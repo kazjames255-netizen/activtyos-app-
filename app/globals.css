@@ -1,0 +1,19 @@
+/*
+ * Tailwind v4 — imported WITHOUT the preflight (base) layer so the legacy
+ * prototype's own CSS reset and styles render faithfully. Utilities + theme
+ * stay available for the new React views we build during the strangler
+ * migration. Once enough views are migrated we can reintroduce a scoped
+ * preflight for the React surface only.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Minimal reset so the legacy full-viewport layout isn't offset by the UA
+ * default body margin. The prototype positions everything via its own
+ * .wrap / .toc classes. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
