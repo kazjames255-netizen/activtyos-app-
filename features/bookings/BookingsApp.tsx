@@ -6,8 +6,9 @@ import { BookingDetail } from "./BookingDetail";
 import { TakeBookingModal } from "./TakeBookingModal";
 
 /**
- * Root of the migrated admin Bookings view. This React island replaces the
- * legacy `.pbApp` render loop for the admin portal (see app/legacy/mountBookings).
+ * Root of the migrated admin Bookings view, rendered at /admin/bookings
+ * (see lib/view-registry.tsx). Replaces the legacy `.pbApp` render loop for
+ * the admin portal.
  */
 export function BookingsApp() {
   const openRef = useBookingsStore((s) => s.openRef);

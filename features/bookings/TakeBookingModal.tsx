@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useBookingsStore } from "./store";
-import { Btn } from "./ui";
+import { Button } from "@/components/ui";
 
 const LISTINGS = ["Summer Holiday Camp 2027", "Easter Football Camp", "After-School Dance Club"];
 const PASSES = ["5-day week pass", "4-day pass", "1-day pass"];
@@ -142,10 +142,10 @@ export function TakeBookingModal() {
         </div>
 
         <div className="mt-3.5 flex gap-2">
-          <Btn variant="primary" onClick={submit}>
+          <Button variant="primary" onClick={submit}>
             Send payment link &amp; create
-          </Btn>
-          <Btn onClick={dismiss}>Cancel</Btn>
+          </Button>
+          <Button onClick={dismiss}>Cancel</Button>
         </div>
       </div>
     </div>

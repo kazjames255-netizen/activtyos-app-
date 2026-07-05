@@ -1,19 +1,135 @@
-/*
- * Tailwind v4 — imported WITHOUT the preflight (base) layer so the legacy
- * prototype's own CSS reset and styles render faithfully. Utilities + theme
- * stay available for the new React views we build during the strangler
- * migration. Once enough views are migrated we can reintroduce a scoped
- * preflight for the React surface only.
- */
-@layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss";
 
-/* Minimal reset so the legacy full-viewport layout isn't offset by the UA
- * default body margin. The prototype positions everything via its own
- * .wrap / .toc classes. */
+/*
+ * Design tokens lifted verbatim from the legacy prototype's :root block
+ * (public/legacy/prototype.html) so migrated React views keep the exact same
+ * look without depending on the legacy document being injected at runtime.
+ * --ff-display / --ff are intentionally NOT defined here — they're supplied
+ * by next/font (see app/layout.tsx), which sets those same custom property
+ * names on <html> with the self-hosted Bricolage Grotesque / Hanken Grotesk
+ * font stacks.
+ */
+:root {
+  --bg: #0f1115;
+  --surface: #181a21;
+  --panel: #21242e;
+  --ink: #f2f4f8;
+  --ink-2: #aeb3c2;
+  --ink-3: #787e8e;
+  --line: #2a2e39;
+  --line-2: #21242e;
+  --sem-info: #2596df;
+  --sem-ok: #22c55e;
+  --sem-warn: #f59e0b;
+  --sem-crit: #ef4444;
+  --sem-action: #e22295;
+  --cat-1: #e22295;
+  --cat-2: #8b5cf6;
+  --cat-3: #6366f1;
+  --cat-4: #3b82f6;
+  --cat-5: #0ea5e9;
+  --cat-6: #14b8a6;
+  --cat-7: #22c55e;
+  --cat-8: #84cc16;
+  --cat-9: #eab308;
+  --cat-10: #f97316;
+  --cat-11: #ef4444;
+  --cat-12: #f43f5e;
+  --stat-exp: var(--brand);
+  --stat-pres: var(--cta);
+  --stat-na: #e8973a;
+  --stat-abs: #d0021b;
+  --fl-alg-bg: #fdeceb;
+  --fl-alg-ink: var(--red);
+  --fl-med-bg: #e8f3fc;
+  --fl-med-ink: #1d6fb8;
+  --fl-send-bg: #efeafe;
+  --fl-send-ink: #7a5af8;
+  --brand: #1d3a8f;
+  --brand-2: #2f6bd8;
+  --brand-ink: #102356;
+  --brand-strong: #16306e;
+  --brand-soft: #eaf0fc;
+  --brand-line: #cdddf7;
+  --green: #15b364;
+  --green-soft: #e7f8ee;
+  --green-line: #bfe9d2;
+  --gold: #f5b81f;
+  --gold-soft: #fdf3d8;
+  --gold-line: #f0deac;
+  --amber: #f5b81f;
+  --amber-soft: #fdf3d8;
+  --amber-line: #f0deac;
+  --red: #e21d27;
+  --red-soft: #fdebec;
+  --red-line: #f6c9cc;
+  --violet: #6a4fd0;
+  --violet-soft: #efe9ff;
+  --r: 16px;
+  --r-sm: 10px;
+  --r-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(16, 35, 86, 0.06), 0 1px 3px rgba(16, 35, 86, 0.05);
+  --shadow: 0 8px 26px rgba(16, 35, 86, 0.1), 0 2px 6px rgba(16, 35, 86, 0.06);
+  --shadow-pop: 0 18px 48px rgba(16, 35, 86, 0.18);
+  --duo-camp: linear-gradient(135deg, #1d3a8f, #2f6bd8 70%, #5b8af0);
+  --duo-arts: linear-gradient(135deg, #3a2f8f, #6a4fd0);
+  --duo-ball: linear-gradient(135deg, #15607a, #2f9bb8);
+  --duo-warm: linear-gradient(135deg, #9a5a12, #f5b81f);
+  --sig-blue: #2254b3;
+  --sig-pink: #ee1f63;
+  --tb-accent: #e91e63;
+  --side-bg: linear-gradient(160deg, #1c3b8c, #172b6a);
+  --side-ink: #ffffff;
+  --side-muted: #92a0d6;
+  --side-nav: #c4cdec;
+  --side-icon: #aab6e0;
+  --side-hover: color-mix(in srgb, var(--sig-blue) 16%, transparent);
+  --side-active: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--sig-blue) 42%, transparent),
+    color-mix(in srgb, var(--sig-pink) 42%, transparent)
+  );
+  --side-aink: #ffffff;
+  --side-ring: color-mix(in srgb, var(--sig-pink) 55%, transparent);
+  --side-ct-bg: #f5b81f;
+  --side-ct-ink: #3a2c00;
+  --side-who: rgba(255, 255, 255, 0.08);
+  --side-head: var(--brand-2);
+  --mk-grad: conic-gradient(from 210deg, #f5b81f, #e21d27, #5b8af0, #f5b81f);
+  --cta: #15b364;
+  --cta-ink: #ffffff;
+  --banner: linear-gradient(118deg, #16235a 0%, #1d3a8f 44%, #2f6bd8 100%);
+}
+
+/* custdash is the one portal that runs a light theme in the legacy prototype. */
+.portal[data-portal="custdash"] {
+  --bg: #f5f8fd;
+  --surface: #ffffff;
+  --panel: #fbf8fc;
+  --ink: #171534;
+  --ink-2: #4a4763;
+  --ink-3: #8a86a3;
+  --line: #ece6f1;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ff);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }

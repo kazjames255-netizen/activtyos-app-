@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useTimetableStore } from "./store";
 import { shortGroup } from "./engine";
-import { TInput } from "./ui";
+import { Input } from "@/components/ui";
 
 function AddRow({ cid }: { cid: string }) {
   const addAct = useTimetableStore((s) => s.addAct);
   const [v, setV] = useState("");
   return (
     <div className="mt-2 flex gap-1.5">
-      <TInput
+      <Input
         value={v}
         onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => {

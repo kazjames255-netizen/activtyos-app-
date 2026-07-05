@@ -6,7 +6,7 @@ import { SetupWizard } from "./SetupWizard";
 import { TimetableGrid } from "./TimetableGrid";
 import { PublishPanel } from "./PublishPanel";
 import { printTimetable } from "./printHtml";
-import { TBtn } from "./ui";
+import { Button } from "@/components/ui";
 
 let didInit = false;
 
@@ -52,12 +52,12 @@ export function TimetableApp() {
       {tab === 1 && (
         <div>
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
-            <TBtn onClick={() => setTab(0)}>← Back to setup</TBtn>
+            <Button onClick={() => setTab(0)}>← Back to setup</Button>
             <div className="flex gap-2">
-              <TBtn onClick={doPrint}>↓ Download PDF</TBtn>
-              <TBtn variant="solid" onClick={() => setTab(2)}>
+              <Button onClick={doPrint}>↓ Download PDF</Button>
+              <Button variant="solid" onClick={() => setTab(2)}>
                 Publish →
-              </TBtn>
+              </Button>
             </div>
           </div>
 
@@ -98,9 +98,9 @@ export function TimetableApp() {
 
           {/* Generate controls */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <TBtn onClick={() => generate("auto")}>Auto-fill</TBtn>
-            <TBtn onClick={() => generate("manual")}>Blank template</TBtn>
-            <TBtn onClick={() => generate()}>↻ Rebuild</TBtn>
+            <Button onClick={() => generate("auto")}>Auto-fill</Button>
+            <Button onClick={() => generate("manual")}>Blank template</Button>
+            <Button onClick={() => generate()}>↻ Rebuild</Button>
             <span className="text-[11.5px] text-[var(--ink-3)]">
               Each day is different. Drag a block to swap it, or drag an activity from the bank onto a cell.
             </span>

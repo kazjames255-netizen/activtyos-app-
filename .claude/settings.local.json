@@ -29,7 +29,11 @@
       "Bash(xcode-select -p)",
       "Read(//Library/Developer/**)",
       "Bash(softwareupdate --list)",
-      "Bash(echo \"\\(exit $?\\)\")"
+      "Bash(echo \"\\(exit $?\\)\")",
+      "Bash(npm -v)",
+      "Bash(tee /private/tmp/claude-501/-Users-amir-WebstormProjects-activtyos-app-/5bc95bd2-8472-4f0d-9129-ca8f0bcc6536/scratchpad/dev-output.log)",
+      "Bash(grep -n 'function esc\\(\\\\|function \\\\$\\(\\\\|function toast\\\\|function modal\\\\|function openModal\\\\|class=\"modal\"\\\\|function fmtMoney\\\\|function fmtDate' public/legacy/prototype.html)",
+      "Bash(awk '/^function renderStaff\\\\\\(/{print NR}' public/legacy/prototype.html)"
     ]
   }
 }

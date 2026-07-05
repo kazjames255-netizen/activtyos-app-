@@ -12,7 +12,7 @@ import {
   sessionCount,
   statusTone,
 } from "./helpers";
-import { Badge, Btn, Card } from "./ui";
+import { Badge, Button, Card } from "@/components/ui";
 
 export function BookingsList() {
   const bookings = useBookingsStore((s) => s.bookings);
@@ -45,16 +45,16 @@ export function BookingsList() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Btn
+          <Button
             onClick={() =>
               alert("Export wizard: pick listings / sessions / dataset / fields / CSV·Excel·PDF.")
             }
           >
             ⬇ Export
-          </Btn>
-          <Btn variant="primary" onClick={openCreate}>
+          </Button>
+          <Button variant="primary" onClick={openCreate}>
             ＋ Take a booking
-          </Btn>
+          </Button>
         </div>
       </div>
 
@@ -96,24 +96,24 @@ export function BookingsList() {
       {selCount > 0 && (
         <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[9px] border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-[7px] text-[12px]">
           <b className="text-[var(--ink)]">{selCount} selected</b>
-          <Btn sm variant="primary" onClick={() => bulk("approve")}>
+          <Button sm variant="primary" onClick={() => bulk("approve")}>
             Approve
-          </Btn>
-          <Btn sm onClick={() => bulk("email")}>
+          </Button>
+          <Button sm onClick={() => bulk("email")}>
             Email
-          </Btn>
-          <Btn sm onClick={() => bulk("waitlist")}>
+          </Button>
+          <Button sm onClick={() => bulk("waitlist")}>
             Waitlist
-          </Btn>
-          <Btn sm onClick={() => bulk("cancel")}>
+          </Button>
+          <Button sm onClick={() => bulk("cancel")}>
             Cancel
-          </Btn>
-          <Btn sm onClick={() => bulk("export")}>
+          </Button>
+          <Button sm onClick={() => bulk("export")}>
             Export
-          </Btn>
-          <Btn sm onClick={clearSel}>
+          </Button>
+          <Button sm onClick={clearSel}>
             Clear
-          </Btn>
+          </Button>
         </div>
       )}
 
