@@ -9,15 +9,22 @@ import { TimetableApp } from "@/features/timetable/TimetableApp";
  * (components/shell/LegacyViewFrame) until it's migrated — at which point it
  * moves from nav config into this registry, with no routing changes needed.
  */
+
+// Bookings is portal-parameterised: the same feature loads a different
+// Firestore dataset per portal (see features/bookings/store.ts init()).
+const AdminBookings = () => <BookingsApp portal="admin" />;
+const FreelancerBookings = () => <BookingsApp portal="fl" />;
+
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType>>> = {
   admin: {
-    bookings: BookingsApp,
+    bookings: AdminBookings,
     timetable: TimetableApp,
   },
   franchise: {
     timetable: TimetableApp,
   },
   freelancer: {
+    bookings: FreelancerBookings,
     timetable: TimetableApp,
   },
 };

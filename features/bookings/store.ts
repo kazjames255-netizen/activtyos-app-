@@ -1,50 +1,41 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Booking, BookingFilter } from "./types";
-import { seedBookings } from "./data";
-import { bookingKids, kidActiveDays, nowStr, refundedTotal } from "./helpers";
+import type { Booking, BookingFilter, BookingPortal } from "./types";
+import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mutations";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 
-type RefundType = "full" | "partial" | "none";
-type BulkAction = "approve" | "decline" | "waitlist" | "cancel" | "email" | "export";
-type RowAction =
-  | "approve"
-  | "decline"
-  | "paid"
-  | "resend"
-  | "recon"
-  | "promote"
-  | "refund-approve"
-  | "refund-decline";
+// The store no longer owns booking mutations — every change is a call to the
+// Express API (which runs the shared logic from ./mutations inside a
+// Firestore transaction) followed by applying the server's returned record.
+// Only transient view state (_cancelling, _refundType, _chgKi, _chgDt) is
+// mutated locally.
 
-export interface CreateBookingInput {
-  booker: string;
-  email: string;
-  child: string;
-  age: number;
-  listing: string;
-  pass: string;
-  dates: string;
-  amount: number;
-  method: string;
-}
+type UiRowAction = RowAction | "resend";
+type UiBulkAction = BulkAction | "email" | "export";
 
 interface BookingsState {
+  portal: BookingPortal | null;
   bookings: Booking[];
+  loading: boolean;
+  error: string | null;
+
   filter: BookingFilter;
   query: string;
   selected: Record<string, boolean>;
   openRef: string | null;
   showCreate: boolean;
-  nextBid: number;
+
+  init: (portal: BookingPortal) => void;
+  refresh: () => Promise<void>;
 
   setFilter: (f: BookingFilter) => void;
   setQuery: (q: string) => void;
   toggleSel: (ref: string) => void;
   clearSel: () => void;
-  bulk: (action: BulkAction) => void;
+  bulk: (action: UiBulkAction) => void;
   open: (ref: string) => void;
   close: () => void;
-  act: (ref: string, action: RowAction) => void;
+  act: (ref: string, action: UiRowAction) => void;
 
   cancelOpen: (ref: string) => void;
   cancelAbort: (ref: string) => void;
@@ -63,244 +54,228 @@ interface BookingsState {
   createBooking: (input: CreateBookingInput) => void;
 }
 
-// Recompute a booking's derived status/pay after per-child/per-day refunds.
-function applyCancelState(b: Booking) {
-  const kids = bookingKids(b);
-  const allCancelled = kids.length > 0 && kids.every((k) => k.cancelled);
-  if (allCancelled) b.status = "Cancelled";
-  const r = refundedTotal(b);
-  if (r >= b.amount - 0.001) b.pay = "Refunded";
-  else if (r > 0) b.pay = "Partially refunded";
-}
-
 const selectedRefs = (sel: Record<string, boolean>) =>
   Object.keys(sel).filter((k) => sel[k]);
 
+const TRANSIENT_KEYS = ["_cancelling", "_refundType", "_chgKi", "_chgDt"] as const;
+
 export const useBookingsStore = create<BookingsState>()(
-  immer((set, get) => ({
-    // Deep clone the seed so edits never mutate the imported module.
-    bookings: JSON.parse(JSON.stringify(seedBookings)) as Booking[],
-    filter: "all",
-    query: "",
-    selected: {},
-    openRef: null,
-    showCreate: false,
-    nextBid: 10312,
-
-    setFilter: (f) => set((s) => void (s.filter = f)),
-    setQuery: (q) => set((s) => void (s.query = q)),
-    toggleSel: (ref) => set((s) => void (s.selected[ref] = !s.selected[ref])),
-    clearSel: () => set((s) => void (s.selected = {})),
-
-    bulk: (action) => {
-      const refs = selectedRefs(get().selected);
-      const n = refs.length;
-      if (!n) return;
+  immer((set, get) => {
+    // Replace a booking with the server's copy, preserving local transient
+    // view state so open panels don't snap shut mid-interaction.
+    const applyServer = (updated: Booking) =>
       set((s) => {
-        for (const ref of refs) {
-          const b = s.bookings.find((x) => x.ref === ref);
-          if (!b) continue;
-          if (action === "approve") b.status = "Confirmed";
-          else if (action === "decline") b.status = "Declined";
-          else if (action === "waitlist") b.status = "Waitlisted";
-          else if (action === "cancel") b.status = "Cancelled";
+        const ix = s.bookings.findIndex((x) => x.ref === updated.ref);
+        if (ix < 0) return;
+        const prev = s.bookings[ix];
+        for (const k of TRANSIENT_KEYS) {
+          (updated as unknown as Record<string, unknown>)[k] = prev[k];
         }
-        s.selected = {};
+        s.bookings[ix] = updated;
       });
-      if (action === "email") setTimeout(() => alert(`Opened a message to ${n} booker(s).`), 40);
-      else if (action === "export") setTimeout(() => alert(`Exported ${n} booking(s) to CSV.`), 40);
-    },
 
-    open: (ref) => {
-      set((s) => void (s.openRef = ref));
+    // Run an API mutation with unified error handling.
+    const run = async (fn: () => Promise<void>) => {
+      set((s) => void (s.error = null));
       try {
-        window.scrollTo(0, 0);
-      } catch {
-        /* noop */
+        await fn();
+      } catch (e) {
+        set((s) => void (s.error = e instanceof Error ? e.message : "Request failed"));
       }
-    },
-    close: () => set((s) => void (s.openRef = null)),
+    };
 
-    act: (ref, action) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        if (action === "approve") b.status = "Confirmed";
-        else if (action === "decline") b.status = "Declined";
-        else if (action === "paid") b.pay = "Paid";
-        else if (action === "resend")
-          setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);
-        else if (action === "recon") b.recon = !b.recon;
-        else if (action === "promote") {
-          b.status = "Confirmed";
-          b.note = "Promoted from waitlist.";
-        } else if (action === "refund-approve") {
-          if (b.cancel) b.cancel.refund = "approved";
-          b.pay = "Refunded";
-        } else if (action === "refund-decline") {
-          if (b.cancel) b.cancel.refund = "declined";
-        }
-      }),
+    const actionsUrl = (ref: string) =>
+      `/api/bookings/${encodeURIComponent(ref)}/actions?portal=${get().portal}`;
 
-    cancelOpen: (ref) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        b._cancelling = true;
-        b._refundType = b._refundType || "full";
-      }),
-    cancelAbort: (ref) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (b) b._cancelling = false;
-      }),
-    setRefund: (ref, type) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (b) b._refundType = type;
-      }),
-    doCancel: (ref, partialAmount) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        const t = b._refundType || "full";
-        let amt = t === "full" ? b.amount : 0;
-        if (t === "partial") amt = partialAmount || 0;
-        if (b.past !== true) b.status = "Cancelled";
-        b.cancel = {
-          on: nowStr(),
-          by: "Provider",
-          refund: t,
-          amount: amt,
-          refundOnly: b.past === true,
-          msg: b.past === true ? "Refund issued by provider." : "Cancelled by provider.",
-        };
-        b.pay = t === "full" ? "Refunded" : t === "partial" ? "Partially refunded" : b.pay;
-        b._cancelling = false;
-      }),
+    return {
+      portal: null,
+      bookings: [],
+      loading: false,
+      error: null,
 
-    saveNote: (ref, text) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (b) b.note = text;
-      }),
+      filter: "all",
+      query: "",
+      selected: {},
+      openRef: null,
+      showCreate: false,
 
-    cancelChild: (ref, ki) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        const kids = bookingKids(b);
-        const k = kids[ki];
-        if (!k || k.cancelled) return;
-        const share = b.amount / (kids.length || 1);
-        const done = share * ((k.cancelledDays || []).length / ((k.dates || []).length || 1));
-        const refund = Math.max(0, Math.round((share - done) * 100) / 100);
-        k.cancelled = true;
-        k.cancelledDays = (k.dates || []).slice();
-        (b.refundLog = b.refundLog || []).push({
-          label: `${k.name || "Child"} — whole place`,
-          amount: refund,
-          on: nowStr(),
-          by: "Provider",
-          source: "Provider",
+      init: (portal) => {
+        if (get().portal === portal && (get().bookings.length || get().loading)) return;
+        set((s) => {
+          s.portal = portal;
+          s.bookings = [];
+          s.openRef = null;
+          s.selected = {};
         });
-        // kids came from bookingKids which may be a synthesised single-child
-        // array; persist it back onto the booking so state survives.
-        if (!b.kids) b.kids = kids;
-        applyCancelState(b);
-      }),
+        void get().refresh();
+      },
 
-    cancelDay: (ref, ki, dt) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        const kids = bookingKids(b);
-        const k = kids[ki];
-        if (!k || k.cancelled) return;
-        k.cancelledDays = k.cancelledDays || [];
-        if (k.cancelledDays.indexOf(dt) > -1) return;
-        k.cancelledDays.push(dt);
-        const perday = Math.round((b.amount / (kids.length || 1) / ((k.dates || []).length || 1)) * 100) / 100;
-        (b.refundLog = b.refundLog || []).push({
-          label: `${k.name || "Child"} — ${dt}`,
-          amount: perday,
-          on: nowStr(),
-          by: "Provider",
-          source: "Provider",
-        });
-        if (kidActiveDays(k).length === 0) k.cancelled = true;
-        if (!b.kids) b.kids = kids;
-        applyCancelState(b);
-      }),
-
-    changeDay: (ref, ki, dt) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        b._chgKi = ki;
-        b._chgDt = dt;
-      }),
-    cancelChange: (ref) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (b) {
-          b._chgKi = null;
-          b._chgDt = null;
+      refresh: async () => {
+        const portal = get().portal;
+        if (!portal) return;
+        set((s) => void (s.loading = true));
+        try {
+          const list = await apiGet<Booking[]>(`/api/bookings?portal=${portal}`);
+          set((s) => {
+            s.bookings = list;
+            s.loading = false;
+            s.error = null;
+          });
+        } catch (e) {
+          set((s) => {
+            s.loading = false;
+            s.error = e instanceof Error ? e.message : "Failed to load bookings";
+          });
         }
-      }),
-    applyChangeDay: (ref, ki, oldDt, newDt) =>
-      set((s) => {
-        const b = s.bookings.find((x) => x.ref === ref);
-        if (!b) return;
-        const kids = bookingKids(b);
-        const k = kids[ki];
-        if (k && k.dates) {
-          const ix = k.dates.indexOf(oldDt);
-          if (ix > -1) k.dates[ix] = newDt;
-          if (!b.kids) b.kids = kids;
-        }
-        b._chgKi = null;
-        b._chgDt = null;
-      }),
+      },
 
-    openCreate: () => set((s) => void (s.showCreate = true)),
-    createBooking: (input) => {
-      const id = get().nextBid;
-      const haf = input.method.indexOf("HAF") > -1;
-      set((s) => {
-        s.bookings.unshift({
-          ref: "APF-" + id,
-          bid: "03073" + id,
-          booker: input.booker,
-          email: input.email,
-          phone: "—",
-          child: input.child || "—",
-          age: input.age || 0,
-          dob: "—",
-          listing: input.listing,
-          pass: input.pass,
-          ticket: `${input.pass} · ${input.dates}`,
-          dates: input.dates,
-          sessions: [input.dates],
-          status: "Confirmed",
-          pay: haf ? "Funded" : "Invoice sent",
-          method: haf ? "HAF" : input.method,
-          amount: haf ? 0 : input.amount || 0,
-          addons: [],
-          answers: [],
-          note: "Payment link sent to the parent — awaiting payment.",
-          recon: input.method === "Tax-Free Childcare" ? false : null,
-          evid: haf ? "Awaiting" : null,
-          cancel: null,
+      setFilter: (f) => set((s) => void (s.filter = f)),
+      setQuery: (q) => set((s) => void (s.query = q)),
+      toggleSel: (ref) => set((s) => void (s.selected[ref] = !s.selected[ref])),
+      clearSel: () => set((s) => void (s.selected = {})),
+
+      bulk: (action) => {
+        const refs = selectedRefs(get().selected);
+        const n = refs.length;
+        if (!n) return;
+        if (action === "email") {
+          setTimeout(() => alert(`Opened a message to ${n} booker(s).`), 40);
+          return;
+        }
+        if (action === "export") {
+          setTimeout(() => alert(`Exported ${n} booking(s) to CSV.`), 40);
+          return;
+        }
+        void run(async () => {
+          const updated = await apiPost<Booking[]>(`/api/bookings/bulk`, {
+            portal: get().portal,
+            refs,
+            action,
+          });
+          updated.forEach(applyServer);
+          set((s) => void (s.selected = {}));
         });
-        s.nextBid = id + 1;
-        s.filter = "all";
-        s.showCreate = false;
-      });
-      setTimeout(
-        () => alert("✓ Booking created — a secure payment link has been emailed to the parent."),
-        40,
-      );
-    },
-  })),
+      },
+
+      open: (ref) => {
+        set((s) => void (s.openRef = ref));
+        try {
+          window.scrollTo(0, 0);
+        } catch {
+          /* noop */
+        }
+      },
+      close: () => set((s) => void (s.openRef = null)),
+
+      act: (ref, action) => {
+        if (action === "resend") {
+          const b = get().bookings.find((x) => x.ref === ref);
+          if (b) setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);
+          return;
+        }
+        void run(async () => {
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action }));
+        });
+      },
+
+      cancelOpen: (ref) =>
+        set((s) => {
+          const b = s.bookings.find((x) => x.ref === ref);
+          if (!b) return;
+          b._cancelling = true;
+          b._refundType = b._refundType || "full";
+        }),
+      cancelAbort: (ref) =>
+        set((s) => {
+          const b = s.bookings.find((x) => x.ref === ref);
+          if (b) b._cancelling = false;
+        }),
+      setRefund: (ref, type) =>
+        set((s) => {
+          const b = s.bookings.find((x) => x.ref === ref);
+          if (b) b._refundType = type;
+        }),
+      doCancel: (ref, partialAmount) => {
+        const b = get().bookings.find((x) => x.ref === ref);
+        if (!b) return;
+        const refund = b._refundType || "full";
+        void run(async () => {
+          const updated = await apiPost<Booking>(actionsUrl(ref), {
+            type: "cancel",
+            refund,
+            amount: refund === "partial" ? partialAmount || 0 : undefined,
+          });
+          updated._cancelling = false;
+          set((s) => {
+            const ix = s.bookings.findIndex((x) => x.ref === updated.ref);
+            if (ix > -1) s.bookings[ix] = updated;
+          });
+        });
+      },
+
+      saveNote: (ref, text) =>
+        void run(async () => {
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "note", text }));
+        }),
+
+      cancelChild: (ref, ki) =>
+        void run(async () => {
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-child", ki }));
+        }),
+
+      cancelDay: (ref, ki, dt) =>
+        void run(async () => {
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: "cancel-day", ki, date: dt }));
+        }),
+
+      changeDay: (ref, ki, dt) =>
+        set((s) => {
+          const b = s.bookings.find((x) => x.ref === ref);
+          if (!b) return;
+          b._chgKi = ki;
+          b._chgDt = dt;
+        }),
+      cancelChange: (ref) =>
+        set((s) => {
+          const b = s.bookings.find((x) => x.ref === ref);
+          if (b) {
+            b._chgKi = null;
+            b._chgDt = null;
+          }
+        }),
+      applyChangeDay: (ref, ki, oldDt, newDt) =>
+        void run(async () => {
+          const updated = await apiPost<Booking>(actionsUrl(ref), {
+            type: "change-day",
+            ki,
+            oldDate: oldDt,
+            newDate: newDt,
+          });
+          updated._chgKi = null;
+          updated._chgDt = null;
+          set((s) => {
+            const ix = s.bookings.findIndex((x) => x.ref === updated.ref);
+            if (ix > -1) s.bookings[ix] = updated;
+          });
+        }),
+
+      openCreate: () => set((s) => void (s.showCreate = true)),
+      createBooking: (input) =>
+        void run(async () => {
+          const created = await apiPost<Booking>(`/api/bookings`, {
+            ...input,
+            portal: get().portal,
+          });
+          set((s) => {
+            s.bookings.unshift(created);
+            s.filter = "all";
+            s.showCreate = false;
+          });
+          setTimeout(
+            () => alert("✓ Booking created — a secure payment link has been emailed to the parent."),
+            40,
+          );
+        }),
+    };
+  }),
 );

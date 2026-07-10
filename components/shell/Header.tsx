@@ -1,7 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 
 // Lives in the portal layout (not the per-view page) so it persists across
@@ -9,6 +11,8 @@ import { PortalSwitcher } from "./PortalSwitcher";
 // since layouts don't receive their child page's dynamic segment.
 export function Header({ portal }: { portal: PortalKey }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOutUser } = useAuth();
   const view = pathname.split("/")[2] ?? "";
   const current = findNavItem(portal, view);
   return (
@@ -16,7 +20,19 @@ export function Header({ portal }: { portal: PortalKey }) {
       <h1 className="m-0 text-[15px] font-extrabold text-[var(--ink)]">
         {current?.label ?? view}
       </h1>
-      <PortalSwitcher portal={portal} />
+      <div className="flex items-center gap-3">
+        {user?.email && <span className="text-[12px] text-[var(--ink-3)]">{user.email}</span>}
+        <PortalSwitcher portal={portal} />
+        <Button
+          sm
+          onClick={async () => {
+            await signOutUser();
+            router.replace("/login");
+          }}
+        >
+          Sign out
+        </Button>
+      </div>
     </header>
   );
 }

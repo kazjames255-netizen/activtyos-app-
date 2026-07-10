@@ -1,0 +1,493 @@
+openapi: 3.0.3
+info:
+  title: ActivityOS API
+  version: 0.1.0
+  description: |
+    Express + Firestore backend for ActivityOS. Milestone 1 covers **bookings**
+    (freelancer / admin portals), plus read-only listings & customers.
+
+    ## Authentication
+
+    Every `/api/*` endpoint requires a **Firebase ID token**:
+
+    ```
+    Authorization: Bearer <idToken>
+    ```
+
+    Get a token by signing in a Firebase user (Email/Password provider):
+
+    - **From a web app** — Firebase JS SDK:
+      `signInWithEmailAndPassword(auth, email, password)` then
+      `await user.getIdToken()`.
+    - **From curl/Postman** (for testing):
+      ```
+      POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<WEB_API_KEY>
+      { "email": "...", "password": "...", "returnSecureToken": true }
+      ```
+      → use the `idToken` from the response. Tokens expire after 1 hour.
+
+    ## Portals
+
+    Bookings are scoped per portal: `admin`, `fr` (franchise), `fl`
+    (freelancer). The same booking `ref` can exist in several portals as
+    independent records.
+
+    ## Notes for UI builders
+
+    - `answers` is an array of `[question, answer]` string pairs (tuples).
+    - Mutations return the **full updated booking** — replace your local copy
+      with it.
+    - No role-based authorization yet: any authenticated user can read/write
+      any portal's data.
+    - The API sends no emails; "payment link" wording in flows is aspirational
+      for now.
+servers:
+  - url: http://localhost:4000
+    description: Local development
+tags:
+  - name: bookings
+  - name: listings
+  - name: customers
+  - name: meta
+
+security:
+  - firebaseIdToken: []
+
+paths:
+  /health:
+    get:
+      tags: [meta]
+      summary: Liveness check (no auth)
+      security: []
+      responses:
+        "200":
+          description: Server is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+
+  /api/bookings:
+    get:
+      tags: [bookings]
+      summary: List a portal's bookings
+      parameters:
+        - $ref: "#/components/parameters/portalQuery"
+      responses:
+        "200":
+          description: Bookings, newest ref first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [bookings]
+      summary: Take a manual booking (provider books on a customer's behalf)
+      description: |
+        Creates a **Confirmed** booking. Payment status is `Invoice sent`
+        (or `Funded` with `amount` forced to 0 when `method` contains "HAF").
+        The `ref`/`bid` are allocated server-side from a Firestore counter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateBookingInput" }
+      responses:
+        "201":
+          description: The created booking
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/bookings/bulk:
+    post:
+      tags: [bookings]
+      summary: Apply a status action to many bookings at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [portal, refs, action]
+              properties:
+                portal: { $ref: "#/components/schemas/Portal" }
+                refs:
+                  type: array
+                  minItems: 1
+                  items: { type: string }
+                  example: ["APF-10293", "APF-10294"]
+                action:
+                  type: string
+                  enum: [approve, decline, waitlist, cancel]
+      responses:
+        "200":
+          description: The updated bookings (unknown refs are skipped silently)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/bookings/{ref}:
+    get:
+      tags: [bookings]
+      summary: Get one booking
+      parameters:
+        - $ref: "#/components/parameters/refPath"
+        - $ref: "#/components/parameters/portalQuery"
+      responses:
+        "200":
+          description: The booking
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/bookings/{ref}/actions:
+    post:
+      tags: [bookings]
+      summary: Apply a workflow action to one booking
+      description: |
+        One endpoint for every single-booking mutation, discriminated by
+        `type`. Runs in a Firestore transaction and returns the updated
+        booking.
+
+        | `type` | Effect |
+        | --- | --- |
+        | `approve` | status → Confirmed |
+        | `decline` | status → Declined |
+        | `paid` | pay → Paid |
+        | `recon` | toggles the reconciliation flag |
+        | `promote` | waitlist → Confirmed (+ note) |
+        | `refund-approve` | cancel.refund → approved, pay → Refunded |
+        | `refund-decline` | cancel.refund → declined |
+        | `cancel` | cancels whole booking, writes `cancel` record, sets pay by refund type |
+        | `cancel-child` | cancels one child (`ki` = index in `kids`), adds a refund-log entry |
+        | `cancel-day` | cancels one day for one child, adds a per-day refund-log entry |
+        | `change-day` | moves one booked day to another date |
+        | `note` | saves the mentor note |
+      parameters:
+        - $ref: "#/components/parameters/refPath"
+        - name: portal
+          in: query
+          required: false
+          description: Portal scope (may be given here or as `portal` in the body).
+          schema: { $ref: "#/components/schemas/Portal" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookingAction" }
+            examples:
+              approve:
+                value: { type: approve }
+              cancelPartialRefund:
+                value: { type: cancel, refund: partial, amount: 50 }
+              cancelOneDay:
+                value: { type: cancel-day, ki: 0, date: "Tue 29 Jul" }
+              moveDay:
+                value: { type: change-day, ki: 0, oldDate: "Mon 28 Jul", newDate: "Fri 8 Aug" }
+              saveNote:
+                value: { type: note, text: "Parent called — arriving late Monday." }
+      responses:
+        "200":
+          description: The updated booking
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/listings:
+    get:
+      tags: [listings]
+      summary: List listings (read-only for now)
+      responses:
+        "200":
+          description: Listings ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Listing" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/customers:
+    get:
+      tags: [customers]
+      summary: List customers/parents (read-only for now)
+      responses:
+        "200":
+          description: Customers ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Customer" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    firebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token (see the Authentication section above).
+
+  parameters:
+    portalQuery:
+      name: portal
+      in: query
+      required: true
+      schema: { $ref: "#/components/schemas/Portal" }
+    refPath:
+      name: ref
+      in: path
+      required: true
+      description: Booking reference, e.g. `APF-10293`.
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation failed (`error` is a message or zod issue list)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing/invalid Firebase ID token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: No booking with that ref in that portal
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Portal:
+      type: string
+      enum: [admin, fr, fl]
+      description: admin = company HQ, fr = franchise, fl = freelancer.
+
+    Error:
+      type: object
+      properties:
+        error:
+          description: Human-readable message, or an array of zod issues on 400.
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: object }
+
+    Kid:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        age: { type: number }
+        dob: { type: string, example: "14/03/2018" }
+        dates:
+          type: array
+          items: { type: string }
+          description: Booked days, e.g. "Mon 28 Jul".
+        cancelledDays:
+          type: array
+          items: { type: string }
+        cancelled: { type: boolean }
+
+    CancelInfo:
+      type: object
+      required: [on, by]
+      properties:
+        on: { type: string, example: "10/07/2026, 15:07" }
+        by: { type: string, example: Provider }
+        msg: { type: string }
+        refund:
+          type: string
+          enum: [full, partial, none, approved, declined, pending]
+        amount: { type: number }
+        refundOnly:
+          type: boolean
+          description: true when the booking was already in the past (refund without cancelling attendance).
+
+    RefundLogEntry:
+      type: object
+      required: [label, amount, on, by]
+      properties:
+        label: { type: string, example: "Jack J — Tue 29 Jul" }
+        amount: { type: number }
+        on: { type: string }
+        by: { type: string }
+        source: { type: string }
+
+    Booking:
+      type: object
+      required: [ref, bid, booker, email, listing, status, pay, amount]
+      properties:
+        ref: { type: string, example: APF-10293 }
+        bid: { type: string, example: "0307293" }
+        portal: { $ref: "#/components/schemas/Portal" }
+        booker: { type: string, example: Sarah Jones }
+        email: { type: string, example: sarah.j@email.com }
+        phone: { type: string }
+        child:
+          type: string
+          description: Primary child name (single-child bookings; multi-child bookings use `kids`).
+        age: { type: number }
+        dob: { type: string }
+        kids:
+          type: array
+          items: { $ref: "#/components/schemas/Kid" }
+        listing: { type: string, example: Summer Holiday Camp 2027 }
+        pass: { type: string, example: 5-day week pass }
+        ticket: { type: string }
+        dates: { type: string, example: 28 Jul – 1 Aug }
+        sessions:
+          type: array
+          items: { type: string, example: "Mon 28 Jul 2027 · 09:00 – 17:30" }
+        status:
+          type: string
+          enum: [Approval needed, Confirmed, Waitlisted, Cancelled, Declined]
+        pay:
+          type: string
+          description: Paid / Unpaid / Invoice sent / Refunded / Partially refunded / Funded (free-form string).
+        method: { type: string, example: Card }
+        amount: { type: number, example: 540 }
+        addons:
+          type: array
+          items: { type: string, example: "Lunch ×5 (£25)" }
+        answers:
+          type: array
+          description: Checkout Q&A as [question, answer] string pairs.
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items: { type: string }
+          example: [["Can your child swim 25m?", "No"]]
+        note: { type: string }
+        recon:
+          type: boolean
+          nullable: true
+          description: Reconciliation flag (null = not applicable).
+        evid:
+          type: string
+          nullable: true
+          description: Funding-evidence state for HAF bookings.
+        cancel:
+          nullable: true
+          allOf: [{ $ref: "#/components/schemas/CancelInfo" }]
+        past:
+          type: boolean
+          description: Booking dates already happened.
+        refundLog:
+          type: array
+          items: { $ref: "#/components/schemas/RefundLogEntry" }
+
+    CreateBookingInput:
+      type: object
+      required: [portal, booker, email, child, age, listing, pass, dates, amount, method]
+      properties:
+        portal: { $ref: "#/components/schemas/Portal" }
+        booker: { type: string, example: Test Parent }
+        email: { type: string, example: tp@test.com }
+        child: { type: string, example: Kid T }
+        age: { type: number, example: 7 }
+        listing: { type: string, example: Easter Football Camp }
+        pass: { type: string, example: 4-day pass }
+        dates: { type: string, example: "Week 1 · 7 – 10 Apr 2027" }
+        amount: { type: number, example: 120 }
+        method:
+          type: string
+          example: Card
+          description: Contains "HAF" → booking becomes Funded with amount 0.
+
+    BookingAction:
+      oneOf:
+        - title: Status / pay / recon transition
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [approve, decline, paid, recon, promote, refund-approve, refund-decline]
+        - title: Cancel booking
+          type: object
+          required: [type, refund]
+          properties:
+            type: { type: string, enum: [cancel] }
+            refund: { type: string, enum: [full, partial, none] }
+            amount:
+              type: number
+              description: Refund amount — required in spirit when refund=partial.
+        - title: Cancel one child
+          type: object
+          required: [type, ki]
+          properties:
+            type: { type: string, enum: [cancel-child] }
+            ki: { type: integer, description: Index into `kids` }
+        - title: Cancel one day
+          type: object
+          required: [type, ki, date]
+          properties:
+            type: { type: string, enum: [cancel-day] }
+            ki: { type: integer }
+            date: { type: string, example: "Tue 29 Jul" }
+        - title: Move a day
+          type: object
+          required: [type, ki, oldDate, newDate]
+          properties:
+            type: { type: string, enum: [change-day] }
+            ki: { type: integer }
+            oldDate: { type: string }
+            newDate: { type: string }
+        - title: Save note
+          type: object
+          required: [type, text]
+          properties:
+            type: { type: string, enum: [note] }
+            text: { type: string }
+      discriminator:
+        propertyName: type
+
+    Listing:
+      type: object
+      properties:
+        id: { type: string, example: lst-1 }
+        name: { type: string, example: Summer Holiday Camp 2027 }
+        passes:
+          type: array
+          items: { type: string }
+        blocks:
+          type: array
+          items: { type: string, example: "Week 1 · 28 Jul – 1 Aug 2027" }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: string, example: cust-1 }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        children:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              age: { type: number }
+              dob: { type: string }
