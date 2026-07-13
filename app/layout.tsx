@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
+
+// Self-hosted equivalents of the legacy prototype's fonts, exposed as the
+// same --ff-display / --ff custom properties the design tokens in
+// globals.css (and every migrated feature) already reference.
+const bricolageGrotesque = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--ff-display",
+});
+
+const hankenGrotesk = Hanken_Grotesk({
+  subsets: ["latin"],
+  variable: "--ff",
+});
 
 export const metadata: Metadata = {
   title: "ActivityOS",
@@ -11,11 +26,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The legacy prototype ships its own fonts (Bricolage Grotesque / Hanken
-  // Grotesk), so we don't declare next/font here during the shell phase.
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={`${bricolageGrotesque.variable} ${hankenGrotesk.variable}`}>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

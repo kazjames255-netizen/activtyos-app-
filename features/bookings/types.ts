@@ -48,6 +48,10 @@ export interface RefundLogEntry {
 export interface Booking {
   ref: string;
   bid: string;
+  /** The provider (tenant) this booking belongs to — stamped server-side. */
+  tenantId?: string;
+  /** Set when the booking belongs to a franchise within the tenant. */
+  franchiseId?: string;
   booker: string;
   email: string;
   phone: string;

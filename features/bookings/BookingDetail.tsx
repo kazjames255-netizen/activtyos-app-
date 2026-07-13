@@ -14,7 +14,7 @@ import {
   sessionCount,
   statusTone,
 } from "./helpers";
-import { Badge, Btn, Card, DefRow, SectionHead } from "./ui";
+import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 function Tile({ big, small }: { big: string; small: string }) {
   return (
@@ -203,10 +203,10 @@ function CancelPanel({ booking }: { booking: Booking }) {
         </div>
       )}
       <div className="mt-3.5 flex gap-[7px]">
-        <Btn variant="primary" onClick={() => doCancel(booking.ref, partial)}>
+        <Button variant="primary" onClick={() => doCancel(booking.ref, partial)}>
           {booking.past ? "Issue refund" : "Confirm cancellation"}
-        </Btn>
-        <Btn onClick={() => cancelAbort(booking.ref)}>{booking.past ? "Close" : "Keep booking"}</Btn>
+        </Button>
+        <Button onClick={() => cancelAbort(booking.ref)}>{booking.past ? "Close" : "Keep booking"}</Button>
       </div>
     </div>
   );
@@ -419,38 +419,38 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           )}
           {b.status === "Approval needed" && (
             <>
-              <Btn variant="primary" onClick={() => act(b.ref, "approve")}>
+              <Button variant="primary" onClick={() => act(b.ref, "approve")}>
                 Approve
-              </Btn>
-              <Btn onClick={() => act(b.ref, "decline")}>Decline</Btn>
+              </Button>
+              <Button onClick={() => act(b.ref, "decline")}>Decline</Button>
             </>
           )}
           {b.status === "Waitlisted" && (
-            <Btn variant="primary" onClick={() => act(b.ref, "promote")}>
+            <Button variant="primary" onClick={() => act(b.ref, "promote")}>
               Offer place / promote
-            </Btn>
+            </Button>
           )}
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
             <>
-              <Btn onClick={() => act(b.ref, "paid")}>Mark paid</Btn>
-              <Btn onClick={() => act(b.ref, "resend")}>Resend invoice</Btn>
+              <Button onClick={() => act(b.ref, "paid")}>Mark paid</Button>
+              <Button onClick={() => act(b.ref, "resend")}>Resend invoice</Button>
             </>
           )}
           {b.status !== "Cancelled" &&
             b.status !== "Declined" &&
             (b.past === true ? (
-              <Btn variant="cta" onClick={() => cancelOpen(b.ref)}>
+              <Button variant="cta" onClick={() => cancelOpen(b.ref)}>
                 Refund
-              </Btn>
+              </Button>
             ) : (
-              <Btn variant="danger" onClick={() => cancelOpen(b.ref)}>
+              <Button variant="danger" onClick={() => cancelOpen(b.ref)}>
                 Cancel booking
-              </Btn>
+              </Button>
             ))}
-          <Btn onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>
+          <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>
             Change date
-          </Btn>
-          <Btn onClick={() => alert("Opened a message to the booker.")}>Message</Btn>
+          </Button>
+          <Button onClick={() => alert("Opened a message to the booker.")}>Message</Button>
         </div>
       </Card>
     </div>

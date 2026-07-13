@@ -1,0 +1,99 @@
+import { Router, type Request } from "express";
+import { z } from "zod";
+import { db } from "../firebase";
+import { canWrite } from "../middleware/role";
+
+export const listings = Router();
+
+const col = db.collection("listings");
+
+const listingSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  passes: z
+    .array(z.object({ name: z.string().min(1), price: z.number().nonnegative() }))
+    .min(1),
+  blocks: z.array(z.string().min(1)).min(1),
+});
+
+// GET /api/listings — all providers' listings (feeds the parent Browse
+// view). With ?mine=1, only the caller's own tenant's listings (the
+// operator management view).
+listings.get("/", async (req, res) => {
+  if (req.query.mine === "1") {
+    const auth = req.auth!;
+    if (!auth.tenantId) {
+      res.status(403).json({ error: "Requires an operator account with a tenant" });
+      return;
+    }
+    const snap = await col.where("tenantId", "==", auth.tenantId).get();
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));
+    list.sort((a, b) => (a.name < b.name ? -1 : 1));
+    res.json(list);
+    return;
+  }
+  const snap = await col.orderBy("name").get();
+  res.json(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+});
+
+// Operators manage their own tenant's listings. (Bookings keep a denormalised
+// listing name, so editing/deleting a listing never corrupts past bookings.)
+
+listings.post("/", async (req, res) => {
+  const auth = req.auth!;
+  if (!canWrite(auth.role) || !auth.tenantId) {
+    res.status(403).json({ error: "Requires an operator account with a tenant" });
+    return;
+  }
+  const parsed = listingSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  const tenant = await db.collection("tenants").doc(auth.tenantId).get();
+  const doc = {
+    ...parsed.data,
+    tenantId: auth.tenantId,
+    tenantName: tenant.exists ? tenant.data()!.name : "Unknown provider",
+  };
+  const ref = await col.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+
+// Load a listing and verify it belongs to the caller's tenant.
+async function ownListing(req: Request, id: string) {
+  const auth = req.auth!;
+  if (!canWrite(auth.role) || !auth.tenantId) return { status: 403 as const };
+  const snap = await col.doc(id).get();
+  if (!snap.exists) return { status: 404 as const };
+  if (snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  return { status: 200 as const, snap };
+}
+
+listings.put("/:id", async (req, res) => {
+  const own = await ownListing(req, req.params.id);
+  if (own.status !== 200) {
+    res
+      .status(own.status)
+      .json({ error: own.status === 403 ? "Requires an operator account" : "Listing not found" });
+    return;
+  }
+  const parsed = listingSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  await own.snap.ref.update(parsed.data);
+  res.json({ id: own.snap.id, ...own.snap.data(), ...parsed.data });
+});
+
+listings.delete("/:id", async (req, res) => {
+  const own = await ownListing(req, req.params.id);
+  if (own.status !== 200) {
+    res
+      .status(own.status)
+      .json({ error: own.status === 403 ? "Requires an operator account" : "Listing not found" });
+    return;
+  }
+  await own.snap.ref.delete();
+  res.json({ ok: true });
+});

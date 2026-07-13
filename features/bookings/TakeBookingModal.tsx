@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useBookingsStore } from "./store";
-import { Btn } from "./ui";
+import { get as apiGet } from "@/lib/api";
+import { Button } from "@/components/ui";
 
+// Fallbacks while /api/listings loads (also used if the fetch fails).
 const LISTINGS = ["Summer Holiday Camp 2027", "Easter Football Camp", "After-School Dance Club"];
 const PASSES = ["5-day week pass", "4-day pass", "1-day pass"];
 const BLOCKS = [
@@ -15,6 +17,13 @@ const BLOCKS = [
 ];
 const METHODS = ["Card", "Tax-Free Childcare", "HAF (funded £0)", "PayPal"];
 
+interface Listing {
+  id: string;
+  name: string;
+  passes: { name: string; price: number }[];
+  blocks: string[];
+}
+
 const inputCls =
   "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none";
 const labelCls = "text-[11.5px] font-bold text-[var(--ink)]";
@@ -25,6 +34,7 @@ export function TakeBookingModal() {
   const createBooking = useBookingsStore((s) => s.createBooking);
   const setShow = useBookingsStore.setState;
 
+  const [listings, setListings] = useState<Listing[] | null>(null);
   const [f, setF] = useState({
     booker: "",
     email: "",
@@ -37,7 +47,31 @@ export function TakeBookingModal() {
     method: METHODS[0],
   });
 
+  useEffect(() => {
+    if (!show || listings) return;
+    apiGet<Listing[]>("/api/listings")
+      .then((ls) => {
+        if (!ls.length) return;
+        setListings(ls);
+        setF((prev) => ({
+          ...prev,
+          listing: ls[0].name,
+          pass: ls[0].passes[0]?.name ?? prev.pass,
+          dates: ls[0].blocks[0] ?? prev.dates,
+          amount: ls[0].passes[0] ? String(ls[0].passes[0].price) : prev.amount,
+        }));
+      })
+      .catch(() => {
+        /* keep the hardcoded fallbacks */
+      });
+  }, [show, listings]);
+
   if (!show) return null;
+
+  const current = listings?.find((l) => l.name === f.listing);
+  const listingNames = listings?.map((l) => l.name) ?? LISTINGS;
+  const passes = current?.passes?.length ? current.passes.map((p) => p.name) : PASSES;
+  const blocks = current?.blocks?.length ? current.blocks : BLOCKS;
 
   const dismiss = () => {
     setShow({ showCreate: false });
@@ -63,7 +97,25 @@ export function TakeBookingModal() {
   };
 
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setF((prev) => ({ ...prev, [k]: e.target.value }));
+    setF((prev) => {
+      const next = { ...prev, [k]: e.target.value };
+      // Changing listing resets pass/block to that listing's options;
+      // changing either autofills the amount from the pass price.
+      if (k === "listing" && listings) {
+        const l = listings.find((x) => x.name === e.target.value);
+        if (l) {
+          next.pass = l.passes[0]?.name ?? next.pass;
+          next.dates = l.blocks[0] ?? next.dates;
+          if (l.passes[0]) next.amount = String(l.passes[0].price);
+        }
+      }
+      if (k === "pass" && listings) {
+        const l = listings.find((x) => x.name === next.listing);
+        const p = l?.passes.find((x) => x.name === e.target.value);
+        if (p) next.amount = String(p.price);
+      }
+      return next;
+    });
 
   return (
     <div
@@ -106,7 +158,7 @@ export function TakeBookingModal() {
           <label className={labelCls}>
             Listing
             <select className={inputCls} value={f.listing} onChange={upd("listing")}>
-              {LISTINGS.map((x) => (
+              {listingNames.map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
@@ -114,7 +166,7 @@ export function TakeBookingModal() {
           <label className={labelCls}>
             Pass
             <select className={inputCls} value={f.pass} onChange={upd("pass")}>
-              {PASSES.map((x) => (
+              {passes.map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
@@ -122,7 +174,7 @@ export function TakeBookingModal() {
           <label className={`${labelCls} col-span-2`}>
             Block / dates
             <select className={inputCls} value={f.dates} onChange={upd("dates")}>
-              {BLOCKS.map((x) => (
+              {blocks.map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
@@ -142,10 +194,10 @@ export function TakeBookingModal() {
         </div>
 
         <div className="mt-3.5 flex gap-2">
-          <Btn variant="primary" onClick={submit}>
+          <Button variant="primary" onClick={submit}>
             Send payment link &amp; create
-          </Btn>
-          <Btn onClick={dismiss}>Cancel</Btn>
+          </Button>
+          <Button onClick={dismiss}>Cancel</Button>
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTimetableStore } from "./store";
 import { buildAllDays } from "./engine";
 import { ActivityLibrary } from "./ActivityLibrary";
-import { FieldLabel, Panel, TBtn, TInput, TSelect, inputCls } from "./ui";
+import { FieldLabel, Panel, Button, Input, Select, inputCls } from "@/components/ui";
 
 const PILLS: [number, string, string][] = [
   [1, "Dates", "#3551c9"],
@@ -38,8 +38,8 @@ function TimeAdder({ onAdd }: { onAdd: (t: string) => void }) {
   const [v, setV] = useState("");
   return (
     <div className="flex gap-1.5">
-      <TInput type="time" value={v} onChange={(e) => setV(e.target.value)} className="max-w-[120px]" />
-      <TBtn
+      <Input type="time" value={v} onChange={(e) => setV(e.target.value)} className="max-w-[120px]" />
+      <Button
         onClick={() => {
           if (v) {
             onAdd(v);
@@ -48,7 +48,7 @@ function TimeAdder({ onAdd }: { onAdd: (t: string) => void }) {
         }}
       >
         + Add
-      </TBtn>
+      </Button>
     </div>
   );
 }
@@ -127,7 +127,7 @@ export function SetupWizard() {
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[230px] flex-1">
               <FieldLabel>Listing</FieldLabel>
-              <TSelect
+              <Select
                 value={s.listingIndex}
                 onChange={(e) => s.pickListing(+e.target.value)}
                 className="w-full"
@@ -137,15 +137,15 @@ export function SetupWizard() {
                     {l.name}
                   </option>
                 ))}
-              </TSelect>
+              </Select>
             </div>
             <div>
               <FieldLabel>From</FieldLabel>
-              <TInput type="date" value={s.dateFrom} onChange={(e) => s.setDates(e.target.value, s.dateTo)} />
+              <Input type="date" value={s.dateFrom} onChange={(e) => s.setDates(e.target.value, s.dateTo)} />
             </div>
             <div>
               <FieldLabel>To</FieldLabel>
-              <TInput type="date" value={s.dateTo} onChange={(e) => s.setDates(s.dateFrom, e.target.value)} />
+              <Input type="date" value={s.dateTo} onChange={(e) => s.setDates(s.dateFrom, e.target.value)} />
             </div>
           </div>
           <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
@@ -165,35 +165,35 @@ export function SetupWizard() {
           <div className="flex flex-wrap gap-4">
             <label>
               <FieldLabel>Day start</FieldLabel>
-              <TInput type="time" value={s.start} onChange={(e) => s.setField({ start: e.target.value })} />
+              <Input type="time" value={s.start} onChange={(e) => s.setField({ start: e.target.value })} />
             </label>
             <label>
               <FieldLabel>Day end</FieldLabel>
-              <TInput type="time" value={s.end} onChange={(e) => s.setField({ end: e.target.value })} />
+              <Input type="time" value={s.end} onChange={(e) => s.setField({ end: e.target.value })} />
             </label>
             <label>
               <FieldLabel>Breaks / day</FieldLabel>
-              <TSelect value={s.breaks} onChange={(e) => s.setField({ breaks: +e.target.value })}>
+              <Select value={s.breaks} onChange={(e) => s.setField({ breaks: +e.target.value })}>
                 {[1, 2, 3].map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
                 ))}
-              </TSelect>
+              </Select>
             </label>
             <label>
               <FieldLabel>Lunch start</FieldLabel>
-              <TInput type="time" value={s.lunch} onChange={(e) => s.setField({ lunch: e.target.value })} />
+              <Input type="time" value={s.lunch} onChange={(e) => s.setField({ lunch: e.target.value })} />
             </label>
             <label>
               <FieldLabel>Activities per day</FieldLabel>
-              <TSelect value={s.perDay} onChange={(e) => s.setField({ perDay: +e.target.value })}>
+              <Select value={s.perDay} onChange={(e) => s.setField({ perDay: +e.target.value })}>
                 {[4, 5, 6, 7, 8].map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
                 ))}
-              </TSelect>
+              </Select>
             </label>
             <div className="min-w-[210px]">
               <FieldLabel>Whole-camp activities at</FieldLabel>
@@ -291,13 +291,13 @@ export function SetupWizard() {
 
       {/* Wizard nav */}
       <div className="mt-3 flex justify-between">
-        <TBtn onClick={() => s.setWizStep(step - 1)} className={step <= 1 ? "invisible" : ""}>
+        <Button onClick={() => s.setWizStep(step - 1)} className={step <= 1 ? "invisible" : ""}>
           ← Back
-        </TBtn>
+        </Button>
         {step < 7 && (
-          <TBtn variant="solid" onClick={() => s.setWizStep(step + 1)}>
+          <Button variant="solid" onClick={() => s.setWizStep(step + 1)}>
             Next →
-          </TBtn>
+          </Button>
         )}
       </div>
     </div>
@@ -345,7 +345,7 @@ function Facilities() {
           placeholder="Add a space… (e.g. Tennis court)"
           className={`${inputCls} max-w-[220px]`}
         />
-        <TBtn
+        <Button
           onClick={() => {
             if (v.trim()) {
               addFac(v);
@@ -354,7 +354,7 @@ function Facilities() {
           }}
         >
           + Add
-        </TBtn>
+        </Button>
       </div>
     </div>
   );
@@ -397,21 +397,21 @@ function GroupsEditor() {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
-        <TInput
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Group name (e.g. Reds)"
           className="max-w-[160px]"
         />
-        <TInput
+        <Input
           value={band}
           onChange={(e) => setBand(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="Age band — optional"
           className="max-w-[150px]"
         />
-        <TBtn onClick={add}>+ Add group</TBtn>
+        <Button onClick={add}>+ Add group</Button>
       </div>
     </div>
   );
