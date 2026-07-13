@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
   if (!icon) return <span className="w-4 flex-none" />;
@@ -30,11 +31,14 @@ function Badge({ value }: { value: string | null }) {
   );
 }
 
+const itemCls =
+  "mx-2 flex items-center gap-2 rounded-lg px-3 py-2 font-medium no-underline hover:bg-[var(--side-hover)]";
+
 function NavLink({ item, portal, active }: { item: NavItem; portal: PortalKey; active: boolean }) {
   return (
     <Link
       href={`/${portal}/${item.view}`}
-      className="mx-2 flex items-center gap-2 rounded-lg px-3 py-2 font-medium no-underline hover:bg-[var(--side-hover)]"
+      className={itemCls}
       style={
         active
           ? { background: "var(--side-active)", color: "var(--side-aink)" }
@@ -45,6 +49,48 @@ function NavLink({ item, portal, active }: { item: NavItem; portal: PortalKey; a
       <span className="truncate">{item.label}</span>
       <Badge value={item.badge} />
     </Link>
+  );
+}
+
+// The nav config's `auth` items came from the prototype, where "Log out"
+// opened a MOCK sign-in screen with role-switch shortcuts. With real auth
+// they perform an actual Firebase sign-out instead — the legacy auth views
+// are never rendered.
+function SignOutItem({ item }: { item: NavItem }) {
+  const router = useRouter();
+  const { signOutUser } = useAuth();
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await signOutUser();
+        router.replace("/login");
+      }}
+      className={`${itemCls} w-[calc(100%-16px)] text-left`}
+      style={{ color: "var(--side-nav)" }}
+    >
+      <Icon icon={item.icon} />
+      <span className="truncate">{item.label}</span>
+    </button>
+  );
+}
+
+function GroupItems({ items, portal, pathname }: { items: NavItem[]; portal: PortalKey; pathname: string }) {
+  return (
+    <>
+      {items.map((item) =>
+        item.view === "auth" ? (
+          <SignOutItem key={item.view} item={item} />
+        ) : (
+          <NavLink
+            key={item.view}
+            item={item}
+            portal={portal}
+            active={pathname === `/${portal}/${item.view}`}
+          />
+        ),
+      )}
+    </>
   );
 }
 
@@ -76,9 +122,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              {group.items.map((item) => (
-                <NavLink key={item.view} item={item} portal={portal} active={pathname === `/${portal}/${item.view}`} />
-              ))}
+              <GroupItems items={group.items} portal={portal} pathname={pathname} />
             </div>
           );
         }
@@ -98,14 +142,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             </button>
             {open && (
               <div>
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.view}
-                    item={item}
-                    portal={portal}
-                    active={pathname === `/${portal}/${item.view}`}
-                  />
-                ))}
+                <GroupItems items={group.items} portal={portal} pathname={pathname} />
               </div>
             )}
           </div>

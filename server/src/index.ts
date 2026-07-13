@@ -7,15 +7,25 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
 import { requireAuth } from "./middleware/auth";
+import { attachRole } from "./middleware/role";
 import { bookings } from "./routes/bookings";
 import { customers } from "./routes/customers";
+import { invitePreview, invites } from "./routes/invites";
 import { listings } from "./routes/listings";
+import { my } from "./routes/my";
+import { platform } from "./routes/platform";
+import { registerRole } from "./routes/registerRole";
+import { me, tenants } from "./routes/tenants";
 
 const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN?.split(",") ?? ["http://localhost:3000"],
+    // 3001 included because Next falls back to it when 3000 is taken.
+    origin: process.env.CORS_ORIGIN?.split(",") ?? [
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ],
   }),
 );
 app.use(express.json());
@@ -28,10 +38,22 @@ const openapi = parseYaml(fs.readFileSync(path.resolve(here, "../openapi.yaml"),
 app.get("/openapi.json", (_req, res) => res.json(openapi));
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
 
-app.use("/api", requireAuth);
+// Public invite preview (GET /api/invites/:token) — the token is the
+// secret; a prospective franchise/staff member sees it before signing up.
+app.use("/api/invites", invitePreview);
+
+app.use("/api", requireAuth, attachRole);
+// Tenant scope is enforced inside each route from the authenticated account
+// (see middleware/role.ts — the client never sends its own scope).
 app.use("/api/bookings", bookings);
-app.use("/api/listings", listings);
 app.use("/api/customers", customers);
+app.use("/api/listings", listings);
+app.use("/api/my", my);
+app.use("/api/register-role", registerRole);
+app.use("/api/invites", invites);
+app.use("/api/tenants", tenants);
+app.use("/api/me", me);
+app.use("/api/platform", platform);
 
 // Surface async route errors as JSON 500s rather than hanging the request.
 // (Express identifies error middleware by its 4-arg signature, so the unused
@@ -48,3 +70,13 @@ const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
   console.log(`ActivityOS API listening on http://localhost:${port}`);
 });
+
+// Bootstrap the Platform (HQ) super-admin from env, if configured — so
+// setting ADMIN_EMAIL / ADMIN_PASSWORD in server/.env is all it takes.
+// Idempotent: an existing admin's password is never touched.
+if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+  import("./lib/ensureAdmin")
+    .then(({ ensureAdmin }) => ensureAdmin(process.env.ADMIN_EMAIL!, process.env.ADMIN_PASSWORD!))
+    .then((msg) => console.log(`[bootstrap] ${msg}`))
+    .catch((e) => console.error("[bootstrap] admin bootstrap failed:", e));
+}

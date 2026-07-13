@@ -1,14 +1,17 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.1.0
+  version: 0.3.0
   description: |
-    Express + Firestore backend for ActivityOS. Milestone 1 covers **bookings**
-    (freelancer / admin portals), plus read-only listings & customers.
+    Express + Firestore backend for ActivityOS — a **multi-tenant** platform
+    for children's activity providers. Milestone 3: real tenancy (providers
+    are isolated tenants), provisioning at signup, invite links, and
+    server-enforced isolation.
 
     ## Authentication
 
-    Every `/api/*` endpoint requires a **Firebase ID token**:
+    Every `/api/*` endpoint (except the invite preview) requires a
+    **Firebase ID token**:
 
     ```
     Authorization: Bearer <idToken>
@@ -26,28 +29,55 @@ info:
       ```
       → use the `idToken` from the response. Tokens expire after 1 hour.
 
-    ## Portals
+    ## Tenancy & roles (server-enforced)
 
-    Bookings are scoped per portal: `admin`, `fr` (franchise), `fl`
-    (freelancer). The same booking `ref` can exist in several portals as
-    independent records.
+    Every provider is a **tenant** with fully isolated data. The API derives
+    the caller's scope from the authenticated account — **there is no
+    tenant/portal parameter for operators to choose**; sending someone
+    else's ref simply yields 404.
+
+    | Role | How it's created | Bookings scope | Write? |
+    | --- | --- | --- | --- |
+    | `platform` | set-role CLI | any tenant (`?tenantId=` filter) | no (read-only) |
+    | `company` | signup (creates its tenant) | whole own tenant, incl. franchises | yes |
+    | `freelancer` | signup (creates its tenant) | whole own tenant | yes |
+    | `franchise` | invite link from a company | own franchise subset only | yes |
+    | `staff` | invite link from an operator | own tenant | no (read-only) |
+    | `parent` | signup | none — `/api/my/*` by token email | own bookings |
+
+    Account type is chosen ONCE (`POST /api/register-role` or invite accept);
+    afterwards only the `set-role` CLI can change it.
 
     ## Notes for UI builders
 
     - `answers` is an array of `[question, answer]` string pairs (tuples).
-    - Mutations return the **full updated booking** — replace your local copy
-      with it.
-    - No role-based authorization yet: any authenticated user can read/write
-      any portal's data.
-    - The API sends no emails; "payment link" wording in flows is aspirational
-      for now.
+    - Mutations return the **full updated booking** — replace your local copy.
+    - Prices are **server-side**: parents pick a listing + pass; the API
+      resolves the amount.
+    - `GET /api/me` tells you who the account is (role, tenant) — use it to
+      route to the right portal after sign-in.
+    - **Transactional emails are sent** to the booker on: booking created
+      (request-received for parents, payment-link for operator-taken
+      bookings), approve/promote, decline, refund-approve, and the `resend`
+      action. Without SMTP configured they go to a dev preview inbox
+      (URLs in the API log). Invite links are still shared manually.
+    - Payments (Stripe / Tax-Free Childcare) come in a later milestone —
+      parent bookings are created `Approval needed` / `Unpaid` and the
+      payment-link button in emails is a placeholder.
 servers:
   - url: http://localhost:4000
     description: Local development
 tags:
   - name: bookings
+    description: Operator bookings, scoped to the caller's tenant
+  - name: my
+    description: The signed-in parent's own bookings
   - name: listings
   - name: customers
+    description: Operator-only, tenant-scoped
+  - name: invites
+    description: How franchises and staff join a tenant
+  - name: tenants
   - name: meta
 
 security:
@@ -69,12 +99,84 @@ paths:
                 properties:
                   ok: { type: boolean }
 
+  /api/me:
+    get:
+      tags: [meta]
+      summary: Who am I
+      responses:
+        "200":
+          description: The signed-in account's role and tenant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string, nullable: true }
+                  role: { $ref: "#/components/schemas/Role" }
+                  tenantId: { type: string, nullable: true }
+                  tenantName: { type: string, nullable: true }
+                  franchiseId: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/register-role:
+    post:
+      tags: [meta]
+      summary: Provision this account (once, at signup)
+      description: |
+        `{role: "parent"}` → parent account.
+        `{role: "company"|"freelancer", businessName}` → **creates the
+        tenant** and links the account as its owner.
+        Locked after the first successful call (**409** afterwards).
+        `franchise`/`staff` cannot self-register — they join via invites.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [role]
+                  properties:
+                    role: { type: string, enum: [parent] }
+                - type: object
+                  required: [role, businessName]
+                  properties:
+                    role: { type: string, enum: [company, freelancer] }
+                    businessName: { type: string, example: Bright Kids Ltd }
+      responses:
+        "200":
+          description: Parent account set
+        "201":
+          description: Operator tenant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role: { type: string }
+                  tenantId: { type: string }
+                  tenantName: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Account type already set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /api/bookings:
     get:
       tags: [bookings]
-      summary: List a portal's bookings
+      summary: List bookings in the caller's scope
+      description: |
+        company/freelancer → whole tenant; franchise → own subset; staff →
+        tenant (read-only); platform → all tenants, optionally filtered.
       parameters:
-        - $ref: "#/components/parameters/portalQuery"
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only — filter to one tenant.
+          schema: { type: string }
       responses:
         "200":
           description: Bookings, newest ref first
@@ -83,15 +185,16 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Booking" }
-        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [bookings]
-      summary: Take a manual booking (provider books on a customer's behalf)
+      summary: Take a manual booking (into the caller's own tenant/franchise)
       description: |
-        Creates a **Confirmed** booking. Payment status is `Invoice sent`
-        (or `Funded` with `amount` forced to 0 when `method` contains "HAF").
-        The `ref`/`bid` are allocated server-side from a Firestore counter.
+        Creates a **Confirmed** booking (pay `Invoice sent`, or `Funded`
+        with amount 0 when `method` contains "HAF"). `ref`/`bid` come from
+        the tenant's own counter. Franchise accounts' bookings are stamped
+        with their `franchiseId`. Staff/platform: 403 (read-only).
       requestBody:
         required: true
         content:
@@ -105,20 +208,21 @@ paths:
               schema: { $ref: "#/components/schemas/Booking" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/bookings/bulk:
     post:
       tags: [bookings]
       summary: Apply a status action to many bookings at once
+      description: Refs outside the caller's scope are silently skipped.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [portal, refs, action]
+              required: [refs, action]
               properties:
-                portal: { $ref: "#/components/schemas/Portal" }
                 refs:
                   type: array
                   minItems: 1
@@ -129,7 +233,7 @@ paths:
                   enum: [approve, decline, waitlist, cancel]
       responses:
         "200":
-          description: The updated bookings (unknown refs are skipped silently)
+          description: The updated bookings
           content:
             application/json:
               schema:
@@ -137,22 +241,27 @@ paths:
                 items: { $ref: "#/components/schemas/Booking" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/bookings/{ref}:
     get:
       tags: [bookings]
-      summary: Get one booking
+      summary: Get one booking in the caller's scope
       parameters:
         - $ref: "#/components/parameters/refPath"
-        - $ref: "#/components/parameters/portalQuery"
+        - name: tenantId
+          in: query
+          required: false
+          description: Required for platform accounts (they have no tenant of their own).
+          schema: { type: string }
       responses:
         "200":
           description: The booking
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Booking" }
-        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/bookings/{ref}/actions:
@@ -162,7 +271,7 @@ paths:
       description: |
         One endpoint for every single-booking mutation, discriminated by
         `type`. Runs in a Firestore transaction and returns the updated
-        booking.
+        booking. Out-of-scope refs → 404. Read-only roles → 403.
 
         | `type` | Effect |
         | --- | --- |
@@ -173,37 +282,105 @@ paths:
         | `promote` | waitlist → Confirmed (+ note) |
         | `refund-approve` | cancel.refund → approved, pay → Refunded |
         | `refund-decline` | cancel.refund → declined |
-        | `cancel` | cancels whole booking, writes `cancel` record, sets pay by refund type |
-        | `cancel-child` | cancels one child (`ki` = index in `kids`), adds a refund-log entry |
-        | `cancel-day` | cancels one day for one child, adds a per-day refund-log entry |
+        | `resend` | no mutation — re-sends the payment-link email |
+        | `cancel` | cancels whole booking, writes `cancel` record |
+        | `cancel-child` | cancels one child (`ki` = index in `kids`) |
+        | `cancel-day` | cancels one day for one child |
         | `change-day` | moves one booked day to another date |
         | `note` | saves the mentor note |
       parameters:
         - $ref: "#/components/parameters/refPath"
-        - name: portal
-          in: query
-          required: false
-          description: Portal scope (may be given here or as `portal` in the body).
-          schema: { $ref: "#/components/schemas/Portal" }
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/BookingAction" }
             examples:
-              approve:
-                value: { type: approve }
-              cancelPartialRefund:
-                value: { type: cancel, refund: partial, amount: 50 }
-              cancelOneDay:
-                value: { type: cancel-day, ki: 0, date: "Tue 29 Jul" }
-              moveDay:
-                value: { type: change-day, ki: 0, oldDate: "Mon 28 Jul", newDate: "Fri 8 Aug" }
-              saveNote:
-                value: { type: note, text: "Parent called — arriving late Monday." }
+              approve: { value: { type: approve } }
+              cancelPartialRefund: { value: { type: cancel, refund: partial, amount: 50 } }
+              cancelOneDay: { value: { type: cancel-day, ki: 0, date: "Tue 29 Jul" } }
+              saveNote: { value: { type: note, text: "Parent called — arriving late Monday." } }
       responses:
         "200":
           description: The updated booking
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/my/bookings:
+    get:
+      tags: [my]
+      summary: The signed-in parent's bookings
+      description: All bookings (any provider) whose booker email matches the verified token.
+      responses:
+        "200":
+          description: The parent's bookings, newest ref first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Booking" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [my]
+      summary: Book a place (parent checkout)
+      description: |
+        Creates a booking **in the listing's tenant** with
+        `status: "Approval needed"` and `pay: "Unpaid"`. Booker name/email
+        come from the token; `amount` is resolved server-side from the
+        listing's pass price.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [listingId, pass, dates, child, age, method]
+              properties:
+                listingId: { type: string, example: lst-1 }
+                pass: { type: string, example: 4-day pass }
+                dates:
+                  type: string
+                  example: "Week 2 · 4 – 8 Aug 2027"
+                  description: One of the listing's `blocks`.
+                child: { type: string, example: Jack J }
+                age: { type: integer, example: 8 }
+                method: { type: string, enum: [Card, Tax-Free Childcare] }
+      responses:
+        "201":
+          description: The created booking (Approval needed / Unpaid)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Booking" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/my/bookings/{ref}/cancel:
+    post:
+      tags: [my]
+      summary: Request cancellation of one of my bookings
+      description: |
+        Parent-initiated cancellation **request**: `status: "Cancelled"`,
+        `cancel.by: "Booker"`, `cancel.refund: "pending"` — the provider
+        resolves it with `refund-approve`/`refund-decline`. Lookup is scoped
+        to the caller's email, so another family's ref is simply 404.
+      parameters:
+        - $ref: "#/components/parameters/refPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: The updated booking (refund pending)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Booking" }
@@ -214,7 +391,17 @@ paths:
   /api/listings:
     get:
       tags: [listings]
-      summary: List listings (read-only for now)
+      summary: List listings
+      description: |
+        Default: every tenant's listings with `tenantId` / `tenantName`
+        (feeds the parent Browse view; any authenticated user). With
+        `?mine=1`: only the caller's own tenant's listings (the operator
+        management view).
+      parameters:
+        - name: mine
+          in: query
+          required: false
+          schema: { type: string, enum: ["1"] }
       responses:
         "200":
           description: Listings ordered by name
@@ -224,11 +411,104 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/Listing" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [listings]
+      summary: Create a listing in the caller's own tenant
+      description: Operators with write access (company/freelancer/franchise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, passes, blocks]
+              properties:
+                name: { type: string, example: Autumn Multi-Sports Camp }
+                passes:
+                  type: array
+                  items:
+                    type: object
+                    required: [name, price]
+                    properties:
+                      name: { type: string, example: Day pass }
+                      price: { type: number, example: 42 }
+                blocks:
+                  type: array
+                  items: { type: string, example: "Week 1 · 27 – 31 Oct 2027" }
+      responses:
+        "201":
+          description: The created listing
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Listing" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/listings/{id}:
+    put:
+      tags: [listings]
+      summary: Update one of my tenant's listings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, passes, blocks]
+              properties:
+                name: { type: string }
+                passes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      price: { type: number }
+                blocks:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200":
+          description: The updated listing
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Listing" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [listings]
+      summary: Delete one of my tenant's listings
+      description: Past bookings keep their denormalised listing name.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/customers:
     get:
       tags: [customers]
-      summary: List customers/parents (read-only for now)
+      summary: List the caller's tenant's customers
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only — filter to one tenant.
+          schema: { type: string }
       responses:
         "200":
           description: Customers ordered by name
@@ -238,6 +518,188 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/Customer" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/invites:
+    get:
+      tags: [invites]
+      summary: List my tenant's invites
+      responses:
+        "200":
+          description: Invites, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Invite" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [invites]
+      summary: Create an invite link
+      description: |
+        Who may invite whom: **company** → franchise or staff;
+        **franchise / freelancer** → staff only. Share the returned URL —
+        the recipient signs up through it and joins the tenant.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [franchise, staff] }
+      responses:
+        "201":
+          description: The invite
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  url: { type: string, example: /signup?invite=abc123 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/invites/{token}:
+    get:
+      tags: [invites]
+      summary: Preview an invite (no auth — the token is the secret)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: What the invite is for
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role: { type: string, enum: [franchise, staff] }
+                  tenantName: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "410":
+          description: Invite already used
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/invites/{token}/accept:
+    post:
+      tags: [invites]
+      summary: Join the tenant (after creating an account)
+      description: |
+        Sets the account's role + tenant from the invite and burns the
+        token. 409 if the account already has a type.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role: { type: string }
+                  tenantId: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Account type already set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "410":
+          description: Invite already used
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/platform/overview:
+    get:
+      tags: [tenants]
+      summary: Platform-wide aggregates for the HQ dashboard (platform role only)
+      responses:
+        "200":
+          description: Live totals across every tenant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenants:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      byType:
+                        type: object
+                        properties:
+                          company: { type: integer }
+                          freelancer: { type: integer }
+                      recent:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            name: { type: string }
+                            type: { type: string }
+                            createdAt: { type: string }
+                  bookings:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      byStatus:
+                        type: object
+                        additionalProperties: { type: integer }
+                      bookedValue: { type: number }
+                      paidValue: { type: number }
+                      refundsPending: { type: integer }
+                  listings:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                  accounts:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      byRole:
+                        type: object
+                        additionalProperties: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/tenants:
+    get:
+      tags: [tenants]
+      summary: List every provider (platform role only)
+      responses:
+        "200":
+          description: Tenants, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    type: { type: string, enum: [company, freelancer] }
+                    createdAt: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
 components:
   securitySchemes:
@@ -248,11 +710,6 @@ components:
       description: Firebase ID token (see the Authentication section above).
 
   parameters:
-    portalQuery:
-      name: portal
-      in: query
-      required: true
-      schema: { $ref: "#/components/schemas/Portal" }
     refPath:
       name: ref
       in: path
@@ -271,17 +728,21 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: The account's role/tenant doesn't allow this
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     NotFound:
-      description: No booking with that ref in that portal
+      description: Not found (or outside the caller's tenant scope)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
-    Portal:
+    Role:
       type: string
-      enum: [admin, fr, fl]
-      description: admin = company HQ, fr = franchise, fl = freelancer.
+      enum: [platform, company, franchise, freelancer, staff, parent]
 
     Error:
       type: object
@@ -322,7 +783,7 @@ components:
         amount: { type: number }
         refundOnly:
           type: boolean
-          description: true when the booking was already in the past (refund without cancelling attendance).
+          description: true when the booking was already in the past.
 
     RefundLogEntry:
       type: object
@@ -340,13 +801,16 @@ components:
       properties:
         ref: { type: string, example: APF-10293 }
         bid: { type: string, example: "0307293" }
-        portal: { $ref: "#/components/schemas/Portal" }
+        tenantId: { type: string, description: The provider this booking belongs to. }
+        franchiseId:
+          type: string
+          description: Set when the booking belongs to a franchise within the tenant.
         booker: { type: string, example: Sarah Jones }
         email: { type: string, example: sarah.j@email.com }
         phone: { type: string }
         child:
           type: string
-          description: Primary child name (single-child bookings; multi-child bookings use `kids`).
+          description: Primary child name (multi-child bookings use `kids`).
         age: { type: number }
         dob: { type: string }
         kids:
@@ -364,12 +828,12 @@ components:
           enum: [Approval needed, Confirmed, Waitlisted, Cancelled, Declined]
         pay:
           type: string
-          description: Paid / Unpaid / Invoice sent / Refunded / Partially refunded / Funded (free-form string).
+          description: Paid / Unpaid / Invoice sent / Refunded / Partially refunded / Funded.
         method: { type: string, example: Card }
         amount: { type: number, example: 540 }
         addons:
           type: array
-          items: { type: string, example: "Lunch ×5 (£25)" }
+          items: { type: string }
         answers:
           type: array
           description: Checkout Q&A as [question, answer] string pairs.
@@ -378,31 +842,21 @@ components:
             minItems: 2
             maxItems: 2
             items: { type: string }
-          example: [["Can your child swim 25m?", "No"]]
         note: { type: string }
-        recon:
-          type: boolean
-          nullable: true
-          description: Reconciliation flag (null = not applicable).
-        evid:
-          type: string
-          nullable: true
-          description: Funding-evidence state for HAF bookings.
+        recon: { type: boolean, nullable: true }
+        evid: { type: string, nullable: true }
         cancel:
           nullable: true
           allOf: [{ $ref: "#/components/schemas/CancelInfo" }]
-        past:
-          type: boolean
-          description: Booking dates already happened.
+        past: { type: boolean }
         refundLog:
           type: array
           items: { $ref: "#/components/schemas/RefundLogEntry" }
 
     CreateBookingInput:
       type: object
-      required: [portal, booker, email, child, age, listing, pass, dates, amount, method]
+      required: [booker, email, child, age, listing, pass, dates, amount, method]
       properties:
-        portal: { $ref: "#/components/schemas/Portal" }
         booker: { type: string, example: Test Parent }
         email: { type: string, example: tp@test.com }
         child: { type: string, example: Kid T }
@@ -424,29 +878,27 @@ components:
           properties:
             type:
               type: string
-              enum: [approve, decline, paid, recon, promote, refund-approve, refund-decline]
+              enum: [approve, decline, paid, recon, promote, refund-approve, refund-decline, resend]
         - title: Cancel booking
           type: object
           required: [type, refund]
           properties:
             type: { type: string, enum: [cancel] }
             refund: { type: string, enum: [full, partial, none] }
-            amount:
-              type: number
-              description: Refund amount — required in spirit when refund=partial.
+            amount: { type: number }
         - title: Cancel one child
           type: object
           required: [type, ki]
           properties:
             type: { type: string, enum: [cancel-child] }
-            ki: { type: integer, description: Index into `kids` }
+            ki: { type: integer }
         - title: Cancel one day
           type: object
           required: [type, ki, date]
           properties:
             type: { type: string, enum: [cancel-day] }
             ki: { type: integer }
-            date: { type: string, example: "Tue 29 Jul" }
+            date: { type: string }
         - title: Move a day
           type: object
           required: [type, ki, oldDate, newDate]
@@ -469,9 +921,16 @@ components:
       properties:
         id: { type: string, example: lst-1 }
         name: { type: string, example: Summer Holiday Camp 2027 }
+        tenantId: { type: string, example: apf-demo }
+        tenantName: { type: string, example: APF Activity Camps }
         passes:
           type: array
-          items: { type: string }
+          items:
+            type: object
+            required: [name, price]
+            properties:
+              name: { type: string, example: 4-day pass }
+              price: { type: number, example: 160 }
         blocks:
           type: array
           items: { type: string, example: "Week 1 · 28 Jul – 1 Aug 2027" }
@@ -480,6 +939,7 @@ components:
       type: object
       properties:
         id: { type: string, example: cust-1 }
+        tenantId: { type: string }
         name: { type: string }
         email: { type: string }
         phone: { type: string }
@@ -491,3 +951,11 @@ components:
               name: { type: string }
               age: { type: number }
               dob: { type: string }
+
+    Invite:
+      type: object
+      properties:
+        token: { type: string }
+        role: { type: string, enum: [franchise, staff] }
+        createdAt: { type: string }
+        usedBy: { type: string, nullable: true }

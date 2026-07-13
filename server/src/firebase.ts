@@ -6,26 +6,27 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 // Credential resolution order:
-//   1. GOOGLE_APPLICATION_CREDENTIALS (standard Admin SDK env var — path to a
+//   1. Emulator mode (FIRESTORE_EMULATOR_HOST set) — no real credentials are
+//      loaded even if a service-account key exists, so an emulator run can
+//      never mix project ids with (or touch) the real project.
+//   2. GOOGLE_APPLICATION_CREDENTIALS (standard Admin SDK env var — path to a
 //      service-account JSON)
-//   2. server/serviceAccountKey.json (gitignored; drop the key from the
+//   3. server/serviceAccountKey.json (gitignored; drop the key from the
 //      Firebase console → Project settings → Service accounts here)
-//   3. No credential (works against the Firebase emulators, where
-//      FIRESTORE_EMULATOR_HOST / FIREBASE_AUTH_EMULATOR_HOST are set)
 const here = path.dirname(fileURLToPath(import.meta.url));
 const keyPath = path.resolve(here, "../serviceAccountKey.json");
 
 const usingEmulator = !!process.env.FIRESTORE_EMULATOR_HOST;
 
 const options: AppOptions = {};
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+if (usingEmulator) {
+  options.projectId = process.env.FIREBASE_PROJECT_ID || "demo-activityos";
+} else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   // Admin SDK reads the env var itself; nothing to configure.
 } else if (fs.existsSync(keyPath)) {
   const key = JSON.parse(fs.readFileSync(keyPath, "utf8"));
   options.credential = cert(key);
   options.projectId = key.project_id;
-} else if (usingEmulator) {
-  options.projectId = process.env.FIREBASE_PROJECT_ID || "demo-activityos";
 } else {
   throw new Error(
     "No Firebase credentials found. Set GOOGLE_APPLICATION_CREDENTIALS, " +

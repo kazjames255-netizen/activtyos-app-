@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import type { BookingPortal } from "./types";
 import { useBookingsStore } from "./store";
 import { BookingsList } from "./BookingsList";
 import { BookingDetail } from "./BookingDetail";
 import { TakeBookingModal } from "./TakeBookingModal";
 
 /**
- * Root of the migrated Bookings view (registered per portal in
- * lib/view-registry.tsx). Data comes from the Express API / Firestore —
- * `portal` selects which portal's dataset is loaded.
+ * Root of the migrated Bookings view (registered in lib/view-registry.tsx
+ * for every operator portal). The API scopes the data to the signed-in
+ * account's tenant — the same component works for company, franchise and
+ * freelancer accounts.
  */
-export function BookingsApp({ portal }: { portal: BookingPortal }) {
-  const init = useBookingsStore((s) => s.init);
+export function BookingsApp() {
+  const refresh = useBookingsStore((s) => s.refresh);
   const loading = useBookingsStore((s) => s.loading);
   const error = useBookingsStore((s) => s.error);
   const openRef = useBookingsStore((s) => s.openRef);
@@ -21,7 +21,7 @@ export function BookingsApp({ portal }: { portal: BookingPortal }) {
     openRef ? s.bookings.find((b) => b.ref === openRef) : null,
   );
 
-  useEffect(() => init(portal), [init, portal]);
+  useEffect(() => void refresh(), [refresh]);
 
   return (
     <div className="text-[var(--ink)]">

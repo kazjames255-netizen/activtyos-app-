@@ -1,8 +1,15 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { canWrite, operatorScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
-import type { Booking, BookingPortal } from "../../../features/bookings/types";
+import {
+  emailBookingConfirmed,
+  emailBookingDeclined,
+  emailPaymentLink,
+  emailRefundApproved,
+} from "../lib/emails";
+import type { Booking } from "../../../features/bookings/types";
 import {
   applyBulkAction,
   applyCancel,
@@ -14,12 +21,17 @@ import {
   buildBooking,
 } from "../../../features/bookings/mutations";
 
+// Operator bookings API. There is NO portal/tenant parameter — the scope is
+// derived from the authenticated account (multi-tenant isolation is enforced
+// here, server-side):
+//   platform            → any tenant (optional ?tenantId= filter), read-only
+//   company/freelancer  → their whole tenant
+//   franchise           → their tenant AND their own franchiseId subset
+//   staff               → their tenant, read-only
 export const bookings = Router();
 
 const col = db.collection("bookings");
-const counters = db.collection("meta").doc("counters");
-
-const portalSchema = z.enum(["admin", "fr", "fl"]);
+const tenantsCol = db.collection("tenants");
 
 const actionSchema = z.discriminatedUnion("type", [
   z.object({
@@ -31,6 +43,8 @@ const actionSchema = z.discriminatedUnion("type", [
       "promote",
       "refund-approve",
       "refund-decline",
+      // resend mutates nothing — it re-sends the payment-link email
+      "resend",
     ]),
   }),
   z.object({
@@ -54,7 +68,6 @@ const actionSchema = z.discriminatedUnion("type", [
 ]);
 
 const createSchema = z.object({
-  portal: portalSchema,
   booker: z.string().min(1),
   email: z.string().min(1),
   child: z.string(),
@@ -67,84 +80,136 @@ const createSchema = z.object({
 });
 
 const bulkSchema = z.object({
-  portal: portalSchema,
   refs: z.array(z.string().min(1)).min(1),
   action: z.enum(["approve", "decline", "waitlist", "cancel"]),
 });
 
-// Doc ids are `${portal}_${ref}` so the same booking ref can exist in several
-// portals' datasets (the seed duplicates the legacy records per portal).
-const docId = (portal: BookingPortal, ref: string) => `${portal}_${ref}`;
+export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${ref}`;
 
-// GET /api/bookings?portal=fl
-bookings.get("/", async (req, res) => {
-  const portal = portalSchema.safeParse(req.query.portal);
-  if (!portal.success) {
-    res.status(400).json({ error: "portal query param must be admin|fr|fl" });
-    return;
+// Is this booking doc inside the caller's scope?
+function inScope(
+  b: { tenantId?: string; franchiseId?: string },
+  scope: { role: string; tenantId: string | null; franchiseId: string | null },
+): boolean {
+  if (scope.role === "platform") return true;
+  if (b.tenantId !== scope.tenantId) return false;
+  if (scope.role === "franchise") return b.franchiseId === scope.franchiseId;
+  return true;
+}
+
+function requireWrite(req: Request, res: Response): boolean {
+  if (!canWrite(req.auth!.role)) {
+    res.status(403).json({ error: "Your account is read-only for bookings" });
+    return false;
   }
-  const snap = await col.where("portal", "==", portal.data).get();
+  return true;
+}
+
+// GET /api/bookings
+bookings.get("/", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope) return;
+
+  let q = col as FirebaseFirestore.Query;
+  if (scope.role === "platform") {
+    const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
+    if (tenantFilter) q = q.where("tenantId", "==", tenantFilter);
+  } else {
+    q = q.where("tenantId", "==", scope.tenantId);
+    if (scope.role === "franchise") q = q.where("franchiseId", "==", scope.franchiseId);
+  }
+
+  const snap = await q.get();
   const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
-  // Stable order: newest ref first (matches legacy unshift-on-create feel).
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   res.json(list);
 });
 
-// GET /api/bookings/:ref?portal=fl
+// GET /api/bookings/:ref
 bookings.get("/:ref", async (req, res) => {
-  const portal = portalSchema.safeParse(req.query.portal);
-  if (!portal.success) {
-    res.status(400).json({ error: "portal query param must be admin|fr|fl" });
+  const scope = operatorScope(req, res);
+  if (!scope) return;
+  // Platform must pass ?tenantId= to address a specific tenant's booking.
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) {
+    res.status(400).json({ error: "tenantId query param required for platform accounts" });
     return;
   }
-  const doc = await col.doc(docId(portal.data, req.params.ref)).get();
-  if (!doc.exists) {
+  const doc = await col.doc(bookingDocId(tenantId, req.params.ref)).get();
+  if (!doc.exists || !inScope(doc.data() as BookingDoc, scope)) {
     res.status(404).json({ error: "Booking not found" });
     return;
   }
   res.json(fromDoc(doc.data() as BookingDoc));
 });
 
-// POST /api/bookings — take a manual booking
+// POST /api/bookings — take a manual booking (into the caller's own scope)
 bookings.post("/", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const { portal, ...input } = parsed.data;
+  const input = parsed.data;
+  const tenantId = scope.tenantId!;
+  const tenantRef = tenantsCol.doc(tenantId);
 
+  let tenantName = "Your activity provider";
   const booking = await db.runTransaction(async (tx) => {
-    const counterSnap = await tx.get(counters);
-    const nextBid: number = counterSnap.exists ? counterSnap.data()!.nextBid : 10312;
-    const b: Booking = { ...buildBooking(input, nextBid), portal };
-    tx.set(counters, { nextBid: nextBid + 1 }, { merge: true });
-    tx.set(col.doc(docId(portal, b.ref)), toDoc(b));
+    const tenantSnap = await tx.get(tenantRef);
+    if (!tenantSnap.exists) throw new NotFound();
+    tenantName = tenantSnap.data()!.name ?? tenantName;
+    const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
+    const b: Booking = {
+      ...buildBooking(input, nextBid),
+      tenantId,
+      ...(scope.role === "franchise" ? { franchiseId: scope.franchiseId! } : {}),
+    };
+    tx.update(tenantRef, { nextBid: nextBid + 1 });
+    tx.set(col.doc(bookingDocId(tenantId, b.ref)), toDoc(b));
     return b;
   });
+
+  // Manual bookings sit as "Invoice sent" until paid — the booker gets the
+  // payment-link email the UI has always promised.
+  if (booking.email.includes("@")) emailPaymentLink(booking, tenantName);
 
   res.status(201).json(booking);
 });
 
 // POST /api/bookings/:ref/actions — every single-booking mutation
 bookings.post("/:ref/actions", async (req, res) => {
-  const portal = portalSchema.safeParse(req.query.portal ?? req.body.portal);
-  if (!portal.success) {
-    res.status(400).json({ error: "portal must be admin|fr|fl" });
-    return;
-  }
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
   const parsed = actionSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
   const action = parsed.data;
-  const ref = col.doc(docId(portal.data, req.params.ref));
+  const ref = col.doc(bookingDocId(scope.tenantId!, req.params.ref));
+
+  const tenantName = async () => {
+    const t = await tenantsCol.doc(scope.tenantId!).get();
+    return t.exists ? ((t.data()!.name as string) ?? "Your activity provider") : "Your activity provider";
+  };
 
   try {
+    // "resend" mutates nothing — just re-send the payment-link email.
+    if (action.type === "resend") {
+      const snap = await ref.get();
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (b.email.includes("@")) emailPaymentLink(b, await tenantName());
+      res.json(b);
+      return;
+    }
+
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists) throw new NotFound();
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
 
       switch (action.type) {
@@ -164,12 +229,22 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyNote(b, action.text);
           break;
         default:
-          applyRowAction(b, action.type);
+          // "resend" returned early above, so only real row actions reach here.
+          applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
       }
 
       tx.set(ref, toDoc(b));
       return b;
     });
+
+    // Status-change emails to the booker (fire-and-forget).
+    if (updated.email.includes("@")) {
+      if (action.type === "approve" || action.type === "promote")
+        emailBookingConfirmed(updated, await tenantName());
+      else if (action.type === "decline") emailBookingDeclined(updated, await tenantName());
+      else if (action.type === "refund-approve") emailRefundApproved(updated, await tenantName());
+    }
+
     res.json(updated);
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
@@ -179,17 +254,21 @@ bookings.post("/:ref/actions", async (req, res) => {
 
 // POST /api/bookings/bulk
 bookings.post("/bulk", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
   const parsed = bulkSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const { portal, refs, action } = parsed.data;
+  const { refs, action } = parsed.data;
   const updated = await db.runTransaction(async (tx) => {
-    const snaps = await Promise.all(refs.map((r) => tx.get(col.doc(docId(portal, r)))));
+    const snaps = await Promise.all(
+      refs.map((r) => tx.get(col.doc(bookingDocId(scope.tenantId!, r)))),
+    );
     const out: Booking[] = [];
     for (const snap of snaps) {
-      if (!snap.exists) continue;
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
       applyBulkAction(b, action);
       tx.set(snap.ref, toDoc(b));

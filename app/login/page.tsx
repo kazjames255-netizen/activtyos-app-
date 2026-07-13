@@ -1,18 +1,52 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { fetchRoleHome } from "@/lib/roles";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  async function resetPassword() {
+    setError(null);
+    setNotice(null);
+    if (!email) {
+      setError("Enter your email first, then click “Forgot password?”.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email);
+      setNotice(`Password-reset email sent to ${email} — check your inbox.`);
+    } catch {
+      setError("Couldn't send the reset email — check the address.");
+    }
+  }
+
+  // Route to the account's home portal: an explicit ?next= wins, otherwise
+  // ask the API who this account is (platform → Providers, company → its
+  // Bookings, parent → Browse, …).
+  async function goHome() {
+    const next = params.get("next");
+    router.replace(next || (await fetchRoleHome()));
+  }
+
+  // Already signed in (e.g. revisiting /login)? Skip the form.
+  useEffect(() => {
+    if (!loading && user && !busy) void goHome();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,7 +54,7 @@ function LoginForm() {
     setBusy(true);
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
-      router.replace(params.get("next") || "/");
+      await goHome();
     } catch {
       setError("Sign-in failed — check your email and password.");
       setBusy(false);
@@ -46,7 +80,16 @@ function LoginForm() {
           />
         </div>
         <div>
-          <FieldLabel>Password</FieldLabel>
+          <div className="flex items-baseline justify-between">
+            <FieldLabel>Password</FieldLabel>
+            <button
+              type="button"
+              onClick={resetPassword}
+              className="text-[11.5px] font-bold text-[var(--brand-2)]"
+            >
+              Forgot password?
+            </button>
+          </div>
           <Input
             type="password"
             required
@@ -57,10 +100,17 @@ function LoginForm() {
           />
         </div>
         {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
+        {notice && <div className="text-[12.5px] text-[var(--green,#15b364)]">{notice}</div>}
         <Button variant="solid" type="submit" disabled={busy} className="mt-1">
           {busy ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+      <p className="mt-4 text-[12.5px] text-[var(--ink-3)]">
+        New here?{" "}
+        <Link href="/signup" className="font-bold text-[var(--brand-2)]">
+          Create an account
+        </Link>
+      </p>
     </Card>
   );
 }

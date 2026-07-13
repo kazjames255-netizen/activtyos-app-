@@ -20,7 +20,7 @@ const METHODS = ["Card", "Tax-Free Childcare", "HAF (funded £0)", "PayPal"];
 interface Listing {
   id: string;
   name: string;
-  passes: string[];
+  passes: { name: string; price: number }[];
   blocks: string[];
 }
 
@@ -56,8 +56,9 @@ export function TakeBookingModal() {
         setF((prev) => ({
           ...prev,
           listing: ls[0].name,
-          pass: ls[0].passes[0] ?? prev.pass,
+          pass: ls[0].passes[0]?.name ?? prev.pass,
           dates: ls[0].blocks[0] ?? prev.dates,
+          amount: ls[0].passes[0] ? String(ls[0].passes[0].price) : prev.amount,
         }));
       })
       .catch(() => {
@@ -69,7 +70,7 @@ export function TakeBookingModal() {
 
   const current = listings?.find((l) => l.name === f.listing);
   const listingNames = listings?.map((l) => l.name) ?? LISTINGS;
-  const passes = current?.passes?.length ? current.passes : PASSES;
+  const passes = current?.passes?.length ? current.passes.map((p) => p.name) : PASSES;
   const blocks = current?.blocks?.length ? current.blocks : BLOCKS;
 
   const dismiss = () => {
@@ -98,13 +99,20 @@ export function TakeBookingModal() {
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((prev) => {
       const next = { ...prev, [k]: e.target.value };
-      // Changing listing resets pass/block to that listing's options.
+      // Changing listing resets pass/block to that listing's options;
+      // changing either autofills the amount from the pass price.
       if (k === "listing" && listings) {
         const l = listings.find((x) => x.name === e.target.value);
         if (l) {
-          next.pass = l.passes[0] ?? next.pass;
+          next.pass = l.passes[0]?.name ?? next.pass;
           next.dates = l.blocks[0] ?? next.dates;
+          if (l.passes[0]) next.amount = String(l.passes[0].price);
         }
+      }
+      if (k === "pass" && listings) {
+        const l = listings.find((x) => x.name === next.listing);
+        const p = l?.passes.find((x) => x.name === e.target.value);
+        if (p) next.amount = String(p.price);
       }
       return next;
     });

@@ -3,6 +3,7 @@ import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
 import { RequireAuth } from "@/components/auth/AuthProvider";
+import { PortalGuard } from "@/components/auth/PortalGuard";
 
 export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
   const { portal } = await props.params;
@@ -11,13 +12,15 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
 
   return (
     <RequireAuth>
-      <div className="flex h-screen">
-        <Sidebar portal={portalKey} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header portal={portalKey} />
-          <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)]">{props.children}</main>
+      <PortalGuard portal={portalKey}>
+        <div className="flex h-screen">
+          <Sidebar portal={portalKey} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Header portal={portalKey} />
+            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)]">{props.children}</main>
+          </div>
         </div>
-      </div>
+      </PortalGuard>
     </RequireAuth>
   );
 }

@@ -136,6 +136,19 @@ export function applyNote(b: Booking, text: string): void {
   b.note = text;
 }
 
+// Parent-initiated cancellation: a REQUEST, not a provider cancel. The refund
+// sits "pending" until the provider uses refund-approve / refund-decline
+// (applyRowAction above) — matching the legacy "cancelled by Booker" records.
+export function applyParentCancel(b: Booking, msg?: string): void {
+  b.status = "Cancelled";
+  b.cancel = {
+    on: nowStr(),
+    by: "Booker",
+    refund: "pending",
+    msg: msg || "Cancelled by the parent.",
+  };
+}
+
 export function buildBooking(input: CreateBookingInput, bid: number): Booking {
   const haf = input.method.indexOf("HAF") > -1;
   return {

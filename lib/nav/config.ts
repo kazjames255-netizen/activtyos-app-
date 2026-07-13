@@ -10,7 +10,7 @@
 // We fold those into a synthesized "More" group here so every view stays
 // reachable from the sidebar, matching this app's full-navigability goal.
 
-export type PortalKey = "admin" | "franchise" | "freelancer" | "staff" | "custdash" | "platform";
+export type PortalKey = "company" | "franchise" | "freelancer" | "staff" | "custdash" | "platform";
 
 export type NavIcon = { type: "glyph"; value: string } | { type: "svg"; markup: string };
 
@@ -32,10 +32,21 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export const PORTALS: PortalKey[] = ["admin", "franchise", "freelancer", "staff", "custdash", "platform"];
+export const PORTALS: PortalKey[] = ["company", "franchise", "freelancer", "staff", "custdash", "platform"];
+
+// The legacy prototype's internal portal ids (its kiosk mode expects these —
+// it predates the admin→company rename).
+export const LEGACY_PORTAL_ID: Record<PortalKey, string> = {
+  company: "admin",
+  franchise: "franchise",
+  freelancer: "freelancer",
+  staff: "staff",
+  custdash: "custdash",
+  platform: "platform",
+};
 
 export const PORTAL_LABELS: Record<PortalKey, string> = {
-  admin: "Company admin",
+  company: "Company / Head Office",
   franchise: "Franchise",
   freelancer: "Freelancer",
   staff: "Staff",
@@ -44,7 +55,7 @@ export const PORTAL_LABELS: Record<PortalKey, string> = {
 };
 
 export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
-  admin: [
+  company: [
     {
       label: null,
       pinned: true,

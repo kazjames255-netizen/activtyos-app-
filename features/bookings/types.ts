@@ -45,14 +45,13 @@ export interface RefundLogEntry {
   source?: string;
 }
 
-// Which portal's dataset a booking belongs to (Firestore field; the legacy
-// prototype shared one dataset, the real backend scopes per portal).
-export type BookingPortal = "admin" | "fr" | "fl";
-
 export interface Booking {
   ref: string;
   bid: string;
-  portal?: BookingPortal;
+  /** The provider (tenant) this booking belongs to — stamped server-side. */
+  tenantId?: string;
+  /** Set when the booking belongs to a franchise within the tenant. */
+  franchiseId?: string;
   booker: string;
   email: string;
   phone: string;

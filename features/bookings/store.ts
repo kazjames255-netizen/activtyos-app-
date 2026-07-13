@@ -1,20 +1,20 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Booking, BookingFilter, BookingPortal } from "./types";
+import type { Booking, BookingFilter } from "./types";
 import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mutations";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 
 // The store no longer owns booking mutations — every change is a call to the
 // Express API (which runs the shared logic from ./mutations inside a
 // Firestore transaction) followed by applying the server's returned record.
-// Only transient view state (_cancelling, _refundType, _chgKi, _chgDt) is
-// mutated locally.
+// The API derives the tenant scope from the signed-in account, so there is
+// no portal/tenant parameter anywhere here. Only transient view state
+// (_cancelling, _refundType, _chgKi, _chgDt) is mutated locally.
 
 type UiRowAction = RowAction | "resend";
 type UiBulkAction = BulkAction | "email" | "export";
 
 interface BookingsState {
-  portal: BookingPortal | null;
   bookings: Booking[];
   loading: boolean;
   error: string | null;
@@ -25,7 +25,6 @@ interface BookingsState {
   openRef: string | null;
   showCreate: boolean;
 
-  init: (portal: BookingPortal) => void;
   refresh: () => Promise<void>;
 
   setFilter: (f: BookingFilter) => void;
@@ -84,11 +83,9 @@ export const useBookingsStore = create<BookingsState>()(
       }
     };
 
-    const actionsUrl = (ref: string) =>
-      `/api/bookings/${encodeURIComponent(ref)}/actions?portal=${get().portal}`;
+    const actionsUrl = (ref: string) => `/api/bookings/${encodeURIComponent(ref)}/actions`;
 
     return {
-      portal: null,
       bookings: [],
       loading: false,
       error: null,
@@ -99,23 +96,10 @@ export const useBookingsStore = create<BookingsState>()(
       openRef: null,
       showCreate: false,
 
-      init: (portal) => {
-        if (get().portal === portal && (get().bookings.length || get().loading)) return;
-        set((s) => {
-          s.portal = portal;
-          s.bookings = [];
-          s.openRef = null;
-          s.selected = {};
-        });
-        void get().refresh();
-      },
-
       refresh: async () => {
-        const portal = get().portal;
-        if (!portal) return;
         set((s) => void (s.loading = true));
         try {
-          const list = await apiGet<Booking[]>(`/api/bookings?portal=${portal}`);
+          const list = await apiGet<Booking[]>(`/api/bookings`);
           set((s) => {
             s.bookings = list;
             s.loading = false;
@@ -147,11 +131,7 @@ export const useBookingsStore = create<BookingsState>()(
           return;
         }
         void run(async () => {
-          const updated = await apiPost<Booking[]>(`/api/bookings/bulk`, {
-            portal: get().portal,
-            refs,
-            action,
-          });
+          const updated = await apiPost<Booking[]>(`/api/bookings/bulk`, { refs, action });
           updated.forEach(applyServer);
           set((s) => void (s.selected = {}));
         });
@@ -168,13 +148,12 @@ export const useBookingsStore = create<BookingsState>()(
       close: () => set((s) => void (s.openRef = null)),
 
       act: (ref, action) => {
-        if (action === "resend") {
-          const b = get().bookings.find((x) => x.ref === ref);
-          if (b) setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);
-          return;
-        }
         void run(async () => {
           applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action }));
+          if (action === "resend") {
+            const b = get().bookings.find((x) => x.ref === ref);
+            if (b) setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);
+          }
         });
       },
 
@@ -262,10 +241,7 @@ export const useBookingsStore = create<BookingsState>()(
       openCreate: () => set((s) => void (s.showCreate = true)),
       createBooking: (input) =>
         void run(async () => {
-          const created = await apiPost<Booking>(`/api/bookings`, {
-            ...input,
-            portal: get().portal,
-          });
+          const created = await apiPost<Booking>(`/api/bookings`, input);
           set((s) => {
             s.bookings.unshift(created);
             s.filter = "all";
