@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, SectionHead } from "@/components/ui";
 
@@ -9,21 +10,19 @@ interface Listing {
   id: string;
   name: string;
   passes: { name: string; price: number }[];
-  blocks: string[];
+  blocks: { id: string; name: string; spotsLeft: number; capacity: number; open: boolean }[];
 }
 
 interface Draft {
   id: string | null; // null = creating
   name: string;
   passes: { name: string; price: string }[];
-  blocks: string[];
 }
 
 const EMPTY_DRAFT: Draft = {
   id: null,
   name: "",
   passes: [{ name: "Day pass", price: "" }],
-  blocks: [""],
 };
 
 function ListingForm({ draft, onDone }: { draft: Draft; onDone: (changed: boolean) => void }) {
@@ -36,14 +35,13 @@ function ListingForm({ draft, onDone }: { draft: Draft; onDone: (changed: boolea
     const passes = d.passes
       .filter((p) => p.name.trim())
       .map((p) => ({ name: p.name.trim(), price: parseFloat(p.price) || 0 }));
-    const blocks = d.blocks.map((b) => b.trim()).filter(Boolean);
-    if (!d.name.trim() || !passes.length || !blocks.length) {
-      setError("A listing needs a name, at least one pass and at least one block of dates.");
+    if (!d.name.trim() || !passes.length) {
+      setError("A listing needs a name and at least one pass.");
       return;
     }
     setBusy(true);
     try {
-      const body = { name: d.name.trim(), passes, blocks };
+      const body = { name: d.name.trim(), passes };
       if (d.id) await api(`/api/listings/${encodeURIComponent(d.id)}`, { method: "PUT", body: JSON.stringify(body) });
       else await apiPost("/api/listings", body);
       onDone(true);
@@ -105,26 +103,9 @@ function ListingForm({ draft, onDone }: { draft: Draft; onDone: (changed: boolea
           </Button>
         </div>
 
-        <div>
-          <FieldLabel>Blocks / dates</FieldLabel>
-          {d.blocks.map((b, i) => (
-            <div key={i} className="mb-1.5 flex gap-1.5">
-              <Input
-                value={b}
-                onChange={(e) => upd({ blocks: d.blocks.map((x, j) => (j === i ? e.target.value : x)) })}
-                placeholder="e.g. Week 1 · 28 Jul – 1 Aug 2027"
-                className="flex-1"
-              />
-              {d.blocks.length > 1 && (
-                <Button sm type="button" onClick={() => upd({ blocks: d.blocks.filter((_, j) => j !== i) })}>
-                  ✕
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button sm type="button" onClick={() => upd({ blocks: [...d.blocks, ""] })}>
-            + Add block
-          </Button>
+        <div className="text-[11.5px] text-[var(--ink-3)]">
+          Blocks (dates, capacity &amp; sessions) are managed in{" "}
+          <b>Sessions &amp; blocks</b> — via the Blocks API until that page ships.
         </div>
 
         {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
@@ -158,6 +139,7 @@ export function ListingsApp() {
   }, []);
 
   useEffect(refresh, [refresh]);
+  useRealtime(["listings", "blocks"], refresh);
 
   async function remove(l: Listing) {
     if (!confirm(`Delete "${l.name}"? Parents will no longer be able to book it.`)) return;
@@ -224,7 +206,6 @@ export function ListingsApp() {
                         id: l.id,
                         name: l.name,
                         passes: l.passes.map((p) => ({ name: p.name, price: String(p.price) })),
-                        blocks: [...l.blocks],
                       })
                     }
                   >
@@ -246,11 +227,23 @@ export function ListingsApp() {
                 ))}
               </div>
               <SectionHead>Blocks</SectionHead>
-              {l.blocks.map((b) => (
-                <div key={b} className="border-b border-dashed border-[var(--line)] py-[3px] text-[12.5px]">
-                  {b}
+              {l.blocks.length === 0 ? (
+                <div className="py-[3px] text-[12px] text-[var(--ink-3)]">
+                  No blocks yet — parents can’t book until one exists (Blocks API).
                 </div>
-              ))}
+              ) : (
+                l.blocks.map((b) => (
+                  <div
+                    key={b.id}
+                    className="flex items-center justify-between border-b border-dashed border-[var(--line)] py-[3px] text-[12.5px]"
+                  >
+                    <span>{b.name}</span>
+                    <span className="text-[11px] font-bold text-[var(--ink-3)]">
+                      {!b.open ? "closed" : `${b.spotsLeft}/${b.capacity} free`}
+                    </span>
+                  </div>
+                ))
+              )}
             </Card>
           ))}
         </div>

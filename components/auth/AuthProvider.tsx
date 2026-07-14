@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -51,10 +51,19 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  // Tracks whether a user was signed in while this page was open. If so, a
+  // user->null transition is an intentional sign-out — redirect WITHOUT a
+  // ?next return-path, so the next (possibly different) account isn't sent
+  // back to this account's page. `next` is only for cold unauthenticated
+  // arrivals (deep links / expired sessions).
+  const hadUser = useRef(false);
+  useEffect(() => {
+    if (user) hadUser.current = true;
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(hadUser.current ? "/login" : `/login?next=${encodeURIComponent(pathname)}`);
     }
   }, [loading, user, router, pathname]);
 

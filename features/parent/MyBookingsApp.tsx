@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
@@ -134,6 +135,7 @@ export function MyBookingsApp() {
   }, []);
 
   useEffect(refresh, [refresh]);
+  useRealtime(["bookings"], refresh);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)

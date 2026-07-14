@@ -52,6 +52,10 @@ export interface Booking {
   tenantId?: string;
   /** Set when the booking belongs to a franchise within the tenant. */
   franchiseId?: string;
+  /** The block this booking holds places in (capacity/waitlist tracking). */
+  blockId?: string;
+  /** Places held in the block (kids count; default 1). */
+  seats?: number;
   booker: string;
   email: string;
   phone: string;

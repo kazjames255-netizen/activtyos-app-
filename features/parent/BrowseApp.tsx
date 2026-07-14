@@ -1,26 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import type { CreateMyBookingInput, ListingSummary } from "./types";
+import type { Child } from "./ChildrenApp";
+import type { BlockSummary, CreateMyBookingInput, ListingSummary } from "./types";
 
 const METHODS = ["Card", "Tax-Free Childcare"];
+const MANUAL = "__manual__";
 
-function BookForm({ listing, onDone }: { listing: ListingSummary; onDone: () => void }) {
+function BookForm({
+  listing,
+  savedChildren,
+  onDone,
+}: {
+  listing: ListingSummary;
+  savedChildren: Child[];
+  onDone: () => void;
+}) {
   const router = useRouter();
+  const openBlocks = listing.blocks.filter((b) => b.open);
+  const [childId, setChildId] = useState(savedChildren[0]?.id ?? MANUAL);
   const [child, setChild] = useState("");
   const [age, setAge] = useState("");
   const [pass, setPass] = useState(listing.passes[0]?.name ?? "");
-  const [dates, setDates] = useState(listing.blocks[0] ?? "");
+  const [blockId, setBlockId] = useState(openBlocks[0]?.id ?? "");
   const [method, setMethod] = useState(METHODS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const price = listing.passes.find((p) => p.name === pass)?.price ?? 0;
+  const selected = savedChildren.find((c) => c.id === childId);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,9 +44,9 @@ function BookForm({ listing, onDone }: { listing: ListingSummary; onDone: () => 
       const input: CreateMyBookingInput = {
         listingId: listing.id,
         pass,
-        dates,
-        child,
-        age: parseInt(age, 10) || 0,
+        blockId,
+        child: selected ? selected.name : child,
+        age: selected ? (selected.age ?? 0) : parseInt(age, 10) || 0,
         method,
       };
       await apiPost<Booking>("/api/my/bookings", input);
@@ -46,21 +60,39 @@ function BookForm({ listing, onDone }: { listing: ListingSummary; onDone: () => 
   return (
     <form onSubmit={submit} className="mt-3 flex flex-col gap-2.5 border-t border-[var(--line)] pt-3">
       <div className="grid grid-cols-2 gap-2.5">
-        <div>
-          <FieldLabel>Child name</FieldLabel>
-          <Input required value={child} onChange={(e) => setChild(e.target.value)} className="w-full" />
-        </div>
-        <div>
-          <FieldLabel>Child age</FieldLabel>
-          <Input
-            type="number"
-            required
-            min={0}
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className="w-full"
-          />
-        </div>
+        {savedChildren.length > 0 && (
+          <div className="col-span-2">
+            <FieldLabel>Who&apos;s going?</FieldLabel>
+            <Select value={childId} onChange={(e) => setChildId(e.target.value)} className="w-full">
+              {savedChildren.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.age !== undefined ? ` (age ${c.age})` : ""}
+                </option>
+              ))}
+              <option value={MANUAL}>Someone else…</option>
+            </Select>
+          </div>
+        )}
+        {(childId === MANUAL || savedChildren.length === 0) && (
+          <>
+            <div>
+              <FieldLabel>Child name</FieldLabel>
+              <Input required value={child} onChange={(e) => setChild(e.target.value)} className="w-full" />
+            </div>
+            <div>
+              <FieldLabel>Child age</FieldLabel>
+              <Input
+                type="number"
+                required
+                min={0}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </>
+        )}
         <div>
           <FieldLabel>Pass</FieldLabel>
           <Select value={pass} onChange={(e) => setPass(e.target.value)} className="w-full">
@@ -73,9 +105,11 @@ function BookForm({ listing, onDone }: { listing: ListingSummary; onDone: () => 
         </div>
         <div>
           <FieldLabel>Dates</FieldLabel>
-          <Select value={dates} onChange={(e) => setDates(e.target.value)} className="w-full">
-            {listing.blocks.map((b) => (
-              <option key={b}>{b}</option>
+          <Select value={blockId} onChange={(e) => setBlockId(e.target.value)} className="w-full">
+            {openBlocks.map((b: BlockSummary) => (
+              <option key={b.id} value={b.id}>
+                {b.name} — {b.spotsLeft > 0 ? `${b.spotsLeft} place${b.spotsLeft === 1 ? "" : "s"} left` : "Full · join waitlist"}
+              </option>
             ))}
           </Select>
         </div>
@@ -111,14 +145,25 @@ function BookForm({ listing, onDone }: { listing: ListingSummary; onDone: () => 
 /** custdash/browse — parents browse the provider's listings and book. */
 export function BrowseApp() {
   const [listings, setListings] = useState<ListingSummary[] | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadListings = useCallback(() => {
     apiGet<ListingSummary[]>("/api/listings")
       .then(setListings)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load activities"));
   }, []);
+
+  useEffect(() => {
+    loadListings();
+    apiGet<Child[]>("/api/my/children")
+      .then(setChildren)
+      .catch(() => {
+        /* booking still works with manual entry */
+      });
+  }, [loadListings]);
+  useRealtime(["listings", "blocks"], loadListings);
 
   if (error) {
     return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
@@ -148,7 +193,7 @@ export function BrowseApp() {
                     {l.blocks.length} block{l.blocks.length === 1 ? "" : "s"} · from {money(from)}
                   </div>
                 </div>
-                {openId !== l.id && (
+                {openId !== l.id && l.blocks.some((b) => b.open) && (
                   <Button variant="primary" onClick={() => setOpenId(l.id)}>
                     Book
                   </Button>
@@ -164,7 +209,9 @@ export function BrowseApp() {
                   </span>
                 ))}
               </div>
-              {openId === l.id && <BookForm listing={l} onDone={() => setOpenId(null)} />}
+              {openId === l.id && (
+                <BookForm listing={l} savedChildren={children} onDone={() => setOpenId(null)} />
+              )}
             </Card>
           );
         })}

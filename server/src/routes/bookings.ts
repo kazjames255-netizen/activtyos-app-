@@ -4,6 +4,12 @@ import { db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import {
+  blockCountDelta,
+  bookingSeats,
+  sessionLabel,
+  type BlockDoc,
+} from "../lib/blockDomain";
+import {
   emailBookingConfirmed,
   emailBookingDeclined,
   emailPaymentLink,
@@ -74,7 +80,10 @@ const createSchema = z.object({
   age: z.number().nonnegative(),
   listing: z.string().min(1),
   pass: z.string().min(1),
-  dates: z.string().min(1),
+  // Either a real block (capacity/waitlist apply, dates derived) or a
+  // free-text dates label (phone bookings for unscheduled things).
+  blockId: z.string().min(1).optional(),
+  dates: z.string().min(1).optional(),
   amount: z.number().nonnegative(),
   method: z.string().min(1),
 });
@@ -153,30 +162,68 @@ bookings.post("/", async (req, res) => {
     return;
   }
   const input = parsed.data;
+  if (!input.blockId && !input.dates) {
+    res.status(400).json({ error: "Provide blockId or a dates label" });
+    return;
+  }
   const tenantId = scope.tenantId!;
   const tenantRef = tenantsCol.doc(tenantId);
 
   let tenantName = "Your activity provider";
-  const booking = await db.runTransaction(async (tx) => {
-    const tenantSnap = await tx.get(tenantRef);
-    if (!tenantSnap.exists) throw new NotFound();
-    tenantName = tenantSnap.data()!.name ?? tenantName;
-    const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
-    const b: Booking = {
-      ...buildBooking(input, nextBid),
-      tenantId,
-      ...(scope.role === "franchise" ? { franchiseId: scope.franchiseId! } : {}),
-    };
-    tx.update(tenantRef, { nextBid: nextBid + 1 });
-    tx.set(col.doc(bookingDocId(tenantId, b.ref)), toDoc(b));
-    return b;
-  });
+  try {
+    const booking = await db.runTransaction(async (tx) => {
+      const tenantSnap = await tx.get(tenantRef);
+      if (!tenantSnap.exists) throw new NotFound();
+      tenantName = tenantSnap.data()!.name ?? tenantName;
 
-  // Manual bookings sit as "Invoice sent" until paid — the booker gets the
-  // payment-link email the UI has always promised.
-  if (booking.email.includes("@")) emailPaymentLink(booking, tenantName);
+      // Real block: capacity + waitlist semantics, sessions derived.
+      let block: BlockDoc | null = null;
+      let blockRef: FirebaseFirestore.DocumentReference | null = null;
+      if (input.blockId) {
+        blockRef = db.collection("blocks").doc(input.blockId);
+        const blockSnap = await tx.get(blockRef);
+        if (!blockSnap.exists || (blockSnap.data() as BlockDoc).tenantId !== tenantId)
+          throw new BadRequest("Unknown block (must belong to your tenant)");
+        block = blockSnap.data() as BlockDoc;
+      }
 
-  res.status(201).json(booking);
+      const seats = 1;
+      const hasSpace = !block || (block.open && block.bookedCount + seats <= block.capacity);
+      const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
+      const b: Booking = {
+        ...buildBooking(
+          { ...input, dates: block ? block.name : input.dates! },
+          nextBid,
+        ),
+        tenantId,
+        ...(scope.role === "franchise" ? { franchiseId: scope.franchiseId! } : {}),
+        ...(block
+          ? {
+              blockId: input.blockId!,
+              seats,
+              sessions: block.sessions.map(sessionLabel),
+              ...(hasSpace ? {} : { status: "Waitlisted" as const, note: "Waitlisted — block full." }),
+            }
+          : {}),
+      };
+      tx.update(tenantRef, { nextBid: nextBid + 1 });
+      if (block && blockRef && hasSpace)
+        tx.update(blockRef, { bookedCount: block.bookedCount + seats });
+      tx.set(col.doc(bookingDocId(tenantId, b.ref)), toDoc(b));
+      return b;
+    });
+
+    // Manual bookings sit as "Invoice sent" until paid — the booker gets the
+    // payment-link email the UI has always promised.
+    if (booking.email.includes("@") && booking.status !== "Waitlisted")
+      emailPaymentLink(booking, tenantName);
+
+    res.status(201).json(booking);
+  } catch (e) {
+    if (e instanceof BadRequest) res.status(400).json({ error: e.message });
+    else if (e instanceof NotFound) res.status(404).json({ error: "Not found" });
+    else throw e;
+  }
 });
 
 // POST /api/bookings/:ref/actions — every single-booking mutation
@@ -211,6 +258,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      const oldStatus = b.status;
 
       switch (action.type) {
         case "cancel":
@@ -233,7 +281,23 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
       }
 
+      // Keep the block's place count in step with the status transition
+      // (promote may intentionally exceed capacity — operator's overbook).
+      // Firestore requires all reads before writes, hence the read here.
+      const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
+      let blockUpdate: { ref: FirebaseFirestore.DocumentReference; count: number } | null = null;
+      if (delta !== 0) {
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
+        if (blockSnap.exists) {
+          blockUpdate = {
+            ref: blockSnap.ref,
+            count: Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + delta),
+          };
+        }
+      }
+
       tx.set(ref, toDoc(b));
+      if (blockUpdate) tx.update(blockUpdate.ref, { bookedCount: blockUpdate.count });
       return b;
     });
 
@@ -266,17 +330,35 @@ bookings.post("/bulk", async (req, res) => {
     const snaps = await Promise.all(
       refs.map((r) => tx.get(col.doc(bookingDocId(scope.tenantId!, r)))),
     );
-    const out: Booking[] = [];
+    // Mutate + aggregate block deltas first (all reads must precede writes).
+    const out: { snap: FirebaseFirestore.DocumentSnapshot; b: Booking }[] = [];
+    const deltas = new Map<string, number>();
     for (const snap of snaps) {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
+      const oldStatus = b.status;
       applyBulkAction(b, action);
-      tx.set(snap.ref, toDoc(b));
-      out.push(b);
+      if (b.blockId) {
+        const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
+        if (d !== 0) deltas.set(b.blockId, (deltas.get(b.blockId) ?? 0) + d);
+      }
+      out.push({ snap, b });
     }
-    return out;
+    const blockSnaps = await Promise.all(
+      [...deltas.keys()].map((id) => tx.get(db.collection("blocks").doc(id))),
+    );
+    for (const { snap, b } of out) tx.set(snap.ref, toDoc(b));
+    for (const blockSnap of blockSnaps) {
+      if (!blockSnap.exists) continue;
+      const d = deltas.get(blockSnap.id)!;
+      tx.update(blockSnap.ref, {
+        bookedCount: Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + d),
+      });
+    }
+    return out.map((x) => x.b);
   });
   res.json(updated);
 });
 
 class NotFound extends Error {}
+class BadRequest extends Error {}

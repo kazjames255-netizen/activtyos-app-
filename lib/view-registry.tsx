@@ -3,6 +3,7 @@ import type { PortalKey } from "./nav/config";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { BrowseApp } from "@/features/parent/BrowseApp";
+import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
@@ -39,6 +40,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   custdash: {
     browse: BrowseApp,
     bookings: MyBookingsApp,
+    children: ChildrenApp,
   },
   platform: {
     dash: OverviewApp,

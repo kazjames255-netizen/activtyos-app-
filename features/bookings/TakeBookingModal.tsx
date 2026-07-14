@@ -21,7 +21,7 @@ interface Listing {
   id: string;
   name: string;
   passes: { name: string; price: number }[];
-  blocks: string[];
+  blocks: { id: string; name: string; spotsLeft: number; open: boolean }[];
 }
 
 const inputCls =
@@ -57,7 +57,7 @@ export function TakeBookingModal() {
           ...prev,
           listing: ls[0].name,
           pass: ls[0].passes[0]?.name ?? prev.pass,
-          dates: ls[0].blocks[0] ?? prev.dates,
+          dates: ls[0].blocks[0]?.id ?? prev.dates,
           amount: ls[0].passes[0] ? String(ls[0].passes[0].price) : prev.amount,
         }));
       })
@@ -71,7 +71,7 @@ export function TakeBookingModal() {
   const current = listings?.find((l) => l.name === f.listing);
   const listingNames = listings?.map((l) => l.name) ?? LISTINGS;
   const passes = current?.passes?.length ? current.passes.map((p) => p.name) : PASSES;
-  const blocks = current?.blocks?.length ? current.blocks : BLOCKS;
+  const structuredBlocks = current?.blocks ?? null;
 
   const dismiss = () => {
     setShow({ showCreate: false });
@@ -90,7 +90,8 @@ export function TakeBookingModal() {
       age: parseInt(f.age, 10) || 0,
       listing: f.listing,
       pass: f.pass,
-      dates: f.dates,
+      // f.dates carries a block id when real blocks exist, else a label.
+      ...(structuredBlocks ? { blockId: f.dates } : { dates: f.dates }),
       amount: parseFloat(f.amount) || 0,
       method: f.method,
     });
@@ -105,7 +106,7 @@ export function TakeBookingModal() {
         const l = listings.find((x) => x.name === e.target.value);
         if (l) {
           next.pass = l.passes[0]?.name ?? next.pass;
-          next.dates = l.blocks[0] ?? next.dates;
+          next.dates = l.blocks[0]?.id ?? next.dates;
           if (l.passes[0]) next.amount = String(l.passes[0].price);
         }
       }
@@ -174,9 +175,13 @@ export function TakeBookingModal() {
           <label className={`${labelCls} col-span-2`}>
             Block / dates
             <select className={inputCls} value={f.dates} onChange={upd("dates")}>
-              {blocks.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
+              {structuredBlocks
+                ? structuredBlocks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} — {!b.open ? "closed" : b.spotsLeft > 0 ? `${b.spotsLeft} left` : "full (waitlists)"}
+                    </option>
+                  ))
+                : BLOCKS.map((x) => <option key={x}>{x}</option>)}
             </select>
           </label>
           <label className={labelCls}>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 
 interface Tenant {
@@ -16,11 +17,14 @@ export function ProvidersApp() {
   const [tenants, setTenants] = useState<Tenant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiGet<Tenant[]>("/api/tenants")
       .then(setTenants)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load providers"));
   }, []);
+
+  useEffect(load, [load]);
+  useRealtime(["tenants"], load);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!tenants)

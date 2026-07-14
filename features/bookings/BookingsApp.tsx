@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRealtime } from "@/lib/realtime";
 import { useBookingsStore } from "./store";
 import { BookingsList } from "./BookingsList";
 import { BookingDetail } from "./BookingDetail";
@@ -22,6 +23,7 @@ export function BookingsApp() {
   );
 
   useEffect(() => void refresh(), [refresh]);
+  useRealtime(["bookings"], refresh);
 
   return (
     <div className="text-[var(--ink)]">

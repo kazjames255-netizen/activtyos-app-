@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, SectionHead } from "@/components/ui";
 
 interface Invite {
@@ -39,6 +40,7 @@ export function TeamApp() {
     apiGet<Me>("/api/me").then(setMe).catch(() => {});
     refresh();
   }, [refresh]);
+  useRealtime(["invites"], refresh);
 
   async function createInvite(role: "franchise" | "staff") {
     setBusy(true);

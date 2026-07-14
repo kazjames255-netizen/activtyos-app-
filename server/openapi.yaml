@@ -1,12 +1,24 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.3.0
+  version: 0.4.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
-    for children's activity providers. Milestone 3: real tenancy (providers
-    are isolated tenants), provisioning at signup, invite links, and
-    server-enforced isolation.
+    for children's activity providers.
+
+    ## ⚠ v0.4.0 breaking changes (Blocks & sessions)
+
+    - `listing.blocks` is no longer `string[]` — it's an array of **Block**
+      objects with `id`, availability (`spotsLeft`, `capacity`, `open`) and
+      per-day `sessions`, joined from the new blocks collection.
+    - `POST /api/my/bookings` takes `blockId` instead of `dates`.
+    - `POST /api/listings` / `PUT` no longer accept a `blocks` field — blocks
+      are managed via the new `/api/blocks` endpoints.
+    - **Capacity is enforced**: booking a full/closed block creates the
+      booking as `Waitlisted` (not an error). Confirmed and
+      Approval-needed bookings hold places; cancelling/declining frees
+      them; `promote` seats a waitlisted booking (may overbook — that's
+      the operator's explicit call).
 
     ## Authentication
 
@@ -73,6 +85,8 @@ tags:
   - name: my
     description: The signed-in parent's own bookings
   - name: listings
+  - name: blocks
+    description: A listing's bookable runs — capacity, sessions, waitlist
   - name: customers
     description: Operator-only, tenant-scoped
   - name: invites
@@ -98,6 +112,30 @@ paths:
                 type: object
                 properties:
                   ok: { type: boolean }
+
+  /api/events:
+    get:
+      tags: [meta]
+      summary: Realtime invalidation stream (SSE)
+      description: |
+        Server-Sent Events. Because `EventSource` can't set headers, pass the
+        Firebase ID token as `?token=`. Emits `data: {"collection":"…"}`
+        whenever something within the caller's scope changes
+        (`bookings` / `listings` / `customers` / `invites` / `children` /
+        `tenants` — scoped by role and tenant exactly like the REST access).
+        No data flows through this channel — on an event, refetch the
+        relevant endpoint. Reconnect with a fresh token on error (tokens
+        expire hourly). Includes `:ping` heartbeats every 25s.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: text/event-stream of invalidation events
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/me:
     get:
@@ -339,14 +377,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [listingId, pass, dates, child, age, method]
+              required: [listingId, blockId, pass, child, age, method]
               properties:
                 listingId: { type: string, example: lst-1 }
-                pass: { type: string, example: 4-day pass }
-                dates:
+                blockId:
                   type: string
-                  example: "Week 2 · 4 – 8 Aug 2027"
-                  description: One of the listing's `blocks`.
+                  description: One of the listing's blocks. Full/closed block → booking is created Waitlisted.
+                pass: { type: string, example: 4-day pass }
                 child: { type: string, example: Jack J }
                 age: { type: integer, example: 8 }
                 method: { type: string, enum: [Card, Tax-Free Childcare] }
@@ -385,6 +422,74 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Booking" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/my/children:
+    get:
+      tags: [my]
+      summary: The signed-in parent's child profiles
+      responses:
+        "200":
+          description: Children, sorted by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChildProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [my]
+      summary: Add a child profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChildProfileInput" }
+      responses:
+        "201":
+          description: The created child
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChildProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/my/children/{id}:
+    put:
+      tags: [my]
+      summary: Update one of my children
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChildProfileInput" }
+      responses:
+        "200":
+          description: The updated child
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChildProfile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [my]
+      summary: Remove one of my children
+      description: Existing bookings keep their own copy of the child's details.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Removed
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -497,6 +602,137 @@ paths:
           description: Deleted
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/blocks:
+    get:
+      tags: [blocks]
+      summary: My tenant's blocks
+      parameters:
+        - name: listingId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Blocks sorted by start date
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Block" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [blocks]
+      summary: Create a block on one of my listings
+      description: |
+        Provide `schedule` (sessions are generated for every matching
+        weekday in the date range) **or** an explicit `sessions` array.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BlockInput" }
+      responses:
+        "201":
+          description: The created block
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Block" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/blocks/{id}:
+    put:
+      tags: [blocks]
+      summary: Update a block
+      description: |
+        `bookedCount` is never client-writable; a block can't move to a
+        different listing. Set `open: false` to pause sales.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BlockInput" }
+      responses:
+        "200":
+          description: The updated block
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Block" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [blocks]
+      summary: Delete a block
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Block still has bookings holding places
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/blocks/{id}/attendees:
+    get:
+      tags: [blocks]
+      summary: Who's booked into this block (the register foundation)
+      description: Counted (Confirmed / Approval needed) and Waitlisted bookings with their children.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Block + attendees
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  block: { $ref: "#/components/schemas/Block" }
+                  attendees:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ref: { type: string }
+                        status: { type: string }
+                        booker: { type: string }
+                        email: { type: string }
+                        seats: { type: integer }
+                        children:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name: { type: string }
+                              age: { type: number }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/customers:
@@ -805,6 +1041,12 @@ components:
         franchiseId:
           type: string
           description: Set when the booking belongs to a franchise within the tenant.
+        blockId:
+          type: string
+          description: The block this booking holds places in.
+        seats:
+          type: integer
+          description: Places held in the block (default 1).
         booker: { type: string, example: Sarah Jones }
         email: { type: string, example: sarah.j@email.com }
         phone: { type: string }
@@ -855,7 +1097,8 @@ components:
 
     CreateBookingInput:
       type: object
-      required: [booker, email, child, age, listing, pass, dates, amount, method]
+      required: [booker, email, child, age, listing, pass, amount, method]
+      description: Provide `blockId` (capacity/waitlist apply, sessions derived) OR a free-text `dates` label.
       properties:
         booker: { type: string, example: Test Parent }
         email: { type: string, example: tp@test.com }
@@ -863,6 +1106,7 @@ components:
         age: { type: number, example: 7 }
         listing: { type: string, example: Easter Football Camp }
         pass: { type: string, example: 4-day pass }
+        blockId: { type: string }
         dates: { type: string, example: "Week 1 · 7 – 10 Apr 2027" }
         amount: { type: number, example: 120 }
         method:
@@ -916,6 +1160,54 @@ components:
       discriminator:
         propertyName: type
 
+    Session:
+      type: object
+      required: [date, start, end]
+      properties:
+        date: { type: string, example: "2027-07-28" }
+        start: { type: string, example: "09:00" }
+        end: { type: string, example: "15:30" }
+
+    Block:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: "Week 1 · 28 Jul – 1 Aug 2027" }
+        startDate: { type: string, example: "2027-07-28" }
+        endDate: { type: string, example: "2027-08-01" }
+        capacity: { type: integer, example: 24 }
+        bookedCount: { type: integer, example: 21 }
+        spotsLeft: { type: integer, example: 3 }
+        open: { type: boolean }
+        sessions:
+          type: array
+          items: { $ref: "#/components/schemas/Session" }
+
+    BlockInput:
+      type: object
+      required: [listingId, name, startDate, endDate, capacity]
+      properties:
+        listingId: { type: string }
+        name: { type: string, example: "Week 1 · 28 Jul – 1 Aug 2027" }
+        startDate: { type: string, example: "2027-07-28" }
+        endDate: { type: string, example: "2027-08-01" }
+        capacity: { type: integer, minimum: 1 }
+        open: { type: boolean, default: true }
+        schedule:
+          type: object
+          description: Sessions are generated from this across the date range.
+          properties:
+            startTime: { type: string, example: "09:00" }
+            endTime: { type: string, example: "15:30" }
+            weekdays:
+              type: array
+              description: 0=Sun … 6=Sat; defaults to Mon–Fri.
+              items: { type: integer, minimum: 0, maximum: 6 }
+        sessions:
+          type: array
+          description: Explicit sessions (alternative to schedule).
+          items: { $ref: "#/components/schemas/Session" }
+
     Listing:
       type: object
       properties:
@@ -933,7 +1225,8 @@ components:
               price: { type: number, example: 160 }
         blocks:
           type: array
-          items: { type: string, example: "Week 1 · 28 Jul – 1 Aug 2027" }
+          description: Joined from the blocks collection (read-only here).
+          items: { $ref: "#/components/schemas/Block" }
 
     Customer:
       type: object
@@ -951,6 +1244,37 @@ components:
               name: { type: string }
               age: { type: number }
               dob: { type: string }
+
+    ChildProfileInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: Zara }
+        age:
+          type: integer
+          minimum: 0
+          maximum: 17
+          description: Derived from dob server-side when omitted.
+        dob: { type: string, example: 14 Mar 2018 }
+        school: { type: string, example: Riverside Primary }
+        allergies: { type: string, example: nut allergy }
+        medical: { type: string, example: asthma }
+        send: { type: string, description: SEND / accessibility needs }
+        photoConsent:
+          type: boolean
+          default: false
+          description: Safeguarding — may the child appear in photos (Moments/newsfeed)? Defaults to NO.
+        photo:
+          type: string
+          description: Small avatar as a data:image/* URL (client-resized; interim until file storage).
+
+    ChildProfile:
+      allOf:
+        - $ref: "#/components/schemas/ChildProfileInput"
+        - type: object
+          properties:
+            id: { type: string }
+            parentUid: { type: string }
 
     Invite:
       type: object

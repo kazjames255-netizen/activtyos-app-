@@ -8,6 +8,7 @@
 
 import "dotenv/config";
 import { db } from "./firebase";
+import { generateSessions } from "./lib/blockDomain";
 import { toDoc } from "./lib/bookingDoc";
 import { seedBookings } from "../../features/bookings/data";
 import type { Booking } from "../../features/bookings/types";
@@ -63,46 +64,89 @@ async function seedBookingsCol() {
 }
 
 async function seedListingsCol() {
-  if (force) await wipe("listings");
-  else if (!(await isEmpty("listings"))) {
+  if (force) {
+    await wipe("listings");
+    await wipe("blocks");
+  } else if (!(await isEmpty("listings"))) {
     console.log("listings: not empty, skipping");
     return;
   }
   const listings = [
     {
+      id: "lst-1",
       name: "Summer Holiday Camp 2027",
       passes: [
         { name: "5-day week pass", price: 200 },
         { name: "4-day pass", price: 160 },
         { name: "1-day pass", price: 40 },
       ],
-      blocks: ["Week 1 · 28 Jul – 1 Aug 2027", "Week 2 · 4 – 8 Aug 2027", "Week 3 · 11 – 15 Aug 2027"],
+      blocks: [
+        { name: "Week 1 · 28 Jul – 1 Aug 2027", startDate: "2027-07-28", endDate: "2027-08-01" },
+        { name: "Week 2 · 4 – 8 Aug 2027", startDate: "2027-08-04", endDate: "2027-08-08" },
+        { name: "Week 3 · 11 – 15 Aug 2027", startDate: "2027-08-11", endDate: "2027-08-15" },
+      ],
     },
     {
+      id: "lst-2",
       name: "Easter Football Camp",
       passes: [
         { name: "5-day week pass", price: 200 },
         { name: "4-day pass", price: 160 },
         { name: "1-day pass", price: 40 },
       ],
-      blocks: ["Week 1 · 7 – 10 Apr 2027", "Week 2 · 14 – 18 Apr 2027"],
+      blocks: [
+        { name: "Week 1 · 7 – 10 Apr 2027", startDate: "2027-04-07", endDate: "2027-04-10" },
+        { name: "Week 2 · 14 – 18 Apr 2027", startDate: "2027-04-14", endDate: "2027-04-18" },
+      ],
     },
     {
+      id: "lst-3",
       name: "After-School Dance Club",
       passes: [{ name: "Term pass", price: 72 }],
-      blocks: ["Summer term · Tue ×6"],
+      blocks: [
+        {
+          name: "Summer term · Tue ×6",
+          startDate: "2027-06-01",
+          endDate: "2027-07-06",
+          weekdays: [2],
+          startTime: "15:30",
+          endTime: "17:00",
+        },
+      ],
     },
   ];
   const batch = db.batch();
-  listings.forEach((l, i) =>
-    batch.set(db.collection("listings").doc(`lst-${i + 1}`), {
-      ...l,
+  let blockCount = 0;
+  for (const l of listings) {
+    batch.set(db.collection("listings").doc(l.id), {
+      name: l.name,
+      passes: l.passes,
       tenantId: DEMO_TENANT_ID,
       tenantName: DEMO_TENANT_NAME,
-    }),
-  );
+    });
+    for (const blk of l.blocks) {
+      const withDefaults = { startTime: "09:00", endTime: "15:30", weekdays: [1, 2, 3, 4, 5], ...blk };
+      batch.set(db.collection("blocks").doc(`blk-${l.id}-${++blockCount}`), {
+        tenantId: DEMO_TENANT_ID,
+        listingId: l.id,
+        name: blk.name,
+        startDate: blk.startDate,
+        endDate: blk.endDate,
+        capacity: 24,
+        bookedCount: 0,
+        open: true,
+        sessions: generateSessions(
+          withDefaults.startDate,
+          withDefaults.endDate,
+          withDefaults.startTime,
+          withDefaults.endTime,
+          withDefaults.weekdays,
+        ),
+      });
+    }
+  }
   await batch.commit();
-  console.log(`listings: seeded ${listings.length} for the demo tenant`);
+  console.log(`listings: seeded ${listings.length} + ${blockCount} blocks for the demo tenant`);
 }
 
 async function seedCustomersCol() {

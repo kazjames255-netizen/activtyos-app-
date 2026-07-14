@@ -4,6 +4,12 @@ import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
+import {
+  blockCountDelta,
+  bookingSeats,
+  sessionLabel,
+  type BlockDoc,
+} from "../lib/blockDomain";
 import { emailBookingRequestReceived } from "../lib/emails";
 import { bookingDocId } from "./bookings";
 
@@ -17,8 +23,8 @@ const bookingsCol = db.collection("bookings");
 
 const createSchema = z.object({
   listingId: z.string().min(1),
+  blockId: z.string().min(1),
   pass: z.string().min(1),
-  dates: z.string().min(1),
   child: z.string().min(1),
   age: z.number().int().nonnegative(),
   method: z.string().min(1),
@@ -27,6 +33,40 @@ const createSchema = z.object({
 const cancelSchema = z.object({
   msg: z.string().max(500).optional(),
 });
+
+const childSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  age: z.number().int().min(0).max(17).optional(),
+  dob: z.string().trim().max(20).optional(),
+  school: z.string().trim().max(120).optional(),
+  allergies: z.string().trim().max(300).optional(),
+  medical: z.string().trim().max(300).optional(),
+  send: z.string().trim().max(300).optional(),
+  // Photo consent — safeguarding: may this child appear in photos
+  // (Moments/newsfeed)? Defaults to NO (privacy-safe).
+  photoConsent: z.boolean().optional().default(false),
+  // Small avatar as a data URL (client resizes to ~128px). Placeholder until
+  // the real file-storage milestone.
+  photo: z
+    .string()
+    .startsWith("data:image/")
+    .max(150_000)
+    .optional(),
+});
+
+const childrenCol = db.collection("children");
+
+// "14 Mar 2018" → age in years (used when the parent gives a DOB but no age).
+function ageFromDob(dob?: string): number | undefined {
+  if (!dob) return undefined;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return undefined;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a >= 0 && a <= 25 ? a : undefined;
+}
 
 function tokenEmail(req: { user?: { email?: string } }): string | null {
   return req.user?.email ?? null;
@@ -71,55 +111,76 @@ my.post("/bookings", async (req, res) => {
     tenantId: string;
     tenantName?: string;
     passes: { name: string; price: number }[];
-    blocks: string[];
   };
   const pass = listing.passes.find((p) => p.name === input.pass);
   if (!pass) {
     res.status(400).json({ error: `Listing has no pass "${input.pass}"` });
     return;
   }
-  if (!listing.blocks.includes(input.dates)) {
-    res.status(400).json({ error: `Listing has no block "${input.dates}"` });
-    return;
-  }
 
   const bookerName = req.user?.name || email.split("@")[0];
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
+  const blockRef = db.collection("blocks").doc(input.blockId);
 
-  const booking = await db.runTransaction(async (tx) => {
-    const tenantSnap = await tx.get(tenantRef);
-    if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
-    const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
-    const b: Booking = {
-      ...buildBooking(
-        {
-          booker: bookerName,
-          email,
-          child: input.child,
-          age: input.age,
-          listing: listing.name,
-          pass: input.pass,
-          dates: input.dates,
-          amount: pass.price,
-          method: input.method,
-        },
-        nextBid,
-      ),
-      tenantId: listing.tenantId,
-      // Parent bookings await the provider's approval and are unpaid until
-      // real payments (Stripe / Tax-Free Childcare) arrive.
-      status: "Approval needed",
-      pay: "Unpaid",
-      note: "",
-    };
-    tx.update(tenantRef, { nextBid: nextBid + 1 });
-    tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
-    return b;
-  });
+  try {
+    const booking = await db.runTransaction(async (tx) => {
+      const [tenantSnap, blockSnap] = await Promise.all([tx.get(tenantRef), tx.get(blockRef)]);
+      if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
+      if (!blockSnap.exists) throw new HttpError(400, "Unknown block");
+      const block = blockSnap.data() as BlockDoc;
+      if (block.listingId !== input.listingId || block.tenantId !== listing.tenantId)
+        throw new HttpError(400, "Block does not belong to this listing");
 
-  emailBookingRequestReceived(booking, listing.tenantName ?? listing.name);
+      const seats = 1;
+      const hasSpace = block.open && block.bookedCount + seats <= block.capacity;
+      // Waitlist position among existing waitlisted bookings for this block.
+      let waitPos = 0;
+      if (!hasSpace) {
+        const waiting = await tx.get(
+          bookingsCol.where("blockId", "==", blockSnap.id).where("status", "==", "Waitlisted"),
+        );
+        waitPos = waiting.size + 1;
+      }
 
-  res.status(201).json(booking);
+      const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
+      const b: Booking = {
+        ...buildBooking(
+          {
+            booker: bookerName,
+            email,
+            child: input.child,
+            age: input.age,
+            listing: listing.name,
+            pass: input.pass,
+            dates: block.name,
+            amount: pass.price,
+            method: input.method,
+          },
+          nextBid,
+        ),
+        tenantId: listing.tenantId,
+        blockId: blockSnap.id,
+        seats,
+        sessions: block.sessions.map(sessionLabel),
+        // Parent bookings await the provider's approval (which holds a
+        // place) — unless the block is full, in which case they join the
+        // waitlist. Unpaid until real payments arrive.
+        status: hasSpace ? "Approval needed" : "Waitlisted",
+        pay: "Unpaid",
+        note: hasSpace ? "" : `Waitlist position ${waitPos}`,
+      };
+      tx.update(tenantRef, { nextBid: nextBid + 1 });
+      if (hasSpace) tx.update(blockRef, { bookedCount: block.bookedCount + seats });
+      tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
+      return b;
+    });
+
+    emailBookingRequestReceived(booking, listing.tenantName ?? listing.name);
+    res.status(201).json(booking);
+  } catch (e) {
+    if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
 });
 
 // POST /api/my/bookings/:ref/cancel — cancellation request (refund pending,
@@ -156,8 +217,20 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       const b = fromDoc(snap.data() as BookingDoc);
       if (b.email !== email) throw new HttpError(403, "Not your booking");
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
+      const oldStatus = b.status;
       applyParentCancel(b, parsed.data.msg);
+      // Free the block place the booking held (all reads before writes).
+      const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
+      let blockUpdate: { ref: FirebaseFirestore.DocumentReference; count: number } | null = null;
+      if (delta !== 0) {
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
+        if (blockSnap.exists) {
+          const count = Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + delta);
+          blockUpdate = { ref: blockSnap.ref, count };
+        }
+      }
       tx.set(ref, toDoc(b));
+      if (blockUpdate) tx.update(blockUpdate.ref, { bookedCount: blockUpdate.count });
       return b;
     });
     res.json(updated);
@@ -165,6 +238,56 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
   }
+});
+
+// ——— Children (the parent's own child profiles — account-level, not
+// tenant-scoped: a family exists across providers). Owned strictly by the
+// signed-in account via parentUid.
+
+my.get("/children", async (req, res) => {
+  const snap = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));
+  list.sort((a, b) => (a.name < b.name ? -1 : 1));
+  res.json(list);
+});
+
+my.post("/children", async (req, res) => {
+  const parsed = childSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  const age = parsed.data.age ?? ageFromDob(parsed.data.dob);
+  const doc = { ...parsed.data, ...(age !== undefined ? { age } : {}), parentUid: req.user!.uid };
+  const ref = await childrenCol.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+
+my.put("/children/:id", async (req, res) => {
+  const parsed = childSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  const snap = await childrenCol.doc(req.params.id).get();
+  if (!snap.exists || snap.data()!.parentUid !== req.user!.uid) {
+    res.status(404).json({ error: "Child not found" });
+    return;
+  }
+  const age = parsed.data.age ?? ageFromDob(parsed.data.dob);
+  const doc = { ...parsed.data, ...(age !== undefined ? { age } : {}), parentUid: req.user!.uid };
+  await snap.ref.set(doc);
+  res.json({ id: snap.id, ...doc });
+});
+
+my.delete("/children/:id", async (req, res) => {
+  const snap = await childrenCol.doc(req.params.id).get();
+  if (!snap.exists || snap.data()!.parentUid !== req.user!.uid) {
+    res.status(404).json({ error: "Child not found" });
+    return;
+  }
+  await snap.ref.delete();
+  res.json({ ok: true });
 });
 
 class HttpError extends Error {

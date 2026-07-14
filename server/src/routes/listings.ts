@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 
 export const listings = Router();
 
@@ -12,12 +13,30 @@ const listingSchema = z.object({
   passes: z
     .array(z.object({ name: z.string().min(1), price: z.number().nonnegative() }))
     .min(1),
-  blocks: z.array(z.string().min(1)).min(1),
 });
 
-// GET /api/listings — all providers' listings (feeds the parent Browse
-// view). With ?mine=1, only the caller's own tenant's listings (the
-// operator management view).
+// Join each listing's real blocks (availability included) onto the response.
+async function withBlocks(
+  docs: { id: string; data: Record<string, unknown> }[],
+): Promise<Record<string, unknown>[]> {
+  const blocksSnap = await db.collection("blocks").get();
+  const byListing = new Map<string, ReturnType<typeof blockSummary>[]>();
+  for (const d of blocksSnap.docs) {
+    const b = d.data() as BlockDoc;
+    const arr = byListing.get(b.listingId) ?? [];
+    arr.push(blockSummary(d.id, b));
+    byListing.set(b.listingId, arr);
+  }
+  return docs.map((d) => ({
+    id: d.id,
+    ...d.data,
+    blocks: (byListing.get(d.id) ?? []).sort((a, b) => (a.startDate < b.startDate ? -1 : 1)),
+  }));
+}
+
+// GET /api/listings — all providers' listings with their blocks/availability
+// (feeds the parent Browse view). With ?mine=1, only the caller's own
+// tenant's listings (the operator management view).
 listings.get("/", async (req, res) => {
   if (req.query.mine === "1") {
     const auth = req.auth!;
@@ -26,13 +45,13 @@ listings.get("/", async (req, res) => {
       return;
     }
     const snap = await col.where("tenantId", "==", auth.tenantId).get();
-    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));
-    list.sort((a, b) => (a.name < b.name ? -1 : 1));
+    const list = await withBlocks(snap.docs.map((d) => ({ id: d.id, data: d.data() })));
+    list.sort((a, b) => ((a.name as string) < (b.name as string) ? -1 : 1));
     res.json(list);
     return;
   }
   const snap = await col.orderBy("name").get();
-  res.json(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  res.json(await withBlocks(snap.docs.map((d) => ({ id: d.id, data: d.data() }))));
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised

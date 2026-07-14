@@ -8,8 +8,10 @@ import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
 import { requireAuth } from "./middleware/auth";
 import { attachRole } from "./middleware/role";
+import { blocks } from "./routes/blocks";
 import { bookings } from "./routes/bookings";
 import { customers } from "./routes/customers";
+import { events } from "./routes/events";
 import { invitePreview, invites } from "./routes/invites";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
@@ -42,12 +44,17 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
 // secret; a prospective franchise/staff member sees it before signing up.
 app.use("/api/invites", invitePreview);
 
+// Realtime stream — authenticates via ?token= itself (EventSource can't set
+// headers), so it mounts before the header-based auth middleware.
+app.use("/api/events", events);
+
 app.use("/api", requireAuth, attachRole);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
 app.use("/api/bookings", bookings);
 app.use("/api/customers", customers);
 app.use("/api/listings", listings);
+app.use("/api/blocks", blocks);
 app.use("/api/my", my);
 app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);

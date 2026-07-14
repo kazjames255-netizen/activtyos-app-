@@ -2,6 +2,11 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { Booking, BookingFilter } from "./types";
 import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mutations";
+
+// Take-a-booking payload: a real block (capacity/waitlist apply) or a
+// free-text dates label for unscheduled phone bookings.
+export type TakeBookingInput = Omit<CreateBookingInput, "dates"> &
+  ({ blockId: string; dates?: undefined } | { dates: string; blockId?: undefined });
 import { get as apiGet, post as apiPost } from "@/lib/api";
 
 // The store no longer owns booking mutations — every change is a call to the
@@ -50,7 +55,7 @@ interface BookingsState {
   applyChangeDay: (ref: string, ki: number, oldDt: string, newDt: string) => void;
 
   openCreate: () => void;
-  createBooking: (input: CreateBookingInput) => void;
+  createBooking: (input: TakeBookingInput) => void;
 }
 
 const selectedRefs = (sel: Record<string, boolean>) =>
