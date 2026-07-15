@@ -300,7 +300,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "blocks", legacyView: "freelancer-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
+        { view: "blocks", legacyView: "freelancer-blocks", label: "Sessions & blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: "1" },
         { view: "customers", legacyView: "freelancer-customers", label: "Parents", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
