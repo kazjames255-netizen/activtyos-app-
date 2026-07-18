@@ -63,10 +63,8 @@ const BOOK_RULES: [BookRule, (days: number) => string][] = [
   ["blocks", (d) => `Fixed ${d}-day block`],
 ];
 type BookRule = "week" | "listing" | "blocks";
-// `noun` is the listing's own type (the one badged on the hero image) — not
-// every listing is a camp.
-const bookRuleDesc = (rule: BookRule, days: number, noun?: string) =>
-  rule === "listing" ? `Parents pick any ${days} days from across all the weeks${noun ? ` of ${noun}` : " it runs"}.`
+const bookRuleDesc = (rule: BookRule, days: number) =>
+  rule === "listing" ? `Parents pick any ${days} days across all the weeks it runs.`
     : rule === "blocks" ? `Sold as one fixed ${days}-day block.`
       : `Parents pick any ${days} days within a single week.`;
 
@@ -607,9 +605,6 @@ export function ListingWizard({
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
   const booking = useMemo(() => blockBooking(blocks, d.blockId), [blocks, d.blockId]);
-  // The type badged on the hero image — used wherever copy needs to name the
-  // thing being sold, since not every listing is a camp.
-  const heroNoun = (local.categories.find((c) => c.id === (d.heroCategoryId ?? d.categoryIds[0])) ?? null)?.name;
   const venue = local.venues.find((v) => v.id === d.venueId) || null;
   const addons = local.addons.filter((a) => d.addonIds.includes(a.id));
 
@@ -691,7 +686,7 @@ export function ListingWizard({
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
-            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} heroNoun={heroNoun} />}
+            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={8} kicker="STEP 8 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1127,7 +1122,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 }
 
 // ── Step: Tickets & pricing (pulls from Blocks) ────────────────────────────
-function TicketsStep({ d, upd, blocks, tickets, heroNoun }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[]; heroNoun?: string }) {
+function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
@@ -1202,7 +1197,7 @@ function TicketsStep({ d, upd, blocks, tickets, heroNoun }: { d: WizardDraft; up
                     </button>
                   ))}
                 </div>
-                <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days, heroNoun)}</div>
+                <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}</div>
               </div>
             );
           })}
@@ -1624,7 +1619,7 @@ function myBrand() {
 }
 type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[] };
 // Shared booking logic — one source of truth, rendered in two visual themes.
-function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], noun?: string) {
+function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[]) {
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
   const [passId, setPassId] = useState<string | null>(passes[0]?.id ?? null);
@@ -1670,6 +1665,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   );
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
   const daysStr = (iso: string[]) => iso.map((x) => new Date(`${x}T00:00:00Z`).getUTCDate()).join(", ");
+  // Spelled out for the basket tooltip — "4" alone doesn't tell them what they booked.
+  const datesFull = (item: BasketItem) =>
+    [item.dates.map(fmtDate).join(" · "), item.timing].filter(Boolean).join(" — ");
   const addToBasket = () => {
     if (!canAdd || !pass) return;
     if (isSingle) {
@@ -1689,7 +1687,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       ? `Tap every day you'd like — each one is a single-day pass (${sel.length} selected)`
       : rule === "blocks"
         ? `Tap a week to take the fixed ${need}-day block`
-        : `Pick ${need} day${need === 1 ? "" : "s"} — ${bookRuleDesc(rule, need, noun)} (${sel.length}/${need})`;
+        : rule === "week"
+          ? `Pick any ${need} days within one week (${sel.length}/${need})`
+          : `Pick any ${need} days across the weeks below (${sel.length}/${need})`;
   // What the basket would look like if they added the current selection — so
   // an already-earned discount is stated before they commit, not after.
   const addPreview = (() => {
@@ -1703,6 +1703,11 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     const off = Math.max(0, Math.round((gross - res.total) * 100) / 100);
     return off > 0 ? { ...res, gross, off } : null;
   })();
+
+  // What adding this selection really costs: the increase in the basket total
+  // once discounts are recalculated, not the sticker price.
+  const pendingGross = (isSingle ? unitPrice * sel.length : unitPrice) * attendees;
+  const addNet = addPreview ? Math.max(0, Math.round((addPreview.total - total) * 100) / 100) : pendingGross;
 
   // "Add 3 more dates to get 10% off" — how close they are to the nearest
   // discount they haven't triggered yet. Counts what's in the basket plus
@@ -1733,15 +1738,15 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
   const reset = () => { setBasket([]); setChild(""); setAttendees(1); setStage("pick"); };
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, setAttendees, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, daysStr, hint, nudge, addPreview, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, setAttendees, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, daysStr, datesFull, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null };
 
 // Dispatcher — same logic, theme-specific presentation.
-function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful", noun }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; theme?: PageTheme; noun?: string;
+function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful" }: {
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; theme?: PageTheme;
 }) {
-  const b = useBooking(d, booking, weeks, noun);
+  const b = useBooking(d, booking, weeks);
   const view: BookView = { b, d, booking, weeks, spacesLeft };
   if (theme === "playful") return <PlayfulBooking {...view} />;
   return <SportBooking {...view} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />;
@@ -1749,8 +1754,16 @@ function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful", noun 
 
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
 function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
-  const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", LINEp = "#e8edf7", SOFTb = "#eef4ff";
+  const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
   const idle = { background: "#fff", color: INKp, borderColor: LINEp };
+  // Numbered so the order to work through is obvious. Timing is skipped when
+  // the block has none, so dates become step 2.
+  const step = (n: number, text: string) => (
+    <div className="mb-2 mt-4 flex items-center gap-2">
+      <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10px] font-extrabold text-white" style={{ background: BLUE }}>{n}</span>
+      <span className="text-[10.5px] font-extrabold uppercase tracking-[0.1em]" style={{ color: MUTp }}>{text}</span>
+    </div>
+  );
   if (b.stage === "done") return (
     <div className="rounded-[26px] bg-white p-6 text-center" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-[26px]" style={{ background: TEAL, color: "#053b2a" }}>✓</div>
@@ -1792,17 +1805,17 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
       )}
       {b.passes.length === 0 ? <div className="mt-2 text-[13px] text-[#7a8194]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
         <>
-          <div className="mb-2 mt-4 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">Pick a pass</div>
+          {step(1, "Choose your pass")}
           <div className="flex flex-wrap gap-2">
             {b.passes.map((t) => <button key={t.id} type="button" onClick={() => { b.setPassId(t.id); }} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold" style={t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}</button>)}
           </div>
           {b.periods.length > 0 && <>
-            <div className="mb-2 mt-4 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">Choose a timing</div>
+            {step(2, "Choose a timing")}
             <div className="flex flex-wrap gap-2">
               {b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="rounded-2xl border-2 px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{p.range}{b.pass ? <span className={p.id === b.periodId ? "block text-[10px] font-semibold opacity-90" : "block text-[10px] font-semibold text-[#7a8194]"}>{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}
             </div>
           </>}
-          {b.pass && <div className="mb-1.5 mt-4 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{b.isSingle ? "Pick any days" : "Pick your days"}</div>}
+          {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
           {weeks.length ? <div className="flex flex-col gap-3">
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Week {w.n} <span className="font-semibold text-[#a6adba]">· from {fmtDate(w.mon)}</span></div>
@@ -1810,7 +1823,17 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
             </div>)}
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: TEAL }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
-          <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>{b.isSingle ? (b.canAdd ? `Add ${b.sel.length} × ${b.pass?.name} · ${money(b.unitPrice * b.sel.length)}` : "Pick at least one day") : b.canAdd ? `Add ${b.pass?.name} · ${money(b.unitPrice)}` : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more day${b.need - b.sel.length === 1 ? "" : "s"}` : "Pick a pass"}</button>
+          <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
+            {b.canAdd ? (
+              <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
+                <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
+                <span className="inline-flex items-baseline gap-1.5">
+                  {b.addNet < b.pendingGross && <s className="opacity-60">{money(b.pendingGross)}</s>}
+                  <span>{money(b.addNet)}</span>
+                </span>
+              </span>
+            ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more day${b.need - b.sel.length === 1 ? "" : "s"}` : "Pick a pass"}
+          </button>
           {b.addPreview && (
             <div className="mt-2 rounded-2xl p-3" style={{ background: "#e4f8ee" }}>
               <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#047857" }}>
@@ -1841,7 +1864,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
       <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
         <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>Your basket</span><span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
         {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">Nothing added yet — pick a pass and dates.</div> :
-          <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[12px]" style={{ background: "#f4f7ff" }}><span className="text-[#5b6478]"><b style={{ color: INKp }}>{x.name}</b>{x.timing ? <span className="text-[#a6adba]"> · {x.timing}</span> : null} <span className="text-[#a6adba]">· {b.daysStr(x.dates)}</span></span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
+          <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="group relative flex items-baseline justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[12px]" style={{ background: "#f4f7ff" }}><span className="text-[#5b6478]" title={b.datesFull(x)}><b style={{ color: INKp }}>{x.name}</b>{x.timing ? <span className="text-[#a6adba]"> · {x.timing}</span> : null} <span className="text-[#a6adba]">· {b.daysStr(x.dates)}</span><span className="pointer-events-none absolute left-2 top-full z-40 mt-1 hidden w-max max-w-[240px] rounded-lg px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-lg group-hover:block" style={{ background: "#232842" }}>{b.datesFull(x)}</span></span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
         {b.basket.length > 0 && (
           <>
             <div className="mt-3 flex items-center gap-2">
@@ -1881,6 +1904,14 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
+  // Numbered so the order to work through is obvious. Timing is skipped when
+  // the block has none, so dates become step 2.
+  const step = (n: number, text: string) => (
+    <div className="mb-2 mt-4 flex items-center gap-2">
+      <span className="flex h-[18px] w-[18px] items-center justify-center text-[10px] font-black" style={{ background: LIME, color: "#12280a" }}>{n}</span>
+      <span className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: MUTs }}>{text}</span>
+    </div>
+  );
   const on = { background: "rgba(198,255,0,.1)", color: LIME, borderColor: LIME };
   const skew = { transform: "skewX(-6deg)" } as const, unskew = { display: "inline-block", transform: "skewX(6deg)" } as const;
   const wrap = "border", wrapStyle = { borderColor: LINEs, background: PANEL };
@@ -1930,19 +1961,29 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
       <div className="p-5">
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
           <>
-            <div className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f9bb0]">Pass</div>
+            {step(1, "Choose your pass")}
             <div className="flex flex-wrap gap-2">{b.passes.map((t) => <button key={t.id} type="button" onClick={() => b.setPassId(t.id)} className="border px-4 py-2 text-[12.5px] font-bold" style={t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}</button>)}</div>
             {b.periods.length > 0 && <>
-              <div className="mb-2 mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f9bb0]">Timing</div>
+              {step(2, "Choose a timing")}
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
-            {b.pass && <div className="mb-1.5 mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f9bb0]">Dates</div>}
+            {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-black leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
             {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: CY }}><span className="inline-block h-2 w-2" style={{ background: LIME }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
-            <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>{b.isSingle ? (b.canAdd ? `Add ${b.sel.length} × ${b.pass?.name} · ${money(b.unitPrice * b.sel.length)}` : "Pick at least one day") : b.canAdd ? `Add ${b.pass?.name} · ${money(b.unitPrice)}` : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more` : "Pick a pass"}</span></button>
+            <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
+                {b.canAdd ? (
+                  <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
+                    <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
+                    <span className="inline-flex items-baseline gap-1.5">
+                      {b.addNet < b.pendingGross && <s className="opacity-60">{money(b.pendingGross)}</s>}
+                      <span>{money(b.addNet)}</span>
+                    </span>
+                  </span>
+                ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more` : "Pick a pass"}
+              </span></button>
             {b.addPreview && (
               <div className="mt-2 border-l-[3px] p-3" style={{ borderLeftColor: LIME, background: CELL }}>
                 <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
@@ -1973,7 +2014,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
         <div className="mt-5 border-t pt-4" style={{ borderColor: LINEs }}>
           <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">Your basket</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
           {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">Nothing added yet — pick a pass and dates.</div> :
-            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-2 text-[12px] text-[#c3ccdb]"><span><b className="text-white">{x.name}</b>{x.timing ? <span className="text-[#8f9bb0]"> · {x.timing}</span> : null} <span className="text-[#8f9bb0]">· {b.daysStr(x.dates)}</span></span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
+            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="group relative flex items-baseline justify-between gap-2 text-[12px] text-[#c3ccdb]"><span title={b.datesFull(x)}><b className="text-white">{x.name}</b>{x.timing ? <span className="text-[#8f9bb0]"> · {x.timing}</span> : null} <span className="text-[#8f9bb0]">· {b.daysStr(x.dates)}</span><span className="pointer-events-none absolute left-0 top-full z-40 mt-1 hidden w-max max-w-[240px] border px-2.5 py-1.5 text-[11px] font-bold leading-snug text-white shadow-lg group-hover:block" style={{ background: CELL, borderColor: LIME }}>{b.datesFull(x)}</span></span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
           {b.basket.length > 0 && (
             <>
               <div className="mt-3 flex items-center gap-2">
@@ -2031,7 +2072,7 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} noun={heroCat?.name} />;
+  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} />;
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
@@ -2174,7 +2215,7 @@ function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, i
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff"], ["📆", "When", runLabel, "#e4f8ee"], ["🧒", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5"]] as const).map(([e, k, v, tint], i) => (
+          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff"], ["📆", "When", runLabel, "#e4f8ee"], ["👧👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5"]] as const).map(([e, k, v, tint], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-l sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div></div>
@@ -2262,7 +2303,7 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
-        {([["📍", venue?.name || town || "Venue TBC"], ["📆", runLabel], ["🧒", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages"]] as const).map(([e, v], i) => (
+        {([["📍", venue?.name || town || "Venue TBC"], ["📆", runLabel], ["👧👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages"]] as const).map(([e, v], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-l sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
@@ -2275,7 +2316,10 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
         {/* Spec strip: ages, availability, all passes in one box, discounts in
             the next — so the prices don't eat the whole row. */}
         {(() => {
-          const live = (d.discounts ?? []).filter((r) => r.enabled);
+          const todayIso = new Date().toISOString().slice(0, 10);
+          const live = (d.discounts ?? []).filter(
+            (r) => r.enabled && !(r.kind === "early" && r.beforeDate && todayIso > r.beforeDate),
+          );
           const tile = "border-b border-l px-4 py-3.5 first:border-l-0";
           const wide = `${tile} lg:col-span-2`;
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
@@ -2315,6 +2359,7 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? "All passes" : r.passNames.join(", ")}
+                            {r.kind === "early" && r.beforeDate ? ` · book by ${fmtDate(r.beforeDate)}` : ""}
                           </span>
                         </span>
                         <b className="flex-none text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>
