@@ -548,6 +548,83 @@ section's heading, tenant-level) needed adding to the `KEYS` whitelist; that
 one-line change is in `server/src/routes/library.ts`, shout if you'd rather
 own it.
 
+## E. Waiting list — the process, and what it needs from you
+
+Kaz has picked the flow; the parent half is built and working, the persistence
+isn't. Both modes are configured per listing in step 11 (`waitlistMode`).
+
+### The journey
+
+1. **Full dates stay selectable.** They were struck through and dead; now a
+   full date is tappable in an amber "queue for this" state, bulk-selectable
+   via "Select all N full days". Capacity is per date, so the queue is too.
+2. **One flow, two outcomes.** Wanting five days with two full doesn't force a
+   choice between booking and queuing — the bookable days go in the basket,
+   the full ones go on the list, same visit.
+3. **No payment to join.** Never charge for a place you don't have. Money is
+   taken when a place is offered and accepted.
+4. **Per-date FIFO queues.** A cancellation on the 13th goes to whoever is
+   first for the 13th, not first overall.
+5. **Partial offers are fine.** Someone waiting on five dates who is offered
+   two can take those two.
+
+### The two modes (operator picks per listing)
+
+| `waitlistMode` | behaviour |
+|---|---|
+| `"manual"` *(default)* | Nothing automatic. The operator sees who's waiting per date and offers the place to whoever they choose — useful for keeping siblings together. |
+| `"auto"` | Offered to whoever joined first, by email, **held 24 hours**; on expiry it passes to the next in the queue. |
+
+Manual needs no timers or email, which is why it's the default. Auto needs a
+scheduled expiry sweep and a transactional email.
+
+### What we need
+
+```ts
+// waitlistEntries
+{
+  id, tenantId, listingId,
+  blockId, date,                 // the specific session queued for
+  parentId, childName, contact,
+  status: "waiting" | "offered" | "accepted" | "declined" | "expired" | "cancelled",
+  position,                      // FIFO within {listingId, date}
+  offerExpiresAt?,               // auto mode: created + 24h
+  bookingId?,                    // set when it converts
+  createdAt,
+}
+```
+
+- `POST /api/waitlist` — join, an array of dates in one call (bulk is the
+  normal case, not the exception). Returns each entry's queue position, which
+  the confirmation should show: *"2nd in line for 12 Aug"*.
+- `GET /api/waitlist?listingId=` — the operator's view, grouped by date.
+- `POST /api/waitlist/{id}/offer` — manual mode, or the auto sweep. Should
+  reject if the date is still full.
+- `POST /api/waitlist/{id}/accept` → creates the booking, decrements the
+  session, marks the entry converted.
+- **A cancellation should trigger the queue** — that's the whole point. In
+  auto mode, freeing a seat offers it to position 1 automatically.
+- **Warn on operator overbooking**: adding a child to a full date while people
+  are queued should say "3 people are waiting for this date" first.
+- `waitlistSize` caps the queue per date; blank means no limit.
+
+### Front-end status
+
+Built and working against local state: date selection, bulk select, the
+combined book-and-queue basket, the join panel, and the confirmation (which
+already varies its wording by mode). Not persisted — the join button currently
+only flips local state.
+
+Two things for you to be aware of:
+
+- **Your `BookingPanel.tsx` needs the same treatment.** It already says
+  "Full · waitlist" at line 177 but selects whole blocks, not dates. The
+  parent-facing storefront is where this actually has to work.
+- **Queue positions can't be shown until `POST /api/waitlist` returns them** —
+  the confirmation currently says "we'll email you" instead.
+
+---
+
 **Suggested order:** A first — it's a correctness bug with a number attached.
-Then B, because the provider decision has lead time. C and D can wait until
-bookings are flowing.
+Then B, because the provider decision has lead time. E whenever you're ready
+for it; the front-end is waiting. C and D once bookings are flowing.
