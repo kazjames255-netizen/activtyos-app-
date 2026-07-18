@@ -174,8 +174,16 @@ export interface BookPass { id: string; name: string; days: number; basePrice: n
 export interface BookPeriod { id: string; title: string; start: string; finish: string; range: string }
 export type RunBlock = { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean };
 
-/** Fewer than this left on a date counts as running low. */
+/**
+ * What counts as "running low" on a date. Flat-5 was wrong for small groups —
+ * a 4-child tuition group would have shown the warning permanently, from its
+ * first day. Scales to a quarter of the group, capped at 5.
+ */
 export const LOW_LEFT = 5;
+export function lowAt(capacity: number | null): number {
+  if (!capacity || capacity <= 0) return 1;
+  return Math.max(1, Math.min(LOW_LEFT, Math.ceil(capacity / 3)));
+}
 
 /**
  * How availability reads to a parent. Says there's room while there is, names
@@ -186,7 +194,7 @@ export function capacityNote(d: WizardDraft, left: number | null): { text: strin
   if (!Number.isFinite(cap) || !d.showSpaces) return null;
   const remaining = left ?? cap;
   if (remaining <= 0) return { text: "Sold out", tone: "gone" };
-  if (remaining <= LOW_LEFT) return { text: `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
+  if (remaining <= lowAt(cap)) return { text: `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
   return { text: "Lots of space left", tone: "calm" };
 }
 
@@ -1789,6 +1797,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     if (blk) return Math.max(0, blk.spotsLeft - seatsOn(iso));
     return capacity === null ? null : Math.max(0, capacity - (perDay ? seatsOn(iso) : basket.length));
   };
+  // Capacity that applies to a date — the run's, else the configured one.
+  const capOn = (iso: string) => blockOn(blocks, iso)?.capacity ?? capacity;
+  const isLow = (iso: string, left: number) => left > 0 && left <= lowAt(capOn(iso));
   const fullDates = sel.filter((iso) => {
     const left = leftOn(iso);
     return left !== null && left < 1;
@@ -1919,7 +1930,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -2246,10 +2257,10 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
                 const dOff = b.off(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= LOW_LEFT;
+                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
                 const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#16a34a";
                 return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : left === null ? undefined : low ? `Only ${left} left` : `${left} places left`}
+                  title={full ? "Full" : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" } : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
@@ -2260,7 +2271,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {b.hasCounts && (
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold" style={{ color: MUTp }}>
-              {([["#16a34a", "Space"], ["#f59e0b", `Under ${LOW_LEFT} left`], ["#dc2626", "Full"]] as const).map(([c, l]) => (
+              {([["#16a34a", "Space"], ["#f59e0b", "Almost full"], ["#dc2626", "Full"]] as const).map(([c, l]) => (
                 <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: c }} />{l}</span>
               ))}
             </div>
@@ -2268,9 +2279,11 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
           {(() => {
             const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
             if (!note) return null;
-            const col = note.tone === "gone" ? "#dc2626" : note.tone === "low" ? "#c2410c" : BLUE;
+            // Same traffic light as the calendar — a different green here made
+            // the key look like it belonged to something else.
+            const col = note.tone === "gone" ? "#dc2626" : note.tone === "low" ? "#f59e0b" : "#16a34a";
             return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: note.tone === "calm" ? TEAL : col }} />{note.text}</div>;
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: col }} />{note.text}</div>;
           })()}
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
             {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
@@ -2338,7 +2351,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookView & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
+  const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#8f9bb0";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -2401,10 +2414,10 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= LOW_LEFT;
+                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
                 const dot = dOff || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
                 return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : left === null ? undefined : low ? `Only ${left} left` : `${left} places left`}
+                  title={full ? "Full" : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed"
                   style={dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
@@ -2414,7 +2427,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
             {b.hasCounts && (
               <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-bold" style={{ color: MUTs }}>
-                {([["#3ddc84", "Space"], ["#ffb020", `Under ${LOW_LEFT} left`], ["#ff5470", "Full"]] as const).map(([c, l]) => (
+                {([["#3ddc84", "Space"], ["#ffb020", "Almost full"], ["#ff5470", "Full"]] as const).map(([c, l]) => (
                   <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5" style={{ background: c }} />{l}</span>
                 ))}
               </div>
@@ -2422,9 +2435,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
             {(() => {
               const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
               if (!note) return null;
-              const col = note.tone === "gone" ? "#ff5470" : note.tone === "low" ? "#ffb020" : CY;
+              const col = note.tone === "gone" ? "#ff5470" : note.tone === "low" ? "#ffb020" : "#3ddc84";
               return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
-                <span className="inline-block h-2 w-2" style={{ background: note.tone === "calm" ? LIME : col }} />{note.text}</div>;
+                <span className="inline-block h-2 w-2" style={{ background: col }} />{note.text}</div>;
             })()}
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
@@ -2834,11 +2847,15 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
           const live = (d.discounts ?? []).filter(
             (r) => r.enabled && !(r.kind === "early" && r.beforeDate && todayIso > r.beforeDate),
           );
-          const tile = "border-b border-l px-4 py-3.5 first:border-l-0";
-          const wide = `${tile} lg:col-span-2`;
+          // Flex, not a column count: tiles come and go (no staff, no
+          // discounts, spaces hidden) and column maths silently wrapped the
+          // last one onto its own row every time the mix changed.
+          const tile = "min-w-0 flex-1 border-b border-l px-4 py-3.5 first:border-l-0";
+          const wide = tile;
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
-            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-7" style={{ borderColor: LINEs, background: PANEL }}>
+            <div className="mt-5 border" style={{ borderColor: LINEs, background: PANEL }}>
+             <div className="flex flex-col sm:flex-row">
               {/* Ages already appear in the facts strip above the image — this
                   slot earns more as the team, names visible, bios on tap. */}
               {staff.length > 0 && (
@@ -2854,6 +2871,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   </div>
                 </button>
               )}
+              {/* "Show spaces" hides the numbers here — the calendar keeps its
+                  colours either way, so a parent can still see which days are
+                  going without being shown a running total. */}
+              {d.showSpaces && (
               <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                 <div className={lab} style={{ color: MUTs }}>spaces</div>
                 {(() => {
@@ -2933,6 +2954,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   )
                 )}
               </div>
+              )}
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
@@ -2971,8 +2993,9 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   </div>
                 )}
               </div>
+             </div>
               {teamOpen && staff.length > 0 && (
-                <div className="border-l-0 border-t px-4 py-4 sm:col-span-2 lg:col-span-7" style={{ borderColor: LINEs }}>
+                <div className="border-t px-4 py-4" style={{ borderColor: LINEs }}>
                   <div className={`grid gap-3 ${grid2}`}>
                     {staff.map((m) => (
                       <div key={m.id} className="border p-3.5" style={{ borderColor: LINEs, background: BG }}>
