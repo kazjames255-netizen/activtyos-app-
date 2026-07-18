@@ -1792,7 +1792,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <div className="grid gap-2 sm:grid-cols-2">
             {([
               ["manual", "You choose", "Nothing happens automatically. You see who's waiting for each date and offer the place to whoever you pick. Best when you know your families, or want to keep siblings together."],
-              ["auto", "First in the queue", "The place is offered to whoever joined first, by email, and held for them for 24 hours. If they don't take it, it passes to the next person. Fairest, and you don't have to do anything."],
+              ["auto", "First in the queue", "The place is offered to whoever joined first, by email, and held for them for 2 hours. If they don't take it, it passes to the next person. Fairest, and you don't have to do anything."],
             ] as const).map(([k, label, desc]) => {
               const on = (d.waitlistMode ?? "manual") === k;
               return (
@@ -2094,7 +2094,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
       <div className="mt-3 rounded-2xl border p-3.5 text-[12px] leading-[1.55]" style={box}>
         <b>You&rsquo;re on the waiting list.</b> We&rsquo;ll email you the moment a place comes up
         {(d.waitlistMode ?? "manual") === "auto"
-          ? " — first in the queue gets it, and you'll have 24 hours to take it."
+          ? " — first in the queue gets it, and you'll have 2 hours to take it."
           : " — the organiser will be in touch if one does."}
       </div>
     );

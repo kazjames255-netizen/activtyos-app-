@@ -548,80 +548,90 @@ section's heading, tenant-level) needed adding to the `KEYS` whitelist; that
 one-line change is in `server/src/routes/library.ts`, shout if you'd rather
 own it.
 
-## E. Waiting list — the process, and what it needs from you
+## E. Waiting list — extend what you already have, don't duplicate it
 
-Kaz has picked the flow; the parent half is built and working, the persistence
-isn't. Both modes are configured per listing in step 11 (`waitlistMode`).
+**Correction to my earlier draft of this section.** I'd specified a separate
+`waitlistEntries` collection before reading `my.ts` and `bookings.ts` properly.
+You've already built most of this and I'd have had you build it twice. What
+follows works with your code instead.
 
-### The journey
+### What you already have
 
-1. **Full dates stay selectable.** They were struck through and dead; now a
-   full date is tappable in an amber "queue for this" state, bulk-selectable
-   via "Select all N full days". Capacity is per date, so the queue is too.
-2. **One flow, two outcomes.** Wanting five days with two full doesn't force a
-   choice between booking and queuing — the bookable days go in the basket,
-   the full ones go on the list, same visit.
-3. **No payment to join.** Never charge for a place you don't have. Money is
-   taken when a place is offered and accepted.
-4. **Per-date FIFO queues.** A cancellation on the 13th goes to whoever is
-   first for the 13th, not first overall.
-5. **Partial offers are fine.** Someone waiting on five dates who is offered
-   two can take those two.
+- `POST /api/my/bookings` creates the booking with status **`Waitlisted`** when
+  the block is full, and computes a queue position by counting existing
+  waitlisted bookings on that block.
+- `POST /api/bookings` has a **`promote`** action that turns a waitlisted
+  booking into a real one, deliberately allowing an operator overbook.
 
-### The two modes (operator picks per listing)
+That's manual mode roughly 80% working already, under a different name. The
+entry being a booking rather than a separate record is the right call — one
+concept, and it converts without copying anything.
 
-| `waitlistMode` | behaviour |
+### The three changes
+
+**1. Waitlist per date, not per block.**
+Same change the capacity fix in §A needs. Today the queue is per week, so
+"I want the 12th" isn't expressible.
+
+**2. Split the basket: book what's free, queue only what isn't.**
+
+Your comment says *"either every child gets a place or the whole basket joins
+the waitlist together — no splitting siblings"*. Right instinct, wrong axis.
+Don't split **children** — book one child and queue their brother, and you've
+made a family's week impossible. But splitting across **dates** is exactly what
+a parent wants: three days free of the five they asked for should book three
+and queue two.
+
+As it stands a parent wanting Mon–Wed with only Monday free gets **nothing** —
+empty basket, no booking, and they go elsewhere. Kaz confirmed the intended
+behaviour is: book what you can, queue the rest.
+
+So: all-or-nothing **within a date** (all children on that date, or none),
+never **across dates**.
+
+**3. `promote` becomes an offer with a hold.**
+
+Right now promote books them immediately. A place should be *offered* and held
+while they decide, or you'll be force-booking families who've already made
+other arrangements.
+
+- `offeredAt`, `offerExpiresAt` on the booking, status `Offered`
+- **The hold is 2 hours** (Kaz's call — long enough to see an email, short
+  enough that a place isn't dead for a day)
+- On expiry: back to `Waitlisted`, offer passes to the next position
+- Operator override stays — promote-without-offer is still useful
+
+### The two modes (`waitlistMode` on the listing, step 11)
+
+| mode | behaviour |
 |---|---|
-| `"manual"` *(default)* | Nothing automatic. The operator sees who's waiting per date and offers the place to whoever they choose — useful for keeping siblings together. |
-| `"auto"` | Offered to whoever joined first, by email, **held 24 hours**; on expiry it passes to the next in the queue. |
+| `"manual"` *(default)* | Nothing automatic. The operator sees who's waiting per date and offers the place to whoever they choose — this is `promote` plus the hold. |
+| `"auto"` | A freed place is offered to position 1 automatically; on expiry it passes down the queue. |
 
-Manual needs no timers or email, which is why it's the default. Auto needs a
-scheduled expiry sweep and a transactional email.
+Auto needs the piece that doesn't exist yet: **a cancellation has to trigger
+the queue**. Right now cancelling frees a seat and nobody is told. That, plus
+an expiry sweep and one transactional email, is the whole of auto mode.
 
-### What we need
+Nothing reads `waitlistMode` server-side yet — it's stored and shown in the
+builder, waiting for you.
 
-```ts
-// waitlistEntries
-{
-  id, tenantId, listingId,
-  blockId, date,                 // the specific session queued for
-  parentId, childName, contact,
-  status: "waiting" | "offered" | "accepted" | "declined" | "expired" | "cancelled",
-  position,                      // FIFO within {listingId, date}
-  offerExpiresAt?,               // auto mode: created + 24h
-  bookingId?,                    // set when it converts
-  createdAt,
-}
-```
+### Also
 
-- `POST /api/waitlist` — join, an array of dates in one call (bulk is the
-  normal case, not the exception). Returns each entry's queue position, which
-  the confirmation should show: *"2nd in line for 12 Aug"*.
-- `GET /api/waitlist?listingId=` — the operator's view, grouped by date.
-- `POST /api/waitlist/{id}/offer` — manual mode, or the auto sweep. Should
-  reject if the date is still full.
-- `POST /api/waitlist/{id}/accept` → creates the booking, decrements the
-  session, marks the entry converted.
-- **A cancellation should trigger the queue** — that's the whole point. In
-  auto mode, freeing a seat offers it to position 1 automatically.
 - **Warn on operator overbooking**: adding a child to a full date while people
   are queued should say "3 people are waiting for this date" first.
 - `waitlistSize` caps the queue per date; blank means no limit.
+- **Queue positions should come back from the API** — the parent confirmation
+  wants to say "2nd in line for 12 Aug" and currently says "we'll email you".
+- **`BookingPanel.tsx` needs the date-level treatment** — it says
+  "Full · waitlist" already but selects whole blocks. It's the storefront
+  parents actually use, so that's where this has to land.
 
 ### Front-end status
 
-Built and working against local state: date selection, bulk select, the
-combined book-and-queue basket, the join panel, and the confirmation (which
-already varies its wording by mode). Not persisted — the join button currently
-only flips local state.
-
-Two things for you to be aware of:
-
-- **Your `BookingPanel.tsx` needs the same treatment.** It already says
-  "Full · waitlist" at line 177 but selects whole blocks, not dates. The
-  parent-facing storefront is where this actually has to work.
-- **Queue positions can't be shown until `POST /api/waitlist` returns them** —
-  the confirmation currently says "we'll email you" instead.
+Built and working against local state: full dates selectable in their own
+state, "select all N full days", the combined book-and-queue basket, and a
+confirmation whose wording follows the mode. It maps straight onto the above
+once the API is per date.
 
 ---
 
