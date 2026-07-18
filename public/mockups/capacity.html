@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capacity & calendar states</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.pane{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pane > h3{margin:0;padding:9px 13px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);background:#fbfcfe;border-bottom:1px solid var(--line)}
+.pane .in{padding:14px}
+/* playful */
+.pf{background:#fff}
+.pf .wk{font-size:11px;font-weight:700;color:#2f6bd8;margin-bottom:6px}
+.pf .wk span{color:#a6adba;font-weight:600}
+.days{display:flex;flex-wrap:wrap;gap:6px}
+.d{position:relative;width:44px;padding:6px 0;border:2px solid #e8edf7;border-radius:12px;display:flex;flex-direction:column;align-items:center;background:#fff;color:#232842;cursor:pointer}
+.d .dw{font-size:9px;font-weight:700;text-transform:uppercase}
+.d .dn{font-size:14px;font-weight:800;line-height:1}
+.d.on{background:#2f6bd8;border-color:#2f6bd8;color:#fff}
+.d.off{background:#fafbfd;border-color:#e8edf7;color:#c8ccd4;cursor:not-allowed}
+.d.off .dn{text-decoration:line-through}
+.d .dot{position:absolute;bottom:-3px;width:6px;height:6px;border-radius:99px;background:#f59e0b}
+.avail{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;font-weight:700}
+.avail i{width:8px;height:8px;border-radius:99px;display:block}
+.btn{margin-top:14px;width:100%;padding:13px;border:0;border-radius:16px;background:#2f6bd8;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+/* sport */
+.sp{background:#0f1420;color:#fff}
+.sp .wk{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8f9bb0;margin-bottom:6px}
+.sp .d{border-radius:0;border:1px solid #26304a;background:#151d2e;color:#fff}
+.sp .d.on{background:#c6ff00;border-color:#c6ff00;color:#12280a}
+.sp .d.off{background:#101725;border-color:#26304a;color:#5a6478}
+.sp .d .dot{border-radius:0;background:#ffb020}
+.sp .btn{border-radius:0;background:#c6ff00;color:#12280a;font-style:italic;text-transform:uppercase;font-weight:900}
+.lgd{margin-top:10px;font-size:10.5px;color:var(--ink-3);display:flex;gap:14px;align-items:center}
+.lgd b{font-weight:700}
+.sp .lgd{color:#8f9bb0}
+.cap{font-size:11.5px;color:var(--ink-3);margin:0 0 10px}
+.before{border:1px dashed #f6c9cc;background:#fdebec;color:#a4161c;border-radius:9px;padding:8px 11px;font-size:12px;font-weight:700;display:inline-block}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a href="/mockups/filter-bars.html">Filter bar</a><a href="/mockups/categories.html">Categories</a><a href="/mockups/locations.html">Locations</a><a class="on" href="/mockups/capacity.html">Capacity</a></nav>
+<h1>Capacity &amp; calendar states</h1>
+<p class="sub">What a parent sees. The calendar only marks exceptions — full days and nearly-full days — so a normal week looks exactly as it does now.</p>
+
+<section class="opt">
+  <header><span class="num">1</span><h2>The line under the calendar</h2><span class="note">Says the shape while there's room; produces a number only when it's scarce.</span></header>
+  <div class="body">
+    <p class="cap">Before — the same sentence regardless of scope, so 60 reads as "60 free today":</p>
+    <div class="before">● 60 spaces left</div>
+    <p class="cap" style="margin-top:16px">After — 60 across the whole camp vs 20 per day:</p>
+    <div class="cols">
+      <div class="pane"><h3>Whole-listing cap — 60</h3><div class="in pf">
+        <div class="avail" style="color:#2f6bd8"><i style="background:#14b8a6"></i>Up to 60 children on this listing</div>
+        <div class="avail" style="color:#c2410c"><i style="background:#c2410c"></i>Only 12 places left</div>
+        <div class="avail" style="color:#dc2626"><i style="background:#dc2626"></i>Sold out</div>
+      </div></div>
+      <div class="pane"><h3>Per-day cap — 20</h3><div class="in pf">
+        <div class="avail" style="color:#2f6bd8"><i style="background:#14b8a6"></i>Up to 20 children each day</div>
+        <div class="avail" style="color:#c2410c"><i style="background:#c2410c"></i>Only 4 places left that day</div>
+        <div class="avail" style="color:#dc2626"><i style="background:#dc2626"></i>Sold out</div>
+      </div></div>
+    </div>
+    <p class="cap" style="margin-top:14px">Scarce = the last fifth, or the last 3 on a small group. So an 8-child club warns at 3, a 60-child camp at 12.</p>
+  </div>
+</section>
+
+<section class="opt">
+  <header><span class="num">2</span><h2>The calendar — Playful</h2><span class="note">11th and 12th are full (struck through, unpickable). 13th has 2 left (amber dot). 14th and 15th are ordinary.</span></header>
+  <div class="body"><div class="pane"><div class="in pf">
+    <div class="wk">Week 1 <span>· from 11 Aug</span></div>
+    <div class="days">
+      <div class="d off"><span class="dw">Mon</span><span class="dn">11</span></div>
+      <div class="d off"><span class="dw">Tue</span><span class="dn">12</span></div>
+      <div class="d" title="Only 2 left"><span class="dw">Wed</span><span class="dn">13</span><i class="dot"></i></div>
+      <div class="d on"><span class="dw">Thu</span><span class="dn">14</span></div>
+      <div class="d"><span class="dw">Fri</span><span class="dn">15</span></div>
+    </div>
+    <div class="wk" style="margin-top:14px">Week 2 <span>· from 18 Aug</span></div>
+    <div class="days">
+      <div class="d"><span class="dw">Mon</span><span class="dn">18</span></div>
+      <div class="d"><span class="dw">Tue</span><span class="dn">19</span></div>
+      <div class="d"><span class="dw">Wed</span><span class="dn">20</span></div>
+      <div class="d"><span class="dw">Thu</span><span class="dn">21</span></div>
+      <div class="d"><span class="dw">Fri</span><span class="dn">22</span></div>
+    </div>
+    <div class="lgd"><span><b>13</b> ● almost full</span><span><b style="text-decoration:line-through">11</b> full</span><span>hover a marked day for the count</span></div>
+    <div class="avail" style="color:#c2410c"><i style="background:#c2410c"></i>Only 2 places left that day</div>
+    <button class="btn">Add 1 × Day pass to basket &nbsp; £30.00</button>
+  </div></div></div>
+</section>
+
+<section class="opt">
+  <header><span class="num">3</span><h2>The calendar — Sport / Navy</h2><span class="note">Same rules in that theme's language.</span></header>
+  <div class="body"><div class="pane"><div class="in sp">
+    <div class="wk">Week 1 · from 11 Aug</div>
+    <div class="days">
+      <div class="d off"><span class="dw">Mon</span><span class="dn">11</span></div>
+      <div class="d off"><span class="dw">Tue</span><span class="dn">12</span></div>
+      <div class="d"><span class="dw">Wed</span><span class="dn">13</span><i class="dot"></i></div>
+      <div class="d on"><span class="dw">Thu</span><span class="dn">14</span></div>
+      <div class="d"><span class="dw">Fri</span><span class="dn">15</span></div>
+    </div>
+    <div class="lgd"><span><b>13</b> ■ almost full</span><span><b style="text-decoration:line-through">11</b> full</span></div>
+    <div class="avail" style="color:#ffb020"><i style="background:#ffb020;border-radius:0"></i>Only 2 places left that day</div>
+    <button class="btn">Add 1 × Day pass · £30.00</button>
+  </div></div></div>
+</section>
+
+<section class="opt">
+  <header><span class="num">4</span><h2>Sold out</h2><span class="note">Every day struck through, button disabled, waiting list offered where one exists.</span></header>
+  <div class="body"><div class="cols">
+    <div class="pane"><h3>Playful</h3><div class="in pf">
+      <div class="days">
+        <div class="d off"><span class="dw">Mon</span><span class="dn">11</span></div>
+        <div class="d off"><span class="dw">Tue</span><span class="dn">12</span></div>
+        <div class="d off"><span class="dw">Wed</span><span class="dn">13</span></div>
+        <div class="d off"><span class="dw">Thu</span><span class="dn">14</span></div>
+        <div class="d off"><span class="dw">Fri</span><span class="dn">15</span></div>
+      </div>
+      <div class="avail" style="color:#dc2626"><i style="background:#dc2626"></i>Sold out</div>
+      <button class="btn" disabled>Sold out — join the waiting list</button>
+    </div></div>
+    <div class="pane"><h3>Sport / Navy — stats tile</h3><div class="in sp">
+      <div style="border:1px solid #26304a;border-top:2px solid #c6ff00;padding:14px 16px;max-width:230px">
+        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#8f9bb0">spaces left</div>
+        <div style="margin-top:4px;font-size:18px;font-weight:900;font-style:italic;text-transform:uppercase;color:#ff5470">Sold out</div>
+        <button style="margin-top:8px;width:100%;padding:6px;border:0;background:#c6ff00;color:#12280a;font-family:inherit;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;cursor:pointer">Join the waiting list</button>
+      </div>
+    </div></div>
+  </div></div>
+</section>
+
+</div>
+</body>
+</html>
