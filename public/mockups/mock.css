@@ -1,0 +1,29 @@
+/* Shared chrome for the ActivityOS design mockups. Mirrors the app's tokens. */
+:root{
+  --ink:#141a2e; --ink-2:#4b5570; --ink-3:#79839c;
+  --surface:#f4f6fb; --panel:#ffffff; --line:#e4e9f4;
+  --brand:#1d3a8f; --brand-2:#2f6bd8; --brand-ink:#102356; --brand-soft:#eaf0fc; --brand-line:#cdddf7;
+  --side-bg:linear-gradient(160deg,#1c3b8c,#172b6a);
+  --green:#16a34a; --amber:#d97706; --red:#dc2626;
+  --ff:"Hanken Grotesk",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);font-family:var(--ff);color:var(--ink);-webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:24px;letter-spacing:-.02em;margin:0 0 4px}
+.sub{color:var(--ink-3);font-size:13.5px;margin:0 0 26px;line-height:1.55}
+.opt{margin:0 0 30px;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,35,86,.04)}
+.opt > header{display:flex;align-items:baseline;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);background:#fbfcfe}
+.opt h2{font-size:14px;margin:0;letter-spacing:-.01em}
+.num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--brand);color:#fff;font-size:11.5px;font-weight:800;flex:none}
+.note{font-size:11.5px;color:var(--ink-3);margin-left:auto;text-align:right;max-width:54%;line-height:1.45}
+.body{padding:16px 18px 18px}
+.lede{font-size:12.5px;color:var(--ink-3);margin:0 0 13px;line-height:1.5}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctl{height:34px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);padding:0 10px;outline:none}
+.btn{height:34px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-2);padding:0 13px;cursor:pointer}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.mut{color:var(--ink-3)}
+.nav{display:flex;gap:8px;margin:0 0 22px}
+.nav a{font-size:12.5px;font-weight:700;text-decoration:none;color:var(--ink-2);background:var(--panel);border:1px solid var(--line);padding:7px 13px;border-radius:999px}
+.nav a.on{background:var(--brand);border-color:var(--brand);color:#fff}
