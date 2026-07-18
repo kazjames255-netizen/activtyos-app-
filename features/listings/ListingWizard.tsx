@@ -670,6 +670,7 @@ export function ListingWizard({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [fullPreview, setFullPreview] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
@@ -679,8 +680,8 @@ export function ListingWizard({
 
   useEffect(() => { saveDraft(wizardKey, d); }, [d, wizardKey]);
 
-  async function syncApi(status: "draft" | "live"): Promise<boolean> {
-    setBusy(true);
+  async function syncApi(status: "draft" | "live", quiet = false): Promise<boolean> {
+    if (!quiet) setBusy(true);
     setMsg(null);
     try {
       const passes = tickets.length ? tickets.map((t) => ({ name: t.name, price: t.price })) : [{ name: "Standard", price: 0 }];
@@ -698,15 +699,36 @@ export function ListingWizard({
       const next = { ...d, images, gallery, id, status };
       setD(next);
       saveDraft(id!, next);
-      setBusy(false);
+      if (!quiet) setBusy(false);
       return true;
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Save failed");
-      setBusy(false);
+      if (!quiet) setBusy(false);
       return false;
     }
   }
-  const saveDraftAction = async () => { if (await syncApi("draft")) onSaved(); };
+  // The builder used to reach the server only when someone pressed Save draft
+  // or Publish, while autosaving to localStorage on every keystroke — so the
+  // screen looked saved, the customer page disagreed, and nothing said which
+  // was right. Now every edit reaches the server, and the header says so.
+  const dirtyRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!dirtyRef.current) { dirtyRef.current = true; return; } // skip the first render
+    setSaveState("dirty");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      if (busy) { setSaveState("dirty"); return; } // an explicit save is already running
+      setSaveState("saving");
+      // Never promotes: an unpublished listing stays unpublished.
+      const ok = await syncApi(d.status === "live" ? "live" : "draft", true);
+      setSaveState(ok ? "saved" : "error");
+    }, 1200);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d]);
+
+  const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length);
   const publishAction = async () => {
     if (blockers.length) {
@@ -733,6 +755,12 @@ export function ListingWizard({
         </div>
         <div className="flex items-center gap-1.5">
           {msg && <span className="mr-1 text-[12px] text-[var(--red)]">{msg}</span>}
+          {(() => {
+            const label = { idle: "", dirty: "Unsaved changes", saving: "Saving…", saved: "Saved", error: "Couldn't save" }[saveState];
+            if (!label) return null;
+            const col = saveState === "error" ? "var(--red)" : saveState === "saved" ? "#0f7a44" : "var(--ink-3)";
+            return <span className="mr-1 text-[11.5px] font-semibold" style={{ color: col }}>{saveState === "saved" ? "✓ " : ""}{label}</span>;
+          })()}
           <Button sm disabled={busy} onClick={saveDraftAction}>Save draft</Button>
           <Button sm variant="cta" onClick={() => setFullPreview(true)}>👁 Preview as a parent</Button>
           <Button sm variant="primary" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined}>Publish{blockers.length > 0 && <span className="ml-1 opacity-80">({blockers.length})</span>}</Button>
