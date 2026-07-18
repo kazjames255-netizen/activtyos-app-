@@ -1,10 +1,30 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.6.0
+  version: 0.7.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.7.0 — Registers (run the day)
+
+    Tag `registers`. A register is one block-session (a block + a date).
+    **Who's expected** comes from the bookings holding a place (Confirmed /
+    Approval needed) on that block; the register only stores what happened on
+    the day — check-in / check-out / absent, per booking ref, stamped with
+    who marked it and when.
+
+    - `GET /api/registers?date=YYYY-MM-DD` (default today) — every session
+      the tenant runs that day, attendees merged with attendance, plus
+      `counts` (expected/in/out/absent). Staff can read; platform passes
+      `?tenantId=`; parents 403.
+    - `POST /api/registers/{blockId}/{date}/mark` `{ref, status}` —
+      `in` | `out` (keeps the check-in time) | `absent` | `expected` (undo,
+      clears the entry). **This is the one write the `staff` role has** —
+      taking attendance is their job. Operators can mark too; platform and
+      parents cannot. Marking a booking that doesn't hold a place is a 409.
+    - Realtime collection `registers` (tenant-scoped) — two devices marking
+      the same session stay in sync live.
 
     ## v0.6.0 — Listings persist the WHOLE builder draft
 
@@ -169,6 +189,8 @@ tags:
     description: A listing's bookable runs — capacity, sessions, waitlist
   - name: blocks-builder
     description: Reusable periods / passes / bundles library with server-side pricing
+  - name: registers
+    description: Daily attendance per block-session — the staff role's one write
   - name: customers
     description: Operator-only, tenant-scoped
   - name: invites
@@ -929,6 +951,83 @@ paths:
                               age: { type: number }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/registers:
+    get:
+      tags: [registers]
+      summary: The day's registers (default today)
+      description: |
+        Every session the caller's tenant runs on the date — one entry per
+        block with a session that day — with expected attendees (bookings
+        holding a place) merged with the attendance taken so far. Staff can
+        read. Platform must pass `?tenantId=`. Parents 403.
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, example: "2026-08-03" }
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only
+          schema: { type: string }
+      responses:
+        "200":
+          description: Sessions ordered by start time
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RegisterSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/registers/{blockId}/{date}/mark:
+    post:
+      tags: [registers]
+      summary: Check a child in/out, mark absent, or undo
+      description: |
+        The `staff` role's one write (operators can too; platform and parents
+        cannot). `in` stamps the arrival time; `out` stamps departure and
+        keeps the arrival; `absent` records a no-show; `expected` clears the
+        entry (mis-tap undo). The booking must hold a place on the block
+        (Confirmed / Approval needed) — anything else is a 409.
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: date
+          in: path
+          required: true
+          schema: { type: string, example: "2026-08-03" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ref, status]
+              properties:
+                ref: { type: string, example: "10312" }
+                status: { type: string, enum: [in, out, absent, expected] }
+      responses:
+        "200":
+          description: The updated entry (null after an undo)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ref: { type: string }
+                  attendance:
+                    $ref: "#/components/schemas/AttendanceEntry"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The booking doesn't hold a place on this block
 
   /api/periods:
     get:
@@ -1837,6 +1936,51 @@ components:
                 addons: { type: array, items: { type: object } }
                 staff: { type: array, items: { type: object } }
                 categories: { type: array, items: { type: object } }
+
+    AttendanceEntry:
+      type: object
+      nullable: true
+      properties:
+        status: { type: string, enum: [in, out, absent] }
+        inAt: { type: string, nullable: true, example: "2026-08-03T08:52:11.000Z" }
+        outAt: { type: string, nullable: true }
+        by: { type: string, description: Who marked it (email/uid) }
+        at: { type: string, description: When the entry last changed }
+
+    RegisterSession:
+      type: object
+      properties:
+        blockId: { type: string }
+        date: { type: string, example: "2026-08-03" }
+        start: { type: string, example: "09:00" }
+        end: { type: string, example: "15:30" }
+        blockName: { type: string, example: "Week 1 · 3 – 7 Aug 2026" }
+        listingId: { type: string }
+        listingName: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              ref: { type: string }
+              booker: { type: string }
+              bookingStatus: { type: string }
+              seats: { type: number }
+              children:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    age: { type: number }
+              attendance: { $ref: "#/components/schemas/AttendanceEntry" }
+        counts:
+          type: object
+          properties:
+            expected: { type: integer }
+            in: { type: integer }
+            out: { type: integer }
+            absent: { type: integer }
 
     Customer:
       type: object

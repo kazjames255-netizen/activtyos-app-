@@ -20,6 +20,7 @@ import { my } from "./routes/my";
 import { images, uploads } from "./routes/uploads";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
+import { registers } from "./routes/registers";
 import { me, tenants } from "./routes/tenants";
 
 const app = express();
@@ -66,6 +67,7 @@ app.use("/api/periods", periods);
 app.use("/api/passes", passes);
 app.use("/api/block-bundles", blockBundles);
 app.use("/api/library", library);
+app.use("/api/registers", registers);
 app.use("/api/uploads", uploads);
 app.use("/api/my", my);
 app.use("/api/register-role", registerRole);
