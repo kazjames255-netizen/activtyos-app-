@@ -34,6 +34,8 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
+  /** "online" venues run remotely — no address, map or travel details. */
+  kind?: "place" | "online";
   /** What's there — shown to parents on the listing page. */
   facilities?: string[];
   /** Getting there, parking, where to drop off. */
@@ -522,7 +524,7 @@ function ListingsTab({
 }) {
   const [q, setQ] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended" | "draft">("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
@@ -610,6 +612,7 @@ function ListingsTab({
       start: info?.from || "",
       end: info?.to || "",
       isLive: info ? info.live : true,
+      isDraft: (dr?.status ?? "live") === "draft",
       archived: l.archived ?? getDraftArchived(l.id),
     };
   });
@@ -627,7 +630,11 @@ function ListingsTab({
   const byDate = (a: string, b: string, dir: 1 | -1) =>
     !a && !b ? 0 : !a ? 1 : !b ? -1 : a < b ? -dir : a > b ? dir : 0;
   const activeShown = filtered
-    .filter((r) => !r.archived && (statusFilter === "all" || (statusFilter === "live" ? r.isLive : !r.isLive)))
+    .filter((r) => !r.archived && (
+      statusFilter === "all" ? true
+      : statusFilter === "draft" ? r.isDraft
+      : statusFilter === "live" ? (r.isLive && !r.isDraft)
+      : (!r.isLive && !r.isDraft)))
     .sort((a, b) => {
       switch (sortBy) {
         case "latest": return byDate(a.start, b.start, -1);
@@ -722,7 +729,7 @@ function ListingsTab({
         )}
 
         <span className="ml-auto flex h-8 items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[11.5px] font-semibold">
-          {([["all", "All"], ["live", "Live"], ["ended", "Ended"]] as const).map(([k, label]) => (
+          {([["all", "All"], ["live", "Published"], ["draft", "Unpublished"], ["ended", "Ended"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatusFilter(k)} className="h-full rounded-full px-3 transition-colors"
               style={statusFilter === k ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
@@ -731,7 +738,7 @@ function ListingsTab({
       {activeShown.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
       ) : (
-        activeShown.map(({ l, info, vn, cap, spaces, isLive }) => {
+        activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft }) => {
           return (
             <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
               <div className="flex flex-col sm:flex-row">
@@ -755,10 +762,12 @@ function ListingsTab({
                 <div className="min-w-0 flex-1 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--ink)]">{l.name}</h3>
-                    {isLive ? (
-                      <span title="The run hasn’t ended — last date is today or later" className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft,#e7f8ee)] px-2 py-[2px] text-[10px] font-semibold text-[#0f7a44]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#16a34a]" />Live</span>
+                    {isDraft ? (
+                      <span title="Not published — parents can't see or book this" className="rounded-full px-2 py-[2px] text-[10px] font-semibold" style={{ background: "#fff7ed", color: "#9a3412" }}>Unpublished</span>
+                    ) : isLive ? (
+                      <span title="Published and still to run — parents can find and book it" className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft,#e7f8ee)] px-2 py-[2px] text-[10px] font-semibold text-[#0f7a44]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#16a34a]" />Published</span>
                     ) : (
-                      <span title="The last date has passed — this run has ended" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
+                      <span title="Published, but the last date has passed" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
                     )}
                     {info?.opensAt && info.opensAt > nowLocal() && (
                       <span title="Parents can see this listing but can't book until then" className="rounded-full bg-[#fff7ed] px-2 py-[2px] text-[10px] font-semibold text-[#9a3412]">⏰ Opens {openLabel(info.opensAt)}</span>
@@ -1045,11 +1054,11 @@ function LocationsTab({
               >
                 {/* Numbered so a row and its map pin are obviously the same thing. */}
                 <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-extrabold"
-                  style={on ? { background: "var(--side-bg)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{i + 1}</span>
+                  style={on ? { background: "var(--side-bg)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{v.kind === "online" ? "💻" : i + 1}</span>
                 <button type="button" onClick={() => setSelId(v.id)} className="min-w-0 flex-1 text-left">
                   <div className="truncate text-[13px] font-bold">{v.name}</div>
                   <div className="truncate text-[11.5px] text-[var(--ink-3)]">
-                    {v.address || "No address yet"} · {n ? `${n} listing${n === 1 ? "" : "s"}` : "not used yet"}
+                    {v.kind === "online" ? "Runs online" : v.address || "No address yet"} · {n ? `${n} listing${n === 1 ? "" : "s"}` : "not used yet"}
                   </div>
                 </button>
                 <button
@@ -1086,7 +1095,16 @@ function LocationsTab({
               </div>
             </div>
           ) : (
-            <Button variant="primary" className="mt-1 self-start" onClick={() => setAdding(true)}>＋ Add location</Button>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <Button variant="primary" onClick={() => setAdding(true)}>＋ Add location</Button>
+              {/* Not every listing has an address — online clubs and tutoring
+                  still need something to point a listing at. */}
+              <Button onClick={() => {
+                const id = uid();
+                patch((st) => ({ ...st, venues: [...st.venues, { id, name: "Online", address: "", kind: "online" }] }));
+                setSelId(id);
+              }}>💻 Add online</Button>
+            </div>
           )}
         </div>
 
@@ -1094,22 +1112,29 @@ function LocationsTab({
         <div className="flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           {sel ? (
             <>
-              {sel.lat !== undefined ? (
+              {sel.kind === "online" ? (
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+                  💻 <b>Runs online.</b> No address, map or travel details — parents see the joining
+                  instructions you write below.
+                </div>
+              ) : sel.lat !== undefined ? (
                 <VenueMap lat={sel.lat} lng={sel.lng} zoom={sel.zoom} onZoom={(z) => setPin(sel.id, { zoom: z })} />
               ) : (
                 <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 text-center text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
                   Use <b className="mx-1">Find</b> below to drop a pin, or type the address in by hand.
                 </div>
               )}
-              <AddressFinder onPick={(h) => setPin(sel.id, { lat: h.lat, lng: h.lng, address: tidyAddress(h.label), zoom: sel.zoom ?? 16 })} />
+              {sel.kind !== "online" && <AddressFinder onPick={(h) => setPin(sel.id, { lat: h.lat, lng: h.lng, address: tidyAddress(h.label), zoom: sel.zoom ?? 16 })} />}
               <div>
                 <FieldLabel>Venue name</FieldLabel>
                 <Input value={sel.name} onChange={(e) => updateVenue(sel.id, "name", e.target.value)} className="w-full" />
               </div>
-              <div>
-                <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— edit freely</span></FieldLabel>
-                <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder="Street, town, postcode" className="w-full" />
-              </div>
+              {sel.kind !== "online" && (
+                <div>
+                  <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— edit freely</span></FieldLabel>
+                  <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder="Street, town, postcode" className="w-full" />
+                </div>
+              )}
               {sel.lat !== undefined && (
                 <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">
                   <span>📍 Pin saved</span>
@@ -1119,6 +1144,7 @@ function LocationsTab({
 
               {/* Both of these show on the customer page — the questions parents
                   ask before they book, answered once per venue. */}
+              {sel.kind !== "online" && (
               <div className="border-t border-[var(--line)] pt-2">
                 <FieldLabel>What&rsquo;s there</FieldLabel>
                 <div className="mb-1.5 flex flex-wrap gap-1.5">
@@ -1141,7 +1167,9 @@ function LocationsTab({
                   ))}
                 </div>
               </div>
+              )}
 
+              {sel.kind !== "online" && (
               <div className="flex flex-wrap gap-2">
                 <div className="min-w-[135px] flex-1">
                   <FieldLabel>what3words</FieldLabel>
@@ -1154,14 +1182,17 @@ function LocationsTab({
                     placeholder="Purbeck Rd bus stop, 3 min" className="w-full" />
                 </div>
               </div>
+              )}
 
               <div>
-                <FieldLabel>Getting there &amp; parking</FieldLabel>
+                <FieldLabel>{sel.kind === "online" ? "How to join" : "Getting there & parking"}</FieldLabel>
                 <textarea
                   value={sel.directions ?? ""}
                   onChange={(e) => setPin(sel.id, { directions: e.target.value })}
                   rows={3}
-                  placeholder="Free car park off Purbeck Road. Drop-off at the main entrance — please don't use the leisure centre bays."
+                  placeholder={sel.kind === "online"
+                    ? "A Zoom link is emailed the day before. Sessions start on the hour — please join a few minutes early."
+                    : "Free car park off Purbeck Road. Drop-off at the main entrance — please don't use the leisure centre bays."}
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[12.5px] leading-[1.5] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--brand-2)]"
                 />
               </div>

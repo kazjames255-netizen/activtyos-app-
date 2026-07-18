@@ -32,9 +32,11 @@ const STEPS = [
   { key: "run", label: "When it runs", stage: "When it runs" },
   { key: "tickets", label: "Tickets & pricing", stage: "Tickets & pricing" },
   { key: "discounts", label: "Discounts", stage: "Tickets & pricing" },
-  { key: "preview", label: "Preview", stage: "Tickets & pricing" },
   { key: "addons", label: "Add-ons", stage: "Extras & team" },
   { key: "staff", label: "Staff", stage: "Extras & team" },
+  // Preview last but one: there's nothing left to add, so what it shows is
+  // what publishing will produce.
+  { key: "preview", label: "Preview", stage: "Publish" },
   { key: "policy", label: "Policy & publish", stage: "Publish" },
 ] as const;
 const STAGES = ["About", "When it runs", "Tickets & pricing", "Extras & team", "Publish"];
@@ -198,6 +200,11 @@ export function capacityNote(d: WizardDraft, left: number | null): { text: strin
   return { text: "Lots of space left", tone: "calm" };
 }
 
+/** Online venues have no address, map or travel — just joining details. */
+export function isOnlineVenue(v: { kind?: string } | null | undefined): boolean {
+  return v?.kind === "online";
+}
+
 /** The dated run covering a date, when the server has told us about them. */
 export function blockOn(blocks: RunBlock[] | undefined, iso: string): RunBlock | null {
   return blocks?.find((b) => b.startDate <= iso && iso <= b.endDate) ?? null;
@@ -339,6 +346,31 @@ export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title
   return def ? def[field] : "";
 }
 
+/**
+ * What has to be true before a listing can be published. Each blocker names the
+ * step that fixes it — "something's missing" without saying what is worse than
+ * no check at all.
+ */
+export function publishBlockers(d: WizardDraft, ticketCount: number): { step: number; what: string }[] {
+  // Referenced by key, not index — the steps get reordered and a stale number
+  // would send someone to the wrong screen without failing.
+  const at = (key: string) => Math.max(0, STEPS.findIndex((x) => x.key === key));
+  const out: { step: number; what: string }[] = [];
+  if (!d.title.trim()) out.push({ step: at("basics"), what: "Give the listing a name" });
+  if (!d.venueId) out.push({ step: at("basics"), what: "Choose where it runs (or pick your online option)" });
+  if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: "Set the dates it runs between" });
+  else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: "The end date is before the start date" });
+  else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
+    // The trap: a range that only covers days the operator has unticked.
+    out.push({ step: at("run"), what: "Those dates don't include any running days — check which weekdays are ticked" });
+  }
+  if (!d.blockId) out.push({ step: at("tickets"), what: "Pick a block so the listing has passes and prices" });
+  else if (ticketCount === 0) out.push({ step: at("tickets"), what: "That block has no passes — add some in the Blocks area" });
+  // Capacity is deliberately not required — left blank the listing just
+  // doesn't show capacity anywhere, which is a legitimate way to run one.
+  return out;
+}
+
 export function emptyDraft(): WizardDraft {
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
@@ -430,7 +462,8 @@ export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null
   return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft), opensAt: draft.opensAt ?? "" };
 }
 
-// "Live" = the run hasn't ended yet (last date is today or later). No end date → treated as live/upcoming.
+// Has the run finished? Nothing to do with publication — a published
+// listing whose last date has passed is "Ended", an unpublished one is neither.
 export function listingIsLive(draft: WizardDraft): boolean {
   if (!draft.runTo) return true;
   return draft.runTo >= new Date().toISOString().slice(0, 10);
@@ -673,7 +706,16 @@ export function ListingWizard({
     }
   }
   const saveDraftAction = async () => { if (await syncApi("draft")) onSaved(); };
-  const publishAction = async () => { if (await syncApi("live")) { onSaved(); onClose(); } };
+  const blockers = publishBlockers(d, tickets.length);
+  const publishAction = async () => {
+    if (blockers.length) {
+      // Send them to the first thing that's missing rather than making them hunt.
+      setStep(blockers[0].step);
+      setMsg(`${blockers.length} thing${blockers.length === 1 ? "" : "s"} to finish before this can be published`);
+      return;
+    }
+    if (await syncApi("live")) { onSaved(); onClose(); }
+  };
 
   const previewProps = { d, venue, local, booking, addons, theme: d.pageStyle ?? "playful", onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
   const stepKey = STEPS[step].key;
@@ -691,7 +733,7 @@ export function ListingWizard({
           {msg && <span className="mr-1 text-[12px] text-[var(--red)]">{msg}</span>}
           <Button sm disabled={busy} onClick={saveDraftAction}>Save draft</Button>
           <Button sm variant="cta" onClick={() => setFullPreview(true)}>👁 Preview as a parent</Button>
-          <Button sm variant="primary" disabled={busy} onClick={publishAction}>Publish</Button>
+          <Button sm variant="primary" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined}>Publish{blockers.length > 0 && <span className="ml-1 opacity-80">({blockers.length})</span>}</Button>
           <button type="button" onClick={onClose} aria-label="Close" className="ml-1 text-[20px] leading-none text-[var(--ink-3)]">×</button>
         </div>
       </div>
@@ -730,10 +772,34 @@ export function ListingWizard({
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
-            {stepKey === "preview" && <div><StepHead n={8} kicker="STEP 8 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
+            {stepKey === "preview" && <div><StepHead n={10} kicker="STEP 10 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "policy" && <PolicyStep d={d} upd={upd} />}
+            {stepKey === "policy" && (
+              <>
+                {blockers.length > 0 && (
+                  <div className="mb-3 max-w-[720px] rounded-xl border p-3.5" style={{ borderColor: "#fed7aa", background: "#fff7ed" }}>
+                    <div className="text-[12.5px] font-extrabold" style={{ color: "#9a3412" }}>
+                      Before this can be published ({blockers.length})
+                    </div>
+                    <ul className="mt-1.5 flex flex-col gap-1">
+                      {blockers.map((bl, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[12px]" style={{ color: "#9a3412" }}>
+                          <span className="mt-[2px]">•</span>
+                          <button type="button" onClick={() => setStep(bl.step)} className="text-left underline underline-offset-2">
+                            {bl.what} <span className="opacity-70">— step {bl.step + 1}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 text-[11px]" style={{ color: "#9a3412" }}>
+                      You can still <b>Save draft</b> — it stays unpublished until these are done.
+                    </div>
+                  </div>
+                )}
+                <PolicyStep d={d} upd={upd} />
+              </>
+            )}
           </div>
 
           <div className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3">
@@ -742,13 +808,15 @@ export function ListingWizard({
             {step < STEPS.length - 1 ? (
               <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next ›</Button>
             ) : (
-              <Button variant="primary" disabled={busy} onClick={publishAction}>Publish</Button>
+              <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction}>
+                {blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} to finish` : "Publish"}
+              </Button>
             )}
           </div>
         </div>
 
         <div className="hidden w-[340px] flex-none overflow-auto border-l border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
-          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">↘ Live customer page · exactly what parents see</div>
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">↘ Customer page · exactly what parents see</div>
           <ParentPreview {...previewProps} />
         </div>
       </div>
@@ -1538,7 +1606,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   };
   return (
     <div className="max-w-[720px]">
-      <StepHead n={9} kicker="STEP 9 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
       <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
@@ -1590,7 +1658,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   };
   return (
     <div className="max-w-[720px]">
-      <StepHead n={10} kicker="STEP 10 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
+      <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
       <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 flex flex-col gap-2">
         {local.staff.map((m) => {
@@ -1668,7 +1736,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   const policies = CANCELLATION_POLICIES;
   return (
     <div className="max-w-[720px]">
-      <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then go live." />
+      <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
       <SectionHead>Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
@@ -2714,7 +2782,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title={headingOf(d, "included", "title")} sub={headingOf(d, "included", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
             {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title={headingOf(d, "safety", "title")} sub={headingOf(d, "safety", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
             {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
-            {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
+            {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
                 <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
                   <div className="flex items-center gap-2.5">
@@ -2728,12 +2796,12 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 </button>
                 {whereOpen && (<div className="mt-4">
                 <div className="text-[14px] font-extrabold" style={{ color: INKp }}>{venue.name}</div>
-                {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
-                {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
+                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>💻 Runs online</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
+                {!isOnlineVenue(venue) && venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
                 {!!venue.facilities?.length && (
                   <div className={`mt-3 grid gap-2 ${grid2}`}>{venue.facilities.map((f, i) => chip(f, "✅", i))}</div>
                 )}
-                {(venue.what3words || venue.transport) && (
+                {!isOnlineVenue(venue) && (venue.what3words || venue.transport) && (
                   <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
                     {venue.what3words && (
                       <a href={`https://what3words.com/${encodeURIComponent(venue.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer noopener"
@@ -2748,7 +2816,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 )}
                 {venue.directions && (
                   <div className="mt-3 rounded-2xl p-3.5" style={{ background: "#f4f7ff" }}>
-                    <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>Getting there &amp; parking</div>
+                    <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{isOnlineVenue(venue) ? "How to join" : "Getting there & parking"}</div>
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: "#3d4763" }}>{venue.directions}</p>
                   </div>
                 )}
@@ -3038,7 +3106,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
-            {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
+            {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
                 <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>
                   <span className="flex items-baseline gap-2.5">
@@ -3049,14 +3117,14 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 </button>
                 {whereOpen && (<div className="mt-3">
                 <div className="text-[14px] font-black text-white">{venue.name}</div>
-                {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
-                {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
+                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>💻 Runs online</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
+                {!isOnlineVenue(venue) && venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
                 {!!venue.facilities?.length && (
                   <div className="mt-3 flex flex-wrap gap-1.5">{venue.facilities.map((f) => (
                     <span key={f} className="border px-2.5 py-1 text-[11.5px] font-bold" style={{ borderColor: LINEs, background: PANEL, color: "#fff" }}>{f}</span>
                   ))}</div>
                 )}
-                {(venue.what3words || venue.transport) && (
+                {!isOnlineVenue(venue) && (venue.what3words || venue.transport) && (
                   <div className="mt-3 flex flex-wrap gap-2 text-[12.5px] font-bold">
                     {venue.what3words && (
                       <a href={`https://what3words.com/${encodeURIComponent(venue.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer noopener"
@@ -3069,7 +3137,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 )}
                 {venue.directions && (
                   <div className="mt-3 border p-3.5" style={{ borderColor: LINEs, background: PANEL }}>
-                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>Getting there &amp; parking</div>
+                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{isOnlineVenue(venue) ? "How to join" : "Getting there & parking"}</div>
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: MUTs }}>{venue.directions}</p>
                   </div>
                 )}
