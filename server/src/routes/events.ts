@@ -80,6 +80,9 @@ events.get("/", async (req, res) => {
     listen(bookingsQ, "bookings");
     listen(db.collection("listings").where("tenantId", "==", tenantId), "listings");
     listen(db.collection("blocks").where("tenantId", "==", tenantId), "blocks");
+    listen(db.collection("periods").where("tenantId", "==", tenantId), "periods");
+    listen(db.collection("passes").where("tenantId", "==", tenantId), "passes");
+    listen(db.collection("blockBundles").where("tenantId", "==", tenantId), "blockBundles");
     listen(db.collection("invites").where("tenantId", "==", tenantId), "invites");
     listen(db.collection("customers").where("tenantId", "==", tenantId), "customers");
   }

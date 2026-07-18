@@ -1,10 +1,27 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.4.0
+  version: 0.5.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.5.0 — Blocks BUILDER (periods / passes / bundles)
+
+    New, separate from the dated-run `blocks` model: reusable scheduling
+    patterns kept in a per-tenant library. **Periods** (named time windows),
+    **Passes** (booking lengths in days) and **Block bundles** (periods +
+    passes + the pricing calculator). Endpoints under `/api/periods`,
+    `/api/passes`, `/api/block-bundles` (tag `blocks-builder`).
+
+    Pricing is resolved **server-side** (single master price → per-day →
+    per-pass → per-timing, every value overridable); each bundle response
+    carries a computed `resolved` object — render it, never re-derive it
+    client-side. **"Send to listings"** (`PUT /api/block-bundles/{id}/listings`)
+    associates the bundle AND snapshots the resolved pass prices into each
+    listing's `passes`, which is what checkout prices from. It does NOT
+    create dated runs — that remains `POST /api/blocks`. Deleting a period
+    or pass cascades: its id is stripped from every bundle.
 
     ## ⚠ v0.4.0 breaking changes (Blocks & sessions)
 
@@ -87,6 +104,8 @@ tags:
   - name: listings
   - name: blocks
     description: A listing's bookable runs — capacity, sessions, waitlist
+  - name: blocks-builder
+    description: Reusable periods / passes / bundles library with server-side pricing
   - name: customers
     description: Operator-only, tenant-scoped
   - name: invites
@@ -735,6 +754,246 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/periods:
+    get:
+      tags: [blocks-builder]
+      summary: My tenant's periods (platform — ?tenantId=)
+      responses:
+        "200":
+          description: Periods sorted by start time
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Period" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [blocks-builder]
+      summary: Create a period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PeriodInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Period" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/periods/{id}:
+    put:
+      tags: [blocks-builder]
+      summary: Update a period
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PeriodInput" }
+      responses:
+        "200": { description: Updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [blocks-builder]
+      summary: Delete a period (cascades out of every bundle)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/passes:
+    get:
+      tags: [blocks-builder]
+      summary: My tenant's passes (sorted by days DESC)
+      responses:
+        "200":
+          description: Passes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Pass" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [blocks-builder]
+      summary: Create a pass
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PassInput" }
+      responses:
+        "201": { description: Created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/passes/{id}:
+    put:
+      tags: [blocks-builder]
+      summary: Update a pass
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PassInput" }
+      responses:
+        "200": { description: Updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [blocks-builder]
+      summary: Delete a pass (cascades out of every bundle)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/block-bundles:
+    get:
+      tags: [blocks-builder]
+      summary: The bundle library (sorted by order; includes resolved pricing)
+      responses:
+        "200":
+          description: Bundles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BlockBundle" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [blocks-builder]
+      summary: Create a bundle (order auto-assigned; listingIds start empty)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BlockBundleInput" }
+      responses:
+        "201":
+          description: Created (with resolved pricing)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BlockBundle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/block-bundles/reorder:
+    post:
+      tags: [blocks-builder]
+      summary: Reorder the library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderedIds]
+              properties:
+                orderedIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200": { description: Reordered }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/block-bundles/{id}:
+    put:
+      tags: [blocks-builder]
+      summary: Update a bundle (listingIds/order managed via their own endpoints)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BlockBundleInput" }
+      responses:
+        "200": { description: Updated (with resolved pricing) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [blocks-builder]
+      summary: Delete a bundle
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/block-bundles/{id}/duplicate:
+    post:
+      tags: [blocks-builder]
+      summary: Duplicate a bundle ("… (copy)", listingIds cleared, appended last)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "201": { description: The copy }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/block-bundles/{id}/archive:
+    post:
+      tags: [blocks-builder]
+      summary: Archive / unarchive
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              properties:
+                archived: { type: boolean }
+      responses:
+        "200": { description: Updated }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/block-bundles/{id}/listings:
+    put:
+      tags: [blocks-builder]
+      summary: Send to listings (associate + snapshot resolved prices into listing.passes)
+      description: |
+        Sets the bundle's `listingIds` and, when the bundle is `priced` with
+        a `masterPrice`, overwrites each target listing's `passes` with the
+        RESOLVED pass prices — that's what parent checkout then charges.
+        Does not create dated runs (`POST /api/blocks` does that).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [listingIds]
+              properties:
+                listingIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200": { description: Updated bundle }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/customers:
     get:
       tags: [customers]
@@ -1207,6 +1466,94 @@ components:
           type: array
           description: Explicit sessions (alternative to schedule).
           items: { $ref: "#/components/schemas/Session" }
+
+    PeriodInput:
+      type: object
+      required: [title, start, finish]
+      properties:
+        title: { type: string, example: Early drop-off }
+        start: { type: string, example: "08:00" }
+        finish: { type: string, example: "09:00" }
+
+    Period:
+      allOf:
+        - $ref: "#/components/schemas/PeriodInput"
+        - type: object
+          properties:
+            id: { type: string }
+            tenantId: { type: string }
+
+    PassInput:
+      type: object
+      required: [name, days]
+      properties:
+        name: { type: string, example: 5-day week pass }
+        days: { type: integer, example: 5 }
+
+    Pass:
+      allOf:
+        - $ref: "#/components/schemas/PassInput"
+        - type: object
+          properties:
+            id: { type: string }
+            tenantId: { type: string }
+
+    BlockBundleInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: Summer Multi-Activity Camp }
+        periodIds:
+          type: array
+          items: { type: string }
+        passIds:
+          type: array
+          items: { type: string }
+        archived: { type: boolean, default: false }
+        priced: { type: boolean, default: false }
+        masterPrice: { type: number, nullable: true, description: Full price of the LONGEST pass. }
+        calcOn: { type: boolean, default: true }
+        passFlat:
+          type: object
+          additionalProperties: { type: number }
+          description: passId → flat price override
+        passMode:
+          type: object
+          additionalProperties: { type: string, enum: [flat] }
+        periodPrice:
+          type: object
+          additionalProperties: { type: number }
+          description: '"{passId}_{periodId}" → per-timing override'
+
+    BlockBundle:
+      allOf:
+        - $ref: "#/components/schemas/BlockBundleInput"
+        - type: object
+          properties:
+            id: { type: string }
+            tenantId: { type: string }
+            listingIds:
+              type: array
+              items: { type: string }
+            order: { type: integer }
+            resolved:
+              type: object
+              description: Server-computed pricing — render this, never re-derive.
+              properties:
+                perDay: { type: number }
+                passes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      days: { type: integer }
+                      price: { type: number }
+                timings:
+                  type: object
+                  additionalProperties: { type: number }
+                  description: '"{passId}_{periodId}" → price'
 
     Listing:
       type: object
