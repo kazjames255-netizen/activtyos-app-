@@ -438,10 +438,116 @@ for everything below).
 
 ## Still open on your side
 
-- The parent Browse now opens the real customer page (same `ParentPreview`,
-  fed by `GET /api/listings/{id}` via the new `CustomerPage` component in
-  `ListingWizard.tsx`) — but a standalone public `/book/{id}` route still
-  doesn't exist. When you build it, `CustomerPage` + that one GET is
-  everything you need.
-- Wiring your checkout's Confirm to `POST /api/bookings` and moving the
-  flow into Bookings (§6) — unblocked now.
+*(Both of the first two items are now done — `/book/{id}` shipped in
+`bef2cb6`, and the checkout in `6d0bafd`. Leaving the list below as the
+current asks.)*
+
+---
+
+## A. Per-session booked counts — a real undercount, not a polish item
+
+Your own note in `server/src/lib/listingRuns.ts:21`:
+
+> capacity comes from maxAttendees … `capacityScope` "day" vs "listing" both
+> enforce **per block for now** — per-session counts are a later refinement.
+
+The consequence is bigger than "later refinement" suggests. Runs are one block
+per calendar week holding a single `bookedCount`, so:
+
+**A cap of 20 *per day* is being enforced as 20 for the whole week.** On a
+Mon–Fri camp that's 100 places sold as 20 — a 5× undercount, and the operator
+sees "Sold out" on a camp that's 20% full.
+
+The two scopes currently collapse to the same behaviour, which makes
+`capacityScope` a setting that doesn't do anything.
+
+**What the front-end needs:** `bookedCount` per session, i.e. per `{block, date}`,
+exposed on the blocks embedded in `GET /api/listings/{id}` — something like
+`sessions: [{ date, capacity, bookedCount }]` alongside the block totals.
+
+Everything on our side is already built for it:
+
+- the customer page's traffic-light calendar (green / under-a-third / full)
+  already reads per date — today every day in a week shows that week's number
+- "Nearly full: Mon 10 Aug–Fri 14 Aug (3 left)" collapses consecutive dates
+  that share a count, so per-session counts will make it read as real dates
+- the "X of Y dates still have space" line likewise
+
+**No front-end change is needed when this lands** — the display narrows from
+week-accurate to day-accurate on its own.
+
+Registers are already built on block-sessions, so the per-date grain may
+already exist on your side.
+
+---
+
+## B. Maps need a key before launch (procurement, so it needs lead time)
+
+The Locations tab now has a pin, an address lookup and a saved zoom, and the
+customer page renders a map in the "Where is it" section. It works today
+because **both services are keyless — and neither is licensed for a commercial
+platform at scale**:
+
+| what | service | the problem |
+|---|---|---|
+| address lookup | Nominatim (OSM) | max 1 req/sec, no systematic/bulk use, commercial use out of scope |
+| map tiles | openstreetmap.org embed | OSMF donated infrastructure; explicitly not for commercial products at volume |
+
+**Tiles are the real exposure** — one request per page view, and far worse if
+parents ever see a map. Geocoding is rare by comparison (once per venue edit),
+but it's still commercial use of a service that doesn't permit it.
+
+Neither fails loudly. OSM blocks by Referer or IP once an app becomes a heavy
+user, so the first sign is maps and lookups failing for *every* tenant at once.
+
+**What we'd want:**
+
+1. **Geocode server-side on venue save**, storing `lat`/`lng` on the venue —
+   the browser then never calls a geocoder and no key reaches the client.
+2. **A keyed tile provider.** Mapbox (50k loads/month free), MapTiler (100k
+   tiles free), or Ordnance Survey — OS has a UK-specific free tier and is the
+   natural fit for UK postcodes.
+
+It's isolated in `features/listings/VenueMap.tsx` and the `AddressFinder`
+component, so swapping providers is those two files.
+
+---
+
+## C. Publish validation is client-side only
+
+The builder now refuses to publish a listing without a name, a venue, dates
+that produce at least one running day, and a block with passes. But
+`PUT /api/listings/{id}` would still accept `status: "live"` on a listing with
+none of those — same shape as `visibility` and `opensAt` before you enforced
+them. Worth mirroring server-side when convenient.
+
+## D. The waiting-list button doesn't write anything
+
+A sold-out listing offers "join the waiting list" and scrolls to the booking
+panel, but there's no endpoint behind it. Not urgent until real bookings are
+flowing — flagging so it isn't mistaken for working.
+
+---
+
+## FYI — venue fields you may not know exist
+
+Venues now carry, beyond `name`/`address`:
+
+```ts
+kind?: "place" | "online",   // online = no address, map or travel; "How to join" instead
+facilities?: string[],        // venue facts only — parking, hall, café
+directions?: string,          // getting there & parking, or joining instructions
+what3words?: string,
+transport?: string,           // nearest stop/station
+lat?: number, lng?: number, zoom?: number,
+```
+
+These persist already because `/api/library` stores venues verbatim — no schema
+change needed, but worth knowing they're there. `whereHeading` (the venue
+section's heading, tenant-level) needed adding to the `KEYS` whitelist; that
+one-line change is in `server/src/routes/library.ts`, shout if you'd rather
+own it.
+
+**Suggested order:** A first — it's a correctness bug with a number attached.
+Then B, because the provider decision has lead time. C and D can wait until
+bookings are flowing.
