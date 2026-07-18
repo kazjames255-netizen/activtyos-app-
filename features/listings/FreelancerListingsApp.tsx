@@ -6,7 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
-import { ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, listingIsLive, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
+import { ListingWizard, ListingPreview, listingRowInfo, listingRunsOn, listingIsLive, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -65,6 +65,12 @@ export interface LocalState {
   staff: StaffMember[];
   emojis: Record<string, string>;
 }
+
+// Date-rail formatting for the listing card.
+const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const dayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
+const shortDate = (iso: string) =>
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "TBC";
 
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -484,7 +490,6 @@ function ListingsTab({
         activeShown.map((l) => {
           const info = (() => { const dr = loadDrafts()[l.id]; return dr ? listingRowInfo(dr) : null; })();
           const vn = venueName(l);
-          const priceRange = l.passes.length ? (() => { const ps = l.passes.map((p) => p.price); const lo = Math.min(...ps), hi = Math.max(...ps); return lo === hi ? money(lo) : `${money(lo)}–${money(hi)}`; })() : null;
           // Prefer the real dated-run blocks (capacity + bookings) if the API has them; else the builder default.
           const apiBlocks = l.blocks ?? [];
           const cap = apiBlocks.length ? apiBlocks.reduce((s, b) => s + b.capacity, 0) : info?.capacity ?? null;
@@ -492,54 +497,38 @@ function ListingsTab({
           const accent = accentOf(l);
           const isLive = info ? info.live : true;
           return (
-            <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]" style={{ borderLeft: `4px solid ${accent}` }}>
-              <div className="flex flex-col gap-4 p-4 sm:flex-row sm:gap-5">
-                <div className="relative h-[150px] w-full flex-none overflow-hidden rounded-xl sm:h-[136px] sm:w-[220px]" style={{ boxShadow: `0 10px 24px -14px ${accent}` }}>
-                  {info?.cover ? (
-                    <CroppedImage im={{ ...info.cover, x: 50, y: 50 }} className="absolute inset-0 h-full w-full" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-[30px]" style={{ background: `linear-gradient(150deg,${accent}22,${accent}44)` }}>🏕️</div>
-                  )}
-                  <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm" style={{ background: isLive ? "rgba(22,163,74,.9)" : "rgba(30,41,59,.85)" }}>
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-white" />{isLive ? "Live" : "Ended"}
-                  </span>
-                  {priceRange && <span className="absolute bottom-2.5 right-2.5 rounded-lg bg-white/95 px-2.5 py-1 text-[12px] font-extrabold" style={{ color: accent }}>{priceRange}</span>}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  {/* title */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-[18px] font-bold leading-tight tracking-[-0.02em] text-[var(--ink)]">{l.name}</h3>
-                    <span title="You created this listing — your own programme (not from a head office/franchise)" className="rounded-full border px-2 py-[1px] text-[9.5px] font-bold uppercase tracking-[0.1em]" style={{ borderColor: `${accent}55`, color: accent }}>Own</span>
-                  </div>
-
-                  {/* where & when */}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
-                    {vn && <span className="font-medium text-[var(--ink-2)]">{vn}</span>}
-                    {vn && <span className="h-3 w-px bg-[var(--line)]" aria-hidden />}
-                    <span className="text-[var(--ink-3)]">{info?.dateLabel ?? "Dates TBC"}</span>
-                  </div>
-
-                  {/* spec strip — labelled figures read as data, not a sentence */}
-                  {(() => {
-                    const stats: { k: string; v: string; tone?: string }[] = [];
-                    if (info && info.totalDays > 0) stats.push({ k: "Runs for", v: `${info.totalDays} days` });
-                    if (cap != null) stats.push({ k: info?.capacityScope === "day" ? "Cap / day" : "Capacity", v: String(cap) });
-                    if (cap != null && info?.showSpaces && spaces != null)
-                      stats.push({ k: "Available", v: `${Math.max(0, spaces)} left`, tone: spaces <= 0 ? "#dc2626" : spaces <= cap * 0.15 ? "#d97706" : "#16a34a" });
-                    return stats.length ? (
-                      <div className="mt-3 flex flex-wrap items-start gap-x-6 gap-y-2">
-                        {stats.map((s) => (
-                          <span key={s.k} className="flex flex-col leading-tight">
-                            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ink-3)] opacity-70">{s.k}</span>
-                            <span className="mt-0.5 text-[13px] font-semibold" style={{ color: s.tone ?? "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{s.v}</span>
-                          </span>
-                        ))}
+            <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
+              <div className="flex flex-col sm:flex-row">
+                {/* date rail — when it runs, read first */}
+                <div className="flex flex-none flex-row items-center justify-center gap-3 px-4 py-3 text-white sm:w-[92px] sm:flex-col sm:gap-0 sm:rounded-l-xl sm:py-4" style={{ background: accent }}>
+                  {info?.from ? (
+                    <>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-75">{monthOf(info.from)}</div>
+                      <div className="text-[26px] font-extrabold leading-none sm:mt-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>{dayOf(info.from)}</div>
+                      <div className="mx-auto my-2 hidden h-px w-6 bg-white/30 sm:block" />
+                      <div className="text-[11px] leading-[1.35] opacity-90 sm:text-center">
+                        <span className="sm:hidden">→ </span>to <b>{shortDate(info.to)}</b>
+                        {info.totalDays > 0 && <><br className="hidden sm:block" /><span className="sm:hidden"> · </span>{info.totalDays} days</>}
                       </div>
-                    ) : null;
-                  })()}
+                    </>
+                  ) : (
+                    <div className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-90">Dates TBC</div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-[17px] font-bold leading-tight tracking-[-0.02em] text-[var(--ink)]">{l.name}</h3>
+                    {isLive ? (
+                      <span title="The run hasn’t ended — last date is today or later" className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft,#e7f8ee)] px-2 py-[2px] text-[10px] font-semibold text-[#0f7a44]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#16a34a]" />Live</span>
+                    ) : (
+                      <span title="The last date has passed — this run has ended" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{vn || "No venue set"}</div>
 
                   {/* passes */}
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                     {l.passes.length ? (
                       <>
                         {l.passes.slice(0, 3).map((t, i) => (
@@ -552,6 +541,28 @@ function ListingsTab({
                       </>
                     ) : <span className="text-[12px] text-[var(--ink-3)]">No tickets yet.</span>}
                   </div>
+
+                  {/* how full it is */}
+                  {cap != null && (() => {
+                    const left = Math.max(0, spaces ?? cap);
+                    const booked = Math.max(0, cap - left);
+                    const pct = cap > 0 ? Math.round((booked / cap) * 100) : 0;
+                    const tone = left <= 0 ? "#dc2626" : left <= cap * 0.15 ? "#d97706" : "#16a34a";
+                    return (
+                      <div className="mt-3">
+                        <div className="h-[7px] overflow-hidden rounded-full bg-[var(--line)]">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: tone }} />
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11.5px] text-[var(--ink-3)]" style={{ fontVariantNumeric: "tabular-nums" }}>
+                          <span><b className="text-[var(--ink)]">{booked}</b> of {cap} booked</span>
+                          <span className="text-[var(--line)]">·</span>
+                          <span style={{ color: tone }}><b>{left}</b> left{info?.capacityScope === "day" ? " per day" : ""}</span>
+                          {booked > 0 && <><span className="text-[var(--line)]">·</span><span>{pct}% full</span></>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* actions */}
                   <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
                     <span key={visTick} className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px] font-semibold">
