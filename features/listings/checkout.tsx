@@ -245,7 +245,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Two stages. Sorting out who's on which pass and picking everyone's lunches
   // at the same time is two jobs on one screen; the first has to be right
   // before the second even makes sense.
-  const [ckStage, setCkStage] = useState<"who" | "extras">("who");
+  const [ckStage, setCkStage] = useState<"who" | "extras" | "pay">("who");
+  const [extraIdx, setExtraIdx] = useState(0);
+  // Per-day extras first, one-offs last: a t-shirt is a yes/no and belongs
+  // after the choices that need thought.
+  const ordered = [...addons].sort((m, n) => (m.type === "perday" ? 0 : 1) - (n.type === "perday" ? 0 : 1));
+  // A colour each, so one extra doesn't blur into the next.
+  const EXTRA_TINTS = ["#2f6bd8", "#0f9d58", "#c2410c", "#7c3aed", "#0891b2", "#be185d"];
   const [saved, setSaved] = useState<ChildProfile[]>([]);
   const { roster, setRoster } = b;
   // Store the EXCEPTIONS, not the assignments: who has been taken off which
@@ -537,76 +543,6 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   {/* Extras, per child. A sibling might want lunch on two days
                       and the other on all five, so each gets their own row —
                       and nothing is ticked for them by default. */}
-                  {addons.length > 0 && parentMode && ckStage === "extras" && b.childrenOn(x.id).length > 0 && (
-                    <div className="mt-3 border-t pt-2.5" style={{ borderColor: tk.line }}>
-                      <div className="mb-1.5 font-bold uppercase" style={{ ...label, color: tk.muted }}>Extras</div>
-                      {addons.map((a) => {
-                        const perDay = a.type === "perday";
-                        const kids = b.childrenOn(x.id);
-                        const lineTotal = kids.reduce((t, k) => t + costOf(a, b.addonDays(x.id, k, a.id)), 0);
-                        return (
-                          <div key={a.id} className="mb-2.5 last:mb-0">
-                            <div className="flex items-baseline gap-2">
-                              {a.image ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={a.image} alt="" className="h-5 w-5 flex-none rounded object-cover" />
-                              ) : a.emoji ? <span>{a.emoji}</span> : null}
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-[12px] font-bold" style={{ color: tk.ink }}>{a.name}</span>
-                                {a.description && <span className="block text-[10.5px] leading-[1.4]" style={{ color: tk.muted }}>{a.description}</span>}
-                              </span>
-                              <span className="flex-none text-[11px]" style={{ color: tk.muted }}>
-                                {perDay ? `${money(a.price)}/day` : `${money(a.price)} one-off`}
-                              </span>
-                              {lineTotal > 0 && <b className="flex-none text-[12px]" style={{ color: tk.ink }}>{money(lineTotal)}</b>}
-                            </div>
-                            {kids.map((kid) => {
-                              const days = b.addonDays(x.id, kid, a.id);
-                              const all = days.length === x.dates.length;
-                              return (
-                                <div key={kid} className="mt-2">
-                                  {/* Just the days. A parent choosing lunches is
-                                      picking dates off a calendar, not reading a
-                                      price list — the cost is on the line above
-                                      and in the total. */}
-                                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                                    <b className="min-w-0 truncate text-[13px]" style={{ color: tk.ink }}>{kid}</b>
-                                    <button type="button"
-                                      onClick={() => b.setAddonDays(x.id, kid, a.id, all ? [] : [...x.dates])}
-                                      className={`flex-none border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                                      style={{ borderColor: tk.line, color: tk.muted }}>
-                                      {all ? "Clear" : "Every day"}
-                                    </button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {x.dates.map((iso) => {
-                                      const active = days.includes(iso);
-                                      const dt = new Date(`${iso}T00:00:00Z`);
-                                      return (
-                                        <button key={iso} type="button"
-                                          onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
-                                          className={`flex min-w-[62px] flex-col items-center gap-0.5 border-2 px-2 py-2 ${tk.round}`}
-                                          style={active
-                                            ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                                            : { borderColor: tk.line, color: tk.muted }}>
-                                          <span className="text-[9.5px] font-bold uppercase tracking-[0.06em] opacity-80">
-                                            {dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
-                                          </span>
-                                          <span className="text-[15px] font-extrabold leading-none">
-                                            {ordinal(dt.getUTCDate())}
-                                          </span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -659,7 +595,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const next = addons.length > 0 ? "Next — add lunches and extras" : "Next — how you'll pay";
         return (
           <>
-            <button type="button" disabled={!ready} onClick={() => setCkStage("extras")}
+            <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : "pay"); }}
               className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
               {roster.length === 0 ? "Add a child first"
@@ -672,17 +608,139 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         );
       })()}
 
-      {parentMode && ckStage === "extras" && addons.length > 0 && (
-        <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>2 · Lunches &amp; extras</div>
+      {/* Extras, one at a time, over the page — a wide sheet so a week of
+          dates fits on one line and each extra gets a clean yes/no. */}
+      {parentMode && ckStage === "extras" && ordered[extraIdx] && (() => {
+        const a = ordered[extraIdx];
+        const tint = EXTRA_TINTS[extraIdx % EXTRA_TINTS.length];
+        const perDay = a.type === "perday";
+        const kids = [...new Set(b.basket.flatMap((x) => b.childrenOn(x.id)))];
+        const anyPicked = b.basket.some((x) => kids.some((k) => b.addonDays(x.id, k, a.id).length > 0));
+        const last = extraIdx === ordered.length - 1;
+        const clearAll = () => b.basket.forEach((x) => kids.forEach((k) => b.setAddonDays(x.id, k, a.id, [])));
+        const step = (n: number) => {
+          if (n < 0) { if (extraIdx === 0) { setCkStage("who"); return; } setExtraIdx(extraIdx - 1); return; }
+          if (last) { setCkStage("pay"); return; }
+          setExtraIdx(extraIdx + 1);
+        };
+        return (
+          <div className="fixed inset-0 z-[9998] flex items-start justify-center overflow-auto bg-black/70 p-4 sm:p-8">
+            <div className="w-full max-w-[820px] overflow-hidden rounded-2xl" style={{ background: tk.bg }}>
+              <div className="px-6 py-4" style={{ background: tint }}>
+                <div className="flex items-center gap-3">
+                  {a.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.image} alt="" className="h-10 w-10 flex-none rounded-lg object-cover" />
+                  ) : a.emoji ? <span className="text-[26px]">{a.emoji}</span> : null}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">
+                      Extra {extraIdx + 1} of {ordered.length}
+                    </div>
+                    <h3 className="text-[20px] font-extrabold leading-tight text-white">{a.name}</h3>
+                  </div>
+                  <div className="flex-none text-right text-white">
+                    <div className="text-[15px] font-extrabold">{money(a.price)}</div>
+                    <div className="text-[10.5px] opacity-75">{perDay ? "per day" : "one-off"}</div>
+                  </div>
+                </div>
+                {a.description && <p className="mt-2 text-[12.5px] leading-[1.5] text-white/85">{a.description}</p>}
+              </div>
+
+              <div className="px-6 py-4">
+                {b.basket.map((x) => {
+                  const on = b.childrenOn(x.id);
+                  if (!on.length) return null;
+                  return (
+                    <div key={x.id} className="mb-4 last:mb-0">
+                      {b.basket.length > 1 && (
+                        <div className="mb-2 text-[11.5px] font-bold" style={{ color: tk.muted }}>
+                          {x.name} · {b.datesPretty(x.dates)}
+                        </div>
+                      )}
+                      {on.map((kid) => {
+                        const days = b.addonDays(x.id, kid, a.id);
+                        const all = days.length === x.dates.length;
+                        return (
+                          <div key={kid} className="mb-3 last:mb-0">
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                              <b className="min-w-0 truncate text-[14px]" style={{ color: tk.ink }}>{kid}</b>
+                              {perDay ? (
+                                <button type="button"
+                                  onClick={() => b.setAddonDays(x.id, kid, a.id, all ? [] : [...x.dates])}
+                                  className={`flex-none border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                                  style={{ borderColor: tk.line, color: tk.muted }}>
+                                  {all ? "Clear" : "Every day"}
+                                </button>
+                              ) : (
+                                // A one-off has nothing to do with dates.
+                                <button type="button"
+                                  onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : ["*"])}
+                                  className={`flex-none border-2 px-4 py-1.5 text-[12.5px] font-extrabold ${tk.round}`}
+                                  style={days.length
+                                    ? { borderColor: tint, background: tint, color: "#fff" }
+                                    : { borderColor: tk.line, color: tk.muted }}>
+                                  {days.length ? `✓ Yes · ${money(a.price)}` : "Add one"}
+                                </button>
+                              )}
+                            </div>
+                            {perDay && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {x.dates.map((iso) => {
+                                  const active = days.includes(iso);
+                                  const dt = new Date(`${iso}T00:00:00Z`);
+                                  return (
+                                    <button key={iso} type="button"
+                                      onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
+                                      className={`flex min-w-[66px] flex-col items-center gap-0.5 border-2 px-2 py-2 ${tk.round}`}
+                                      style={active
+                                        ? { borderColor: tint, background: tint, color: "#fff" }
+                                        : { borderColor: tk.line, color: tk.muted }}>
+                                      <span className="text-[9.5px] font-bold uppercase tracking-[0.06em] opacity-80">
+                                        {dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
+                                      </span>
+                                      <span className="text-[16px] font-extrabold leading-none">{ordinal(dt.getUTCDate())}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2 border-t px-6 py-3.5" style={{ borderColor: tk.line }}>
+                <button type="button" onClick={() => step(-1)} className="text-[12px] font-bold" style={{ color: tk.muted }}>← Back</button>
+                <button type="button" onClick={() => { clearAll(); step(1); }}
+                  className={`ml-auto border px-4 py-2 text-[12.5px] font-bold ${tk.round}`}
+                  style={{ borderColor: tk.line, color: tk.muted }}>No thanks</button>
+                <button type="button" onClick={() => step(1)}
+                  className={`px-5 py-2 text-[12.5px] font-extrabold ${tk.round}`}
+                  style={{ background: tint, color: "#fff" }}>
+                  {anyPicked ? (last ? "Done — how you'll pay" : "Next extra") : (last ? "Skip — how you'll pay" : "Next extra")}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {parentMode && ckStage === "pay" && addons.length > 0 && (
+        <button type="button" onClick={() => { setExtraIdx(0); setCkStage("extras"); }}
+          className="mt-3 text-[11.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+          ← Change lunches &amp; extras
+        </button>
       )}
-      {parentMode && ckStage === "extras" && (
+      {parentMode && ckStage === "pay" && !addons.length && (
         <button type="button" onClick={() => setCkStage("who")}
           className="mt-3 text-[11.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
           ← Back to who&rsquo;s coming
         </button>
       )}
-
-      {(!parentMode || ckStage === "extras") && parentMode && (
+      {parentMode && ckStage === "pay" && (
         <div className="mt-3">
           <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>How you&rsquo;ll pay</div>
           <select value={method} onChange={(e) => setMethod(e.target.value)}
@@ -699,7 +757,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
       )}
 
-      {(!parentMode || ckStage === "extras") && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
+      {(!parentMode || ckStage === "pay") && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
         disabled={(!parentMode && !b.parent) || (parentMode && roster.length === 0) || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
