@@ -1744,7 +1744,27 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     });
   }
   const { locked, countdown, opensLabel } = useOpensAt(d.opensAt);
-  const canAdd = !locked && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
+  // Capacity. Two scopes: "day" caps how many children are on site on any one
+  // date, "listing" caps the whole run. Parse carefully — `parseInt(...) || null`
+  // turned a capacity of 0 into "no limit", which is why a sold-out listing
+  // still took bookings.
+  //
+  // This is the UI half: it stops a basket overfilling in front of you. The
+  // real limit is the block's capacity on the server, which is what settles
+  // two parents taking the last place at once.
+  const capNum = parseInt(d.maxAttendees, 10);
+  const capacity = Number.isFinite(capNum) ? capNum : null;
+  const perDay = d.capacityScope === "day";
+  const seatsOn = (iso: string) => basket.filter((x) => x.dates.includes(iso)).length;
+
+  // A basket line is one child, whichever dates it covers.
+  const fullDates = capacity === null || !perDay ? [] : sel.filter((iso) => seatsOn(iso) + 1 > capacity);
+  const listingFull = capacity !== null && !perDay && basket.length + 1 > capacity;
+  const soldOut = capacity !== null && (capacity <= 0 || listingFull);
+  const hasSpace = capacity === null || (capacity > 0 && !listingFull && fullDates.length === 0);
+  const seatsLeft = capacity === null ? null : perDay ? capacity : Math.max(0, capacity - basket.length);
+
+  const canAdd = !locked && hasSpace && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
   // One booking may cover several children; the count drives multi-person rules.
   const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
 
@@ -1856,7 +1876,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -2182,9 +2202,9 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" } : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-extrabold leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
-          {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: TEAL }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
+          {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: spacesLeft <= 0 ? "#dc2626" : BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: spacesLeft <= 0 ? "#dc2626" : TEAL }} />{spacesLeft <= 0 ? "Sold out" : `${spacesLeft} spaces left${d.capacityScope === "day" ? " / day" : ""}`}</div>}
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
-            {b.locked ? "Booking not open yet" : b.canAdd ? (
+            {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                 <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
                 <span className="inline-flex items-baseline gap-1.5">
@@ -2312,9 +2332,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-black leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
-            {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: CY }}><span className="inline-block h-2 w-2" style={{ background: LIME }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
+            {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: spacesLeft <= 0 ? "#ff5470" : CY }}><span className="inline-block h-2 w-2" style={{ background: spacesLeft <= 0 ? "#ff5470" : LIME }} />{spacesLeft <= 0 ? "Sold out" : `${spacesLeft} spaces left${d.capacityScope === "day" ? " / day" : ""}`}</div>}
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
-                {b.locked ? "Booking not open yet" : b.canAdd ? (
+                {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
                     <span className="inline-flex items-baseline gap-1.5">
@@ -2392,7 +2412,10 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : "Dates TBC";
   const dates = genDates(d.runFrom, d.runTo, d.days);
   const weeks = groupWeeks(dates);
-  const spacesLeft = d.showSpaces ? parseInt(d.maxAttendees, 10) || 0 : null;
+  // Blank capacity means "not set", not zero — `|| 0` was showing "Sold out"
+  // on listings that had never had a limit typed in.
+  const capParsed = parseInt(d.maxAttendees, 10);
+  const spacesLeft = d.showSpaces && Number.isFinite(capParsed) ? capParsed : null;
   const staff = local.staff.filter((m) => d.staffIds.includes(m.id));
   const staffNames = staff.map((m) => `${m.first} ${m.last}`.trim()).filter(Boolean);
   const emo = (o: string, fb: string) => OPT_EMOJI[o] || local.emojis?.[o] || fb;
@@ -2572,7 +2595,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         <div className={`mt-5 ${full ? "grid items-start gap-6 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-4">
             {d.description && <div className="rounded-3xl bg-white p-5 text-[15px] leading-[1.7]" style={{ color: "#3d4763", boxShadow: "0 2px 0 #e8edf7" }}>{d.description}</div>}
-            {!full && <div>{widget}</div>}
+            {!full && <div id="aos-book">{widget}</div>}
             {d.sections.some((s) => s.text) && <PlayCard e="🎯" tint="#e7f0ff" title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{s.type}</div><p className="mt-1 text-[13.5px] leading-[1.6]" style={{ color: "#3d4763" }}>{s.text}</p></div>)}</PlayCard>}
             {d.outcomes.length > 0 && <PlayCard e="🌟" tint="#fff6e0" title={headingOf(d, "learn", "title")} sub={headingOf(d, "learn", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => chip(o, "⭐", i))}</div></PlayCard>}
             {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title={headingOf(d, "included", "title")} sub={headingOf(d, "included", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
@@ -2636,7 +2659,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
             {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
           </div>
-          {full && <div className="self-start lg:sticky lg:top-4">{widget}</div>}
+          {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
 
         {/* footer */}
@@ -2721,12 +2744,12 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
           const wide = `${tile} lg:col-span-2`;
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
-            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-6" style={{ borderColor: LINEs, background: PANEL }}>
+            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-7" style={{ borderColor: LINEs, background: PANEL }}>
               {/* Ages already appear in the facts strip above the image — this
                   slot earns more as the team, names visible, bios on tap. */}
               {staff.length > 0 && (
                 <button type="button" onClick={() => setTeamOpen((o) => !o)}
-                  className={`${wide} text-left`} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  className={`${wide} flex flex-col text-left`} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className={lab} style={{ color: MUTs }}>{headingOf(d, "team", "eyebrow")}</div>
@@ -2737,9 +2760,25 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
                   </div>
                 </button>
               )}
-              <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
+              <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                 <div className={lab} style={{ color: MUTs }}>{spacesLeft !== null ? "spaces left" : "capacity"}</div>
-                <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{spacesLeft !== null ? String(spacesLeft) : "—"}</div>
+                <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
+                  style={{ fontVariantNumeric: "tabular-nums", color: spacesLeft !== null && spacesLeft <= 0 ? "#ff5470" : "#fff" }}>
+                  {spacesLeft === null ? "—" : spacesLeft <= 0 ? "Sold out" : String(spacesLeft)}
+                </div>
+                {/* Sold out is a dead end unless it says what to do next. */}
+                {spacesLeft !== null && spacesLeft <= 0 && (
+                  d.waitlist ? (
+                    <button type="button"
+                      onClick={() => document.getElementById("aos-book")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                      className="mt-2 w-full px-2 py-1.5 text-[11px] font-black uppercase tracking-[0.08em]"
+                      style={{ background: LIME, color: "#12280a" }}>
+                      Join the waiting list
+                    </button>
+                  ) : (
+                    <div className="mt-1.5 text-[11px]" style={{ color: MUTs }}>No waiting list on this one</div>
+                  )
+                )}
               </div>
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
@@ -2780,7 +2819,7 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
                 )}
               </div>
               {teamOpen && staff.length > 0 && (
-                <div className="border-l-0 border-t px-4 py-4 sm:col-span-2 lg:col-span-6" style={{ borderColor: LINEs }}>
+                <div className="border-l-0 border-t px-4 py-4 sm:col-span-2 lg:col-span-7" style={{ borderColor: LINEs }}>
                   <div className={`grid gap-3 ${grid2}`}>
                     {staff.map((m) => (
                       <div key={m.id} className="border p-3.5" style={{ borderColor: LINEs, background: BG }}>
@@ -2801,7 +2840,7 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
         <div className={`mt-8 ${full ? "grid items-start gap-7 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-6">
             {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[15px] leading-[1.7]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
-            {!full && <div>{widget}</div>}
+            {!full && <div id="aos-book">{widget}</div>}
             {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
             {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
@@ -2851,7 +2890,7 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
             ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
             {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
-          {full && <div className="self-start lg:sticky lg:top-4">{widget}</div>}
+          {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-5 text-[12px]" style={{ borderColor: LINEs, color: MUTs }}>

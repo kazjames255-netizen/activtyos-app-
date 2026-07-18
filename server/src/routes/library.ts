@@ -23,6 +23,10 @@ const KEYS = [
   "addons",
   "staff",
   "emojis",
+  // The venue section's heading on customer pages — tenant-level, set once in
+  // the Locations tab rather than per listing. Without it here the PUT silently
+  // dropped it and the operator's wording reverted on reload.
+  "whereHeading",
 ] as const;
 
 const MAX_BYTES = 400_000; // well under Firestore's 1MB doc limit
