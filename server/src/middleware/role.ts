@@ -68,6 +68,18 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
   next();
 }
 
+// After optionalAuth: signed-in users get their real role, anonymous
+// visitors browse with parent-shaped (most restricted) permissions — every
+// existing guard then behaves correctly without knowing about anonymity.
+export async function attachRoleOptional(req: Request, res: Response, next: NextFunction) {
+  if (req.user) {
+    await attachRole(req, res, next);
+    return;
+  }
+  req.auth = { role: "parent", tenantId: null, franchiseId: null };
+  next();
+}
+
 export const isOperator = (role: Role) => role !== "parent";
 
 // Staff and platform can look but not mutate operator data.

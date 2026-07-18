@@ -6,6 +6,13 @@ import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
 import {
+  resolveBundlePricing,
+  type BundleDoc,
+  type PassDoc,
+  type PeriodDoc,
+  type ResolvedPricing,
+} from "../lib/bundlePricing";
+import {
   blockCountDelta,
   bookingSeats,
   sessionLabel,
@@ -22,7 +29,27 @@ export const my = Router();
 
 const bookingsCol = db.collection("bookings");
 
-const createSchema = z.object({
+// One basket item = one child on one pass (optionally a specific timing and
+// specific days). The legacy single-booking shape is accepted too and
+// treated as a one-item basket.
+const itemSchema = z.object({
+  pass: z.string().min(1),
+  periodId: z.string().max(60).optional(), // bundle timing
+  dates: z.array(z.string().max(10)).min(1).max(60).optional(), // chosen session days
+  child: z.string().min(1).max(80),
+  age: z.number().int().nonnegative(),
+  addons: z
+    .array(z.object({ id: z.string().max(60), days: z.array(z.string().max(10)).max(60).optional() }))
+    .max(20)
+    .optional(),
+});
+const basketSchema = z.object({
+  listingId: z.string().min(1),
+  blockId: z.string().min(1),
+  method: z.string().min(1),
+  items: z.array(itemSchema).min(1).max(20),
+});
+const legacySchema = z.object({
   listingId: z.string().min(1),
   blockId: z.string().min(1),
   pass: z.string().min(1),
@@ -86,16 +113,33 @@ my.get("/bookings", async (req, res) => {
   res.json(list);
 });
 
-// POST /api/my/bookings — parent books a place on a listing. The price is
-// resolved server-side from the listing's pass, and the booking is created
-// in the listing's tenant.
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+// POST /api/my/bookings — parent checkout. Takes a BASKET (or the legacy
+// single-booking shape) and creates one booking per item, atomically:
+// either the whole basket gets places or the whole basket waitlists.
+// EVERY price is computed here — pass/timing from the bundle's resolver,
+// add-ons from the tenant library, automatic discounts across the basket —
+// the client only ever sends choices, never amounts.
 my.post("/bookings", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
-  const parsed = createSchema.safeParse(req.body);
+  // Legacy single-booking bodies become a one-item basket.
+  const legacy = legacySchema.safeParse(req.body);
+  const parsed = legacy.success
+    ? {
+        success: true as const,
+        data: {
+          listingId: legacy.data.listingId,
+          blockId: legacy.data.blockId,
+          method: legacy.data.method,
+          items: [{ pass: legacy.data.pass, child: legacy.data.child, age: legacy.data.age }],
+        },
+      }
+    : basketSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
@@ -112,10 +156,12 @@ my.post("/bookings", async (req, res) => {
     tenantId: string;
     tenantName?: string;
     passes: { name: string; price: number; days?: number }[];
+    blockId?: string | null; // block bundle (timings live there)
     status?: string;
     archived?: boolean;
     opensAt?: string;
     waitlist?: boolean;
+    bookingType?: "auto" | "manual";
     discounts?: DiscountRule[];
   };
   // Lifecycle gates — the client-side lock is a courtesy, this is the control.
@@ -130,18 +176,126 @@ my.post("/bookings", async (req, res) => {
     });
     return;
   }
-  const pass = listing.passes.find((p) => p.name === input.pass);
-  if (!pass) {
-    res.status(400).json({ error: `Listing has no pass "${input.pass}"` });
+
+  // Pricing context: the bundle's resolved passes/timings (server-priced),
+  // the block's real session dates, and the library's add-ons.
+  const blockPre = await db.collection("blocks").doc(input.blockId).get();
+  if (!blockPre.exists || blockPre.data()!.listingId !== input.listingId) {
+    res.status(400).json({ error: "Unknown block" });
     return;
   }
+  const sessionDates = (blockPre.data() as BlockDoc).sessions.map((s) => s.date);
+
+  let resolved: ResolvedPricing | null = null;
+  let periodTitle = new Map<string, string>();
+  if (listing.blockId) {
+    const bSnap = await db.collection("blockBundles").doc(listing.blockId).get();
+    if (bSnap.exists && bSnap.data()!.tenantId === listing.tenantId) {
+      const bundle = bSnap.data() as BundleDoc;
+      const [periodSnaps, passSnaps] = await Promise.all([
+        Promise.all((bundle.periodIds ?? []).map((id) => db.collection("periods").doc(id).get())),
+        Promise.all((bundle.passIds ?? []).map((id) => db.collection("passes").doc(id).get())),
+      ]);
+      const periodsById = new Map(
+        periodSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, ...(s.data() as PeriodDoc) }]),
+      );
+      const passesById = new Map(
+        passSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, ...(s.data() as PassDoc) }]),
+      );
+      resolved = resolveBundlePricing(bundle, passesById, periodsById);
+      periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
+    }
+  }
+  const needsAddons = input.items.some((i) => i.addons?.length);
+  const libAddons = new Map<string, { name: string; type: string; price: number }>();
+  if (needsAddons) {
+    const lib = await db.collection("libraries").doc(listing.tenantId).get();
+    for (const a of ((lib.data()?.addons ?? []) as { id: string; name: string; type: string; price: number }[]))
+      libAddons.set(a.id, a);
+  }
+
+  // Price each item (base pass/timing + add-ons) and validate its days.
+  let priced;
+  try {
+    priced = input.items.map((item) => {
+      const listedPass = listing.passes.find((p) => p.name === item.pass);
+      const resolvedPass = resolved?.passes.find((p) => p.name === item.pass);
+      if (!listedPass && !resolvedPass) throw new HttpError(400, `Listing has no pass "${item.pass}"`);
+      let base = resolvedPass?.price ?? listedPass!.price;
+      let timing: string | undefined;
+      if (item.periodId) {
+        if (!resolved || !resolvedPass) throw new HttpError(400, "This listing has no timings");
+        const t = resolved.timings[`${resolvedPass.id}_${item.periodId}`];
+        if (t === undefined) throw new HttpError(400, "Unknown timing for this pass");
+        base = t;
+        timing = periodTitle.get(item.periodId);
+      }
+      const passDays = resolvedPass?.days ?? listedPass?.days;
+      let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
+      days = [...new Set(days)].sort();
+      if (days.some((d) => !sessionDates.includes(d)))
+        throw new HttpError(400, `This block doesn't run on ${days.find((d) => !sessionDates.includes(d))}`);
+      if (passDays && days.length > passDays)
+        throw new HttpError(400, `"${item.pass}" covers ${passDays} day${passDays === 1 ? "" : "s"} — ${days.length} picked`);
+      const addons = (item.addons ?? []).map((a) => {
+        const def = libAddons.get(a.id);
+        if (!def) throw new HttpError(400, "Unknown add-on");
+        const onDays = a.days ? [...new Set(a.days)] : days;
+        if (onDays.some((d) => !days.includes(d)))
+          throw new HttpError(400, `Add-on "${def.name}" is on a day the pass isn't`);
+        const price = def.type === "perday" ? round2(def.price * onDays.length) : def.price;
+        return { name: def.name, price, label: def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name };
+      });
+      return { item, base, timing, days, addons, addonsTotal: round2(addons.reduce((s, a) => s + a.price, 0)) };
+    });
+  } catch (e) {
+    if (e instanceof HttpError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+
+  // Automatic discounts across the basket, with the shared engine. The
+  // engine prices "these pass lines × N attendees", so when every child has
+  // the same lines we use it exactly (multi-person rules apply); a mixed
+  // basket falls back to per-line pricing (attendees=1 — never overcharges).
+  const attendees = new Set(input.items.map((i) => i.child.trim())).size;
+  const lineKey = (p: (typeof priced)[0]) => `${p.item.pass}|${p.item.periodId ?? ""}|${p.base}|${p.days.length}`;
+  const byChild = new Map<string, string>();
+  for (const p of priced) {
+    const c = p.item.child.trim();
+    byChild.set(c, [...(byChild.get(c) ?? ""), lineKey(p)].sort().join("~"));
+  }
+  const uniform = new Set(byChild.values()).size === 1;
+  const engineLines = uniform
+    ? [...new Map(priced.map((p) => [lineKey(p), p])).values()]
+    : priced;
+  const { total: discounted } = applyDiscounts(
+    listing.discounts ?? [],
+    engineLines.map((p) => ({ name: p.item.pass, price: p.base, days: p.days.length })),
+    uniform ? attendees : 1,
+  );
+  const passGross = round2(priced.reduce((s, p) => s + p.base, 0));
+  const discountOff = Math.max(0, round2(passGross - discounted));
+  // Spread the discount across items in proportion to their base price.
+  const amounts = priced.map((p) =>
+    round2(p.base - (passGross > 0 ? (p.base / passGross) * discountOff : 0) + p.addonsTotal),
+  );
+  // Rounding drift lands on the last item so the sum is exact.
+  const target = round2(discounted + priced.reduce((s, p) => s + p.addonsTotal, 0));
+  const drift = round2(target - amounts.reduce((s, a) => round2(s + a), 0));
+  if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + drift);
 
   const bookerName = req.user?.name || email.split("@")[0];
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
   const blockRef = db.collection("blocks").doc(input.blockId);
+  // Auto-confirm listings seat parents immediately; manual ones hold the
+  // place pending the operator's approval. Unpaid until payments land.
+  const placedStatus = listing.bookingType === "auto" ? "Confirmed" : "Approval needed";
 
   try {
-    const booking = await db.runTransaction(async (tx) => {
+    const bookings = await db.runTransaction(async (tx) => {
       const [tenantSnap, blockSnap] = await Promise.all([tx.get(tenantRef), tx.get(blockRef)]);
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
       if (!blockSnap.exists) throw new HttpError(400, "Unknown block");
@@ -149,63 +303,56 @@ my.post("/bookings", async (req, res) => {
       if (block.listingId !== input.listingId || block.tenantId !== listing.tenantId)
         throw new HttpError(400, "Block does not belong to this listing");
 
-      const seats = 1;
-      const hasSpace = block.open && block.bookedCount + seats <= block.capacity;
+      const seatsWanted = priced.length;
+      // All or nothing: either every child gets a place or the whole basket
+      // joins the waitlist together — no splitting siblings.
+      const hasSpace = block.open && block.bookedCount + seatsWanted <= block.capacity;
       if (!hasSpace && listing.waitlist === false)
         throw new HttpError(409, "This block is full and the waitlist is off");
-      // Waitlist position among existing waitlisted bookings for this block.
       let waitPos = 0;
       if (!hasSpace) {
         const waiting = await tx.get(
           bookingsCol.where("blockId", "==", blockSnap.id).where("status", "==", "Waitlisted"),
         );
-        waitPos = waiting.size + 1;
+        waitPos = waiting.size;
       }
 
-      // The server decides the price: the pass's stored price with the
-      // listing's automatic discounts applied (same engine the builder
-      // previews — features/listings/discounts.ts).
-      const { total } = applyDiscounts(
-        listing.discounts ?? [],
-        [{ name: pass.name, price: pass.price, days: pass.days ?? block.sessions.length }],
-        1,
-      );
-
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
-      const b: Booking = {
+      const created: Booking[] = priced.map((p, i) => ({
         ...buildBooking(
           {
             booker: bookerName,
             email,
-            child: input.child,
-            age: input.age,
+            child: p.item.child,
+            age: p.item.age,
             listing: listing.name,
-            pass: input.pass,
+            pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
             dates: block.name,
-            amount: total,
+            amount: amounts[i],
             method: input.method,
           },
-          nextBid,
+          nextBid + i,
         ),
         tenantId: listing.tenantId,
         blockId: blockSnap.id,
-        seats,
-        sessions: block.sessions.map(sessionLabel),
-        // Parent bookings await the provider's approval (which holds a
-        // place) — unless the block is full, in which case they join the
-        // waitlist. Unpaid until real payments arrive.
-        status: hasSpace ? "Approval needed" : "Waitlisted",
+        seats: 1,
+        days: p.days,
+        ...(p.timing ? { timing: p.timing } : {}),
+        addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
+        sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
+        status: hasSpace ? placedStatus : "Waitlisted",
         pay: "Unpaid",
-        note: hasSpace ? "" : `Waitlist position ${waitPos}`,
-      };
-      tx.update(tenantRef, { nextBid: nextBid + 1 });
-      if (hasSpace) tx.update(blockRef, { bookedCount: block.bookedCount + seats });
-      tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
-      return b;
+        note: hasSpace ? "" : `Waitlist position ${waitPos + i + 1}`,
+      }));
+      tx.update(tenantRef, { nextBid: nextBid + created.length });
+      if (hasSpace) tx.update(blockRef, { bookedCount: block.bookedCount + seatsWanted });
+      for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
+      return created;
     });
 
-    emailBookingRequestReceived(booking, listing.tenantName ?? listing.name);
-    res.status(201).json(booking);
+    // One email for the basket, not one per child.
+    emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
+    res.status(201).json(legacy.success ? bookings[0] : { bookings, total: target });
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;

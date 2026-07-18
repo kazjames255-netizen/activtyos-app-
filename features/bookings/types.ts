@@ -56,6 +56,11 @@ export interface Booking {
   blockId?: string;
   /** Places held in the block (kids count; default 1). */
   seats?: number;
+  /** The ISO session dates this booking occupies (absent = every session —
+   * pre-day-picker bookings). Registers use this to know who's expected. */
+  days?: string[];
+  /** The bundle timing chosen at checkout (period title, e.g. "Late pick-up"). */
+  timing?: string;
   booker: string;
   email: string;
   phone: string;

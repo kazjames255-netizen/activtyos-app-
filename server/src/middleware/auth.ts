@@ -22,3 +22,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "Invalid or expired token" });
   }
 }
+
+// For public storefront reads: a valid token attaches the user, no token
+// continues anonymously — but a BAD token is still a 401, because silently
+// downgrading a signed-in operator to anonymous would just look like their
+// drafts had vanished.
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) {
+    next();
+    return;
+  }
+  try {
+    req.user = await auth.verifyIdToken(token);
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+  }
+}

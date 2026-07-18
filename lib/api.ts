@@ -39,7 +39,18 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const user = await signedInUser();
   if (!user) throw new ApiError(401, "Not signed in");
   const token = await withTimeout(user.getIdToken(), "Getting your sign-in token");
+  return request<T>(path, token, init);
+}
 
+// Public storefront reads (/api/listings, /book/{id}): attach the token when
+// a session exists (operators see their drafts), otherwise go anonymously.
+export async function apiPublic<T>(path: string, init?: RequestInit): Promise<T> {
+  const user = await signedInUser().catch(() => null);
+  const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token").catch(() => null) : null;
+  return request<T>(path, token, init);
+}
+
+async function request<T>(path: string, token: string | null, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const abort = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const res = await fetch(`${BASE}${path}`, {
@@ -47,7 +58,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     signal: controller.signal,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
   })

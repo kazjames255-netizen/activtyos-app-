@@ -6,8 +6,8 @@ import cors from "cors";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
-import { requireAuth } from "./middleware/auth";
-import { attachRole } from "./middleware/role";
+import { optionalAuth, requireAuth } from "./middleware/auth";
+import { attachRole, attachRoleOptional } from "./middleware/role";
 import { blockBundles, passes, periods } from "./routes/blockBundles";
 import { blocks } from "./routes/blocks";
 import { bookings } from "./routes/bookings";
@@ -56,12 +56,17 @@ app.use("/api/events", events);
 // secret). Uploading them requires an operator account — see routes/uploads.
 app.use("/api/images", images);
 
+// Listings are the public storefront: browsing and the /book/{id} page work
+// signed-out (anonymous = parent-shaped permissions — live+public feed,
+// hidden by direct link, drafts 404). A token still changes what you see
+// (?mine=1, own drafts) and writes still require an operator.
+app.use("/api/listings", optionalAuth, attachRoleOptional, listings);
+
 app.use("/api", requireAuth, attachRole);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
 app.use("/api/bookings", bookings);
 app.use("/api/customers", customers);
-app.use("/api/listings", listings);
 app.use("/api/blocks", blocks);
 app.use("/api/periods", periods);
 app.use("/api/passes", passes);
