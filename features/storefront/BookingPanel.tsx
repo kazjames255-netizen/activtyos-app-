@@ -7,6 +7,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { applyDiscounts, type DiscountRule } from "@/features/listings/discounts";
 import type { ServerListing } from "@/features/listings/ListingWizard";
+import { PayModal } from "@/features/payments/PayModal";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The parent checkout on /book/{id}: block → pass → timing → days →
@@ -57,6 +58,8 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ refs: string[]; status: string; total: number } | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [paid, setPaid] = useState(false);
 
   const block = blocks.find((b) => b.id === blockId) ?? null;
   const pass = passes.find((p) => p.id === passId) ?? null;
@@ -150,10 +153,27 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           {done.status === "Approval needed" && " — the provider will confirm your place."}
           {done.status === "Waitlisted" && " — you'll be offered a place if one frees up."}
         </p>
-        <p className="mt-1 text-[12px] text-[#8a86a3]">Payment is collected after confirmation.</p>
-        <Link href="/custdash/bookings" className="mt-3 inline-block rounded-xl bg-[#2f6bd8] px-4 py-2 text-[13px] font-bold text-white">
-          View my bookings
-        </Link>
+        {paid ? (
+          <p className="mt-1 text-[13px] font-bold text-[#0f7a44]">✅ Paid — see you there!</p>
+        ) : done.status === "Confirmed" && done.total > 0 ? (
+          <button
+            type="button"
+            className={S.cta + " mt-3"}
+            onClick={() => setPaying(true)}
+          >
+            Pay {money(done.total)} now
+          </button>
+        ) : (
+          <p className="mt-1 text-[12px] text-[#8a86a3]">Payment is collected after confirmation.</p>
+        )}
+        <div>
+          <Link href="/custdash/bookings" className="mt-3 inline-block rounded-xl bg-[#2f6bd8] px-4 py-2 text-[13px] font-bold text-white">
+            View my bookings
+          </Link>
+        </div>
+        {paying && (
+          <PayModal refs={done.refs} onClose={() => setPaying(false)} onPaid={() => setPaid(true)} />
+        )}
       </div>
     );
 

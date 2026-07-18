@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
+import { stripe, toPence } from "../lib/stripe";
 import {
   blockCountDelta,
   bookingSeats,
@@ -303,6 +304,14 @@ bookings.post("/:ref/actions", async (req, res) => {
       return b;
     });
 
+    // Approving a refund on a Stripe-paid booking issues the REAL refund on
+    // the provider's connected account (the amount the cancel flow agreed —
+    // full or partial). Failures are logged and recorded, never swallowed
+    // into a fake "Refunded" without money moving... the record shows it.
+    if (action.type === "refund-approve" && updated.paymentIntentId) {
+      void refundStripePayment(updated);
+    }
+
     // Status-change emails to the booker (fire-and-forget).
     if (updated.email.includes("@")) {
       if (action.type === "approve" || action.type === "promote")
@@ -361,6 +370,35 @@ bookings.post("/bulk", async (req, res) => {
   });
   res.json(updated);
 });
+
+// Refund the Stripe payment behind a booking (fire-and-forget from
+// refund-approve). Refunds what the cancel flow agreed (full booking amount
+// when no explicit figure). Recorded in `payments` either way — success or
+// failure — so the money trail is never silent.
+async function refundStripePayment(b: Booking): Promise<void> {
+  if (!stripe || !b.paymentIntentId) return;
+  const amount = b.cancel?.amount ?? b.amount;
+  const base = {
+    tenantId: b.tenantId ?? null,
+    refs: [b.ref],
+    type: "refund",
+    amount,
+    currency: "gbp",
+    paymentIntentId: b.paymentIntentId,
+    stripeAccount: b.stripeAccount ?? null,
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    const refund = await stripe.refunds.create(
+      { payment_intent: b.paymentIntentId, amount: toPence(amount) },
+      b.stripeAccount ? { stripeAccount: b.stripeAccount } : undefined,
+    );
+    await db.collection("payments").add({ ...base, status: "succeeded", refundId: refund.id });
+  } catch (e) {
+    console.error(`[payments] refund failed for ${b.ref}:`, (e as Error).message);
+    await db.collection("payments").add({ ...base, status: "failed", error: (e as Error).message });
+  }
+}
 
 class NotFound extends Error {}
 class BadRequest extends Error {}

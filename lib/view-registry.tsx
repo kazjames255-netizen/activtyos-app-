@@ -3,6 +3,7 @@ import type { PortalKey } from "./nav/config";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { CustomersApp } from "@/features/customers/CustomersApp";
+import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
@@ -31,6 +32,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     "admin-registers": RegistersApp,
     customers: CustomersApp,
+    finance: PaymentsApp,
   },
   franchise: {
     bookings: BookingsApp,
@@ -39,6 +41,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     registers: RegistersApp,
     customers: CustomersApp,
+    finance: PaymentsApp,
   },
   freelancer: {
     bookings: BookingsApp,
@@ -47,6 +50,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     registers: RegistersApp,
     customers: CustomersApp,
+    finance: PaymentsApp,
   },
   staff: {
     registers: RegistersApp,

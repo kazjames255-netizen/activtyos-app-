@@ -5,6 +5,7 @@ import Link from "next/link";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
+import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
@@ -56,7 +57,11 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
 function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
+  // Same rule as the server: confirmed places and operator invoices.
+  const payable =
+    b.pay !== "Paid" && b.pay !== "Refunded" && (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
 
   return (
     <Card className="p-4">
@@ -78,6 +83,11 @@ function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
       </div>
 
       <div className="mt-2 flex gap-2">
+        {payable && (
+          <Button sm variant="primary" onClick={() => setPaying(true)}>
+            Pay {money(b.amount)}
+          </Button>
+        )}
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? "Hide details" : "Details"}
         </Button>
@@ -87,6 +97,8 @@ function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
           </Button>
         )}
       </div>
+
+      {paying && <PayModal refs={[b.ref]} onClose={() => setPaying(false)} onPaid={refresh} />}
 
       {expanded && (
         <div className="mt-2">

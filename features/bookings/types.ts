@@ -61,6 +61,11 @@ export interface Booking {
   days?: string[];
   /** The bundle timing chosen at checkout (period title, e.g. "Late pick-up"). */
   timing?: string;
+  /** Stripe payment that settled this booking (set server-side on confirm).
+   * stripeAccount is the provider's connected account it was charged on
+   * (null = dev platform fallback). Refund-approve refunds through these. */
+  paymentIntentId?: string;
+  stripeAccount?: string | null;
   booker: string;
   email: string;
   phone: string;

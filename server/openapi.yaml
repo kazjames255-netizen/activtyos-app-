@@ -1,10 +1,37 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.8.1
+  version: 0.9.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.9.0 — Payments: Stripe Connect (build item 7)
+
+    Tag `payments`. Per the product doc, each provider connects their OWN
+    Stripe account (Express) and parents' card payments are **direct
+    charges on the provider's connected account** — the money never touches
+    ActivityOS; the platform only records payments and refunds for
+    oversight (`GET /api/payments`).
+
+    - Operator: `POST /api/payments/connect` → Stripe-hosted Express
+      onboarding URL; `GET /api/payments/status` → connection state.
+    - Parent: `POST /api/payments/checkout` `{refs}` → ONE PaymentIntent
+      for the bookings (a basket pays at once), returns `{clientSecret,
+      stripeAccount, amount}` for Stripe's Payment Element (initialise
+      Stripe.js WITH `stripeAccount`); then
+      `POST /api/payments/checkout/{id}/confirm` verifies with Stripe and
+      flips the bookings to `pay: "Paid"` (idempotent). Payable = status
+      `Confirmed`, or `pay: "Invoice sent"` (operator-taken).
+    - `refund-approve` on a Stripe-paid booking now issues the REAL refund
+      on the connected account (the cancel flow's agreed amount); outcome
+      recorded in `payments` (type `refund`).
+    - Amounts are always computed server-side from the booking records —
+      the client never sends a price.
+    - DEV ONLY: `STRIPE_PLATFORM_FALLBACK=1` lets un-onboarded providers
+      take TEST payments on the platform account (flagged
+      `platformFallback` on the record). Remove in production.
+    - Realtime collection `payments` (tenant-scoped).
 
     ## v0.8.1 — Customers & families become real (and self-filling)
 
@@ -225,6 +252,8 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
+  - name: payments
+    description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
     description: Operator-only, tenant-scoped
   - name: invites
@@ -1032,6 +1061,117 @@ paths:
                             properties:
                               name: { type: string }
                               age: { type: number }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/payments/connect:
+    post:
+      tags: [payments]
+      summary: Connect (or resume) the tenant's Stripe Express account
+      responses:
+        "200":
+          description: The Stripe-hosted onboarding URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+                  accountId: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503":
+          description: Payments not configured on the server
+
+  /api/payments/status:
+    get:
+      tags: [payments]
+      summary: How connected the tenant's Stripe account is
+      responses:
+        "200":
+          description: Connection state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected: { type: boolean }
+                  accountId: { type: string }
+                  chargesEnabled: { type: boolean }
+                  detailsSubmitted: { type: boolean }
+                  payoutsEnabled: { type: boolean }
+                  platformFallback: { type: boolean, description: DEV flag — see the v0.9.0 notes }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/payments:
+    get:
+      tags: [payments]
+      summary: The tenant's payment & refund records (oversight)
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only
+          schema: { type: string }
+      responses:
+        "200":
+          description: Records, newest first (refunds have type "refund")
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/payments/checkout:
+    post:
+      tags: [payments]
+      summary: Start paying for bookings (parent)
+      description: |
+        One PaymentIntent for the given bookings (all one provider, all
+        payable — status `Confirmed` or `pay: "Invoice sent"`), created as a
+        direct charge on the provider's connected account. Initialise
+        Stripe.js with the returned `stripeAccount` before mounting the
+        Payment Element.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refs]
+              properties:
+                refs:
+                  type: array
+                  items: { type: string }
+      responses:
+        "201":
+          description: Client secret for the Payment Element
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentId: { type: string }
+                  clientSecret: { type: string }
+                  stripeAccount: { type: string, nullable: true }
+                  amount: { type: number }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Not payable (already paid, not confirmed, or the provider hasn't finished Stripe onboarding)
+
+  /api/payments/checkout/{id}/confirm:
+    post:
+      tags: [payments]
+      summary: Verify the payment with Stripe and mark the bookings Paid
+      description: Idempotent; only the paying family's account can call it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: "{status, paid} — bookings flip to Paid when succeeded"
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
