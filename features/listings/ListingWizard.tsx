@@ -1727,15 +1727,16 @@ function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (f
 
 function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<"perday" | "bundle" | "once">("perday");
+  const [type, setType] = useState<"perday" | "once">("perday");
+  const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
-  const types: Record<string, string> = { perday: "Per day", bundle: "Whole block", once: "One-off" };
+  const types: Record<string, string> = { perday: "Per day", once: "One-off" };
   const create = () => {
     if (name.trim().length < 2) return;
-    const a = { id: uid(), name: name.trim(), type, price: parseFloat(price) || 0 };
+    const a = { id: uid(), name: name.trim(), type, price: parseFloat(price) || 0, ...(desc.trim() ? { description: desc.trim() } : {}) };
     patchLocal((s) => ({ ...s, addons: [...s.addons, a] }));
     upd({ addonIds: [...d.addonIds, a.id] });
-    setName(""); setPrice("");
+    setName(""); setPrice(""); setDesc("");
   };
   return (
     <div className="max-w-[720px]">
@@ -1750,8 +1751,11 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
               <div key={a.id} className="flex items-center gap-2 rounded-lg border p-2.5" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
                 <button type="button" onClick={() => upd({ addonIds: toggle(d.addonIds, a.id) })} className="flex flex-1 items-center gap-2 text-left">
                   <span className="text-[13px]">{on ? "☑" : "☐"}</span>
-                  <span className="text-[12.5px] font-bold">{a.name}</span>
-                  <span className="text-[11px] text-[var(--ink-3)]">{types[a.type]} · {money(a.price)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12.5px] font-bold">{a.name}</span>
+                    {a.description && <span className="block text-[10.5px] leading-[1.4] text-[var(--ink-3)]">{a.description}</span>}
+                  </span>
+                  <span className="flex-none text-[11px] text-[var(--ink-3)]">{types[a.type] ?? "One-off"} · {money(a.price)}</span>
                 </button>
                 <AddonIcon addon={a} patchLocal={patchLocal} />
                 <button type="button" onClick={() => { patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
@@ -1763,8 +1767,10 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <SectionHead icon="➕">Create a new add-on</SectionHead>
       <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
         <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hot lunch" className="w-full" /></div>
-        <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "bundle" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
+        <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
         <div className="w-[90px]"><FieldLabel>Price £</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
+        <div className="w-full"><FieldLabel>Description <span className="font-normal text-[var(--ink-3)]">— optional, shown to parents</span></FieldLabel>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Hot meal, dessert and a drink. Vegetarian by default — tell us about allergies when you book." className="w-full" /></div>
         <Button variant="primary" onClick={create}>＋ Add</Button>
       </div>
     </div>
@@ -2559,11 +2565,15 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   };
   const addonById = new Map(addons.map((a) => [a.id, a]));
   const costOf = (a: AddonTemplate, days: string[]) => (a.type === "perday" ? a.price * days.length : a.price);
+  // Per child, because that's what an add-on is: a lunch each, a t-shirt each.
+  // The server already charges them per child (it prices one line per child),
+  // so showing one lunch for two children quoted a price we wouldn't honour.
+  const addonHeads = (itemId: string) => (parentMode ? Math.max(1, b.childrenOn(itemId).length) : 1);
   const addonTotal = b.basket.reduce((sum, item) => {
     const sel = b.addonSel[item.id] ?? {};
     return sum + Object.entries(sel).reduce((t, [aid, days]) => {
       const a = addonById.get(aid);
-      return a ? t + costOf(a, days) : t;
+      return a ? t + costOf(a, days) * addonHeads(item.id) : t;
     }, 0);
   }, 0);
   const calculated = b.total + addonTotal;
@@ -2781,11 +2791,25 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={a.image} alt="" className="h-5 w-5 flex-none rounded object-cover" />
                               ) : a.emoji ? <span>{a.emoji}</span> : null}
-                              <span className="flex-1 font-bold">{a.name}</span>
-                              <span className="text-[11px]" style={{ color: tk.muted }}>
-                                {perDay ? `${money(a.price)}/day` : a.type === "bundle" ? `${money(a.price)} whole block` : `${money(a.price)} one-off`}
+                              <span className="min-w-0 flex-1">
+                                <span className="block font-bold">{a.name}</span>
+                                {/* The operator's own words — what it is, when it's needed. */}
+                                {a.description && (
+                                  <span className="block text-[10.5px] font-normal leading-[1.4]" style={{ color: tk.muted }}>{a.description}</span>
+                                )}
                               </span>
-                              {on && <b className="flex-none">{money(costOf(a, days))}</b>}
+                              <span className="flex-none text-[11px]" style={{ color: tk.muted }}>
+                                {perDay ? `${money(a.price)}/day` : `${money(a.price)} one-off`}
+                              </span>
+                              {on && (() => {
+                                const heads = addonHeads(x.id);
+                                return (
+                                  <b className="flex-none">
+                                    {money(costOf(a, days) * heads)}
+                                    {heads > 1 && <span className="ml-1 text-[10px] font-normal" style={{ color: tk.muted }}>({money(costOf(a, days))} each)</span>}
+                                  </b>
+                                );
+                              })()}
                             </button>
                             {/* Per-day add-ons default to every day — untick any that aren't wanted. */}
                             {on && perDay && (
