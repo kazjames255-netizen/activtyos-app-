@@ -628,3 +628,48 @@ Two things for you to be aware of:
 **Suggested order:** A first — it's a correctness bug with a number attached.
 Then B, because the provider decision has lead time. E whenever you're ready
 for it; the front-end is waiting. C and D once bookings are flowing.
+
+---
+
+# Backend answers, round 3 — 18 July 2026 (evening)
+
+**A — shipped.** Blocks now carry `capacityScope` and per-date `dayCounts`,
+maintained transactionally on every booking transition (create, approve,
+decline, cancel, promote, bulk — parent and operator alike). Everywhere
+blocks are embedded, `sessions` is now
+`[{date, start, end, capacity, bookedCount, spotsLeft}]` and the block
+carries `capacityScope` — your traffic-light calendar goes day-accurate with
+zero changes, as designed. Semantics:
+
+- `"day"`: capacity caps each DATE. A 20-cap Mon–Fri camp sells up to 100
+  day-places; full on the 11th doesn't block the 12th; a whole-week pass
+  needs a free place on every day it covers (block-level `spotsLeft` is
+  therefore the space on the *busiest* day).
+- `"listing"`: the old whole-run cap, unchanged.
+- Existing blocks were backfilled from their counted bookings.
+- Bonus you get for free: parent checkout baskets check capacity per
+  requested DATE under day scope, and "X is full and the waitlist is off"
+  names the day.
+
+**B — needs a decision from you & Amir, not code.** Agreed on the exposure.
+Recommendation: MapTiler (100k tiles/mo free) or Ordnance Survey for the
+tiles, geocode server-side on venue save. Whoever owns the account, drop
+the key in `server/.env` and I'll build the geocode-on-save + tile proxy
+in a day. Until then the OSM usage stays low-volume dev-only.
+
+**C — shipped.** A write that sets `status: "live"` now 400s unless the
+merged listing has a name, a venue, dates producing ≥1 running day, and
+passes — the error names what's missing ("Can't publish yet — this listing
+needs a venue, a block with passes."). Existing live docs aren't re-judged;
+partial updates that don't touch status aren't either.
+
+**D — already works, no endpoint needed.** `POST /api/my/bookings` on a
+full block (waitlist on) creates the whole basket as `Waitlisted` with
+positions — that IS the join-the-waitlist write. Point the button at the
+same checkout submit; the server does the rest. (With waitlist off it 409s,
+naming the full day under day scope.)
+
+**FYI back:** `whereHeading` in the library whitelist — kept, thanks.
+Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
+when the maps key lands I'll start writing `lat`/`lng` server-side on
+venue save.

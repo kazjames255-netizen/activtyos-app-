@@ -14,10 +14,16 @@ import {
 } from "../lib/bundlePricing";
 import {
   blockCountDelta,
+  bookingDays,
   bookingSeats,
+  countsUpdate,
+  daysHaveSpace,
   sessionLabel,
   type BlockDoc,
 } from "../lib/blockDomain";
+
+const prettyDay = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 import { emailBookingRequestReceived } from "../lib/emails";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
@@ -307,9 +313,22 @@ my.post("/bookings", async (req, res) => {
       const seatsWanted = priced.length;
       // All or nothing: either every child gets a place or the whole basket
       // joins the waitlist together — no splitting siblings.
-      const hasSpace = block.open && block.bookedCount + seatsWanted <= block.capacity;
+      // Day-scope capacity checks each DATE the basket wants; listing scope
+      // checks the block total (the old behaviour).
+      const wantedByDay: Record<string, number> = {};
+      for (const p of priced) for (const d of p.days) wantedByDay[d] = (wantedByDay[d] ?? 0) + 1;
+      const scope = block.capacityScope ?? "listing";
+      const dayCheck = scope === "day" ? daysHaveSpace(block, wantedByDay) : { fits: true as const };
+      const hasSpace =
+        block.open &&
+        (scope === "day" ? dayCheck.fits : block.bookedCount + seatsWanted <= block.capacity);
       if (!hasSpace && listing.waitlist === false)
-        throw new HttpError(409, "This block is full and the waitlist is off");
+        throw new HttpError(
+          409,
+          "fullDay" in dayCheck && dayCheck.fullDay
+            ? `${prettyDay(dayCheck.fullDay)} is full and the waitlist is off`
+            : "This block is full and the waitlist is off",
+        );
       let waitPos = 0;
       if (!hasSpace) {
         const waiting = await tx.get(
@@ -346,7 +365,11 @@ my.post("/bookings", async (req, res) => {
         note: hasSpace ? "" : `Waitlist position ${waitPos + i + 1}`,
       }));
       tx.update(tenantRef, { nextBid: nextBid + created.length });
-      if (hasSpace) tx.update(blockRef, { bookedCount: block.bookedCount + seatsWanted });
+      if (hasSpace) {
+        const dayCounts = { ...(block.dayCounts ?? {}) };
+        for (const [d, n] of Object.entries(wantedByDay)) dayCounts[d] = (dayCounts[d] ?? 0) + n;
+        tx.update(blockRef, { bookedCount: block.bookedCount + seatsWanted, dayCounts });
+      }
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
@@ -398,18 +421,22 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
       const oldStatus = b.status;
       applyParentCancel(b, parsed.data.msg);
-      // Free the block place the booking held (all reads before writes).
+      // Free the block places the booking held — total AND its days
+      // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
-      let blockUpdate: { ref: FirebaseFirestore.DocumentReference; count: number } | null = null;
+      let blockUpdate: {
+        ref: FirebaseFirestore.DocumentReference;
+        counts: ReturnType<typeof countsUpdate>;
+      } | null = null;
       if (delta !== 0) {
         const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
         if (blockSnap.exists) {
-          const count = Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + delta);
-          blockUpdate = { ref: blockSnap.ref, count };
+          const blockData = blockSnap.data() as BlockDoc;
+          blockUpdate = { ref: blockSnap.ref, counts: countsUpdate(blockData, delta, bookingDays(b, blockData)) };
         }
       }
       tx.set(ref, toDoc(b));
-      if (blockUpdate) tx.update(blockUpdate.ref, { bookedCount: blockUpdate.count });
+      if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       return b;
     });
     res.json(updated);

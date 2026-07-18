@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
-import { syncListingBlocks } from "../lib/listingRuns";
+import { desiredRuns, syncListingBlocks } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
 
 export const listings = Router();
@@ -131,7 +131,7 @@ const createSchema = baseListingSchema.refine((d) => d.name || d.title, {
 type ListingInput = z.infer<typeof baseListingSchema>;
 
 /** Fields whose change means the dated blocks must be re-synced. */
-const RUN_FIELDS = ["runFrom", "runTo", "blockMode", "days", "datesOff", "maxAttendees", "blockId"] as const;
+const RUN_FIELDS = ["runFrom", "runTo", "blockMode", "days", "datesOff", "maxAttendees", "capacityScope", "blockId"] as const;
 
 function runRecipeOf(doc: Record<string, unknown>) {
   return {
@@ -141,8 +141,24 @@ function runRecipeOf(doc: Record<string, unknown>) {
     days: doc.days as number[] | undefined,
     datesOff: doc.datesOff as string[] | undefined,
     maxAttendees: doc.maxAttendees as string | undefined,
+    capacityScope: doc.capacityScope as "day" | "listing" | undefined,
     blockId: doc.blockId as string | null | undefined,
   };
+}
+
+// Publishing has requirements the builder already enforces client-side —
+// mirrored here so `status: "live"` can't arrive by API with none of them
+// (the client-side lock is a courtesy, this is the control). Only checked
+// when the WRITE itself publishes; existing live docs aren't re-judged.
+function publishProblems(merged: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  if (!((merged.title as string) ?? (merged.name as string))?.trim()) problems.push("a name");
+  if (!merged.venueId) problems.push("a venue");
+  const recipe = runRecipeOf(merged);
+  const runs = desiredRuns(recipe, { start: "09:00", end: "15:30" });
+  if (!runs.length) problems.push("dates with at least one running day");
+  if (!((merged.passes as unknown[]) ?? []).length) problems.push("a block with passes");
+  return problems;
 }
 
 // Join each listing's real blocks (availability included) onto the response.
@@ -294,6 +310,13 @@ listings.post("/", async (req, res) => {
   }
   const tenant = await db.collection("tenants").doc(auth.tenantId).get();
   const data = parsed.data;
+  if (data.status === "live") {
+    const problems = publishProblems(data as Record<string, unknown>);
+    if (problems.length) {
+      res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
+      return;
+    }
+  }
   const name = (data.title ?? data.name)!;
   const doc = {
     ...data,
@@ -334,6 +357,13 @@ listings.put("/:id", async (req, res) => {
     return;
   }
   const data: ListingInput = parsed.data;
+  if (data.status === "live") {
+    const problems = publishProblems({ ...own.snap.data()!, ...data });
+    if (problems.length) {
+      res.status(400).json({ error: `Can't publish yet — this listing needs ${problems.join(", ")}.` });
+      return;
+    }
+  }
   const patch: Record<string, unknown> = { ...data };
   if (data.title ?? data.name) {
     patch.name = data.title ?? data.name;

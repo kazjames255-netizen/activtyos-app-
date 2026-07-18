@@ -30,6 +30,7 @@ export interface RunRecipe {
   days?: number[]; // 0=Sun … 6=Sat
   datesOff?: string[];
   maxAttendees?: string | number;
+  capacityScope?: "day" | "listing";
   blockId?: string | null; // block bundle → session times come from its periods
 }
 
@@ -153,7 +154,9 @@ export async function syncListingBlocks(
         name: run.name,
         endDate: run.endDate,
         capacity: run.capacity,
+        capacityScope: recipe.capacityScope ?? "listing",
         sessions: run.sessions,
+        // dayCounts intentionally untouched — booked seats survive a re-save.
       });
     } else {
       const doc: BlockDoc & { auto: true } = {
@@ -164,7 +167,9 @@ export async function syncListingBlocks(
         startDate: run.startDate,
         endDate: run.endDate,
         capacity: run.capacity,
+        capacityScope: recipe.capacityScope ?? "listing",
         bookedCount: 0,
+        dayCounts: {},
         open: true,
         sessions: run.sessions,
       };

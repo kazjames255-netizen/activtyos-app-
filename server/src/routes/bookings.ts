@@ -7,6 +7,9 @@ import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { stripe, toPence } from "../lib/stripe";
 import {
   blockCountDelta,
+  bookingDays,
+  countsUpdate,
+  daysHaveSpace,
   bookingSeats,
   sessionLabel,
   type BlockDoc,
@@ -190,7 +193,14 @@ bookings.post("/", async (req, res) => {
       }
 
       const seats = 1;
-      const hasSpace = !block || (block.open && block.bookedCount + seats <= block.capacity);
+      // Operator bookings occupy every session (no day picker yet); day
+      // scope needs a free place on each date, listing scope on the total.
+      const hasSpace =
+        !block ||
+        (block.open &&
+          ((block.capacityScope ?? "listing") === "day"
+            ? daysHaveSpace(block, Object.fromEntries(block.sessions.map((s) => [s.date, seats]))).fits
+            : block.bookedCount + seats <= block.capacity));
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
       const b: Booking = {
         ...buildBooking(
@@ -210,7 +220,7 @@ bookings.post("/", async (req, res) => {
       };
       tx.update(tenantRef, { nextBid: nextBid + 1 });
       if (block && blockRef && hasSpace)
-        tx.update(blockRef, { bookedCount: block.bookedCount + seats });
+        tx.update(blockRef, { ...countsUpdate(block, seats, bookingDays(b, block)) });
       tx.set(col.doc(bookingDocId(tenantId, b.ref)), toDoc(b));
       return b;
     });
@@ -284,23 +294,27 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
       }
 
-      // Keep the block's place count in step with the status transition
-      // (promote may intentionally exceed capacity — operator's overbook).
-      // Firestore requires all reads before writes, hence the read here.
+      // Keep the block's place counts — total AND per day — in step with
+      // the status transition (promote may intentionally exceed capacity —
+      // operator's overbook). Firestore requires all reads before writes.
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
-      let blockUpdate: { ref: FirebaseFirestore.DocumentReference; count: number } | null = null;
+      let blockUpdate: {
+        ref: FirebaseFirestore.DocumentReference;
+        counts: ReturnType<typeof countsUpdate>;
+      } | null = null;
       if (delta !== 0) {
         const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId!));
         if (blockSnap.exists) {
+          const blockData = blockSnap.data() as BlockDoc;
           blockUpdate = {
             ref: blockSnap.ref,
-            count: Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + delta),
+            counts: countsUpdate(blockData, delta, bookingDays(b, blockData)),
           };
         }
       }
 
       tx.set(ref, toDoc(b));
-      if (blockUpdate) tx.update(blockUpdate.ref, { bookedCount: blockUpdate.count });
+      if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       return b;
     });
 
@@ -341,9 +355,11 @@ bookings.post("/bulk", async (req, res) => {
     const snaps = await Promise.all(
       refs.map((r) => tx.get(col.doc(bookingDocId(scope.tenantId!, r)))),
     );
-    // Mutate + aggregate block deltas first (all reads must precede writes).
+    // Mutate + aggregate block deltas first (all reads must precede
+    // writes). Each entry keeps the booking's days so per-day counts move
+    // too (undefined days = every session, resolved once the block loads).
     const out: { snap: FirebaseFirestore.DocumentSnapshot; b: Booking }[] = [];
-    const deltas = new Map<string, number>();
+    const deltas = new Map<string, { delta: number; days?: string[] }[]>();
     for (const snap of snaps) {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) continue;
       const b = fromDoc(snap.data() as BookingDoc);
@@ -351,7 +367,11 @@ bookings.post("/bulk", async (req, res) => {
       applyBulkAction(b, action);
       if (b.blockId) {
         const d = blockCountDelta(oldStatus, b.status, bookingSeats(b));
-        if (d !== 0) deltas.set(b.blockId, (deltas.get(b.blockId) ?? 0) + d);
+        if (d !== 0) {
+          const arr = deltas.get(b.blockId) ?? [];
+          arr.push({ delta: d, days: b.days });
+          deltas.set(b.blockId, arr);
+        }
       }
       out.push({ snap, b });
     }
@@ -361,9 +381,14 @@ bookings.post("/bulk", async (req, res) => {
     for (const { snap, b } of out) tx.set(snap.ref, toDoc(b));
     for (const blockSnap of blockSnaps) {
       if (!blockSnap.exists) continue;
-      const d = deltas.get(blockSnap.id)!;
+      let blockData = blockSnap.data() as BlockDoc;
+      for (const entry of deltas.get(blockSnap.id)!) {
+        const counts = countsUpdate(blockData, entry.delta, bookingDays({ days: entry.days }, blockData));
+        blockData = { ...blockData, ...counts };
+      }
       tx.update(blockSnap.ref, {
-        bookedCount: Math.max(0, (blockSnap.data()!.bookedCount ?? 0) + d),
+        bookedCount: blockData.bookedCount,
+        dayCounts: blockData.dayCounts ?? {},
       });
     }
     return out.map((x) => x.b);

@@ -1,10 +1,29 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.9.0
+  version: 0.9.1
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.9.1 — Day-accurate capacity + server-side publish validation
+
+    - **Per-session booked counts** (handoff §A): blocks now carry
+      `capacityScope` and per-date `dayCounts`, maintained transactionally
+      on every booking transition. With `capacityScope: "day"` a cap of 20
+      means 20 **per date** — a Mon–Fri camp sells up to 100 day-places,
+      and "full on the 11th" no longer blocks the 12th. `"listing"` keeps
+      the whole-run cap. Block summaries (everywhere blocks are embedded)
+      now expose `capacityScope` and
+      `sessions: [{date, start, end, capacity, bookedCount, spotsLeft}]` —
+      the traffic-light calendar reads per date with no front-end change.
+      Block-level `spotsLeft` under day scope = space on the BUSIEST day
+      (what a whole-run pass needs). Existing blocks backfilled.
+    - **Publishing is validated server-side** (handoff §C): a write that
+      sets `status: "live"` must have a name, a venue, dates producing at
+      least one running day, and passes — otherwise 400 naming what's
+      missing. Existing live docs aren't re-judged; partial updates that
+      don't touch status don't either.
 
     ## v0.9.0 — Payments: Stripe Connect (build item 7)
 
