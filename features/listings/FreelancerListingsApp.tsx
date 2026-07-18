@@ -217,7 +217,7 @@ export function FreelancerListingsApp() {
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<LocalState | null>(null);
   const [wizard, setWizard] = useState<{ draft: WizardDraft; key: string } | null>(null);
-  const [viewing, setViewing] = useState<WizardDraft | null>(null);
+  const [viewing, setViewing] = useState<{ draft: WizardDraft; runs?: Listing["blocks"] } | null>(null);
   const [tick, setTick] = useState(0);
   // In-progress drafts (never published) — resumable from the Listings tab.
   // How many listings sit behind each category / venue. Both library tabs show
@@ -412,7 +412,7 @@ export function FreelancerListingsApp() {
           }}
           onResume={(key, dr) => setWizard({ draft: dr, key })}
           onDeleteDraft={(key) => { if (confirm("Delete this draft?")) { deleteDraft(key); setTick((t) => t + 1); } }}
-          onView={(l) => setViewing(serverDraft(l) ?? loadDrafts()[l.id] ?? { ...emptyDraft(), id: l.id, title: l.name })}
+          onView={(l) => setViewing({ draft: serverDraft(l) ?? loadDrafts()[l.id] ?? { ...emptyDraft(), id: l.id, title: l.name }, runs: l.blocks })}
           onSetVisibility={(l, vis) => {
             api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ visibility: vis }) })
               .then(() => refresh())
@@ -442,10 +442,10 @@ export function FreelancerListingsApp() {
         <div onClick={(e) => e.target === e.currentTarget && setViewing(null)} className="fixed inset-0 z-[10000] flex items-start justify-center overflow-auto bg-black/60 p-4 sm:p-6">
           <div className="w-full max-w-[1040px]">
             <div className="mb-2 flex items-center justify-between text-white">
-              <span className="text-[13px] font-bold">Customer view — {viewing.title || "listing"}</span>
+              <span className="text-[13px] font-bold">Customer view — {viewing.draft.title || "listing"}</span>
               <button type="button" onClick={() => setViewing(null)} className="text-[22px] leading-none">×</button>
             </div>
-            <ListingPreview draft={viewing} local={local} />
+            <ListingPreview draft={viewing.draft} local={local} runs={viewing.runs} />
           </div>
         </div>
       )}

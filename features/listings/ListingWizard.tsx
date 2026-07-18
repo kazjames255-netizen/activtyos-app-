@@ -544,7 +544,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
 }
 
 // Standalone customer-page preview (for the "View" action on the Listings tab).
-export function ListingPreview({ draft, local }: { draft: WizardDraft; local: LocalState }) {
+export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; local: LocalState; runs?: RunBlock[] }) {
   const blocks = useBlocks();
   const [theme, setTheme] = useState<PageTheme>(draft.pageStyle ?? "playful");
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
@@ -552,7 +552,7 @@ export function ListingPreview({ draft, local }: { draft: WizardDraft; local: Lo
   const venue = local.venues.find((v) => v.id === draft.venueId) || null;
   const booking = blockBooking(blocks, draft.blockId);
   const addons = local.addons.filter((a) => draft.addonIds.includes(a.id));
-  return <ParentPreview d={d2} venue={venue} local={local} booking={booking} addons={addons} theme={theme} onTheme={setTheme} full />;
+  return <ParentPreview d={d2} venue={venue} local={local} booking={booking} addons={addons} blocks={runs} theme={theme} onTheme={setTheme} full />;
 }
 
 async function fileToImage(file: File): Promise<string> {
@@ -1185,13 +1185,19 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
           {blocks.library.map((b) => {
             const on = b.id === d.blockId;
             return (
-              <button key={b.id} type="button" onClick={() => upd({ blockId: b.id })} className="flex items-center justify-between gap-2 rounded-xl border p-3 text-left"
+              // Clicking the selected block clears it — picking the wrong one
+              // otherwise left no way back to "no block".
+              <button key={b.id} type="button" onClick={() => upd({ blockId: on ? null : b.id })}
+                title={on ? "Click to unselect" : undefined}
+                className="group flex items-center justify-between gap-2 rounded-xl border p-3 text-left"
                 style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
                   <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} periods · {b.passIds.length} passes</div>
                 </div>
-                <span className="text-[11.5px] font-bold" style={{ color: on ? "var(--brand-ink)" : "var(--ink-3)" }}>{on ? "✓ Selected" : "Use this block"}</span>
+                <span className="whitespace-nowrap text-[11.5px] font-bold" style={{ color: on ? "var(--brand-ink)" : "var(--ink-3)" }}>
+                  {on ? <><span className="group-hover:hidden">✓ Selected</span><span className="hidden group-hover:inline">✕ Unselect</span></> : "Use this block"}
+                </span>
               </button>
             );
           })}
@@ -2881,9 +2887,19 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   // Totals come from the real runs when there are any. They
                   // legitimately differ by scope: 20/day over ten days is 200
                   // places, 60 across the camp is 60 — so read, don't assume.
-                  const total = blocks?.length ? blocks.reduce((n, x) => n + x.capacity, 0) : spacesLeft;
-                  const left = blocks?.length ? blocks.reduce((n, x) => n + x.spotsLeft, 0) : spacesLeft;
-                  if (total === null || left === null) return <div className={`mt-1 text-[18px] font-black ${cond} text-white`}>—</div>;
+                  // No dated runs means no bookings to count. Showing
+                  // "0 booked · 0% full" there states a fact we don't have —
+                  // it's what made a listing with a booking look empty.
+                  if (!blocks?.length) {
+                    return spacesLeft === null
+                      ? <div className={`mt-1 text-[18px] font-black ${cond} text-white`}>—</div>
+                      : (<>
+                          <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>Up to {spacesLeft}</div>
+                          <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>Bookings show once the run is saved</div>
+                        </>);
+                  }
+                  const total = blocks.reduce((n, x) => n + x.capacity, 0);
+                  const left = blocks.reduce((n, x) => n + x.spotsLeft, 0);
                   const used = Math.max(0, total - left);
                   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
                   return (
