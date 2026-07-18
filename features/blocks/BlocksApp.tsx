@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
@@ -9,12 +10,18 @@ import type { ApiBundle, BundleInput } from "./blocksApi";
 // ─────────────────────────────────────────────────────────────────────────
 // Blocks — the build-manual's "Reusable scheduling patterns" builder.
 //
-// Server-backed: periods, passes and block bundles live in the API
-// (server/src/routes/blockBundles.ts), which is also the source of truth for
-// pricing — every bundle comes back with a `resolved` block computed by
-// server/src/lib/bundlePricing.ts. The local calculator mirrors that formula
-// purely as a live preview while you type; what's saved is what the server
-// resolves. The draft block being assembled in step 3 is local until saved.
+// Periods (session time windows) → Passes (booking lengths) → Block Bundles
+// (period+pass sets, kept in a searchable Block Library), each with a pricing
+// calculator and "sent" to one or more listings. Fully backed by the API:
+//   GET/POST/PUT/DELETE /api/periods
+//   GET/POST/PUT/DELETE /api/passes
+//   GET/POST/PUT/DELETE /api/block-bundles (+ /duplicate /archive /reorder /:id/listings)
+// The pricing model lives server-side (spec §4): each bundle response carries a
+// computed `resolved` (per-pass prices, per-timing prices, perDay) that this
+// screen renders — the browser never re-derives prices. "Send to a listing"
+// associates the bundle and snapshots the resolved pass prices onto the
+// listing server-side; it does NOT materialise dated runs (that's POST
+// /api/blocks). Deleting a period/pass cascades it out of every bundle.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface Period {
@@ -28,92 +35,70 @@ interface Pass {
   name: string;
   days: number;
 }
-interface LibraryBlock {
+interface ResolvedPricing {
+  passes: { id: string; name: string; days: number; price: number }[];
+  timings: Record<string, number>; // "{passId}_{periodId}" → price
+  perDay: number;
+}
+interface Bundle {
   id: string;
   name: string;
   periodIds: string[];
   passIds: string[];
-  listingIds: string[]; // may be sent to several listings
-  archived?: boolean;
+  listingIds: string[];
+  order: number;
+  archived: boolean;
   priced: boolean;
-  // Pricing (mirrors the manual): masterPrice = full price of the LONGEST pass.
-  masterPrice?: number;
-  calcOn?: boolean; // auto-calculate (default true)
-  passFlat?: Record<string, number>; // per-pass overrides
-  passMode?: Record<string, "flat">; // which passes are overridden
-  periodPrice?: Record<string, number>; // key `${passId}_${periodId}` overrides
+  masterPrice: number | null;
+  calcOn: boolean;
+  passFlat: Record<string, number>;
+  passMode: Record<string, "flat">;
+  periodPrice: Record<string, number>;
+  resolved: ResolvedPricing;
 }
-interface Draft {
-  id: string | null;
-  name: string;
-  periodIds: string[];
-  passIds: string[];
-}
-interface BuilderState {
-  periods: Period[];
-  passes: Pass[];
-  library: LibraryBlock[];
-  draft: Draft;
-}
-
 interface Listing {
   id: string;
   name: string;
 }
-
-/** Server-backed writes. Each re-reads the library so pricing stays authoritative. */
-interface Actions {
-  savePeriod: (id: string | null, fields: Omit<Period, "id">) => Promise<void>;
-  deletePeriod: (id: string) => Promise<void>;
-  savePass: (id: string | null, fields: Omit<Pass, "id">) => Promise<void>;
-  deletePass: (id: string) => Promise<void>;
-  createBundle: (b: LibraryBlock) => Promise<void>;
-  saveBundle: (b: LibraryBlock) => Promise<void>;
-  deleteBundle: (id: string) => Promise<void>;
-  duplicateBundle: (id: string) => Promise<void>;
-  archiveBundle: (id: string, archived: boolean) => Promise<void>;
-  reorderBundles: (orderedIds: string[]) => Promise<void>;
-  sendToListings: (id: string, listingIds: string[]) => Promise<void>;
-  queueBundleSave: (b: LibraryBlock) => void;
+interface Draft {
+  name: string;
+  periodIds: string[];
+  passIds: string[];
 }
 
-const EMPTY_DRAFT: Draft = { id: null, name: "", periodIds: [], passIds: [] };
+const EMPTY_DRAFT: Draft = { name: "", periodIds: [], passIds: [] };
 
-// ── API ⇄ UI mapping ────────────────────────────────────────────────────────
-// The server's bundle shape is the UI's LibraryBlock plus `order`/`resolved`;
-// the only real differences are nullable masterPrice and a required `archived`.
-function toLibraryBlock(b: ApiBundle): LibraryBlock {
+// The writable half of a bundle (POST/PUT body — the server manages listingIds
+// and order separately). Pricing edits merge over the current values.
+interface BundleBody {
+  name: string;
+  periodIds: string[];
+  passIds: string[];
+  archived: boolean;
+  priced: boolean;
+  masterPrice: number | null;
+  calcOn: boolean;
+  passFlat: Record<string, number>;
+  passMode: Record<string, "flat">;
+  periodPrice: Record<string, number>;
+}
+function bundleBody(b: Bundle, over: Partial<BundleBody> = {}): BundleBody {
   return {
-    id: b.id,
     name: b.name,
     periodIds: b.periodIds,
     passIds: b.passIds,
-    listingIds: b.listingIds,
     archived: b.archived,
     priced: b.priced,
-    masterPrice: b.masterPrice ?? undefined,
+    masterPrice: b.masterPrice,
     calcOn: b.calcOn,
     passFlat: b.passFlat,
     passMode: b.passMode,
     periodPrice: b.periodPrice,
-  };
-}
-function toBundleInput(b: LibraryBlock): BundleInput {
-  return {
-    name: b.name.trim() || "Untitled block",
-    periodIds: b.periodIds,
-    passIds: b.passIds,
-    archived: !!b.archived,
-    priced: b.priced,
-    masterPrice: b.masterPrice ?? null,
-    calcOn: b.calcOn !== false,
-    passFlat: b.passFlat ?? {},
-    passMode: (b.passMode ?? {}) as Record<string, "flat">,
-    periodPrice: b.periodPrice ?? {},
+    ...over,
   };
 }
 
-// ── Formatting + pricing helpers (mirror the manual) ───────────────────────
+// ── Formatting helpers (presentation only — pricing is server-side) ─────────
 function to12h(t: string): string {
   const [hStr, m] = t.split(":");
   let h = parseInt(hStr, 10);
@@ -123,29 +108,12 @@ function to12h(t: string): string {
 }
 const periodRange = (p: Period) => `${to12h(p.start)}–${to12h(p.finish)}`;
 const money = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
-const blkMins = (t: string) => {
-  const [h, m] = t.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
+const num = (v: string): number => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
 };
-const blkHours = (p: Period) => {
-  const d = (blkMins(p.finish) - blkMins(p.start)) / 60;
-  return d > 0 ? d : 1;
-};
-const blkBaseHours = (periods: Period[]) =>
-  periods.length ? Math.max(...periods.map(blkHours)) : 1;
 
 // ── Manual chrome ──────────────────────────────────────────────────────────
-function PhaseBadge() {
-  return (
-    <span
-      className="inline-flex items-center rounded-md border px-[7px] py-[2px] text-[10px] font-extrabold uppercase leading-[1.5] tracking-[0.3px]"
-      style={{ background: "#fbe9cf", borderColor: "#f3d4a3", color: "#9a5a00" }}
-    >
-      Phase 1
-    </span>
-  );
-}
-
 function PaletteCard({
   title,
   meta,
@@ -208,112 +176,50 @@ const ARROW = (
 
 /** Blocks (freelancer) — the manual's reusable scheduling-pattern builder. */
 export function BlocksApp() {
-  const [state, setState] = useState<BuilderState | null>(null);
+  const [periods, setPeriods] = useState<Period[] | null>(null);
+  const [passes, setPasses] = useState<Pass[] | null>(null);
+  const [bundles, setBundles] = useState<Bundle[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [listingsError, setListingsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(0);
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
 
-  const patch = useCallback((fn: (s: BuilderState) => BuilderState) => {
-    setState((prev) => (prev ? fn(prev) : prev));
+  const refresh = useCallback(() => {
+    Promise.all([
+      apiGet<Period[]>("/api/periods"),
+      apiGet<Pass[]>("/api/passes"),
+      apiGet<Bundle[]>("/api/block-bundles"),
+      apiGet<Listing[]>("/api/listings?mine=1"),
+    ])
+      .then(([p, q, b, l]) => {
+        setPeriods(p);
+        setPasses(q);
+        setBundles(b);
+        setListings(l.map((x) => ({ id: x.id, name: x.name })));
+        setError(null);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load blocks"));
   }, []);
 
-  // Pull the whole library from the server; keeps the in-progress draft.
-  const refresh = useCallback(async () => {
-    const [periods, passes, bundles] = await Promise.all([
-      blocksApi.listPeriods(),
-      blocksApi.listPasses(),
-      blocksApi.listBundles(),
-    ]);
-    setState((prev) => ({
-      periods,
-      passes,
-      library: bundles.map(toLibraryBlock),
-      draft: prev?.draft ?? EMPTY_DRAFT,
-    }));
-  }, []);
+  useEffect(refresh, [refresh]);
+  useRealtime(["periods", "passes", "blockBundles", "listings"], refresh);
 
-  // Run a server write, then re-read so `resolved` pricing stays authoritative.
-  const run = useCallback(
-    async (fn: () => Promise<unknown>) => {
-      setSaving((n) => n + 1);
+  // Run a mutation, surface any error, then refetch. Returns whether it worked
+  // so callers can clear local UI (e.g. the builder draft) only on success.
+  const act = useCallback(
+    async (fn: () => Promise<unknown>): Promise<boolean> => {
       try {
         await fn();
-        await refresh();
-        setError(null);
+        refresh();
+        return true;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong saving that.");
-        await refresh().catch(() => {});
-      } finally {
-        setSaving((n) => n - 1);
+        setError(e instanceof Error ? e.message : "Something went wrong");
+        return false;
       }
     },
     [refresh],
   );
 
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      try {
-        await refresh();
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "Couldn't load your blocks.");
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [refresh]);
-  useEffect(() => {
-    apiGet<Listing[]>("/api/listings?mine=1")
-      .then((ls) => {
-        setListings(ls.map((l) => ({ id: l.id, name: l.name })));
-        setListingsError(null);
-      })
-      // Don't fail silently — without listings the "Send to a listing" control
-      // can't render, and the operator needs to know why.
-      .catch((e) => {
-        setListings([]);
-        setListingsError(e instanceof Error ? e.message : "Couldn't load your listings.");
-      });
-  }, []);
-  useEffect(() => {
-    const pending = timers.current;
-    return () => Object.values(pending).forEach(clearTimeout);
-  }, []);
-
-  const actions: Actions = useMemo(
-    () => ({
-      savePeriod: (id, f) => run(() => (id ? blocksApi.updatePeriod(id, f) : blocksApi.createPeriod(f))),
-      deletePeriod: (id) => run(() => blocksApi.deletePeriod(id)),
-      savePass: (id, f) => run(() => (id ? blocksApi.updatePass(id, f) : blocksApi.createPass(f))),
-      deletePass: (id) => run(() => blocksApi.deletePass(id)),
-      createBundle: (b) => run(() => blocksApi.createBundle(toBundleInput(b))),
-      saveBundle: (b) => run(() => blocksApi.updateBundle(b.id, toBundleInput(b))),
-      deleteBundle: (id) => run(() => blocksApi.deleteBundle(id)),
-      duplicateBundle: (id) => run(() => blocksApi.duplicateBundle(id)),
-      archiveBundle: (id, archived) => run(() => blocksApi.archiveBundle(id, archived)),
-      reorderBundles: (ids) => run(() => blocksApi.reorderBundles(ids)),
-      sendToListings: (id, listingIds) => run(() => blocksApi.sendBundleToListings(id, listingIds)),
-      // Typing in the pricing calculator updates locally on every keystroke;
-      // the write is debounced so we don't PUT per character.
-      queueBundleSave: (b) => {
-        clearTimeout(timers.current[b.id]);
-        timers.current[b.id] = setTimeout(() => {
-          void run(() => blocksApi.updateBundle(b.id, toBundleInput(b)));
-        }, 600);
-      },
-    }),
-    [run],
-  );
-
-  if (!state)
-    return (
-      <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">
-        {error ? <span style={{ color: "#b91c1c" }}>{error}</span> : "Loading…"}
-      </div>
-    );
+  const loading = !periods || !passes || !bundles;
 
   return (
     // Light palette to match the build manual (mirrors the custdash light theme).
@@ -342,8 +248,13 @@ export function BlocksApp() {
           </h2>
           <p className="text-[13px] text-[var(--ink-3)]">Reusable scheduling patterns</p>
         </div>
-        <PhaseBadge />
       </div>
+
+      {error && (
+        <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
+          {error}
+        </div>
+      )}
 
       {/* How it works (the single explanation) */}
       <Card className="mb-3.5 p-4" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--brand)" }}>
@@ -378,62 +289,58 @@ export function BlocksApp() {
         </ol>
       </Card>
 
-      {/* Sync status — everything here saves to your account, not this browser. */}
-      {(error || saving > 0) && (
-        <div
-          className="mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]"
-          style={
-            error
-              ? { borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }
-              : { borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-3)" }
-          }
-        >
-          {error ? (
-            <>
-              <span>⚠</span>
-              <span className="flex-1">{error}</span>
-              <button type="button" onClick={() => setError(null)} className="font-bold">
-                Dismiss
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand)]" />
-              <span>Saving…</span>
-            </>
-          )}
-        </div>
+      {loading ? (
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+      ) : (
+        <>
+          {/* .blkFlow — 3 columns */}
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
+            <PeriodsColumn periods={periods} draft={draft} setDraft={setDraft} act={act} />
+            {ARROW}
+            <PassesColumn passes={passes} draft={draft} setDraft={setDraft} act={act} />
+            {ARROW}
+            <BuildColumn
+              periods={periods}
+              passes={passes}
+              draft={draft}
+              setDraft={setDraft}
+              act={act}
+            />
+          </div>
+
+          <BlockLibrary
+            bundles={bundles}
+            periods={periods}
+            passes={passes}
+            listings={listings}
+            act={act}
+          />
+        </>
       )}
-
-      {/* .blkFlow — 3 columns */}
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
-        <PeriodsColumn state={state} patch={patch} actions={actions} />
-        {ARROW}
-        <PassesColumn state={state} patch={patch} actions={actions} />
-        {ARROW}
-        <BuildColumn state={state} patch={patch} actions={actions} />
-      </div>
-
-      <BlockLibrary state={state} patch={patch} actions={actions} listings={listings} listingsError={listingsError} />
     </div>
   );
 }
 
+type Act = (fn: () => Promise<unknown>) => Promise<boolean>;
+
 // ── Column 1: Make your periods (add + edit) ───────────────────────────────
 function PeriodsColumn({
-  state,
-  patch,
-  actions,
+  periods,
+  draft,
+  setDraft,
+  act,
 }: {
-  state: BuilderState;
-  patch: (fn: (s: BuilderState) => BuilderState) => void;
-  actions: Actions;
+  periods: Period[];
+  draft: Draft;
+  setDraft: React.Dispatch<React.SetStateAction<Draft>>;
+  act: Act;
 }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [start, setStart] = useState("09:00");
   const [finish, setFinish] = useState("15:30");
+  const [busy, setBusy] = useState(false);
 
   function reset() {
     setTitle("");
@@ -448,25 +355,34 @@ function PeriodsColumn({
     setEditingId(p.id);
     setOpen(true);
   }
-  function saveForm() {
-    if (title.trim().length < 2) return;
-    void actions.savePeriod(editingId, { title: title.trim(), start, finish });
-    reset();
-    setOpen(false);
+  async function saveForm() {
+    if (title.trim().length < 2 || start >= finish) return;
+    const body = { title: title.trim(), start, finish };
+    setBusy(true);
+    const ok = await act(() =>
+      editingId
+        ? apiCall(`/api/periods/${encodeURIComponent(editingId)}`, {
+            method: "PUT",
+            body: JSON.stringify(body),
+          })
+        : apiPost("/api/periods", body),
+    );
+    setBusy(false);
+    if (ok) {
+      reset();
+      setOpen(false);
+    }
   }
 
   const addToDraft = (id: string) =>
-    patch((s) =>
-      s.draft.periodIds.includes(id)
-        ? s
-        : { ...s, draft: { ...s.draft, periodIds: [...s.draft.periodIds, id] } },
+    setDraft((d) =>
+      d.periodIds.includes(id) ? d : { ...d, periodIds: [...d.periodIds, id] },
     );
   const removePeriod = (id: string) => {
     if (!confirm("Delete this period? It’s removed from any blocks using it. This can’t be undone."))
       return;
-    // Drop it from the local draft too; the server detaches it from bundles.
-    patch((s) => ({ ...s, draft: { ...s.draft, periodIds: s.draft.periodIds.filter((x) => x !== id) } }));
-    void actions.deletePeriod(id);
+    setDraft((d) => ({ ...d, periodIds: d.periodIds.filter((x) => x !== id) }));
+    void act(() => apiCall(`/api/periods/${encodeURIComponent(id)}`, { method: "DELETE" }));
   };
 
   return (
@@ -493,9 +409,12 @@ function PeriodsColumn({
               <Input type="time" value={finish} onChange={(e) => setFinish(e.target.value)} className="w-full" />
             </div>
           </div>
+          {start >= finish && (
+            <div className="text-[11px] text-[var(--red)]">Finish must be after start.</div>
+          )}
           <div className="flex gap-2">
-            <Button sm variant="primary" onClick={saveForm}>
-              {editingId ? "Save period" : "Add period"}
+            <Button sm variant="primary" disabled={busy} onClick={saveForm}>
+              {busy ? "Saving…" : editingId ? "Save period" : "Add period"}
             </Button>
             <Button
               sm
@@ -522,7 +441,7 @@ function PeriodsColumn({
       )}
 
       <div className="flex flex-col gap-1.5">
-        {state.periods.map((p) => (
+        {periods.map((p) => (
           <PaletteCard
             key={p.id}
             title={p.title}
@@ -540,18 +459,21 @@ function PeriodsColumn({
 
 // ── Column 2: Make your passes (add + edit) ────────────────────────────────
 function PassesColumn({
-  state,
-  patch,
-  actions,
+  passes,
+  draft,
+  setDraft,
+  act,
 }: {
-  state: BuilderState;
-  patch: (fn: (s: BuilderState) => BuilderState) => void;
-  actions: Actions;
+  passes: Pass[];
+  draft: Draft;
+  setDraft: React.Dispatch<React.SetStateAction<Draft>>;
+  act: Act;
 }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [days, setDays] = useState("1");
+  const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
@@ -564,24 +486,32 @@ function PassesColumn({
     setEditingId(p.id);
     setOpen(true);
   }
-  function saveForm() {
+  async function saveForm() {
     if (name.trim().length < 2) return;
-    void actions.savePass(editingId, { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1) });
-    reset();
-    setOpen(false);
+    const body = { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1) };
+    setBusy(true);
+    const ok = await act(() =>
+      editingId
+        ? apiCall(`/api/passes/${encodeURIComponent(editingId)}`, {
+            method: "PUT",
+            body: JSON.stringify(body),
+          })
+        : apiPost("/api/passes", body),
+    );
+    setBusy(false);
+    if (ok) {
+      reset();
+      setOpen(false);
+    }
   }
 
   const addToDraft = (id: string) =>
-    patch((s) =>
-      s.draft.passIds.includes(id)
-        ? s
-        : { ...s, draft: { ...s.draft, passIds: [...s.draft.passIds, id] } },
-    );
+    setDraft((d) => (d.passIds.includes(id) ? d : { ...d, passIds: [...d.passIds, id] }));
   const removePass = (id: string) => {
     if (!confirm("Delete this pass? It’s removed from any blocks using it. This can’t be undone."))
       return;
-    patch((s) => ({ ...s, draft: { ...s.draft, passIds: s.draft.passIds.filter((x) => x !== id) } }));
-    void actions.deletePass(id);
+    setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
+    void act(() => apiCall(`/api/passes/${encodeURIComponent(id)}`, { method: "DELETE" }));
   };
 
   return (
@@ -608,8 +538,8 @@ function PassesColumn({
             <Input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} className="w-full" />
           </div>
           <div className="flex gap-2">
-            <Button sm variant="primary" onClick={saveForm}>
-              {editingId ? "Save pass" : "Add pass"}
+            <Button sm variant="primary" disabled={busy} onClick={saveForm}>
+              {busy ? "Saving…" : editingId ? "Save pass" : "Add pass"}
             </Button>
             <Button
               sm
@@ -636,7 +566,7 @@ function PassesColumn({
       )}
 
       <div className="flex flex-col gap-1.5">
-        {state.passes.map((p) => (
+        {passes.map((p) => (
           <PaletteCard
             key={p.id}
             title={p.name}
@@ -654,21 +584,25 @@ function PassesColumn({
 
 // ── Column 3: Build your blocks (drop zone + click-to-add) ─────────────────
 function BuildColumn({
-  state,
-  patch,
-  actions,
+  periods,
+  passes,
+  draft,
+  setDraft,
+  act,
 }: {
-  state: BuilderState;
-  patch: (fn: (s: BuilderState) => BuilderState) => void;
-  actions: Actions;
+  periods: Period[];
+  passes: Pass[];
+  draft: Draft;
+  setDraft: React.Dispatch<React.SetStateAction<Draft>>;
+  act: Act;
 }) {
   const [over, setOver] = useState(false);
-  const { draft } = state;
+  const [busy, setBusy] = useState(false);
   const draftPeriods = draft.periodIds
-    .map((id) => state.periods.find((p) => p.id === id))
+    .map((id) => periods.find((p) => p.id === id))
     .filter(Boolean) as Period[];
   const draftPasses = draft.passIds
-    .map((id) => state.passes.find((p) => p.id === id))
+    .map((id) => passes.find((p) => p.id === id))
     .filter(Boolean) as Pass[];
   const empty = draftPeriods.length === 0 && draftPasses.length === 0;
 
@@ -677,45 +611,31 @@ function BuildColumn({
     setOver(false);
     const [kind, id] = e.dataTransfer.getData("text/plain").split(":");
     if (!id) return;
-    patch((s) => {
-      if (kind === "period")
-        return s.draft.periodIds.includes(id)
-          ? s
-          : { ...s, draft: { ...s.draft, periodIds: [...s.draft.periodIds, id] } };
-      if (kind === "pass")
-        return s.draft.passIds.includes(id)
-          ? s
-          : { ...s, draft: { ...s.draft, passIds: [...s.draft.passIds, id] } };
-      return s;
-    });
+    if (kind === "period")
+      setDraft((d) =>
+        d.periodIds.includes(id) ? d : { ...d, periodIds: [...d.periodIds, id] },
+      );
+    if (kind === "pass")
+      setDraft((d) => (d.passIds.includes(id) ? d : { ...d, passIds: [...d.passIds, id] }));
   }
 
-  const setName = (name: string) => patch((s) => ({ ...s, draft: { ...s.draft, name } }));
+  const setName = (name: string) => setDraft((d) => ({ ...d, name }));
   const dropPeriod = (id: string) =>
-    patch((s) => ({ ...s, draft: { ...s.draft, periodIds: s.draft.periodIds.filter((x) => x !== id) } }));
+    setDraft((d) => ({ ...d, periodIds: d.periodIds.filter((x) => x !== id) }));
   const dropPass = (id: string) =>
-    patch((s) => ({ ...s, draft: { ...s.draft, passIds: s.draft.passIds.filter((x) => x !== id) } }));
+    setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
 
-  function moveToLibrary() {
-    if (empty) return;
-    const name = draft.name.trim() || "Untitled block";
-    const existing = state.library.find((b) => b.id === draft.id);
-    const block: LibraryBlock = existing
-      ? { ...existing, name, periodIds: draft.periodIds, passIds: draft.passIds }
-      : {
-          id: "",
-          name,
-          periodIds: draft.periodIds,
-          passIds: draft.passIds,
-          listingIds: [],
-          priced: false,
-          calcOn: true,
-          passFlat: {},
-          passMode: {},
-          periodPrice: {},
-        };
-    void (existing ? actions.saveBundle(block) : actions.createBundle(block));
-    patch((s) => ({ ...s, draft: EMPTY_DRAFT }));
+  async function moveToLibrary() {
+    if (empty || busy) return;
+    const body = {
+      name: draft.name.trim() || "Untitled block",
+      periodIds: draft.periodIds,
+      passIds: draft.passIds,
+    };
+    setBusy(true);
+    const ok = await act(() => apiPost<Bundle>("/api/block-bundles", body));
+    setBusy(false);
+    if (ok) setDraft(EMPTY_DRAFT);
   }
 
   return (
@@ -776,8 +696,8 @@ function BuildColumn({
         className="mb-2.5 w-full"
       />
 
-      <Button sm variant="primary" disabled={empty} onClick={moveToLibrary}>
-        {draft.id ? "Save to Block Library" : "Move to Block Library →"}
+      <Button sm variant="primary" disabled={empty || busy} onClick={moveToLibrary}>
+        {busy ? "Saving…" : "Move to Block Library →"}
       </Button>
     </Card>
   );
@@ -797,25 +717,25 @@ function blockColor(id: string): string {
 }
 
 function BlockLibrary({
-  state,
-  patch,
-  actions,
+  bundles,
+  periods,
+  passes,
   listings,
-  listingsError,
+  act,
 }: {
-  state: BuilderState;
-  patch: (fn: (s: BuilderState) => BuilderState) => void;
-  actions: Actions;
+  bundles: Bundle[];
+  periods: Period[];
+  passes: Pass[];
   listings: Listing[];
-  listingsError: string | null;
+  act: Act;
 }) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
 
   const q = query.trim().toLowerCase();
-  const active = state.library.filter((b) => !b.archived);
-  const archived = state.library.filter((b) => b.archived);
+  const active = bundles.filter((b) => !b.archived);
+  const archived = bundles.filter((b) => b.archived);
   const filtered = q ? active.filter((b) => b.name.toLowerCase().includes(q)) : active;
 
   const expandAll = () => setCollapsed(new Set());
@@ -828,22 +748,24 @@ function BlockLibrary({
       return next;
     });
 
-  // Drag-to-reorder — reflect it locally, then persist the new order.
+  // Drag-to-reorder within the library. Send the full ordered id list; the
+  // server assigns `order` = position for each.
   const reorder = (draggedId: string, targetId: string) => {
-    const arr = [...state.library];
-    const from = arr.findIndex((b) => b.id === draggedId);
-    const to = arr.findIndex((b) => b.id === targetId);
+    const ids = bundles.map((b) => b.id);
+    const from = ids.indexOf(draggedId);
+    const to = ids.indexOf(targetId);
     if (from < 0 || to < 0 || from === to) return;
-    const [moved] = arr.splice(from, 1);
-    arr.splice(to, 0, moved);
-    patch((s) => ({ ...s, library: arr }));
-    void actions.reorderBundles(arr.map((b) => b.id));
+    const next = [...ids];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    void act(() => apiPost("/api/block-bundles/reorder", { orderedIds: next }));
   };
 
-  const unarchive = (id: string) => void actions.archiveBundle(id, false);
+  const unarchive = (id: string) =>
+    void act(() => apiPost(`/api/block-bundles/${encodeURIComponent(id)}/archive`, { archived: false }));
   const deleteBlock = (id: string, name: string) => {
     if (!confirm(`Delete “${name}”? This can’t be undone.`)) return;
-    void actions.deleteBundle(id);
+    void act(() => apiCall(`/api/block-bundles/${encodeURIComponent(id)}`, { method: "DELETE" }));
   };
 
   return (
@@ -876,7 +798,7 @@ function BlockLibrary({
 
       {active.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">
-          {state.library.length === 0
+          {bundles.length === 0
             ? "No blocks yet — build one above and it lands here."
             : "No active blocks — they’re all archived (see below)."}
         </Card>
@@ -890,11 +812,10 @@ function BlockLibrary({
             <LibraryCard
               key={b.id}
               block={b}
-              state={state}
-              patch={patch}
-              actions={actions}
+              periods={periods}
+              passes={passes}
               listings={listings}
-              listingsError={listingsError}
+              act={act}
               color={blockColor(b.id)}
               expanded={!collapsed.has(b.id)}
               onToggle={() => toggle(b.id)}
@@ -940,22 +861,20 @@ function BlockLibrary({
 
 function LibraryCard({
   block,
-  state,
-  patch,
-  actions,
+  periods,
+  passes,
   listings,
-  listingsError,
+  act,
   color,
   expanded,
   onToggle,
   onDropBlock,
 }: {
-  block: LibraryBlock;
-  state: BuilderState;
-  patch: (fn: (s: BuilderState) => BuilderState) => void;
-  actions: Actions;
+  block: Bundle;
+  periods: Period[];
+  passes: Pass[];
   listings: Listing[];
-  listingsError: string | null;
+  act: Act;
   color: string;
   expanded: boolean;
   onToggle: () => void;
@@ -967,54 +886,62 @@ function LibraryCard({
   const [dragOver, setDragOver] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  const periods = useMemo(
-    () => block.periodIds.map((id) => state.periods.find((p) => p.id === id)).filter(Boolean) as Period[],
-    [block.periodIds, state.periods],
+  const blockPeriods = useMemo(
+    () => block.periodIds.map((id) => periods.find((p) => p.id === id)).filter(Boolean) as Period[],
+    [block.periodIds, periods],
   );
-  const passes = useMemo(
-    () => block.passIds.map((id) => state.passes.find((p) => p.id === id)).filter(Boolean) as Pass[],
-    [block.passIds, state.passes],
+  const blockPasses = useMemo(
+    () => block.passIds.map((id) => passes.find((p) => p.id === id)).filter(Boolean) as Pass[],
+    [block.passIds, passes],
   );
   const inListings = block.listingIds
     .map((id) => listings.find((l) => l.id === id))
     .filter(Boolean) as Listing[];
   const available = listings.filter((l) => !block.listingIds.includes(l.id));
 
-  // Every bundle edit funnels through here: update locally so typing stays
-  // instant, then persist (debounced — the calculator fires per keystroke).
-  const mutate = (fn: (b: LibraryBlock) => LibraryBlock) => {
-    const next = fn(block);
-    patch((s) => ({ ...s, library: s.library.map((x) => (x.id === block.id ? next : x)) }));
-    actions.queueBundleSave(next);
-  };
+  // Every structural edit PUTs the whole bundle (server keeps listingIds/order).
+  const putBundle = (over: Partial<BundleBody>) =>
+    act(() =>
+      apiCall(`/api/block-bundles/${encodeURIComponent(block.id)}`, {
+        method: "PUT",
+        body: JSON.stringify(bundleBody(block, over)),
+      }),
+    );
 
   const saveName = () => {
-    mutate((b) => ({ ...b, name: tempName.trim() || b.name }));
+    const name = tempName.trim();
+    if (name && name !== block.name) void putBundle({ name });
     setRenaming(false);
   };
-  // Listing links are a separate endpoint — it also snapshots resolved prices
-  // onto each listing, so the checkout prices from this bundle.
-  const addListing = (id: string) => {
-    if (block.listingIds.includes(id)) return;
-    void actions.sendToListings(block.id, [...block.listingIds, id]);
-  };
+  const setListingIds = (listingIds: string[]) =>
+    act(() =>
+      apiCall(`/api/block-bundles/${encodeURIComponent(block.id)}/listings`, {
+        method: "PUT",
+        body: JSON.stringify({ listingIds }),
+      }),
+    );
+  const addListing = (id: string) =>
+    block.listingIds.includes(id) ? undefined : void setListingIds([...block.listingIds, id]);
   const removeListing = (id: string) =>
-    void actions.sendToListings(block.id, block.listingIds.filter((x) => x !== id));
+    void setListingIds(block.listingIds.filter((x) => x !== id));
   const addPeriod = (pid: string) =>
-    mutate((b) => (b.periodIds.includes(pid) ? b : { ...b, periodIds: [...b.periodIds, pid] }));
+    block.periodIds.includes(pid) ? undefined : void putBundle({ periodIds: [...block.periodIds, pid] });
   const removePeriodFromBlock = (pid: string) =>
-    mutate((b) => ({ ...b, periodIds: b.periodIds.filter((x) => x !== pid) }));
+    void putBundle({ periodIds: block.periodIds.filter((x) => x !== pid) });
   const addPass = (pid: string) =>
-    mutate((b) => (b.passIds.includes(pid) ? b : { ...b, passIds: [...b.passIds, pid] }));
+    block.passIds.includes(pid) ? undefined : void putBundle({ passIds: [...block.passIds, pid] });
   const removePassFromBlock = (pid: string) =>
-    mutate((b) => ({ ...b, passIds: b.passIds.filter((x) => x !== pid) }));
-  const availablePeriods = state.periods.filter((p) => !block.periodIds.includes(p.id));
-  const availablePasses = state.passes.filter((p) => !block.passIds.includes(p.id));
-  const duplicate = () => void actions.duplicateBundle(block.id);
-  const archive = () => void actions.archiveBundle(block.id, true);
+    void putBundle({ passIds: block.passIds.filter((x) => x !== pid) });
+  const availablePeriods = periods.filter((p) => !block.periodIds.includes(p.id));
+  const availablePasses = passes.filter((p) => !block.passIds.includes(p.id));
+
+  const duplicate = () =>
+    void act(() => apiPost(`/api/block-bundles/${encodeURIComponent(block.id)}/duplicate`, {}));
+  const archive = () =>
+    void act(() => apiPost(`/api/block-bundles/${encodeURIComponent(block.id)}/archive`, { archived: true }));
   const remove = () => {
     if (!confirm(`Delete “${block.name}”? This can’t be undone.`)) return;
-    void actions.deleteBundle(block.id);
+    void act(() => apiCall(`/api/block-bundles/${encodeURIComponent(block.id)}`, { method: "DELETE" }));
   };
 
   return (
@@ -1104,226 +1031,251 @@ function LibraryCard({
         </div>
       </div>
       <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
-        {periods.length} period{periods.length === 1 ? "" : "s"} · {passes.length} pass
-        {passes.length === 1 ? "" : "es"}
+        {blockPeriods.length} period{blockPeriods.length === 1 ? "" : "s"} · {blockPasses.length} pass
+        {blockPasses.length === 1 ? "" : "es"}
       </div>
 
       {expanded && (
         <>
-      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            Periods
-          </div>
-          {editing ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {periods.map((p) => (
-                <Chip key={p.id} onRemove={() => removePeriodFromBlock(p.id)}>
-                  {p.title}
-                </Chip>
-              ))}
-              {availablePeriods.length > 0 && (
-                <Select
-                  value=""
-                  onChange={(e) => e.target.value && addPeriod(e.target.value)}
-                  className="h-[26px] py-0 text-[11px]"
-                >
-                  <option value="">+ Add period…</option>
-                  {availablePeriods.map((p) => (
-                    <option key={p.id} value={p.id}>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+                Periods
+              </div>
+              {editing ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {blockPeriods.map((p) => (
+                    <Chip key={p.id} onRemove={() => removePeriodFromBlock(p.id)}>
                       {p.title}
-                    </option>
+                    </Chip>
                   ))}
-                </Select>
+                  {availablePeriods.length > 0 && (
+                    <Select
+                      value=""
+                      onChange={(e) => e.target.value && addPeriod(e.target.value)}
+                      className="h-[26px] py-0 text-[11px]"
+                    >
+                      <option value="">+ Add period…</option>
+                      {availablePeriods.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+              ) : (
+                <div className="text-[12px] text-[var(--ink-2)]">
+                  {blockPeriods.length ? (
+                    blockPeriods.map((p) => (
+                      <div key={p.id}>
+                        {p.title} <span className="text-[var(--ink-3)]">{periodRange(p)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[var(--ink-3)]">—</span>
+                  )}
+                </div>
               )}
             </div>
-          ) : (
-            <div className="text-[12px] text-[var(--ink-2)]">
-              {periods.length ? (
-                periods.map((p) => (
-                  <div key={p.id}>
-                    {p.title} <span className="text-[var(--ink-3)]">{periodRange(p)}</span>
-                  </div>
+            <div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+                Passes
+              </div>
+              {editing ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {blockPasses.map((p) => (
+                    <Chip key={p.id} onRemove={() => removePassFromBlock(p.id)}>
+                      {p.name}
+                    </Chip>
+                  ))}
+                  {availablePasses.length > 0 && (
+                    <Select
+                      value=""
+                      onChange={(e) => e.target.value && addPass(e.target.value)}
+                      className="h-[26px] py-0 text-[11px]"
+                    >
+                      <option value="">+ Add pass…</option>
+                      {availablePasses.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+              ) : (
+                <div className="text-[12px] text-[var(--ink-2)]">
+                  {blockPasses.length ? (
+                    blockPasses.map((p) => p.name).join(" · ")
+                  ) : (
+                    <span className="text-[var(--ink-3)]">—</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {showCalc && (
+            <PricingCalculator block={block} periods={blockPeriods} onSavePricing={putBundle} />
+          )}
+
+          {/* Send to listings */}
+          <div className="mt-2.5">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+              Sent to listings
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {inListings.length ? (
+                inListings.map((l) => (
+                  <Chip key={l.id} onRemove={() => removeListing(l.id)}>
+                    {l.name}
+                  </Chip>
                 ))
               ) : (
-                <span className="text-[var(--ink-3)]">—</span>
+                <span className="text-[11.5px] text-[var(--ink-3)]">Not sent to any listing yet.</span>
               )}
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            Passes
-          </div>
-          {editing ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {passes.map((p) => (
-                <Chip key={p.id} onRemove={() => removePassFromBlock(p.id)}>
-                  {p.name}
-                </Chip>
-              ))}
-              {availablePasses.length > 0 && (
+              {available.length > 0 && (
                 <Select
                   value=""
-                  onChange={(e) => e.target.value && addPass(e.target.value)}
-                  className="h-[26px] py-0 text-[11px]"
+                  onChange={(e) => e.target.value && addListing(e.target.value)}
+                  className="cursor-pointer py-0 text-[11.5px] font-bold"
+                  style={{
+                    height: 30,
+                    borderRadius: 999,
+                    borderColor: "var(--brand-line, #cdddf7)",
+                    background: "var(--brand-soft)",
+                    color: "var(--brand-ink)",
+                    paddingLeft: 12,
+                    paddingRight: 10,
+                  }}
                 >
-                  <option value="">+ Add pass…</option>
-                  {availablePasses.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
+                  <option value="">📩  Send to a listing…</option>
+                  {available.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
                     </option>
                   ))}
                 </Select>
               )}
             </div>
-          ) : (
-            <div className="text-[12px] text-[var(--ink-2)]">
-              {passes.length ? passes.map((p) => p.name).join(" · ") : <span className="text-[var(--ink-3)]">—</span>}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showCalc && (
-        <PricingCalculator block={block} periods={periods} passes={passes} mutate={mutate} />
-      )}
-
-      {/* Send to listings */}
-      <div className="mt-2.5">
-        <div className="text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-          Sent to listings
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {inListings.length ? (
-            inListings.map((l) => (
-              <Chip key={l.id} onRemove={() => removeListing(l.id)}>
-                {l.name}
-              </Chip>
-            ))
-          ) : (
-            <span className="text-[11.5px] text-[var(--ink-3)]">Not sent to any listing yet.</span>
-          )}
-          {available.length > 0 && (
-            <Select
-              value=""
-              onChange={(e) => e.target.value && addListing(e.target.value)}
-              className="cursor-pointer py-0 text-[11.5px] font-bold"
-              style={{
-                height: 30,
-                borderRadius: 999,
-                borderColor: "var(--brand-line, #cdddf7)",
-                background: "var(--brand-soft)",
-                color: "var(--brand-ink)",
-                paddingLeft: 12,
-                paddingRight: 10,
-              }}
-            >
-              <option value="">📩  Send to a listing…</option>
-              {available.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </div>
-        {/* No dropdown means there's nothing to send to — say why, rather than
-            silently hiding the control. */}
-        {available.length === 0 && (
-          <div className="mt-1 text-[11px]" style={{ color: listingsError ? "#b91c1c" : "var(--ink-3)" }}>
-            {listingsError
-              ? `Couldn’t load your listings — ${listingsError}`
-              : listings.length === 0
-                ? "You don’t have any listings yet — create one in Listings first, then send this block to it."
-                : "Sent to all of your listings."}
+            {inListings.length > 0 && !block.priced && (
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">
+                Sort pricing to push pass prices to these listings.
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <Button sm variant={showCalc ? "primary" : "default"} onClick={() => setShowCalc((v) => !v)}>
-          {showCalc ? "Save pricing" : "Sort pricing"}
-        </Button>
-        <Button sm variant={editing ? "primary" : "default"} onClick={() => setEditing((v) => !v)}>
-          {editing ? "Done" : "Edit"}
-        </Button>
-        <Button sm onClick={duplicate}>
-          Duplicate
-        </Button>
-        <Button sm onClick={archive}>
-          Archive
-        </Button>
-        <Button sm variant="danger" onClick={remove}>
-          Delete
-        </Button>
-      </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Button sm variant={showCalc ? "primary" : "default"} onClick={() => setShowCalc((v) => !v)}>
+              {showCalc ? "Close pricing" : "Sort pricing"}
+            </Button>
+            <Button sm variant={editing ? "primary" : "default"} onClick={() => setEditing((v) => !v)}>
+              {editing ? "Done" : "Edit"}
+            </Button>
+            <Button sm onClick={duplicate}>
+              Duplicate
+            </Button>
+            <Button sm onClick={archive}>
+              Archive
+            </Button>
+            <Button sm variant="danger" onClick={remove}>
+              Delete
+            </Button>
+          </div>
         </>
       )}
     </div>
   );
 }
 
-// ── Pricing calculator (mirrors the manual's buildPrice) ───────────────────
+// ── Pricing calculator ─────────────────────────────────────────────────────
+// The operator sets the inputs (master price, per-pass/per-timing overrides,
+// auto-calc on/off); the derived numbers come from the server's `resolved`
+// pricing (spec §4). Editing is local; "Save pricing" PUTs the bundle and the
+// server returns freshly-resolved prices.
 function PricingCalculator({
   block,
   periods,
-  passes,
-  mutate,
+  onSavePricing,
 }: {
-  block: LibraryBlock;
+  block: Bundle;
   periods: Period[];
-  passes: Pass[];
-  mutate: (fn: (b: LibraryBlock) => LibraryBlock) => void;
+  onSavePricing: (over: Partial<BundleBody>) => Promise<boolean>;
 }) {
   const [openPass, setOpenPass] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const calcOn = block.calcOn !== false;
-  const sorted = useMemo(() => [...passes].sort((a, b) => b.days - a.days), [passes]);
-  const master = sorted[0];
-  const mPrice = block.masterPrice ?? 0;
-  const perDay = calcOn && master && master.days ? mPrice / master.days : 0;
-  const baseH = blkBaseHours(periods);
+  const [masterPrice, setMasterPrice] = useState(
+    block.masterPrice != null ? String(block.masterPrice) : "",
+  );
+  const [calcOn, setCalcOn] = useState(block.calcOn !== false);
+  const [passFlat, setPassFlat] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(block.passFlat).map(([k, v]) => [k, String(v)])),
+  );
+  const [passMode, setPassMode] = useState<Record<string, "flat">>(() => ({ ...block.passMode }));
+  const [periodPrice, setPeriodPriceState] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(block.periodPrice).map(([k, v]) => [k, String(v)])),
+  );
 
-  const num = (v: string) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : undefined;
+  // Ordered pass list with server-resolved prices (days DESC; first is master).
+  const passes = block.resolved.passes;
+  const resolvedTiming = (passId: string, periodId: string) =>
+    block.resolved.timings[`${passId}_${periodId}`] ?? 0;
+  // Timing rows: the block's periods, ordered by start (matches the palette).
+  const timingRows = useMemo(
+    () => [...periods].sort((a, b) => (a.start < b.start ? -1 : 1)),
+    [periods],
+  );
+
+  const setFlat = (passId: string, v: string) => {
+    setPassFlat((m) => ({ ...m, [passId]: v }));
+    setPassMode((m) => ({ ...m, [passId]: "flat" }));
   };
-
-  const toggleCalc = () => mutate((b) => ({ ...b, calcOn: !(b.calcOn !== false) }));
-  const setMaster = (v: string) => {
-    const n = num(v);
-    mutate((b) => ({ ...b, masterPrice: n, priced: (n ?? 0) > 0 }));
+  const resetPass = (passId: string) => {
+    setPassFlat((m) => {
+      const next = { ...m };
+      delete next[passId];
+      return next;
+    });
+    setPassMode((m) => {
+      const next = { ...m };
+      delete next[passId];
+      return next;
+    });
   };
-  const setFlat = (passId: string, v: string) =>
-    mutate((b) => ({
-      ...b,
-      passFlat: { ...b.passFlat, [passId]: num(v) ?? 0 },
-      passMode: { ...b.passMode, [passId]: "flat" },
-    }));
-  const resetPass = (passId: string) =>
-    mutate((b) => {
-      const passMode = { ...b.passMode };
-      const passFlat = { ...b.passFlat };
-      delete passMode[passId];
-      delete passFlat[passId];
-      return { ...b, passMode, passFlat };
-    });
-  const setPeriodPrice = (passId: string, periodId: string, v: string) =>
-    mutate((b) => ({ ...b, periodPrice: { ...b.periodPrice, [`${passId}_${periodId}`]: num(v) ?? 0 } }));
-  const resetPeriodPrice = (passId: string, periodId: string) =>
-    mutate((b) => {
-      const periodPrice = { ...b.periodPrice };
-      delete periodPrice[`${passId}_${periodId}`];
-      return { ...b, periodPrice };
+  const setPeriodPrice = (key: string, v: string) =>
+    setPeriodPriceState((m) => ({ ...m, [key]: v }));
+  const resetPeriodPrice = (key: string) =>
+    setPeriodPriceState((m) => {
+      const next = { ...m };
+      delete next[key];
+      return next;
     });
 
-  const passPrice = (q: Pass, idx: number) => {
-    const isM = idx === 0;
-    const isFlat = block.passMode?.[q.id] === "flat";
-    if (isM) return mPrice;
-    if (!calcOn) return block.passFlat?.[q.id] ?? 0;
-    return isFlat ? block.passFlat?.[q.id] ?? 0 : q.days * perDay;
+  async function save() {
+    const master = masterPrice.trim() === "" ? null : num(masterPrice);
+    const flat = Object.fromEntries(Object.entries(passFlat).map(([k, v]) => [k, num(v)]));
+    const timings = Object.fromEntries(Object.entries(periodPrice).map(([k, v]) => [k, num(v)]));
+    const priced = (master ?? 0) > 0 || Object.values(flat).some((v) => v > 0);
+    setBusy(true);
+    await onSavePricing({
+      masterPrice: master,
+      calcOn,
+      passFlat: flat,
+      passMode,
+      periodPrice: timings,
+      priced,
+    });
+    setBusy(false);
+  }
+
+  // Display price for a pass row: master + flat overrides are what the operator
+  // typed (local); auto rows show the server-resolved price.
+  const passDisplayPrice = (passId: string, idx: number, resolvedPrice: number): number => {
+    if (idx === 0) return num(masterPrice);
+    if (passMode[passId] === "flat") return num(passFlat[passId] ?? "0");
+    return resolvedPrice;
   };
 
   return (
@@ -1332,7 +1284,7 @@ function PricingCalculator({
         <span className="text-[13px] font-extrabold">💷 Pricing calculator</span>
         <button
           type="button"
-          onClick={toggleCalc}
+          onClick={() => setCalcOn((v) => !v)}
           role="switch"
           aria-checked={calcOn}
           className="relative h-[18px] w-[32px] rounded-full transition-colors"
@@ -1343,24 +1295,22 @@ function PricingCalculator({
             style={{ left: calcOn ? "16px" : "2px" }}
           />
         </button>
-        <span className="text-[11px] text-[var(--ink-3)]">
-          Auto-calculate {calcOn ? "on" : "off"}
-        </span>
+        <span className="text-[11px] text-[var(--ink-3)]">Auto-calculate {calcOn ? "on" : "off"}</span>
       </div>
       <p className="mb-2 text-[11px] text-[var(--ink-3)]">
         {calcOn
-          ? "Set the full price for the longest pass — shorter passes and each timing (e.g. the standard day) are calculated. Edit any to override."
-          : "Auto-calc is off — set each price by hand."}
+          ? "Set the full price for the longest pass — shorter passes and each timing are calculated. Edit any to override, then Save pricing."
+          : "Auto-calc is off — set each price by hand, then Save pricing."}
       </p>
 
-      {sorted.length === 0 ? (
+      {passes.length === 0 ? (
         <div className="text-[11.5px] text-[var(--ink-3)]">Add passes to price them.</div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          {sorted.map((q, idx) => {
+          {passes.map((q, idx) => {
             const isM = idx === 0;
-            const isFlat = block.passMode?.[q.id] === "flat";
-            const price = passPrice(q, idx);
+            const isFlat = passMode[q.id] === "flat";
+            const price = passDisplayPrice(q.id, idx, q.price);
             const open = openPass === q.id;
             return (
               <div key={q.id} className="overflow-hidden rounded-lg border border-[var(--line)]">
@@ -1383,46 +1333,45 @@ function PricingCalculator({
                     <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
                       Timings &amp; prices
                     </div>
-                    {periods.length === 0 ? (
+                    {timingRows.length === 0 ? (
                       <div className="text-[11px] text-[var(--ink-3)]">No timings on this block yet.</div>
                     ) : (
-                      [...periods]
-                        .sort((a, b) => blkHours(b) - blkHours(a))
-                        .map((p) => {
-                          const key = `${q.id}_${p.id}`;
-                          const ov = block.periodPrice?.[key];
-                          const pred = calcOn && baseH ? (price * blkHours(p)) / baseH : 0;
-                          const val = ov != null ? ov : calcOn ? pred : 0;
-                          return (
-                            <div
-                              key={p.id}
-                              className="flex items-center gap-2 border-t border-dashed border-[var(--line)] py-1.5 first:border-t-0"
-                            >
-                              <div className="flex-1">
-                                <div className="text-[12px] font-bold">{p.title}</div>
-                                <div className="text-[10.5px] text-[var(--ink-3)]">{periodRange(p)}</div>
-                              </div>
-                              <span className="font-extrabold">£</span>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={val ? val.toFixed(2) : ""}
-                                onChange={(e) => setPeriodPrice(q.id, p.id, e.target.value)}
-                                className="w-[84px]"
-                              />
-                              {ov != null && calcOn && (
-                                <button
-                                  type="button"
-                                  title="Reset to calculated"
-                                  onClick={() => resetPeriodPrice(q.id, p.id)}
-                                  className="text-[14px] font-bold text-[var(--brand)]"
-                                >
-                                  ↺
-                                </button>
-                              )}
+                      timingRows.map((p) => {
+                        const key = `${q.id}_${p.id}`;
+                        const ovStr = periodPrice[key];
+                        const calc = resolvedTiming(q.id, p.id);
+                        const inputVal =
+                          ovStr !== undefined ? ovStr : calcOn && calc ? calc.toFixed(2) : "";
+                        return (
+                          <div
+                            key={p.id}
+                            className="flex items-center gap-2 border-t border-dashed border-[var(--line)] py-1.5 first:border-t-0"
+                          >
+                            <div className="flex-1">
+                              <div className="text-[12px] font-bold">{p.title}</div>
+                              <div className="text-[10.5px] text-[var(--ink-3)]">{periodRange(p)}</div>
                             </div>
-                          );
-                        })
+                            <span className="font-extrabold">£</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={inputVal}
+                              onChange={(e) => setPeriodPrice(key, e.target.value)}
+                              className="w-[84px]"
+                            />
+                            {ovStr !== undefined && calcOn && (
+                              <button
+                                type="button"
+                                title="Reset to calculated"
+                                onClick={() => resetPeriodPrice(key)}
+                                className="text-[14px] font-bold text-[var(--brand)]"
+                              >
+                                ↺
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
 
                     <div className="mt-2 rounded-lg bg-[var(--panel)] p-2">
@@ -1436,8 +1385,8 @@ function PricingCalculator({
                             <Input
                               type="number"
                               step="0.01"
-                              value={block.masterPrice ?? ""}
-                              onChange={(e) => setMaster(e.target.value)}
+                              value={masterPrice}
+                              onChange={(e) => setMasterPrice(e.target.value)}
                               placeholder="0.00"
                               className="w-[120px]"
                             />
@@ -1453,7 +1402,7 @@ function PricingCalculator({
                             <Input
                               type="number"
                               step="0.01"
-                              value={price.toFixed(2)}
+                              value={isFlat ? passFlat[q.id] ?? "" : price.toFixed(2)}
                               onChange={(e) => setFlat(q.id, e.target.value)}
                               className="w-[110px]"
                             />
@@ -1477,6 +1426,17 @@ function PricingCalculator({
           })}
         </div>
       )}
+
+      <div className="mt-2.5 flex items-center gap-2">
+        <Button sm variant="primary" disabled={busy} onClick={save}>
+          {busy ? "Saving…" : "Save pricing"}
+        </Button>
+        {calcOn && block.resolved.perDay > 0 && (
+          <span className="text-[11px] text-[var(--ink-3)]">
+            Per-day rate {money(block.resolved.perDay)}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
