@@ -2804,7 +2804,9 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
         <div className="mt-2 flex items-baseline justify-between text-[14px]">
           <span style={{ color: tk.muted }}>Total</span>
           <span className="flex items-baseline gap-2">
-            {(b.saved > 0 || b.totalOverride !== null) && <s className="text-[11px]" style={{ color: tk.muted }}>{money(calculated)}</s>}
+            {/* What it was BEFORE discounts — showing the discounted total here
+                struck through said "£540, was £540". */}
+            {(b.saved > 0 || b.totalOverride !== null) && <s className="text-[11px]" style={{ color: tk.muted }}>{money(b.subtotal + addonTotal)}</s>}
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
