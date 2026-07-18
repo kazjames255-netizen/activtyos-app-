@@ -300,6 +300,8 @@ export interface WizardDraft {
   bookingType: "auto" | "manual";
   waitlist: boolean;
   waitlistSize: string;
+  /** Who decides when a place frees up — see step 11. */
+  waitlistMode?: "manual" | "auto";
   cancellation: string;
   discounts?: DiscountRule[];
   status: "draft" | "live";
@@ -376,7 +378,7 @@ export function emptyDraft(): WizardDraft {
     categoryIds: [], venueId: null, allowOutOfRange: false, maxAttendees: "60", capacityScope: "listing", showSpaces: true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: [1, 2, 3, 4, 5], datesOff: [], blockId: null,
-    ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20",
+    ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
     cancellation: CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
   };
 }
@@ -1783,8 +1785,31 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <button key={k} type="button" onClick={() => upd({ bookingType: k })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold" style={d.bookingType === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{d.bookingType === k ? "✓ " : ""}{label}</button>
         ))}
       </div>
-      <YesNo label="Waiting list" value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help="Let parents join a waiting list once a ticket sells out." />
-      {d.waitlist && <div className="my-2 w-[140px]"><FieldLabel>Waiting-list size</FieldLabel><Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} className="w-full" /></div>}
+      <YesNo label="Waiting list" value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help="Let parents queue for dates that are already full." />
+      {d.waitlist && (
+        <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">When a place frees up</div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {([
+              ["manual", "You choose", "Nothing happens automatically. You see who's waiting for each date and offer the place to whoever you pick. Best when you know your families, or want to keep siblings together."],
+              ["auto", "First in the queue", "The place is offered to whoever joined first, by email, and held for them for 24 hours. If they don't take it, it passes to the next person. Fairest, and you don't have to do anything."],
+            ] as const).map(([k, label, desc]) => {
+              const on = (d.waitlistMode ?? "manual") === k;
+              return (
+                <button key={k} type="button" onClick={() => upd({ waitlistMode: k })} className="rounded-xl border p-3 text-left"
+                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+                  <div className="text-[12.5px] font-extrabold">{on ? "● " : ""}{label}</div>
+                  <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]">{desc}</div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2.5 w-[150px]">
+            <FieldLabel>Max people waiting</FieldLabel>
+            <Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} placeholder="No limit" className="w-full" />
+          </div>
+        </div>
+      )}
       <SectionHead icon="📄">Cancellation policy</SectionHead>
       <Select value={d.cancellation} onChange={(e) => upd({ cancellation: e.target.value })} className="w-full text-[12px]">{policies.map((p) => <option key={p} value={p}>{p}</option>)}</Select>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
@@ -1839,6 +1864,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   const passId = passPick ?? passes[0]?.id ?? null;
   const periodId = periodPick ?? periods[0]?.id ?? null;
   const [sel, setSel] = useState<string[]>([]);
+  // Dates the parent wants but can't have — queued, not booked.
+  const [waitSel, setWaitSel] = useState<string[]>([]);
+  const [waitDone, setWaitDone] = useState(false);
   const [basket, setBasket] = useState<BasketItem[]>([]);
   const [stage, setStage] = useState<"pick" | "checkout" | "done">("pick");
   const [child, setChild] = useState("");
@@ -1915,6 +1943,15 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   // Tightest count that applies to what's on screen — the selection if there
   // is one, else the run as a whole.
   const hasCounts = !!blocks?.length || capacity !== null;
+  const waitlistOn = !!d.waitlist;
+  const isFull = (iso: string) => { const left = leftOn(iso); return left !== null && left < 1; };
+  const toggleWait = (iso: string) => setWaitSel((w) => (w.includes(iso) ? w.filter((x) => x !== iso) : [...w, iso]));
+  // Bulk: every full date across the run, for someone who'll take anything.
+  const waitAll = () => {
+    const all = weeks.flatMap((w) => w.days).filter((iso) => !off(iso) && isFull(iso));
+    setWaitSel((w) => (w.length === all.length ? [] : all));
+  };
+  const fullCount = weeks.flatMap((w) => w.days).filter((iso) => !off(iso) && isFull(iso)).length;
   const seatsLeft = (() => {
     const pool = sel.length ? sel.map(leftOn).filter((n): n is number => n !== null) : [];
     if (pool.length) return Math.min(...pool);
@@ -2034,11 +2071,64 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow,
+    waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
 // Dispatcher — same logic, theme-specific presentation.
+/**
+ * The waiting-list half of the picker. Full dates are chosen the same way
+ * bookable ones are, so someone wanting five days with two full doesn't have
+ * to choose between booking and queuing — they do both in one go.
+ */
+function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: WizardDraft; tone: "light" | "dark" }) {
+  if (!b.waitlistOn || !b.fullCount) return null;
+  const dark = tone === "dark";
+  const box = dark
+    ? { borderColor: "#ffb020", background: "#2a2110", color: "#ffd79a" }
+    : { borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" };
+
+  if (b.waitDone) {
+    return (
+      <div className="mt-3 rounded-2xl border p-3.5 text-[12px] leading-[1.55]" style={box}>
+        <b>You&rsquo;re on the waiting list.</b> We&rsquo;ll email you the moment a place comes up
+        {(d.waitlistMode ?? "manual") === "auto"
+          ? " — first in the queue gets it, and you'll have 24 hours to take it."
+          : " — the organiser will be in touch if one does."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-2xl border p-3.5" style={box}>
+      <div className="flex flex-wrap items-center gap-2">
+        <b className="text-[12.5px]">Some days are full</b>
+        <button type="button" onClick={b.waitAll} className="ml-auto text-[11.5px] font-bold underline underline-offset-2">
+          {b.waitSel.length === b.fullCount ? "Clear all" : `Select all ${b.fullCount} full days`}
+        </button>
+      </div>
+      <div className="mt-1 text-[11.5px] leading-[1.5]">
+        {b.waitSel.length === 0
+          ? "Tap a full day above to join the waiting list for it — you can pick as many as you like."
+          : `Waiting list for ${b.waitSel.length} day${b.waitSel.length === 1 ? "" : "s"}: ${b.datesPretty(b.waitSel)}`}
+      </div>
+      {b.waitSel.length > 0 && (
+        <>
+          <button type="button" onClick={() => b.setWaitDone(true)}
+            className="mt-2.5 w-full rounded-xl py-2.5 text-[12.5px] font-extrabold text-white"
+            style={{ background: dark ? "#c2410c" : "#c2410c" }}>
+            Join the waiting list for {b.waitSel.length} day{b.waitSel.length === 1 ? "" : "s"}
+          </button>
+          <div className="mt-1.5 text-[11px] leading-[1.45] opacity-90">
+            Nothing to pay — you&rsquo;re only charged if a place comes up and you take it.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, theme = "playful" }: {
   d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; theme?: PageTheme;
 }) {
@@ -2363,10 +2453,15 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
                 // every cell turns the calendar into a spreadsheet.
                 const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
                 const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#16a34a";
-                return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                const waiting = b.waitSel.includes(iso);
+                const queueable = full && b.waitlistOn && !dOff;
+                return <button key={iso} type="button" disabled={dOff || (full && !queueable)}
+                  onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
+                  title={full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
-                  style={dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" } : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
+                  style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
+                    : dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" }
+                    : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-extrabold leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
@@ -2389,6 +2484,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
             return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: col }} />{note.text}</div>;
           })()}
+          <WaitlistPanel b={b} d={d} tone="light" />
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
             {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
@@ -2520,10 +2616,15 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
                 const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
                 const dot = dOff || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
-                return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                const waiting = b.waitSel.includes(iso);
+                const queueable = full && b.waitlistOn && !dOff;
+                return <button key={iso} type="button" disabled={dOff || (full && !queueable)}
+                  onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
+                  title={full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed"
-                  style={dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
+                  style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
+                    : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
+                    : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-black leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
@@ -2543,6 +2644,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
                 <span className="inline-block h-2 w-2" style={{ background: col }} />{note.text}</div>;
             })()}
+            <WaitlistPanel b={b} d={d} tone="dark" />
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
