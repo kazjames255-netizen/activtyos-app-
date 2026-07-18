@@ -404,7 +404,7 @@ export const SECTION_KEYS = [
   { key: "addons", label: "Optional add-ons", eyebrow: "Add-ons", title: "Extras" },
   { key: "gallery", label: "Gallery", eyebrow: "Gallery", title: "In action" },
 ] as const;
-export const WHERE_HEAD_DEFAULT = { eyebrow: "Where it is", title: "Getting there" };
+export const WHERE_HEAD_DEFAULT = { eyebrow: "Where is it", title: "Location" };
 /** The venue section's heading. Lives on the operator's library, not the listing — the same venue reads the same on every listing. */
 export function whereHeading(local: LocalState): { eyebrow: string; title: string } {
   return {
@@ -1668,6 +1668,35 @@ function myBrand() {
   const u = firebaseAuth.currentUser;
   return u?.displayName || (u?.email ? u.email.split("@")[0] : "") || "Your business";
 }
+/**
+ * Scheduled open (step 11). The listing stays browsable — only booking is held
+ * — so everyone gets the same starting gun on a popular run.
+ */
+function useOpensAt(opensAt?: string) {
+  const at = opensAt ?? "";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!at) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [at]);
+  const openMs = at ? new Date(at).getTime() : 0;
+  const locked = !!at && !Number.isNaN(openMs) && now < openMs;
+  const countdown = (() => {
+    if (!locked) return "";
+    let s2 = Math.max(0, Math.floor((openMs - now) / 1000));
+    const dd = Math.floor(s2 / 86400); s2 -= dd * 86400;
+    const hh = Math.floor(s2 / 3600); s2 -= hh * 3600;
+    const mm = Math.floor(s2 / 60); s2 -= mm * 60;
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    return dd > 0 ? `${dd} day${dd === 1 ? "" : "s"} ${hh}h ${mm}m` : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
+  })();
+  const opensLabel = at && !Number.isNaN(openMs)
+    ? new Date(openMs).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
+    : "";
+  return { locked, countdown, opensLabel };
+}
+
 type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[] };
 // Shared booking logic — one source of truth, rendered in two visual themes.
 function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[]) {
@@ -1721,29 +1750,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       return [...prev, iso];
     });
   }
-  // Scheduled open (step 11). The listing stays browsable — only booking is
-  // held — so everyone gets the same starting gun on a popular run.
-  const opensAt = d.opensAt ?? "";
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!opensAt) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [opensAt]);
-  const openMs = opensAt ? new Date(opensAt).getTime() : 0;
-  const locked = !!opensAt && !Number.isNaN(openMs) && now < openMs;
-  const countdown = (() => {
-    if (!locked) return "";
-    let s2 = Math.max(0, Math.floor((openMs - now) / 1000));
-    const dd = Math.floor(s2 / 86400); s2 -= dd * 86400;
-    const hh = Math.floor(s2 / 3600); s2 -= hh * 3600;
-    const mm = Math.floor(s2 / 60); s2 -= mm * 60;
-    const p2 = (n: number) => String(n).padStart(2, "0");
-    return dd > 0 ? `${dd} day${dd === 1 ? "" : "s"} ${hh}h ${mm}m` : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
-  })();
-  const opensLabel = opensAt && !Number.isNaN(openMs)
-    ? new Date(openMs).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
-    : "";
+  const { locked, countdown, opensLabel } = useOpensAt(d.opensAt);
   const canAdd = !locked && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
   // One booking may cover several children; the count drives multi-person rules.
   const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
@@ -2183,13 +2190,6 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
             </div>)}
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: TEAL }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
-          {b.locked && (
-            <div className="mt-3 rounded-2xl border-2 p-3 text-center" style={{ borderColor: BLUE, background: "#eef3ff" }}>
-              <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: BLUE }}>⏰ Booking opens in</div>
-              <div className="my-0.5 text-[22px] font-extrabold tabular-nums" style={{ color: BLUE }}>{b.countdown}</div>
-              <div className="text-[11.5px] text-[#6b7382]">{b.opensLabel} — have a look around, then come back to book.</div>
-            </div>
-          )}
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
             {b.locked ? "Booking not open yet" : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
@@ -2320,13 +2320,6 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-black leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
             {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: CY }}><span className="inline-block h-2 w-2" style={{ background: LIME }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
-            {b.locked && (
-              <div className="mt-3 border p-3 text-center" style={{ borderColor: LIME, background: CELL }}>
-                <div className="text-[10.5px] font-black uppercase tracking-[0.08em]" style={{ color: LIME }}>⏰ Booking opens in</div>
-                <div className="my-0.5 text-[22px] font-black tabular-nums text-white">{b.countdown}</div>
-                <div className="text-[11.5px] text-[#8f9bb0]">{b.opensLabel} — have a look around, then come back to book.</div>
-              </div>
-            )}
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
@@ -2415,7 +2408,8 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} theme={theme} />;
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local) };
+  const opens = useOpensAt(d.opensAt);
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -2446,6 +2440,7 @@ interface PageProps {
   fromPrice: number | null; passSummary: { name: string; price: number }[]; spacesLeft: number | null;
   /** Set once in Locations, not per listing. */
   whereHead: { eyebrow: string; title: string };
+  opens: { locked: boolean; countdown: string; opensLabel: string };
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // Dark surfaces for the Sport-style pages — swappable so the same design can be
@@ -2504,7 +2499,7 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
+function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
   const chip = (o: string, fb: string, i: number) => (
@@ -2515,6 +2510,7 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
   );
   const grid2 = full ? "grid-cols-2" : "grid-cols-1";
   const [teamOpen, setTeamOpen] = useState(true);
+  const [whereOpen, setWhereOpen] = useState(false);
   return (
     <div className="overflow-hidden rounded-[26px] border border-[#e8edf7]" style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? "0 40px 90px -60px rgba(30,50,90,.4)" : undefined }}>
       <div className="flex items-center justify-between bg-white px-6 py-4">
@@ -2523,7 +2519,8 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
       </div>
       <div className={full ? "p-6 lg:p-7" : "p-5"}>
         {/* title above the image */}
-        <div className="mb-4">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
           {/* every chosen type, sized so the row always fits */}
           {/* Types in blue, location in muted grey — one colour ran them together. */}
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]">
@@ -2538,6 +2535,14 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
             )}
           </div>
           <h1 className="mt-1 font-extrabold leading-[1.04] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 34 : 24 }}>{d.title || "Your listing title"}</h1>
+          </div>
+          {opens.locked && (
+            <div className="flex-none rounded-2xl px-3.5 py-2 text-right" style={{ background: "#eef3ff", border: `1.5px solid ${BLUE}` }}>
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em]" style={{ color: BLUE }}>⏰ Booking opens in</div>
+              <div className="text-[17px] font-extrabold leading-tight tabular-nums" style={{ color: BLUE }}>{opens.countdown}</div>
+              <div className="text-[10px]" style={{ color: MUTp }}>{opens.opensLabel}</div>
+            </div>
+          )}
         </div>
         {/* hero image (no text on it) */}
         <div className="relative overflow-hidden rounded-[28px]" style={{ height: heroH }}>
@@ -2577,7 +2582,18 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
             {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title={headingOf(d, "safety", "title")} sub={headingOf(d, "safety", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
             {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
             {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
-              <PlayCard e="📍" tint="#e7f0ff" title={whereHead.title} sub={whereHead.eyebrow}>
+              <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
+                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: "#e7f0ff" }}>📍</span>
+                    <div>
+                      <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{whereHead.eyebrow}</div>
+                      <h2 className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{whereHead.title}</h2>
+                    </div>
+                  </div>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-extrabold text-white" style={{ background: BLUE }}>{whereOpen ? "–" : "+"}</span>
+                </button>
+                {whereOpen && (<div className="mt-4">
                 <div className="text-[14px] font-extrabold" style={{ color: INKp }}>{venue.name}</div>
                 {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
                 {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
@@ -2603,7 +2619,8 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: "#3d4763" }}>{venue.directions}</p>
                   </div>
                 )}
-              </PlayCard>
+                </div>)}
+              </div>
             )}
             {staff.length > 0 && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
@@ -2636,13 +2653,14 @@ function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-2" : "grid-cols-1";
   const heroH = full ? 340 : 240;
   const [teamOpen, setTeamOpen] = useState(true);
+  const [whereOpen, setWhereOpen] = useState(false);
   return (
     <div className="overflow-hidden rounded-[18px] border" style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: LINEs }}>
@@ -2650,7 +2668,8 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
         <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
-      <div className="px-6 pb-4 pt-6">
+      <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
+        <div className="min-w-0 flex-1">
         {/* Types in lime, location in cyan — one colour for both ran them together. */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase leading-tight tracking-[0.12em]">
           {cats.length ? cats.map((c, i) => (
@@ -2667,6 +2686,14 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
           )}
         </div>
         <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 48 : 30, lineHeight: .92, color: "#fff" }}>{d.title || "Your listing title"}</h1>
+        </div>
+        {opens.locked && (
+          <div className="flex-none border px-3.5 py-2 text-right" style={{ borderColor: LIME, background: PANEL }}>
+            <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>⏰ Booking opens in</div>
+            <div className="text-[17px] font-black leading-tight tabular-nums text-white">{opens.countdown}</div>
+            <div className="text-[10px]" style={{ color: MUTs }}>{opens.opensLabel}</div>
+          </div>
+        )}
       </div>
       {/* hero image (no text on it) */}
       <div className="relative overflow-hidden" style={{ height: heroH }}>
@@ -2698,10 +2725,21 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
             <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-6" style={{ borderColor: LINEs, background: PANEL }}>
-              <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
-                <div className={lab} style={{ color: MUTs }}>ages</div>
-                <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>{d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All"}</div>
-              </div>
+              {/* Ages already appear in the facts strip above the image — this
+                  slot earns more as the team, names visible, bios on tap. */}
+              {staff.length > 0 && (
+                <button type="button" onClick={() => setTeamOpen((o) => !o)}
+                  className={`${wide} text-left`} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className={lab} style={{ color: MUTs }}>{headingOf(d, "team", "eyebrow")}</div>
+                      <div className={`mt-1 truncate text-[15px] font-black ${cond} text-white`}>{headingOf(d, "team", "title")}</div>
+                      <div className="mt-1 truncate text-[11px]" style={{ color: "#c3ccdb" }}>{staffNames.join(" · ")}</div>
+                    </div>
+                    <span className="flex h-5 w-5 flex-none items-center justify-center text-[14px] font-black" style={{ background: LIME, color: "#12280a" }}>{teamOpen ? "–" : "+"}</span>
+                  </div>
+                </button>
+              )}
               <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
                 <div className={lab} style={{ color: MUTs }}>{spacesLeft !== null ? "spaces left" : "capacity"}</div>
                 <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{spacesLeft !== null ? String(spacesLeft) : "—"}</div>
@@ -2744,6 +2782,21 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
                   </div>
                 )}
               </div>
+              {teamOpen && staff.length > 0 && (
+                <div className="border-l-0 border-t px-4 py-4 sm:col-span-2 lg:col-span-6" style={{ borderColor: LINEs }}>
+                  <div className={`grid gap-3 ${grid2}`}>
+                    {staff.map((m) => (
+                      <div key={m.id} className="border p-3.5" style={{ borderColor: LINEs, background: BG }}>
+                        <div className="flex items-center gap-2.5">
+                          <span className={`flex h-9 w-9 flex-none items-center justify-center font-black ${cond} text-[15px] text-white`} style={{ background: EL }}>{(m.first[0] || "?").toUpperCase()}</span>
+                          <b className="text-[13.5px]">{m.first} {m.last}</b>
+                        </div>
+                        {m.bio && <p className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: MUTs }}>{m.bio}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -2758,7 +2811,15 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
             {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
             {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
-              <SportSec eye={whereHead.eyebrow} title={whereHead.title}>
+              <div className="border-t pt-6" style={{ borderColor: LINEs }}>
+                <button type="button" onClick={() => setWhereOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>
+                  <span className="flex items-baseline gap-2.5">
+                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{whereHead.eyebrow}</span>
+                    <span className={`text-[16px] font-black ${cond} text-white`}>{whereHead.title}</span>
+                  </span>
+                  <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: "#12280a" }}>{whereOpen ? "–" : "+"}</span>
+                </button>
+                {whereOpen && (<div className="mt-3">
                 <div className="text-[14px] font-black text-white">{venue.name}</div>
                 {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
                 {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
@@ -2784,18 +2845,7 @@ function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, 
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: MUTs }}>{venue.directions}</p>
                   </div>
                 )}
-              </SportSec>
-            )}
-            {staff.length > 0 && (
-              <div className="border-t pt-6" style={{ borderColor: LINEs }}>
-                <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>
-                  <span className="flex items-baseline gap-2.5">
-                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "team", "eyebrow")}</span>
-                    <span className={`text-[16px] font-black ${cond} text-white`}>{headingOf(d, "team", "title")}</span>
-                  </span>
-                  <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: "#12280a" }}>{teamOpen ? "–" : "+"}</span>
-                </button>
-                {teamOpen && <div className={`mt-3 grid gap-3 ${grid2}`}>{staff.map((m) => <div key={m.id} className="border p-4" style={{ borderColor: LINEs, background: PANEL }}><div className="flex items-center gap-2.5"><span className={`flex h-10 w-10 flex-none items-center justify-center font-black ${cond} text-[16px] text-white`} style={{ background: EL }}>{(m.first[0] || "?").toUpperCase()}</span><b className="text-[14px]">{m.first} {m.last}</b></div>{m.bio && <p className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: MUTs }}>{m.bio}</p>}</div>)}</div>}
+                </div>)}
               </div>
             )}
             {addons.length > 0 && <SportSec eye={headingOf(d, "addons", "eyebrow")} title={headingOf(d, "addons", "title")}>{addons.map((a, i) => <div key={i} className="mt-2 flex items-center justify-between border px-4 py-3 first:mt-0" style={{ borderColor: LINEs, background: PANEL }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold">{a.image ? (
