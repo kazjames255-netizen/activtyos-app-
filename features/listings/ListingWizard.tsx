@@ -604,14 +604,12 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
           listingId: listing.id,
           blockId,
           method,
-          items: items.map((l) => ({
-            pass: l.pass,
-            dates: l.dates,
-            child: l.child,
-            ...(Object.keys(addonSel[l.itemId] ?? {}).length
-              ? { addons: Object.keys(addonSel[l.itemId] ?? {}).map((id) => ({ id })) }
-              : {}),
-          })),
+          items: items.map((l) => {
+            // That child's own extras on that line, with the days they picked.
+            const sel = addonSel[`${l.itemId}|${l.child}`] ?? {};
+            const addons = Object.entries(sel).map(([id, days]) => ({ id, ...(days[0] === "*" ? {} : { days }) }));
+            return { pass: l.pass, dates: l.dates, child: l.child, ...(addons.length ? { addons } : {}) };
+          }),
         });
         refs.push(...res.bookings.map((x) => x.ref));
         total += res.total;
@@ -1958,7 +1956,9 @@ function useOpensAt(opensAt?: string) {
   return { locked, countdown, opensLabel };
 }
 
-type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule };
+type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule;
+  /** 24h "09:00"/"13:00" — two sessions in a day are fine if they don't overlap. */
+  start?: string; finish?: string };
 // Shared booking logic — one source of truth, rendered in two visual themes.
 function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], blocks?: RunBlock[], mode: "operator" | "parent" = "operator") {
   const parentMode = mode === "parent";
@@ -2117,10 +2117,10 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     if (!canAdd || !pass) return;
     if (isSingle) {
       // One basket line per chosen day → as many 1-day passes as they want.
-      const items: BasketItem[] = [...sel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [day], rule }));
+      const items: BasketItem[] = [...sel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [day], rule, start: period?.start, finish: period?.finish }));
       setBasket((b) => [...b, ...items]);
     } else {
-      setBasket((b) => [...b, { id: uid(), name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [...sel].sort(), rule }]);
+      setBasket((b) => [...b, { id: uid(), name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [...sel].sort(), rule, start: period?.start, finish: period?.finish }]);
     }
     setSel([]);
   };
@@ -2206,14 +2206,19 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else next[itemId] = Math.max(0, price);
       return next;
     });
-  const setAddonDays = (itemId: string, addonId: string, dates: string[]) =>
+  /** One child's add-ons on one basket line — lunch is per child, not per pass. */
+  const addonKey = (itemId: string, child: string) => `${itemId}|${child}`;
+  const setAddonDays = (itemId: string, child: string, addonId: string, dates: string[]) =>
     setAddonSel((all) => {
-      const forItem = { ...(all[itemId] ?? {}) };
-      if (dates.length === 0) delete forItem[addonId];
-      else forItem[addonId] = dates;
-      return { ...all, [itemId]: forItem };
+      const key = addonKey(itemId, child);
+      const forKey = { ...(all[key] ?? {}) };
+      if (dates.length) forKey[addonId] = dates;
+      else delete forKey[addonId];
+      return { ...all, [key]: forKey };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  const addonDays = (itemId: string, child: string, addonId: string) => addonSel[addonKey(itemId, child)]?.[addonId] ?? [];
+
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
@@ -2538,6 +2543,10 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
   const [method, setMethod] = useState("card");
+  // Two stages. Sorting out who's on which pass and picking everyone's lunches
+  // at the same time is two jobs on one screen; the first has to be right
+  // before the second even makes sense.
+  const [ckStage, setCkStage] = useState<"who" | "extras">("who");
   const [saved, setSaved] = useState<ChildProfile[]>([]);
   const { roster, setRoster } = b;
   // Store the EXCEPTIONS, not the assignments: who has been taken off which
@@ -2568,12 +2577,16 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   // Per child, because that's what an add-on is: a lunch each, a t-shirt each.
   // The server already charges them per child (it prices one line per child),
   // so showing one lunch for two children quoted a price we wouldn't honour.
-  const addonHeads = (itemId: string) => (parentMode ? Math.max(1, b.childrenOn(itemId).length) : 1);
+  // Each child's extras are chosen separately, so the total is simply the sum
+  // of what was chosen — no head-count multiplier guessing on their behalf.
   const addonTotal = b.basket.reduce((sum, item) => {
-    const sel = b.addonSel[item.id] ?? {};
-    return sum + Object.entries(sel).reduce((t, [aid, days]) => {
-      const a = addonById.get(aid);
-      return a ? t + costOf(a, days) * addonHeads(item.id) : t;
+    const kids = parentMode ? b.childrenOn(item.id) : [""];
+    return sum + kids.reduce((t, kid) => {
+      const sel = b.addonSel[b.addonKey(item.id, kid)] ?? {};
+      return t + Object.entries(sel).reduce((n, [aid, days]) => {
+        const a = addonById.get(aid);
+        return a ? n + costOf(a, days) : n;
+      }, 0);
     }, 0);
   }, 0);
   const calculated = b.total + addonTotal;
@@ -2593,27 +2606,45 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   // covering the 28th–31st are easy to end up with, and nobody can attend the
   // same day twice — they'd be paying for it twice.
   const clashes = !parentMode ? [] : (() => {
-    const byChildDate = new Map<string, string[]>();
+    // Two sessions in one day are fine — a morning club and an afternoon one —
+    // so this asks whether the times overlap, not just whether the dates match.
+    const mins = (t?: string) => {
+      if (!t) return null;
+      const [h, m] = t.split(":").map(Number);
+      return Number.isFinite(h) ? h * 60 + (m || 0) : null;
+    };
+    const overlaps = (a: BasketItem, c: BasketItem) => {
+      const a1 = mins(a.start), a2 = mins(a.finish), c1 = mins(c.start), c2 = mins(c.finish);
+      // Unknown times: treat as a clash rather than wave through a double
+      // booking we can't rule out.
+      if (a1 === null || a2 === null || c1 === null || c2 === null) return true;
+      return a1 < c2 && c1 < a2;
+    };
+    const byChildDate = new Map<string, BasketItem[]>();
     for (const x of b.basket) {
       for (const name of b.childrenOn(x.id)) {
         for (const iso of x.dates) {
           const key = `${name}|${iso}`;
-          byChildDate.set(key, [...(byChildDate.get(key) ?? []), x.id]);
+          byChildDate.set(key, [...(byChildDate.get(key) ?? []), x]);
         }
       }
     }
     const out: { name: string; iso: string; itemIds: string[] }[] = [];
-    for (const [key, ids] of byChildDate) {
-      if (ids.length < 2) continue;
+    for (const [key, items] of byChildDate) {
+      if (items.length < 2) continue;
+      const hit = new Set<string>();
+      for (let i = 0; i < items.length; i++)
+        for (let j = i + 1; j < items.length; j++)
+          if (overlaps(items[i], items[j])) { hit.add(items[i].id); hit.add(items[j].id); }
+      if (!hit.size) continue;
       const [name, iso] = key.split("|");
-      out.push({ name, iso, itemIds: ids });
+      out.push({ name, iso, itemIds: [...hit] });
     }
     return out;
   })();
   const clashesOn = (id: string) => clashes.filter((c) => c.itemIds.includes(id));
   const unassigned = parentMode ? shortPasses.length : b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
-  const dayNum = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 
   return (
     <div className="p-5" style={{ background: tk.bg }}>
@@ -2715,7 +2746,6 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
 
           <div className="mt-2 flex flex-col gap-2">
             {b.basket.map((x) => {
-              const sel = b.addonSel[x.id] ?? {};
               return (
                 <div key={x.id} className={`border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
                   <div className="flex items-center gap-2">
@@ -2774,8 +2804,8 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                         <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
                           style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
                           {[...new Set(clashesOn(x.id).map((c) => c.name))].join(" and ")} {clashesOn(x.id).length === 1 ? "is" : "are"} already
-                          booked on {[...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))].join(", ")} in another pass.
-                          Take them off one of the two, or change the dates.
+                          booked at this time on {[...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))].join(", ")} in another pass.
+                          Take them off one of the two, or pick a session at a different time.
                         </div>
                       )}
                       {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
@@ -2805,60 +2835,72 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                     </div>
                   )}
 
-                  {addons.length > 0 && (
-                    <div className="mt-2.5 flex flex-col gap-1.5">
+                  {/* Extras, per child. A sibling might want lunch on two days
+                      and the other on all five, so each gets their own row —
+                      and nothing is ticked for them by default. */}
+                  {addons.length > 0 && parentMode && ckStage === "extras" && b.childrenOn(x.id).length > 0 && (
+                    <div className="mt-3 border-t pt-2.5" style={{ borderColor: tk.line }}>
+                      <div className="mb-1.5 font-bold uppercase" style={{ ...label, color: tk.muted }}>Extras</div>
                       {addons.map((a) => {
-                        const days = sel[a.id] ?? [];
-                        const on = days.length > 0;
                         const perDay = a.type === "perday";
+                        const kids = b.childrenOn(x.id);
+                        const lineTotal = kids.reduce((t, k) => t + costOf(a, b.addonDays(x.id, k, a.id)), 0);
                         return (
-                          <div key={a.id}>
-                            <button type="button"
-                              onClick={() => b.setAddonDays(x.id, a.id, on ? [] : perDay ? [...x.dates] : ["*"])}
-                              className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-[12px] ${tk.round}`}
-                              style={on ? { borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink } : { borderColor: tk.line, color: tk.ink }}>
-                              <span>{on ? "☑" : "☐"}</span>
+                          <div key={a.id} className="mb-2.5 last:mb-0">
+                            <div className="flex items-baseline gap-2">
                               {a.image ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={a.image} alt="" className="h-5 w-5 flex-none rounded object-cover" />
                               ) : a.emoji ? <span>{a.emoji}</span> : null}
                               <span className="min-w-0 flex-1">
-                                <span className="block font-bold">{a.name}</span>
-                                {/* The operator's own words — what it is, when it's needed. */}
-                                {a.description && (
-                                  <span className="block text-[10.5px] font-normal leading-[1.4]" style={{ color: tk.muted }}>{a.description}</span>
-                                )}
+                                <span className="block text-[12px] font-bold" style={{ color: tk.ink }}>{a.name}</span>
+                                {a.description && <span className="block text-[10.5px] leading-[1.4]" style={{ color: tk.muted }}>{a.description}</span>}
                               </span>
                               <span className="flex-none text-[11px]" style={{ color: tk.muted }}>
                                 {perDay ? `${money(a.price)}/day` : `${money(a.price)} one-off`}
                               </span>
-                              {on && (() => {
-                                const heads = addonHeads(x.id);
-                                return (
-                                  <b className="flex-none">
-                                    {money(costOf(a, days) * heads)}
-                                    {heads > 1 && <span className="ml-1 text-[10px] font-normal" style={{ color: tk.muted }}>({money(costOf(a, days))} each)</span>}
-                                  </b>
-                                );
-                              })()}
-                            </button>
-                            {/* Per-day add-ons default to every day — untick any that aren't wanted. */}
-                            {on && perDay && (
-                              <div className="mt-1 flex flex-wrap items-center gap-1 pl-6">
-                                {x.dates.map((iso) => {
-                                  const active = days.includes(iso);
-                                  return (
-                                    <button key={iso} type="button"
-                                      onClick={() => b.setAddonDays(x.id, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
-                                      className="border px-2 py-[3px] text-[11px] font-bold"
-                                      style={active ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
-                                      {dayNum(iso)}
+                              {lineTotal > 0 && <b className="flex-none text-[12px]" style={{ color: tk.ink }}>{money(lineTotal)}</b>}
+                            </div>
+                            {kids.map((kid) => {
+                              const days = b.addonDays(x.id, kid, a.id);
+                              return (
+                                <div key={kid} className="mt-1 flex flex-wrap items-center gap-1 pl-6">
+                                  <span className="w-[58px] flex-none truncate text-[11px]" style={{ color: tk.muted }}>{kid.split(" ")[0]}</span>
+                                  {perDay ? (
+                                    <>
+                                      {x.dates.map((iso) => {
+                                        const active = days.includes(iso);
+                                        return (
+                                          <button key={iso} type="button"
+                                            onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
+                                            className={`border px-2 py-[3px] text-[11px] font-bold ${tk.round}`}
+                                            style={active ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
+                                            {ordinal(new Date(`${iso}T00:00:00Z`).getUTCDate())}
+                                          </button>
+                                        );
+                                      })}
+                                      {x.dates.length > 1 && (
+                                        <button type="button"
+                                          onClick={() => b.setAddonDays(x.id, kid, a.id, days.length === x.dates.length ? [] : [...x.dates])}
+                                          className="text-[10.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+                                          {days.length === x.dates.length ? "none" : "all"}
+                                        </button>
+                                      )}
+                                      <span className="text-[10.5px]" style={{ color: tk.muted }}>
+                                        {days.length ? money(costOf(a, days)) : "not added"}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <button type="button"
+                                      onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : ["*"])}
+                                      className={`border px-2.5 py-[3px] text-[11px] font-bold ${tk.round}`}
+                                      style={days.length ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
+                                      {days.length ? `✓ added · ${money(a.price)}` : "add"}
                                     </button>
-                                  );
-                                })}
-                                <span className="text-[10.5px]" style={{ color: tk.muted }}>{days.length} of {x.dates.length} days</span>
-                              </div>
-                            )}
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })}
@@ -2911,7 +2953,35 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
         </div>}
       </div>
 
-      {parentMode && (
+      {parentMode && ckStage === "who" && (() => {
+        const ready = roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0;
+        const next = addons.length > 0 ? "Next — add lunches and extras" : "Next — how you'll pay";
+        return (
+          <>
+            <button type="button" disabled={!ready} onClick={() => setCkStage("extras")}
+              className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
+              style={{ background: tk.accent, color: tk.accentInk }}>
+              {roster.length === 0 ? "Add a child first"
+                : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
+                : unassigned > 0 || shortPasses.length > 0 ? "Put a child on every pass"
+                : next}
+            </button>
+            <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>
+          </>
+        );
+      })()}
+
+      {parentMode && ckStage === "extras" && addons.length > 0 && (
+        <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>2 · Lunches &amp; extras</div>
+      )}
+      {parentMode && ckStage === "extras" && (
+        <button type="button" onClick={() => setCkStage("who")}
+          className="mt-3 text-[11.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+          ← Back to who&rsquo;s coming
+        </button>
+      )}
+
+      {(!parentMode || ckStage === "extras") && parentMode && (
         <div className="mt-3">
           <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>How you&rsquo;ll pay</div>
           <select value={method} onChange={(e) => setMethod(e.target.value)}
@@ -2928,7 +2998,7 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
       )}
 
-      <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
+      {(!parentMode || ckStage === "extras") && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
         disabled={(!parentMode && !b.parent) || (parentMode && roster.length === 0) || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
@@ -2945,11 +3015,11 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
           : !parentMode && !b.parent ? "Find the parent first"
           : parentMode && roster.length === 0 ? "Add a child first"
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
-          : clashes.length > 0 ? `${clashes[0].name} is booked twice on ${fmtDate(clashes[0].iso)}`
+          : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
           : shortPasses.length > 0 ? `One child needs all ${shortPasses[0].dates.length} days of the ${shortPasses[0].name}`
           : `Confirm & pay ${money(grandTotal)}`}
-      </button>
-      <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>
+      </button>}
+      {!parentMode && <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>}
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
     </div>
   );
