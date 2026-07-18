@@ -1646,6 +1646,10 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   // Add-ons are chosen per pass (so per child), and per-day ones record which
   // days they cover: { passId: { addonId: [dates] } }.
   const [addonSel, setAddonSel] = useState<Record<string, Record<string, string[]>>>({});
+  // Operator-side price edits: per pass, and an optional override of the final
+  // figure. Discounts recalculate from the edited pass prices.
+  const [priceEdit, setPriceEdit] = useState<Record<string, number>>({});
+  const [totalOverride, setTotalOverride] = useState<number | null>(null);
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const rule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
@@ -1677,10 +1681,11 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
 
   // Automatic discounts come off here so the basket shows what's really owed.
-  const subtotal = basket.reduce((s, x) => s + x.price, 0) * attendees;
+  const priceOf = (x: BasketItem) => priceEdit[x.id] ?? x.price;
+  const subtotal = basket.reduce((s, x) => s + priceOf(x), 0) * attendees;
   const { lines: discountLines, total } = applyDiscounts(
     d.discounts ?? [],
-    basket.map((x) => ({ name: x.name, price: x.price, days: x.dates.length })),
+    basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length })),
     attendees,
   );
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
@@ -1726,7 +1731,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     const pending = isSingle
       ? sel.map(() => ({ name: pass.name, price: unitPrice, days: 1 }))
       : [{ name: pass.name, price: unitPrice, days: sel.length }];
-    const items = [...basket.map((x) => ({ name: x.name, price: x.price, days: x.dates.length })), ...pending];
+    const items = [...basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length })), ...pending];
     const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
     const res = applyDiscounts(d.discounts ?? [], items, attendees);
     const off = Math.max(0, Math.round((gross - res.total) * 100) / 100);
@@ -1766,9 +1771,16 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     const best = options[0];
     return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
-  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setStage("pick"); };
+  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setPriceEdit({}); setTotalOverride(null); setStage("pick"); };
   const assignTo = (itemId: string, name: string) => setAssign((a) => ({ ...a, [itemId]: name }));
   const assignAll = (name: string) => setAssign(Object.fromEntries(basket.map((x) => [x.id, name])));
+  const setItemPrice = (itemId: string, price: number | null) =>
+    setPriceEdit((m) => {
+      const next = { ...m };
+      if (price === null) delete next[itemId];
+      else next[itemId] = Math.max(0, price);
+      return next;
+    });
   const setAddonDays = (itemId: string, addonId: string, dates: string[]) =>
     setAddonSel((all) => {
       const forItem = { ...(all[itemId] ?? {}) };
@@ -1776,7 +1788,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -1839,7 +1851,8 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
       return a ? t + costOf(a, days) : t;
     }, 0);
   }, 0);
-  const grandTotal = b.total + addonTotal;
+  const calculated = b.total + addonTotal;
+  const grandTotal = b.totalOverride ?? calculated;
   const unassigned = b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
   const dayNum = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
@@ -1857,9 +1870,16 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
               </span>
               {x.timing && <span className="block text-[11px] font-bold" style={{ color: tk.accent }}>🕘 {x.timing}</span>}
             </span>
-            <b className="flex-none" style={{ color: tk.ink }}>{money(x.price)}</b>
+            <span className="flex flex-none items-center gap-1">
+              <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
+              <input type="number" min={0} step="0.01" value={b.priceOf(x)}
+                onChange={(e) => b.setItemPrice(x.id, e.target.value === "" ? null : parseFloat(e.target.value))}
+                className={`w-[74px] border px-2 py-1 text-right text-[12.5px] font-bold outline-none ${tk.round}`}
+                style={{ background: tk.inputBg, borderColor: b.priceEdit[x.id] !== undefined ? tk.accent : tk.line, color: tk.ink }} />
+            </span>
           </div>
         ))}
+        <div className="text-[10.5px]" style={{ color: tk.muted }}>Prices are editable — discounts recalculate from what you set.</div>
       </div>
 
       {/* 1 · find the parent */}
@@ -1983,8 +2003,22 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
         <div className="mt-2 flex items-baseline justify-between text-[14px]">
           <span style={{ color: tk.muted }}>Total</span>
           <span className="flex items-baseline gap-2">
-            {b.saved > 0 && <s className="text-[11px]" style={{ color: tk.muted }}>{money(b.subtotal + addonTotal)}</s>}
+            {(b.saved > 0 || b.totalOverride !== null) && <s className="text-[11px]" style={{ color: tk.muted }}>{money(calculated)}</s>}
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
+          </span>
+        </div>
+        {/* Final say on the price — for a one-off arrangement a rule can't express. */}
+        <div className="mt-2 flex items-center gap-2">
+          <span className="flex-1 text-[11.5px]" style={{ color: tk.muted }}>Override the total</span>
+          <span className="flex items-center gap-1">
+            <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
+            <input type="number" min={0} step="0.01" value={b.totalOverride ?? ""} placeholder={calculated.toFixed(2)}
+              onChange={(e) => b.setTotalOverride(e.target.value === "" ? null : Math.max(0, parseFloat(e.target.value) || 0))}
+              className={`w-[86px] border px-2 py-1 text-right text-[12.5px] font-bold outline-none ${tk.round}`}
+              style={{ background: tk.inputBg, borderColor: b.totalOverride !== null ? tk.accent : tk.line, color: tk.ink }} />
+            {b.totalOverride !== null && (
+              <button type="button" onClick={() => b.setTotalOverride(null)} className="text-[11px] font-bold" style={{ color: tk.muted }}>Reset</button>
+            )}
           </span>
         </div>
       </div>
