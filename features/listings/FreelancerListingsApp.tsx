@@ -52,8 +52,15 @@ export interface Venue {
 export interface AddonTemplate {
   id: string;
   name: string;
+  /**
+   * "bundle" is retired — it priced identically to "once" and only differed in
+   * name, which meant picking the wrong one had no effect but looked like it
+   * should. Existing add-ons keep parsing and behave as "once".
+   */
   type: "perday" | "bundle" | "once";
   price: number;
+  /** A line of explanation for parents — what it is, when it's needed. */
+  description?: string;
   /** Shown beside the add-on on the customer page. An image wins over an emoji. */
   emoji?: string;
   image?: string;
