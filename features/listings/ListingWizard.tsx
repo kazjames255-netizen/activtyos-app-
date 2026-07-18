@@ -30,6 +30,7 @@ const STEPS = [
   { key: "safety", label: "Safety & SEND", stage: "About" },
   { key: "run", label: "When it runs", stage: "When it runs" },
   { key: "tickets", label: "Tickets & pricing", stage: "Tickets & pricing" },
+  { key: "discounts", label: "Discounts", stage: "Tickets & pricing" },
   { key: "preview", label: "Preview", stage: "Tickets & pricing" },
   { key: "addons", label: "Add-ons", stage: "Extras & team" },
   { key: "staff", label: "Staff", stage: "Extras & team" },
@@ -261,11 +262,120 @@ export interface WizardDraft {
   waitlist: boolean;
   waitlistSize: string;
   cancellation: string;
+  discounts?: DiscountRule[];
   status: "draft" | "live";
   archived?: boolean;
   pageStyle?: PageTheme;
 }
 export type PageTheme = "playful" | "sport" | "navy";
+
+// ── Automatic discounts ────────────────────────────────────────────────────
+// Three rule types. Multi-session is always applied after multi-person, and
+// where rules conflict the booker gets the best price.
+export type DiscountKind = "person" | "session" | "early";
+export interface DiscountRule {
+  id: string;
+  kind: DiscountKind;
+  name: string; // shown to bookers
+  passNames: string[]; // which tickets it applies to; [] = all
+  enabled: boolean;
+  /** person: applies when attendees > this. session: when sessions > this. */
+  moreThan: number;
+  /** person only — who in the booking gets the discount. */
+  appliesTo: "all" | "after1" | "second";
+  method: "price" | "subtract" | "percent";
+  value: number; // £ for price/subtract, % for percent
+  /** early only — must book on or before this date. */
+  beforeDate: string;
+}
+export function emptyRule(kind: DiscountKind): DiscountRule {
+  return {
+    id: uid(),
+    kind,
+    name: "",
+    passNames: [],
+    enabled: true,
+    moreThan: kind === "session" ? 3 : 1,
+    appliesTo: "after1",
+    method: kind === "session" ? "percent" : "subtract",
+    value: 0,
+    beforeDate: "",
+  };
+}
+/** Plain-English summary shown to the operator and the booker. */
+export function ruleSummary(r: DiscountRule): string {
+  const amount = r.method === "percent" ? `${r.value}%` : money(r.value);
+  const who = r.appliesTo === "all" ? "every attendee" : r.appliesTo === "second" ? "attendee 2 only" : "each attendee after the first";
+  if (r.kind === "person")
+    return r.method === "price"
+      ? `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${who} pays ${amount} per ticket`
+      : `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${amount} off for ${who}`;
+  if (r.kind === "session") return `Book more than ${r.moreThan} sessions — ${amount} off`;
+  return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
+}
+
+export interface DiscountLine { name: string; amount: number }
+/**
+ * Work out what comes off a basket. Returns each applied rule's saving.
+ * Multi-person runs first, then multi-session on the reduced total, then
+ * early bird; where several rules of a kind match, the best one wins.
+ */
+export function applyDiscounts(
+  rules: DiscountRule[],
+  items: { name: string; price: number; days: number }[],
+  attendees: number,
+  today = new Date().toISOString().slice(0, 10),
+): { lines: DiscountLine[]; total: number } {
+  const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
+  if (!items.length) return { lines: [], total: 0 };
+  const live = rules.filter((r) => r.enabled);
+  const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
+  const off = (r: DiscountRule, unit: number) =>
+    r.method === "percent" ? (unit * r.value) / 100 : r.method === "subtract" ? Math.min(unit, r.value) : Math.max(0, unit - r.value);
+
+  const lines: DiscountLine[] = [];
+  let running = gross;
+
+  // 1) Multi-person — priced per discounted attendee, per covered ticket.
+  const person = live.filter((r) => r.kind === "person" && attendees > r.moreThan);
+  let bestPerson: { r: DiscountRule; amount: number } | null = null;
+  for (const r of person) {
+    const heads = r.appliesTo === "all" ? attendees : r.appliesTo === "second" ? Math.min(1, attendees - 1) : attendees - 1;
+    const amount = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + off(r, i.price), 0) * Math.max(0, heads);
+    if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount };
+  }
+  if (bestPerson) {
+    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount });
+    running -= bestPerson.amount;
+  }
+
+  // 2) Multi-session — on the already-reduced total.
+  const sessions = items.reduce((s, i) => s + i.days, 0) * attendees;
+  const session = live.filter((r) => r.kind === "session" && sessions > r.moreThan);
+  let bestSession: { r: DiscountRule; amount: number } | null = null;
+  for (const r of session) {
+    const amount = off(r, running);
+    if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
+  }
+  if (bestSession) {
+    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount });
+    running -= bestSession.amount;
+  }
+
+  // 3) Early bird.
+  const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate);
+  let bestEarly: { r: DiscountRule; amount: number } | null = null;
+  for (const r of early) {
+    const amount = off(r, running);
+    if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
+  }
+  if (bestEarly) {
+    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount });
+    running -= bestEarly.amount;
+  }
+
+  return { lines, total: Math.max(0, Math.round(running * 100) / 100) };
+}
 
 // Every heading a parent sees, so the operator can reword all of them.
 // `about` falls back to the editable "Section title" from step 2.
@@ -295,7 +405,7 @@ export function emptyDraft(): WizardDraft {
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20",
-    cancellation: CANCELLATION_POLICIES[3], status: "draft", pageStyle: "playful",
+    cancellation: CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
   };
 }
 
@@ -560,11 +670,12 @@ export function ListingWizard({
           <div className="min-h-0 flex-1 overflow-auto p-5">
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "provided" && <ChipStep n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
+            {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
-            {stepKey === "preview" && <div><StepHead n={7} kicker="STEP 7 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
+            {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
+            {stepKey === "preview" && <div><StepHead n={8} kicker="STEP 8 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "policy" && <PolicyStep d={d} upd={upd} />}
@@ -644,10 +755,11 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
   );
 }
 
-function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string> }) {
+function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode }) {
   return (
     <div className="max-w-[720px]">
       <StepHead n={n} kicker={kicker} title={title} lede={lede} />
+      {headings}
       <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">Add options (pick an emoji), delete with ✕ — saved and offered on every listing.</div>
     </div>
@@ -799,6 +911,7 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 
       <SectionHead>Gallery</SectionHead>
       <div className="mb-1 text-[11px] text-[var(--ink-3)]">Extra photos — shown as a gallery at the bottom of the customer page.</div>
+      <HeadingFields d={d} upd={upd} sectionKey="gallery" />
       <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
 
       <div className="mb-3 flex gap-3">
@@ -906,6 +1019,7 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       </Select>
 
       <SectionHead>Learning outcomes</SectionHead>
+      <HeadingFields d={d} upd={upd} sectionKey="learn" />
       <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
     </div>
   );
@@ -916,8 +1030,10 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
     <div className="max-w-[720px]">
       <StepHead n={4} kicker="STEP 4 · SAFETY & SEND" title="Safety & inclusion" lede="Show your safety features and the SEND support you offer." />
       <SectionHead>Safety features</SectionHead>
+      <HeadingFields d={d} upd={upd} sectionKey="safety" />
       <div className="mb-3"><EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check /></div>
       <SectionHead>SEND &amp; accessibility</SectionHead>
+      <HeadingFields d={d} upd={upd} sectionKey="send" />
       <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">New options you add here are saved and offered on every listing.</div>
     </div>
@@ -1079,6 +1195,194 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
 }
 
 // ── Step: Add-ons (reusable library) ───────────────────────────────────────
+// ── Step: Automatic discounts ──────────────────────────────────────────────
+const DISCOUNT_KINDS: { kind: DiscountKind; title: string; eg: string; icon: string; colour: string }[] = [
+  { kind: "person", title: "Multi-person", eg: "Siblings pay £3.50 each, bring a friend pay £10.00 each", icon: "👨‍👩‍👧", colour: "#2f6bd8" },
+  { kind: "session", title: "Multi-session", eg: "Book more than 3 sessions to get 10% off", icon: "📅", colour: "#0e9f6e" },
+  { kind: "early", title: "Early bird", eg: "£10 off when they book before 1 June", icon: "🐦", colour: "#d97706" },
+];
+
+function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; tickets: { name: string; days: number; price: number }[] }) {
+  const rules = d.discounts ?? [];
+  const setRules = (next: DiscountRule[]) => upd({ discounts: next });
+  // One form at a time: picking a type opens it here rather than stacking
+  // another card onto the page.
+  const [form, setForm] = useState<DiscountRule | null>(null);
+  const editing = !!form && rules.some((r) => r.id === form.id);
+  const set = (p: Partial<DiscountRule>) => setForm((f) => (f ? { ...f, ...p } : f));
+  const save = () => {
+    if (!form) return;
+    setRules(editing ? rules.map((r) => (r.id === form.id ? form : r)) : [...rules, form]);
+    setForm(null);
+  };
+  const kindOf = (k: DiscountKind) => DISCOUNT_KINDS.find((x) => x.kind === k)!;
+
+  return (
+    <div className="max-w-[760px]">
+      <StepHead n={7} kicker="STEP 7 · DISCOUNTS" title="Automatic discounts" lede="Rules that come off the price by themselves at checkout — no codes for parents to remember." />
+
+      {/* Create / edit panel */}
+      <Card className="mb-4 overflow-hidden p-0">
+        <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          <div className="text-[13px] font-extrabold">{editing ? "Edit discount rule" : "Create an automatic discount rule"}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]">Select a discount type</div>
+        </div>
+
+        <div className="grid gap-2 p-4 sm:grid-cols-3">
+          {DISCOUNT_KINDS.map((k) => {
+            const on = form?.kind === k.kind;
+            return (
+              <button key={k.kind} type="button" onClick={() => setForm(on && form ? form : emptyRule(k.kind))}
+                className="rounded-xl border-2 p-3 text-left transition-all"
+                style={on ? { borderColor: k.colour, background: `${k.colour}0f` } : { borderColor: "var(--line)" }}>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[16px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
+                  <span className="text-[12.5px] font-extrabold" style={{ color: on ? k.colour : "var(--ink)" }}>{k.title}</span>
+                  {on && <span className="ml-auto text-[13px]" style={{ color: k.colour }}>✓</span>}
+                </div>
+                <div className="mt-1.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">{k.eg}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {form && (
+          <div className="border-t border-[var(--line)] p-4">
+            <FieldLabel>Name your discount — parents see this on the booking page</FieldLabel>
+            <Input value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder={ruleSummary(form)} className="mb-3.5 w-full text-[12.5px]" />
+
+            <FieldLabel>Which tickets does it apply to?</FieldLabel>
+            <div className="mb-3.5 flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => set({ passNames: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold"
+                style={form.passNames.length === 0 ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>All tickets</button>
+              {tickets.map((t) => {
+                const on = form.passNames.includes(t.name);
+                return (
+                  <button key={t.name} type="button" onClick={() => set({ passNames: on ? form.passNames.filter((x) => x !== t.name) : [...form.passNames, t.name] })}
+                    className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold"
+                    style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{t.name}</button>
+                );
+              })}
+              {tickets.length === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">Pick a block in Tickets &amp; pricing first.</span>}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {form.kind !== "early" ? (
+                <div>
+                  <FieldLabel>{form.kind === "person" ? "Applies when attendees are more than" : "Applies when sessions are more than"}</FieldLabel>
+                  <Input type="number" min={1} value={form.moreThan} onChange={(e) => set({ moreThan: Math.max(1, parseInt(e.target.value, 10) || 1) })} className="w-full" />
+                </div>
+              ) : (
+                <div>
+                  <FieldLabel>Must book on or before</FieldLabel>
+                  <Input type="date" value={form.beforeDate} onChange={(e) => set({ beforeDate: e.target.value })} className="w-full" />
+                </div>
+              )}
+
+              {form.kind === "person" && (
+                <div>
+                  <FieldLabel>Discount the selected tickets for</FieldLabel>
+                  <Select value={form.appliesTo} onChange={(e) => set({ appliesTo: e.target.value as DiscountRule["appliesTo"] })} className="w-full text-[12px]">
+                    <option value="all">All attendees in the booking</option>
+                    <option value="after1">All attendees after number 1</option>
+                    <option value="second">Attendee number 2 only</option>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <FieldLabel>Discount method</FieldLabel>
+                <Select value={form.method} onChange={(e) => set({ method: e.target.value as DiscountRule["method"] })} className="w-full text-[12px]">
+                  {form.kind !== "session" && <option value="price">A discounted price</option>}
+                  {form.kind !== "session" && <option value="subtract">Subtract an amount</option>}
+                  <option value="percent">By a percentage</option>
+                </Select>
+              </div>
+              <div>
+                <FieldLabel>{form.method === "percent" ? "Percent off" : "Amount"}</FieldLabel>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-extrabold text-[var(--ink-3)]">{form.method === "percent" ? "%" : "£"}</span>
+                  <Input type="number" min={0} step="0.01" value={form.value} onChange={(e) => set({ value: Math.max(0, parseFloat(e.target.value) || 0) })} className="w-full" />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3.5 rounded-lg border-l-4 bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]" style={{ borderLeftColor: kindOf(form.kind).colour }}>
+              <b>Parents will see:</b> {form.name.trim() || ruleSummary(form)}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <Button variant="primary" onClick={save}>{editing ? "Save changes" : "Add discount"}</Button>
+              <Button onClick={() => setForm(null)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Saved rules */}
+      {rules.length > 0 && (
+        <>
+          <SectionHead>Your discounts ({rules.length})</SectionHead>
+          <div className="flex flex-col gap-2">
+            {rules.map((r) => {
+              const k = kindOf(r.kind);
+              return (
+                <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3" style={{ borderLeft: `4px solid ${k.colour}`, opacity: r.enabled ? 1 : 0.55 }}>
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: `${k.colour}1a` }}>{k.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-bold">{r.name.trim() || ruleSummary(r)}</span>
+                    <span className="block truncate text-[11px] text-[var(--ink-3)]">{k.title} · {r.passNames.length ? r.passNames.join(", ") : "all tickets"}</span>
+                  </span>
+                  <span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: `${k.colour}1a`, color: k.colour }}>
+                    {r.method === "percent" ? `${r.value}%` : money(r.value)}
+                  </span>
+                  <button type="button" onClick={() => setRules(rules.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)))}
+                    className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                    style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? "On" : "Off"}</button>
+                  <Button sm onClick={() => setForm(r)}>Edit</Button>
+                  <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) setForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {rules.length === 0 && !form && (
+        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">No discounts yet — pick a type above to create your first rule.</Card>
+      )}
+
+      <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11.5px] text-[var(--ink-3)]">
+        <b className="text-[var(--ink-2)]">How these stack:</b> multi-session discounts are applied after multi-person ones have been calculated, then early bird. If two rules conflict, the parent is offered the best price.
+      </div>
+    </div>
+  );
+}
+
+// Inline on each step: reword the heading this step's content appears under on
+// the customer page. Blank keeps the wording shown as the placeholder.
+function HeadingFields({ d, upd, sectionKey }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; sectionKey: string }) {
+  const def = SECTION_KEYS.find((s) => s.key === sectionKey);
+  if (!def) return null;
+  const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
+  return (
+    <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+      <div className="text-[11.5px] font-bold">How this appears on the customer page</div>
+      <div className="mb-2 text-[11px] text-[var(--ink-3)]">Leave blank to use the wording shown.</div>
+      <div className="flex flex-wrap gap-2">
+        <div className="min-w-[150px] flex-1">
+          <FieldLabel>Small label above</FieldLabel>
+          <Input value={d.headings?.[`${sectionKey}.eyebrow`] ?? ""} onChange={(e) => set(`${sectionKey}.eyebrow`, e.target.value)} placeholder={def.eyebrow} className="w-full text-[12px]" />
+        </div>
+        <div className="min-w-[150px] flex-1">
+          <FieldLabel>Heading</FieldLabel>
+          <Input value={d.headings?.[`${sectionKey}.title`] ?? ""} onChange={(e) => set(`${sectionKey}.title`, e.target.value)} placeholder={sectionKey === "about" ? d.descriptionSection || def.title : def.title} className="w-full text-[12px]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Reword every heading a parent sees. Blank = use the wording shown as the
 // placeholder.
 function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
@@ -1173,7 +1477,8 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   };
   return (
     <div className="max-w-[720px]">
-      <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <StepHead n={9} kicker="STEP 9 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
           <SectionHead>Your add-ons — tick the ones for this listing</SectionHead>
@@ -1224,7 +1529,8 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   };
   return (
     <div className="max-w-[720px]">
-      <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
+      <StepHead n={10} kicker="STEP 10 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
+      <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 flex flex-col gap-2">
         {local.staff.map((m) => {
           const on = d.staffIds.includes(m.id);
@@ -1268,7 +1574,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   const policies = CANCELLATION_POLICIES;
   return (
     <div className="max-w-[720px]">
-      <StepHead n={10} kicker="STEP 10 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then go live." />
+      <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then go live." />
       <SectionHead>Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
@@ -1309,6 +1615,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   const [basket, setBasket] = useState<BasketItem[]>([]);
   const [stage, setStage] = useState<"pick" | "checkout" | "done">("pick");
   const [child, setChild] = useState("");
+  const [attendees, setAttendees] = useState(1);
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const rule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
@@ -1336,7 +1643,14 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     });
   }
   const canAdd = !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
-  const total = basket.reduce((s, x) => s + x.price, 0);
+  // Automatic discounts come off here so the basket shows what's really owed.
+  const subtotal = basket.reduce((s, x) => s + x.price, 0) * attendees;
+  const { lines: discountLines, total } = applyDiscounts(
+    d.discounts ?? [],
+    basket.map((x) => ({ name: x.name, price: x.price, days: x.dates.length })),
+    attendees,
+  );
+  const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
   const daysStr = (iso: string[]) => iso.map((x) => new Date(`${x}T00:00:00Z`).getUTCDate()).join(", ");
   const addToBasket = () => {
     if (!canAdd || !pass) return;
@@ -1350,8 +1664,48 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     setSel([]);
   };
   const removeItem = (id: string) => setBasket((b) => b.filter((y) => y.id !== id));
-  const reset = () => { setBasket([]); setChild(""); setStage("pick"); };
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, total, daysStr, addToBasket, removeItem, reset };
+  // One instruction, shown both in the card header and above the calendar.
+  const hint = !pass
+    ? ""
+    : isSingle
+      ? `Tap every day you'd like — each one is a single-day pass (${sel.length} selected)`
+      : rule === "blocks"
+        ? `Tap a week to take the fixed ${need}-day block`
+        : `Pick ${need} day${need === 1 ? "" : "s"} — ${bookRuleDesc(rule, need)} (${sel.length}/${need})`;
+  // What the basket would look like if they added the current selection — so
+  // an already-earned discount is stated before they commit, not after.
+  const addPreview = (() => {
+    if (!canAdd || !pass) return null;
+    const pending = isSingle
+      ? sel.map(() => ({ name: pass.name, price: unitPrice, days: 1 }))
+      : [{ name: pass.name, price: unitPrice, days: sel.length }];
+    const items = [...basket.map((x) => ({ name: x.name, price: x.price, days: x.dates.length })), ...pending];
+    const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
+    const res = applyDiscounts(d.discounts ?? [], items, attendees);
+    const off = Math.max(0, Math.round((gross - res.total) * 100) / 100);
+    return off > 0 ? { ...res, gross, off } : null;
+  })();
+
+  // "Add 3 more dates to get 10% off" — how close they are to the nearest
+  // discount they haven't triggered yet. Counts what's in the basket plus
+  // what's currently selected, so it ticks down as they tap.
+  // Multi-session only: this sits above the calendar, where adding dates is the
+  // action available. A "add more children" prompt here isn't actionable —
+  // that counter lives down in the basket.
+  const nudge = (() => {
+    const sessionsNow = (basket.reduce((s, x) => s + x.dates.length, 0) + sel.length) * attendees;
+    const options = (d.discounts ?? [])
+      .filter((r) => r.enabled && r.kind === "session" && sessionsNow <= r.moreThan)
+      .map((r) => ({
+        need: r.moreThan + 1 - sessionsNow,
+        amt: r.method === "percent" ? `${r.value}% off` : `${money(r.value)} off`,
+      }))
+      .sort((a, b) => a.need - b.need);
+    const best = options[0];
+    return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}` : null;
+  })();
+  const reset = () => { setBasket([]); setChild(""); setAttendees(1); setStage("pick"); };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, setAttendees, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, daysStr, hint, nudge, addPreview, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null };
 
@@ -1397,6 +1751,17 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
         <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Book your place</span>
         {b.pass && <span className="text-[13px] text-[#7a8194]">from <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
       </div>
+      {b.hint && (
+        <div className="mt-2.5 flex items-start gap-2 rounded-2xl px-3 py-2 text-[12px] font-bold" style={{ background: SOFTb, color: DEEP }}>
+          <span aria-hidden>👉</span><span>{b.hint}</span>
+        </div>
+      )}
+      {/* How close they are to the next discount. */}
+      {b.nudge && (
+        <div className="mt-1.5 flex items-start gap-2 rounded-2xl px-3 py-2 text-[12px] font-extrabold" style={{ background: "#e4f8ee", color: "#047857" }}>
+          <span aria-hidden>⚡</span><span>{b.nudge}</span>
+        </div>
+      )}
       {b.passes.length === 0 ? <div className="mt-2 text-[13px] text-[#7a8194]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
         <>
           <div className="mb-2 mt-4 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">Pick a pass</div>
@@ -1410,7 +1775,6 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
             </div>
           </>}
           {b.pass && <div className="mb-1.5 mt-4 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{b.isSingle ? "Pick any days" : "Pick your days"}</div>}
-          {b.pass && <div className="mb-2 text-[12px] text-[#7a8194]">{b.isSingle ? `Tap every day you'd like — each one is a single-day pass (${b.sel.length} selected)` : b.rule === "blocks" ? `Tap a week for the fixed ${b.need}-day block.` : `Pick ${b.need} day${b.need === 1 ? "" : "s"} — ${bookRuleDesc(b.rule, b.need)} (${b.sel.length}/${b.need})`}</div>}
           {weeks.length ? <div className="flex flex-col gap-3">
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Week {w.n} <span className="font-semibold text-[#a6adba]">· from {fmtDate(w.mon)}</span></div>
@@ -1419,13 +1783,62 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: TEAL }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>{b.isSingle ? (b.canAdd ? `Add ${b.sel.length} × ${b.pass?.name} · ${money(b.unitPrice * b.sel.length)}` : "Pick at least one day") : b.canAdd ? `Add ${b.pass?.name} · ${money(b.unitPrice)}` : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more day${b.need - b.sel.length === 1 ? "" : "s"}` : "Pick a pass"}</button>
+          {b.addPreview && (
+            <div className="mt-2 rounded-2xl p-3" style={{ background: "#e4f8ee" }}>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#047857" }}>
+                ⚡ {b.addPreview.lines.length === 1 ? "Discount applied" : `${b.addPreview.lines.length} discounts applied`}
+              </div>
+              <div className="mt-1.5 flex flex-col gap-1">
+                {b.addPreview.lines.map((l, i) => (
+                  <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                    <span className="truncate" style={{ color: "#0f766e" }}>{l.name}</span>
+                    <b className="flex-none" style={{ color: "#047857" }}>−{money(l.amount)}</b>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex items-baseline justify-between border-t pt-2" style={{ borderColor: "#bfe8d4" }}>
+                <span className="text-[11.5px] font-bold" style={{ color: "#0f766e" }}>You&apos;ll pay</span>
+                <span className="flex items-baseline gap-2">
+                  <s className="text-[11px]" style={{ color: "#7aa894" }}>{money(b.addPreview.gross)}</s>
+                  <b className="text-[16px] font-extrabold" style={{ color: "#047857" }}>{money(b.addPreview.total)}</b>
+                </span>
+              </div>
+            </div>
+          )}
         </>
       )}
       <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
         <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>Your basket</span><span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
         {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">Nothing added yet — pick a pass and dates.</div> :
           <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[12px]" style={{ background: "#f4f7ff" }}><span className="text-[#5b6478]"><b style={{ color: INKp }}>{x.name}</b>{x.timing ? <span className="text-[#a6adba]"> · {x.timing}</span> : null} <span className="text-[#a6adba]">· {b.daysStr(x.dates)}</span></span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
-        <div className="mt-3 flex items-center justify-between text-[14px]"><span className="text-[#7a8194]">Total</span><b style={{ color: DEEP }}>{money(b.total)}</b></div>
+        {b.basket.length > 0 && (
+          <>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-[12px] text-[#7a8194]">Children</span>
+              <span className="ml-auto inline-flex items-center gap-1.5">
+                <button type="button" onClick={() => b.setAttendees((n) => Math.max(1, n - 1))} className="h-6 w-6 rounded-full border-2 font-extrabold" style={{ borderColor: LINEp, color: INKp }}>−</button>
+                <b className="w-5 text-center text-[13px]" style={{ color: INKp }}>{b.attendees}</b>
+                <button type="button" onClick={() => b.setAttendees((n) => n + 1)} className="h-6 w-6 rounded-full border-2 font-extrabold" style={{ borderColor: LINEp, color: INKp }}>+</button>
+              </span>
+            </div>
+            {b.discountLines.length > 0 && (
+              <div className="mt-2 rounded-xl p-2" style={{ background: "#e4f8ee" }}>
+                {b.discountLines.map((l, i) => (
+                  <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: "#047857" }}>
+                    <span className="pr-2">🎉 {l.name}</span><b>−{money(l.amount)}</b>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        <div className="mt-3 flex items-center justify-between text-[14px]">
+          <span className="text-[#7a8194]">Total</span>
+          <span className="flex items-baseline gap-2">
+            {b.saved > 0 && <s className="text-[12px] text-[#a6adba]">{money(b.subtotal)}</s>}
+            <b style={{ color: DEEP }}>{money(b.total)}</b>
+          </span>
+        </div>
         <button className="mt-3 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: DEEP }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}>Checkout ({b.basket.length})</button>
       </div>
     </div>
@@ -1434,7 +1847,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff";
+  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
   const on = { background: "rgba(198,255,0,.1)", color: LIME, borderColor: LIME };
@@ -1466,9 +1879,22 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
   );
   return (
     <div className={wrap} style={wrapStyle}>
-      <div className="flex items-baseline justify-between px-5 py-3.5" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>
-        <span className="text-[18px] font-black italic uppercase text-white">Book your place</span>
-        {b.pass && <span className="text-[12px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
+      <div className="px-5 py-3.5" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>
+        <div className="flex items-baseline justify-between">
+          <span className="text-[18px] font-black italic uppercase text-white">Book your place</span>
+          {b.pass && <span className="text-[12px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
+        </div>
+        {b.hint && (
+          <div className="mt-2 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1.5 text-[11.5px] font-semibold text-white backdrop-blur-sm">
+            <span aria-hidden>👉</span><span>{b.hint}</span>
+          </div>
+        )}
+        {/* How close they are to the next discount. */}
+        {b.nudge && (
+          <div className="mt-1.5 flex items-start gap-1.5 rounded px-2.5 py-1.5 text-[11.5px] font-black" style={{ background: LIME, color: "#12280a" }}>
+            <span aria-hidden>⚡</span><span>{b.nudge}</span>
+          </div>
+        )}
       </div>
       <div className="p-5">
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
@@ -1480,20 +1906,68 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
             {b.pass && <div className="mb-1.5 mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f9bb0]">Dates</div>}
-            {b.pass && <div className="mb-2 text-[12px] text-[#8f9bb0]">{b.isSingle ? `Tap every day you'd like — each is a single-day pass (${b.sel.length} selected)` : b.rule === "blocks" ? `Tap a week for the fixed ${b.need}-day block.` : `Pick ${b.need} day${b.need === 1 ? "" : "s"} — ${bookRuleDesc(b.rule, b.need)} (${b.sel.length}/${b.need})`}</div>}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-black leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
             {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: CY }}><span className="inline-block h-2 w-2" style={{ background: LIME }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>{b.isSingle ? (b.canAdd ? `Add ${b.sel.length} × ${b.pass?.name} · ${money(b.unitPrice * b.sel.length)}` : "Pick at least one day") : b.canAdd ? `Add ${b.pass?.name} · ${money(b.unitPrice)}` : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more` : "Pick a pass"}</span></button>
+            {b.addPreview && (
+              <div className="mt-2 border-l-[3px] p-3" style={{ borderLeftColor: LIME, background: CELL }}>
+                <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
+                  ⚡ {b.addPreview.lines.length === 1 ? "Discount applied" : `${b.addPreview.lines.length} discounts applied`}
+                </div>
+                <div className="mt-1.5 flex flex-col gap-1">
+                  {b.addPreview.lines.map((l, i) => (
+                    <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                      <span className="truncate" style={{ color: "#c3ccdb" }}>{l.name}</span>
+                      <b className="flex-none" style={{ color: LIME }}>−{money(l.amount)}</b>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-baseline justify-between border-t pt-2" style={{ borderColor: LINEs }}>
+                  <span className="text-[11.5px] font-bold" style={{ color: MUTs }}>You&apos;ll pay</span>
+                  <span className="flex items-baseline gap-2">
+                    <s className="text-[11px]" style={{ color: MUTs }}>{money(b.addPreview.gross)}</s>
+                    <b className="text-[16px] font-black italic uppercase text-white">{money(b.addPreview.total)}</b>
+                  </span>
+                </div>
+              </div>
+            )}
           </>
         )}
         <div className="mt-5 border-t pt-4" style={{ borderColor: LINEs }}>
           <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">Your basket</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
           {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">Nothing added yet — pick a pass and dates.</div> :
             <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-2 text-[12px] text-[#c3ccdb]"><span><b className="text-white">{x.name}</b>{x.timing ? <span className="text-[#8f9bb0]"> · {x.timing}</span> : null} <span className="text-[#8f9bb0]">· {b.daysStr(x.dates)}</span></span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
-          <div className="mt-3 flex items-center justify-between text-[14px]"><span className="text-[#8f9bb0]">Total</span><b className="italic text-white">{money(b.total)}</b></div>
+          {b.basket.length > 0 && (
+            <>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-[12px]" style={{ color: MUTs }}>Children</span>
+                <span className="ml-auto inline-flex items-center gap-1.5">
+                  <button type="button" onClick={() => b.setAttendees((n) => Math.max(1, n - 1))} className="h-6 w-6 border font-black text-white" style={{ borderColor: LINEs }}>−</button>
+                  <b className="w-5 text-center text-[13px] text-white">{b.attendees}</b>
+                  <button type="button" onClick={() => b.setAttendees((n) => n + 1)} className="h-6 w-6 border font-black text-white" style={{ borderColor: LINEs }}>+</button>
+                </span>
+              </div>
+              {b.discountLines.length > 0 && (
+                <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
+                  {b.discountLines.map((l, i) => (
+                    <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: LIME }}>
+                      <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          <div className="mt-3 flex items-center justify-between text-[14px]">
+            <span style={{ color: MUTs }}>Total</span>
+            <span className="flex items-baseline gap-2">
+              {b.saved > 0 && <s className="text-[12px]" style={{ color: MUTs }}>{money(b.subtotal)}</s>}
+              <b className="italic text-white">{money(b.total)}</b>
+            </span>
+          </div>
           <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>Checkout ({b.basket.length})</span></button>
         </div>
       </div>
@@ -1632,11 +2106,17 @@ function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, i
         {/* title above the image */}
         <div className="mb-4">
           {/* every chosen type, sized so the row always fits */}
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]" style={{ color: BLUE }}>
+          {/* Types in blue, location in muted grey — one colour ran them together. */}
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]">
             {cats.length ? cats.map((c, i) => (
-              <span key={c.id}>{i > 0 && <span className="opacity-40"> / </span>}{c.name}</span>
-            )) : <span>Holiday camp</span>}
-            {town && <><span className="opacity-40">·</span><span className="opacity-70">{town}</span></>}
+              <span key={c.id} style={{ color: BLUE }}>{i > 0 && <span style={{ color: MUTp, opacity: 0.5 }}> / </span>}{c.name}</span>
+            )) : <span style={{ color: BLUE }}>Holiday camp</span>}
+            {town && (
+              <>
+                <span style={{ color: MUTp, opacity: 0.5 }}>|</span>
+                <span style={{ color: MUTp }}>{town}</span>
+              </>
+            )}
           </div>
           <h1 className="mt-1 font-extrabold leading-[1.04] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 34 : 24 }}>{d.title || "Your listing title"}</h1>
         </div>
@@ -1660,7 +2140,7 @@ function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, i
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff"], ["📆", "When", runLabel, "#e4f8ee"], ["👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5"]] as const).map(([e, k, v, tint], i) => (
+          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff"], ["📆", "When", runLabel, "#e4f8ee"], ["🧒", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5"]] as const).map(([e, k, v, tint], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-l sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div></div>
@@ -1723,14 +2203,20 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
       <div className="px-6 pb-4 pt-6">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase leading-tight tracking-[0.12em]" style={{ color: LIME }}>
+        {/* Types in lime, location in cyan — one colour for both ran them together. */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase leading-tight tracking-[0.12em]">
           {cats.length ? cats.map((c, i) => (
             <span key={c.id} className="inline-flex items-center gap-2">
-              {i > 0 && <span className="opacity-40">/</span>}
-              {c.name}
+              {i > 0 && <span style={{ color: MUTs, opacity: 0.5 }}>/</span>}
+              <span style={{ color: LIME }}>{c.name}</span>
             </span>
-          )) : <span>Holiday camp</span>}
-          {town && <><span className="opacity-40">·</span><span className="opacity-80">{town}</span></>}
+          )) : <span style={{ color: LIME }}>Holiday camp</span>}
+          {town && (
+            <>
+              <span style={{ color: MUTs, opacity: 0.5 }}>|</span>
+              <span style={{ color: CY }}>{town}</span>
+            </>
+          )}
         </div>
         <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 48 : 30, lineHeight: .92, color: "#fff" }}>{d.title || "Your listing title"}</h1>
       </div>
@@ -1742,7 +2228,7 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
-        {([["📍", venue?.name || town || "Venue TBC"], ["📆", runLabel], ["👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages"]] as const).map(([e, v], i) => (
+        {([["📍", venue?.name || town || "Venue TBC"], ["📆", runLabel], ["🧒", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages"]] as const).map(([e, v], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-l sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
@@ -1752,38 +2238,60 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
       </div>
       <div className={full ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
         {/* stats strip */}
-        {/* pass prices — named, not a bare "from" figure */}
-        {passSummary.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {passSummary.map((p) => (
-              <span key={p.name} className="inline-flex items-baseline gap-1.5 border px-3 py-1.5" style={{ borderColor: LINEs, background: PANEL }}>
-                <span className="text-[11px] font-bold uppercase tracking-[0.06em]" style={{ color: MUTs }}>{p.name}</span>
-                <span className={`text-[13px] font-black ${cond}`} style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>from {money(p.price)}</span>
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Spec strip: ages, availability, all passes in one box, discounts in
+            the next — so the prices don't eat the whole row. */}
         {(() => {
-          const stats: [string, string, boolean][] = [
-            [d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All", "ages", true],
-            [spacesLeft !== null ? String(spacesLeft) : "—", spacesLeft !== null ? "spaces left" : "capacity", false],
-            [String(cats.length || 1), cats.length === 1 ? "activity type" : "activity types", false],
-          ];
+          const live = (d.discounts ?? []).filter((r) => r.enabled);
+          const tile = "border-b border-l px-4 py-3.5 first:border-l-0";
+          const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
-            <div className="mt-5 grid grid-cols-3 border" style={{ borderColor: LINEs, background: PANEL }}>
-              {stats.map(([b, k, hl], i) => (
-                <div key={i} className="border-l px-4 py-3.5 first:border-l-0" style={{ borderColor: LINEs, background: hl ? LIME : "transparent" }}>
-                  <div className={`truncate text-[22px] font-black ${cond}`} style={{ color: hl ? "#12280a" : "#fff" }}>{b}</div>
-                  <div className="text-[9.5px] font-bold uppercase tracking-[0.12em]" style={{ color: hl ? "#3a5a00" : MUTs }}>{k}</div>
+            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-4" style={{ borderColor: LINEs, background: PANEL }}>
+              <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
+                <div className={lab} style={{ color: MUTs }}>ages</div>
+                <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>{d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All"}</div>
+              </div>
+              <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
+                <div className={lab} style={{ color: MUTs }}>{spacesLeft !== null ? "spaces left" : "capacity"}</div>
+                <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{spacesLeft !== null ? String(spacesLeft) : "—"}</div>
+              </div>
+              {passSummary.length > 0 && (
+                <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  <div className={lab} style={{ color: MUTs }}>passes</div>
+                  <div className="mt-1.5 flex flex-col gap-1">
+                    {passSummary.map((pp) => (
+                      <div key={pp.name} className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-[11px]" style={{ color: MUTs }}>{pp.name}</span>
+                        <b className={`flex-none text-[13px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+              <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                <div className={lab} style={{ color: MUTs }}>discounts</div>
+                {live.length === 0 ? (
+                  <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>None on this camp</div>
+                ) : (
+                  <div className="mt-1.5 flex flex-col gap-1">
+                    {live.slice(0, 3).map((r) => (
+                      <div key={r.id} className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-[11px]" style={{ color: MUTs }}>{r.name.trim() || ruleSummary(r)}</span>
+                        <b className="flex-none text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>
+                          {r.method === "percent" ? `-${r.value}%` : `-${money(r.value)}`}
+                        </b>
+                      </div>
+                    ))}
+                    {live.length > 3 && <div className="text-[10.5px]" style={{ color: MUTs }}>+{live.length - 3} more</div>}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })()}
 
         <div className={`mt-8 ${full ? "grid items-start gap-7 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-6">
-            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>The camp</div><p className="mt-1.5 text-[15px] leading-[1.7]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
+            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[15px] leading-[1.7]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
             {!full && <div>{widget}</div>}
             {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
             {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
