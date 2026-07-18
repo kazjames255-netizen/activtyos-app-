@@ -19,8 +19,13 @@ export interface DiscountRule {
   enabled: boolean;
   /** person: applies when attendees > this. session: when sessions > this. */
   moreThan: number;
-  /** person only — who in the booking gets the discount. */
-  appliesTo: "all" | "after1" | "second";
+  /**
+   * @deprecated Every child on the line gets the discount. Kept so existing
+   * rules still parse; "after1" and "second" now behave as "all" — a sibling
+   * discount that quietly applied to one of two children was read as a bug
+   * every time it was seen.
+   */
+  appliesTo?: "all" | "after1" | "second";
   method: "price" | "subtract" | "percent";
   value: number; // £ for price/subtract, % for percent
   /** early only — must book on or before this date. */
@@ -40,7 +45,7 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
     passNames: [],
     enabled: true,
     moreThan: kind === "session" ? 3 : 1,
-    appliesTo: "after1",
+    appliesTo: "all",
     method: kind === "session" ? "percent" : "subtract",
     value: 0,
     beforeDate: "",
@@ -50,11 +55,10 @@ export function emptyRule(kind: DiscountKind): DiscountRule {
 /** Plain-English summary shown to the operator and the booker. */
 export function ruleSummary(r: DiscountRule): string {
   const amount = r.method === "percent" ? `${r.value}%` : money(r.value);
-  const who = r.appliesTo === "all" ? "every attendee" : r.appliesTo === "second" ? "attendee 2 only" : "each attendee after the first";
   if (r.kind === "person")
     return r.method === "price"
-      ? `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${who} pays ${amount} per ticket`
-      : `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${amount} off for ${who}`;
+      ? `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — every child pays ${amount} per ticket`
+      : `More than ${r.moreThan} child${r.moreThan === 1 ? "" : "ren"} on a pass — ${amount} off every child`;
   if (r.kind === "session") return `Book more than ${r.moreThan} sessions — ${amount} off`;
   return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
 }
@@ -69,6 +73,8 @@ export interface DiscountLine {
    * lump at the bottom. Callers that don't need it can ignore it.
    */
   perItem?: number[];
+  /** "10%" / "£5 off" — and who it covers, so £3 on a £60 line makes sense. */
+  terms?: string;
 }
 /**
  * Work out what comes off a basket. Returns each applied rule's saving.
@@ -93,6 +99,10 @@ export function applyDiscounts(
   const live = rules.filter((r) => r.enabled);
   const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
   const scopeOf = (r: DiscountRule) => (r.passNames.length === 0 ? "All passes" : r.passNames.join(", "));
+  const termsOf = (r: DiscountRule) => {
+    const amount = r.method === "percent" ? `${r.value}%` : r.method === "subtract" ? `${money(r.value)} off` : `${money(r.value)} each`;
+    return r.kind === "person" ? `${amount} · every child` : amount;
+  };
   const off = (r: DiscountRule, unit: number) =>
     r.method === "percent" ? (unit * r.value) / 100 : r.method === "subtract" ? Math.min(unit, r.value) : Math.max(0, unit - r.value);
 
@@ -102,19 +112,18 @@ export function applyDiscounts(
   // 1) Multi-person — priced per discounted attendee, per covered ticket.
   // Judged line by line: two children on the same week earn it, one child on
   // each of two weeks doesn't — they're never actually a pair.
-  const discountedHeads = (r: DiscountRule, n: number) =>
-    Math.max(0, r.appliesTo === "all" ? n : r.appliesTo === "second" ? Math.min(1, n - 1) : n - 1);
+  const discountedHeads = (n: number) => Math.max(0, n);
   const person = live.filter((r) => r.kind === "person");
   let bestPerson: { r: DiscountRule; amount: number; perItem: number[] } | null = null;
   for (const r of person) {
     const perItem = items.map((i) =>
-      covers(r, i.name) && headsOf(i) > r.moreThan ? off(r, i.price) * discountedHeads(r, headsOf(i)) : 0,
+      covers(r, i.name) && headsOf(i) > r.moreThan ? off(r, i.price) * discountedHeads(headsOf(i)) : 0,
     );
     const amount = perItem.reduce((s, n) => s + n, 0);
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
   }
   if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), perItem: bestPerson.perItem });
+    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), terms: termsOf(bestPerson.r), perItem: bestPerson.perItem });
     running -= bestPerson.amount;
   }
 
@@ -147,7 +156,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
+    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r), terms: termsOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
     running -= bestSession.amount;
   }
 
@@ -159,7 +168,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
+    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), terms: termsOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
     running -= bestEarly.amount;
   }
 
