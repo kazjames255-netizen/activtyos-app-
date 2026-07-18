@@ -8,6 +8,30 @@ Thanks for that — the Blocks builder is fully wired to it and working.
 
 ---
 
+## 0. Three decisions we need from you first
+
+These shape the listing schema, so they're worth settling **before** §2 is built
+rather than after. They're small decisions with large knock-on effects.
+
+1. **Does saving a listing generate dated `blocks`?** Bookings attach to a
+   `blockId` — a dated run — but the builder produces a date *range* plus
+   weekdays and exclusions (`runFrom`, `runTo`, `days`, `datesOff`). Something has
+   to turn one into the other, and the server on save seems the natural place.
+
+2. **If not, is free-text `dates` acceptable?** It's the quick path, but
+   `POST /api/bookings` only enforces capacity and waitlist when there's a real
+   `blockId`. Listings carry "60 capacity / 60 spaces left", so this probably
+   means being able to oversell.
+
+3. **Where does capacity live?** A listing has `maxAttendees` and
+   `capacityScope: "day" | "listing"`. Per-day capacity in particular needs the
+   dated blocks to hang off.
+
+I'm holding off building the booking write until these are answered — I'd rather
+not build it twice. Detail in §6.
+
+---
+
 ## 1. What I've been doing today
 
 Front-end only, all on `blocks-server-api`.
@@ -266,10 +290,15 @@ the Bookings area as "Take a booking". The components are already extracted
 
 ## Suggested order
 
-1. **Listing content schema** (§2) — unblocks everything else.
-2. **Discounts persisted + priced server-side** (§3, §4).
-3. **Dated runs decision** (§6).
+1. **Answer §0** — the dated-runs and capacity decisions, since they change how
+   the listing schema is shaped.
+2. **Listing content schema** (§2) — unblocks everything else.
+3. **Discounts persisted + priced server-side** (§3, §4).
 4. **Booking write**, then move the flow into Bookings.
+
+The UI move itself is cheap — `useBooking` and `CheckoutPanel` are already
+extracted, so it's a wrapper and a listing picker. It's the data underneath that
+depends on the above.
 
 Happy to adjust the shapes to whatever suits the backend — the front-end can map.
 Anything above that's easier a different way, just say and I'll change our side.
