@@ -5,7 +5,7 @@ import { api, post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import type { LocalState, StaffMember } from "./FreelancerListingsApp";
+import type { AddonTemplate, LocalState, StaffMember } from "./FreelancerListingsApp";
 import * as blocksApi from "@/features/blocks/blocksApi";
 import type { ResolvedPricing } from "@/features/blocks/blocksApi";
 
@@ -235,6 +235,10 @@ export interface WizardDraft {
   maxAttendees: string;
   capacityScope: "day" | "listing";
   showSpaces: boolean;
+  /** Which category is featured on the hero image when several are chosen. */
+  heroCategoryId?: string | null;
+  /** Customer-page section headings, keyed by SECTION_KEYS — all editable. */
+  headings?: Record<string, string>;
   descriptionSection: string;
   description: string;
   sections: { id: string; type: string; text: string }[];
@@ -262,6 +266,27 @@ export interface WizardDraft {
   pageStyle?: PageTheme;
 }
 export type PageTheme = "playful" | "sport" | "navy";
+
+// Every heading a parent sees, so the operator can reword all of them.
+// `about` falls back to the editable "Section title" from step 2.
+export const SECTION_KEYS = [
+  { key: "about", label: "About the camp", eyebrow: "The camp", title: "How it runs" },
+  { key: "learn", label: "What you'll learn", eyebrow: "What you'll learn", title: "Skills that stick" },
+  { key: "included", label: "What's included", eyebrow: "What's included", title: "In the price" },
+  { key: "safety", label: "Safety", eyebrow: "Safety", title: "Covered" },
+  { key: "send", label: "SEND & accessibility", eyebrow: "SEND & access", title: "Everyone plays" },
+  { key: "team", label: "Meet the team", eyebrow: "The team", title: "Your child's crew" },
+  { key: "addons", label: "Optional add-ons", eyebrow: "Add-ons", title: "Extras" },
+  { key: "gallery", label: "Gallery", eyebrow: "Gallery", title: "In action" },
+] as const;
+/** Heading for a section — the operator's wording if set, else the default. */
+export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title"): string {
+  const def = SECTION_KEYS.find((s) => s.key === key);
+  const custom = d.headings?.[`${key}.${field}`]?.trim();
+  if (custom) return custom;
+  if (key === "about" && field === "title" && d.descriptionSection.trim()) return d.descriptionSection.trim();
+  return def ? def[field] : "";
+}
 
 export function emptyDraft(): WizardDraft {
   return {
@@ -342,7 +367,14 @@ export function setDraftArchived(key: string, archived: boolean) {
 export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean } {
   const imgs = ((draft.images as unknown as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const dates = genDates(draft.runFrom, draft.runTo, draft.days).filter((x) => !(draft.datesOff || []).includes(x));
-  const dateLabel = draft.runFrom && draft.runTo ? `${fmtDate(draft.runFrom)} – ${fmtDate(draft.runTo)}` : null;
+  // Show the year when the run leaves the current one — otherwise a mistyped
+  // end year looks identical to a normal range while quietly inflating the
+  // day count.
+  const thisYear = new Date().getUTCFullYear();
+  const yearOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCFullYear();
+  const showYear = !!draft.runFrom && !!draft.runTo && (yearOf(draft.runFrom) !== thisYear || yearOf(draft.runTo) !== thisYear || yearOf(draft.runFrom) !== yearOf(draft.runTo));
+  const withYear = (iso: string) => (showYear ? `${fmtDate(iso)} ${yearOf(iso)}` : fmtDate(iso));
+  const dateLabel = draft.runFrom && draft.runTo ? `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}` : null;
   const capacity = parseInt(draft.maxAttendees, 10) || null;
   return { cover: imgs[0] || null, dateLabel, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft) };
 }
@@ -532,7 +564,7 @@ export function ListingWizard({
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
-            {stepKey === "preview" && <div><StepHead n={7} kicker="STEP 7 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><ParentPreview {...previewProps} full /></div>}
+            {stepKey === "preview" && <div><StepHead n={7} kicker="STEP 7 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "staff" && <StaffStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "policy" && <PolicyStep d={d} upd={upd} />}
@@ -791,6 +823,25 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
           </button>
         ))}
       </div>
+      {/* Every chosen type is listed on the page, but only one fits the hero
+          image badge — let the operator say which. */}
+      {d.categoryIds.length > 1 && (
+        <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="text-[11.5px] font-bold">Which type shows on the main image?</div>
+          <div className="mb-2 text-[11px] text-[var(--ink-3)]">All {d.categoryIds.length} appear above the title — this one gets the badge on the photo.</div>
+          <div className="flex flex-wrap gap-1.5">
+            {local.categories.filter((c) => d.categoryIds.includes(c.id)).map((c) => {
+              const on = (d.heroCategoryId ?? d.categoryIds[0]) === c.id;
+              return (
+                <button key={c.id} type="button" onClick={() => upd({ heroCategoryId: c.id })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
+                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                  {on ? "★ " : ""}{c.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <SectionHead>Capacity</SectionHead>
       <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
@@ -1028,6 +1079,86 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
 }
 
 // ── Step: Add-ons (reusable library) ───────────────────────────────────────
+// Reword every heading a parent sees. Blank = use the wording shown as the
+// placeholder.
+function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const [open, setOpen] = useState(false);
+  const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
+  return (
+    <Card className="mb-3 p-3.5">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+        <span>
+          <span className="text-[13px] font-extrabold">Section headings</span>
+          <span className="ml-2 text-[11.5px] text-[var(--ink-3)]">Reword any heading parents see — leave blank for the default.</span>
+        </span>
+        <span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 flex flex-col gap-2.5">
+          {SECTION_KEYS.map((s) => (
+            <div key={s.key} className="grid grid-cols-[130px_1fr_1fr] items-center gap-2">
+              <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{s.label}</span>
+              <Input value={d.headings?.[`${s.key}.eyebrow`] ?? ""} onChange={(e) => set(`${s.key}.eyebrow`, e.target.value)} placeholder={s.eyebrow} className="w-full text-[12px]" />
+              <Input value={d.headings?.[`${s.key}.title`] ?? ""} onChange={(e) => set(`${s.key}.title`, e.target.value)} placeholder={s.key === "about" ? d.descriptionSection || s.title : s.title} className="w-full text-[12px]" />
+            </div>
+          ))}
+          <div className="text-[11px] text-[var(--ink-3)]">Left = the small label above the heading; right = the heading itself. “About the camp” follows your Section title from step 2 unless you set one here.</div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// Give an add-on an emoji (from the bank) or a photo — shown next to it on the
+// customer page. A photo wins over an emoji.
+function AddonIcon({ addon, patchLocal }: { addon: AddonTemplate; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const set = (patch: Partial<AddonTemplate>) =>
+    patchLocal((s) => ({ ...s, addons: s.addons.map((x) => (x.id === addon.id ? { ...x, ...patch } : x)) }));
+  async function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) set({ image: await fileToImage(f), emoji: undefined });
+    e.target.value = "";
+    setOpen(false);
+  }
+  const shown = q.trim() ? EMOJI_BANK.filter((_, i) => i < 300).filter((x) => x.includes(q.trim())) : EMOJI_BANK.slice(0, 300);
+  return (
+    <span className="relative">
+      <button type="button" onClick={() => setOpen((v) => !v)} title="Choose an emoji or image"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] hover:border-[var(--brand)]">
+        {addon.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={addon.image} alt="" className="h-full w-full rounded-lg object-cover" />
+        ) : addon.emoji || "🖼"}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-30 mt-1 w-[290px] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-lg">
+            <div className="mb-2 flex items-center gap-1.5">
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search emoji…" className="w-full text-[12px]" />
+              <Button sm onClick={() => fileRef.current?.click()}>Image</Button>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickImage} />
+            <div className="grid max-h-[190px] grid-cols-10 gap-0.5 overflow-y-auto">
+              {shown.map((e, i) => (
+                <button key={i} type="button" onClick={() => { set({ emoji: e, image: undefined }); setOpen(false); }}
+                  className="flex h-6 w-6 items-center justify-center rounded text-[15px] hover:bg-[var(--panel)]">{e}</button>
+              ))}
+            </div>
+            {(addon.emoji || addon.image) && (
+              <button type="button" onClick={() => { set({ emoji: undefined, image: undefined }); setOpen(false); }}
+                className="mt-2 w-full rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>
+            )}
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<"perday" | "bundle" | "once">("perday");
@@ -1055,6 +1186,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
                   <span className="text-[12.5px] font-bold">{a.name}</span>
                   <span className="text-[11px] text-[var(--ink-3)]">{types[a.type]} · {money(a.price)}</span>
                 </button>
+                <AddonIcon addon={a} patchLocal={patchLocal} />
                 <button type="button" onClick={() => { patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
@@ -1371,7 +1503,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
 
 function ParentPreview({ d, venue, local, booking, addons, full, theme = "playful", onTheme }: {
   d: WizardDraft; venue: { name: string; address: string } | null; local: LocalState;
-  booking: BlockBooking | null; addons: { name: string; type: string; price: number }[]; full?: boolean;
+  booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
 }) {
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
@@ -1386,8 +1518,13 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const emo = (o: string, fb: string) => OPT_EMOJI[o] || local.emojis?.[o] || fb;
 
   const fromPrice = booking && booking.passes.length ? Math.min(...booking.passes.map((pp) => pp.basePrice)) : null;
+  // "5 day pass from £150" reads far better than a bare "from £30". Cap at 3
+  // so the row always fits.
+  const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
+  // Which category sits on the hero image when several are chosen.
+  const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} />;
-  const p: PageProps = { d, venue, cats, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, spacesLeft };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -1411,10 +1548,11 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
 
 interface PageProps {
   d: WizardDraft; venue: { name: string; address: string } | null; cats: { id: string; name: string }[];
+  heroCat: { id: string; name: string } | null;
   town: string; runLabel: string; staff: LocalState["staff"]; staffNames: string[];
-  addons: { name: string; type: string; price: number }[]; imgs: ListingImage[];
+  addons: LocalState["addons"]; imgs: ListingImage[];
   widget: React.ReactNode; full?: boolean; emo: (o: string, fb: string) => string;
-  fromPrice: number | null; spacesLeft: number | null;
+  fromPrice: number | null; passSummary: { name: string; price: number }[]; spacesLeft: number | null;
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // Dark surfaces for the Sport-style pages — swappable so the same design can be
@@ -1473,7 +1611,7 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widget, full, emo }: PageProps) {
+function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
   const chip = (o: string, fb: string, i: number) => (
@@ -1493,14 +1631,32 @@ function PlayfulPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widg
       <div className={full ? "p-6 lg:p-7" : "p-5"}>
         {/* title above the image */}
         <div className="mb-4">
-          <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: BLUE }}>{[cats[0]?.name, town].filter(Boolean).join(" · ") || "Holiday camp"}</div>
+          {/* every chosen type, sized so the row always fits */}
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]" style={{ color: BLUE }}>
+            {cats.length ? cats.map((c, i) => (
+              <span key={c.id}>{i > 0 && <span className="opacity-40"> / </span>}{c.name}</span>
+            )) : <span>Holiday camp</span>}
+            {town && <><span className="opacity-40">·</span><span className="opacity-70">{town}</span></>}
+          </div>
           <h1 className="mt-1 font-extrabold leading-[1.04] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 34 : 24 }}>{d.title || "Your listing title"}</h1>
         </div>
         {/* hero image (no text on it) */}
         <div className="relative overflow-hidden rounded-[28px]" style={{ height: heroH }}>
           <HeroImages imgs={imgs} fallback={HERO_FALLBACK} />
-          {cats[0] && <span className="absolute left-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {cats[0].name}</span>}
+          {heroCat && <span className="absolute left-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
         </div>
+
+        {/* pass prices — named, not a bare "from" figure */}
+        {passSummary.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {passSummary.map((p) => (
+              <span key={p.name} className="inline-flex items-baseline gap-1.5 rounded-full bg-white px-3.5 py-2" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
+                <span className="text-[11.5px] font-bold" style={{ color: MUTp }}>{p.name}</span>
+                <span className="text-[13px] font-extrabold" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}>from {money(p.price)}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
@@ -1516,22 +1672,27 @@ function PlayfulPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widg
           <div className="flex flex-col gap-4">
             {d.description && <div className="rounded-3xl bg-white p-5 text-[15px] leading-[1.7]" style={{ color: "#3d4763", boxShadow: "0 2px 0 #e8edf7" }}>{d.description}</div>}
             {!full && <div>{widget}</div>}
-            {d.sections.some((s) => s.text) && <PlayCard e="🎯" tint="#e7f0ff" title="What we'll do">{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{s.type}</div><p className="mt-1 text-[13.5px] leading-[1.6]" style={{ color: "#3d4763" }}>{s.text}</p></div>)}</PlayCard>}
-            {d.outcomes.length > 0 && <PlayCard e="🌟" tint="#fff6e0" title="What you'll learn" sub="Skills and confidence every child takes home."><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => chip(o, "⭐", i))}</div></PlayCard>}
-            {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title="What's included" sub="Everything that comes with your booking."><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
-            {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title="Safety & wellbeing" sub="How we keep every child safe and cared for."><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
-            {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title="SEND & accessibility" sub="Support for additional needs."><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
+            {d.sections.some((s) => s.text) && <PlayCard e="🎯" tint="#e7f0ff" title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{s.type}</div><p className="mt-1 text-[13.5px] leading-[1.6]" style={{ color: "#3d4763" }}>{s.text}</p></div>)}</PlayCard>}
+            {d.outcomes.length > 0 && <PlayCard e="🌟" tint="#fff6e0" title={headingOf(d, "learn", "title")} sub={headingOf(d, "learn", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => chip(o, "⭐", i))}</div></PlayCard>}
+            {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title={headingOf(d, "included", "title")} sub={headingOf(d, "included", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
+            {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title={headingOf(d, "safety", "title")} sub={headingOf(d, "safety", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
+            {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
             {staff.length > 0 && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
                 <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-                  <div className="flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: "#e7f0ff" }}>👋</span><h2 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#232842]">Meet the team</h2></div>
+                  <div className="flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-2xl text-[17px]" style={{ background: "#e7f0ff" }}>👋</span><h2 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#232842]">{headingOf(d, "team", "title")}</h2></div>
                   <span className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-extrabold text-white" style={{ background: BLUE }}>{teamOpen ? "–" : "+"}</span>
                 </button>
                 {teamOpen && <div className={`mt-4 grid gap-3 ${grid2}`}>{staff.map((m, i) => <div key={m.id} className="rounded-2xl p-3.5" style={{ background: "#f4f7ff" }}><div className="flex items-center gap-2.5"><span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-white" style={{ background: [BLUE, "#ff5d8f", "#06d6a0", "#f59e0b"][i % 4] }}>{(m.first[0] || "?").toUpperCase()}</span><b className="text-[14px]" style={{ color: INKp }}>{m.first} {m.last}</b></div>{m.bio && <p className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: MUTp }}>{m.bio}</p>}</div>)}</div>}
               </div>
             )}
-            {addons.length > 0 && <PlayCard e="✨" tint="#e4f8ee" title="Optional add-ons" sub="Added at checkout."><div className="flex flex-col gap-2">{addons.map((a, i) => <div key={i} className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: "#f4f7ff" }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold" style={{ color: INKp }}><span className="flex h-7 w-7 items-center justify-center rounded-lg text-[13px] font-extrabold text-white" style={{ background: "#06d6a0" }}>＋</span>{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
-            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title="Gallery"><div className={`grid gap-2.5 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
+            {addons.length > 0 && <PlayCard e="✨" tint="#e4f8ee" title={headingOf(d, "addons", "title")} sub={headingOf(d, "addons", "eyebrow")}><div className="flex flex-col gap-2">{addons.map((a, i) => <div key={i} className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: "#f4f7ff" }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold" style={{ color: INKp }}>{a.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.image} alt="" className="h-8 w-8 flex-none rounded-lg object-cover" />
+            ) : (
+              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: a.emoji ? "#e4f8ee" : "#06d6a0", color: a.emoji ? undefined : "#fff" }}>{a.emoji || "＋"}</span>
+            )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
+            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
           </div>
           {full && <div className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
@@ -1547,7 +1708,7 @@ function PlayfulPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widg
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widget, full, emo, fromPrice, spacesLeft, surf }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
@@ -1560,16 +1721,24 @@ function SportPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widget
         <span className={`text-[18px] font-black ${cond}`}>{myBrand()}</span>
         <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
       </div>
-      {/* title above the image */}
+      {/* title above the image — every chosen type listed, sized to fit */}
       <div className="px-6 pb-4 pt-6">
-        <div className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: LIME }}>{[cats[0]?.name, town].filter(Boolean).join(" · ") || "Holiday camp"}</div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase leading-tight tracking-[0.12em]" style={{ color: LIME }}>
+          {cats.length ? cats.map((c, i) => (
+            <span key={c.id} className="inline-flex items-center gap-2">
+              {i > 0 && <span className="opacity-40">/</span>}
+              {c.name}
+            </span>
+          )) : <span>Holiday camp</span>}
+          {town && <><span className="opacity-40">·</span><span className="opacity-80">{town}</span></>}
+        </div>
         <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 48 : 30, lineHeight: .92, color: "#fff" }}>{d.title || "Your listing title"}</h1>
       </div>
       {/* hero image (no text on it) */}
       <div className="relative overflow-hidden" style={{ height: heroH }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
-        {cats[0] && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#12280a]" style={{ background: LIME, transform: "skewX(-8deg)" }}>{cats[0].name}</span>}
+        {heroCat && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#12280a]" style={{ background: LIME, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
@@ -1583,15 +1752,25 @@ function SportPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widget
       </div>
       <div className={full ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
         {/* stats strip */}
+        {/* pass prices — named, not a bare "from" figure */}
+        {passSummary.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {passSummary.map((p) => (
+              <span key={p.name} className="inline-flex items-baseline gap-1.5 border px-3 py-1.5" style={{ borderColor: LINEs, background: PANEL }}>
+                <span className="text-[11px] font-bold uppercase tracking-[0.06em]" style={{ color: MUTs }}>{p.name}</span>
+                <span className={`text-[13px] font-black ${cond}`} style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>from {money(p.price)}</span>
+              </span>
+            ))}
+          </div>
+        )}
         {(() => {
           const stats: [string, string, boolean][] = [
-            [fromPrice !== null ? `£${fromPrice % 1 ? fromPrice.toFixed(2) : fromPrice}` : "—", fromPrice !== null ? "from" : "add a block", true],
-            [d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All", "ages", false],
+            [d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All", "ages", true],
             [spacesLeft !== null ? String(spacesLeft) : "—", spacesLeft !== null ? "spaces left" : "capacity", false],
-            [cats[0]?.name || "Camp", "type", false],
+            [String(cats.length || 1), cats.length === 1 ? "activity type" : "activity types", false],
           ];
           return (
-            <div className="mt-5 grid grid-cols-2 border sm:grid-cols-4" style={{ borderColor: LINEs, background: PANEL }}>
+            <div className="mt-5 grid grid-cols-3 border" style={{ borderColor: LINEs, background: PANEL }}>
               {stats.map(([b, k, hl], i) => (
                 <div key={i} className="border-l px-4 py-3.5 first:border-l-0" style={{ borderColor: LINEs, background: hl ? LIME : "transparent" }}>
                   <div className={`truncate text-[22px] font-black ${cond}`} style={{ color: hl ? "#12280a" : "#fff" }}>{b}</div>
@@ -1606,25 +1785,28 @@ function SportPage({ d, venue, cats, town, runLabel, staff, addons, imgs, widget
           <div className="flex flex-col gap-6">
             {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>The camp</div><p className="mt-1.5 text-[15px] leading-[1.7]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
             {!full && <div>{widget}</div>}
-            {d.sections.some((s) => s.text) && <SportSec eye="Each day" title="How it runs">{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
-            {d.outcomes.length > 0 && <SportSec eye="What you'll learn" title="Skills that stick"><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.provided.length > 0 && <SportSec eye="What's included" title="In the price"><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.safety.length > 0 && <SportSec eye="Safety" title="Covered"><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.send.length > 0 && <SportSec eye="SEND & access" title="Everyone plays"><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
+            {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
             {staff.length > 0 && (
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
                 <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>
                   <span className="flex items-baseline gap-2.5">
-                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>The team</span>
-                    <span className={`text-[16px] font-black ${cond} text-white`}>Your child&apos;s crew</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "team", "eyebrow")}</span>
+                    <span className={`text-[16px] font-black ${cond} text-white`}>{headingOf(d, "team", "title")}</span>
                   </span>
                   <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: "#12280a" }}>{teamOpen ? "–" : "+"}</span>
                 </button>
                 {teamOpen && <div className={`mt-3 grid gap-3 ${grid2}`}>{staff.map((m) => <div key={m.id} className="border p-4" style={{ borderColor: LINEs, background: PANEL }}><div className="flex items-center gap-2.5"><span className={`flex h-10 w-10 flex-none items-center justify-center font-black ${cond} text-[16px] text-white`} style={{ background: EL }}>{(m.first[0] || "?").toUpperCase()}</span><b className="text-[14px]">{m.first} {m.last}</b></div>{m.bio && <p className="mt-2 text-[12.5px] leading-[1.55]" style={{ color: MUTs }}>{m.bio}</p>}</div>)}</div>}
               </div>
             )}
-            {addons.length > 0 && <SportSec eye="Add-ons" title="Extras">{addons.map((a, i) => <div key={i} className="mt-2 flex items-center justify-between border px-4 py-3 first:mt-0" style={{ borderColor: LINEs, background: PANEL }}><span className="text-[13.5px] font-bold">{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
-            {d.gallery.length > 0 && <SportSec eye="Gallery" title="In action"><div className={`grid gap-2 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
+            {addons.length > 0 && <SportSec eye={headingOf(d, "addons", "eyebrow")} title={headingOf(d, "addons", "title")}>{addons.map((a, i) => <div key={i} className="mt-2 flex items-center justify-between border px-4 py-3 first:mt-0" style={{ borderColor: LINEs, background: PANEL }}><span className="flex items-center gap-2.5 text-[13.5px] font-bold">{a.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
+            ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
+            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
           {full && <div className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
