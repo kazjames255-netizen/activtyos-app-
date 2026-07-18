@@ -349,12 +349,24 @@ export function applyDiscounts(
     running -= bestPerson.amount;
   }
 
-  // 2) Multi-session — on the already-reduced total.
-  const sessions = items.reduce((s, i) => s + i.days, 0) * attendees;
-  const session = live.filter((r) => r.kind === "session" && sessions > r.moreThan);
+  // A rule limited to certain tickets may only discount those tickets' share
+  // of the basket — not the whole thing.
+  const shareOf = (r: DiscountRule) => {
+    if (r.passNames.length === 0) return 1;
+    const covered = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.price, 0) * attendees;
+    return gross > 0 ? covered / gross : 0;
+  };
+
+  // 2) Multi-session — on the already-reduced total, counting only the
+  //    sessions on tickets this rule covers.
+  const session = live.filter((r) => {
+    if (r.kind !== "session") return false;
+    const sessions = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.days, 0) * attendees;
+    return sessions > r.moreThan;
+  });
   let bestSession: { r: DiscountRule; amount: number } | null = null;
   for (const r of session) {
-    const amount = off(r, running);
+    const amount = off(r, running * shareOf(r));
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
@@ -366,7 +378,7 @@ export function applyDiscounts(
   const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate);
   let bestEarly: { r: DiscountRule; amount: number } | null = null;
   for (const r of early) {
-    const amount = off(r, running);
+    const amount = off(r, running * shareOf(r));
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
@@ -1689,20 +1701,30 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   // "Add 3 more dates to get 10% off" — how close they are to the nearest
   // discount they haven't triggered yet. Counts what's in the basket plus
   // what's currently selected, so it ticks down as they tap.
-  // Multi-session only: this sits above the calendar, where adding dates is the
-  // action available. A "add more children" prompt here isn't actionable —
-  // that counter lives down in the basket.
+  // Multi-session only, and only for rules that cover the pass they're picking
+  // — nudging someone toward a discount their ticket can't earn is a lie.
   const nudge = (() => {
-    const sessionsNow = (basket.reduce((s, x) => s + x.dates.length, 0) + sel.length) * attendees;
-    const options = (d.discounts ?? [])
-      .filter((r) => r.enabled && r.kind === "session" && sessionsNow <= r.moreThan)
-      .map((r) => ({
-        need: r.moreThan + 1 - sessionsNow,
-        amt: r.method === "percent" ? `${r.value}% off` : `${money(r.value)} off`,
-      }))
+    if (!pass) return null;
+    const rulesFor = (d.discounts ?? []).filter(
+      (r) => r.enabled && r.kind === "session" && (r.passNames.length === 0 || r.passNames.includes(pass.name)),
+    );
+    const options = rulesFor
+      .map((r) => {
+        // Count only the sessions this rule actually covers.
+        const inBasket = basket
+          .filter((x) => r.passNames.length === 0 || r.passNames.includes(x.name))
+          .reduce((s, x) => s + x.dates.length, 0);
+        const now = (inBasket + sel.length) * attendees;
+        return {
+          need: r.moreThan + 1 - now,
+          amt: r.method === "percent" ? `${r.value}% off` : `${money(r.value)} off`,
+          scope: r.passNames.length === 0 ? "" : ` on ${pass.name}`,
+        };
+      })
+      .filter((o) => o.need > 0)
       .sort((a, b) => a.need - b.need);
     const best = options[0];
-    return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}` : null;
+    return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
   const reset = () => { setBasket([]); setChild(""); setAttendees(1); setStage("pick"); };
   return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, setAttendees, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, daysStr, hint, nudge, addPreview, addToBasket, removeItem, reset };
@@ -2274,8 +2296,14 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
                 ) : (
                   <div className="mt-1.5 flex flex-col gap-1">
                     {live.slice(0, 3).map((r) => (
-                      <div key={r.id} className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-[11px]" style={{ color: MUTs }}>{r.name.trim() || ruleSummary(r)}</span>
+                      <div key={r.id} className="flex items-start justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11px]" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r)}</span>
+                          {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
+                          <span className="block truncate text-[9.5px]" style={{ color: MUTs }}>
+                            {r.passNames.length === 0 ? "All passes" : r.passNames.join(", ")}
+                          </span>
+                        </span>
                         <b className="flex-none text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>
                           {r.method === "percent" ? `-${r.value}%` : `-${money(r.value)}`}
                         </b>
