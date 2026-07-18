@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, del } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -1958,7 +1958,12 @@ function useOpensAt(opensAt?: string) {
 
 type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule };
 // Shared booking logic — one source of truth, rendered in two visual themes.
-function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], blocks?: RunBlock[]) {
+function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], blocks?: RunBlock[], mode: "operator" | "parent" = "operator") {
+  const parentMode = mode === "parent";
+  // The children on this booking, and who's been taken off which line. Stored
+  // as exceptions so a child added is on everything immediately.
+  const [roster, setRoster] = useState<ChildProfile[]>([]);
+  const [removed, setRemoved] = useState<Record<string, string[]>>({});
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
   // The block loads from the API after first render, so useState's initial
@@ -2066,16 +2071,36 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
 
   const canAdd = !locked && hasSpace && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
   // One booking may cover several children; the count drives multi-person rules.
-  const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
+  const rosterNames = roster.map((c) => c.name.trim()).filter(Boolean);
+  /** Who's on a given basket line. A multi-day pass is a block: on it or not. */
+  const childrenOn = (id: string) => rosterNames.filter((n) => !(removed[id] ?? []).includes(n));
+  const toggleChild = (id: string, name: string) =>
+    setRemoved((m) => {
+      const list = m[id] ?? [];
+      return { ...m, [id]: list.includes(name) ? list.filter((n) => n !== name) : [...list, name] };
+    });
+
+  const attendees = parentMode
+    ? Math.max(1, rosterNames.length)
+    : Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
 
   // Automatic discounts come off here so the basket shows what's really owed.
   const priceOf = (x: BasketItem) => priceEdit[x.id] ?? x.price;
-  const subtotal = basket.reduce((s, x) => s + priceOf(x), 0) * attendees;
-  const { lines: discountLines, total } = applyDiscounts(
+  const headsOn = (x: BasketItem) => (parentMode ? childrenOn(x.id).length : attendees);
+  // Priced per child per line, so a second child doubles that line.
+  const subtotal = basket.reduce((s, x) => s + priceOf(x) * headsOn(x), 0);
+  const assumed = basket.reduce((s, x) => s + priceOf(x), 0) * attendees;
+  const raw = applyDiscounts(
     d.discounts ?? [],
     basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length })),
     attendees,
   );
+  // The engine (shared with the server) assumes every child is on every pass.
+  // That's the usual case; where it isn't, scale the discount to the gross
+  // actually being charged rather than change a contract the server relies on.
+  const factor = assumed > 0 ? subtotal / assumed : 1;
+  const discountLines = raw.lines.map((l) => ({ ...l, amount: Math.round(l.amount * factor * 100) / 100 }));
+  const total = Math.max(0, Math.round((subtotal - discountLines.reduce((s, l) => s + l.amount, 0)) * 100) / 100);
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
   // "21st, 22nd, 23rd, 24th August" — grouped by month so the month isn't
   // repeated, and readable on the row itself rather than hidden in a tooltip.
@@ -2102,6 +2127,20 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     setSel([]);
   };
   const removeItem = (id: string) => setBasket((b) => b.filter((y) => y.id !== id));
+  /**
+   * Change which days a pass covers. A 5 day pass is 5 days — you don't drop
+   * one, you swap it — so this puts the parent back on the calendar with the
+   * current choice loaded and the line taken out of the basket.
+   */
+  const editDates = (id: string) => {
+    const item = basket.find((y) => y.id === id);
+    if (!item) return;
+    const p = passes.find((x) => x.name === item.name);
+    if (p) setPassId(p.id);
+    setSel([...item.dates]);
+    setBasket((b) => b.filter((y) => y.id !== id));
+    setStage("pick");
+  };
   // One instruction, shown both in the card header and above the calendar.
   const hint = !pass
     ? ""
@@ -2176,7 +2215,8 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow,
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+    roster, setRoster, childrenOn, toggleChild, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null } };
@@ -2237,7 +2277,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful" }: {
   d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme;
 }) {
-  const b = useBooking(d, booking, weeks, blocks);
+  const b = useBooking(d, booking, weeks, blocks, mode);
   const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState };
   // Checkout is much shorter than the calendar it replaces, so without this the
   // card collapses and leaves you staring at whitespace. "nearest" nudges it
@@ -2328,13 +2368,18 @@ export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
  * apply in a tap; a new child is asked once for the things a provider needs on
  * the day, and never asked again.
  */
-function ChildrenPanel({ d, tk, saved, roster, setRoster }: {
+function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAssignAll }: {
   d: WizardDraft; tk: CkTheme;
   saved: ChildProfile[];
   roster: ChildProfile[];
   setRoster: (c: ChildProfile[]) => void;
+  /** How many basket lines this child is currently on. */
+  comingCount: (name: string) => number;
+  onUnassignAll: (name: string) => void;
+  onAssignAll: (name: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState<ChildProfile>({ name: "", photoConsent: false });
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
   const inp = `w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`;
@@ -2343,9 +2388,28 @@ function ChildrenPanel({ d, tk, saved, roster, setRoster }: {
 
   const add = () => {
     if (!draft.name.trim() || problem) return;
-    setRoster([...roster, draft]);
+    if (editing !== null) {
+      setRoster(roster.map((c, i) => (i === editing ? draft : c)));
+      // Keep their saved profile in step with the edit, when there is one.
+      if (draft.id) void api(`/api/my/children/${encodeURIComponent(draft.id)}`, { method: "PUT", body: JSON.stringify(draft) }).catch(() => {});
+    } else {
+      setRoster([...roster, draft]);
+    }
     setDraft({ name: "", photoConsent: false });
+    setEditing(null);
     setOpen(false);
+  };
+
+  /** Removing is deleting them from the account — worth asking about. */
+  const remove = (i: number) => {
+    const c = roster[i];
+    const savedProfile = !!c.id;
+    const msg = savedProfile
+      ? `Remove ${c.name} from your account?\n\nThis deletes their details — allergies, medical, likes and dislikes — and you'd have to enter them again next time.\n\nTo keep the profile and just leave them off this booking, use "Not coming" instead.`
+      : `Remove ${c.name}?\n\nYou haven't saved their details yet, so they'll be lost.`;
+    if (!confirm(msg)) return;
+    if (c.id) void del(`/api/my/children/${encodeURIComponent(c.id)}`).catch(() => {});
+    setRoster(roster.filter((_, n) => n !== i));
   };
 
   return (
@@ -2373,17 +2437,27 @@ function ChildrenPanel({ d, tk, saved, roster, setRoster }: {
 
       {roster.length > 0 && (
         <div className="mt-2 flex flex-col gap-1.5">
-          {roster.map((c, i) => (
-            <div key={`${c.name}-${i}`} className={`flex items-center gap-2 border px-3 py-2 ${tk.round}`}
-              style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
-              <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>
-                {c.name}
-                {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
-              </span>
-              <button type="button" onClick={() => setRoster(roster.filter((_, n) => n !== i))}
-                className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Remove</button>
-            </div>
-          ))}
+          {roster.map((c, i) => {
+            const on = comingCount(c.name.trim());
+            return (
+              <div key={`${c.name}-${i}`} className={`border px-3 py-2 ${tk.round}`}
+                style={{ borderColor: on ? tk.accent : tk.line, background: on ? `${tk.accent}1a` : "transparent" }}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: on ? tk.ink : tk.muted }}>
+                    {c.name}
+                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
+                    {!on && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>· not on this booking</span>}
+                  </span>
+                  <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
+                    className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Edit details</button>
+                  <button type="button" onClick={() => (on ? onUnassignAll(c.name.trim()) : onAssignAll(c.name.trim()))}
+                    className="text-[11.5px] font-bold" style={{ color: tk.muted }}>{on ? "Not coming" : "Add to all"}</button>
+                  <button type="button" onClick={() => remove(i)}
+                    className="text-[11.5px] font-bold" style={{ color: "#dc2626" }}>Remove</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -2447,8 +2521,9 @@ function ChildrenPanel({ d, tk, saved, roster, setRoster }: {
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={add} disabled={!draft.name.trim() || !!problem}
               className={`flex-1 py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
-              style={{ background: tk.accent, color: tk.accentInk }}>Add child</button>
-            <button type="button" onClick={() => setOpen(false)} className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
+              style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? "Save details" : "Add child"}</button>
+            <button type="button" onClick={() => { setOpen(false); setEditing(null); setDraft({ name: "", photoConsent: false }); }}
+              className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
           </div>
         </div>
       )}
@@ -2466,72 +2541,22 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
   const [method, setMethod] = useState("card");
   const [saved, setSaved] = useState<ChildProfile[]>([]);
-  const [roster, setRoster] = useState<ChildProfile[]>([]);
-  // Who's on which day. A child added goes on every date in the basket —
-  // that's the common case — and is taken off the odd day by exception.
-  const [dayAssign, setDayAssign] = useState<Record<string, Record<string, string[]>>>({});
-  useEffect(() => {
-    if (!parentMode) return;
-    setDayAssign((prev) => {
-      const next: Record<string, Record<string, string[]>> = {};
-      const names = roster.map((c) => c.name.trim()).filter(Boolean);
-      for (const item of b.basket) {
-        next[item.id] = {};
-        for (const iso of item.dates) {
-          const before = prev[item.id]?.[iso];
-          next[item.id][iso] = before
-            // Keep removals, drop anyone no longer in the roster, add newcomers.
-            ? names.filter((n) => before.includes(n) || !prevNames.current.includes(n))
-            : names;
-        }
-      }
-      prevNames.current = names;
-      return next;
-    });
-  }, [roster, b.basket, parentMode]);
-  const prevNames = useRef<string[]>([]);
-  /**
-   * Removing a child from a day means different things depending on how the
-   * operator sold the pass:
-   *
-   *   "blocks"  — a fixed block. You're in for all of it or none of it, so
-   *               taking a child off one day takes them off the block.
-   *   "week"    — any N days within a single week. The days are the pass, so
-   *               dropping one drops the child from the whole line too.
-   *   "listing" — any N days across the run. Days are genuinely independent,
-   *               so a child can skip one and the rest stands.
-   */
-  const toggleDay = (itemId: string, iso: string, name: string) =>
-    setDayAssign((m) => {
-      const item = b.basket.find((x) => x.id === itemId);
-      const on = m[itemId]?.[iso] ?? [];
-      const removing = on.includes(name);
-      const allOrNothing = (item?.rule ?? "week") !== "listing";
-      if (removing && allOrNothing) {
-        const cleared = Object.fromEntries(
-          Object.entries(m[itemId] ?? {}).map(([day, names]) => [day, names.filter((n) => n !== name)]),
-        );
-        return { ...m, [itemId]: cleared };
-      }
-      if (!removing && allOrNothing) {
-        // Putting them back puts them back on the whole pass, for the same reason.
-        const filled = Object.fromEntries(
-          Object.entries(m[itemId] ?? {}).map(([day, names]) => [day, names.includes(name) ? names : [...names, name]]),
-        );
-        return { ...m, [itemId]: filled };
-      }
-      return { ...m, [itemId]: { ...(m[itemId] ?? {}), [iso]: removing ? on.filter((n) => n !== name) : [...on, name] } };
-    });
-  useEffect(() => {
-    if (!parentMode) return;
-    // Signed out this 401s, which is fine — they just type the details in.
-    apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
-  }, [parentMode]);
+  const { roster, setRoster } = b;
+  // Store the EXCEPTIONS, not the assignments: who has been taken off which
+  // day. A child is therefore on everything the moment they're added, with no
+  // seeding step to go wrong — the previous version tracked "who's new" in a
+  // ref mutated inside a setState updater, which React re-runs, so a newly
+  // added child could be filtered straight back out.
   const [q, setQ] = useState("");
   const [bulk, setBulk] = useState("");
   const matches = q.trim()
     ? parents.filter((p) => `${p.name} ${p.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
     : [];
+  useEffect(() => {
+    if (!parentMode) return;
+    // Signed out this 401s, which is fine — they just type the details in.
+    apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
+  }, [parentMode]);
   const addonById = new Map(addons.map((a) => [a.id, a]));
   const costOf = (a: AddonTemplate, days: string[]) => (a.type === "perday" ? a.price * days.length : a.price);
   const addonTotal = b.basket.reduce((sum, item) => {
@@ -2550,16 +2575,10 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   //     bought at the wrong price.
   //   any-N-days-across-the-run — the days are independent, so each one just
   //     needs somebody on it; it needn't be the same child throughout.
-  const names = roster.map((c) => c.name.trim()).filter(Boolean);
-  const shortPasses = !parentMode ? [] : b.basket.filter((x) => {
-    const on = (iso: string) => dayAssign[x.id]?.[iso] ?? [];
-    return (x.rule ?? "week") === "listing"
-      ? x.dates.some((iso) => on(iso).length === 0)
-      : !names.some((n) => x.dates.every((iso) => on(iso).includes(n)));
-  });
-  const unassigned = parentMode
-    ? b.basket.reduce((n, x) => n + x.dates.filter((iso) => (dayAssign[x.id]?.[iso] ?? []).length === 0).length, 0)
-    : b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
+  // A pass is a block: a child is on all of its days or none. So the only
+  // thing to check is that somebody is on each line.
+  const shortPasses = !parentMode ? [] : b.basket.filter((x) => b.childrenOn(x.id).length === 0);
+  const unassigned = parentMode ? shortPasses.length : b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
   const dayNum = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 
@@ -2634,7 +2653,12 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
       {/* 2 · a child and their extras, per pass */}
       {(parentMode || b.parent) && (
         <>
-          {parentMode && <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster} />}
+          {parentMode && (
+            <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster}
+              comingCount={(name) => b.basket.filter((x) => b.childrenOn(x.id).includes(name)).length}
+              onUnassignAll={(name) => b.basket.forEach((x) => { if (b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })}
+              onAssignAll={(name) => b.basket.forEach((x) => { if (!b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })} />
+          )}
           <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{parentMode ? "2 · Who's on each pass" : "2 · Who's going & extras"}</div>
           {!parentMode && (
             <div className="mt-2 flex gap-1.5">
@@ -2647,10 +2671,8 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
           {parentMode && (
             <div className="mt-1.5 text-[11px]" style={{ color: tk.muted }}>
               {roster.length === 0
-                ? "Add a child above and they'll go on every day — then take them off any they're not coming to."
-                : b.basket.some((x) => (x.rule ?? "week") === "listing")
-                  ? "Everyone's on every day. Tap a name to take them off a day they're not coming."
-                  : "Everyone's on every day. These passes are sold as a set, so taking a child off one day takes them off that pass."}
+                ? "Add a child above and they'll go on everything — then take them off anything they're not coming to."
+                : "Everyone's on everything. Tap a name to take them off. Multi-day passes are sold as a set, so a child is on all of it or none — use “Change which days” to move the days themselves."}
             </div>
           )}
 
@@ -2660,9 +2682,19 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
               return (
                 <div key={x.id} className={`border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
                   <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-[11.5px]" style={{ color: tk.muted }}>
+                    <span className="min-w-0 flex-1 text-[11.5px]" style={{ color: tk.muted }}>
                       <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
+                      {x.timing && <span className="block text-[11px] font-bold" style={{ color: tk.accent }}>🕘 {x.timing}</span>}
                     </span>
+                    {parentMode && (() => {
+                      const heads = b.childrenOn(x.id).length;
+                      return (
+                        <span className="flex-none text-right text-[12px]">
+                          <b style={{ color: tk.ink }}>{money(b.priceOf(x) * heads)}</b>
+                          {heads > 1 && <span className="block text-[10.5px]" style={{ color: tk.muted }}>{money(b.priceOf(x))} × {heads}</span>}
+                        </span>
+                      );
+                    })()}
                     {!parentMode && (
                       <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
                         className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
@@ -2671,44 +2703,41 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
 
                   {/* Every day, not just the first few — you can't take a child
                       off a day the list doesn't show. */}
-                  {parentMode && roster.length > 0 && shortPasses.some((sp) => sp.id === x.id) && (
-                    <div className="mt-2 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
-                      style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
-                      {(x.rule ?? "week") === "listing"
-                        ? <>Every day of this <b>{x.name}</b> needs somebody on it — it doesn&rsquo;t have to be the same child.</>
-                        : <>This is a <b>{x.name}</b> — one child needs to be on all {x.dates.length} days. Others can skip days around them.</>}
-                    </div>
-                  )}
-                  {parentMode && roster.length > 0 && (
-                    <div className="mt-2 flex flex-col gap-1">
-                      {x.dates.map((iso) => {
-                        const on = dayAssign[x.id]?.[iso] ?? [];
-                        const dt = new Date(`${iso}T00:00:00Z`);
-                        return (
-                          <div key={iso} className="flex flex-wrap items-center gap-1.5">
-                            <span className="w-[92px] flex-none text-[11.5px]" style={{ color: on.length ? tk.ink : tk.muted }}>
-                              {dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
-                            </span>
-                            {roster.map((c) => {
-                              const name = c.name.trim();
-                              const going = on.includes(name);
-                              return (
-                                <button key={name} type="button" onClick={() => toggleDay(x.id, iso, name)}
-                                  title={(x.rule ?? "week") === "listing"
-                                    ? (going ? `Take ${name} off this day` : `Put ${name} back on this day`)
-                                    : (going ? `Take ${name} off this whole pass` : `Put ${name} on this whole pass`)}
-                                  className={`border px-2 py-[3px] text-[11px] font-bold ${tk.round}`}
-                                  style={going
-                                    ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                                    : { borderColor: tk.line, color: tk.muted, textDecoration: "line-through" }}>
-                                  {name.split(" ")[0]}
-                                </button>
-                              );
-                            })}
-                            {on.length === 0 && <span className="text-[10.5px]" style={{ color: "#c2410c" }}>nobody on this day</span>}
-                          </div>
-                        );
-                      })}
+                  {parentMode && (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px]" style={{ color: tk.muted }}>
+                          {x.dates.length === 1 ? "Who's coming" : `Who's on all ${x.dates.length} days`}
+                        </span>
+                        {roster.length === 0 && <span className="text-[11px]" style={{ color: "#c2410c" }}>add a child above</span>}
+                        {roster.map((c) => {
+                          const name = c.name.trim();
+                          const going = b.childrenOn(x.id).includes(name);
+                          return (
+                            <button key={name} type="button" onClick={() => b.toggleChild(x.id, name)}
+                              title={x.dates.length === 1
+                                ? (going ? `Take ${name} off this day` : `Put ${name} on this day`)
+                                : (going ? `Take ${name} off this ${x.dates.length}-day pass` : `Put ${name} on this ${x.dates.length}-day pass`)}
+                              className={`border px-2.5 py-[3px] text-[11.5px] font-bold ${tk.round}`}
+                              style={going
+                                ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
+                                : { borderColor: tk.line, color: tk.muted }}>
+                              {going ? "✓ " : "+ "}{name.split(" ")[0]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
+                        <div className="mt-1 text-[11px]" style={{ color: "#c2410c" }}>
+                          Nobody&rsquo;s on this {x.dates.length === 1 ? "day" : "pass"} — remove it or put a child on it.
+                        </div>
+                      )}
+                      {x.dates.length > 1 && (
+                        <button type="button" onClick={() => b.editDates(x.id)}
+                          className="mt-1.5 text-[11px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+                          Change which {x.dates.length} days
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -2822,7 +2851,11 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // A parent's confirm actually books; the operator preview still just
           // shows the done screen until the operator flow is wired.
-          if (parentMode && onBook) onBook({ method, basket: b.basket, addonSel: b.addonSel, children: roster, dayAssign });
+          if (parentMode && onBook) onBook({
+            method, basket: b.basket, addonSel: b.addonSel, children: roster,
+            // Resolved here so the caller gets plain "who's on what" rather than exceptions.
+            dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
+          });
           else b.setStage("done");
         }}>
         {booking?.busy ? "Booking…"
