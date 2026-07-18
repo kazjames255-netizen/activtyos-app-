@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
+import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import {
   blockCountDelta,
   bookingSeats,
@@ -217,6 +218,7 @@ bookings.post("/", async (req, res) => {
     // payment-link email the UI has always promised.
     if (booking.email.includes("@") && booking.status !== "Waitlisted")
       emailPaymentLink(booking, tenantName);
+    void upsertCustomerFromBooking(tenantId, booking);
 
     res.status(201).json(booking);
   } catch (e) {

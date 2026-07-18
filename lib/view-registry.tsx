@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { PortalKey } from "./nav/config";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
+import { CustomersApp } from "@/features/customers/CustomersApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
@@ -29,6 +30,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     staff: TeamApp,
     "admin-registers": RegistersApp,
+    customers: CustomersApp,
   },
   franchise: {
     bookings: BookingsApp,
@@ -36,6 +38,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     staff: TeamApp,
     registers: RegistersApp,
+    customers: CustomersApp,
   },
   freelancer: {
     bookings: BookingsApp,
@@ -43,9 +46,11 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     blocks: BlocksApp,
     timetable: TimetableApp,
     registers: RegistersApp,
+    customers: CustomersApp,
   },
   staff: {
     registers: RegistersApp,
+    customers: CustomersApp,
   },
   custdash: {
     browse: BrowseApp,

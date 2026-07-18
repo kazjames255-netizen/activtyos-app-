@@ -1,10 +1,20 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.8.0
+  version: 0.8.1
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.8.1 — Customers & families become real (and self-filling)
+
+    - `/api/customers` grows `POST` / `PUT /{id}` / `DELETE /{id}`
+      (operators; staff read-only). Shape: `{name, email, phone,
+      children: [{name, age?, dob?}]}`.
+    - **Every booking upserts the family automatically** — operator-taken
+      and parent checkout alike: new booker email → new customer; known
+      email → the booked child is added to their `children` if new. The
+      Customers & families page fills itself.
 
     ## v0.8.0 — Public storefront + the real parent checkout
 
@@ -1362,6 +1372,59 @@ paths:
                 items: { $ref: "#/components/schemas/Customer" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [customers]
+      summary: Add a family by hand (operators)
+      description: |
+        Rarely needed — bookings upsert families automatically. This covers
+        a family phoning before their first booking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerInput" }
+      responses:
+        "201":
+          description: The created customer
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/customers/{id}:
+    put:
+      tags: [customers]
+      summary: Edit a family record (operators)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerInput" }
+      responses:
+        "200":
+          description: The updated customer
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [customers]
+      summary: Remove a family record (operators; their bookings are kept)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/invites:
     get:
@@ -2054,6 +2117,23 @@ components:
             in: { type: integer }
             out: { type: integer }
             absent: { type: integer }
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        children:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string }
+              age: { type: integer }
+              dob: { type: string }
 
     Customer:
       type: object

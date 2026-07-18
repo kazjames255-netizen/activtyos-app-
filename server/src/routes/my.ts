@@ -19,6 +19,7 @@ import {
   type BlockDoc,
 } from "../lib/blockDomain";
 import { emailBookingRequestReceived } from "../lib/emails";
+import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
@@ -352,6 +353,8 @@ my.post("/bookings", async (req, res) => {
 
     // One email for the basket, not one per child.
     emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
+    // Keep Customers & families current (one upsert per child, same family).
+    for (const b of bookings) void upsertCustomerFromBooking(listing.tenantId, b);
     res.status(201).json(legacy.success ? bookings[0] : { bookings, total: target });
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

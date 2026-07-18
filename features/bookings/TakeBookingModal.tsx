@@ -24,6 +24,14 @@ interface Listing {
   blocks: { id: string; name: string; spotsLeft: number; open: boolean }[];
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  children?: { name: string; age?: number }[];
+}
+
 const inputCls =
   "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none";
 const labelCls = "text-[11.5px] font-bold text-[var(--ink)]";
@@ -35,6 +43,9 @@ export function TakeBookingModal() {
   const setShow = useBookingsStore.setState;
 
   const [listings, setListings] = useState<Listing[] | null>(null);
+  // Existing families for "find parent": typing a known name fills their
+  // email/phone, and their children become one-click child picks.
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [f, setF] = useState({
     booker: "",
     email: "",
@@ -65,6 +76,14 @@ export function TakeBookingModal() {
         /* keep the hardcoded fallbacks */
       });
   }, [show, listings]);
+  useEffect(() => {
+    if (!show) return;
+    apiGet<Customer[]>("/api/customers")
+      .then(setCustomers)
+      .catch(() => {
+        /* manual entry still works */
+      });
+  }, [show]);
 
   if (!show) return null;
 
@@ -97,9 +116,21 @@ export function TakeBookingModal() {
     });
   };
 
+  const matchedCustomer = customers.find((c) => c.name === f.booker) ?? null;
+
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((prev) => {
       const next = { ...prev, [k]: e.target.value };
+      // Picking a known parent fills their contact details; picking one of
+      // their children fills the age from the family record.
+      if (k === "booker") {
+        const c = customers.find((x) => x.name === e.target.value);
+        if (c) next.email = c.email ?? next.email;
+      }
+      if (k === "child") {
+        const kid = matchedCustomer?.children?.find((x) => x.name === e.target.value);
+        if (kid?.age !== undefined) next.age = String(kid.age);
+      }
       // Changing listing resets pass/block to that listing's options;
       // changing either autofills the amount from the pass price.
       if (k === "listing" && listings) {
@@ -141,8 +172,15 @@ export function TakeBookingModal() {
 
         <div className="grid grid-cols-2 gap-2.5">
           <label className={labelCls}>
-            Booker name
-            <input className={inputCls} value={f.booker} onChange={upd("booker")} />
+            Booker name {customers.length > 0 && <span className="font-normal text-[var(--ink-3)]">(type to find a parent)</span>}
+            <input className={inputCls} value={f.booker} onChange={upd("booker")} list="tb-customers" />
+            <datalist id="tb-customers">
+              {customers.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.email}
+                </option>
+              ))}
+            </datalist>
           </label>
           <label className={labelCls}>
             Booker email
@@ -150,7 +188,16 @@ export function TakeBookingModal() {
           </label>
           <label className={labelCls}>
             Child name
-            <input className={inputCls} value={f.child} onChange={upd("child")} />
+            <input className={inputCls} value={f.child} onChange={upd("child")} list="tb-children" />
+            {!!matchedCustomer?.children?.length && (
+              <datalist id="tb-children">
+                {matchedCustomer.children.map((k) => (
+                  <option key={k.name} value={k.name}>
+                    {k.age !== undefined ? `age ${k.age}` : ""}
+                  </option>
+                ))}
+              </datalist>
+            )}
           </label>
           <label className={labelCls}>
             Child age
