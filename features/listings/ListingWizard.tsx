@@ -39,7 +39,6 @@ const STEPS = [
   { key: "preview", label: "Preview", stage: "Publish" },
   { key: "policy", label: "Policy & publish", stage: "Publish" },
 ] as const;
-const STAGES = ["About", "When it runs", "Tickets & pricing", "Extras & team", "Publish"];
 
 const LAYOUTS = [
   { key: "big", label: "One big image · 1600×900px" },
@@ -721,9 +720,10 @@ export function ListingWizard({
   const stepKey = STEPS[step].key;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-[var(--bg,#f5f8fd)] text-[var(--ink)]"
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[var(--bg,#f5f8fd)] text-[var(--ink)]"
       style={{ ["--bg" as string]: "#f5f8fd", ["--surface" as string]: "#fff", ["--panel" as string]: "#fbf8fc", ["--ink" as string]: "#171534", ["--ink-2" as string]: "#4a4763", ["--ink-3" as string]: "#8a86a3", ["--line" as string]: "#ece6f1" } as React.CSSProperties}>
-      {/* Header */}
+      {/* Header + progress stick; everything else scrolls with the page. */}
+      <div className="sticky top-0 z-30">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-5 py-3">
         <div>
           <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create listing"}</div>
@@ -738,22 +738,49 @@ export function ListingWizard({
         </div>
       </div>
 
-      {/* 5-stage progress */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[var(--panel)] px-5 py-2 text-[11.5px]">
-        {STAGES.map((s, i) => {
-          const on = STAGES.indexOf(STEPS[step].stage) >= i;
+      {/* Progress ring + what's left, always in view — eleven screens of fields
+          with no sense of distance travelled is what made this a slog. */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-[var(--line)] bg-[var(--panel)] px-5 py-3">
+        {(() => {
+          const pct = Math.round(((step + 1) / STEPS.length) * 100);
+          const r = 15.5, circ = 2 * Math.PI * r;
           return (
-            <span key={s} className="flex items-center gap-1.5">
-              <span className="font-bold" style={{ color: on ? "var(--brand-ink)" : "var(--ink-3)" }}>{i + 1}. {s}</span>
-              {i < STAGES.length - 1 && <span className="text-[var(--ink-3)]">→</span>}
-            </span>
+            <div className="flex items-center gap-3">
+              <svg width="46" height="46" viewBox="0 0 36 36" className="flex-none">
+                <circle cx="18" cy="18" r={r} fill="none" stroke="var(--line)" strokeWidth="4" />
+                <circle cx="18" cy="18" r={r} fill="none" stroke="var(--brand)" strokeWidth="4" strokeLinecap="round"
+                  strokeDasharray={`${(circ * pct) / 100} ${circ}`} transform="rotate(-90 18 18)" />
+                <text x="18" y="21" textAnchor="middle" fontSize="9" fontWeight="800" fill="var(--ink)">{pct}%</text>
+              </svg>
+              <div>
+                <div className="text-[13px] font-extrabold leading-tight">{STEPS[step].label}</div>
+                <div className="text-[11.5px] text-[var(--ink-3)]">Step {step + 1} of {STEPS.length} · {STEPS[step].stage}</div>
+              </div>
+            </div>
           );
-        })}
-        <span className="ml-auto font-bold text-[var(--ink-3)]">Step {step + 1} of 10 · {STEPS[step].label}</span>
+        })()}
+        {blockers.length > 0 ? (
+          <div className="ml-auto max-w-[420px] rounded-xl border px-3 py-2" style={{ borderColor: "#fed7aa", background: "#fff7ed" }}>
+            <div className="text-[11px] font-extrabold" style={{ color: "#9a3412" }}>
+              {blockers.length} thing{blockers.length === 1 ? "" : "s"} left before you can publish
+            </div>
+            <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10.5px]" style={{ color: "#9a3412" }}>
+              {blockers.slice(0, 3).map((bl, i) => (
+                <button key={i} type="button" onClick={() => setStep(bl.step)} className="underline underline-offset-2">{bl.what}</button>
+              ))}
+              {blockers.length > 3 && <span>+{blockers.length - 3} more</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="ml-auto rounded-xl px-3 py-2 text-[11.5px] font-bold" style={{ background: "var(--green-soft,#e7f8ee)", color: "#0f7a44" }}>
+            ✓ Everything&rsquo;s ready to publish
+          </div>
+        )}
+      </div>
       </div>
 
-      <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap gap-1 border-b border-[var(--line)] bg-[var(--surface)] px-3 py-2">
             {STEPS.map((s, i) => (
               <button key={s.key} type="button" onClick={() => setStep(i)}
@@ -764,7 +791,10 @@ export function ListingWizard({
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-5">
+          <div className="flex-1 bg-[var(--surface)] px-5 py-7">
+            <div className={stepKey === "preview"
+              ? "mx-auto w-full"
+              : "mx-auto w-full max-w-[660px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[0_1px_2px_rgba(16,35,86,.05)]"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
@@ -800,11 +830,11 @@ export function ListingWizard({
                 <PolicyStep d={d} upd={upd} />
               </>
             )}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3">
+          <div className="sticky bottom-0 z-20 flex items-center justify-center gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3.5">
             <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
-            <span className="text-[11.5px] text-[var(--ink-3)]">{STEPS[step].label}</span>
             {step < STEPS.length - 1 ? (
               <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next ›</Button>
             ) : (
@@ -815,7 +845,7 @@ export function ListingWizard({
           </div>
         </div>
 
-        <div className="hidden w-[340px] flex-none overflow-auto border-l border-[var(--line)] bg-[var(--panel)] p-4 lg:block">
+        <div className="hidden w-[340px] flex-none self-start border-l border-[var(--line)] bg-[var(--panel)] p-4 lg:sticky lg:top-[112px] lg:block">
           <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">↘ Customer page · exactly what parents see</div>
           <ParentPreview {...previewProps} />
         </div>
@@ -1020,7 +1050,7 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <FieldLabel>Listing title · up to 70 characters</FieldLabel>
       <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder="e.g. Summer Multi-Activity Camp" className="mb-3 w-full" />
 
-      <SectionHead>Main image</SectionHead>
+      <SectionHead icon="🖼️">Main image</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {LAYOUTS.map((l) => (
           <button key={l.key} type="button" onClick={() => upd({ layout: l.key })} className="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold"
@@ -1032,7 +1062,7 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <div className="mb-1 text-[11px] text-[var(--ink-3)]">Crop each photo to fit — the crop preview matches the customer page exactly. Add more than one and the main image rotates as a carousel.</div>
       <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" />
 
-      <SectionHead>Gallery</SectionHead>
+      <SectionHead icon="📸">Gallery</SectionHead>
       <div className="mb-1 text-[11px] text-[var(--ink-3)]">Extra photos — shown as a gallery at the bottom of the customer page.</div>
       <HeadingFields d={d} upd={upd} sectionKey="gallery" />
       <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
@@ -1042,14 +1072,14 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
       </div>
 
-      <SectionHead>Venue</SectionHead>
+      <SectionHead icon="📍">Venue</SectionHead>
       <Select value={d.venueId ?? ""} onChange={(e) => upd({ venueId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
         <option value="">Select a venue…</option>
         {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
       </Select>
       <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in the Locations tab — just pick a venue here.</div>
 
-      <SectionHead>Categories</SectionHead>
+      <SectionHead icon="🏷️">Categories</SectionHead>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {local.categories.map((c) => (
@@ -1079,7 +1109,7 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         </div>
       )}
 
-      <SectionHead>Capacity</SectionHead>
+      <SectionHead icon="👧👦">Capacity</SectionHead>
       <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
       <div className="my-2 flex items-end gap-2">
         <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
@@ -1124,7 +1154,7 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         className="mb-1 h-[100px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
       <div className="mb-3 text-[11px] text-[var(--ink-3)]">{d.description.length}/300 · “Write with AI” turns your words into a paragraph for the <b>{d.descriptionSection || "section"}</b> section — press again for a fresh version.</div>
 
-      <SectionHead>Additional sections</SectionHead>
+      <SectionHead icon="📝">Additional sections</SectionHead>
       <div className="mb-2 flex flex-col gap-1.5">
         {d.sections.map((s) => (
           <div key={s.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
@@ -1141,7 +1171,7 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         {SECTION_TYPES.map((s) => <option key={s}>{s}</option>)}
       </Select>
 
-      <SectionHead>Learning outcomes</SectionHead>
+      <SectionHead icon="🌟">Learning outcomes</SectionHead>
       <HeadingFields d={d} upd={upd} sectionKey="learn" />
       <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
     </div>
@@ -1152,10 +1182,10 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   return (
     <div className="max-w-[720px]">
       <StepHead n={4} kicker="STEP 4 · SAFETY & SEND" title="Safety & inclusion" lede="Show your safety features and the SEND support you offer." />
-      <SectionHead>Safety features</SectionHead>
+      <SectionHead icon="🛡️">Safety features</SectionHead>
       <HeadingFields d={d} upd={upd} sectionKey="safety" />
       <div className="mb-3"><EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check /></div>
-      <SectionHead>SEND &amp; accessibility</SectionHead>
+      <SectionHead icon="🤝">SEND &amp; accessibility</SectionHead>
       <HeadingFields d={d} upd={upd} sectionKey="send" />
       <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">New options you add here are saved and offered on every listing.</div>
@@ -1176,7 +1206,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
         <div className="flex-1"><FieldLabel>Camp runs from</FieldLabel><Input type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
         <div className="flex-1"><FieldLabel>Camp runs to</FieldLabel><Input type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
       </div>
-      <SectionHead>Block size</SectionHead>
+      <SectionHead icon="▥">Block size</SectionHead>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
           <button key={k} type="button" onClick={() => upd({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
@@ -1273,7 +1303,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
       )}
       {tickets.length > 0 && (
         <div className="mt-3">
-          <SectionHead>Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
+          <SectionHead icon="🎟️">Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
             return (
@@ -1296,7 +1326,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
 
       {multiDay.length > 0 && (
         <div className="mt-3">
-          <SectionHead>How parents can book each pass</SectionHead>
+          <SectionHead icon="🧭">How parents can book each pass</SectionHead>
           {multiDay.map((t) => {
             const rule = (d.bookRules ?? {})[t.name] ?? "week";
             return (
@@ -1610,7 +1640,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
-          <SectionHead>Your add-ons — tick the ones for this listing</SectionHead>
+          <SectionHead icon="✨">Your add-ons — tick the ones for this listing</SectionHead>
           {local.addons.map((a) => {
             const on = d.addonIds.includes(a.id);
             return (
@@ -1627,7 +1657,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
           })}
         </div>
       )}
-      <SectionHead>Create a new add-on</SectionHead>
+      <SectionHead icon="➕">Create a new add-on</SectionHead>
       <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
         <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hot lunch" className="w-full" /></div>
         <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "bundle" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
@@ -1737,7 +1767,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   return (
     <div className="max-w-[720px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
-      <SectionHead>Who can see it</SectionHead>
+      <SectionHead icon="👁️">Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
           <button key={k} type="button" onClick={() => upd({ visibility: k })} className="rounded-xl border p-2.5 text-left" style={d.visibility === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
@@ -1747,7 +1777,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         ))}
       </div>
       <BookingOpens value={d.opensAt ?? ""} onChange={(v) => upd({ opensAt: v })} />
-      <SectionHead>Booking &amp; waiting list</SectionHead>
+      <SectionHead icon="📋">Booking &amp; waiting list</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {book.map(([k, label]) => (
           <button key={k} type="button" onClick={() => upd({ bookingType: k })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold" style={d.bookingType === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{d.bookingType === k ? "✓ " : ""}{label}</button>
@@ -1755,7 +1785,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       </div>
       <YesNo label="Waiting list" value={d.waitlist} onChange={(v) => upd({ waitlist: v })} help="Let parents join a waiting list once a ticket sells out." />
       {d.waitlist && <div className="my-2 w-[140px]"><FieldLabel>Waiting-list size</FieldLabel><Input type="number" min={0} value={d.waitlistSize} onChange={(e) => upd({ waitlistSize: e.target.value })} className="w-full" /></div>}
-      <SectionHead>Cancellation policy</SectionHead>
+      <SectionHead icon="📄">Cancellation policy</SectionHead>
       <Select value={d.cancellation} onChange={(e) => upd({ cancellation: e.target.value })} className="w-full text-[12px]">{policies.map((p) => <option key={p} value={p}>{p}</option>)}</Select>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
     </div>
@@ -3162,20 +3192,26 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 }
 
 // ── Small shared bits ──────────────────────────────────────────────────────
-function StepHead({ n, kicker, title, lede }: { n: number; kicker: string; title: string; lede: string }) {
+function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: string; lede: string }) {
   return (
-    <div className="mb-3">
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-strong)]">{kicker}</div>
-      <div className="flex items-center gap-2">
-        <span className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "var(--brand)" }}>{n}</span>
-        <h3 className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</h3>
-      </div>
-      <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">{lede}</p>
+    <div className="mb-5 text-center">
+      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[var(--brand-2)]">{kicker}</div>
+      <h3 className="mt-1.5 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h3>
+      <p className="mx-auto mt-1.5 max-w-[460px] text-[13px] leading-[1.55] text-[var(--ink-3)]">{lede}</p>
     </div>
   );
 }
-function SectionHead({ children }: { children: React.ReactNode }) {
-  return <div className="mb-1.5 mt-3 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{children}</div>;
+/**
+ * Starts a band within the step's card. The rule and the icon are what stop a
+ * long step reading as one undifferentiated wall of fields.
+ */
+function SectionHead({ children, icon }: { children: React.ReactNode; icon?: string }) {
+  return (
+    <div className="mb-2.5 mt-5 flex items-center gap-2 border-t border-[var(--line)] pt-4 first:mt-0 first:border-t-0 first:pt-0">
+      {icon && <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-[var(--brand-soft)] text-[14px]">{icon}</span>}
+      <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{children}</div>
+    </div>
+  );
 }
 function YesNo({ label, value, onChange, help }: { label: string; value: boolean; onChange: (v: boolean) => void; help?: string }) {
   return (

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Listing builder — 10 directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+.fld{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px}
+.inp{height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:0 11px;font-family:inherit;font-size:12.5px;width:100%;color:var(--ink-3)}
+.inp.big{height:44px;font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.foot{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:11px 16px;background:#fbfcfe}
+.b{height:34px;border:1px solid var(--line);border-radius:9px;background:#fff;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-2);padding:0 14px;cursor:pointer}
+.b.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink-2);background:#fff}
+.chip.on{background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)}
+.muted{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.rail{display:flex;gap:4px}
+.rail i{height:4px;flex:1;border-radius:99px;background:#e4e9f4;display:block}
+.rail i.done{background:var(--brand)}
+.rail i.now{background:var(--brand-2)}
+.stepno{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:var(--brand);color:#fff;font-size:12px;font-weight:800;flex:none}
+.side{width:250px;flex:none;border-left:1px solid var(--line);background:#fbfcfe;padding:14px}
+.phone{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.phone .im{height:70px;background:linear-gradient(140deg,#7fd4d6,#2f7fae)}
+.phone .bd{padding:9px}
+.ttl{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2)}
+.lede{font-size:12.5px;color:var(--ink-3);margin:3px 0 0}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav">
+  <a href="/mockups/filter-bars.html">Filter bar</a><a href="/mockups/categories.html">Categories</a>
+  <a href="/mockups/locations.html">Locations</a><a href="/mockups/capacity.html">Capacity</a>
+  <a class="on" href="/mockups/wizard.html">Builder</a>
+</nav>
+<h1>Listing builder — 10 directions</h1>
+<p class="sub">Same generic step in all ten, so you're comparing the treatment and not the content. Whatever you pick applies across steps 1–11 (step 5 keeps its own date UI). Tell me a number.</p>
+
+<!-- 1 -->
+<section class="opt"><header><span class="num">1</span><h2>Soft cards</h2><span class="note">Each group of fields in its own card with an icon. Calm, roomy, hard to get wrong.</span></header>
+<div class="body"><div class="frame">
+  <div style="padding:16px 18px;border-bottom:1px solid var(--line)">
+    <div class="rail" style="margin-bottom:12px"><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="eyebrow">Step 3 of 11</div><h3 class="ttl">What's provided</h3><p class="lede">Tick what you supply so parents know what to pack.</p>
+  </div>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px;background:var(--surface)">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><span style="font-size:17px">🎒</span><b style="font-size:13.5px">Included in the price</b></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">✓ Lunch</span><span class="chip on">✓ All equipment</span><span class="chip">Snacks</span><span class="chip">Water</span><span class="chip">Certificate</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><span style="font-size:17px">🧳</span><b style="font-size:13.5px">What to bring</b></div>
+      <input class="inp" placeholder="Sun cream, water bottle, trainers…">
+    </div>
+  </div>
+  <div class="foot"><button class="b">‹ Back</button><span class="muted" style="margin-left:auto">Saved a moment ago</span><button class="b p">Next ›</button></div>
+</div></div></section>
+
+<!-- 2 -->
+<section class="opt"><header><span class="num">2</span><h2>Split with live preview</h2><span class="note">Form left, the customer page updating beside it. Every edit has a visible consequence.</span></header>
+<div class="body"><div class="frame" style="display:flex">
+  <div style="flex:1;min-width:0">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--line)"><div class="eyebrow">Step 1 of 11 · Basics</div><h3 class="ttl">Make a great first impression</h3></div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+      <div><label class="fld">Listing name</label><input class="inp big" placeholder="Summer Multi-Activity Camp"></div>
+      <div class="grid2">
+        <div><label class="fld">Ages from</label><input class="inp" placeholder="4"></div>
+        <div><label class="fld">Ages to</label><input class="inp" placeholder="15"></div>
+      </div>
+      <div><label class="fld">Types</label><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">Holiday Camps</span><span class="chip">Breakfast Clubs</span><span class="chip">SEND</span></div></div>
+    </div>
+    <div class="foot"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+  </div>
+  <div class="side">
+    <div class="muted" style="font-weight:800;text-transform:uppercase;font-size:9.5px;letter-spacing:.08em;margin-bottom:8px">Parents see</div>
+    <div class="phone"><div class="im"></div><div class="bd"><b style="font-size:12px">Summer Multi-Activity Camp</b><div class="muted" style="font-size:10.5px">Ages 4–15 · Milton Keynes</div></div></div>
+    <div class="muted" style="margin-top:9px;font-size:10.5px">Updates as you type.</div>
+  </div>
+</div></div></section>
+
+<!-- 3 -->
+<section class="opt"><header><span class="num">3</span><h2>Checklist sidebar</h2><span class="note">All 11 steps visible with ticks. You always know what's left — and what's blocking publish.</span></header>
+<div class="body"><div class="frame" style="display:flex">
+  <div style="width:200px;flex:none;border-right:1px solid var(--line);padding:12px;background:#fbfcfe">
+    <div class="muted" style="font-weight:800;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px">4 of 11 done</div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span style="color:#16a34a">✓</span>Basics</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span style="color:#16a34a">✓</span>Content</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span style="color:#16a34a">✓</span>Provided</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span style="color:#16a34a">✓</span>Safety &amp; SEND</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:6px 7px;border-radius:7px;background:var(--brand-soft);color:var(--brand-ink);font-weight:800"><span>5</span>When it runs</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span>6</span>Tickets &amp; pricing</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span>7</span>Discounts</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span>8</span>Add-ons</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span>9</span>Staff</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:var(--ink-3)"><span>10</span>Preview</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:5px 7px;color:#9a3412"><span>⚠</span>Publish</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--line)"><div class="eyebrow">Step 6 · Tickets &amp; pricing</div><h3 class="ttl">What can parents buy?</h3></div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+      <div style="border:1px solid var(--brand-2);background:var(--brand-soft);border-radius:11px;padding:12px"><b style="font-size:13px">▥ Summer Camp Block</b><div class="muted">2 periods · 3 passes</div></div>
+      <div style="border:1px solid var(--line);border-radius:11px;padding:12px"><b style="font-size:13px">▥ After-School Block</b><div class="muted">1 period · 2 passes</div></div>
+    </div>
+    <div class="foot"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+  </div>
+</div></div></section>
+
+<!-- 4 -->
+<section class="opt"><header><span class="num">4</span><h2>One question at a time</h2><span class="note">Big type, one decision per screen. Slowest but the least intimidating.</span></header>
+<div class="body"><div class="frame">
+  <div style="padding:34px 30px;text-align:center">
+    <div class="eyebrow">Question 3 of 11</div>
+    <h3 style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin:8px 0 6px">What do you provide?</h3>
+    <p class="muted" style="max-width:380px;margin:0 auto 18px">Tick anything included so parents know what to pack.</p>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:460px;margin:0 auto">
+      <span class="chip on" style="height:36px">✓ Lunch</span><span class="chip on" style="height:36px">✓ All equipment</span>
+      <span class="chip" style="height:36px">Snacks</span><span class="chip" style="height:36px">Water</span><span class="chip" style="height:36px">Certificate</span>
+    </div>
+  </div>
+  <div class="foot" style="justify-content:center"><button class="b">‹ Back</button><button class="b p">Next ›</button><span class="muted">or press Enter</span></div>
+</div></div></section>
+
+<!-- 5 -->
+<section class="opt"><header><span class="num">5</span><h2>Navy header</h2><span class="note">Picks up the sidebar blue that runs through the rest of the product. Most "designed" of the set.</span></header>
+<div class="body"><div class="frame">
+  <div style="background:var(--side-bg);color:#fff;padding:18px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <span class="stepno" style="background:rgba(255,255,255,.16)">9</span>
+      <div><div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.7">Extras &amp; team</div>
+      <h3 class="ttl" style="color:#fff">Staff onsite</h3></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:10.5px;opacity:.75">9 of 11</div>
+      <div class="rail" style="width:110px;margin-top:5px"><i class="done" style="background:#fff"></i><i class="done" style="background:#fff"></i><i class="done" style="background:#fff"></i><i style="background:rgba(255,255,255,.25)"></i></div></div>
+    </div>
+  </div>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+    <div style="display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:11px">
+      <span style="width:34px;height:34px;border-radius:99px;background:var(--side-bg);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">A</span>
+      <div><b style="font-size:13px">Amir M</b><div class="muted">Lead coach</div></div>
+      <span class="chip on" style="margin-left:auto">On this listing</span>
+    </div>
+    <div style="display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:11px">
+      <span style="width:34px;height:34px;border-radius:99px;background:#e4e9f4;color:var(--ink-3);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">K</span>
+      <div><b style="font-size:13px">Kaz James</b><div class="muted">Camp manager</div></div>
+      <span class="chip" style="margin-left:auto">Add</span>
+    </div>
+  </div>
+  <div class="foot"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+</div></div></section>
+
+<!-- 6 -->
+<section class="opt"><header><span class="num">6</span><h2>Numbered timeline</h2><span class="note">A vertical spine down the left. Reads as a journey rather than a form.</span></header>
+<div class="body"><div class="frame" style="padding:18px">
+  <div style="display:flex;gap:16px">
+    <div style="width:26px;flex:none;display:flex;flex-direction:column;align-items:center">
+      <span class="stepno" style="background:#e4e9f4;color:var(--ink-3);font-size:11px">✓</span>
+      <span style="flex:1;width:2px;background:var(--line);margin:5px 0"></span>
+      <span class="stepno">7</span>
+      <span style="flex:1;width:2px;background:var(--line);margin:5px 0"></span>
+      <span class="stepno" style="background:#e4e9f4;color:var(--ink-3);font-size:11px">8</span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="muted" style="padding-bottom:14px">Tickets &amp; pricing — 3 passes from the Summer Camp Block</div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px">
+        <div class="eyebrow">Step 7</div><h3 class="ttl" style="margin-bottom:10px">Automatic discounts</h3>
+        <div style="display:flex;gap:7px;flex-wrap:wrap"><span class="chip on">👨‍👩‍👧 Sibling 10%</span><span class="chip on">📅 5+ days 20%</span><span class="chip">⏰ Early bird</span></div>
+      </div>
+      <div class="muted">Add-ons — wraparound care, lunches, kit</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px;padding-top:13px;border-top:1px solid var(--line)"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+</div></div></section>
+
+<!-- 7 -->
+<section class="opt"><header><span class="num">7</span><h2>Playful blocks</h2><span class="note">Colour-blocked sections with emoji anchors — matches the Playful customer theme.</span></header>
+<div class="body"><div class="frame">
+  <div style="padding:16px 18px;background:#eef3ff;border-bottom:1px solid var(--line)">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🛡️</span>
+      <div><div class="eyebrow">Step 4 of 11</div><h3 class="ttl">Safety &amp; inclusion</h3></div></div>
+  </div>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+    <div style="border-radius:14px;padding:13px;background:#fff0f5">
+      <b style="font-size:12.5px">🚑 Safety</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px"><span class="chip on">✓ DBS-checked</span><span class="chip on">✓ First aid</span><span class="chip">Low ratios</span></div>
+    </div>
+    <div style="border-radius:14px;padding:13px;background:#e0f5ff">
+      <b style="font-size:12.5px">🤝 SEND &amp; access</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px"><span class="chip on">✓ Wheelchair access</span><span class="chip">Quiet space</span><span class="chip">1:1 support</span></div>
+    </div>
+  </div>
+  <div class="foot"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+</div></div></section>
+
+<!-- 8 -->
+<section class="opt"><header><span class="num">8</span><h2>Two columns, dense</h2><span class="note">Most on screen at once, least scrolling. Best if you build listings often.</span></header>
+<div class="body"><div class="frame">
+  <div style="padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+    <span class="stepno">2</span><div><h3 class="ttl" style="font-size:16px">Describe your activity</h3></div>
+    <div class="rail" style="width:150px;margin-left:auto"><i class="done"></i><i class="now"></i><i></i><i></i><i></i></div>
+  </div>
+  <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><label class="fld">Summary</label><input class="inp" placeholder="One line parents see first"></div>
+      <div><label class="fld">Full description</label><div class="inp" style="height:80px;padding-top:9px">Games, sport, art and adventure…</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><label class="fld">What they'll learn</label><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">Teamwork</span><span class="chip on">Confidence</span><span class="chip">New skills</span></div></div>
+      <div><label class="fld">Extra sections</label><button class="b" style="width:100%">＋ Add a section</button></div>
+    </div>
+  </div>
+  <div class="foot"><button class="b">‹ Back</button><span class="muted" style="margin-left:auto">Autosaved</span><button class="b p">Next ›</button></div>
+</div></div></section>
+
+<!-- 9 -->
+<section class="opt"><header><span class="num">9</span><h2>Progress-led</h2><span class="note">A ring and a completion count up top, with what's still blocking publish always in view.</span></header>
+<div class="body"><div class="frame">
+  <div style="padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px">
+    <svg width="52" height="52" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#e4e9f4" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#1d3a8f" stroke-width="4" stroke-dasharray="66 100" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21" text-anchor="middle" font-size="9" font-weight="800" fill="#141a2e" font-family="Hanken Grotesk">66%</text></svg>
+    <div><h3 class="ttl">Nearly there</h3><p class="lede">Step 8 of 11 · Add-ons</p></div>
+    <div style="margin-left:auto;border:1px solid #fed7aa;background:#fff7ed;border-radius:10px;padding:8px 11px;max-width:240px">
+      <b style="font-size:11px;color:#9a3412">2 left before you can publish</b>
+      <div style="font-size:10.5px;color:#9a3412;line-height:1.45;margin-top:2px">Dates don't include a running day · No block chosen</div>
+    </div>
+  </div>
+  <div style="padding:16px 18px;display:flex;gap:7px;flex-wrap:wrap">
+    <span class="chip on">🍱 Packed lunch · £4.50</span><span class="chip on">🌅 Early drop-off · £5</span><span class="chip">🌙 Late pick-up</span><span class="chip">👕 Camp t-shirt</span>
+  </div>
+  <div class="foot"><button class="b">‹ Back</button><button class="b p" style="margin-left:auto">Next ›</button></div>
+</div></div></section>
+
+<!-- 10 -->
+<section class="opt"><header><span class="num">10</span><h2>Quiet editorial</h2><span class="note">No boxes, generous white space, hairline rules. The least "form-like" of the ten.</span></header>
+<div class="body"><div class="frame" style="padding:26px 30px">
+  <div class="eyebrow">Step 11 · Policy &amp; publish</div>
+  <h3 style="font-size:24px;font-weight:800;letter-spacing:-.03em;margin:6px 0 4px">Set clear expectations</h3>
+  <p class="muted" style="margin:0 0 20px">Booking style, who can see it, cancellation — then publish.</p>
+  <div style="border-top:1px solid var(--line);padding:15px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+      <div><b style="font-size:13px">Who can see it</b><div class="muted">Hidden listings still book by direct link</div></div>
+      <div style="display:flex;gap:6px"><span class="chip on">Public</span><span class="chip">Hidden</span></div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--line);padding:15px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+      <div><b style="font-size:13px">Waiting list</b><div class="muted">Let parents queue once it's full</div></div>
+      <div style="display:flex;gap:6px"><span class="chip on">On</span><span class="chip">Off</span></div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--line);padding:15px 0 0;display:flex;gap:8px;align-items:center">
+    <button class="b">‹ Back</button><span class="muted" style="margin-left:auto">Everything's ready</span><button class="b p">Publish</button>
+  </div>
+</div></div></section>
+
+</div>
+</body>
+</html>
