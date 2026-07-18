@@ -1815,18 +1815,27 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, theme = "playful
 // Parents for this tenant — the operator books on their behalf.
 function useParents() {
   const [list, setList] = useState<{ id: string; name: string; email?: string }[]>([]);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     apiGet<{ id: string; name?: string; email?: string }[]>("/api/customers")
-      .then((cs) => alive && setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email }))))
-      .catch(() => {
-        /* not signed in / no customers yet — the operator can still type a name */
+      .then((cs) => {
+        if (!alive) return;
+        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email })));
+        setState("ready");
+      })
+      // An empty address book and a failed request look identical otherwise.
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : "Couldn't load your parents.");
+        setState("error");
       });
     return () => {
       alive = false;
     };
   }, []);
-  return list;
+  return { list, state, error };
 }
 
 type CkTheme = { bg: string; line: string; ink: string; muted: string; accent: string; accentInk: string; round: string; inputBg: string };
@@ -1836,7 +1845,7 @@ type CkTheme = { bg: string; line: string; ink: string; muted: string; accent: s
  * each pass (with bulk add). Shared by both page styles — only colours differ.
  */
 function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme }) {
-  const parents = useParents();
+  const { list: parents, state: parentsState, error: parentsError } = useParents();
   const [q, setQ] = useState("");
   const [bulk, setBulk] = useState("");
   const matches = q.trim()
@@ -1893,6 +1902,15 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
         <>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
             className={`mt-2 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+          <div className="mt-1 text-[10.5px]" style={{ color: parentsState === "error" ? "#dc2626" : tk.muted }}>
+            {parentsState === "loading"
+              ? "Loading your parents…"
+              : parentsState === "error"
+                ? `Couldn't load your parents — ${parentsError}`
+                : parents.length === 0
+                  ? "No parents registered to your account yet — type a name to book for someone new."
+                  : `${parents.length} parent${parents.length === 1 ? "" : "s"} registered`}
+          </div>
           {q.trim() && (
             <div className="mt-1.5 flex flex-col gap-1">
               {matches.map((p) => (
@@ -1904,7 +1922,7 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
               {matches.length === 0 && (
                 <button type="button" onClick={() => { b.setParent({ id: "new", name: q.trim() }); setQ(""); }}
                   className={`border border-dashed px-3 py-2 text-left text-[12px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.muted }}>
-                  No match — book for “{q.trim()}” as a new parent
+                  {parents.length === 0 ? `No parents registered yet — book for “${q.trim()}” as a new parent` : `No match — book for “${q.trim()}” as a new parent`}
                 </button>
               )}
             </div>
