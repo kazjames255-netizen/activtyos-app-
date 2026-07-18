@@ -8,7 +8,7 @@ Thanks for that — the Blocks builder is fully wired to it and working.
 
 ---
 
-## 0. Three decisions we need from you first
+## 0. Four decisions we need from you first
 
 These shape the listing schema, so they're worth settling **before** §2 is built
 rather than after. They're small decisions with large knock-on effects.
@@ -27,8 +27,16 @@ rather than after. They're small decisions with large knock-on effects.
    `capacityScope: "day" | "listing"`. Per-day capacity in particular needs the
    dated blocks to hang off.
 
-I'm holding off building the booking write until these are answered — I'd rather
-not build it twice. Detail in §6.
+4. **Where should the manual booking flow live?** We've effectively built a
+   "take a booking" tool inside the listing preview — find parent, child per
+   pass, add-ons, editable prices. It reads like it belongs in **Bookings** as
+   *"Take a booking"*, with a listing picker on the front. Is that the right
+   home, and do you want it creating bookings through `POST /api/bookings` as it
+   stands, or something else?
+
+Kaz doesn't have a strong view on any of these — they're backend-shape calls, so
+they're yours to make. I'm holding off building the booking write until they're
+answered; I'd rather not build it twice. Detail in §6.
 
 ---
 
