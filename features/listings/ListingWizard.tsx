@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -555,6 +555,12 @@ function genDates(from: string, to: string, days: number[]): string[] {
   }
   return out;
 }
+// 1st, 2nd, 3rd, 4th…
+const ordinal = (n: number) => {
+  const rest = n % 100;
+  const suffix = rest >= 11 && rest <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${suffix}`;
+};
 const fmtDate = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
 
@@ -1622,13 +1628,22 @@ type BasketItem = { id: string; name: string; timing: string; price: number; dat
 function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[]) {
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
-  const [passId, setPassId] = useState<string | null>(passes[0]?.id ?? null);
-  const [periodId, setPeriodId] = useState<string | null>(periods[0]?.id ?? null);
+  // The block loads from the API after first render, so useState's initial
+  // value is always empty — fall back to the first entry instead of leaving
+  // nothing selected (which recorded a blank timing on the basket line).
+  const [passPick, setPassId] = useState<string | null>(null);
+  const [periodPick, setPeriodId] = useState<string | null>(null);
+  const passId = passPick ?? passes[0]?.id ?? null;
+  const periodId = periodPick ?? periods[0]?.id ?? null;
   const [sel, setSel] = useState<string[]>([]);
   const [basket, setBasket] = useState<BasketItem[]>([]);
   const [stage, setStage] = useState<"pick" | "checkout" | "done">("pick");
   const [child, setChild] = useState("");
-  const [attendees, setAttendees] = useState(1);
+  // Operator-side checkout: which parent it's for, a child per pass, and any
+  // add-ons. Attendees is derived from the children actually assigned.
+  const [parent, setParent] = useState<{ id: string; name: string } | null>(null);
+  const [assign, setAssign] = useState<Record<string, string>>({});
+  const [addonNames, setAddonNames] = useState<string[]>([]);
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const rule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
@@ -1656,6 +1671,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     });
   }
   const canAdd = !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
+  // One booking may cover several children; the count drives multi-person rules.
+  const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
+
   // Automatic discounts come off here so the basket shows what's really owed.
   const subtotal = basket.reduce((s, x) => s + x.price, 0) * attendees;
   const { lines: discountLines, total } = applyDiscounts(
@@ -1664,10 +1682,19 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     attendees,
   );
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
-  const daysStr = (iso: string[]) => iso.map((x) => new Date(`${x}T00:00:00Z`).getUTCDate()).join(", ");
-  // Spelled out for the basket tooltip — "4" alone doesn't tell them what they booked.
-  const datesFull = (item: BasketItem) =>
-    [item.dates.map(fmtDate).join(" · "), item.timing].filter(Boolean).join(" — ");
+  // "21st, 22nd, 23rd, 24th August" — grouped by month so the month isn't
+  // repeated, and readable on the row itself rather than hidden in a tooltip.
+  const datesPretty = (isos: string[]) => {
+    const byMonth = new Map<string, number[]>();
+    for (const iso of [...isos].sort()) {
+      const dt = new Date(`${iso}T00:00:00Z`);
+      const month = dt.toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" });
+      const list = byMonth.get(month) ?? [];
+      list.push(dt.getUTCDate());
+      byMonth.set(month, list);
+    }
+    return [...byMonth].map(([month, days]) => `${days.map(ordinal).join(", ")} ${month}`).join(", ");
+  };
   const addToBasket = () => {
     if (!canAdd || !pass) return;
     if (isSingle) {
@@ -1737,23 +1764,200 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     const best = options[0];
     return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
-  const reset = () => { setBasket([]); setChild(""); setAttendees(1); setStage("pick"); };
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, setAttendees, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, daysStr, datesFull, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonNames([]); setStage("pick"); };
+  const assignTo = (itemId: string, name: string) => setAssign((a) => ({ ...a, [itemId]: name }));
+  const assignAll = (name: string) => setAssign(Object.fromEntries(basket.map((x) => [x.id, name])));
+  const toggleAddon = (name: string) => setAddonNames((a) => (a.includes(name) ? a.filter((x) => x !== name) : [...a, name]));
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonNames, toggleAddon, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
 // Dispatcher — same logic, theme-specific presentation.
-function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful" }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; theme?: PageTheme;
+function BookingWidget({ d, booking, weeks, spacesLeft, addons, theme = "playful" }: {
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; theme?: PageTheme;
 }) {
   const b = useBooking(d, booking, weeks);
-  const view: BookView = { b, d, booking, weeks, spacesLeft };
-  if (theme === "playful") return <PlayfulBooking {...view} />;
-  return <SportBooking {...view} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />;
+  const view: BookView = { b, d, booking, weeks, spacesLeft, addons };
+  // Checkout is much shorter than the calendar it replaces, so without this the
+  // card collapses and leaves you staring at whitespace. "nearest" nudges it
+  // into view only if it isn't already — no jump to the top of the page.
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (b.stage !== "pick") box.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [b.stage]);
+  return (
+    <div ref={box}>
+      {theme === "playful" ? <PlayfulBooking {...view} /> : <SportBooking {...view} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />}
+    </div>
+  );
+}
+
+// Parents for this tenant — the operator books on their behalf.
+function useParents() {
+  const [list, setList] = useState<{ id: string; name: string; email?: string }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    apiGet<{ id: string; name?: string; email?: string }[]>("/api/customers")
+      .then((cs) => alive && setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email }))))
+      .catch(() => {
+        /* not signed in / no customers yet — the operator can still type a name */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return list;
+}
+
+type CkTheme = { bg: string; line: string; ink: string; muted: string; accent: string; accentInk: string; round: string; inputBg: string };
+
+/**
+ * Operator-side checkout: add-ons, find the parent, then put a child against
+ * each pass (with bulk add). Shared by both page styles — only colours differ.
+ */
+function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme }) {
+  const parents = useParents();
+  const [q, setQ] = useState("");
+  const [bulk, setBulk] = useState("");
+  const matches = q.trim()
+    ? parents.filter((p) => `${p.name} ${p.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
+    : [];
+  const addonTotal = addons.filter((a) => b.addonNames.includes(a.name)).reduce((s, a) => s + a.price, 0);
+  const grandTotal = b.total + addonTotal;
+  const unassigned = b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
+  const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
+
+  return (
+    <div className="p-5" style={{ background: tk.bg }}>
+      {/* what's being booked */}
+      <div className="flex flex-col gap-2">
+        {b.basket.map((x) => (
+          <div key={x.id} className="flex items-start justify-between gap-3 text-[12.5px]">
+            <span className="min-w-0">
+              <b className="block" style={{ color: tk.ink }}>{x.name}</b>
+              <span className="block text-[11px] leading-snug" style={{ color: tk.muted }}>
+                {b.datesPretty(x.dates)}
+              </span>
+              {x.timing && <span className="block text-[11px] font-bold" style={{ color: tk.accent }}>🕘 {x.timing}</span>}
+            </span>
+            <b className="flex-none" style={{ color: tk.ink }}>{money(x.price)}</b>
+          </div>
+        ))}
+      </div>
+
+      {/* 1 · add-ons */}
+      {addons.length > 0 && (
+        <>
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Add-ons</div>
+          <div className="mt-2 flex flex-col gap-1.5">
+            {addons.map((a) => {
+              const on = b.addonNames.includes(a.name);
+              return (
+                <button key={a.id} type="button" onClick={() => b.toggleAddon(a.name)}
+                  className={`flex items-center gap-2.5 border px-3 py-2 text-left text-[12.5px] ${tk.round}`}
+                  style={on ? { borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink } : { borderColor: tk.line, color: tk.ink }}>
+                  <span className="text-[13px]">{on ? "☑" : "☐"}</span>
+                  {a.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.image} alt="" className="h-6 w-6 flex-none rounded object-cover" />
+                  ) : a.emoji ? <span>{a.emoji}</span> : null}
+                  <span className="flex-1 font-bold">{a.name}</span>
+                  <b>{money(a.price)}</b>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* 2 · find the parent */}
+      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{addons.length > 0 ? "2" : "1"} · Find parent</div>
+      {b.parent ? (
+        <div className={`mt-2 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
+          <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>{b.parent.name}</span>
+          <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Change</button>
+        </div>
+      ) : (
+        <>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
+            className={`mt-2 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+          {q.trim() && (
+            <div className="mt-1.5 flex flex-col gap-1">
+              {matches.map((p) => (
+                <button key={p.id} type="button" onClick={() => { b.setParent(p); setQ(""); }}
+                  className={`border px-3 py-2 text-left text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
+                  <b>{p.name}</b>{p.email ? <span className="ml-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
+                </button>
+              ))}
+              {matches.length === 0 && (
+                <button type="button" onClick={() => { b.setParent({ id: "new", name: q.trim() }); setQ(""); }}
+                  className={`border border-dashed px-3 py-2 text-left text-[12px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.muted }}>
+                  No match — book for “{q.trim()}” as a new parent
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 3 · a child against each pass */}
+      {b.parent && (
+        <>
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{addons.length > 0 ? "3" : "2"} · Who&apos;s going?</div>
+          <div className="mt-2 flex gap-1.5">
+            <input value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="Add the same child to every pass…"
+              className={`w-full border px-3 py-2 text-[12.5px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+            <button type="button" disabled={!bulk.trim()} onClick={() => { b.assignAll(bulk.trim()); setBulk(""); }}
+              className={`flex-none px-3 text-[12px] font-bold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}>Add to all</button>
+          </div>
+          <div className="mt-2 flex flex-col gap-1.5">
+            {b.basket.map((x) => (
+              <div key={x.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-[11.5px]" style={{ color: tk.muted }}>
+                  <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
+                </span>
+                <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
+                  className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* totals */}
+      <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
+        {b.discountLines.map((l, i) => (
+          <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.accent }}>
+            <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
+          </div>
+        ))}
+        {addonTotal > 0 && (
+          <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
+            <span>Add-ons</span><b style={{ color: tk.ink }}>{money(addonTotal)}</b>
+          </div>
+        )}
+        <div className="mt-2 flex items-baseline justify-between text-[14px]">
+          <span style={{ color: tk.muted }}>Total</span>
+          <span className="flex items-baseline gap-2">
+            {b.saved > 0 && <s className="text-[11px]" style={{ color: tk.muted }}>{money(b.subtotal + addonTotal)}</s>}
+            <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
+          </span>
+        </div>
+      </div>
+
+      <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
+        disabled={!b.parent || unassigned > 0}
+        onClick={() => { b.setChild(Object.values(b.assign).filter(Boolean).join(", ")); b.setStage("done"); }}>
+        {!b.parent ? "Find the parent first" : unassigned > 0 ? `Name a child on ${unassigned} more pass${unassigned === 1 ? "" : "es"}` : `Confirm & pay ${money(grandTotal)}`}
+      </button>
+      <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>
+      <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
+    </div>
+  );
 }
 
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
-function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
+function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
   const idle = { background: "#fff", color: INKp, borderColor: LINEp };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -1773,17 +1977,9 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
     </div>
   );
   if (b.stage === "checkout") return (
-    <div className="rounded-[26px] bg-white p-5" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
-      <div className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
-      <div className="my-3 flex flex-col gap-2">
-        {b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-3 text-[13px]"><span className="text-[#5b6478]">{x.name}{x.timing ? <span className="text-[#a6adba]"> · {x.timing}</span> : null}</span><span className="font-bold" style={{ color: INKp }}>{money(x.price)}</span></div>)}
-      </div>
-      <div className="mb-3 flex items-center justify-between border-t-2 border-dashed pt-3 text-[14px]" style={{ borderColor: LINEp }}><span className="text-[#7a8194]">Total</span><span className="font-extrabold" style={{ color: DEEP }}>{money(b.total)}</span></div>
-      <div className="text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">Who&apos;s coming?</div>
-      <input value={b.child} onChange={(e) => b.setChild(e.target.value)} placeholder="Child's name e.g. Zara" className="mb-3 mt-1.5 w-full rounded-2xl border-2 bg-white px-3.5 py-2.5 text-[14px] outline-none" style={{ borderColor: LINEp, color: INKp }} />
-      <button className="w-full rounded-2xl py-3.5 text-[15px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: "0 14px 26px -12px " + BLUE }} disabled={!b.child.trim()} onClick={() => b.setStage("done")}>Confirm &amp; pay {money(b.total)}</button>
-      <button className="mt-2 w-full text-[12.5px] font-bold text-[#7a8194]" onClick={() => b.setStage("pick")}>← Back to dates</button>
-      <div className="mt-2 text-[11px] leading-[1.5] text-[#a6adba]">{d.cancellation}</div>
+    <div className="overflow-hidden rounded-[26px] bg-white" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
+      <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
+      <CheckoutPanel b={b} d={d} addons={addons} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff" }} />
     </div>
   );
   return (
@@ -1864,27 +2060,15 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
       <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
         <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>Your basket</span><span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
         {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">Nothing added yet — pick a pass and dates.</div> :
-          <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="group relative flex items-baseline justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[12px]" style={{ background: "#f4f7ff" }}><span className="text-[#5b6478]" title={b.datesFull(x)}><b style={{ color: INKp }}>{x.name}</b>{x.timing ? <span className="text-[#a6adba]"> · {x.timing}</span> : null} <span className="text-[#a6adba]">· {b.daysStr(x.dates)}</span><span className="pointer-events-none absolute left-2 top-full z-40 mt-1 hidden w-max max-w-[240px] rounded-lg px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-lg group-hover:block" style={{ background: "#232842" }}>{b.datesFull(x)}</span></span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
-        {b.basket.length > 0 && (
-          <>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[12px] text-[#7a8194]">Children</span>
-              <span className="ml-auto inline-flex items-center gap-1.5">
-                <button type="button" onClick={() => b.setAttendees((n) => Math.max(1, n - 1))} className="h-6 w-6 rounded-full border-2 font-extrabold" style={{ borderColor: LINEp, color: INKp }}>−</button>
-                <b className="w-5 text-center text-[13px]" style={{ color: INKp }}>{b.attendees}</b>
-                <button type="button" onClick={() => b.setAttendees((n) => n + 1)} className="h-6 w-6 rounded-full border-2 font-extrabold" style={{ borderColor: LINEp, color: INKp }}>+</button>
-              </span>
-            </div>
-            {b.discountLines.length > 0 && (
-              <div className="mt-2 rounded-xl p-2" style={{ background: "#e4f8ee" }}>
-                {b.discountLines.map((l, i) => (
-                  <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: "#047857" }}>
-                    <span className="pr-2">🎉 {l.name}</span><b>−{money(l.amount)}</b>
-                  </div>
-                ))}
+          <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 rounded-xl px-2.5 py-2 text-[12px]" style={{ background: "#f4f7ff" }}><span className="min-w-0"><b className="block" style={{ color: INKp }}>{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: "#5b6478" }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: BLUE }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
+        {b.basket.length > 0 && b.discountLines.length > 0 && (
+          <div className="mt-2 rounded-xl p-2" style={{ background: "#e4f8ee" }}>
+            {b.discountLines.map((l, i) => (
+              <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: "#047857" }}>
+                <span className="pr-2">🎉 {l.name}</span><b>−{money(l.amount)}</b>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
         <div className="mt-3 flex items-center justify-between text-[14px]">
           <span className="text-[#7a8194]">Total</span>
@@ -1900,7 +2084,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
 }
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
-function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { surf: Surf }) {
+function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookView & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
@@ -1928,15 +2112,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>Checkout</div>
-      <div className="p-5">
-        <div className="mb-3 flex flex-col gap-2">{b.basket.map((x) => <div key={x.id} className="flex items-baseline justify-between gap-3 text-[13px] text-[#c3ccdb]"><span>{x.name}{x.timing ? <span className="text-[#8f9bb0]"> · {x.timing}</span> : null}</span><span className="font-bold text-white">{money(x.price)}</span></div>)}</div>
-        <div className="mb-3 flex items-center justify-between border-t pt-3 text-[14px]" style={{ borderColor: LINEs }}><span className="text-[#8f9bb0]">Total</span><span className="font-black italic" style={{ color: LIME }}>{money(b.total)}</span></div>
-        <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8f9bb0]">Who&apos;s coming?</div>
-        <input value={b.child} onChange={(e) => b.setChild(e.target.value)} placeholder="Child's name e.g. Zara" className="mb-3 mt-1.5 w-full border px-3.5 py-2.5 text-[14px] text-white outline-none" style={{ background: CELL, borderColor: LINEs }} />
-        <button className="w-full py-3.5 text-[14px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.child.trim()} onClick={() => b.setStage("done")}><span style={unskew}>Confirm &amp; pay {money(b.total)}</span></button>
-        <button className="mt-2 w-full text-[12px] font-bold text-[#8f9bb0]" onClick={() => b.setStage("pick")}>← Back to dates</button>
-        <div className="mt-2 text-[11px] leading-[1.5] text-[#6a7488]">{d.cancellation}</div>
-      </div>
+      <CheckoutPanel b={b} d={d} addons={addons} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL }} />
     </div>
   );
   return (
@@ -2014,27 +2190,15 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
         <div className="mt-5 border-t pt-4" style={{ borderColor: LINEs }}>
           <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">Your basket</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
           {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">Nothing added yet — pick a pass and dates.</div> :
-            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="group relative flex items-baseline justify-between gap-2 text-[12px] text-[#c3ccdb]"><span title={b.datesFull(x)}><b className="text-white">{x.name}</b>{x.timing ? <span className="text-[#8f9bb0]"> · {x.timing}</span> : null} <span className="text-[#8f9bb0]">· {b.daysStr(x.dates)}</span><span className="pointer-events-none absolute left-0 top-full z-40 mt-1 hidden w-max max-w-[240px] border px-2.5 py-1.5 text-[11px] font-bold leading-snug text-white shadow-lg group-hover:block" style={{ background: CELL, borderColor: LIME }}>{b.datesFull(x)}</span></span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
-          {b.basket.length > 0 && (
-            <>
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-[12px]" style={{ color: MUTs }}>Children</span>
-                <span className="ml-auto inline-flex items-center gap-1.5">
-                  <button type="button" onClick={() => b.setAttendees((n) => Math.max(1, n - 1))} className="h-6 w-6 border font-black text-white" style={{ borderColor: LINEs }}>−</button>
-                  <b className="w-5 text-center text-[13px] text-white">{b.attendees}</b>
-                  <button type="button" onClick={() => b.setAttendees((n) => n + 1)} className="h-6 w-6 border font-black text-white" style={{ borderColor: LINEs }}>+</button>
-                </span>
-              </div>
-              {b.discountLines.length > 0 && (
-                <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
-                  {b.discountLines.map((l, i) => (
-                    <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: LIME }}>
-                      <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
-                    </div>
-                  ))}
+            <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[#c3ccdb]"><span className="min-w-0"><b className="block text-white">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
+          {b.basket.length > 0 && b.discountLines.length > 0 && (
+            <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
+              {b.discountLines.map((l, i) => (
+                <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: LIME }}>
+                  <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
           <div className="mt-3 flex items-center justify-between text-[14px]">
             <span style={{ color: MUTs }}>Total</span>
@@ -2072,7 +2236,7 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} />;
+  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} theme={theme} />;
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
