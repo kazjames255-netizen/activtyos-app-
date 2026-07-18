@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Listings filter bar — 10 options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#141a2e; --ink-2:#4b5570; --ink-3:#79839c;
+  --surface:#f4f6fb; --panel:#ffffff; --line:#e4e9f4;
+  --brand:#1d3a8f; --brand-2:#2f6bd8; --brand-ink:#102356; --brand-soft:#eaf0fc; --brand-line:#cdddf7;
+  --side-bg:linear-gradient(160deg,#1c3b8c,#172b6a);
+  --green:#16a34a; --amber:#d97706; --red:#dc2626;
+  --ff:"Hanken Grotesk",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);font-family:var(--ff);color:var(--ink);-webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:24px;letter-spacing:-.02em;margin:0 0 4px}
+.sub{color:var(--ink-3);font-size:13.5px;margin:0 0 26px;line-height:1.55}
+.opt{margin:0 0 34px;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,35,86,.04)}
+.opt > header{display:flex;align-items:baseline;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);background:#fbfcfe}
+.opt h2{font-size:14px;margin:0;letter-spacing:-.01em}
+.num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--brand);color:#fff;font-size:11.5px;font-weight:800;flex:none}
+.note{font-size:11.5px;color:var(--ink-3);margin-left:auto;text-align:right;max-width:52%;line-height:1.45}
+.body{padding:16px 18px 18px}
+/* ── shared card ── */
+.cards{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.card{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.rail{flex:none;width:88px;background:var(--side-bg);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px;text-align:center}
+.rail .m{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.rail .d{font-size:25px;font-weight:800;line-height:1;margin-top:2px;font-variant-numeric:tabular-nums}
+.rail hr{width:24px;border:0;border-top:1px solid rgba(255,255,255,.3);margin:9px 0}
+.rail .t{font-size:10.5px;opacity:.9;line-height:1.35}
+.mid{flex:1;min-width:0;padding:14px 16px}
+.ttl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ttl h3{font-size:16px;margin:0;letter-spacing:-.02em;font-weight:700}
+.pill{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+.pill.live{background:#e7f8ee;color:#0f7a44}
+.venue{font-size:12px;color:var(--ink-3);margin-top:3px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface);color:var(--ink-2);border:1px solid var(--line)}
+.bar{height:6px;border-radius:99px;background:#eef1f7;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;border-radius:99px}
+.cap{font-size:11.5px;color:var(--ink-3);margin-top:6px;display:flex;gap:7px;align-items:center}
+.cap b{color:var(--ink)}
+.photo{flex:none;width:200px;background:#dfe6f4 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:26px}
+/* ── generic control looks reused across options ── */
+.ctl{height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);padding:0 10px;outline:none}
+select.ctl{cursor:pointer;padding-right:26px;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%2379839c' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center}
+.search{flex:1;min-width:170px;position:relative}
+.search input{width:100%;height:36px;border:1px solid var(--line);border-radius:9px;padding:0 10px 0 30px;font-family:inherit;font-size:12.5px;outline:none;background:var(--panel)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4}
+.seg{display:inline-flex;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:3px}
+.seg button{border:0;background:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:0 12px;border-radius:6px;cursor:pointer}
+.seg button.on{background:var(--brand);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Listings filter bar — 10 options</h1>
+<p class="sub">Same controls throughout (search · runs on · location · category · sort · status), each shown above the real listing cards so you can judge how the two sit together. Tell me a number.</p>
+
+<!-- ══ 1 ══ -->
+<section class="opt">
+  <header><span class="num">1</span><h2>Quiet toolbar</h2><span class="note">No boxes, no fills. Hairline dividers group the controls; the page stays about the listings.</span></header>
+  <div class="body">
+    <div style="display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:5px 6px;flex-wrap:wrap">
+      <div class="search" style="max-width:250px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search listings…" style="border:0;background:none;height:32px">
+      </div>
+      <span style="width:1px;height:20px;background:var(--line);margin:0 8px"></span>
+      <select class="ctl" style="border:0;height:32px;background-color:transparent"><option>All locations</option><option>Bedford Woodland Centre</option></select>
+      <select class="ctl" style="border:0;height:32px;background-color:transparent"><option>All categories</option><option>Breakfast Clubs</option></select>
+      <span style="width:1px;height:20px;background:var(--line);margin:0 8px"></span>
+      <select class="ctl" style="border:0;height:32px;background-color:transparent"><option>Starting soonest</option><option>Most booked</option></select>
+      <span style="margin-left:auto"></span>
+      <div class="seg" style="height:32px;border:0;background:var(--surface)"><button class="on">All</button><button>Live</button><button>Ended</button></div>
+    </div>
+    <div class="cards" id="c1"></div>
+  </div>
+</section>
+
+<!-- ══ 2 ══ -->
+<section class="opt">
+  <header><span class="num">2</span><h2>Filter pills</h2><span class="note">Each filter is a pill that fills brand-blue once it's doing something. Reads like Airbnb / Linear.</span></header>
+  <div class="body">
+    <div class="row">
+      <div class="search" style="max-width:230px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search listings…" style="border-radius:999px">
+      </div>
+      <button class="ctl" style="border-radius:999px;background:var(--brand);color:#fff;border-color:var(--brand);cursor:pointer">📍 Bedford Woodland ×</button>
+      <button class="ctl" style="border-radius:999px;cursor:pointer;color:var(--ink-2)">Category ▾</button>
+      <button class="ctl" style="border-radius:999px;cursor:pointer;color:var(--ink-2)">Starting soonest ▾</button>
+      <button class="ctl" style="border-radius:999px;cursor:pointer;color:var(--ink-2)">Runs on ▾</button>
+      <div class="seg" style="border-radius:999px;margin-left:auto"><button class="on" style="border-radius:999px">All</button><button style="border-radius:999px">Live</button><button style="border-radius:999px">Ended</button></div>
+    </div>
+    <div class="cards" id="c2"></div>
+  </div>
+</section>
+
+<!-- ══ 3 ══ -->
+<section class="opt">
+  <header><span class="num">3</span><h2>Search-led, chips below</h2><span class="note">One prominent search. Whatever you've filtered by appears as removable chips underneath — you always see the state.</span></header>
+  <div class="body">
+    <div class="row">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search by name or location…" style="height:42px;font-size:13.5px;border-radius:11px;padding-left:34px">
+      </div>
+      <select class="ctl" style="height:42px"><option>Starting soonest</option></select>
+      <button class="ctl" style="height:42px;cursor:pointer;color:var(--brand);border-color:var(--brand-line);background:var(--brand-soft)">⚙︎ Filters</button>
+    </div>
+    <div class="row" style="margin-top:9px;gap:6px">
+      <span style="font-size:11px;color:var(--ink-3);font-weight:600">Filtering by</span>
+      <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">📍 Bedford Woodland Centre ×</span>
+      <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">🏷 Breakfast Clubs ×</span>
+      <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">Live only ×</span>
+      <button style="border:0;background:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink-3);cursor:pointer;text-decoration:underline">Clear all</button>
+    </div>
+    <div class="cards" id="c3"></div>
+  </div>
+</section>
+
+<!-- ══ 4 ══ -->
+<section class="opt">
+  <header><span class="num">4</span><h2>Navy command bar</h2><span class="note">Picks up the date rail's blue so the bar and the cards are obviously one family. Strongest visual anchor.</span></header>
+  <div class="body">
+    <div class="row" style="background:var(--side-bg);border-radius:12px;padding:9px 10px;gap:8px">
+      <div class="search" style="max-width:250px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:#fff;opacity:.6"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search listings…" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff">
+      </div>
+      <select class="ctl" style="background-color:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff"><option>All locations</option></select>
+      <select class="ctl" style="background-color:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff"><option>All categories</option></select>
+      <select class="ctl" style="background-color:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff"><option>Starting soonest</option></select>
+      <div class="seg" style="margin-left:auto;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)"><button class="on" style="background:#fff;color:var(--brand)">All</button><button style="color:rgba(255,255,255,.75)">Live</button><button style="color:rgba(255,255,255,.75)">Ended</button></div>
+    </div>
+    <div class="cards" id="c4"></div>
+  </div>
+</section>
+
+<!-- ══ 5 ══ -->
+<section class="opt">
+  <header><span class="num">5</span><h2>Labelled fields</h2><span class="note">Small caps label above each control. The most conventional admin look — calm and unambiguous.</span></header>
+  <div class="body">
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <div class="search" style="max-width:240px"><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Search</label>
+        <input placeholder="Name or location…" style="padding-left:11px"></div>
+      <div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Location</label>
+        <select class="ctl" style="width:165px"><option>All locations</option></select></div>
+      <div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Category</label>
+        <select class="ctl" style="width:165px"><option>All categories</option></select></div>
+      <div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Sort by</label>
+        <select class="ctl" style="width:160px"><option>Starting soonest</option></select></div>
+      <div class="seg" style="margin-left:auto"><button class="on">All</button><button>Live</button><button>Ended</button></div>
+    </div>
+    <div class="cards" id="c5"></div>
+  </div>
+</section>
+
+<!-- ══ 6 ══ -->
+<section class="opt">
+  <header><span class="num">6</span><h2>Sticky slim bar</h2><span class="note">Half the height of the others and stays put as you scroll a long list. Icons carry the meaning.</span></header>
+  <div class="body">
+    <div class="row" style="border:1px solid var(--line);border-radius:999px;background:var(--panel);padding:4px 5px 4px 14px;gap:0;box-shadow:0 2px 8px rgba(16,35,86,.05)">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="opacity:.4;margin-right:7px"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <input placeholder="Search…" style="border:0;outline:none;font-family:inherit;font-size:12.5px;height:30px;width:130px;background:none">
+      <span style="width:1px;height:18px;background:var(--line);margin:0 10px"></span>
+      <select class="ctl" style="border:0;height:30px;font-size:12px;background-color:transparent"><option>📍 All locations</option></select>
+      <select class="ctl" style="border:0;height:30px;font-size:12px;background-color:transparent"><option>🏷 All categories</option></select>
+      <select class="ctl" style="border:0;height:30px;font-size:12px;background-color:transparent"><option>⇅ Soonest</option></select>
+      <span style="margin-left:auto"></span>
+      <div class="seg" style="height:30px;border:0;background:var(--surface);border-radius:999px"><button class="on" style="border-radius:999px">All</button><button style="border-radius:999px">Live</button><button style="border-radius:999px">Ended</button></div>
+    </div>
+    <div class="cards" id="c6"></div>
+  </div>
+</section>
+
+<!-- ══ 7 ══ -->
+<section class="opt">
+  <header><span class="num">7</span><h2>Two tiers</h2><span class="note">Find on top, narrow underneath. Keeps each row short — the best option if the filter list keeps growing.</span></header>
+  <div class="body">
+    <div style="border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden">
+      <div class="row" style="padding:10px 12px">
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <input placeholder="Search by name or location…">
+        </div>
+        <div class="seg"><button class="on">All</button><button>Live</button><button>Ended</button></div>
+      </div>
+      <div class="row" style="padding:9px 12px;border-top:1px solid var(--line);background:#fbfcfe;gap:7px">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)">Narrow</span>
+        <select class="ctl" style="height:32px;font-size:12px"><option>All locations</option></select>
+        <select class="ctl" style="height:32px;font-size:12px"><option>All categories</option></select>
+        <select class="ctl" style="height:32px;font-size:12px"><option>Runs on any date</option></select>
+        <span style="margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)">Sort</span>
+        <select class="ctl" style="height:32px;font-size:12px"><option>Starting soonest</option></select>
+      </div>
+    </div>
+    <div class="cards" id="c7"></div>
+  </div>
+</section>
+
+<!-- ══ 8 ══ -->
+<section class="opt">
+  <header><span class="num">8</span><h2>Editorial underline</h2><span class="note">No boxes at all — bottom rules only. Lightest of the ten; lets the cards do all the talking.</span></header>
+  <div class="body">
+    <div class="row" style="gap:22px;padding:2px 2px 0">
+      <div class="search" style="max-width:230px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="left:0"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search listings…" style="border:0;border-bottom:1.5px solid var(--line);border-radius:0;padding-left:21px;background:none">
+      </div>
+      <select class="ctl" style="border:0;border-bottom:1.5px solid var(--line);border-radius:0;padding-left:0;background-color:transparent"><option>All locations</option></select>
+      <select class="ctl" style="border:0;border-bottom:1.5px solid var(--line);border-radius:0;padding-left:0;background-color:transparent"><option>All categories</option></select>
+      <select class="ctl" style="border:0;border-bottom:1.5px solid var(--brand);border-radius:0;padding-left:0;color:var(--brand);background-color:transparent"><option>Starting soonest</option></select>
+      <div class="seg" style="margin-left:auto;border:0;background:var(--surface)"><button class="on">All</button><button>Live</button><button>Ended</button></div>
+    </div>
+    <div class="cards" id="c8"></div>
+  </div>
+</section>
+
+<!-- ══ 9 ══ -->
+<section class="opt">
+  <header><span class="num">9</span><h2>Counted tabs + toolbar</h2><span class="note">Status becomes real tabs with counts (the thing you switch most), filters sit quietly underneath.</span></header>
+  <div class="body">
+    <div style="display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:11px">
+      <button style="border:0;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--brand);padding:0 3px 9px;margin-right:18px;border-bottom:2.5px solid var(--brand);cursor:pointer">All <span style="font-weight:600;color:var(--ink-3)">12</span></button>
+      <button style="border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);padding:0 3px 9px;margin-right:18px;border-bottom:2.5px solid transparent;cursor:pointer">Live <span>9</span></button>
+      <button style="border:0;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);padding:0 3px 9px;border-bottom:2.5px solid transparent;cursor:pointer">Ended <span>3</span></button>
+    </div>
+    <div class="row" style="gap:7px">
+      <div class="search" style="max-width:220px">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <input placeholder="Search listings…" style="height:33px">
+      </div>
+      <select class="ctl" style="height:33px"><option>All locations</option></select>
+      <select class="ctl" style="height:33px"><option>All categories</option></select>
+      <select class="ctl" style="height:33px;margin-left:auto"><option>Sort: Starting soonest</option></select>
+    </div>
+    <div class="cards" id="c9"></div>
+  </div>
+</section>
+
+<!-- ══ 10 ══ -->
+<section class="opt">
+  <header><span class="num">10</span><h2>Card header</h2><span class="note">The bar is the top of the list panel rather than a separate object — everything lives in one container.</span></header>
+  <div class="body">
+    <div style="border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;box-shadow:0 1px 2px rgba(16,35,86,.05)">
+      <div class="row" style="padding:11px 13px;border-bottom:1px solid var(--line);gap:7px">
+        <strong style="font-size:13px;letter-spacing:-.01em">12 listings</strong>
+        <span style="width:1px;height:18px;background:var(--line);margin:0 4px"></span>
+        <div class="search" style="max-width:200px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <input placeholder="Search…" style="height:32px">
+        </div>
+        <select class="ctl" style="height:32px;font-size:12px"><option>All locations</option></select>
+        <select class="ctl" style="height:32px;font-size:12px"><option>All categories</option></select>
+        <select class="ctl" style="height:32px;font-size:12px;margin-left:auto"><option>Starting soonest</option></select>
+        <div class="seg" style="height:32px"><button class="on">All</button><button>Live</button><button>Ended</button></div>
+      </div>
+      <div style="padding:11px 13px;background:#fbfcfe" id="c10"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+<script>
+const LISTINGS = [
+  {m:"AUG",d:"11",to:"22 Aug",days:10,name:"Summer Multi-Activity Camp",venue:"Bedford Woodland Centre",chips:["5 day pass £150","Single day £35"],booked:38,cap:60},
+  {m:"SEP",d:"02",to:"18 Dec",days:15,name:"Breakfast Club — Autumn Term",venue:"Northampton Sports Hub",chips:["Termly £180","Drop-in £8"],booked:52,cap:55},
+];
+function card(l){
+  const left=l.cap-l.booked, pct=Math.round(l.booked/l.cap*100);
+  const tone = left<=0?"var(--red)":left<=l.cap*.15?"var(--amber)":"var(--green)";
+  return `<div class="card">
+    <div class="rail"><div class="m">${l.m}</div><div class="d">${l.d}</div><hr><div class="t">to <b>${l.to}</b><br>${l.days} days</div></div>
+    <div class="mid">
+      <div class="ttl"><h3>${l.name}</h3><span class="pill live">● Live</span></div>
+      <div class="venue">${l.venue}</div>
+      <div class="chips">${l.chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>
+      <div class="bar"><i style="width:${pct}%;background:${tone}"></i></div>
+      <div class="cap"><span><b>${l.booked}</b> of ${l.cap} booked</span><span style="color:var(--line)">·</span><span style="color:${tone}"><b>${left}</b> left</span><span style="color:var(--line)">·</span><span>${pct}% full</span></div>
+    </div>
+    <div class="photo">${l.m==="AUG"?"🏕️":"🥐"}</div>
+  </div>`;
+}
+for(let i=1;i<=10;i++){
+  const el=document.getElementById("c"+i);
+  if(!el) continue;
+  el.innerHTML = LISTINGS.map(card).join("");
+  if(i===10) el.className="cards", el.style.marginTop="0";
+}
+</script>
+</body>
+</html>

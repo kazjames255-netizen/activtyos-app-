@@ -5,7 +5,8 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import type { AddonTemplate, LocalState, StaffMember } from "./FreelancerListingsApp";
+import type { AddonTemplate, LocalState, StaffMember, Venue } from "./FreelancerListingsApp";
+import { VenueMap } from "./VenueMap";
 import * as blocksApi from "@/features/blocks/blocksApi";
 import type { ResolvedPricing } from "@/features/blocks/blocksApi";
 
@@ -403,6 +404,15 @@ export const SECTION_KEYS = [
   { key: "addons", label: "Optional add-ons", eyebrow: "Add-ons", title: "Extras" },
   { key: "gallery", label: "Gallery", eyebrow: "Gallery", title: "In action" },
 ] as const;
+export const WHERE_HEAD_DEFAULT = { eyebrow: "Where it is", title: "Getting there" };
+/** The venue section's heading. Lives on the operator's library, not the listing — the same venue reads the same on every listing. */
+export function whereHeading(local: LocalState): { eyebrow: string; title: string } {
+  return {
+    eyebrow: local.whereHeading?.eyebrow?.trim() || WHERE_HEAD_DEFAULT.eyebrow,
+    title: local.whereHeading?.title?.trim() || WHERE_HEAD_DEFAULT.title,
+  };
+}
+
 /** Heading for a section — the operator's wording if set, else the default. */
 export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title"): string {
   const def = SECTION_KEYS.find((s) => s.key === key);
@@ -2383,7 +2393,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
 }
 
 function ParentPreview({ d, venue, local, booking, addons, full, theme = "playful", onTheme }: {
-  d: WizardDraft; venue: { name: string; address: string } | null; local: LocalState;
+  d: WizardDraft; venue: Venue | null; local: LocalState;
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
 }) {
@@ -2405,7 +2415,7 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} theme={theme} />;
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local) };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -2428,12 +2438,14 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
 }
 
 interface PageProps {
-  d: WizardDraft; venue: { name: string; address: string } | null; cats: { id: string; name: string }[];
+  d: WizardDraft; venue: Venue | null; cats: { id: string; name: string }[];
   heroCat: { id: string; name: string } | null;
   town: string; runLabel: string; staff: LocalState["staff"]; staffNames: string[];
   addons: LocalState["addons"]; imgs: ListingImage[];
   widget: React.ReactNode; full?: boolean; emo: (o: string, fb: string) => string;
   fromPrice: number | null; passSummary: { name: string; price: number }[]; spacesLeft: number | null;
+  /** Set once in Locations, not per listing. */
+  whereHead: { eyebrow: string; title: string };
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // Dark surfaces for the Sport-style pages — swappable so the same design can be
@@ -2492,7 +2504,7 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
+function PlayfulPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
   const chip = (o: string, fb: string, i: number) => (
@@ -2564,6 +2576,35 @@ function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, i
             {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title={headingOf(d, "included", "title")} sub={headingOf(d, "included", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
             {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title={headingOf(d, "safety", "title")} sub={headingOf(d, "safety", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
             {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
+            {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
+              <PlayCard e="📍" tint="#e7f0ff" title={whereHead.title} sub={whereHead.eyebrow}>
+                <div className="text-[14px] font-extrabold" style={{ color: INKp }}>{venue.name}</div>
+                {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
+                {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
+                {!!venue.facilities?.length && (
+                  <div className={`mt-3 grid gap-2 ${grid2}`}>{venue.facilities.map((f, i) => chip(f, "✅", i))}</div>
+                )}
+                {(venue.what3words || venue.transport) && (
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
+                    {venue.what3words && (
+                      <a href={`https://what3words.com/${encodeURIComponent(venue.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer noopener"
+                        className="rounded-2xl px-3 py-2 font-bold" style={{ background: "#fff0f5", color: "#c81e5b" }}>
+                        {"///"} {venue.what3words.replace(/^\/+/, "")}
+                      </a>
+                    )}
+                    {venue.transport && (
+                      <span className="rounded-2xl px-3 py-2 font-bold" style={{ background: "#e4f8ee", color: "#0f7a44" }}>🚌 {venue.transport}</span>
+                    )}
+                  </div>
+                )}
+                {venue.directions && (
+                  <div className="mt-3 rounded-2xl p-3.5" style={{ background: "#f4f7ff" }}>
+                    <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>Getting there &amp; parking</div>
+                    <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: "#3d4763" }}>{venue.directions}</p>
+                  </div>
+                )}
+              </PlayCard>
+            )}
             {staff.length > 0 && (
               <div className="rounded-3xl bg-white p-5" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
                 <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
@@ -2595,7 +2636,7 @@ function PlayfulPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, i
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
@@ -2716,6 +2757,35 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
             {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
+            {venue && (venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
+              <SportSec eye={whereHead.eyebrow} title={whereHead.title}>
+                <div className="text-[14px] font-black text-white">{venue.name}</div>
+                {venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
+                {venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
+                {!!venue.facilities?.length && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">{venue.facilities.map((f) => (
+                    <span key={f} className="border px-2.5 py-1 text-[11.5px] font-bold" style={{ borderColor: LINEs, background: PANEL, color: "#fff" }}>{f}</span>
+                  ))}</div>
+                )}
+                {(venue.what3words || venue.transport) && (
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12.5px] font-bold">
+                    {venue.what3words && (
+                      <a href={`https://what3words.com/${encodeURIComponent(venue.what3words.replace(/^\/+/, ""))}`} target="_blank" rel="noreferrer noopener"
+                        className="border px-3 py-2" style={{ borderColor: LIME, color: LIME }}>{"///"} {venue.what3words.replace(/^\/+/, "")}</a>
+                    )}
+                    {venue.transport && (
+                      <span className="border px-3 py-2" style={{ borderColor: LINEs, background: PANEL, color: "#fff" }}>🚌 {venue.transport}</span>
+                    )}
+                  </div>
+                )}
+                {venue.directions && (
+                  <div className="mt-3 border p-3.5" style={{ borderColor: LINEs, background: PANEL }}>
+                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>Getting there &amp; parking</div>
+                    <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: MUTs }}>{venue.directions}</p>
+                  </div>
+                )}
+              </SportSec>
+            )}
             {staff.length > 0 && (
               <div className="border-t pt-6" style={{ borderColor: LINEs }}>
                 <button type="button" onClick={() => setTeamOpen((o) => !o)} className="flex w-full items-center justify-between border px-4 py-3 text-left" style={{ borderColor: LINEs, background: PANEL }}>

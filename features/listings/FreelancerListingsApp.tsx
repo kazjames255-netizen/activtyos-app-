@@ -5,8 +5,9 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
-import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import { ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
+import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { VenueMap } from "./VenueMap";
+import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -34,10 +35,22 @@ interface Category {
   id: string;
   name: string;
 }
-interface Venue {
+export interface Venue {
   id: string;
   name: string;
   address: string;
+  /** What's there — shown to parents on the listing page. */
+  facilities?: string[];
+  /** Getting there, parking, where to drop off. */
+  directions?: string;
+  /** what3words square for the exact entrance — stops the "which door?" phone calls. */
+  what3words?: string;
+  /** Nearest bus stop / station. */
+  transport?: string;
+  /** Saved map position. Set by the address lookup, adjusted by the zoom buttons. */
+  lat?: number;
+  lng?: number;
+  zoom?: number;
 }
 export interface AddonTemplate {
   id: string;
@@ -55,6 +68,8 @@ export interface StaffMember {
   bio: string;
 }
 export interface LocalState {
+  /** Heading for the venue section on every customer page — set once, not per listing. */
+  whereHeading?: { eyebrow: string; title: string };
   categories: Category[];
   venues: Venue[];
   provided: string[];
@@ -140,6 +155,7 @@ function loadLocal(): LocalState {
       addons: p.addons ?? seed.addons,
       staff,
       emojis: p.emojis ?? {},
+      whereHeading: p.whereHeading,
     };
   } catch {
     return seed;
@@ -153,26 +169,37 @@ function saveLocal(s: LocalState) {
   }
 }
 
-function HowItWorks() {
+type Tab = "listings" | "categories" | "locations";
+
+function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
+  const jump = "font-bold text-[var(--brand-ink,#1d3a8f)] underline underline-offset-2";
   return (
     <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
         <span>ℹ️ How it works</span>
       </summary>
-      <div className="px-3.5 pb-3.5 pl-8 text-[12.5px] text-[var(--ink-3)]">
-        <p className="mb-2">Build the camps, clubs and sessions you sell.</p>
-        <ol className="ml-4 flex list-decimal flex-col gap-1">
-          <li>Set when it runs, the ages and the venue — once</li>
-          <li>Add passes, prices, capacity and waitlists</li>
-          <li>Add wraparound times and add-ons, then publish to your storefront</li>
-        </ol>
+      <div className="px-3.5 pb-3.5 pl-8 text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
+        <p className="mb-2">
+          A listing is one thing you sell — a holiday camp, a weekly club, a one-off session.
+        </p>
+        {/* The two things that have to exist first — the builder can't invent them mid-flow. */}
+        <p className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
+          <b>Set up your </b>
+          <button type="button" onClick={() => onTab("categories")} className={jump}>categories</button>
+          <b> and </b>
+          <button type="button" onClick={() => onTab("locations")} className={jump}>locations</button>
+          <b> first</b> — you pick from those lists inside the builder, and reuse them on every listing after.
+        </p>
+        <p>
+          The builder then walks you through it: describe it, set when it runs, add passes and prices,
+          then discounts, extras and staff. You can preview the customer page at any point.
+          It saves as you go, and nothing goes live until you publish.
+        </p>
       </div>
     </details>
   );
 }
-
-type Tab = "listings" | "categories" | "locations";
 
 /** Freelancer Listings — manual layout, Phase A. */
 export function FreelancerListingsApp() {
@@ -184,6 +211,26 @@ export function FreelancerListingsApp() {
   const [viewing, setViewing] = useState<WizardDraft | null>(null);
   const [tick, setTick] = useState(0);
   // In-progress drafts (never published) — resumable from the Listings tab.
+  // How many listings sit behind each category / venue. Both library tabs show
+  // it, and it's what makes an unused entry obvious.
+  const usage = useMemo(() => {
+    const cats: Record<string, number> = {};
+    const venues: Record<string, number> = {};
+    // Only count drafts that still have a listing behind them. Deleting a
+    // listing leaves its draft in localStorage, and counting those inflated
+    // every category (a deleted camp kept voting for its categories forever).
+    const live = new Set((listings ?? []).map((l) => l.id));
+    for (const dr of Object.values(loadDrafts())) {
+      if (dr.id === null || dr.archived || !live.has(dr.id)) continue;
+      for (const c of dr.categoryIds ?? []) cats[c] = (cats[c] ?? 0) + 1;
+      if (dr.venueId) venues[dr.venueId] = (venues[dr.venueId] ?? 0) + 1;
+    }
+    return { cats, venues };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick, wizard, listings]);
+
+  const startNew = useCallback((venueId?: string) => setWizard({ draft: { ...emptyDraft(), venueId: venueId ?? null }, key: uid() }), []);
+
   const drafts = useMemo(
     () => Object.entries(loadDrafts()).filter(([, dr]) => dr.id === null && (dr.title.trim() || dr.blockId || dr.description.trim())),
     // tick/wizard drive a re-read of localStorage (loadDrafts is not a tracked dep)
@@ -272,14 +319,14 @@ export function FreelancerListingsApp() {
         </div>
         <div className="flex items-center gap-2.5">
           {tab === "listings" && (
-            <Button variant="primary" onClick={() => setWizard({ draft: emptyDraft(), key: uid() })}>
+            <Button variant="primary" onClick={() => startNew()}>
               ＋ New listing
             </Button>
           )}
         </div>
       </div>
 
-      <HowItWorks />
+      <HowItWorks onTab={setTab} />
 
       {/* Tabs */}
       <div className="mb-3 flex gap-1.5 border-b border-[var(--line)]">
@@ -333,8 +380,8 @@ export function FreelancerListingsApp() {
           refresh={refresh}
         />
       )}
-      {tab === "categories" && <CategoriesTab local={local} patch={patchLocal} />}
-      {tab === "locations" && <LocationsTab local={local} patch={patchLocal} />}
+      {tab === "categories" && <CategoriesTab local={local} patch={patchLocal} usage={usage} />}
+      {tab === "locations" && <LocationsTab local={local} patch={patchLocal} usage={usage} onNewListing={startNew} />}
 
       {wizard && (
         <ListingWizard
@@ -363,6 +410,34 @@ export function FreelancerListingsApp() {
 }
 
 // ── Listings tab: compact, searchable cards ────────────────────────────────
+// Filter pills. A pill fills brand-blue while it's doing something, so the row
+// shows the current state at a glance instead of a wall of empty controls. The
+// native select chevron is replaced — it can't be recoloured for the filled state.
+function Pill({ active, onClear, children }: { active: boolean; onClear?: () => void; children: React.ReactNode }) {
+  return (
+    <span className="flex h-8 items-center gap-1.5 rounded-full border pl-3 pr-1 transition-colors"
+      style={active ? { background: "var(--brand)", borderColor: "var(--brand)" } : { background: "var(--panel)", borderColor: "var(--line)" }}>
+      {children}
+      <button type="button" onClick={onClear} title={active ? "Clear" : undefined} aria-hidden={!active}
+        className="mr-1 text-[13px] leading-none transition-opacity"
+        style={active ? { color: "rgba(255,255,255,.75)" } : { opacity: 0, pointerEvents: "none", width: 0, marginRight: 0 }}>×</button>
+    </span>
+  );
+}
+
+function PillSelect({ active, value, onChange, options, title }: { active: boolean; value: string; onChange: (v: string) => void; options: [string, string][]; title: string }) {
+  return (
+    <span className="relative flex items-center">
+      <select value={value} onChange={(e) => onChange(e.target.value)} title={title}
+        className="h-8 max-w-[165px] cursor-pointer appearance-none border-0 bg-transparent pr-4 text-[12.5px] font-semibold outline-none"
+        style={{ color: active ? "#fff" : "var(--ink-2)" }}>
+        {options.map(([v, label]) => <option key={v} value={v} style={{ color: "var(--ink)" }}>{label}</option>)}
+      </select>
+      <span className="pointer-events-none absolute right-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-3)" }}>▼</span>
+    </span>
+  );
+}
+
 type SortKey = "soonest" | "latest" | "ending" | "capacity" | "booked" | "full" | "left" | "price" | "name";
 const SORTS: [SortKey, string][] = [
   ["soonest", "Starting soonest"],
@@ -410,6 +485,7 @@ function ListingsTab({
 
   const [menuId, setMenuId] = useState<string | null>(null);
   const [venueFilter, setVenueFilter] = useState("");
+  const [catFilter, setCatFilter] = useState("");
   // Clicking Public/Hidden explains what it actually does — the words alone
   // don't tell an operator whether parents can still reach the listing.
   const [visNote, setVisNote] = useState<string | null>(null);
@@ -472,6 +548,7 @@ function ListingsTab({
       l, dr, info,
       vn: dr ? local.venues.find((v) => v.id === dr.venueId)?.name ?? "" : "",
       venueId: dr?.venueId ?? null,
+      categoryIds: dr?.categoryIds ?? [],
       cap, spaces, left, booked,
       pct: cap && cap > 0 ? booked / cap : 0,
       from: l.passes.length ? Math.min(...l.passes.map((p) => p.price)) : Infinity,
@@ -486,6 +563,7 @@ function ListingsTab({
     if (query && !`${r.l.name} ${r.vn} ${r.info?.dateLabel ?? ""}`.toLowerCase().includes(query)) return false;
     if (dateFilter && !(r.dr && listingRunsOn(r.dr, dateFilter))) return false;
     if (venueFilter && r.venueId !== venueFilter) return false;
+    if (catFilter && !r.categoryIds.includes(catFilter)) return false;
     return true;
   });
 
@@ -510,10 +588,12 @@ function ListingsTab({
     });
   const archivedList = listings.filter((l) => getDraftArchived(l.id));
 
-  // Only offer locations that actually have a listing behind them.
-  const venueOpts = [...new Map(rows.filter((r) => r.venueId && r.vn && !r.archived).map((r) => [r.venueId!, r.vn])).entries()]
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Offer the whole library, not just what's already in use — an operator
+  // looking for "Northampton" shouldn't have to know whether anything is
+  // filed there yet. The counts show which are actually populated.
+  const countBy = (pick: (r: (typeof rows)[number]) => boolean) => rows.filter((r) => !r.archived && pick(r)).length;
+  const venueOpts = local.venues.map((v) => ({ id: v.id, name: v.name, n: countBy((r) => r.venueId === v.id) }));
+  const catOpts = local.categories.map((c) => ({ id: c.id, name: c.name, n: countBy((r) => r.categoryIds.includes(c.id)) }));
 
   const draftsBlock = drafts.length > 0 && (
     <div className="mb-3">
@@ -542,34 +622,58 @@ function ListingsTab({
   return (
     <div className="flex flex-col gap-3" data-archive-tick={archiveTick}>
       {draftsBlock}
+      {/* Filter pills — each control is a pill that fills brand-blue once it's
+          actually narrowing the list, so the row reads as state, not chrome. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  Search by name or location…" className="w-full max-w-[300px]" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Runs on</span>
-          <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-[150px]" />
-          {dateFilter && <Button sm onClick={() => setDateFilter("")}>Clear</Button>}
+        <div className="relative min-w-[180px] flex-1 sm:max-w-[260px]">
+          <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
+            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--brand-2)]" />
         </div>
-        {venueOpts.length > 1 && (
-          <Select value={venueFilter} onChange={(e) => setVenueFilter(e.target.value)} className="w-[170px]">
-            <option value="">All locations</option>
-            {venueOpts.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </Select>
+
+        {venueOpts.length > 0 && (
+          <Pill active={!!venueFilter} onClear={() => setVenueFilter("")}>
+            <PillSelect active={!!venueFilter} value={venueFilter} onChange={setVenueFilter} title="Filter by location"
+              options={[["", "Location"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
+          </Pill>
         )}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Sort</span>
-          <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="w-[185px]">
-            {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-          </Select>
-        </div>
-        <span className="flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
+
+        {catOpts.length > 0 && (
+          <Pill active={!!catFilter} onClear={() => setCatFilter("")}>
+            <PillSelect active={!!catFilter} value={catFilter} onChange={setCatFilter} title="Filter by category"
+              options={[["", "Category"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+          </Pill>
+        )}
+
+        <Pill active={sortBy !== "soonest"} onClear={() => setSortBy("soonest")}>
+          <PillSelect active={sortBy !== "soonest"} value={sortBy} onChange={(v) => setSortBy(v as SortKey)} title="Sort the list"
+            options={SORTS.map(([k, label]) => [k, label] as [string, string])} />
+        </Pill>
+
+        <Pill active={!!dateFilter} onClear={() => setDateFilter("")}>
+          <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: dateFilter ? "#fff" : "var(--ink-2)" }}>Runs on</span>
+          <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}
+            className="h-full w-[112px] border-0 bg-transparent text-[12.5px] font-semibold outline-none"
+            style={{ color: dateFilter ? "#fff" : "var(--ink-2)", colorScheme: dateFilter ? "dark" : "light" }} />
+        </Pill>
+
+        {(q || dateFilter || venueFilter || catFilter || sortBy !== "soonest") && (
+          <button type="button" title="Clear every filter"
+            onClick={() => { setQ(""); setDateFilter(""); setVenueFilter(""); setCatFilter(""); setSortBy("soonest"); }}
+            className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
+        )}
+
+        <span className="ml-auto flex h-8 items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[11.5px] font-semibold">
           {([["all", "All"], ["live", "Live"], ["ended", "Ended"]] as const).map(([k, label]) => (
-            <button key={k} type="button" onClick={() => setStatusFilter(k)} className="px-3 py-1.5"
+            <button key={k} type="button" onClick={() => setStatusFilter(k)} className="h-full rounded-full px-3 transition-colors"
               style={statusFilter === k ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </span>
       </div>
       {activeShown.length === 0 ? (
-        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
+        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
       ) : (
         activeShown.map(({ l, info, vn, cap, spaces, isLive }) => {
           return (
@@ -729,9 +833,11 @@ function ListingsTab({
 function CategoriesTab({
   local,
   patch,
+  usage,
 }: {
   local: LocalState;
   patch: (fn: (s: LocalState) => LocalState) => void;
+  usage: { cats: Record<string, number>; venues: Record<string, number> };
 }) {
   const [name, setName] = useState("");
   const add = () => {
@@ -740,7 +846,9 @@ function CategoriesTab({
     setName("");
   };
   const remove = (id: string, nm: string) => {
-    if (!confirm(`Delete category “${nm}”?`)) return;
+    const n = usage.cats[id] ?? 0;
+    const warn = n > 0 ? `\n\n${n} listing${n === 1 ? " uses" : "s use"} it — they'll lose this category.` : "";
+    if (!confirm(`Delete category “${nm}”?${warn}`)) return;
     patch((s) => ({ ...s, categories: s.categories.filter((c) => c.id !== id) }));
   };
 
@@ -751,28 +859,9 @@ function CategoriesTab({
         Categories are how parents filter your storefront. These are the options offered when you
         build a listing.
       </p>
-      <div className="mb-3 flex flex-wrap gap-2">
-        {local.categories.map((c) => (
-          <span
-            key={c.id}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12.5px] font-bold"
-          >
-            {c.name}
-            <button
-              type="button"
-              onClick={() => remove(c.id, c.name)}
-              aria-label="Delete category"
-              className="text-[var(--ink-3)] hover:text-[var(--red)]"
-            >
-              ✕
-            </button>
-          </span>
-        ))}
-        {local.categories.length === 0 && (
-          <span className="text-[12px] text-[var(--ink-3)]">No categories yet.</span>
-        )}
-      </div>
-      <div className="flex gap-1.5">
+
+      {/* Add first — this page is mostly visited to put something new in it. */}
+      <div className="mb-3.5 flex gap-1.5">
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -780,7 +869,36 @@ function CategoriesTab({
           placeholder="New category name"
           className="w-[240px]"
         />
-        <Button onClick={add}>＋ Add category</Button>
+        <Button variant="primary" onClick={add}>＋ Add category</Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {local.categories.map((c) => {
+          const n = usage.cats[c.id] ?? 0;
+          return (
+            <span
+              key={c.id}
+              title={n ? `Used by ${n} listing${n === 1 ? "" : "s"}` : "Not used by any listing yet"}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1.5 pl-3.5 pr-1.5 text-[12.5px] font-bold"
+            >
+              {c.name}
+              {/* The count is the whole point — it's how you spot a dead category. */}
+              <span className="rounded-full px-1.5 py-[1px] text-[11px] font-bold"
+                style={n ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{n}</span>
+              <button
+                type="button"
+                onClick={() => remove(c.id, c.name)}
+                aria-label={`Delete ${c.name}`}
+                className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]"
+              >
+                ✕
+              </button>
+            </span>
+          );
+        })}
+        {local.categories.length === 0 && (
+          <span className="text-[12px] text-[var(--ink-3)]">No categories yet — add your first above.</span>
+        )}
       </div>
     </Card>
   );
@@ -790,107 +908,318 @@ function CategoriesTab({
 function LocationsTab({
   local,
   patch,
+  usage,
+  onNewListing,
 }: {
   local: LocalState;
   patch: (fn: (s: LocalState) => LocalState) => void;
+  usage: { cats: Record<string, number>; venues: Record<string, number> };
+  onNewListing: (venueId?: string) => void;
 }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [selId, setSelId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [nm, setNm] = useState("");
   const [addr, setAddr] = useState("");
 
+  const sel = local.venues.find((v) => v.id === selId) ?? local.venues[0] ?? null;
+  const wh = whereHeading(local);
+
   const addVenue = () => {
     if (nm.trim().length < 2) return;
-    patch((s) => ({ ...s, venues: [...s.venues, { id: uid(), name: nm.trim(), address: addr.trim() }] }));
+    const id = uid();
+    patch((s) => ({ ...s, venues: [...s.venues, { id, name: nm.trim(), address: addr.trim() }] }));
     setNm("");
     setAddr("");
     setAdding(false);
+    setSelId(id);
   };
+  // Everything here writes straight through to the saved venue — the panel has
+  // no separate save button by design.
+  const setPin = (id: string, patchV: Partial<Venue>) =>
+    patch((s) => ({ ...s, venues: s.venues.map((v) => (v.id === id ? { ...v, ...patchV } : v)) }));
   const updateVenue = (id: string, field: "name" | "address", value: string) =>
     patch((s) => ({ ...s, venues: s.venues.map((v) => (v.id === id ? { ...v, [field]: value } : v)) }));
   const removeVenue = (id: string, name: string) => {
-    if (!confirm(`Delete venue “${name}”?`)) return;
+    const n = usage.venues[id] ?? 0;
+    const warn = n > 0 ? `\n\n${n} listing${n === 1 ? " runs" : "s run"} there — they'll lose their venue.` : "";
+    if (!confirm(`Delete venue “${name}”?${warn}`)) return;
     patch((s) => ({ ...s, venues: s.venues.filter((v) => v.id !== id) }));
+    if (selId === id) setSelId(null);
   };
 
   return (
     <Card className="p-4">
       <div className="text-[15px] font-extrabold">Locations</div>
       <p className="mb-3 text-[12px] text-[var(--ink-3)]">
-        Your venues — a simple list of name + address. Pick one per listing; address &amp; map pin
-        are set here once.
+        Your venues. Pick one per listing — the address is set here once and reused everywhere.
       </p>
 
-      <div className="flex flex-col gap-1.5">
-        {local.venues.map((v) => {
-          const open = openId === v.id;
-          return (
-            <div key={v.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)]">
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => setOpenId(open ? null : v.id)}
-                  className="flex flex-1 items-center gap-2 text-left"
-                >
-                  <span className="text-[var(--ink-3)]">{open ? "▾" : "▸"}</span>
-                  <span>
-                    <span className="text-[13px] font-bold">{v.name}</span>
-                    <span className="ml-2 text-[11.5px] text-[var(--ink-3)]">{v.address}</span>
-                  </span>
+      {/* Set once here rather than per listing — the venue section reads the
+          same on every customer page. */}
+      <details className="mb-3 max-w-[900px] rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <summary className="cursor-pointer list-none px-3 py-2 text-[11.5px] font-bold text-[var(--brand-ink)] [&::-webkit-details-marker]:hidden">
+          ✎ Section heading on customer pages — <span className="font-semibold text-[var(--ink-3)]">{wh.eyebrow} · {wh.title}</span>
+        </summary>
+        <div className="flex flex-wrap gap-2 px-3 pb-3">
+          <div>
+            <FieldLabel>Small label</FieldLabel>
+            <Input value={local.whereHeading?.eyebrow ?? ""} placeholder={WHERE_HEAD_DEFAULT.eyebrow} className="w-[180px]"
+              onChange={(e) => patch((s) => ({ ...s, whereHeading: { eyebrow: e.target.value, title: s.whereHeading?.title ?? "" } }))} />
+          </div>
+          <div>
+            <FieldLabel>Heading</FieldLabel>
+            <Input value={local.whereHeading?.title ?? ""} placeholder={WHERE_HEAD_DEFAULT.title} className="w-[200px]"
+              onChange={(e) => patch((s) => ({ ...s, whereHeading: { eyebrow: s.whereHeading?.eyebrow ?? "", title: e.target.value } }))} />
+          </div>
+        </div>
+      </details>
+
+      {/* Capped so the rows don't stretch across a wide screen — long thin rows
+          beside a small map read badly, and the map gets more of the width. */}
+      <div className="grid max-w-[900px] gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex flex-col gap-1.5">
+          {local.venues.map((v, i) => {
+            const on = sel?.id === v.id;
+            const n = usage.venues[v.id] ?? 0;
+            return (
+              <div
+                key={v.id}
+                className="flex items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-colors"
+                style={on ? { borderColor: "var(--brand-line)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}
+              >
+                {/* Numbered so a row and its map pin are obviously the same thing. */}
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-extrabold"
+                  style={on ? { background: "var(--side-bg)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{i + 1}</span>
+                <button type="button" onClick={() => setSelId(v.id)} className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-[13px] font-bold">{v.name}</div>
+                  <div className="truncate text-[11.5px] text-[var(--ink-3)]">
+                    {v.address || "No address yet"} · {n ? `${n} listing${n === 1 ? "" : "s"}` : "not used yet"}
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => removeVenue(v.id, v.name)}
-                  aria-label="Delete venue"
-                  className="text-[13px] text-[var(--ink-3)] hover:text-[var(--red)]"
+                  aria-label={`Delete ${v.name}`}
+                  className="px-1 text-[13px] text-[var(--ink-3)] hover:text-[var(--red)]"
                 >
                   ✕
                 </button>
               </div>
-              {open && (
-                <div className="border-t border-[var(--line)] p-3">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <FieldLabel>Venue name</FieldLabel>
-                      <Input value={v.name} onChange={(e) => updateVenue(v.id, "name", e.target.value)} className="w-full" />
-                    </div>
-                    <div>
-                      <FieldLabel>Address</FieldLabel>
-                      <Input value={v.address} onChange={(e) => updateVenue(v.id, "address", e.target.value)} className="w-full" />
-                    </div>
-                  </div>
-                  <div className="mt-2 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] text-[11.5px] text-[var(--ink-3)]">
-                    📍 Map pin — search &amp; drop a pin (needs the maps key your developer provisions)
-                  </div>
+            );
+          })}
+
+          {local.venues.length === 0 && !adding && (
+            <div className="rounded-xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
+              No venues yet — add your first below.
+            </div>
+          )}
+
+          {adding ? (
+            <div className="mt-1 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <FieldLabel>Venue name</FieldLabel>
+                <Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="e.g. Riverside Sports Hall" className="w-full" />
+              </div>
+              <div className="flex-1">
+                <FieldLabel>Address</FieldLabel>
+                <Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Street, town, postcode" className="w-full" />
+              </div>
+              <div className="flex gap-1.5">
+                <Button variant="primary" onClick={addVenue}>Add</Button>
+                <Button onClick={() => setAdding(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="primary" className="mt-1 self-start" onClick={() => setAdding(true)}>＋ Add location</Button>
+          )}
+        </div>
+
+        {/* Map + details for whichever venue is selected. */}
+        <div className="flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          {sel ? (
+            <>
+              {sel.lat !== undefined ? (
+                <VenueMap lat={sel.lat} lng={sel.lng} zoom={sel.zoom} onZoom={(z) => setPin(sel.id, { zoom: z })} />
+              ) : (
+                <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 text-center text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+                  Use <b className="mx-1">Find</b> below to drop a pin, or type the address in by hand.
                 </div>
               )}
+              <AddressFinder onPick={(h) => setPin(sel.id, { lat: h.lat, lng: h.lng, address: tidyAddress(h.label), zoom: sel.zoom ?? 16 })} />
+              <div>
+                <FieldLabel>Venue name</FieldLabel>
+                <Input value={sel.name} onChange={(e) => updateVenue(sel.id, "name", e.target.value)} className="w-full" />
+              </div>
+              <div>
+                <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— edit freely</span></FieldLabel>
+                <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder="Street, town, postcode" className="w-full" />
+              </div>
+              {sel.lat !== undefined && (
+                <div className="flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">
+                  <span>📍 Pin saved</span>
+                  <button type="button" onClick={() => setPin(sel.id, { lat: undefined, lng: undefined })} className="underline hover:text-[var(--ink)]">Remove</button>
+                </div>
+              )}
+
+              {/* Both of these show on the customer page — the questions parents
+                  ask before they book, answered once per venue. */}
+              <div className="border-t border-[var(--line)] pt-2">
+                <FieldLabel>What&rsquo;s there</FieldLabel>
+                <div className="mb-1.5 flex flex-wrap gap-1.5">
+                  {(sel.facilities ?? []).map((f) => (
+                    <span key={f} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-1 pl-2.5 pr-1 text-[11.5px] font-semibold text-[var(--brand-ink)]">
+                      {f}
+                      <button type="button" onClick={() => setPin(sel.id, { facilities: (sel.facilities ?? []).filter((x) => x !== f) })}
+                        aria-label={`Remove ${f}`} className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                    </span>
+                  ))}
+                  {!(sel.facilities ?? []).length && <span className="text-[11.5px] text-[var(--ink-3)]">Nothing added yet.</span>}
+                </div>
+                <div className="mb-1.5 text-[10.5px] leading-[1.4] text-[var(--ink-3)]">
+                  Accessibility and what&rsquo;s provided are set per listing (steps 3 &amp; 4) — this is the venue itself.
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {FACILITIES.filter((f) => !(sel.facilities ?? []).includes(f)).map((f) => (
+                    <button key={f} type="button" onClick={() => setPin(sel.id, { facilities: [...(sel.facilities ?? []), f] })}
+                      className="rounded-full border border-dashed border-[var(--line)] px-2 py-[3px] text-[11px] font-semibold text-[var(--ink-3)] hover:border-[var(--brand-2)] hover:text-[var(--brand)]">+ {f}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <div className="min-w-[135px] flex-1">
+                  <FieldLabel>what3words</FieldLabel>
+                  <Input value={sel.what3words ?? ""} onChange={(e) => setPin(sel.id, { what3words: e.target.value })}
+                    placeholder="///filled.count.soap" className="w-full" />
+                </div>
+                <div className="min-w-[135px] flex-1">
+                  <FieldLabel>Nearest stop / station</FieldLabel>
+                  <Input value={sel.transport ?? ""} onChange={(e) => setPin(sel.id, { transport: e.target.value })}
+                    placeholder="Purbeck Rd bus stop, 3 min" className="w-full" />
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel>Getting there &amp; parking</FieldLabel>
+                <textarea
+                  value={sel.directions ?? ""}
+                  onChange={(e) => setPin(sel.id, { directions: e.target.value })}
+                  rows={3}
+                  placeholder="Free car park off Purbeck Road. Drop-off at the main entrance — please don't use the leisure centre bays."
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[12.5px] leading-[1.5] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--brand-2)]"
+                />
+              </div>
+              <div className="mt-0.5 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">
+                {usage.venues[sel.id] ? (
+                  <>Used by <b className="text-[var(--ink)]">{usage.venues[sel.id]}</b> listing{usage.venues[sel.id] === 1 ? "" : "s"}.</>
+                ) : (
+                  <>Nothing runs here yet.{" "}
+                    <button type="button" onClick={() => onNewListing(sel.id)} className="font-bold text-[var(--brand)] underline">Create a listing here</button>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full min-h-[180px] items-center justify-center text-center text-[12px] text-[var(--ink-3)]">
+              Add a venue to see it on the map.
             </div>
-          );
-        })}
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * Venue facts only — what the building has and how you reach it.
+ * Deliberately excludes accessibility and what's provided (water, lunch,
+ * equipment): those are set per listing in steps 3 and 4, and duplicating them
+ * here would mean two places to keep in step.
+ */
+const FACILITIES = [
+  "Free car park", "On-street parking only", "Drop-off zone", "Bike racks",
+  "Indoor sports hall", "Astro pitch", "Floodlit", "Changing rooms",
+  "Café on site", "Covered area if wet",
+];
+
+type Hit = { label: string; lat: number; lng: number };
+
+/**
+ * Nominatim returns the full chain — "Venue, Road, Ward, Suburb, Town, County,
+ * England, Postcode, United Kingdom". Keep what an operator would actually
+ * write: the first couple of parts, the town, and the postcode.
+ */
+function tidyAddress(label: string): string {
+  const parts = label.split(",").map((p) => p.trim()).filter(Boolean);
+  const isPostcode = (p: string) => /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i.test(p);
+  const postcode = parts.find(isPostcode);
+  const body = parts.filter(
+    (p) => !isPostcode(p) && !/^(United Kingdom|England|Scotland|Wales|Northern Ireland)$/i.test(p) && !/^(City|County|Borough) of /i.test(p),
+  );
+  const keep = body.length <= 3 ? body : [...body.slice(0, 2), body[body.length - 1]];
+  return [...keep, ...(postcode ? [postcode] : [])].join(", ");
+}
+
+/**
+ * Address lookup against OpenStreetMap's Nominatim — free and keyless, which
+ * matters because we have no geocoding on the backend yet. Searches on demand
+ * rather than per keystroke: their usage policy asks for that, and it stops a
+ * half-typed postcode burning a request.
+ */
+function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<Hit[] | null>(null);
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+
+  const search = async () => {
+    const term = q.trim();
+    if (term.length < 3) return;
+    setState("busy");
+    setHits(null);
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=gb&limit=6&q=${encodeURIComponent(term)}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!r.ok) throw new Error(String(r.status));
+      const raw = (await r.json()) as { display_name: string; lat: string; lon: string }[];
+      setHits(raw.map((h) => ({ label: h.display_name, lat: parseFloat(h.lat), lng: parseFloat(h.lon) })));
+      setState("idle");
+    } catch {
+      setState("error");
+    }
+  };
+
+  return (
+    <div>
+      <FieldLabel>Find address</FieldLabel>
+      <div className="flex gap-1.5">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(); } }}
+          placeholder="Postcode or address…"
+          className="w-full"
+        />
+        <Button onClick={() => void search()} disabled={state === "busy"}>{state === "busy" ? "…" : "Find"}</Button>
       </div>
 
-      {adding ? (
-        <div className="mt-2 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <FieldLabel>Venue name</FieldLabel>
-            <Input value={nm} onChange={(e) => setNm(e.target.value)} placeholder="e.g. Riverside Sports Hall" className="w-full" />
-          </div>
-          <div className="flex-1">
-            <FieldLabel>Address</FieldLabel>
-            <Input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="Street, town, postcode" className="w-full" />
-          </div>
-          <div className="flex gap-1.5">
-            <Button variant="primary" onClick={addVenue}>
-              Add
-            </Button>
-            <Button onClick={() => setAdding(false)}>Cancel</Button>
-          </div>
-        </div>
-      ) : (
-        <Button className="mt-2" onClick={() => setAdding(true)}>
-          ＋ Add venue
-        </Button>
+      {state === "error" && (
+        <div className="mt-1.5 text-[11.5px] text-[var(--red)]">Couldn&rsquo;t reach the address service — type the address in by hand below.</div>
       )}
-    </Card>
+      {hits?.length === 0 && (
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">No match. Try the postcode on its own, or type it in by hand below.</div>
+      )}
+      {!!hits?.length && (
+        <div className="mt-1.5 max-h-[132px] overflow-y-auto rounded-lg border border-[var(--line)]">
+          {hits.map((h, i) => (
+            <button key={i} type="button" onClick={() => { onPick(h); setHits(null); setQ(""); }}
+              className="block w-full border-b border-[var(--line)] px-2.5 py-1.5 text-left text-[11.5px] leading-[1.4] last:border-b-0 hover:bg-[var(--surface)]">
+              {h.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

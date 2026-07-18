@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Locations tab — 10 options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.venue{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--panel)}
+.pin{width:34px;height:34px;border-radius:9px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.pin.dark{background:var(--side-bg);color:#fff}
+.init{width:36px;height:36px;border-radius:99px;background:var(--side-bg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;flex:none;letter-spacing:.02em}
+.map{background:#e8edf7 repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 9px,transparent 9px 18px);position:relative}
+.map:after{content:"📍";position:absolute;left:50%;top:50%;transform:translate(-50%,-60%);font-size:17px}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);padding:0 10px 8px;font-weight:800}
+.tbl td{padding:10px;border-top:1px solid var(--line)}
+.tbl tr:hover td{background:#fbfcfe}
+.mut2{color:var(--ink-2)}
+.tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+.x{border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:15px;line-height:1;padding:4px}
+.hd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:0 0 8px}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a href="/mockups/filter-bars.html">Filter bar</a><a href="/mockups/categories.html">Categories</a><a class="on" href="/mockups/locations.html">Locations</a></nav>
+<h1>Locations tab — 10 options</h1>
+<p class="sub">Your venues — name, address, and whatever else earns its place. Some of these show what's actually running there, which the current list doesn't. Tell me a number.</p>
+
+<!-- 1 -->
+<section class="opt"><header><span class="num">1</span><h2>Rows, tidied</h2><span class="note">Your current list with a pin, the postcode pulled out, and what's running there.</span></header>
+<div class="body">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="venue row" style="gap:12px"><span class="pin">📍</span>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">Stantonbury Leisure Centre</div><div class="mut" style="font-size:11.5px;margin-top:2px">Purbeck, Milton Keynes · <b class="mut2">MK14 6BN</b> · 3 listings</div></div>
+      <button class="btn" style="height:29px">Edit</button><button class="x">×</button></div>
+    <div class="venue row" style="gap:12px"><span class="pin">📍</span>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">Northampton Sports Hub</div><div class="mut" style="font-size:11.5px;margin-top:2px">Gladstone Rd, Northampton · <b class="mut2">NN5 7EA</b> · 6 listings</div></div>
+      <button class="btn" style="height:29px">Edit</button><button class="x">×</button></div>
+    <div class="venue row" style="gap:12px"><span class="pin">📍</span>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">Bedford Woodland Centre</div><div class="mut" style="font-size:11.5px;margin-top:2px">Mowsbury Park, Bedford · <b class="mut2">MK41 8DH</b> · not used yet</div></div>
+      <button class="btn" style="height:29px">Edit</button><button class="x">×</button></div>
+  </div>
+  <div class="row" style="margin-top:12px"><input class="ctl" placeholder="Venue name" style="width:200px"><input class="ctl" placeholder="Address" style="width:250px"><button class="btn pri">+ Add location</button></div>
+</div></section>
+
+<!-- 2 -->
+<section class="opt"><header><span class="num">2</span><h2>Map cards</h2><span class="note">A map thumbnail per venue. Best if parents ever need directions — the pin is the point.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:11px">
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div class="map" style="height:82px"></div>
+      <div style="padding:11px 12px"><div style="font-weight:700;font-size:13px">Stantonbury Leisure Centre</div><div class="mut" style="font-size:11.5px;margin-top:3px;line-height:1.45">Purbeck, Milton Keynes MK14 6BN</div>
+      <div class="row" style="margin-top:9px;justify-content:space-between"><span class="tag">3 listings</span><span class="mut" style="font-size:11.5px">Edit · Remove</span></div></div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div class="map" style="height:82px"></div>
+      <div style="padding:11px 12px"><div style="font-weight:700;font-size:13px">Northampton Sports Hub</div><div class="mut" style="font-size:11.5px;margin-top:3px;line-height:1.45">Gladstone Rd, Northampton NN5 7EA</div>
+      <div class="row" style="margin-top:9px;justify-content:space-between"><span class="tag">6 listings</span><span class="mut" style="font-size:11.5px">Edit · Remove</span></div></div>
+    </div>
+    <div style="border:1px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:700;font-size:12.5px;min-height:150px;cursor:pointer">+ Add location</div>
+  </div>
+</div></section>
+
+<!-- 3 -->
+<section class="opt"><header><span class="num">3</span><h2>Table</h2><span class="note">Densest option. Sortable columns, and postcode/capacity get their own space.</span></header>
+<div class="body">
+  <table class="tbl">
+    <thead><tr><th>Venue</th><th>Address</th><th style="width:90px">Postcode</th><th style="width:80px">Capacity</th><th style="width:80px">Listings</th><th style="width:60px"></th></tr></thead>
+    <tbody>
+      <tr><td><b>Stantonbury Leisure Centre</b></td><td class="mut">Purbeck, Milton Keynes</td><td class="mut2">MK14 6BN</td><td class="mut">60</td><td class="mut">3</td><td style="text-align:right" class="mut">✎ ×</td></tr>
+      <tr><td><b>Northampton Sports Hub</b></td><td class="mut">Gladstone Rd, Northampton</td><td class="mut2">NN5 7EA</td><td class="mut">45</td><td class="mut">6</td><td style="text-align:right" class="mut">✎ ×</td></tr>
+      <tr><td><b>Bedford Woodland Centre</b></td><td class="mut">Mowsbury Park, Bedford</td><td class="mut2">MK41 8DH</td><td class="mut">30</td><td class="mut">—</td><td style="text-align:right" class="mut">✎ ×</td></tr>
+    </tbody>
+  </table>
+  <div class="row" style="margin-top:12px"><button class="btn pri">+ Add location</button><span class="mut" style="font-size:11.5px">Capacity here is the venue's ceiling — a listing can set its own lower limit.</span></div>
+</div></section>
+
+<!-- 4 -->
+<section class="opt"><header><span class="num">4</span><h2>Map beside the list</h2><span class="note">See your whole patch at once. Useful when you run across several towns.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:1fr 250px;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div class="venue row" style="gap:11px;border-color:var(--brand-line);background:var(--brand-soft)"><span class="pin dark">1</span><div style="flex:1"><div style="font-weight:700;font-size:13px">Stantonbury Leisure Centre</div><div class="mut" style="font-size:11.5px">Milton Keynes MK14 6BN · 3 listings</div></div><button class="x">×</button></div>
+      <div class="venue row" style="gap:11px"><span class="pin">2</span><div style="flex:1"><div style="font-weight:700;font-size:13px">Northampton Sports Hub</div><div class="mut" style="font-size:11.5px">Northampton NN5 7EA · 6 listings</div></div><button class="x">×</button></div>
+      <div class="venue row" style="gap:11px"><span class="pin">3</span><div style="flex:1"><div style="font-weight:700;font-size:13px">Bedford Woodland Centre</div><div class="mut" style="font-size:11.5px">Bedford MK41 8DH · not used yet</div></div><button class="x">×</button></div>
+      <button class="btn pri" style="align-self:flex-start;margin-top:3px">+ Add location</button>
+    </div>
+    <div class="map" style="border-radius:12px;border:1px solid var(--line);min-height:180px"></div>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section class="opt"><header><span class="num">5</span><h2>Expand to edit</h2><span class="note">Closest to what you have — but the caret opens a proper form instead of just more text.</span></header>
+<div class="body">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="border:1px solid var(--brand-line);border-radius:11px;overflow:hidden">
+      <div class="row" style="padding:11px 13px;background:var(--brand-soft);gap:9px"><span style="color:var(--brand)">▾</span><b style="font-size:13.5px">Stantonbury Leisure Centre</b><span class="tag" style="margin-left:auto">3 listings</span></div>
+      <div style="padding:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="hd">Address</label><input class="ctl" value="Purbeck, Milton Keynes" style="width:100%"></div>
+        <div><label class="hd">Postcode</label><input class="ctl" value="MK14 6BN" style="width:100%"></div>
+        <div><label class="hd">Parking &amp; access notes</label><input class="ctl" placeholder="Free car park, level access" style="width:100%"></div>
+        <div><label class="hd">Max capacity</label><input class="ctl" value="60" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="venue row" style="gap:9px"><span class="mut">▸</span><b style="font-size:13.5px">Northampton Sports Hub</b><span class="mut" style="font-size:11.5px">Gladstone Rd, Northampton NN5 7EA</span><button class="x" style="margin-left:auto">×</button></div>
+    <div class="venue row" style="gap:9px"><span class="mut">▸</span><b style="font-size:13.5px">Bedford Woodland Centre</b><span class="mut" style="font-size:11.5px">Mowsbury Park, Bedford MK41 8DH</span><button class="x" style="margin-left:auto">×</button></div>
+  </div>
+</div></section>
+
+<!-- 6 -->
+<section class="opt"><header><span class="num">6</span><h2>Initials, no icons</h2><span class="note">A monogram instead of a pin — quieter, and each venue gets a shape you recognise.</span></header>
+<div class="body">
+  <div style="display:flex;flex-direction:column;gap:1px;border:1px solid var(--line);border-radius:11px;overflow:hidden">
+    <div class="row" style="gap:12px;padding:12px 13px"><span class="init">SL</span><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Stantonbury Leisure Centre</div><div class="mut" style="font-size:11.5px;margin-top:1px">Purbeck, Milton Keynes MK14 6BN</div></div><span class="tag">3</span><button class="x">×</button></div>
+    <div class="row" style="gap:12px;padding:12px 13px;border-top:1px solid var(--line)"><span class="init">NS</span><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Northampton Sports Hub</div><div class="mut" style="font-size:11.5px;margin-top:1px">Gladstone Rd, Northampton NN5 7EA</div></div><span class="tag">6</span><button class="x">×</button></div>
+    <div class="row" style="gap:12px;padding:12px 13px;border-top:1px solid var(--line)"><span class="init">BW</span><div style="flex:1"><div style="font-weight:700;font-size:13.5px">Bedford Woodland Centre</div><div class="mut" style="font-size:11.5px;margin-top:1px">Mowsbury Park, Bedford MK41 8DH</div></div><span class="tag" style="opacity:.5">0</span><button class="x">×</button></div>
+    <div class="row" style="padding:10px 13px;border-top:1px solid var(--line);background:#fbfcfe"><span style="color:var(--brand);font-weight:700;font-size:12.5px;cursor:pointer">+ Add location</span></div>
+  </div>
+</div></section>
+
+<!-- 7 -->
+<section class="opt"><header><span class="num">7</span><h2>Photo tiles</h2><span class="note">A picture of the venue. The same shot can appear on the customer page so parents know where they're going.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px">
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div style="height:96px;background:linear-gradient(140deg,#cfe0f8,#eaf0fc);display:flex;align-items:center;justify-content:center;font-size:26px">🏟️</div>
+      <div style="padding:10px 12px"><div style="font-weight:700;font-size:12.5px">Stantonbury Leisure Centre</div><div class="mut" style="font-size:11px;margin-top:2px">MK14 6BN · 3 listings</div></div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div style="height:96px;background:linear-gradient(140deg,#d3f0e0,#eafaf1);display:flex;align-items:center;justify-content:center;font-size:26px">⚽️</div>
+      <div style="padding:10px 12px"><div style="font-weight:700;font-size:12.5px">Northampton Sports Hub</div><div class="mut" style="font-size:11px;margin-top:2px">NN5 7EA · 6 listings</div></div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div style="height:96px;background:linear-gradient(140deg,#e0e9d4,#f2f7e8);display:flex;align-items:center;justify-content:center;font-size:26px">🌲</div>
+      <div style="padding:10px 12px"><div style="font-weight:700;font-size:12.5px">Bedford Woodland Centre</div><div class="mut" style="font-size:11px;margin-top:2px">MK41 8DH · not used yet</div></div>
+    </div>
+    <div style="border:1px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:700;font-size:12.5px;min-height:150px;cursor:pointer">+ Add location</div>
+  </div>
+</div></section>
+
+<!-- 8 -->
+<section class="opt"><header><span class="num">8</span><h2>Grouped by town</h2><span class="note">Groups itself as you grow. Handy once you're running the same venue list across several areas.</span></header>
+<div class="body">
+  <div style="margin-bottom:15px"><div class="hd">Milton Keynes</div>
+    <div class="venue row" style="gap:11px"><span class="pin">📍</span><div style="flex:1"><b style="font-size:13px">Stantonbury Leisure Centre</b><div class="mut" style="font-size:11.5px">Purbeck · MK14 6BN</div></div><span class="tag">3 listings</span><button class="x">×</button></div>
+  </div>
+  <div style="margin-bottom:15px"><div class="hd">Northampton</div>
+    <div class="venue row" style="gap:11px"><span class="pin">📍</span><div style="flex:1"><b style="font-size:13px">Northampton Sports Hub</b><div class="mut" style="font-size:11.5px">Gladstone Rd · NN5 7EA</div></div><span class="tag">6 listings</span><button class="x">×</button></div>
+  </div>
+  <div><div class="hd">Bedford</div>
+    <div class="venue row" style="gap:11px"><span class="pin">📍</span><div style="flex:1"><b style="font-size:13px">Bedford Woodland Centre</b><div class="mut" style="font-size:11.5px">Mowsbury Park · MK41 8DH</div></div><span class="tag" style="opacity:.55">unused</span><button class="x">×</button></div>
+  </div>
+  <button class="btn pri" style="margin-top:13px">+ Add location</button>
+</div></section>
+
+<!-- 9 -->
+<section class="opt"><header><span class="num">9</span><h2>List &amp; detail</h2><span class="note">Same split as the categories option — room for access notes, parking, contacts, a photo.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:225px 1fr;gap:14px">
+    <div style="border:1px solid var(--line);border-radius:11px;overflow:hidden">
+      <div style="padding:10px 12px;font-size:12.5px;font-weight:700;background:var(--brand-soft);color:var(--brand-ink);border-bottom:1px solid var(--line)">Stantonbury Leisure Centre</div>
+      <div style="padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--line)">Northampton Sports Hub</div>
+      <div style="padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--line)">Bedford Woodland Centre</div>
+      <div style="padding:10px 12px;font-size:12.5px;color:var(--brand);font-weight:700;cursor:pointer">+ New location</div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:11px;padding:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="hd">Venue name</label><input class="ctl" value="Stantonbury Leisure Centre" style="width:100%"></div>
+        <div><label class="hd">Postcode</label><input class="ctl" value="MK14 6BN" style="width:100%"></div>
+        <div style="grid-column:1/-1"><label class="hd">Address</label><input class="ctl" value="Purbeck, Milton Keynes" style="width:100%"></div>
+        <div style="grid-column:1/-1"><label class="hd">Notes for parents</label><input class="ctl" placeholder="Free parking, entrance via the leisure centre car park" style="width:100%"></div>
+      </div>
+      <div class="row" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--line);justify-content:space-between">
+        <span class="mut" style="font-size:11.5px">Used by 3 listings</span><button class="btn" style="color:var(--red);border-color:#f6c9cc">Delete venue</button>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 10 -->
+<section class="opt"><header><span class="num">10</span><h2>What's on where</h2><span class="note">Leads with activity rather than address — which venues are earning, which are idle.</span></header>
+<div class="body">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="venue"><div class="row" style="justify-content:space-between"><div><b style="font-size:13.5px">Northampton Sports Hub</b><div class="mut" style="font-size:11.5px;margin-top:2px">Gladstone Rd, Northampton NN5 7EA</div></div><button class="x">×</button></div>
+      <div class="row" style="gap:6px;margin-top:9px"><span class="tag" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">6 listings</span><span class="tag">210 places</span><span class="tag">Next: 2 Sep</span><span class="tag" style="background:#e7f8ee;border-color:#bfe9d2;color:#0f7a44">88% booked</span></div></div>
+    <div class="venue"><div class="row" style="justify-content:space-between"><div><b style="font-size:13.5px">Stantonbury Leisure Centre</b><div class="mut" style="font-size:11.5px;margin-top:2px">Purbeck, Milton Keynes MK14 6BN</div></div><button class="x">×</button></div>
+      <div class="row" style="gap:6px;margin-top:9px"><span class="tag" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">3 listings</span><span class="tag">180 places</span><span class="tag">Next: 11 Aug</span><span class="tag" style="background:#fdf3d8;border-color:#f0deac;color:#8a6300">63% booked</span></div></div>
+    <div class="venue" style="background:#fbfcfe"><div class="row" style="justify-content:space-between"><div><b style="font-size:13.5px">Bedford Woodland Centre</b><div class="mut" style="font-size:11.5px;margin-top:2px">Mowsbury Park, Bedford MK41 8DH</div></div><button class="x">×</button></div>
+      <div class="row" style="gap:6px;margin-top:9px"><span class="tag" style="opacity:.7">No listings yet</span><span style="font-size:11.5px;color:var(--brand);font-weight:700;cursor:pointer">Create one here →</span></div></div>
+    <div class="row" style="border:1px dashed var(--line);border-radius:11px;padding:9px 11px">
+      <input class="ctl" placeholder="Venue name" style="width:190px;border:0"><input class="ctl" placeholder="Address" style="width:230px;border:0"><button class="btn pri" style="height:30px">+ Add location</button>
+    </div>
+  </div>
+</div></section>
+
+</div>
+</body>
+</html>

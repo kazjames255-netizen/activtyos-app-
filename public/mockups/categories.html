@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Categories tab — 10 options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;font-weight:700}
+.chip .x{border:0;background:none;cursor:pointer;color:var(--ink-3);font-size:14px;line-height:1;padding:4px}
+.tick{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);font-size:10px;color:#fff}
+.tick.on{background:var(--brand);border-color:var(--brand)}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);padding:0 10px 8px;font-weight:800}
+.tbl td{padding:9px 10px;border-top:1px solid var(--line)}
+.tbl tr:hover td{background:#fbfcfe}
+.grab{color:#c3cadd;cursor:grab;font-size:13px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.bar{height:5px;border-radius:99px;background:#eef1f7;overflow:hidden;width:110px}
+.bar i{display:block;height:100%;background:var(--brand-2)}
+.tile{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--panel)}
+.emoji{font-size:19px}
+.count{font-size:11px;font-weight:700;color:var(--ink-3);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+.sw{display:flex;gap:5px}
+.sw i{width:15px;height:15px;border-radius:5px;cursor:pointer;display:block}
+.toggle{display:inline-block;width:34px;height:19px;border-radius:99px;background:var(--brand);position:relative;flex:none}
+.toggle.off{background:#d6dcea}
+.toggle b{display:block;position:absolute;top:2px;left:17px;width:15px;height:15px;border-radius:99px;background:#fff}
+.toggle.off b{left:2px}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a href="/mockups/filter-bars.html">Filter bar</a><a class="on" href="/mockups/categories.html">Categories</a><a href="/mockups/locations.html">Locations</a></nav>
+<h1>Categories tab — 10 options</h1>
+<p class="sub">Same job throughout: see your categories, add one, remove one. The differences are how much each one tells you — usage counts, colour, storefront visibility, ordering. Tell me a number.</p>
+
+<!-- 1 -->
+<section class="opt"><header><span class="num">1</span><h2>Chips, tidied</h2><span class="note">Your current layout, but the add box leads and each chip shows how many listings use it.</span></header>
+<div class="body">
+  <p class="lede">Categories are how parents filter your storefront.</p>
+  <div class="row" style="margin-bottom:14px">
+    <input class="ctl" placeholder="New category name" style="width:230px">
+    <button class="btn pri">+ Add category</button>
+  </div>
+  <div class="row" style="gap:7px">
+    <span class="chip">Breakfast Clubs <span class="count">4</span><button class="x">×</button></span>
+    <span class="chip">After-School Clubs <span class="count">6</span><button class="x">×</button></span>
+    <span class="chip">Holiday Multi-Activity Camps <span class="count">3</span><button class="x">×</button></span>
+    <span class="chip">School Enrichment Days <span class="count">0</span><button class="x">×</button></span>
+    <span class="chip">Specialist Camps <span class="count">1</span><button class="x">×</button></span>
+    <span class="chip">SEND &amp; Inclusion <span class="count">2</span><button class="x">×</button></span>
+  </div>
+</div></section>
+
+<!-- 2 -->
+<section class="opt"><header><span class="num">2</span><h2>Sortable table</h2><span class="note">Drag to set the order parents see. Rename in place, and you can tell at a glance what's unused.</span></header>
+<div class="body">
+  <table class="tbl">
+    <thead><tr><th style="width:26px"></th><th>Category</th><th style="width:130px">Listings</th><th style="width:110px">On storefront</th><th style="width:70px"></th></tr></thead>
+    <tbody>
+      <tr><td class="grab">⠿</td><td><b>Breakfast Clubs</b></td><td><div class="row" style="gap:7px;flex-wrap:nowrap"><span class="bar"><i style="width:67%"></i></span><span class="mut">4</span></div></td><td><span class="toggle"><b></b></span></td><td style="text-align:right"><span class="mut">✎ &nbsp; ×</span></td></tr>
+      <tr><td class="grab">⠿</td><td><b>After-School Clubs</b></td><td><div class="row" style="gap:7px;flex-wrap:nowrap"><span class="bar"><i style="width:100%"></i></span><span class="mut">6</span></div></td><td><span class="toggle"><b></b></span></td><td style="text-align:right"><span class="mut">✎ &nbsp; ×</span></td></tr>
+      <tr><td class="grab">⠿</td><td><b>Holiday Multi-Activity Camps</b></td><td><div class="row" style="gap:7px;flex-wrap:nowrap"><span class="bar"><i style="width:50%"></i></span><span class="mut">3</span></div></td><td><span class="toggle"><b></b></span></td><td style="text-align:right"><span class="mut">✎ &nbsp; ×</span></td></tr>
+      <tr><td class="grab">⠿</td><td><b>School Enrichment Days</b></td><td><span class="mut">Not used yet</span></td><td><span class="toggle off"><b></b></span></td><td style="text-align:right"><span class="mut">✎ &nbsp; ×</span></td></tr>
+    </tbody>
+  </table>
+  <div class="row" style="margin-top:13px"><input class="ctl" placeholder="New category name" style="width:230px"><button class="btn pri">+ Add</button></div>
+</div></section>
+
+<!-- 3 -->
+<section class="opt"><header><span class="num">3</span><h2>Colour-coded</h2><span class="note">Each category gets a colour that carries through to the listing cards and your storefront filters.</span></header>
+<div class="body">
+  <div class="row" style="gap:8px">
+    <span class="chip" style="background:#eaf0fc;border-color:#cdddf7;color:var(--brand-ink)"><span class="dot" style="background:#2f6bd8"></span> Breakfast Clubs <button class="x">×</button></span>
+    <span class="chip" style="background:#e7f8ee;border-color:#bfe9d2;color:#0f7a44"><span class="dot" style="background:#16a34a"></span> After-School Clubs <button class="x">×</button></span>
+    <span class="chip" style="background:#fdf3d8;border-color:#f0deac;color:#8a6300"><span class="dot" style="background:#f5b81f"></span> Holiday Camps <button class="x">×</button></span>
+    <span class="chip" style="background:#efe9ff;border-color:#ddd2fb;color:#4b32a8"><span class="dot" style="background:#6a4fd0"></span> Enrichment Days <button class="x">×</button></span>
+    <span class="chip" style="background:#fdebec;border-color:#f6c9cc;color:#a4161c"><span class="dot" style="background:#e21d27"></span> SEND &amp; Inclusion <button class="x">×</button></span>
+  </div>
+  <div class="row" style="margin-top:15px;padding-top:13px;border-top:1px solid var(--line)">
+    <input class="ctl" placeholder="New category name" style="width:210px">
+    <span class="sw"><i style="background:#2f6bd8;outline:2px solid var(--brand);outline-offset:2px"></i><i style="background:#16a34a"></i><i style="background:#f5b81f"></i><i style="background:#6a4fd0"></i><i style="background:#e21d27"></i><i style="background:#0ea5e9"></i></span>
+    <button class="btn pri">+ Add</button>
+  </div>
+</div></section>
+
+<!-- 4 -->
+<section class="opt"><header><span class="num">4</span><h2>Icon tiles</h2><span class="note">An emoji per category, so the list is scannable by shape. The same icon can show on the storefront.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:10px">
+    <div class="tile"><div class="row" style="justify-content:space-between"><span class="emoji">🥐</span><span class="mut" style="font-size:13px">×</span></div><div style="font-weight:700;font-size:13px;margin-top:7px">Breakfast Clubs</div><div class="mut" style="font-size:11.5px;margin-top:2px">4 listings</div></div>
+    <div class="tile"><div class="row" style="justify-content:space-between"><span class="emoji">⚽️</span><span class="mut" style="font-size:13px">×</span></div><div style="font-weight:700;font-size:13px;margin-top:7px">After-School Clubs</div><div class="mut" style="font-size:11.5px;margin-top:2px">6 listings</div></div>
+    <div class="tile"><div class="row" style="justify-content:space-between"><span class="emoji">🏕️</span><span class="mut" style="font-size:13px">×</span></div><div style="font-weight:700;font-size:13px;margin-top:7px">Holiday Camps</div><div class="mut" style="font-size:11.5px;margin-top:2px">3 listings</div></div>
+    <div class="tile"><div class="row" style="justify-content:space-between"><span class="emoji">🎨</span><span class="mut" style="font-size:13px">×</span></div><div style="font-weight:700;font-size:13px;margin-top:7px">Enrichment Days</div><div class="mut" style="font-size:11.5px;margin-top:2px">Not used yet</div></div>
+    <div class="tile" style="border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:700;font-size:12.5px;cursor:pointer;min-height:84px">+ New category</div>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section class="opt"><header><span class="num">5</span><h2>Add-first ghost chip</h2><span class="note">The lightest possible version — the add control is just another chip at the end of the row.</span></header>
+<div class="body">
+  <div class="row" style="gap:7px">
+    <span class="chip">Breakfast Clubs <button class="x">×</button></span>
+    <span class="chip">After-School Clubs <button class="x">×</button></span>
+    <span class="chip">Holiday Multi-Activity Camps <button class="x">×</button></span>
+    <span class="chip">School Enrichment Days <button class="x">×</button></span>
+    <span class="chip">Specialist Camps <button class="x">×</button></span>
+    <span class="chip">SEND &amp; Inclusion <button class="x">×</button></span>
+    <span class="chip" style="border-style:dashed;background:none;color:var(--brand);cursor:pointer;padding-right:14px">+ Add category</span>
+  </div>
+</div></section>
+
+<!-- 6 -->
+<section class="opt"><header><span class="num">6</span><h2>List &amp; detail</h2><span class="note">Click a category to edit its name, colour and blurb. Room to grow if categories gain settings later.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:230px 1fr;gap:14px">
+    <div style="border:1px solid var(--line);border-radius:11px;overflow:hidden">
+      <div style="padding:9px 12px;font-size:12.5px;font-weight:700;background:var(--brand-soft);color:var(--brand-ink);border-bottom:1px solid var(--line)">Breakfast Clubs <span class="mut">4</span></div>
+      <div style="padding:9px 12px;font-size:12.5px;border-bottom:1px solid var(--line)">After-School Clubs <span class="mut">6</span></div>
+      <div style="padding:9px 12px;font-size:12.5px;border-bottom:1px solid var(--line)">Holiday Camps <span class="mut">3</span></div>
+      <div style="padding:9px 12px;font-size:12.5px;border-bottom:1px solid var(--line)">Enrichment Days <span class="mut">0</span></div>
+      <div style="padding:9px 12px;font-size:12.5px;color:var(--brand);font-weight:700;cursor:pointer">+ New category</div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:11px;padding:14px">
+      <label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3)">Name</label>
+      <input class="ctl" value="Breakfast Clubs" style="width:100%;margin:5px 0 12px">
+      <label style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3)">Shown to parents as</label>
+      <input class="ctl" value="Before school" style="width:100%;margin:5px 0 12px">
+      <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:11px">
+        <span class="mut" style="font-size:11.5px">Used by 4 listings — removing it clears the category from those.</span>
+        <button class="btn" style="color:var(--red);border-color:#f6c9cc">Delete</button>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 7 -->
+<section class="opt"><header><span class="num">7</span><h2>Used vs unused</h2><span class="note">Splits the list so dead categories are obvious — the ones worth deleting or filling.</span></header>
+<div class="body">
+  <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:8px">In use</div>
+  <div class="row" style="gap:7px;margin-bottom:16px">
+    <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">Breakfast Clubs <span class="count" style="background:#fff">4</span><button class="x">×</button></span>
+    <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">After-School Clubs <span class="count" style="background:#fff">6</span><button class="x">×</button></span>
+    <span class="chip" style="background:var(--brand-soft);border-color:var(--brand-line);color:var(--brand-ink)">Holiday Camps <span class="count" style="background:#fff">3</span><button class="x">×</button></span>
+  </div>
+  <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:8px">Not used yet</div>
+  <div class="row" style="gap:7px">
+    <span class="chip" style="opacity:.65">School Enrichment Days <button class="x">×</button></span>
+    <span class="chip" style="opacity:.65">Specialist Camps <button class="x">×</button></span>
+    <span class="chip" style="border-style:dashed;background:none;color:var(--brand);cursor:pointer;padding-right:14px">+ Add category</span>
+  </div>
+</div></section>
+
+<!-- 8 -->
+<section class="opt"><header><span class="num">8</span><h2>Storefront preview</h2><span class="note">Shows the categories as parents will actually see them, with the editor underneath.</span></header>
+<div class="body">
+  <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px">
+    <div style="padding:7px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);background:#fbfcfe;border-bottom:1px solid var(--line)">How parents see it</div>
+    <div style="padding:13px;background:var(--side-bg)">
+      <div class="row" style="gap:7px">
+        <span class="chip" style="background:#fff;border-color:transparent">All</span>
+        <span class="chip" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff">Breakfast Clubs</span>
+        <span class="chip" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff">After-School Clubs</span>
+        <span class="chip" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff">Holiday Camps</span>
+        <span class="chip" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff">SEND &amp; Inclusion</span>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="gap:7px">
+    <span class="chip">Breakfast Clubs <button class="x">×</button></span>
+    <span class="chip">After-School Clubs <button class="x">×</button></span>
+    <span class="chip">Holiday Camps <button class="x">×</button></span>
+    <span class="chip">SEND &amp; Inclusion <button class="x">×</button></span>
+    <input class="ctl" placeholder="New category…" style="width:170px"><button class="btn pri">+ Add</button>
+  </div>
+</div></section>
+
+<!-- 9 -->
+<section class="opt"><header><span class="num">9</span><h2>Checklist</h2><span class="note">Tick what you offer. Suggestions are pre-loaded, so a new operator isn't staring at an empty box.</span></header>
+<div class="body">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:7px">
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--brand-line);background:var(--brand-soft);border-radius:9px;font-size:12.5px;font-weight:600"><span class="tick on">✓</span>Breakfast Clubs</label>
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--brand-line);background:var(--brand-soft);border-radius:9px;font-size:12.5px;font-weight:600"><span class="tick on">✓</span>After-School Clubs</label>
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--brand-line);background:var(--brand-soft);border-radius:9px;font-size:12.5px;font-weight:600"><span class="tick on">✓</span>Holiday Camps</label>
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink-2)"><span class="tick"></span>Sports Coaching</label>
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink-2)"><span class="tick"></span>Performing Arts</label>
+    <label class="row" style="gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink-2)"><span class="tick"></span>Tuition &amp; Revision</label>
+  </div>
+  <div class="row" style="margin-top:12px"><input class="ctl" placeholder="Something else…" style="width:210px"><button class="btn">+ Add your own</button></div>
+</div></section>
+
+<!-- 10 -->
+<section class="opt"><header><span class="num">10</span><h2>Rows with reach</h2><span class="note">Each row says what the category is actually doing for you — listings, places and next date.</span></header>
+<div class="body">
+  <div style="display:flex;flex-direction:column;gap:7px">
+    <div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:11px;padding:11px 13px">
+      <div><div style="font-weight:700;font-size:13px">Breakfast Clubs</div><div class="mut" style="font-size:11.5px;margin-top:2px">4 listings · 120 places · next 2 Sep</div></div>
+      <div class="row" style="gap:6px"><button class="btn" style="height:29px">Rename</button><button class="btn" style="height:29px;color:var(--red);border-color:#f6c9cc">Remove</button></div>
+    </div>
+    <div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:11px;padding:11px 13px">
+      <div><div style="font-weight:700;font-size:13px">After-School Clubs</div><div class="mut" style="font-size:11.5px;margin-top:2px">6 listings · 210 places · next 2 Sep</div></div>
+      <div class="row" style="gap:6px"><button class="btn" style="height:29px">Rename</button><button class="btn" style="height:29px;color:var(--red);border-color:#f6c9cc">Remove</button></div>
+    </div>
+    <div class="row" style="justify-content:space-between;border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:#fbfcfe">
+      <div><div style="font-weight:700;font-size:13px">School Enrichment Days</div><div class="mut" style="font-size:11.5px;margin-top:2px">No listings yet — parents won't see this filter</div></div>
+      <div class="row" style="gap:6px"><button class="btn" style="height:29px">Rename</button><button class="btn" style="height:29px;color:var(--red);border-color:#f6c9cc">Remove</button></div>
+    </div>
+    <div class="row" style="border:1px dashed var(--line);border-radius:11px;padding:9px 11px">
+      <input class="ctl" placeholder="New category name" style="width:230px;border:0"><button class="btn pri" style="height:30px">+ Add category</button>
+    </div>
+  </div>
+</div></section>
+
+</div>
+</body>
+</html>
