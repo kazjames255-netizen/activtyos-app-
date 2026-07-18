@@ -6,6 +6,8 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import type { LocalState, StaffMember } from "./FreelancerListingsApp";
+import * as blocksApi from "@/features/blocks/blocksApi";
+import type { ResolvedPricing } from "@/features/blocks/blocksApi";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The build-manual's 10-step Listing builder (freelancer). Front-end only:
@@ -77,34 +79,65 @@ interface BBlock {
   masterPrice?: number; calcOn?: boolean; passFlat?: Record<string, number>; passMode?: Record<string, string>;
   periodPrice?: Record<string, number>; // key `${passId}_${periodId}`
 }
-interface BlocksStore { periods: BPeriod[]; passes: BPass[]; library: BBlock[] }
-function readStore(k: string): BlocksStore | null {
-  try {
-    const raw = localStorage.getItem(k);
-    if (!raw) return null;
-    const p = JSON.parse(raw) as Partial<BlocksStore>;
-    return { periods: p.periods ?? [], passes: p.passes ?? [], library: p.library ?? [] };
-  } catch {
-    return null;
-  }
+interface BlocksStore {
+  periods: BPeriod[];
+  passes: BPass[];
+  library: BBlock[];
+  /** Server-resolved pricing per bundle id — authoritative when present. */
+  resolved: Record<string, ResolvedPricing>;
 }
-// Robust: prefer this account's key, but fall back to any blocks-builder store
-// that actually has blocks (guards against an auth-timing key mismatch).
-function loadBlocks(): BlocksStore {
-  const primary = readStore(`activityos.blocks-builder.${who()}`);
-  if (primary && primary.library.length) return primary;
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith("activityos.blocks-builder.")) {
-      const s = readStore(k);
-      if (s && s.library.length) return s;
-    }
-  }
-  return primary || { periods: [], passes: [], library: [] };
+const EMPTY_BLOCKS: BlocksStore = { periods: [], passes: [], library: [], resolved: {} };
+
+// Blocks live on the server (see features/blocks/blocksApi.ts). The server also
+// resolves pricing, so we keep `resolved` and prefer it over local arithmetic.
+async function fetchBlocks(): Promise<BlocksStore> {
+  const [periods, passes, bundles] = await Promise.all([
+    blocksApi.listPeriods(),
+    blocksApi.listPasses(),
+    blocksApi.listBundles(),
+  ]);
+  return {
+    periods,
+    passes,
+    library: bundles.map((b) => ({
+      id: b.id,
+      name: b.name,
+      periodIds: b.periodIds,
+      passIds: b.passIds,
+      masterPrice: b.masterPrice ?? undefined,
+      calcOn: b.calcOn,
+      passFlat: b.passFlat,
+      passMode: b.passMode,
+      periodPrice: b.periodPrice,
+    })),
+    resolved: Object.fromEntries(bundles.map((b) => [b.id, b.resolved])),
+  };
+}
+/** Load the blocks library once per mount. */
+function useBlocks(): BlocksStore {
+  const [store, setStore] = useState<BlocksStore>(EMPTY_BLOCKS);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const s = await fetchBlocks();
+        if (alive) setStore(s);
+      } catch {
+        /* not signed in yet / offline — the picker just shows no blocks */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return store;
 }
 function blockTickets(store: BlocksStore, blockId: string | null) {
   const b = store.library.find((x) => x.id === blockId);
   if (!b) return [] as { name: string; days: number; price: number }[];
+  // Server-resolved prices win — they're what checkout will charge.
+  const res = blockId ? store.resolved[blockId] : undefined;
+  if (res) return res.passes.map((p) => ({ name: p.name, days: p.days, price: p.price }));
   const passes = b.passIds.map((id) => store.passes.find((p) => p.id === id)).filter(Boolean) as BPass[];
   const sorted = [...passes].sort((a, c) => c.days - a.days);
   const master = sorted[0];
@@ -149,12 +182,22 @@ function blockBooking(store: BlocksStore, blockId: string | null): BlockBooking 
     const price = idx === 0 ? mPrice : !calcOn ? b.passFlat?.[q.id] ?? 0 : flat ? b.passFlat?.[q.id] ?? 0 : q.days * perDay;
     return Math.round(price * 100) / 100;
   };
-  const passes: BookPass[] = passList.map((q, i) => ({ id: q.id, name: q.name, days: q.days, basePrice: basePrice(q, i) }));
+  // Server-resolved prices win — they're what checkout will charge.
+  const res = blockId ? store.resolved[blockId] : undefined;
+  const resolvedBase = new Map((res?.passes ?? []).map((p) => [p.id, p.price]));
+  const passes: BookPass[] = passList.map((q, i) => ({
+    id: q.id,
+    name: q.name,
+    days: q.days,
+    basePrice: resolvedBase.get(q.id) ?? basePrice(q, i),
+  }));
   const priceFor = (passId: string, periodId: string | null) => {
     const qi = passList.findIndex((p) => p.id === passId);
     if (qi < 0) return 0;
     const base = passes[qi].basePrice;
     if (!periodId) return base;
+    const fromServer = res?.timings[`${passId}_${periodId}`];
+    if (fromServer != null) return fromServer;
     const per = periodList.find((p) => p.id === periodId);
     if (!per) return base;
     const ov = b.periodPrice?.[`${passId}_${periodId}`];
@@ -311,7 +354,7 @@ export function listingRunsOn(draft: WizardDraft, iso: string): boolean {
 
 // Standalone customer-page preview (for the "View" action on the Listings tab).
 export function ListingPreview({ draft, local }: { draft: WizardDraft; local: LocalState }) {
-  const blocks = useMemo(() => loadBlocks(), []);
+  const blocks = useBlocks();
   const [theme, setTheme] = useState<PageTheme>(draft.pageStyle ?? "playful");
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const d2 = { ...draft, images: norm(draft.images), gallery: norm(draft.gallery), bookRules: draft.bookRules ?? {}, ticketOverrides: draft.ticketOverrides ?? {} };
@@ -396,7 +439,7 @@ export function ListingWizard({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [fullPreview, setFullPreview] = useState(false);
-  const blocks = useMemo(() => loadBlocks(), []);
+  const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
   const booking = useMemo(() => blockBooking(blocks, d.blockId), [blocks, d.blockId]);
