@@ -284,7 +284,7 @@ export function FreelancerListingsApp() {
         else {
           const start = loadLocal();
           setLocal(start);
-          void putLibrary(start).catch(() => {});
+          void putLibrary(start).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your library"));
         }
       })
       .catch(() => {
@@ -302,7 +302,12 @@ export function FreelancerListingsApp() {
     // Debounced — typing in the categories/venues managers shouldn't PUT
     // per keystroke.
     if (libTimer.current) clearTimeout(libTimer.current);
-    libTimer.current = setTimeout(() => void putLibrary(local).catch(() => {}), 800);
+    // A swallowed failure here is why an add-on could look saved while the
+    // customer page never saw it — the library lived only in this browser.
+    libTimer.current = setTimeout(
+      () => void putLibrary(local).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your categories, venues and add-ons")),
+      800,
+    );
   }, [local]);
   useEffect(() => () => { if (libTimer.current) clearTimeout(libTimer.current); }, []);
 

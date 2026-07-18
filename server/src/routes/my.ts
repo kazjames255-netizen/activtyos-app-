@@ -77,6 +77,10 @@ const childSchema = z.object({
   allergies: z.string().trim().max(300).optional(),
   medical: z.string().trim().max(300).optional(),
   send: z.string().trim().max(300).optional(),
+  // What settles them and what doesn't — the things a parent tells you at the
+  // door, kept so they don't have to say it twice.
+  likes: z.string().trim().max(300).optional(),
+  dislikes: z.string().trim().max(300).optional(),
   // Photo consent — safeguarding: may this child appear in photos
   // (Moments/newsfeed)? Defaults to NO (privacy-safe).
   photoConsent: z.boolean().optional().default(false),
