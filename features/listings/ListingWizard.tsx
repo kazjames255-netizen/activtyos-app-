@@ -63,8 +63,10 @@ const BOOK_RULES: [BookRule, (days: number) => string][] = [
   ["blocks", (d) => `Fixed ${d}-day block`],
 ];
 type BookRule = "week" | "listing" | "blocks";
-const bookRuleDesc = (rule: BookRule, days: number) =>
-  rule === "listing" ? `Parents pick any ${days} days from across all the weeks the camp runs.`
+// `noun` is the listing's own type (the one badged on the hero image) — not
+// every listing is a camp.
+const bookRuleDesc = (rule: BookRule, days: number, noun?: string) =>
+  rule === "listing" ? `Parents pick any ${days} days from across all the weeks${noun ? ` of ${noun}` : " it runs"}.`
     : rule === "blocks" ? `Sold as one fixed ${days}-day block.`
       : `Parents pick any ${days} days within a single week.`;
 
@@ -314,7 +316,7 @@ export function ruleSummary(r: DiscountRule): string {
   return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
 }
 
-export interface DiscountLine { name: string; amount: number }
+export interface DiscountLine { name: string; amount: number; scope: string }
 /**
  * Work out what comes off a basket. Returns each applied rule's saving.
  * Multi-person runs first, then multi-session on the reduced total, then
@@ -330,6 +332,7 @@ export function applyDiscounts(
   if (!items.length) return { lines: [], total: 0 };
   const live = rules.filter((r) => r.enabled);
   const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
+  const scopeOf = (r: DiscountRule) => (r.passNames.length === 0 ? "All passes" : r.passNames.join(", "));
   const off = (r: DiscountRule, unit: number) =>
     r.method === "percent" ? (unit * r.value) / 100 : r.method === "subtract" ? Math.min(unit, r.value) : Math.max(0, unit - r.value);
 
@@ -345,7 +348,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount };
   }
   if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount });
+    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r) });
     running -= bestPerson.amount;
   }
 
@@ -370,7 +373,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount });
+    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r) });
     running -= bestSession.amount;
   }
 
@@ -382,7 +385,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount });
+    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r) });
     running -= bestEarly.amount;
   }
 
@@ -604,6 +607,9 @@ export function ListingWizard({
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
   const booking = useMemo(() => blockBooking(blocks, d.blockId), [blocks, d.blockId]);
+  // The type badged on the hero image — used wherever copy needs to name the
+  // thing being sold, since not every listing is a camp.
+  const heroNoun = (local.categories.find((c) => c.id === (d.heroCategoryId ?? d.categoryIds[0])) ?? null)?.name;
   const venue = local.venues.find((v) => v.id === d.venueId) || null;
   const addons = local.addons.filter((a) => d.addonIds.includes(a.id));
 
@@ -685,7 +691,7 @@ export function ListingWizard({
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
-            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
+            {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} heroNoun={heroNoun} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={8} kicker="STEP 8 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
             {stepKey === "addons" && <AddonsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1121,7 +1127,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 }
 
 // ── Step: Tickets & pricing (pulls from Blocks) ────────────────────────────
-function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
+function TicketsStep({ d, upd, blocks, tickets, heroNoun }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[]; heroNoun?: string }) {
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
@@ -1196,7 +1202,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                     </button>
                   ))}
                 </div>
-                <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}</div>
+                <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days, heroNoun)}</div>
               </div>
             );
           })}
@@ -1618,7 +1624,7 @@ function myBrand() {
 }
 type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[] };
 // Shared booking logic — one source of truth, rendered in two visual themes.
-function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[]) {
+function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], noun?: string) {
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
   const [passId, setPassId] = useState<string | null>(passes[0]?.id ?? null);
@@ -1683,7 +1689,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       ? `Tap every day you'd like — each one is a single-day pass (${sel.length} selected)`
       : rule === "blocks"
         ? `Tap a week to take the fixed ${need}-day block`
-        : `Pick ${need} day${need === 1 ? "" : "s"} — ${bookRuleDesc(rule, need)} (${sel.length}/${need})`;
+        : `Pick ${need} day${need === 1 ? "" : "s"} — ${bookRuleDesc(rule, need, noun)} (${sel.length}/${need})`;
   // What the basket would look like if they added the current selection — so
   // an already-earned discount is stated before they commit, not after.
   const addPreview = (() => {
@@ -1732,10 +1738,10 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null };
 
 // Dispatcher — same logic, theme-specific presentation.
-function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful" }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; theme?: PageTheme;
+function BookingWidget({ d, booking, weeks, spacesLeft, theme = "playful", noun }: {
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; theme?: PageTheme; noun?: string;
 }) {
-  const b = useBooking(d, booking, weeks);
+  const b = useBooking(d, booking, weeks, noun);
   const view: BookView = { b, d, booking, weeks, spacesLeft };
   if (theme === "playful") return <PlayfulBooking {...view} />;
   return <SportBooking {...view} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />;
@@ -1812,8 +1818,11 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft }: BookView) {
               </div>
               <div className="mt-1.5 flex flex-col gap-1">
                 {b.addPreview.lines.map((l, i) => (
-                  <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
-                    <span className="truncate" style={{ color: "#0f766e" }}>{l.name}</span>
+                  <div key={i} className="flex items-start justify-between gap-3 text-[11.5px]">
+                    <span className="min-w-0">
+                      <span className="block" style={{ color: "#0f766e" }}>{l.name}</span>
+                      <span className="block text-[10px] opacity-70" style={{ color: "#0f766e" }}>{l.scope}</span>
+                    </span>
                     <b className="flex-none" style={{ color: "#047857" }}>−{money(l.amount)}</b>
                   </div>
                 ))}
@@ -1941,8 +1950,11 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, surf }: BookView & { s
                 </div>
                 <div className="mt-1.5 flex flex-col gap-1">
                   {b.addPreview.lines.map((l, i) => (
-                    <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
-                      <span className="truncate" style={{ color: "#c3ccdb" }}>{l.name}</span>
+                    <div key={i} className="flex items-start justify-between gap-3 text-[11.5px]">
+                      <span className="min-w-0">
+                        <span className="block" style={{ color: "#c3ccdb" }}>{l.name}</span>
+                        <span className="block text-[10px]" style={{ color: MUTs }}>{l.scope}</span>
+                      </span>
                       <b className="flex-none" style={{ color: LIME }}>−{money(l.amount)}</b>
                     </div>
                   ))}
@@ -2019,7 +2031,7 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} />;
+  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} theme={theme} noun={heroCat?.name} />;
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
@@ -2265,9 +2277,10 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
         {(() => {
           const live = (d.discounts ?? []).filter((r) => r.enabled);
           const tile = "border-b border-l px-4 py-3.5 first:border-l-0";
+          const wide = `${tile} lg:col-span-2`;
           const lab = "truncate text-[9.5px] font-bold uppercase tracking-[0.12em]";
           return (
-            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-4" style={{ borderColor: LINEs, background: PANEL }}>
+            <div className="mt-5 grid grid-cols-1 border sm:grid-cols-2 lg:grid-cols-6" style={{ borderColor: LINEs, background: PANEL }}>
               <div className={tile} style={{ borderColor: LINEs, borderTop: "2px solid transparent" }}>
                 <div className={lab} style={{ color: MUTs }}>ages</div>
                 <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>{d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo}` : "All"}</div>
@@ -2277,7 +2290,7 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
                 <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{spacesLeft !== null ? String(spacesLeft) : "—"}</div>
               </div>
               {passSummary.length > 0 && (
-                <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
                   <div className="mt-1.5 flex flex-col gap-1">
                     {passSummary.map((pp) => (
@@ -2289,18 +2302,18 @@ function SportPage({ d, venue, cats, heroCat, town, runLabel, staff, addons, img
                   </div>
                 </div>
               )}
-              <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+              <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                 <div className={lab} style={{ color: MUTs }}>discounts</div>
                 {live.length === 0 ? (
-                  <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>None on this camp</div>
+                  <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>None on this listing</div>
                 ) : (
                   <div className="mt-1.5 flex flex-col gap-1">
                     {live.slice(0, 3).map((r) => (
                       <div key={r.id} className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block truncate text-[11px]" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r)}</span>
+                          <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r)}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
-                          <span className="block truncate text-[9.5px]" style={{ color: MUTs }}>
+                          <span className="block text-[9.5px]" style={{ color: MUTs }}>
                             {r.passNames.length === 0 ? "All passes" : r.passNames.join(", ")}
                           </span>
                         </span>
