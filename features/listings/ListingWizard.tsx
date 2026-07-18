@@ -487,7 +487,7 @@ export function setDraftArchived(key: string, archived: boolean) {
 }
 
 // Summary bits for the Listings-tab row (image, dates, total days).
-export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean } {
+export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; from: string; to: string; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean } {
   const imgs = ((draft.images as unknown as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const dates = genDates(draft.runFrom, draft.runTo, draft.days).filter((x) => !(draft.datesOff || []).includes(x));
   // Show the year when the run leaves the current one — otherwise a mistyped
@@ -499,7 +499,7 @@ export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null
   const withYear = (iso: string) => (showYear ? `${fmtDate(iso)} ${yearOf(iso)}` : fmtDate(iso));
   const dateLabel = draft.runFrom && draft.runTo ? `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}` : null;
   const capacity = parseInt(draft.maxAttendees, 10) || null;
-  return { cover: imgs[0] || null, dateLabel, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft) };
+  return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft) };
 }
 
 // "Live" = the run hasn't ended yet (last date is today or later). No end date → treated as live/upcoming.
