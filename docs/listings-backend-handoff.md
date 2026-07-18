@@ -63,6 +63,12 @@ them.
 built for *the operator*, not the parent: find the parent, assign a child to each
 pass, per-day add-ons, and editable prices (§5).
 
+**Listings index.** Cards rebuilt around when the listing runs — date rail, a
+booked-vs-left capacity bar, cover image. Added sorting (start date, places
+offered, places booked, % booked, fewest left, price, name) and a location
+filter. The capacity numbers read from `l.blocks`, so they'll stay at zero
+until bookings are real — see §6.
+
 ### Three bugs I fixed that touch shared code
 
 1. **SSE connection leak** (`lib/realtime.ts`) — `subscribeRealtime` opened a new
@@ -157,6 +163,48 @@ so we're not maintaining a mapping layer:
   archived: boolean,
 }
 ```
+
+### `visibility` needs enforcing, not just storing
+
+`visibility` is in the schema above, but it's worth calling out separately
+because it's the one field with behaviour attached — and right now nothing
+honours it. It's localStorage-only, and `GET /api/listings` returns every
+listing regardless.
+
+Kaz confirmed the intended meaning is **unlisted**, not private:
+
+- `public` — listed on the operator's booking page. Anyone browsing can find it.
+- `hidden` — **not** listed on the booking page, but the direct link still
+  books normally. This is how an operator quietly runs a listing for a school,
+  a private group, or returning families only.
+
+So the two reads need to diverge:
+
+- `GET /api/listings` (parent browse feed) — must filter out `hidden`.
+- `GET /api/listings/:id` (direct link, `/book/{id}`) — must still return
+  `hidden` listings and allow booking against them.
+- `GET /api/listings?mine=1` (operator view) — returns everything, as now.
+
+Worth agreeing early: it changes the shape of the browse query rather than
+being a field we can bolt on later, and the front-end copy already promises
+this behaviour to the operator.
+
+Note there's no `/book/{id}` route or public browse page in the app yet — I've
+only built the operator side — so this is spec-ahead-of-code on both ends.
+
+### `opensAt` — scheduled booking open
+
+New in step 11: an operator can hold booking until a date/time (`opensAt` on the
+draft, blank = open now). The listing is still browsable before then — parents
+see a live countdown where the book button goes. It's for fair release on a
+popular run, rather than whoever happens to be refreshing.
+
+Front-end is done: the countdown, the disabled button (all three themes), and an
+`⏰ Opens 3 Aug, 9am` badge on the operator's listing card.
+
+**The server has to enforce it too** — the client-side lock is a courtesy, not a
+control. The booking write should reject anything before `opensAt` (409 with the
+open time, so we can show it), and `opensAt` needs storing on the listing.
 
 ### Also browser-only: the operator's shared library
 
@@ -300,7 +348,9 @@ the Bookings area as "Take a booking". The components are already extracted
 
 1. **Answer §0** — the dated-runs and capacity decisions, since they change how
    the listing schema is shaped.
-2. **Listing content schema** (§2) — unblocks everything else.
+2. **Listing content schema** (§2) — unblocks everything else. Includes
+   splitting the browse feed from the direct-link read so `hidden` means
+   *unlisted but still bookable by link*.
 3. **Discounts persisted + priced server-side** (§3, §4).
 4. **Booking write**, then move the flow into Bookings.
 

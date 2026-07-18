@@ -258,6 +258,7 @@ export interface WizardDraft {
   addonIds: string[];
   staffIds: string[];
   visibility: "public" | "hidden";
+  opensAt?: string;              // local datetime; blank = open now
   bookingType: "auto" | "manual";
   waitlist: boolean;
   waitlistSize: string;
@@ -487,7 +488,7 @@ export function setDraftArchived(key: string, archived: boolean) {
 }
 
 // Summary bits for the Listings-tab row (image, dates, total days).
-export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; from: string; to: string; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean } {
+export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null; dateLabel: string | null; from: string; to: string; totalDays: number; capacity: number | null; capacityScope: "day" | "listing"; showSpaces: boolean; live: boolean; opensAt: string } {
   const imgs = ((draft.images as unknown as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const dates = genDates(draft.runFrom, draft.runTo, draft.days).filter((x) => !(draft.datesOff || []).includes(x));
   // Show the year when the run leaves the current one — otherwise a mistyped
@@ -499,7 +500,7 @@ export function listingRowInfo(draft: WizardDraft): { cover: ListingImage | null
   const withYear = (iso: string) => (showYear ? `${fmtDate(iso)} ${yearOf(iso)}` : fmtDate(iso));
   const dateLabel = draft.runFrom && draft.runTo ? `${withYear(draft.runFrom)} – ${withYear(draft.runTo)}` : null;
   const capacity = parseInt(draft.maxAttendees, 10) || null;
-  return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft) };
+  return { cover: imgs[0] || null, dateLabel, from: draft.runFrom, to: draft.runTo, totalDays: dates.length, capacity, capacityScope: draft.capacityScope, showSpaces: draft.showSpaces, live: listingIsLive(draft), opensAt: draft.opensAt ?? "" };
 }
 
 // "Live" = the run hasn't ended yet (last date is today or later). No end date → treated as live/upcoming.
@@ -1584,6 +1585,39 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   );
 }
 
+/** Optional embargo: the listing is visible, but booking is held until a date. */
+function BookingOpens({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Default to 9am tomorrow — a sensible "next morning" release most operators want.
+  const suggest = () => {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    t.setHours(9, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T09:00`;
+  };
+  if (!value) {
+    return (
+      <button type="button" onClick={() => onChange(suggest())}
+        className="mb-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px] font-bold text-[var(--brand-ink)] hover:border-[var(--brand-2)]">
+        ⏰ Schedule when bookings open
+      </button>
+    );
+  }
+  return (
+    <div className="mb-1 rounded-xl border p-3" style={{ borderColor: "var(--brand-2)", background: "var(--brand-soft)" }}>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">⏰ Bookings open at</div>
+        <button type="button" onClick={() => onChange("")} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">Open straight away</button>
+      </div>
+      <Input type="datetime-local" value={value} onChange={(e) => onChange(e.target.value)} className="w-full max-w-[240px]" />
+      <div className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-2)]">
+        Parents can see the listing before this, but can&rsquo;t book — they see a countdown instead of the book button.
+        Use it so everyone gets a fair shot at a popular camp rather than whoever happens to be looking.
+      </div>
+    </div>
+  );
+}
+
 function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const vis: [WizardDraft["visibility"], string, string][] = [
     ["public", "Public", "Visible in search & browse"],
@@ -1603,6 +1637,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           </button>
         ))}
       </div>
+      <BookingOpens value={d.opensAt ?? ""} onChange={(v) => upd({ opensAt: v })} />
       <SectionHead>Booking &amp; waiting list</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {book.map(([k, label]) => (
@@ -1676,7 +1711,30 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       return [...prev, iso];
     });
   }
-  const canAdd = !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
+  // Scheduled open (step 11). The listing stays browsable — only booking is
+  // held — so everyone gets the same starting gun on a popular run.
+  const opensAt = d.opensAt ?? "";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!opensAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [opensAt]);
+  const openMs = opensAt ? new Date(opensAt).getTime() : 0;
+  const locked = !!opensAt && !Number.isNaN(openMs) && now < openMs;
+  const countdown = (() => {
+    if (!locked) return "";
+    let s2 = Math.max(0, Math.floor((openMs - now) / 1000));
+    const dd = Math.floor(s2 / 86400); s2 -= dd * 86400;
+    const hh = Math.floor(s2 / 3600); s2 -= hh * 3600;
+    const mm = Math.floor(s2 / 60); s2 -= mm * 60;
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    return dd > 0 ? `${dd} day${dd === 1 ? "" : "s"} ${hh}h ${mm}m` : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
+  })();
+  const opensLabel = opensAt && !Number.isNaN(openMs)
+    ? new Date(openMs).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
+    : "";
+  const canAdd = !locked && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
   // One booking may cover several children; the count drives multi-person rules.
   const attendees = Math.max(1, new Set(Object.values(assign).map((n) => n.trim()).filter(Boolean)).size);
 
@@ -1788,7 +1846,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -2115,8 +2173,15 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
             </div>)}
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: BLUE }}><span className="inline-block h-2 w-2 rounded-full" style={{ background: TEAL }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
+          {b.locked && (
+            <div className="mt-3 rounded-2xl border-2 p-3 text-center" style={{ borderColor: BLUE, background: "#eef3ff" }}>
+              <div className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: BLUE }}>⏰ Booking opens in</div>
+              <div className="my-0.5 text-[22px] font-extrabold tabular-nums" style={{ color: BLUE }}>{b.countdown}</div>
+              <div className="text-[11.5px] text-[#6b7382]">{b.opensLabel} — have a look around, then come back to book.</div>
+            </div>
+          )}
           <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
-            {b.canAdd ? (
+            {b.locked ? "Booking not open yet" : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                 <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
                 <span className="inline-flex items-baseline gap-1.5">
@@ -2245,8 +2310,15 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => { const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`); return <button key={iso} type="button" disabled={dOff} onClick={() => b.pickDay(iso, w.mon)} className="flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed" style={dOff ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}><span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span><span className="text-[14px] font-black leading-none">{dt.getUTCDate()}</span></button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
             {spacesLeft !== null && <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: CY }}><span className="inline-block h-2 w-2" style={{ background: LIME }} />{spacesLeft} spaces left{d.capacityScope === "day" ? " / day" : ""}</div>}
+            {b.locked && (
+              <div className="mt-3 border p-3 text-center" style={{ borderColor: LIME, background: CELL }}>
+                <div className="text-[10.5px] font-black uppercase tracking-[0.08em]" style={{ color: LIME }}>⏰ Booking opens in</div>
+                <div className="my-0.5 text-[22px] font-black tabular-nums text-white">{b.countdown}</div>
+                <div className="text-[11.5px] text-[#8f9bb0]">{b.opensLabel} — have a look around, then come back to book.</div>
+              </div>
+            )}
             <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
-                {b.canAdd ? (
+                {b.locked ? "Booking not open yet" : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
                     <span className="inline-flex items-baseline gap-1.5">

@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
-import { Button, Card, FieldLabel, Input } from "@/components/ui";
-import { ListingWizard, ListingPreview, listingRowInfo, listingRunsOn, listingIsLive, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
+import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -69,6 +69,15 @@ export interface LocalState {
 // Date-rail formatting for the listing card.
 const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 const dayOf = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
+// Scheduled-open badge. Compared as local strings, matching the datetime-local
+// input the operator typed — no timezone shifting.
+const nowLocal = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}T${p(t.getHours())}:${p(t.getMinutes())}`; };
+const openLabel = (v: string) => {
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  const time = d.getMinutes() ? d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" }) : d.toLocaleTimeString("en-GB", { hour: "numeric" });
+  return `${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}, ${time.replace(/\s/g, "").toLowerCase()}`;
+};
 const shortDate = (iso: string) =>
   iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "TBC";
 
@@ -354,6 +363,19 @@ export function FreelancerListingsApp() {
 }
 
 // ── Listings tab: compact, searchable cards ────────────────────────────────
+type SortKey = "soonest" | "latest" | "ending" | "capacity" | "booked" | "full" | "left" | "price" | "name";
+const SORTS: [SortKey, string][] = [
+  ["soonest", "Starting soonest"],
+  ["latest", "Starting latest"],
+  ["ending", "Ending soonest"],
+  ["capacity", "Most places offered"],
+  ["booked", "Most places booked"],
+  ["full", "Highest % booked"],
+  ["left", "Fewest places left"],
+  ["price", "Price: low to high"],
+  ["name", "Name A–Z"],
+];
+
 function ListingsTab({
   listings,
   drafts,
@@ -382,19 +404,24 @@ function ListingsTab({
   const [q, setQ] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended">("all");
-  const liveOf = (l: Listing) => { const dr = loadDrafts()[l.id]; return dr ? listingIsLive(dr) : true; };
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
 
-  // Subtle solid accent per venue — a quiet colour cue, not a whole-card fill.
-  const ACCENTS = ["#2f6bd8", "#0e9f6e", "#7c3aed", "#e11d48", "#0891b2", "#d97706", "#4f46e5", "#0f766e"];
-  const accentOf = (l: Listing) => {
-    const vid = loadDrafts()[l.id]?.venueId;
-    const idx = vid ? local.venues.findIndex((v) => v.id === vid) : -1;
-    return idx < 0 ? "#64748b" : ACCENTS[idx % ACCENTS.length];
-  };
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [venueFilter, setVenueFilter] = useState("");
+  // Clicking Public/Hidden explains what it actually does — the words alone
+  // don't tell an operator whether parents can still reach the listing.
+  const [visNote, setVisNote] = useState<string | null>(null);
+  const visNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setVisibility = (l: Listing, v: "public" | "hidden") => {
+    onSetVisibility(l, v);
+    setVisNote(l.id);
+    if (visNoteTimer.current) clearTimeout(visNoteTimer.current);
+    visNoteTimer.current = setTimeout(() => setVisNote(null), 8000);
+  };
+  useEffect(() => () => { if (visNoteTimer.current) clearTimeout(visNoteTimer.current); }, []);
+  const [sortBy, setSortBy] = useState<SortKey>("soonest");
 
   const bookedCount = (l: Listing) => (l.blocks ?? []).reduce((s, b) => s + Math.max(0, b.capacity - b.spotsLeft), 0);
   async function duplicate(l: Listing) {
@@ -424,24 +451,69 @@ function ListingsTab({
     }
   }
   const archive = (l: Listing, v: boolean) => { setDraftArchived(l.id, v); setArchiveTick((t) => t + 1); };
-  const venueName = (l: Listing) => { const dr = loadDrafts()[l.id]; return dr ? local.venues.find((v) => v.id === dr.venueId)?.name ?? "" : ""; };
   const copyLink = (l: Listing) => {
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
     navigator.clipboard?.writeText(link).then(() => { setCopiedId(l.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {});
   };
 
+  // Read localStorage once per render, then decorate each listing with the
+  // numbers the filters, the sort and the card all need.
   const query = q.trim().toLowerCase();
-  const shown = listings.filter((l) => {
-    const dr = loadDrafts()[l.id];
-    if (query) {
-      const info = dr ? listingRowInfo(dr) : null;
-      if (!`${l.name} ${venueName(l)} ${info?.dateLabel ?? ""}`.toLowerCase().includes(query)) return false;
-    }
-    if (dateFilter) return dr ? listingRunsOn(dr, dateFilter) : false;
+  const allDrafts = loadDrafts();
+  const rows = listings.map((l) => {
+    const dr = allDrafts[l.id];
+    const info = dr ? listingRowInfo(dr) : null;
+    const apiBlocks = l.blocks ?? [];
+    const cap = apiBlocks.length ? apiBlocks.reduce((s2, b) => s2 + b.capacity, 0) : info?.capacity ?? null;
+    const spaces = apiBlocks.length ? apiBlocks.reduce((s2, b) => s2 + b.spotsLeft, 0) : cap;
+    const left = Math.max(0, spaces ?? cap ?? 0);
+    const booked = Math.max(0, (cap ?? 0) - left);
+    return {
+      l, dr, info,
+      vn: dr ? local.venues.find((v) => v.id === dr.venueId)?.name ?? "" : "",
+      venueId: dr?.venueId ?? null,
+      cap, spaces, left, booked,
+      pct: cap && cap > 0 ? booked / cap : 0,
+      from: l.passes.length ? Math.min(...l.passes.map((p) => p.price)) : Infinity,
+      start: info?.from || "",
+      end: info?.to || "",
+      isLive: info ? info.live : true,
+      archived: getDraftArchived(l.id),
+    };
+  });
+
+  const filtered = rows.filter((r) => {
+    if (query && !`${r.l.name} ${r.vn} ${r.info?.dateLabel ?? ""}`.toLowerCase().includes(query)) return false;
+    if (dateFilter && !(r.dr && listingRunsOn(r.dr, dateFilter))) return false;
+    if (venueFilter && r.venueId !== venueFilter) return false;
     return true;
   });
-  const activeShown = shown.filter((l) => !getDraftArchived(l.id) && (statusFilter === "all" || (statusFilter === "live" ? liveOf(l) : !liveOf(l))));
+
+  // Blank dates sort last whichever direction you pick — an undated listing
+  // isn't "soonest".
+  const byDate = (a: string, b: string, dir: 1 | -1) =>
+    !a && !b ? 0 : !a ? 1 : !b ? -1 : a < b ? -dir : a > b ? dir : 0;
+  const activeShown = filtered
+    .filter((r) => !r.archived && (statusFilter === "all" || (statusFilter === "live" ? r.isLive : !r.isLive)))
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "latest": return byDate(a.start, b.start, -1);
+        case "ending": return byDate(a.end, b.end, 1);
+        case "capacity": return (b.cap ?? 0) - (a.cap ?? 0);
+        case "booked": return b.booked - a.booked;
+        case "full": return b.pct - a.pct;
+        case "left": return a.left - b.left;
+        case "price": return a.from - b.from;
+        case "name": return a.l.name.localeCompare(b.l.name);
+        default: return byDate(a.start, b.start, 1);
+      }
+    });
   const archivedList = listings.filter((l) => getDraftArchived(l.id));
+
+  // Only offer locations that actually have a listing behind them.
+  const venueOpts = [...new Map(rows.filter((r) => r.venueId && r.vn && !r.archived).map((r) => [r.venueId!, r.vn])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const draftsBlock = drafts.length > 0 && (
     <div className="mb-3">
@@ -477,6 +549,18 @@ function ListingsTab({
           <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-[150px]" />
           {dateFilter && <Button sm onClick={() => setDateFilter("")}>Clear</Button>}
         </div>
+        {venueOpts.length > 1 && (
+          <Select value={venueFilter} onChange={(e) => setVenueFilter(e.target.value)} className="w-[170px]">
+            <option value="">All locations</option>
+            {venueOpts.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </Select>
+        )}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Sort</span>
+          <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="w-[185px]">
+            {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          </Select>
+        </div>
         <span className="flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
           {([["all", "All"], ["live", "Live"], ["ended", "Ended"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatusFilter(k)} className="px-3 py-1.5"
@@ -485,22 +569,14 @@ function ListingsTab({
         </span>
       </div>
       {activeShown.length === 0 ? (
-        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter ? `No listings match your search${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
+        <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
       ) : (
-        activeShown.map((l) => {
-          const info = (() => { const dr = loadDrafts()[l.id]; return dr ? listingRowInfo(dr) : null; })();
-          const vn = venueName(l);
-          // Prefer the real dated-run blocks (capacity + bookings) if the API has them; else the builder default.
-          const apiBlocks = l.blocks ?? [];
-          const cap = apiBlocks.length ? apiBlocks.reduce((s, b) => s + b.capacity, 0) : info?.capacity ?? null;
-          const spaces = apiBlocks.length ? apiBlocks.reduce((s, b) => s + b.spotsLeft, 0) : cap;
-          const accent = accentOf(l);
-          const isLive = info ? info.live : true;
+        activeShown.map(({ l, info, vn, cap, spaces, isLive }) => {
           return (
             <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
               <div className="flex flex-col sm:flex-row">
                 {/* date rail — when it runs, read first */}
-                <div className="flex flex-none flex-row items-center justify-center gap-3 px-4 py-3 text-white sm:w-[92px] sm:flex-col sm:gap-0 sm:rounded-l-xl sm:py-4" style={{ background: accent }}>
+                <div className="flex flex-none flex-row items-center justify-center gap-3 px-4 py-3 text-white sm:w-[92px] sm:flex-col sm:gap-0 sm:rounded-l-xl sm:py-4" style={{ background: "var(--side-bg)" }}>
                   {info?.from ? (
                     <>
                       <div className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-75">{monthOf(info.from)}</div>
@@ -523,6 +599,9 @@ function ListingsTab({
                       <span title="The run hasn’t ended — last date is today or later" className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft,#e7f8ee)] px-2 py-[2px] text-[10px] font-semibold text-[#0f7a44]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#16a34a]" />Live</span>
                     ) : (
                       <span title="The last date has passed — this run has ended" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
+                    )}
+                    {info?.opensAt && info.opensAt > nowLocal() && (
+                      <span title="Parents can see this listing but can't book until then" className="rounded-full bg-[#fff7ed] px-2 py-[2px] text-[10px] font-semibold text-[#9a3412]">⏰ Opens {openLabel(info.opensAt)}</span>
                     )}
                   </div>
                   <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{vn || "No venue set"}</div>
@@ -568,9 +647,21 @@ function ListingsTab({
                     <span key={visTick} className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px] font-semibold">
                       {(["public", "hidden"] as const).map((v) => {
                         const on = getDraftVisibility(l.id) === v;
-                        return <button key={v} type="button" onClick={() => onSetVisibility(l, v)} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? "Public" : "Hidden"}</button>;
+                        return <button key={v} type="button" onClick={() => setVisibility(l, v)} title={v === "public" ? "Listed on your booking page — parents can find and book it" : "Unlisted — off your booking page, but the direct link still books"} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? "Public" : "Hidden"}</button>;
                       })}
                     </span>
+                    {visNote === l.id && (
+                      <div className="order-last w-full rounded-lg border px-3 py-2 text-[11.5px] leading-[1.5]"
+                        style={getDraftVisibility(l.id) === "public"
+                          ? { background: "var(--brand-soft)", borderColor: "transparent", color: "var(--brand-ink)" }
+                          : { background: "#fff7ed", borderColor: "#fed7aa", color: "#9a3412" }}>
+                        {getDraftVisibility(l.id) === "public" ? (
+                          <><b>Public</b> — listed on your booking page. Any parent can find it, see the prices and book a place.</>
+                        ) : (
+                          <><b>Hidden</b> — not listed on your booking page, so parents can&rsquo;t find it by browsing. Anyone you send the <b>🔗 Link</b> to can still book as normal — handy for a private group, a school, or returning families.</>
+                        )}
+                      </div>
+                    )}
                     <div className="ml-auto flex items-center gap-2">
                       <Button sm onClick={() => copyLink(l)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
                       <Button sm onClick={() => onView(l)}>View</Button>
@@ -595,6 +686,15 @@ function ListingsTab({
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* cover, on the right */}
+                <div className="order-first h-[150px] w-full flex-none overflow-hidden sm:order-last sm:h-auto sm:w-[230px] sm:self-stretch sm:rounded-r-xl">
+                  {info?.cover ? (
+                    <CroppedImage im={{ ...info.cover, x: 50, y: 50 }} className="h-full w-full" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[var(--surface)] text-[26px]">🏕️</div>
+                  )}
                 </div>
               </div>
             </Card>
