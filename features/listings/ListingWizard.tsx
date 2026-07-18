@@ -2863,41 +2863,45 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                             </div>
                             {kids.map((kid) => {
                               const days = b.addonDays(x.id, kid, a.id);
+                              const on = days.length > 0;
                               return (
-                                <div key={kid} className="mt-1 flex flex-wrap items-center gap-1 pl-6">
-                                  <span className="w-[58px] flex-none truncate text-[11px]" style={{ color: tk.muted }}>{kid.split(" ")[0]}</span>
+                                <div key={kid} className={`mt-1.5 border p-2.5 ${tk.round}`}
+                                  style={{ borderColor: on ? tk.accent : tk.line, background: on ? `${tk.accent}0f` : "transparent" }}>
+                                  {/* Name and totals on their own line, days below. One
+                                      wrapping row with the controls buried inside it
+                                      was unreadable. */}
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <b className="min-w-0 flex-1 truncate text-[12px]" style={{ color: tk.ink }}>{kid}</b>
+                                    <span className="text-[11px]" style={{ color: tk.muted }}>
+                                      {perDay ? (on ? `${days.length} of ${x.dates.length} days` : "not added") : (on ? "added" : "not added")}
+                                    </span>
+                                    {on ? <b className="text-[12px]" style={{ color: tk.ink }}>{money(costOf(a, days))}</b> : null}
+                                    <button type="button"
+                                      onClick={() => b.setAddonDays(x.id, kid, a.id, on ? [] : perDay ? [...x.dates] : ["*"])}
+                                      className={`flex-none border px-2.5 py-[3px] text-[11px] font-bold ${tk.round}`}
+                                      style={on || perDay
+                                        ? { borderColor: tk.line, color: tk.muted }
+                                        : { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }}>
+                                      {on ? "Remove" : perDay ? "Every day" : `Add · ${money(a.price)}`}
+                                    </button>
+                                  </div>
                                   {perDay ? (
-                                    <>
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
                                       {x.dates.map((iso) => {
                                         const active = days.includes(iso);
                                         return (
                                           <button key={iso} type="button"
                                             onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
-                                            className={`border px-2 py-[3px] text-[11px] font-bold ${tk.round}`}
-                                            style={active ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
+                                            className={`min-w-[46px] border px-2 py-[4px] text-[11px] font-bold ${tk.round}`}
+                                            style={active
+                                              ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
+                                              : { borderColor: tk.line, color: tk.muted }}>
                                             {ordinal(new Date(`${iso}T00:00:00Z`).getUTCDate())}
                                           </button>
                                         );
                                       })}
-                                      {x.dates.length > 1 && (
-                                        <button type="button"
-                                          onClick={() => b.setAddonDays(x.id, kid, a.id, days.length === x.dates.length ? [] : [...x.dates])}
-                                          className="text-[10.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
-                                          {days.length === x.dates.length ? "none" : "all"}
-                                        </button>
-                                      )}
-                                      <span className="text-[10.5px]" style={{ color: tk.muted }}>
-                                        {days.length ? money(costOf(a, days)) : "not added"}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <button type="button"
-                                      onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : ["*"])}
-                                      className={`border px-2.5 py-[3px] text-[11px] font-bold ${tk.round}`}
-                                      style={days.length ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
-                                      {days.length ? `✓ added · ${money(a.price)}` : "add"}
-                                    </button>
-                                  )}
+                                    </div>
+                                  ) : null}
                                 </div>
                               );
                             })}
