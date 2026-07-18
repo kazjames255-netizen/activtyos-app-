@@ -59,7 +59,17 @@ export function ruleSummary(r: DiscountRule): string {
   return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
 }
 
-export interface DiscountLine { name: string; amount: number; scope: string }
+export interface DiscountLine {
+  name: string;
+  amount: number;
+  scope: string;
+  /**
+   * What this rule took off each item, index-aligned with `items`. Lets a
+   * basket show the saving on the line that earned it, instead of only as a
+   * lump at the bottom. Callers that don't need it can ignore it.
+   */
+  perItem?: number[];
+}
 /**
  * Work out what comes off a basket. Returns each applied rule's saving.
  * Multi-person runs first, then multi-session on the reduced total, then
@@ -95,15 +105,16 @@ export function applyDiscounts(
   const discountedHeads = (r: DiscountRule, n: number) =>
     Math.max(0, r.appliesTo === "all" ? n : r.appliesTo === "second" ? Math.min(1, n - 1) : n - 1);
   const person = live.filter((r) => r.kind === "person");
-  let bestPerson: { r: DiscountRule; amount: number } | null = null;
+  let bestPerson: { r: DiscountRule; amount: number; perItem: number[] } | null = null;
   for (const r of person) {
-    const amount = items
-      .filter((i) => covers(r, i.name) && headsOf(i) > r.moreThan)
-      .reduce((s, i) => s + off(r, i.price) * discountedHeads(r, headsOf(i)), 0);
-    if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount };
+    const perItem = items.map((i) =>
+      covers(r, i.name) && headsOf(i) > r.moreThan ? off(r, i.price) * discountedHeads(r, headsOf(i)) : 0,
+    );
+    const amount = perItem.reduce((s, n) => s + n, 0);
+    if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount, perItem };
   }
   if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r) });
+    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r), perItem: bestPerson.perItem });
     running -= bestPerson.amount;
   }
 
@@ -113,6 +124,14 @@ export function applyDiscounts(
     if (r.passNames.length === 0) return 1;
     const covered = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.price * headsOf(i), 0);
     return gross > 0 ? covered / gross : 0;
+  };
+
+  // These rules come off the whole (reduced) total, so their saving is split
+  // across the items they cover, by each item's share of that gross.
+  const spread = (r: DiscountRule, amount: number) => {
+    const weights = items.map((i) => (covers(r, i.name) ? i.price * headsOf(i) : 0));
+    const sum = weights.reduce((s, n) => s + n, 0);
+    return weights.map((w) => (sum > 0 ? Math.round(((amount * w) / sum) * 100) / 100 : 0));
   };
 
   // 2) Multi-session — on the already-reduced total, counting only the
@@ -128,7 +147,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
   }
   if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r) });
+    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r), perItem: spread(bestSession.r, bestSession.amount) });
     running -= bestSession.amount;
   }
 
@@ -140,7 +159,7 @@ export function applyDiscounts(
     if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
   }
   if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r) });
+    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r), perItem: spread(bestEarly.r, bestEarly.amount) });
     running -= bestEarly.amount;
   }
 
