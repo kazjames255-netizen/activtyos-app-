@@ -133,3 +133,12 @@ h4 {
   letter-spacing: -0.01em;
   color: var(--ink);
 }
+
+/* Booking flow steps — dates, children, each extra, pay. A short fade-and-lift
+   so moving between them reads as one continuous flow rather than the panel
+   redrawing. */
+@keyframes aos-step-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.aos-step { animation: aos-step-in 0.22s ease-out; }
