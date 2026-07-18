@@ -174,25 +174,20 @@ export interface BookPass { id: string; name: string; days: number; basePrice: n
 export interface BookPeriod { id: string; title: string; start: string; finish: string; range: string }
 export type RunBlock = { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean };
 
+/** Fewer than this left on a date counts as running low. */
+export const LOW_LEFT = 5;
+
 /**
- * How a listing's capacity should read to a parent.
- *
- * "60 spaces left" is the wrong sentence: it answers a question nobody asked
- * and, on a whole-camp cap, reads as if 60 were free every day. Say the shape
- * while there's room, and only produce a number once it's scarce enough to
- * change what someone does.
+ * How availability reads to a parent. Says there's room while there is, names
+ * the number once it's running out, and never makes them do the arithmetic.
  */
 export function capacityNote(d: WizardDraft, left: number | null): { text: string; tone: "calm" | "low" | "gone" } | null {
   const cap = parseInt(d.maxAttendees, 10);
   if (!Number.isFinite(cap) || !d.showSpaces) return null;
-  const perDay = d.capacityScope === "day";
   const remaining = left ?? cap;
   if (remaining <= 0) return { text: "Sold out", tone: "gone" };
-  // Scarce = the last fifth, or the last handful on a small group.
-  if (remaining <= Math.max(3, Math.round(cap * 0.2))) {
-    return { text: `Only ${remaining} place${remaining === 1 ? "" : "s"} left${perDay ? " that day" : ""}`, tone: "low" };
-  }
-  return { text: perDay ? `Up to ${cap} children each day` : `Up to ${cap} children on this listing`, tone: "calm" };
+  if (remaining <= LOW_LEFT) return { text: `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
+  return { text: "Lots of space left", tone: "calm" };
 }
 
 /** The dated run covering a date, when the server has told us about them. */
@@ -1804,6 +1799,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   const hasSpace = !soldOut && fullDates.length === 0;
   // Tightest count that applies to what's on screen — the selection if there
   // is one, else the run as a whole.
+  const hasCounts = !!blocks?.length || capacity !== null;
   const seatsLeft = (() => {
     const pool = sel.length ? sel.map(leftOn).filter((n): n is number => n !== null) : [];
     if (pool.length) return Math.min(...pool);
@@ -1923,7 +1919,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
       else forItem[addonId] = dates;
       return { ...all, [itemId]: forItem };
     });
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -2250,17 +2246,25 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
                 const dOff = b.off(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= 3;
+                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= LOW_LEFT;
+                const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#16a34a";
                 return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : low ? `Only ${left} left` : undefined}
+                  title={full ? "Full" : left === null ? undefined : low ? `Only ${left} left` : `${left} places left`}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" } : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-extrabold leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
-                  {low && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: "#f59e0b" }} />}
+                  {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
+          {b.hasCounts && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold" style={{ color: MUTp }}>
+              {([["#16a34a", "Space"], ["#f59e0b", `Under ${LOW_LEFT} left`], ["#dc2626", "Full"]] as const).map(([c, l]) => (
+                <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: c }} />{l}</span>
+              ))}
+            </div>
+          )}
           {(() => {
             const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
             if (!note) return null;
@@ -2397,16 +2401,24 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= 3;
+                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && left <= LOW_LEFT;
+                const dot = dOff || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
                 return <button key={iso} type="button" disabled={dOff || full} onClick={() => b.pickDay(iso, w.mon)}
-                  title={full ? "Full" : low ? `Only ${left} left` : undefined}
+                  title={full ? "Full" : left === null ? undefined : low ? `Only ${left} left` : `${left} places left`}
                   className="relative flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed"
                   style={dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF } : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-black leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
-                  {low && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: "#ffb020" }} />}
+                  {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
+            {b.hasCounts && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-bold" style={{ color: MUTs }}>
+                {([["#3ddc84", "Space"], ["#ffb020", `Under ${LOW_LEFT} left`], ["#ff5470", "Full"]] as const).map(([c, l]) => (
+                  <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5" style={{ background: c }} />{l}</span>
+                ))}
+              </div>
+            )}
             {(() => {
               const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
               if (!note) return null;
@@ -2509,7 +2521,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, full, theme =
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} theme={theme} />;
   const opens = useOpensAt(d.opensAt);
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, brand: brand ?? myBrand() };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand() };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -2541,6 +2553,7 @@ interface PageProps {
   /** Set once in Locations, not per listing. */
   whereHead: { eyebrow: string; title: string };
   opens: { locked: boolean; countdown: string; opensLabel: string };
+  blocks?: RunBlock[];
   brand: string;
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
@@ -2754,7 +2767,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
@@ -2841,12 +2854,71 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
                   </div>
                 </button>
               )}
-              <div className={tile} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                <div className={lab} style={{ color: MUTs }}>{spacesLeft !== null ? "spaces left" : "capacity"}</div>
-                <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
-                  style={{ fontVariantNumeric: "tabular-nums", color: spacesLeft !== null && spacesLeft <= 0 ? "#ff5470" : "#fff" }}>
-                  {spacesLeft === null ? "—" : spacesLeft <= 0 ? "Sold out" : String(spacesLeft)}
-                </div>
+              <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                <div className={lab} style={{ color: MUTs }}>spaces</div>
+                {(() => {
+                  // Totals come from the real runs when there are any. They
+                  // legitimately differ by scope: 20/day over ten days is 200
+                  // places, 60 across the camp is 60 — so read, don't assume.
+                  const total = blocks?.length ? blocks.reduce((n, x) => n + x.capacity, 0) : spacesLeft;
+                  const left = blocks?.length ? blocks.reduce((n, x) => n + x.spotsLeft, 0) : spacesLeft;
+                  if (total === null || left === null) return <div className={`mt-1 text-[18px] font-black ${cond} text-white`}>—</div>;
+                  const used = Math.max(0, total - left);
+                  const pct = total > 0 ? Math.round((used / total) * 100) : 0;
+                  return (
+                    <>
+                      <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
+                        style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? "#ff5470" : "#fff" }}>
+                        {left <= 0 ? "Sold out" : `${left} of ${total} left`}
+                      </div>
+                      <div className="mt-1.5 h-1 w-full" style={{ background: "#26304a" }}>
+                        <div className="h-full" style={{ width: `${pct}%`, background: left <= 0 ? "#ff5470" : LIME }} />
+                      </div>
+                      <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{used} booked · {pct}% full</div>
+                    </>
+                  );
+                })()}
+                {(() => {
+                  // Counted in dates, because that's the unit a parent books in
+                  // — "15 places left" doesn't say whether the days they want
+                  // are among them.
+                  const dates = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x));
+                  if (!dates.length || !blocks?.length) return null;
+                  const leftOnDate = (iso: string) => { const blk = blockOn(blocks, iso); return blk ? (blk.open ? blk.spotsLeft : 0) : null; };
+                  const open = dates.filter((x) => (leftOnDate(x) ?? 1) > 0);
+
+                  // Runs of consecutive dates sharing a count collapse to a
+                  // range. Today counts are per week so that yields one range
+                  // per week; when they go per session it yields real dates,
+                  // with no change here.
+                  const spans: { from: string; to: string; left: number }[] = [];
+                  dates.forEach((iso) => {
+                    const n = leftOnDate(iso);
+                    if (n === null || n <= 0 || n > LOW_LEFT) return;
+                    const last = spans[spans.length - 1];
+                    const prev = dates[dates.indexOf(iso) - 1];
+                    if (last && last.left === n && last.to === prev) last.to = iso;
+                    else spans.push({ from: iso, to: iso, left: n });
+                  });
+                  const label = (sp: { from: string; to: string; left: number }) =>
+                    `${sp.from === sp.to ? fmtDate(sp.from) : `${fmtDate(sp.from)}–${fmtDate(sp.to)}`} (${sp.left} left)`;
+
+                  return (
+                    <>
+                      {/* Only worth saying once some dates have actually gone. */}
+                      {open.length < dates.length && (
+                        <div className="mt-1.5 text-[10.5px]" style={{ color: MUTs }}>
+                          <b className="text-white">{open.length}</b> of {dates.length} dates still have space
+                        </div>
+                      )}
+                      {spans.length > 0 && (
+                        <div className="mt-1 text-[10.5px] font-bold leading-[1.45]" style={{ color: "#ffb020" }}>
+                          ⚠ Nearly full: {spans.slice(0, 3).map(label).join(" · ")}{spans.length > 3 ? ` +${spans.length - 3} more` : ""}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 {/* Sold out is a dead end unless it says what to do next. */}
                 {spacesLeft !== null && spacesLeft <= 0 && (
                   d.waitlist ? (
