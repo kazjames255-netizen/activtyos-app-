@@ -13,8 +13,17 @@ export class ApiError extends Error {
   }
 }
 
+// `currentUser` is null for the first moments after a page load, until Firebase
+// restores the persisted session. Calling straight from a mount effect used to
+// throw "Not signed in" and leave screens stuck, so wait for auth to settle.
+async function signedInUser() {
+  if (firebaseAuth.currentUser) return firebaseAuth.currentUser;
+  await firebaseAuth.authStateReady();
+  return firebaseAuth.currentUser;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const user = firebaseAuth.currentUser;
+  const user = await signedInUser();
   if (!user) throw new ApiError(401, "Not signed in");
   const token = await user.getIdToken();
 

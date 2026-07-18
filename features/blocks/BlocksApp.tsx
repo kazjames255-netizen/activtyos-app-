@@ -210,6 +210,7 @@ const ARROW = (
 export function BlocksApp() {
   const [state, setState] = useState<BuilderState | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [listingsError, setListingsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(0);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -266,8 +267,16 @@ export function BlocksApp() {
   }, [refresh]);
   useEffect(() => {
     apiGet<Listing[]>("/api/listings?mine=1")
-      .then((ls) => setListings(ls.map((l) => ({ id: l.id, name: l.name }))))
-      .catch(() => setListings([]));
+      .then((ls) => {
+        setListings(ls.map((l) => ({ id: l.id, name: l.name })));
+        setListingsError(null);
+      })
+      // Don't fail silently — without listings the "Send to a listing" control
+      // can't render, and the operator needs to know why.
+      .catch((e) => {
+        setListings([]);
+        setListingsError(e instanceof Error ? e.message : "Couldn't load your listings.");
+      });
   }, []);
   useEffect(() => {
     const pending = timers.current;
@@ -405,7 +414,7 @@ export function BlocksApp() {
         <BuildColumn state={state} patch={patch} actions={actions} />
       </div>
 
-      <BlockLibrary state={state} patch={patch} actions={actions} listings={listings} />
+      <BlockLibrary state={state} patch={patch} actions={actions} listings={listings} listingsError={listingsError} />
     </div>
   );
 }
@@ -792,11 +801,13 @@ function BlockLibrary({
   patch,
   actions,
   listings,
+  listingsError,
 }: {
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
   actions: Actions;
   listings: Listing[];
+  listingsError: string | null;
 }) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -883,6 +894,7 @@ function BlockLibrary({
               patch={patch}
               actions={actions}
               listings={listings}
+              listingsError={listingsError}
               color={blockColor(b.id)}
               expanded={!collapsed.has(b.id)}
               onToggle={() => toggle(b.id)}
@@ -932,6 +944,7 @@ function LibraryCard({
   patch,
   actions,
   listings,
+  listingsError,
   color,
   expanded,
   onToggle,
@@ -942,6 +955,7 @@ function LibraryCard({
   patch: (fn: (s: BuilderState) => BuilderState) => void;
   actions: Actions;
   listings: Listing[];
+  listingsError: string | null;
   color: string;
   expanded: boolean;
   onToggle: () => void;
@@ -1214,6 +1228,17 @@ function LibraryCard({
             </Select>
           )}
         </div>
+        {/* No dropdown means there's nothing to send to — say why, rather than
+            silently hiding the control. */}
+        {available.length === 0 && (
+          <div className="mt-1 text-[11px]" style={{ color: listingsError ? "#b91c1c" : "var(--ink-3)" }}>
+            {listingsError
+              ? `Couldn’t load your listings — ${listingsError}`
+              : listings.length === 0
+                ? "You don’t have any listings yet — create one in Listings first, then send this block to it."
+                : "Sent to all of your listings."}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">

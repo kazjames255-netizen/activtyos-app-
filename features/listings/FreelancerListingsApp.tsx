@@ -175,8 +175,15 @@ export function FreelancerListingsApp() {
 
   const refresh = useCallback(() => {
     apiGet<Listing[]>("/api/listings?mine=1")
-      .then(setListings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load listings"));
+      .then((ls) => {
+        setListings(ls);
+        setError(null);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Failed to load listings");
+        // Never leave the page stuck on "Loading…" — show the error instead.
+        setListings((prev) => prev ?? []);
+      });
   }, []);
   useEffect(refresh, [refresh]);
   useRealtime(["listings", "blocks"], refresh);
@@ -192,7 +199,21 @@ export function FreelancerListingsApp() {
     setLocal((prev) => (prev ? fn(prev) : prev));
 
   if (!listings || !local)
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+    return (
+      <div className="py-10 text-center text-[12.5px]">
+        {error ? (
+          <div className="mx-auto max-w-[420px] rounded-lg border px-3 py-2.5" style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}>
+            <div className="font-bold">Couldn’t load your listings</div>
+            <div className="mt-1">{error}</div>
+            <button type="button" onClick={refresh} className="mt-2 font-bold underline">
+              Try again
+            </button>
+          </div>
+        ) : (
+          <span className="text-[var(--ink-3)]">Loading…</span>
+        )}
+      </div>
+    );
 
   const TABS: [Tab, string][] = [
     ["listings", "Listings"],
@@ -254,7 +275,20 @@ export function FreelancerListingsApp() {
         ))}
       </div>
 
-      {error && <div className="mb-3 text-[12.5px] text-[var(--red)]">{error}</div>}
+      {/* Sticky so a failed action is visible even when scrolled down a long list. */}
+      {error && (
+        <div
+          className="sticky top-2 z-30 mb-3 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[12.5px] shadow-sm"
+          style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}
+          role="alert"
+        >
+          <span>⚠</span>
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={() => setError(null)} className="font-bold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {tab === "listings" && (
         <ListingsTab

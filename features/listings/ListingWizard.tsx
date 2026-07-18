@@ -85,8 +85,10 @@ interface BlocksStore {
   library: BBlock[];
   /** Server-resolved pricing per bundle id — authoritative when present. */
   resolved: Record<string, ResolvedPricing>;
+  loading: boolean;
+  error: string | null;
 }
-const EMPTY_BLOCKS: BlocksStore = { periods: [], passes: [], library: [], resolved: {} };
+const EMPTY_BLOCKS: BlocksStore = { periods: [], passes: [], library: [], resolved: {}, loading: true, error: null };
 
 // Blocks live on the server (see features/blocks/blocksApi.ts). The server also
 // resolves pricing, so we keep `resolved` and prefer it over local arithmetic.
@@ -111,6 +113,8 @@ async function fetchBlocks(): Promise<BlocksStore> {
       periodPrice: b.periodPrice,
     })),
     resolved: Object.fromEntries(bundles.map((b) => [b.id, b.resolved])),
+    loading: false,
+    error: null,
   };
 }
 /** Load the blocks library once per mount. */
@@ -122,8 +126,11 @@ function useBlocks(): BlocksStore {
       try {
         const s = await fetchBlocks();
         if (alive) setStore(s);
-      } catch {
-        /* not signed in yet / offline — the picker just shows no blocks */
+      } catch (e) {
+        // Surface it — "no blocks" and "couldn't fetch blocks" look identical
+        // in the ticket picker otherwise.
+        if (alive)
+          setStore({ ...EMPTY_BLOCKS, loading: false, error: e instanceof Error ? e.message : "Couldn’t load your blocks." });
       }
     })();
     return () => {
@@ -943,7 +950,13 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
   return (
     <div className="max-w-[720px]">
       <StepHead n={6} kicker="STEP 6 · TICKETS & PRICING" title="Tickets & pricing" lede="Pick a block you built in the Blocks area — its passes & prices become this listing's tickets." />
-      {blocks.library.length === 0 ? (
+      {blocks.loading ? (
+        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">Loading your blocks…</Card>
+      ) : blocks.error ? (
+        <Card className="p-4 text-[12.5px]" style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}>
+          <b>Couldn’t load your blocks.</b> {blocks.error}
+        </Card>
+      ) : blocks.library.length === 0 ? (
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">No blocks saved yet. Build one in the <b>Blocks</b> area — set your periods (times) and passes once, then reuse them here.</Card>
       ) : (
         <div className="flex flex-col gap-2">
