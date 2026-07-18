@@ -44,6 +44,9 @@ export interface AddonTemplate {
   name: string;
   type: "perday" | "bundle" | "once";
   price: number;
+  /** Shown beside the add-on on the customer page. An image wins over an emoji. */
+  emoji?: string;
+  image?: string;
 }
 export interface StaffMember {
   id: string;
@@ -173,12 +176,26 @@ export function FreelancerListingsApp() {
     [tick, wizard],
   );
 
-  const refresh = useCallback(() => {
-    apiGet<Listing[]>("/api/listings?mine=1")
-      .then(setListings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load listings"));
-  }, []);
-  useEffect(refresh, [refresh]);
+  // Returns the fresh list so callers (e.g. delete) can confirm the change landed.
+  const refresh = useCallback(
+    () =>
+      apiGet<Listing[]>("/api/listings?mine=1")
+        .then((ls) => {
+          setListings(ls);
+          setError(null);
+          return ls;
+        })
+        .catch((e) => {
+          setError(e instanceof Error ? e.message : "Failed to load listings");
+          // Never leave the page stuck on "Loading…" — show the error instead.
+          setListings((prev) => prev ?? []);
+          return null;
+        }),
+    [],
+  );
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
   useRealtime(["listings", "blocks"], refresh);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -192,7 +209,21 @@ export function FreelancerListingsApp() {
     setLocal((prev) => (prev ? fn(prev) : prev));
 
   if (!listings || !local)
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+    return (
+      <div className="py-10 text-center text-[12.5px]">
+        {error ? (
+          <div className="mx-auto max-w-[420px] rounded-lg border px-3 py-2.5" style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}>
+            <div className="font-bold">Couldn’t load your listings</div>
+            <div className="mt-1">{error}</div>
+            <button type="button" onClick={refresh} className="mt-2 font-bold underline">
+              Try again
+            </button>
+          </div>
+        ) : (
+          <span className="text-[var(--ink-3)]">Loading…</span>
+        )}
+      </div>
+    );
 
   const TABS: [Tab, string][] = [
     ["listings", "Listings"],
@@ -254,7 +285,20 @@ export function FreelancerListingsApp() {
         ))}
       </div>
 
-      {error && <div className="mb-3 text-[12.5px] text-[var(--red)]">{error}</div>}
+      {/* Sticky so a failed action is visible even when scrolled down a long list. */}
+      {error && (
+        <div
+          className="sticky top-2 z-30 mb-3 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[12.5px] shadow-sm"
+          style={{ borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }}
+          role="alert"
+        >
+          <span>⚠</span>
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={() => setError(null)} className="font-bold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {tab === "listings" && (
         <ListingsTab
@@ -327,7 +371,7 @@ function ListingsTab({
   onSetVisibility: (l: Listing, vis: "public" | "hidden") => void;
   visTick: number;
   onError: (m: string) => void;
-  refresh: () => void;
+  refresh: () => Promise<Listing[] | null>;
 }) {
   const [q, setQ] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -363,7 +407,12 @@ function ListingsTab({
     if (!confirm(`Delete “${l.name}”? This can’t be undone.`)) return;
     try {
       await api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "DELETE" });
-      refresh();
+      // Confirm it actually went — a "successful" delete that leaves the row
+      // in place otherwise just looks like the button did nothing.
+      const after = await refresh();
+      if (after?.some((x) => x.id === l.id)) {
+        onError(`The server accepted deleting “${l.name}” but it's still in the list. Send this to your developer — the listing may belong to a different account.`);
+      }
     } catch (e) {
       onError(e instanceof Error ? e.message : "Delete failed");
     }
@@ -457,30 +506,49 @@ function ListingsTab({
                   {priceRange && <span className="absolute bottom-2.5 right-2.5 rounded-lg bg-white/95 px-2.5 py-1 text-[12px] font-extrabold" style={{ color: accent }}>{priceRange}</span>}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
-                  {/* title + status */}
+                  {/* title */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[17px] font-extrabold tracking-[-0.015em] text-[var(--ink)]">{l.name}</span>
-                    <span title="You created this listing — your own programme (not from a head office/franchise)" className="rounded-full px-2 py-[2px] text-[10px] font-bold" style={{ background: `${accent}18`, color: accent }}>Own</span>
+                    <h3 className="text-[18px] font-bold leading-tight tracking-[-0.02em] text-[var(--ink)]">{l.name}</h3>
+                    <span title="You created this listing — your own programme (not from a head office/franchise)" className="rounded-full border px-2 py-[1px] text-[9.5px] font-bold uppercase tracking-[0.1em]" style={{ borderColor: `${accent}55`, color: accent }}>Own</span>
                   </div>
-                  {/* meta */}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-[var(--ink-3)]">
-                    {vn && <span>📍 {vn}</span>}
-                    <span className="text-[var(--line)]">·</span>
-                    <span>📆 {info?.dateLabel ?? "Dates TBC"}</span>
-                    {info && info.totalDays > 0 && <><span className="text-[var(--line)]">·</span><span>{info.totalDays} days</span></>}
-                    {cap != null && <><span className="text-[var(--line)]">·</span><span>👥 {cap} cap{info?.capacityScope === "day" ? "/day" : ""}</span></>}
-                    {cap != null && info?.showSpaces && spaces != null && (
-                      <><span className="text-[var(--line)]">·</span><span style={{ color: spaces <= 0 ? "#dc2626" : spaces <= cap * 0.15 ? "#d97706" : "#16a34a" }}>{Math.max(0, spaces)} left</span></>
-                    )}
+
+                  {/* where & when */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                    {vn && <span className="font-medium text-[var(--ink-2)]">{vn}</span>}
+                    {vn && <span className="h-3 w-px bg-[var(--line)]" aria-hidden />}
+                    <span className="text-[var(--ink-3)]">{info?.dateLabel ?? "Dates TBC"}</span>
                   </div>
+
+                  {/* spec strip — labelled figures read as data, not a sentence */}
+                  {(() => {
+                    const stats: { k: string; v: string; tone?: string }[] = [];
+                    if (info && info.totalDays > 0) stats.push({ k: "Runs for", v: `${info.totalDays} days` });
+                    if (cap != null) stats.push({ k: info?.capacityScope === "day" ? "Cap / day" : "Capacity", v: String(cap) });
+                    if (cap != null && info?.showSpaces && spaces != null)
+                      stats.push({ k: "Available", v: `${Math.max(0, spaces)} left`, tone: spaces <= 0 ? "#dc2626" : spaces <= cap * 0.15 ? "#d97706" : "#16a34a" });
+                    return stats.length ? (
+                      <div className="mt-3 flex flex-wrap items-start gap-x-6 gap-y-2">
+                        {stats.map((s) => (
+                          <span key={s.k} className="flex flex-col leading-tight">
+                            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ink-3)] opacity-70">{s.k}</span>
+                            <span className="mt-0.5 text-[13px] font-semibold" style={{ color: s.tone ?? "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{s.v}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+
                   {/* passes */}
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {l.passes.length ? (
                       <>
                         {l.passes.slice(0, 3).map((t, i) => (
-                          <span key={i} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-medium text-[var(--ink-2)]">{t.name} · <span className="font-semibold text-[var(--ink)]">{money(t.price)}</span></span>
+                          <span key={i} className="inline-flex items-baseline gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1">
+                            <span className="text-[11.5px] text-[var(--ink-3)]">{t.name}</span>
+                            <span className="text-[12px] font-bold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{money(t.price)}</span>
+                          </span>
                         ))}
-                        {l.passes.length > 3 && <span className="px-1 py-[3px] text-[11.5px] font-medium text-[var(--ink-3)]">+{l.passes.length - 3} more</span>}
+                        {l.passes.length > 3 && <span className="text-[11.5px] font-medium text-[var(--ink-3)]">+{l.passes.length - 3} more</span>}
                       </>
                     ) : <span className="text-[12px] text-[var(--ink-3)]">No tickets yet.</span>}
                   </div>

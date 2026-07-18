@@ -1,20 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { firebaseAuth } from "@/lib/firebase/client";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import * as blocksApi from "./blocksApi";
+import type { ApiBundle, BundleInput } from "./blocksApi";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Blocks — the build-manual's "Reusable scheduling patterns" builder.
 //
-// FRONT-END ONLY (for now): the deployed backend's `blocks` API models a
-// *dated run on one listing*, a different feature. This screen is the manual's
-// Periods → Passes → Block Library builder (+ pricing calculator), which has no
-// backend yet, so it persists to localStorage per account. Collections/endpoints
-// the developer needs are in docs/blocks-builder-backend-spec.md. The pricing
-// model mirrors the manual's buildPrice(): price the longest pass, derive a
-// per-day rate, auto-calc the rest; price each timing by hours; edit any.
+// Server-backed: periods, passes and block bundles live in the API
+// (server/src/routes/blockBundles.ts), which is also the source of truth for
+// pricing — every bundle comes back with a `resolved` block computed by
+// server/src/lib/bundlePricing.ts. The local calculator mirrors that formula
+// purely as a live preview while you type; what's saved is what the server
+// resolves. The draft block being assembled in step 3 is local until saved.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface Period {
@@ -61,86 +61,56 @@ interface Listing {
   name: string;
 }
 
+/** Server-backed writes. Each re-reads the library so pricing stays authoritative. */
+interface Actions {
+  savePeriod: (id: string | null, fields: Omit<Period, "id">) => Promise<void>;
+  deletePeriod: (id: string) => Promise<void>;
+  savePass: (id: string | null, fields: Omit<Pass, "id">) => Promise<void>;
+  deletePass: (id: string) => Promise<void>;
+  createBundle: (b: LibraryBlock) => Promise<void>;
+  saveBundle: (b: LibraryBlock) => Promise<void>;
+  deleteBundle: (id: string) => Promise<void>;
+  duplicateBundle: (id: string) => Promise<void>;
+  archiveBundle: (id: string, archived: boolean) => Promise<void>;
+  reorderBundles: (orderedIds: string[]) => Promise<void>;
+  sendToListings: (id: string, listingIds: string[]) => Promise<void>;
+  queueBundleSave: (b: LibraryBlock) => void;
+}
+
 const EMPTY_DRAFT: Draft = { id: null, name: "", periodIds: [], passIds: [] };
 
-const uid = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-
-// First-run seed mirrors the manual's example content.
-function seed(): BuilderState {
-  const std = { id: uid(), title: "Standard day", start: "09:00", finish: "15:30" };
-  const early = { id: uid(), title: "Early drop-off", start: "08:00", finish: "09:00" };
-  const late = { id: uid(), title: "Late pick-up", start: "15:30", finish: "17:30" };
-  const wrap = { id: uid(), title: "Full wraparound", start: "08:00", finish: "17:30" };
-  const p1 = { id: uid(), name: "1-day pass", days: 1 };
-  const p4 = { id: uid(), name: "4-day pass", days: 4 };
-  const p5 = { id: uid(), name: "5-day week pass", days: 5 };
-  const taster = { id: uid(), name: "Taster session", days: 1 };
+// ── API ⇄ UI mapping ────────────────────────────────────────────────────────
+// The server's bundle shape is the UI's LibraryBlock plus `order`/`resolved`;
+// the only real differences are nullable masterPrice and a required `archived`.
+function toLibraryBlock(b: ApiBundle): LibraryBlock {
   return {
-    periods: [std, early, late, wrap],
-    passes: [p1, p4, p5, taster],
-    library: [
-      {
-        id: uid(),
-        name: "Summer Multi-Activity Camp",
-        periodIds: [std.id, late.id, early.id],
-        passIds: [p5.id, p4.id, p1.id],
-        listingIds: [],
-        priced: true,
-        masterPrice: 160,
-        calcOn: true,
-      },
-    ],
-    draft: EMPTY_DRAFT,
+    id: b.id,
+    name: b.name,
+    periodIds: b.periodIds,
+    passIds: b.passIds,
+    listingIds: b.listingIds,
+    archived: b.archived,
+    priced: b.priced,
+    masterPrice: b.masterPrice ?? undefined,
+    calcOn: b.calcOn,
+    passFlat: b.passFlat,
+    passMode: b.passMode,
+    periodPrice: b.periodPrice,
   };
 }
-
-// ── Persistence (swap this block for the real API once it exists) ───────────
-function storeKey(): string {
-  const who = firebaseAuth.currentUser?.uid || firebaseAuth.currentUser?.email || "anon";
-  return `activityos.blocks-builder.${who}`;
-}
-type StoredBlock = Partial<LibraryBlock> & { listingId?: string | null; id: string; name: string };
-function load(): BuilderState {
-  try {
-    const raw = localStorage.getItem(storeKey());
-    if (!raw) return seed();
-    const parsed = JSON.parse(raw) as {
-      periods?: Period[];
-      passes?: Pass[];
-      library?: StoredBlock[];
-    };
-    return {
-      periods: parsed.periods ?? [],
-      passes: parsed.passes ?? [],
-      library: (parsed.library ?? []).map((b) => ({
-        id: b.id,
-        name: b.name,
-        periodIds: b.periodIds ?? [],
-        passIds: b.passIds ?? [],
-        listingIds: b.listingIds ?? (b.listingId ? [b.listingId] : []),
-        archived: b.archived,
-        priced: !!b.priced,
-        masterPrice: b.masterPrice,
-        calcOn: b.calcOn,
-        passFlat: b.passFlat ?? {},
-        passMode: b.passMode ?? {},
-        periodPrice: b.periodPrice ?? {},
-      })),
-      draft: EMPTY_DRAFT,
-    };
-  } catch {
-    return seed();
-  }
-}
-function save(s: BuilderState) {
-  try {
-    localStorage.setItem(storeKey(), JSON.stringify({ ...s, draft: EMPTY_DRAFT }));
-  } catch {
-    /* storage full/unavailable — non-fatal for a prototype */
-  }
+function toBundleInput(b: LibraryBlock): BundleInput {
+  return {
+    name: b.name.trim() || "Untitled block",
+    periodIds: b.periodIds,
+    passIds: b.passIds,
+    archived: !!b.archived,
+    priced: b.priced,
+    masterPrice: b.masterPrice ?? null,
+    calcOn: b.calcOn !== false,
+    passFlat: b.passFlat ?? {},
+    passMode: (b.passMode ?? {}) as Record<string, "flat">,
+    periodPrice: b.periodPrice ?? {},
+  };
 }
 
 // ── Formatting + pricing helpers (mirror the manual) ───────────────────────
@@ -240,26 +210,110 @@ const ARROW = (
 export function BlocksApp() {
   const [state, setState] = useState<BuilderState | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setState(load());
-  }, []);
-  useEffect(() => {
-    if (state) save(state);
-  }, [state]);
-  useEffect(() => {
-    apiGet<Listing[]>("/api/listings?mine=1")
-      .then((ls) => setListings(ls.map((l) => ({ id: l.id, name: l.name }))))
-      .catch(() => setListings([]));
-  }, []);
+  const [listingsError, setListingsError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(0);
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const patch = useCallback((fn: (s: BuilderState) => BuilderState) => {
     setState((prev) => (prev ? fn(prev) : prev));
   }, []);
 
+  // Pull the whole library from the server; keeps the in-progress draft.
+  const refresh = useCallback(async () => {
+    const [periods, passes, bundles] = await Promise.all([
+      blocksApi.listPeriods(),
+      blocksApi.listPasses(),
+      blocksApi.listBundles(),
+    ]);
+    setState((prev) => ({
+      periods,
+      passes,
+      library: bundles.map(toLibraryBlock),
+      draft: prev?.draft ?? EMPTY_DRAFT,
+    }));
+  }, []);
+
+  // Run a server write, then re-read so `resolved` pricing stays authoritative.
+  const run = useCallback(
+    async (fn: () => Promise<unknown>) => {
+      setSaving((n) => n + 1);
+      try {
+        await fn();
+        await refresh();
+        setError(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong saving that.");
+        await refresh().catch(() => {});
+      } finally {
+        setSaving((n) => n - 1);
+      }
+    },
+    [refresh],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        await refresh();
+      } catch (e) {
+        if (alive) setError(e instanceof Error ? e.message : "Couldn't load your blocks.");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
+  useEffect(() => {
+    apiGet<Listing[]>("/api/listings?mine=1")
+      .then((ls) => {
+        setListings(ls.map((l) => ({ id: l.id, name: l.name })));
+        setListingsError(null);
+      })
+      // Don't fail silently — without listings the "Send to a listing" control
+      // can't render, and the operator needs to know why.
+      .catch((e) => {
+        setListings([]);
+        setListingsError(e instanceof Error ? e.message : "Couldn't load your listings.");
+      });
+  }, []);
+  useEffect(() => {
+    const pending = timers.current;
+    return () => Object.values(pending).forEach(clearTimeout);
+  }, []);
+
+  const actions: Actions = useMemo(
+    () => ({
+      savePeriod: (id, f) => run(() => (id ? blocksApi.updatePeriod(id, f) : blocksApi.createPeriod(f))),
+      deletePeriod: (id) => run(() => blocksApi.deletePeriod(id)),
+      savePass: (id, f) => run(() => (id ? blocksApi.updatePass(id, f) : blocksApi.createPass(f))),
+      deletePass: (id) => run(() => blocksApi.deletePass(id)),
+      createBundle: (b) => run(() => blocksApi.createBundle(toBundleInput(b))),
+      saveBundle: (b) => run(() => blocksApi.updateBundle(b.id, toBundleInput(b))),
+      deleteBundle: (id) => run(() => blocksApi.deleteBundle(id)),
+      duplicateBundle: (id) => run(() => blocksApi.duplicateBundle(id)),
+      archiveBundle: (id, archived) => run(() => blocksApi.archiveBundle(id, archived)),
+      reorderBundles: (ids) => run(() => blocksApi.reorderBundles(ids)),
+      sendToListings: (id, listingIds) => run(() => blocksApi.sendBundleToListings(id, listingIds)),
+      // Typing in the pricing calculator updates locally on every keystroke;
+      // the write is debounced so we don't PUT per character.
+      queueBundleSave: (b) => {
+        clearTimeout(timers.current[b.id]);
+        timers.current[b.id] = setTimeout(() => {
+          void run(() => blocksApi.updateBundle(b.id, toBundleInput(b)));
+        }, 600);
+      },
+    }),
+    [run],
+  );
+
   if (!state)
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+    return (
+      <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">
+        {error ? <span style={{ color: "#b91c1c" }}>{error}</span> : "Loading…"}
+      </div>
+    );
 
   return (
     // Light palette to match the build manual (mirrors the custdash light theme).
@@ -324,16 +378,43 @@ export function BlocksApp() {
         </ol>
       </Card>
 
+      {/* Sync status — everything here saves to your account, not this browser. */}
+      {(error || saving > 0) && (
+        <div
+          className="mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]"
+          style={
+            error
+              ? { borderColor: "#f4c7c7", background: "#fdf2f2", color: "#b91c1c" }
+              : { borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-3)" }
+          }
+        >
+          {error ? (
+            <>
+              <span>⚠</span>
+              <span className="flex-1">{error}</span>
+              <button type="button" onClick={() => setError(null)} className="font-bold">
+                Dismiss
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand)]" />
+              <span>Saving…</span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* .blkFlow — 3 columns */}
       <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr]">
-        <PeriodsColumn state={state} patch={patch} />
+        <PeriodsColumn state={state} patch={patch} actions={actions} />
         {ARROW}
-        <PassesColumn state={state} patch={patch} />
+        <PassesColumn state={state} patch={patch} actions={actions} />
         {ARROW}
-        <BuildColumn state={state} patch={patch} />
+        <BuildColumn state={state} patch={patch} actions={actions} />
       </div>
 
-      <BlockLibrary state={state} patch={patch} listings={listings} />
+      <BlockLibrary state={state} patch={patch} actions={actions} listings={listings} listingsError={listingsError} />
     </div>
   );
 }
@@ -342,9 +423,11 @@ export function BlocksApp() {
 function PeriodsColumn({
   state,
   patch,
+  actions,
 }: {
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
+  actions: Actions;
 }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -367,12 +450,7 @@ function PeriodsColumn({
   }
   function saveForm() {
     if (title.trim().length < 2) return;
-    const fields = { title: title.trim(), start, finish };
-    patch((s) =>
-      editingId
-        ? { ...s, periods: s.periods.map((p) => (p.id === editingId ? { ...p, ...fields } : p)) }
-        : { ...s, periods: [...s.periods, { id: uid(), ...fields }] },
-    );
+    void actions.savePeriod(editingId, { title: title.trim(), start, finish });
     reset();
     setOpen(false);
   }
@@ -386,12 +464,9 @@ function PeriodsColumn({
   const removePeriod = (id: string) => {
     if (!confirm("Delete this period? It’s removed from any blocks using it. This can’t be undone."))
       return;
-    patch((s) => ({
-      ...s,
-      periods: s.periods.filter((p) => p.id !== id),
-      draft: { ...s.draft, periodIds: s.draft.periodIds.filter((x) => x !== id) },
-      library: s.library.map((b) => ({ ...b, periodIds: b.periodIds.filter((x) => x !== id) })),
-    }));
+    // Drop it from the local draft too; the server detaches it from bundles.
+    patch((s) => ({ ...s, draft: { ...s.draft, periodIds: s.draft.periodIds.filter((x) => x !== id) } }));
+    void actions.deletePeriod(id);
   };
 
   return (
@@ -467,9 +542,11 @@ function PeriodsColumn({
 function PassesColumn({
   state,
   patch,
+  actions,
 }: {
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
+  actions: Actions;
 }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -489,12 +566,7 @@ function PassesColumn({
   }
   function saveForm() {
     if (name.trim().length < 2) return;
-    const fields = { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1) };
-    patch((s) =>
-      editingId
-        ? { ...s, passes: s.passes.map((p) => (p.id === editingId ? { ...p, ...fields } : p)) }
-        : { ...s, passes: [...s.passes, { id: uid(), ...fields }] },
-    );
+    void actions.savePass(editingId, { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1) });
     reset();
     setOpen(false);
   }
@@ -508,12 +580,8 @@ function PassesColumn({
   const removePass = (id: string) => {
     if (!confirm("Delete this pass? It’s removed from any blocks using it. This can’t be undone."))
       return;
-    patch((s) => ({
-      ...s,
-      passes: s.passes.filter((p) => p.id !== id),
-      draft: { ...s.draft, passIds: s.draft.passIds.filter((x) => x !== id) },
-      library: s.library.map((b) => ({ ...b, passIds: b.passIds.filter((x) => x !== id) })),
-    }));
+    patch((s) => ({ ...s, draft: { ...s.draft, passIds: s.draft.passIds.filter((x) => x !== id) } }));
+    void actions.deletePass(id);
   };
 
   return (
@@ -588,9 +656,11 @@ function PassesColumn({
 function BuildColumn({
   state,
   patch,
+  actions,
 }: {
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
+  actions: Actions;
 }) {
   const [over, setOver] = useState(false);
   const { draft } = state;
@@ -628,28 +698,24 @@ function BuildColumn({
 
   function moveToLibrary() {
     if (empty) return;
-    patch((s) => {
-      const name = s.draft.name.trim() || "Untitled block";
-      const existing = s.library.find((b) => b.id === s.draft.id);
-      const block: LibraryBlock = existing
-        ? { ...existing, name, periodIds: s.draft.periodIds, passIds: s.draft.passIds }
-        : {
-            id: uid(),
-            name,
-            periodIds: s.draft.periodIds,
-            passIds: s.draft.passIds,
-            listingIds: [],
-            priced: false,
-            calcOn: true,
-            passFlat: {},
-            passMode: {},
-            periodPrice: {},
-          };
-      const library = existing
-        ? s.library.map((b) => (b.id === existing.id ? block : b))
-        : [...s.library, block];
-      return { ...s, library, draft: EMPTY_DRAFT };
-    });
+    const name = draft.name.trim() || "Untitled block";
+    const existing = state.library.find((b) => b.id === draft.id);
+    const block: LibraryBlock = existing
+      ? { ...existing, name, periodIds: draft.periodIds, passIds: draft.passIds }
+      : {
+          id: "",
+          name,
+          periodIds: draft.periodIds,
+          passIds: draft.passIds,
+          listingIds: [],
+          priced: false,
+          calcOn: true,
+          passFlat: {},
+          passMode: {},
+          periodPrice: {},
+        };
+    void (existing ? actions.saveBundle(block) : actions.createBundle(block));
+    patch((s) => ({ ...s, draft: EMPTY_DRAFT }));
   }
 
   return (
@@ -733,11 +799,15 @@ function blockColor(id: string): string {
 function BlockLibrary({
   state,
   patch,
+  actions,
   listings,
+  listingsError,
 }: {
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
+  actions: Actions;
   listings: Listing[];
+  listingsError: string | null;
 }) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -758,23 +828,22 @@ function BlockLibrary({
       return next;
     });
 
-  // Drag-to-reorder within the library array.
-  const reorder = (draggedId: string, targetId: string) =>
-    patch((s) => {
-      const arr = [...s.library];
-      const from = arr.findIndex((b) => b.id === draggedId);
-      const to = arr.findIndex((b) => b.id === targetId);
-      if (from < 0 || to < 0 || from === to) return s;
-      const [moved] = arr.splice(from, 1);
-      arr.splice(to, 0, moved);
-      return { ...s, library: arr };
-    });
+  // Drag-to-reorder — reflect it locally, then persist the new order.
+  const reorder = (draggedId: string, targetId: string) => {
+    const arr = [...state.library];
+    const from = arr.findIndex((b) => b.id === draggedId);
+    const to = arr.findIndex((b) => b.id === targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    patch((s) => ({ ...s, library: arr }));
+    void actions.reorderBundles(arr.map((b) => b.id));
+  };
 
-  const unarchive = (id: string) =>
-    patch((s) => ({ ...s, library: s.library.map((x) => (x.id === id ? { ...x, archived: false } : x)) }));
+  const unarchive = (id: string) => void actions.archiveBundle(id, false);
   const deleteBlock = (id: string, name: string) => {
     if (!confirm(`Delete “${name}”? This can’t be undone.`)) return;
-    patch((s) => ({ ...s, library: s.library.filter((x) => x.id !== id) }));
+    void actions.deleteBundle(id);
   };
 
   return (
@@ -823,7 +892,9 @@ function BlockLibrary({
               block={b}
               state={state}
               patch={patch}
+              actions={actions}
               listings={listings}
+              listingsError={listingsError}
               color={blockColor(b.id)}
               expanded={!collapsed.has(b.id)}
               onToggle={() => toggle(b.id)}
@@ -871,7 +942,9 @@ function LibraryCard({
   block,
   state,
   patch,
+  actions,
   listings,
+  listingsError,
   color,
   expanded,
   onToggle,
@@ -880,7 +953,9 @@ function LibraryCard({
   block: LibraryBlock;
   state: BuilderState;
   patch: (fn: (s: BuilderState) => BuilderState) => void;
+  actions: Actions;
   listings: Listing[];
+  listingsError: string | null;
   color: string;
   expanded: boolean;
   onToggle: () => void;
@@ -905,17 +980,26 @@ function LibraryCard({
     .filter(Boolean) as Listing[];
   const available = listings.filter((l) => !block.listingIds.includes(l.id));
 
-  const mutate = (fn: (b: LibraryBlock) => LibraryBlock) =>
-    patch((s) => ({ ...s, library: s.library.map((x) => (x.id === block.id ? fn(x) : x)) }));
+  // Every bundle edit funnels through here: update locally so typing stays
+  // instant, then persist (debounced — the calculator fires per keystroke).
+  const mutate = (fn: (b: LibraryBlock) => LibraryBlock) => {
+    const next = fn(block);
+    patch((s) => ({ ...s, library: s.library.map((x) => (x.id === block.id ? next : x)) }));
+    actions.queueBundleSave(next);
+  };
 
   const saveName = () => {
     mutate((b) => ({ ...b, name: tempName.trim() || b.name }));
     setRenaming(false);
   };
-  const addListing = (id: string) =>
-    mutate((b) => (b.listingIds.includes(id) ? b : { ...b, listingIds: [...b.listingIds, id] }));
+  // Listing links are a separate endpoint — it also snapshots resolved prices
+  // onto each listing, so the checkout prices from this bundle.
+  const addListing = (id: string) => {
+    if (block.listingIds.includes(id)) return;
+    void actions.sendToListings(block.id, [...block.listingIds, id]);
+  };
   const removeListing = (id: string) =>
-    mutate((b) => ({ ...b, listingIds: b.listingIds.filter((x) => x !== id) }));
+    void actions.sendToListings(block.id, block.listingIds.filter((x) => x !== id));
   const addPeriod = (pid: string) =>
     mutate((b) => (b.periodIds.includes(pid) ? b : { ...b, periodIds: [...b.periodIds, pid] }));
   const removePeriodFromBlock = (pid: string) =>
@@ -926,15 +1010,11 @@ function LibraryCard({
     mutate((b) => ({ ...b, passIds: b.passIds.filter((x) => x !== pid) }));
   const availablePeriods = state.periods.filter((p) => !block.periodIds.includes(p.id));
   const availablePasses = state.passes.filter((p) => !block.passIds.includes(p.id));
-  const duplicate = () =>
-    patch((s) => ({
-      ...s,
-      library: [...s.library, { ...block, id: uid(), name: `${block.name} (copy)`, listingIds: [] }],
-    }));
-  const archive = () => mutate((b) => ({ ...b, archived: true }));
+  const duplicate = () => void actions.duplicateBundle(block.id);
+  const archive = () => void actions.archiveBundle(block.id, true);
   const remove = () => {
     if (!confirm(`Delete “${block.name}”? This can’t be undone.`)) return;
-    patch((s) => ({ ...s, library: s.library.filter((x) => x.id !== block.id) }));
+    void actions.deleteBundle(block.id);
   };
 
   return (
@@ -1148,6 +1228,17 @@ function LibraryCard({
             </Select>
           )}
         </div>
+        {/* No dropdown means there's nothing to send to — say why, rather than
+            silently hiding the control. */}
+        {available.length === 0 && (
+          <div className="mt-1 text-[11px]" style={{ color: listingsError ? "#b91c1c" : "var(--ink-3)" }}>
+            {listingsError
+              ? `Couldn’t load your listings — ${listingsError}`
+              : listings.length === 0
+                ? "You don’t have any listings yet — create one in Listings first, then send this block to it."
+                : "Sent to all of your listings."}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">

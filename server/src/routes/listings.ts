@@ -16,16 +16,30 @@ const listingSchema = z.object({
 });
 
 // Join each listing's real blocks (availability included) onto the response.
+// Only the blocks for the listings being returned are read — this used to scan
+// the whole `blocks` collection (every tenant's) on every listings request,
+// which got slower as the platform grew.
+const IN_CHUNK = 30; // Firestore's max values per `in` filter
+
 async function withBlocks(
   docs: { id: string; data: Record<string, unknown> }[],
 ): Promise<Record<string, unknown>[]> {
-  const blocksSnap = await db.collection("blocks").get();
   const byListing = new Map<string, ReturnType<typeof blockSummary>[]>();
-  for (const d of blocksSnap.docs) {
-    const b = d.data() as BlockDoc;
-    const arr = byListing.get(b.listingId) ?? [];
-    arr.push(blockSummary(d.id, b));
-    byListing.set(b.listingId, arr);
+  const ids = docs.map((d) => d.id);
+  if (ids.length) {
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += IN_CHUNK) chunks.push(ids.slice(i, i + IN_CHUNK));
+    const snaps = await Promise.all(
+      chunks.map((c) => db.collection("blocks").where("listingId", "in", c).get()),
+    );
+    for (const snap of snaps) {
+      for (const d of snap.docs) {
+        const b = d.data() as BlockDoc;
+        const arr = byListing.get(b.listingId) ?? [];
+        arr.push(blockSummary(d.id, b));
+        byListing.set(b.listingId, arr);
+      }
+    }
   }
   return docs.map((d) => ({
     id: d.id,
