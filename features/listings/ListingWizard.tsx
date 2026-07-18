@@ -1643,7 +1643,9 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   // add-ons. Attendees is derived from the children actually assigned.
   const [parent, setParent] = useState<{ id: string; name: string } | null>(null);
   const [assign, setAssign] = useState<Record<string, string>>({});
-  const [addonNames, setAddonNames] = useState<string[]>([]);
+  // Add-ons are chosen per pass (so per child), and per-day ones record which
+  // days they cover: { passId: { addonId: [dates] } }.
+  const [addonSel, setAddonSel] = useState<Record<string, Record<string, string[]>>>({});
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const rule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
@@ -1764,11 +1766,17 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
     const best = options[0];
     return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
-  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonNames([]); setStage("pick"); };
+  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setStage("pick"); };
   const assignTo = (itemId: string, name: string) => setAssign((a) => ({ ...a, [itemId]: name }));
   const assignAll = (name: string) => setAssign(Object.fromEntries(basket.map((x) => [x.id, name])));
-  const toggleAddon = (name: string) => setAddonNames((a) => (a.includes(name) ? a.filter((x) => x !== name) : [...a, name]));
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonNames, toggleAddon, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
+  const setAddonDays = (itemId: string, addonId: string, dates: string[]) =>
+    setAddonSel((all) => {
+      const forItem = { ...(all[itemId] ?? {}) };
+      if (dates.length === 0) delete forItem[addonId];
+      else forItem[addonId] = dates;
+      return { ...all, [itemId]: forItem };
+    });
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
 type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
 
@@ -1822,10 +1830,19 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
   const matches = q.trim()
     ? parents.filter((p) => `${p.name} ${p.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
     : [];
-  const addonTotal = addons.filter((a) => b.addonNames.includes(a.name)).reduce((s, a) => s + a.price, 0);
+  const addonById = new Map(addons.map((a) => [a.id, a]));
+  const costOf = (a: AddonTemplate, days: string[]) => (a.type === "perday" ? a.price * days.length : a.price);
+  const addonTotal = b.basket.reduce((sum, item) => {
+    const sel = b.addonSel[item.id] ?? {};
+    return sum + Object.entries(sel).reduce((t, [aid, days]) => {
+      const a = addonById.get(aid);
+      return a ? t + costOf(a, days) : t;
+    }, 0);
+  }, 0);
   const grandTotal = b.total + addonTotal;
   const unassigned = b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
+  const dayNum = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
 
   return (
     <div className="p-5" style={{ background: tk.bg }}>
@@ -1845,33 +1862,8 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
         ))}
       </div>
 
-      {/* 1 · add-ons */}
-      {addons.length > 0 && (
-        <>
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Add-ons</div>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {addons.map((a) => {
-              const on = b.addonNames.includes(a.name);
-              return (
-                <button key={a.id} type="button" onClick={() => b.toggleAddon(a.name)}
-                  className={`flex items-center gap-2.5 border px-3 py-2 text-left text-[12.5px] ${tk.round}`}
-                  style={on ? { borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink } : { borderColor: tk.line, color: tk.ink }}>
-                  <span className="text-[13px]">{on ? "☑" : "☐"}</span>
-                  {a.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.image} alt="" className="h-6 w-6 flex-none rounded object-cover" />
-                  ) : a.emoji ? <span>{a.emoji}</span> : null}
-                  <span className="flex-1 font-bold">{a.name}</span>
-                  <b>{money(a.price)}</b>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* 2 · find the parent */}
-      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{addons.length > 0 ? "2" : "1"} · Find parent</div>
+      {/* 1 · find the parent */}
+      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Find parent</div>
       {b.parent ? (
         <div className={`mt-2 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
           <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>{b.parent.name}</span>
@@ -1900,26 +1892,78 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
         </>
       )}
 
-      {/* 3 · a child against each pass */}
+      {/* 2 · a child and their extras, per pass */}
       {b.parent && (
         <>
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{addons.length > 0 ? "3" : "2"} · Who&apos;s going?</div>
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>2 · Who&apos;s going &amp; extras</div>
           <div className="mt-2 flex gap-1.5">
             <input value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="Add the same child to every pass…"
               className={`w-full border px-3 py-2 text-[12.5px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
             <button type="button" disabled={!bulk.trim()} onClick={() => { b.assignAll(bulk.trim()); setBulk(""); }}
               className={`flex-none px-3 text-[12px] font-bold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}>Add to all</button>
           </div>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {b.basket.map((x) => (
-              <div key={x.id} className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-[11.5px]" style={{ color: tk.muted }}>
-                  <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
-                </span>
-                <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
-                  className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-              </div>
-            ))}
+
+          <div className="mt-2 flex flex-col gap-2">
+            {b.basket.map((x) => {
+              const sel = b.addonSel[x.id] ?? {};
+              return (
+                <div key={x.id} className={`border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[11.5px]" style={{ color: tk.muted }}>
+                      <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
+                    </span>
+                    <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
+                      className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+                  </div>
+
+                  {addons.length > 0 && (
+                    <div className="mt-2.5 flex flex-col gap-1.5">
+                      {addons.map((a) => {
+                        const days = sel[a.id] ?? [];
+                        const on = days.length > 0;
+                        const perDay = a.type === "perday";
+                        return (
+                          <div key={a.id}>
+                            <button type="button"
+                              onClick={() => b.setAddonDays(x.id, a.id, on ? [] : perDay ? [...x.dates] : ["*"])}
+                              className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-[12px] ${tk.round}`}
+                              style={on ? { borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink } : { borderColor: tk.line, color: tk.ink }}>
+                              <span>{on ? "☑" : "☐"}</span>
+                              {a.image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={a.image} alt="" className="h-5 w-5 flex-none rounded object-cover" />
+                              ) : a.emoji ? <span>{a.emoji}</span> : null}
+                              <span className="flex-1 font-bold">{a.name}</span>
+                              <span className="text-[11px]" style={{ color: tk.muted }}>
+                                {perDay ? `${money(a.price)}/day` : a.type === "bundle" ? `${money(a.price)} whole block` : `${money(a.price)} one-off`}
+                              </span>
+                              {on && <b className="flex-none">{money(costOf(a, days))}</b>}
+                            </button>
+                            {/* Per-day add-ons default to every day — untick any that aren't wanted. */}
+                            {on && perDay && (
+                              <div className="mt-1 flex flex-wrap items-center gap-1 pl-6">
+                                {x.dates.map((iso) => {
+                                  const active = days.includes(iso);
+                                  return (
+                                    <button key={iso} type="button"
+                                      onClick={() => b.setAddonDays(x.id, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
+                                      className="border px-2 py-[3px] text-[11px] font-bold"
+                                      style={active ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk } : { borderColor: tk.line, color: tk.muted }}>
+                                      {dayNum(iso)}
+                                    </button>
+                                  );
+                                })}
+                                <span className="text-[10.5px]" style={{ color: tk.muted }}>{days.length} of {x.dates.length} days</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
