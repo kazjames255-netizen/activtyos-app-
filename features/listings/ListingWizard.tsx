@@ -1546,13 +1546,9 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
               )}
 
               {form.kind === "person" && (
-                <div>
-                  <FieldLabel>Discount the selected tickets for</FieldLabel>
-                  <Select value={form.appliesTo} onChange={(e) => set({ appliesTo: e.target.value as DiscountRule["appliesTo"] })} className="w-full text-[12px]">
-                    <option value="all">All attendees in the booking</option>
-                    <option value="after1">All attendees after number 1</option>
-                    <option value="second">Attendee number 2 only</option>
-                  </Select>
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+                  Applies to <b>every child</b> on the same pass. Two siblings on one week both get it;
+                  a child booked on their own doesn&rsquo;t.
                 </div>
               )}
 
@@ -2556,9 +2552,9 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   // Each rule's saving, broken down by the basket line that earned it.
   const savingsOn = (id: string) => {
     const i = b.basket.findIndex((x) => x.id === id);
-    if (i < 0) return [] as { name: string; amount: number }[];
+    if (i < 0) return [] as { name: string; amount: number; terms?: string }[];
     return b.discountLines
-      .map((l) => ({ name: l.name, amount: l.perItem?.[i] ?? 0 }))
+      .map((l) => ({ name: l.name, terms: l.terms, amount: l.perItem?.[i] ?? 0 }))
       .filter((l) => l.amount > 0.004);
   };
   const addonById = new Map(addons.map((a) => [a.id, a]));
@@ -2588,8 +2584,11 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
 
   return (
     <div className="p-5" style={{ background: tk.bg }}>
-      {/* what's being booked */}
-      <div className="flex flex-col gap-2">
+      {/* What's being booked. For a parent this is already spelled out on each
+          line below — pass, dates, timing, price — so listing it again here was
+          the same information twice. */}
+      {!parentMode && (
+        <div className="flex flex-col gap-2">
         {b.basket.map((x) => (
           <div key={x.id} className="flex items-start justify-between gap-3 text-[12.5px]">
             <span className="min-w-0">
@@ -2614,6 +2613,7 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
         ))}
         {!parentMode && <div className="text-[10.5px]" style={{ color: tk.muted }}>Prices are editable — discounts recalculate from what you set.</div>}
       </div>
+      )}
 
       {/* 1 · find the parent — operators only; a parent is already themselves */}
       {!parentMode && <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Find parent</div>}
@@ -2745,10 +2745,14 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                       {/* The saving on the line that earned it — a lump at the
                           bottom doesn't tell you which choice paid off. */}
                       {savingsOn(x.id).length > 0 && (
-                        <div className="mt-1.5 flex flex-col gap-0.5">
+                        <div className="mt-1.5 flex flex-col gap-0.5 border-t pt-1.5" style={{ borderColor: tk.line }}>
                           {savingsOn(x.id).map((sv) => (
-                            <div key={sv.name} className="flex items-baseline justify-between text-[11px] font-bold" style={{ color: tk.accent }}>
-                              <span>{sv.name}</span><span>−{money(sv.amount)}</span>
+                            <div key={sv.name} className="flex items-baseline justify-between gap-3 text-[11px]">
+                              <span className="min-w-0" style={{ color: tk.muted }}>
+                                {sv.name}
+                                {sv.terms && <span className="ml-1 opacity-70">({sv.terms})</span>}
+                              </span>
+                              <span className="flex-none font-bold" style={{ color: tk.accent }}>−{money(sv.amount)}</span>
                             </div>
                           ))}
                         </div>
@@ -2815,8 +2819,11 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
       {/* totals */}
       <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
         {b.discountLines.map((l, i) => (
-          <div key={i} className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.accent }}>
-            <span className="pr-2">{l.name}</span><b>−{money(l.amount)}</b>
+          <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
+            <span className="min-w-0" style={{ color: tk.muted }}>
+              {l.name}{l.terms && <span className="ml-1 opacity-70">({l.terms})</span>}
+            </span>
+            <b className="flex-none" style={{ color: tk.accent }}>−{money(l.amount)}</b>
           </div>
         ))}
         {addonTotal > 0 && (
