@@ -287,7 +287,25 @@ export function FreelancerListingsApp() {
     apiGet<Partial<LocalState> | null>("/api/library")
       .then((lib) => {
         if (!alive) return;
-        if (lib) setLocal({ ...seedLocal(), ...lib });
+        if (lib) {
+          // The server wins — except where it has nothing and this browser
+          // does. Add-ons built before the library could save (the 100kb body
+          // limit, silently) live only here, and spreading an empty server
+          // list over them erased them from view. Recover those and push
+          // them up rather than leaving the operator to rebuild.
+          const merged = { ...seedLocal(), ...lib } as LocalState;
+          const cached = loadLocal();
+          const listKeys = ["addons", "staff", "categories", "venues", "provided", "safety", "send", "outcomes"] as const;
+          let recovered = false;
+          for (const k of listKeys) {
+            if ((merged[k]?.length ?? 0) === 0 && (cached[k]?.length ?? 0) > 0) {
+              (merged as unknown as Record<string, unknown>)[k] = cached[k];
+              recovered = true;
+            }
+          }
+          setLocal(merged);
+          if (recovered) void putLibrary(merged).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save your library"));
+        }
         else {
           const start = loadLocal();
           setLocal(start);
