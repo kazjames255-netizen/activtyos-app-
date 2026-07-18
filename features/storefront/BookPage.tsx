@@ -5,7 +5,6 @@ import Link from "next/link";
 import { apiPublic } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
-import { BookingPanel } from "./BookingPanel";
 
 // ─────────────────────────────────────────────────────────────────────────
 // /book/{id} — the provider's public storefront page. Renders the exact
@@ -61,9 +60,7 @@ export function BookPage({ id }: { id: string }) {
       </div>
       <div className="mx-auto max-w-[1040px] px-4">
         <CustomerPage listing={listing} />
-        <div className="mt-5" id="book">
-          <BookingPanel listing={listing} signedIn={signedIn === true} />
-        </div>
+        <div className="mt-5" id="book"></div>
       </div>
     </div>
   );

@@ -550,6 +550,8 @@ export function bookingFromBundle(bundle: ServerListing["bundle"]): BlockBooking
  * "Preview as a parent" (same ParentPreview component, same data shape). */
 export function CustomerPage({ listing }: { listing: ServerListing }) {
   const d = draftFromListing(listing);
+  const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
+  const [done, setDone] = useState<{ refs: string[]; total: number } | null>(null);
   const lib = listing.library;
   const local: LocalState = {
     categories: lib?.categories ?? [],
@@ -562,6 +564,64 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
     staff: lib?.staff ?? [],
     emojis: {},
   };
+  // The basket is per child and per date; the API takes one block per call, so
+  // a basket spanning two weeks goes as two calls. Flagged to Amir — the server
+  // is the better place to accept a mixed basket.
+  async function book(basket: BasketItem[], assign: Record<string, string>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = []) {
+    setBookState({ busy: true, error: null });
+    try {
+      // Save children we haven't seen before, so next time is one tap. A
+      // failure here mustn't cost them the booking — it's a convenience.
+      await Promise.all(
+        children.filter((c) => !c.id && c.name.trim()).map((c) =>
+          apiPost("/api/my/children", c).catch(() => null),
+        ),
+      );
+      const byBlock = new Map<string, BasketItem[]>();
+      for (const item of basket) {
+        const blk = blockOn(listing.blocks, item.dates[0]);
+        if (!blk) throw new Error("Those dates aren't open for booking any more.");
+        byBlock.set(blk.id, [...(byBlock.get(blk.id) ?? []), item]);
+      }
+      const refs: string[] = [];
+      let total = 0;
+      for (const [blockId, items] of byBlock) {
+        const res = await apiPost<{ bookings: { ref: string }[]; total: number }>("/api/my/bookings", {
+          listingId: listing.id,
+          blockId,
+          method,
+          items: items.map((item) => ({
+            pass: item.name,
+            dates: item.dates,
+            child: (assign[item.id] ?? "").trim(),
+            ...(Object.keys(addonSel[item.id] ?? {}).length
+              ? { addons: Object.keys(addonSel[item.id] ?? {}).map((id) => ({ id })) }
+              : {}),
+          })),
+        });
+        refs.push(...res.bookings.map((x) => x.ref));
+        total += res.total;
+      }
+      setDone({ refs, total });
+    } catch (e) {
+      setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
+      return;
+    }
+    setBookState({ busy: false, error: null });
+  }
+
+  if (done)
+    return (
+      <div className="mx-auto max-w-[520px] p-6 text-center">
+        <div className="text-[40px]">🎉</div>
+        <h2 className="mt-2 text-[22px] font-extrabold">You&rsquo;re booked in</h2>
+        <p className="mt-1.5 text-[13.5px] text-[var(--ink-3)]">
+          {done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")} · {money(done.total)} paid.
+          A confirmation email is on its way.
+        </p>
+      </div>
+    );
+
   return (
     <ParentPreview
       d={d}
@@ -572,6 +632,9 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       addons={lib?.addons ?? []}
       theme={d.pageStyle ?? "playful"}
       brand={listing.tenantName}
+      mode="parent"
+      bookState={bookState}
+      onBook={(p) => void book(p.basket, p.assign, p.addonSel, p.method, p.children)}
       full
     />
   );
@@ -2102,7 +2165,7 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"] };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; assign: Record<string, string>; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[] }) => void; bookState?: { busy: boolean; error: string | null } };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -2157,11 +2220,11 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   );
 }
 
-function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, theme = "playful" }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; theme?: PageTheme;
+function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful" }: {
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; assign: Record<string, string>; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[] }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme;
 }) {
   const b = useBooking(d, booking, weeks, blocks);
-  const view: BookView = { b, d, booking, weeks, spacesLeft, addons };
+  const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState };
   // Checkout is much shorter than the calendar it replaces, so without this the
   // card collapses and leaves you staring at whitespace. "nearest" nudges it
   // into view only if it isn't already — no jump to the top of the page.
@@ -2177,11 +2240,13 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, theme = 
 }
 
 // Parents for this tenant — the operator books on their behalf.
-function useParents() {
+function useParents(skip = false) {
   const [list, setList] = useState<{ id: string; name: string; email?: string }[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  // Derived, not set in the effect: a parent never has an address book to load.
+  const [state, setState] = useState<"loading" | "ready" | "error">(skip ? "ready" : "loading");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    if (skip) return; // parents can't read /api/customers, and shouldn't
     let alive = true;
     apiGet<{ id: string; name?: string; email?: string }[]>("/api/customers")
       .then((cs) => {
@@ -2198,7 +2263,7 @@ function useParents() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [skip]);
   return { list, state, error };
 }
 
@@ -2208,8 +2273,191 @@ type CkTheme = { bg: string; line: string; ink: string; muted: string; accent: s
  * Operator-side checkout: add-ons, find the parent, then put a child against
  * each pass (with bulk add). Shared by both page styles — only colours differ.
  */
-function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme }) {
-  const { list: parents, state: parentsState, error: parentsError } = useParents();
+/**
+ * The checkout, for both audiences. An operator is booking on someone's behalf
+ * so starts by finding the parent; a parent already is the parent, so that step
+ * doesn't exist for them and they get a payment method instead. Everything
+ * between — children per pass, add-ons per day, bulk assign, discounts — is the
+ * same code, because it's the same job.
+ */
+export type ChildProfile = {
+  id?: string; name: string; dob?: string;
+  allergies?: string; medical?: string; likes?: string; dislikes?: string;
+  photoConsent?: boolean;
+};
+
+/** Age on the day the listing starts — the number that decides eligibility. */
+export function ageOn(dob: string | undefined, iso: string): number | null {
+  if (!dob || !iso) return null;
+  const b = new Date(`${dob}T00:00:00Z`), on = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(b.getTime()) || Number.isNaN(on.getTime())) return null;
+  let age = on.getUTCFullYear() - b.getUTCFullYear();
+  const m = on.getUTCMonth() - b.getUTCMonth();
+  if (m < 0 || (m === 0 && on.getUTCDate() < b.getUTCDate())) age -= 1;
+  return age;
+}
+
+/** Why a child can't be booked onto this listing, if they can't. */
+export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
+  if (d.allowOutOfRange) return null; // the operator has said they'll take them
+  const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
+  if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
+  const age = ageOn(c.dob, d.runFrom);
+  if (age === null) return null; // no date of birth yet — nothing to judge
+  if (Number.isFinite(from) && age < from) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
+  if (Number.isFinite(to) && age > to) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
+  return null;
+}
+
+/**
+ * The parent's children. Saved profiles come back from /api/my/children and
+ * apply in a tap; a new child is asked once for the things a provider needs on
+ * the day, and never asked again.
+ */
+function ChildrenPanel({ d, tk, saved, roster, setRoster }: {
+  d: WizardDraft; tk: CkTheme;
+  saved: ChildProfile[];
+  roster: ChildProfile[];
+  setRoster: (c: ChildProfile[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<ChildProfile>({ name: "", photoConsent: false });
+  const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
+  const inp = `w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`;
+  const inpStyle = { background: tk.inputBg, borderColor: tk.line, color: tk.ink };
+  const problem = draft.name.trim() ? ageProblem(d, draft) : null;
+
+  const add = () => {
+    if (!draft.name.trim() || problem) return;
+    setRoster([...roster, draft]);
+    setDraft({ name: "", photoConsent: false });
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>Your children</div>
+
+      {saved.length > 0 && (
+        <div className="mt-1.5">
+          <div className="text-[11px]" style={{ color: tk.muted }}>Tap to add — we&rsquo;ll remember the details you gave us.</div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {saved.filter((sv) => !roster.some((r) => r.id === sv.id || r.name === sv.name)).map((sv) => {
+              const bad = ageProblem(d, sv);
+              return (
+                <button key={sv.id ?? sv.name} type="button" disabled={!!bad} title={bad ?? undefined}
+                  onClick={() => setRoster([...roster, sv])}
+                  className={`border px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
+                  style={{ borderColor: tk.line, color: tk.ink }}>
+                  + {sv.name}{bad ? " · out of age range" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {roster.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {roster.map((c, i) => (
+            <div key={`${c.name}-${i}`} className={`flex items-center gap-2 border px-3 py-2 ${tk.round}`}
+              style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
+              <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>
+                {c.name}
+                {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
+              </span>
+              <button type="button" onClick={() => setRoster(roster.filter((_, n) => n !== i))}
+                className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)}
+          className={`mt-2 w-full border border-dashed px-3 py-2 text-[12.5px] font-bold ${tk.round}`}
+          style={{ borderColor: tk.line, color: tk.ink }}>
+          ＋ Add a child
+        </button>
+      ) : (
+        <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+          <div className="flex flex-wrap gap-2">
+            <div className="min-w-[150px] flex-1">
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Child&rsquo;s name</div>
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={inp} style={inpStyle} />
+            </div>
+            <div className="w-[150px]">
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Date of birth</div>
+              <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })} className={inp} style={inpStyle} />
+            </div>
+          </div>
+
+          {problem && (
+            <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{problem}</div>
+          )}
+
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Allergies <span className="font-normal">— optional</span></div>
+            <input value={draft.allergies ?? ""} onChange={(e) => setDraft({ ...draft, allergies: e.target.value })}
+              placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
+          </div>
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Medical <span className="font-normal">— optional</span></div>
+            <input value={draft.medical ?? ""} onChange={(e) => setDraft({ ...draft, medical: e.target.value })}
+              placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
+          </div>
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Likes &amp; dislikes <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+              What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })}
+                placeholder="Likes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
+              <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })}
+                placeholder="Dislikes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Happy for photos of them to be used?</span>
+            {[["Yes", true], ["No", false]].map(([l, v]) => (
+              <button key={String(l)} type="button" onClick={() => setDraft({ ...draft, photoConsent: v as boolean })}
+                className={`border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                style={draft.photoConsent === v
+                  ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
+                  : { borderColor: tk.line, color: tk.muted }}>{l as string}</button>
+            ))}
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={add} disabled={!draft.name.trim() || !!problem}
+              className={`flex-1 py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
+              style={{ background: tk.accent, color: tk.accentInk }}>Add child</button>
+            <button type="button" onClick={() => setOpen(false)} className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }: {
+  b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
+  mode?: "operator" | "parent";
+  onBook?: (p: { method: string; basket: BasketItem[]; assign: Record<string, string>; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[] }) => void;
+  booking?: { busy: boolean; error: string | null };
+}) {
+  const parentMode = mode === "parent";
+  const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
+  const [method, setMethod] = useState("card");
+  const [saved, setSaved] = useState<ChildProfile[]>([]);
+  const [roster, setRoster] = useState<ChildProfile[]>([]);
+  useEffect(() => {
+    if (!parentMode) return;
+    // Signed out this 401s, which is fine — they just type the details in.
+    apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
+  }, [parentMode]);
   const [q, setQ] = useState("");
   const [bulk, setBulk] = useState("");
   const matches = q.trim()
@@ -2255,9 +2503,9 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
         <div className="text-[10.5px]" style={{ color: tk.muted }}>Prices are editable — discounts recalculate from what you set.</div>
       </div>
 
-      {/* 1 · find the parent */}
-      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Find parent</div>
-      {b.parent ? (
+      {/* 1 · find the parent — operators only; a parent is already themselves */}
+      {!parentMode && <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Find parent</div>}
+      {parentMode ? null : b.parent ? (
         <div className={`mt-2 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
           <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>{b.parent.name}</span>
           <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Change</button>
@@ -2295,9 +2543,10 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
       )}
 
       {/* 2 · a child and their extras, per pass */}
-      {b.parent && (
+      {(parentMode || b.parent) && (
         <>
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>2 · Who&apos;s going &amp; extras</div>
+          {parentMode && <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster} />}
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{parentMode ? "2 · Who's on each pass" : "2 · Who's going & extras"}</div>
           <div className="mt-2 flex gap-1.5">
             <input value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="Add the same child to every pass…"
               className={`w-full border px-3 py-2 text-[12.5px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
@@ -2389,8 +2638,8 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
-        {/* Final say on the price — for a one-off arrangement a rule can't express. */}
-        <div className="mt-2 flex items-center gap-2">
+        {/* Final say on the price — for a one-off arrangement a rule can't express. Operators only. */}
+        {!parentMode && <div className="mt-2 flex items-center gap-2">
           <span className="flex-1 text-[11.5px]" style={{ color: tk.muted }}>Override the total</span>
           <span className="flex items-center gap-1">
             <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
@@ -2402,13 +2651,39 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
               <button type="button" onClick={() => b.setTotalOverride(null)} className="text-[11px] font-bold" style={{ color: tk.muted }}>Reset</button>
             )}
           </span>
-        </div>
+        </div>}
       </div>
 
+      {parentMode && (
+        <div className="mt-3">
+          <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>How you&rsquo;ll pay</div>
+          <select value={method} onChange={(e) => setMethod(e.target.value)}
+            className={`mt-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
+            style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }}>
+            <option value="card">Card</option>
+            <option value="bank">Bank transfer</option>
+            <option value="cash">Cash on the day</option>
+          </select>
+        </div>
+      )}
+
+      {booking?.error && (
+        <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
+      )}
+
       <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={!b.parent || unassigned > 0}
-        onClick={() => { b.setChild(Object.values(b.assign).filter(Boolean).join(", ")); b.setStage("done"); }}>
-        {!b.parent ? "Find the parent first" : unassigned > 0 ? `Name a child on ${unassigned} more pass${unassigned === 1 ? "" : "es"}` : `Confirm & pay ${money(grandTotal)}`}
+        disabled={(!parentMode && !b.parent) || unassigned > 0 || !!booking?.busy}
+        onClick={() => {
+          b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
+          // A parent's confirm actually books; the operator preview still just
+          // shows the done screen until the operator flow is wired.
+          if (parentMode && onBook) onBook({ method, basket: b.basket, assign: b.assign, addonSel: b.addonSel, children: roster });
+          else b.setStage("done");
+        }}>
+        {booking?.busy ? "Booking…"
+          : !parentMode && !b.parent ? "Find the parent first"
+          : unassigned > 0 ? `Name a child on ${unassigned} more pass${unassigned === 1 ? "" : "es"}`
+          : `Confirm & pay ${money(grandTotal)}`}
       </button>
       <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
@@ -2417,7 +2692,7 @@ function CheckoutPanel({ b, d, addons, tk }: { b: ReturnType<typeof useBooking>;
 }
 
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
-function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) {
+function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState }: BookView) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
   const idle = { background: "#fff", color: INKp, borderColor: LINEp };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -2439,7 +2714,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
   if (b.stage === "checkout") return (
     <div className="overflow-hidden rounded-[26px] bg-white" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff" }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff" }} />
     </div>
   );
   return (
@@ -2578,7 +2853,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons }: BookView) 
 }
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
-function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookView & { surf: Surf }) {
+function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf }: BookView & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#8f9bb0";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
@@ -2606,7 +2881,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL }} />
     </div>
   );
   return (
@@ -2738,8 +3013,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
   );
 }
 
-function ParentPreview({ d, venue, local, booking, addons, blocks, full, theme = "playful", onTheme, brand }: {
+function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand }: {
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
+  mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; assign: Record<string, string>; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[] }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
   /** The provider's brand in the page header. Defaults to the signed-in
@@ -2766,7 +3042,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, full, theme =
   const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} theme={theme} />;
+  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} />;
   const opens = useOpensAt(d.opensAt);
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand() };
 

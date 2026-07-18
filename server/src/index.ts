@@ -35,7 +35,11 @@ app.use(
     ],
   }),
 );
-app.use(express.json());
+// Listings now store the operator's whole draft, so the 100kb default was
+// nowhere near enough — a listing with any real content 500'd on save.
+// Firestore caps a document at 1MB, so anything past this can't be stored
+// anyway and gets a clear error rather than a size failure.
+app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -90,6 +94,13 @@ app.use(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
+    // Body-parser's own errors carry a status; "request entity too large"
+    // surfaced as a bare 500 and told the operator nothing.
+    const e = err as { type?: string; status?: number };
+    if (e?.type === "entity.too.large") {
+      res.status(413).json({ error: "That listing is too large to save — try smaller images." });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   },
 );
