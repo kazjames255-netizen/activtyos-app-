@@ -2588,6 +2588,29 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
   // A pass is a block: a child is on all of its days or none. So the only
   // thing to check is that somebody is on each line.
   const shortPasses = !parentMode ? [] : b.basket.filter((x) => b.childrenOn(x.id).length === 0);
+
+  // Overlapping passes: a 5 day pass covering the 27th–31st and a 4 day pass
+  // covering the 28th–31st are easy to end up with, and nobody can attend the
+  // same day twice — they'd be paying for it twice.
+  const clashes = !parentMode ? [] : (() => {
+    const byChildDate = new Map<string, string[]>();
+    for (const x of b.basket) {
+      for (const name of b.childrenOn(x.id)) {
+        for (const iso of x.dates) {
+          const key = `${name}|${iso}`;
+          byChildDate.set(key, [...(byChildDate.get(key) ?? []), x.id]);
+        }
+      }
+    }
+    const out: { name: string; iso: string; itemIds: string[] }[] = [];
+    for (const [key, ids] of byChildDate) {
+      if (ids.length < 2) continue;
+      const [name, iso] = key.split("|");
+      out.push({ name, iso, itemIds: ids });
+    }
+    return out;
+  })();
+  const clashesOn = (id: string) => clashes.filter((c) => c.itemIds.includes(id));
   const unassigned = parentMode ? shortPasses.length : b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
   const dayNum = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDate();
@@ -2747,6 +2770,14 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                           );
                         })}
                       </div>
+                      {clashesOn(x.id).length > 0 && (
+                        <div className="mt-1.5 border px-2.5 py-1.5 text-[11px] leading-[1.45]"
+                          style={{ borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" }}>
+                          {[...new Set(clashesOn(x.id).map((c) => c.name))].join(" and ")} {clashesOn(x.id).length === 1 ? "is" : "are"} already
+                          booked on {[...new Set(clashesOn(x.id).map((c) => fmtDate(c.iso)))].join(", ")} in another pass.
+                          Take them off one of the two, or change the dates.
+                        </div>
+                      )}
                       {b.childrenOn(x.id).length === 0 && roster.length > 0 && (
                         <div className="mt-1 text-[11px]" style={{ color: "#c2410c" }}>
                           Nobody&rsquo;s on this {x.dates.length === 1 ? "day" : "pass"} — remove it or put a child on it.
@@ -2898,7 +2929,7 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
       )}
 
       <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && roster.length === 0) || unassigned > 0 || shortPasses.length > 0 || !!booking?.busy}
+        disabled={(!parentMode && !b.parent) || (parentMode && roster.length === 0) || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // A parent's confirm actually books; the operator preview still just
@@ -2914,6 +2945,7 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
           : !parentMode && !b.parent ? "Find the parent first"
           : parentMode && roster.length === 0 ? "Add a child first"
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
+          : clashes.length > 0 ? `${clashes[0].name} is booked twice on ${fmtDate(clashes[0].iso)}`
           : shortPasses.length > 0 ? `One child needs all ${shortPasses[0].dates.length} days of the ${shortPasses[0].name}`
           : `Confirm & pay ${money(grandTotal)}`}
       </button>
