@@ -1,0 +1,275 @@
+# Listings & Bookings — backend handoff
+
+**From:** Kaz · **Date:** 18 July 2026
+**Branch:** `blocks-server-api` (PR #2) — 11 commits ahead of `main`
+
+Companion to `docs/blocks-builder-backend-spec.md`, which you've already built.
+Thanks for that — the Blocks builder is fully wired to it and working.
+
+---
+
+## 1. What I've been doing today
+
+Front-end only, all on `blocks-server-api`.
+
+**Blocks builder → your API.** Dropped localStorage entirely. Periods, passes and
+bundles now load from `/api/periods`, `/api/passes` and `/api/block-bundles`, and
+every write goes through them (create, edit, delete, duplicate, archive, reorder,
+send-to-listings). Pricing edits are debounced ~600ms so the calculator doesn't
+PUT per keystroke. Your `resolved` block is treated as the source of truth for
+prices — the local calculator is only a live preview while typing.
+
+**Listing builder.** Now 11 steps. New step 7 **Discounts** (see §4). Section
+headings are editable per step. Add-ons take an emoji or an uploaded image.
+Multiple hero images rotate as a carousel.
+
+**Customer page.** Three switchable styles (Playful / Sport / Navy) the operator
+picks per listing. Shares one booking engine, so behaviour can't drift between
+them.
+
+**Booking flow.** Pick pass → timing → dates → basket → checkout. Checkout is
+built for *the operator*, not the parent: find the parent, assign a child to each
+pass, per-day add-ons, and editable prices (§5).
+
+### Three bugs I fixed that touch shared code
+
+1. **SSE connection leak** (`lib/realtime.ts`) — `subscribeRealtime` opened a new
+   `EventSource` per component mount. Browsers allow ~6 per origin over HTTP/1.1,
+   and with StrictMode double-mounts plus Fast Refresh they accumulated until all
+   six were held, after which **every fetch queued forever**. This was behind a
+   day of "the page won't load", failed deletes and empty pickers. Now one shared,
+   reference-counted connection. **Worth knowing about if you add more realtime
+   subscribers.**
+
+2. **Auth race** (`lib/api.ts`) — `firebaseAuth.currentUser` is null for the first
+   moments after a page load while the session is restored. `api()` read it
+   synchronously and threw "Not signed in", so anything fetching on mount failed.
+   Now waits for `authStateReady()`, and every step has a 15s timeout so a stall
+   surfaces as an error instead of an endless spinner.
+
+3. **`withBlocks` in your `server/src/routes/listings.ts`** — it read the *entire*
+   `blocks` collection (every tenant's) on every listings request, just to attach
+   a few blocks. Now scoped to the listings being returned via chunked `in`
+   queries. Same output, but it no longer degrades as data grows. **This is the
+   one change I made in your code — shout if you'd rather own it.**
+
+---
+
+## 2. The headline: listings have no content schema
+
+This is the blocker for everything below.
+
+`listingSchema` currently stores:
+
+```js
+{ name, passes: [{ name, price }] }
+```
+
+Everything else the builder produces lives in the operator's **browser
+localStorage**. Open the app on another machine, or clear the browser, and a
+listing is a name and three prices — the customer page renders empty.
+
+I've kept it that way deliberately rather than inventing endpoints, but it means
+**listings aren't really persisted yet**.
+
+### Proposed schema
+
+This is the exact working shape (`WizardDraft` in
+`features/listings/ListingWizard.tsx`) — I'd suggest storing it close to verbatim
+so we're not maintaining a mapping layer:
+
+```ts
+{
+  title: string,
+  // media
+  images: { src, x, y, zoom }[],      // hero; >1 rotates as a carousel
+  gallery: { src, x, y, zoom }[],
+  layout: string,
+  // who it's for
+  ageFrom: string, ageTo: string,
+  categoryIds: string[],
+  heroCategoryId: string | null,      // which category badges the hero image
+  venueId: string | null,
+  allowOutOfRange: boolean,
+  // capacity
+  maxAttendees: string,
+  capacityScope: "day" | "listing",
+  showSpaces: boolean,
+  // content
+  descriptionSection: string,
+  description: string,
+  sections: { id, type, text }[],
+  outcomes: string[], provided: string[], safety: string[], send: string[],
+  headings: Record<string, string>,   // customer-page headings, "<key>.eyebrow" / "<key>.title"
+  // when it runs
+  runFrom: string, runTo: string,     // ISO dates
+  blockMode: "weekly" | "custom",
+  days: number[],                     // 0–6
+  datesOff: string[],                 // ISO dates excluded
+  // tickets
+  blockId: string | null,             // → block bundle from your builder
+  ticketOverrides: Record<string, { ageFrom?, ageTo?, capacity? }>,
+  bookRules: Record<string, "week" | "listing" | "blocks">,
+  // extras & team
+  addonIds: string[], staffIds: string[],
+  // discounts — see §4
+  discounts: DiscountRule[],
+  // policy
+  visibility: "public" | "hidden",
+  bookingType: "auto" | "manual",
+  waitlist: boolean, waitlistSize: string,
+  cancellation: string,
+  // presentation
+  pageStyle: "playful" | "sport" | "navy",
+  status: "draft" | "live",
+  archived: boolean,
+}
+```
+
+### Also browser-only: the operator's shared library
+
+`LocalState` in `features/listings/FreelancerListingsApp.tsx` — reused across all
+of a tenant's listings, so it wants to be tenant-level, not per listing:
+
+```ts
+{ categories, venues, provided, safety, send, outcomes, addons, staff, emojis }
+```
+
+`addons` are `{ id, name, type: "perday"|"bundle"|"once", price, emoji?, image? }`
+and `staff` are `{ id, first, last, bio }`.
+
+---
+
+## 3. Pricing must move server-side (correctness, not polish)
+
+The browser currently decides the price **three** ways: discount rules, per-day
+add-ons, and manual operator edits. Right now nothing is submitted, so nothing is
+at risk — but the moment checkout writes a booking, the server has to be the one
+that decides what's charged. Otherwise a booking can be submitted at a price the
+server never agreed to.
+
+Specifically, **the operator's price override (§5) must arrive as an explicit,
+authorised field** — not as "whatever total the client sent" — or it becomes a way
+to book anything at any price.
+
+---
+
+## 4. Discounts
+
+New in the builder (step 7). Three rule types, matching the spec Kaz supplied:
+
+```ts
+type DiscountKind = "person" | "session" | "early";
+
+interface DiscountRule {
+  id: string;
+  kind: DiscountKind;
+  name: string;              // shown to bookers
+  passNames: string[];       // which tickets it covers; [] = all
+  enabled: boolean;
+  moreThan: number;          // person: attendees >; session: sessions >
+  appliesTo: "all" | "after1" | "second";   // person only
+  method: "price" | "subtract" | "percent";
+  value: number;             // £ for price/subtract, % for percent
+  beforeDate: string;        // early only — must book on or before (ISO)
+}
+```
+
+**Reference implementation:** `applyDiscounts()` in
+`features/listings/ListingWizard.tsx`. It's a pure function — takes rules, basket
+items, attendee count and today's date; returns the applied lines and the total.
+It should port to the server almost unchanged. Please take the **current**
+version: an earlier one ignored `passNames` on session/early rules and
+under-charged.
+
+Rules it implements, from the original spec:
+
+- Multi-person first, then multi-session **on the reduced total**, then early bird.
+- Where several rules of the same kind match, **the booker gets the best price**.
+- A rule limited to certain tickets only discounts **those tickets' share** of the
+  basket, and only counts **their** sessions toward its threshold.
+- Early-bird rules stop applying (and stop being advertised) after `beforeDate`.
+
+---
+
+## 5. Operator checkout
+
+Built for a freelancer taking a booking, not a parent self-serving:
+
+- **Find parent** — searches `/api/customers`; falls back to booking for a new name.
+- **A child per pass**, with a bulk "add to all". Multi-person discounts count the
+  distinct children assigned.
+- **Add-ons per pass** — per-day ones default to every day of that pass and price
+  at rate × days, with day chips to drop individual days.
+- **Editable prices** — each pass line is editable and discounts recalculate from
+  the amended figure; plus an override for the whole booking, applied last.
+
+### Correction to something I flagged earlier
+
+I'd said children weren't reachable. **That was wrong** — customer records already
+carry them:
+
+```js
+Sarah Jones → children: [ { name: "Jack J", age: 8, dob: "14/03/2018" }, … ]
+```
+
+So no new endpoint is needed. (The separate top-level `children` collection *is*
+keyed by Firebase auth UID and doesn't join to `customers` — that's what misled
+me. Worth deciding whether that collection is still wanted, since it duplicates
+the same data by a different key.)
+
+**Next step on our side:** let the operator pick from the selected parent's
+children instead of typing names — avoids typos and mismatches against their
+record. Say if you'd rather that read from somewhere else.
+
+---
+
+## 6. Taking bookings
+
+`POST /api/bookings` is already built and looks right — transactional, capacity
+and waitlist aware. What's missing is the UI, and one mismatch.
+
+Our checkout works in **block-bundle passes + individual dates**. The endpoint
+wants:
+
+```js
+{ booker, email, child, age, listing, pass, amount, method,
+  blockId /* a dated run */  |  dates /* free-text label */ }
+```
+
+**`blockId` is a dated run in the `blocks` collection — not a bundle from the
+Blocks builder.** So there's a question to settle before we build on it:
+
+- Do bookings attach via the free-text `dates` label (quick, but loses capacity
+  and waitlist enforcement)? **or**
+- Does something turn a listing's run (`runFrom`/`runTo`/`days`/`datesOff`) into
+  real dated `blocks`, so capacity works properly?
+
+**I'd rather not build the booking write twice, so I'm holding off until this is
+answered.** Once it's settled: wire Confirm to `POST /api/bookings` (one per pass
+per child, with the operator's final price as `amount`), then move the flow into
+the Bookings area as "Take a booking". The components are already extracted
+(`useBooking`, `CheckoutPanel`), so relocating is cheap.
+
+---
+
+## 7. Smaller things
+
+- **Seed data only covers `apf-demo`.** Kaz's freelancer account is on tenant
+  `VOiiaTnDNd03MLbZaVcM`, so it sees zero parents and the customer search looks
+  broken. A few parents seeded onto real tenants would help testing a lot.
+- **Blocks builder has no first-run content** now that it's server-backed — a new
+  operator sees an empty library. Worth deciding whether a starter set is seeded
+  server-side or the UI offers a "create example block" action.
+
+---
+
+## Suggested order
+
+1. **Listing content schema** (§2) — unblocks everything else.
+2. **Discounts persisted + priced server-side** (§3, §4).
+3. **Dated runs decision** (§6).
+4. **Booking write**, then move the flow into Bookings.
+
+Happy to adjust the shapes to whatever suits the backend — the front-end can map.
+Anything above that's easier a different way, just say and I'll change our side.
