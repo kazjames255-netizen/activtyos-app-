@@ -2553,6 +2553,14 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
     // Signed out this 401s, which is fine — they just type the details in.
     apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
   }, [parentMode]);
+  // Each rule's saving, broken down by the basket line that earned it.
+  const savingsOn = (id: string) => {
+    const i = b.basket.findIndex((x) => x.id === id);
+    if (i < 0) return [] as { name: string; amount: number }[];
+    return b.discountLines
+      .map((l) => ({ name: l.name, amount: l.perItem?.[i] ?? 0 }))
+      .filter((l) => l.amount > 0.004);
+  };
   const addonById = new Map(addons.map((a) => [a.id, a]));
   const costOf = (a: AddonTemplate, days: string[]) => (a.type === "perday" ? a.price * days.length : a.price);
   const addonTotal = b.basket.reduce((sum, item) => {
@@ -2691,6 +2699,12 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                         </span>
                       );
                     })()}
+                    {parentMode && (
+                      <button type="button" onClick={() => b.removeItem(x.id)}
+                        title={x.dates.length === 1 ? "Remove this day" : `Remove this ${x.dates.length}-day pass`}
+                        className="flex-none px-1 text-[15px] leading-none"
+                        style={{ color: tk.muted }}>×</button>
+                    )}
                     {!parentMode && (
                       <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
                         className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
@@ -2728,12 +2742,21 @@ function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }:
                           Nobody&rsquo;s on this {x.dates.length === 1 ? "day" : "pass"} — remove it or put a child on it.
                         </div>
                       )}
-                      {x.dates.length > 1 && (
-                        <button type="button" onClick={() => b.editDates(x.id)}
-                          className="mt-1.5 text-[11px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
-                          Change which {x.dates.length} days
-                        </button>
+                      {/* The saving on the line that earned it — a lump at the
+                          bottom doesn't tell you which choice paid off. */}
+                      {savingsOn(x.id).length > 0 && (
+                        <div className="mt-1.5 flex flex-col gap-0.5">
+                          {savingsOn(x.id).map((sv) => (
+                            <div key={sv.name} className="flex items-baseline justify-between text-[11px] font-bold" style={{ color: tk.accent }}>
+                              <span>{sv.name}</span><span>−{money(sv.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
+                      <button type="button" onClick={() => b.editDates(x.id)}
+                        className="mt-1.5 text-[11px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
+                        {x.dates.length === 1 ? "Change this date" : `Change which ${x.dates.length} days`}
+                      </button>
                     </div>
                   )}
 
