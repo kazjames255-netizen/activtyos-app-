@@ -3,8 +3,15 @@
 // legacy prototype. Idempotent: skips any collection that already has
 // documents unless --force.
 //
-//   npm run seed            # seed empty collections
-//   npm run seed -- --force # wipe + reseed everything
+//   npm run seed                        # seed empty collections
+//   npm run seed -- --force             # wipe + reseed the DEMO TENANT's data only
+//   npm run seed -- --customers <tid>   # demo parents onto a REAL tenant (for
+//                                       # testing customer search / checkout)
+//
+// --force only ever deletes documents belonging to the demo tenant. Real
+// accounts and their tenants/listings/bookings are never touched — a reseed
+// once wiped the whole `tenants` collection and orphaned live accounts
+// (every listing showed "Unknown provider").
 
 import "dotenv/config";
 import { db } from "./firebase";
@@ -18,8 +25,9 @@ const force = process.argv.includes("--force");
 export const DEMO_TENANT_ID = "apf-demo";
 const DEMO_TENANT_NAME = "APF Activity Camps";
 
+// Delete only the demo tenant's documents in a collection.
 async function wipe(name: string) {
-  const snap = await db.collection(name).get();
+  const snap = await db.collection(name).where("tenantId", "==", DEMO_TENANT_ID).get();
   if (snap.empty) return;
   const batch = db.batch();
   snap.docs.forEach((d) => batch.delete(d.ref));
@@ -27,12 +35,17 @@ async function wipe(name: string) {
 }
 
 async function isEmpty(name: string) {
-  const snap = await db.collection(name).limit(1).get();
+  const snap = await db
+    .collection(name)
+    .where("tenantId", "==", DEMO_TENANT_ID)
+    .limit(1)
+    .get();
   return snap.empty;
 }
 
 async function seedTenant() {
-  if (force) await wipe("tenants");
+  // No wipe here: the demo tenant doc is keyed by id and set() overwrites it.
+  // Other tenants belong to real accounts and must survive a reseed.
   const ref = db.collection("tenants").doc(DEMO_TENANT_ID);
   if (!force && (await ref.get()).exists) {
     console.log("tenants: demo tenant exists, skipping");
@@ -149,13 +162,8 @@ async function seedListingsCol() {
   console.log(`listings: seeded ${listings.length} + ${blockCount} blocks for the demo tenant`);
 }
 
-async function seedCustomersCol() {
-  if (force) await wipe("customers");
-  else if (!(await isEmpty("customers"))) {
-    console.log("customers: not empty, skipping");
-    return;
-  }
-  // Derived from the bookings' booker + kids fields.
+// Derived from the bookings' booker + kids fields.
+function demoCustomers() {
   const byEmail = new Map<
     string,
     { name: string; email: string; phone: string; children: { name: string; age?: number; dob?: string }[] }
@@ -172,18 +180,52 @@ async function seedCustomersCol() {
       byEmail.set(b.email, { name: b.booker, email: b.email, phone: b.phone, children: kids });
     }
   }
+  return [...byEmail.values()];
+}
+
+async function seedCustomersCol() {
+  if (force) await wipe("customers");
+  else if (!(await isEmpty("customers"))) {
+    console.log("customers: not empty, skipping");
+    return;
+  }
+  const customers = demoCustomers();
   const batch = db.batch();
-  let i = 0;
-  for (const c of byEmail.values())
-    batch.set(db.collection("customers").doc(`cust-${++i}`), {
-      ...c,
-      tenantId: DEMO_TENANT_ID,
-    });
+  customers.forEach((c, i) =>
+    batch.set(db.collection("customers").doc(`cust-${i + 1}`), { ...c, tenantId: DEMO_TENANT_ID }),
+  );
   await batch.commit();
-  console.log(`customers: seeded ${byEmail.size} for the demo tenant`);
+  console.log(`customers: seeded ${customers.length} for the demo tenant`);
+}
+
+// Demo parents onto a REAL tenant (idempotent — fixed doc ids per tenant), so
+// an operator account has customers to search at checkout.
+async function seedCustomersFor(tenantId: string) {
+  const tenant = await db.collection("tenants").doc(tenantId).get();
+  if (!tenant.exists) {
+    console.error(`No tenant ${tenantId} — check the id (see the tenants collection).`);
+    process.exit(1);
+  }
+  const customers = demoCustomers();
+  const batch = db.batch();
+  customers.forEach((c, i) =>
+    batch.set(db.collection("customers").doc(`cust-${tenantId}-${i + 1}`), { ...c, tenantId }),
+  );
+  await batch.commit();
+  console.log(`customers: seeded ${customers.length} onto "${tenant.data()!.name}" (${tenantId})`);
 }
 
 async function main() {
+  const custFlag = process.argv.indexOf("--customers");
+  if (custFlag !== -1) {
+    const tid = process.argv[custFlag + 1];
+    if (!tid) {
+      console.error("Usage: npm run seed -- --customers <tenantId>");
+      process.exit(1);
+    }
+    await seedCustomersFor(tid);
+    return;
+  }
   await seedTenant();
   await seedBookingsCol();
   await seedListingsCol();

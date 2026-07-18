@@ -402,7 +402,9 @@ blockBundles.put("/:id/listings", async (req, res) => {
   if (bundle.priced && bundle.masterPrice !== null && resolved.passes.length) {
     for (const ls of listingSnaps) {
       batch.update(ls.ref, {
-        passes: resolved.passes.map((p) => ({ name: p.name, price: p.price })),
+        // days rides along so booking flows can count sessions (discount
+        // thresholds) without re-loading the bundle.
+        passes: resolved.passes.map((p) => ({ name: p.name, price: p.price, days: p.days })),
       });
     }
   }

@@ -360,3 +360,88 @@ depends on the above.
 
 Happy to adjust the shapes to whatever suits the backend — the front-end can map.
 Anything above that's easier a different way, just say and I'll change our side.
+
+---
+
+# Answers from the backend — 18 July 2026
+
+All of the above is **built, live on `main`, and E2E-tested** (Swagger
+v0.6.0 — the changelog at the top of `server/openapi.yaml` is the contract
+for everything below).
+
+## §0 decisions
+
+1. **Yes — saving a listing generates dated `blocks`.** Every
+   `POST`/`PUT /api/listings` turns the recipe (`runFrom`/`runTo`/`blockMode`/
+   `days`/`datesOff`) into real dated runs: weekly → one block per calendar
+   week ("Week 2 · 10 – 14 Aug 2026"), custom → one block for the range.
+   Session times come from the listing's bundle (its longest period), else
+   09:00–15:30. Generated blocks carry `auto: true`; ones you make by hand
+   via `POST /api/blocks` are never touched. Re-saving updates matching
+   blocks in place — `bookedCount` and the open/closed toggle survive; runs
+   that leave the recipe are deleted when empty, closed when booked.
+   **Drop any client-side block creation — just save the listing.**
+2. Moot — parent bookings always attach to a `blockId`, so capacity and the
+   waitlist are always enforced. No overselling path exists.
+3. **Capacity lives on the generated blocks**, from `maxAttendees` (blank =
+   effectively unlimited). `capacityScope` is stored; both scopes enforce
+   per block for now — true per-session counts are a later refinement, say
+   if you need them sooner.
+4. **"Take a booking" → the Bookings area**, writing `POST /api/bookings`
+   as it stands, one booking per pass per child. The operator-typed final
+   price goes in `amount` — that's the operator's *authorised* override
+   (only operator roles can call it). Parent self-serve bookings
+   (`POST /api/my/bookings`) never send a price.
+
+## What changed under you (§2–§6)
+
+- **The listing doc IS the draft.** Send the whole `WizardDraft` to
+  `POST`/`PUT /api/listings` — stored verbatim, `name` mirrors `title`.
+  I've already wired `syncApi` in the wizard to do this (and to upload
+  images first — see below), plus the Listings tab to prefer the server
+  draft over localStorage, so **open the app anywhere and everything's
+  there**. Unknown fields are stripped: when the builder grows a new field,
+  add it to `baseListingSchema` in `server/src/routes/listings.ts`.
+- **`visibility` enforced** exactly per your spec: the browse feed filters
+  `hidden`/drafts/archived; the new **`GET /api/listings/{id}`** serves the
+  direct link (hidden included) and embeds `blocks` + `bundle`
+  (server-priced passes/timings/periods) + `library` (the venue/add-ons/
+  staff/categories the listing uses). Your `/book/{id}` page has its one
+  endpoint.
+- **`opensAt` enforced**: parent bookings before it → `409` with `opensAt`
+  in the body for the countdown.
+- **Discounts are server-priced.** `applyDiscounts` moved verbatim to
+  `features/listings/discounts.ts` (shared module — same pattern as
+  `features/bookings/mutations.ts`); the wizard re-exports it so your
+  imports didn't break. `POST /api/my/bookings` prices every parent booking
+  with it. Pass snapshots from "send to listings" now carry `days` so
+  session thresholds count correctly.
+- **The shared library is tenant-level**: `GET`/`PUT /api/library`,
+  realtime collection `library`. The app now loads it from the server and
+  migrates a browser's existing localStorage up automatically on first run.
+- **Images**: `POST /api/uploads` `{dataUrl}` → `{url}`, served publicly at
+  `GET /api/images/{id}` with immutable caching. Listing/library docs store
+  URLs only — data URLs are rejected (Firestore 1MB doc limit). The wizard
+  and library sync already upload transparently on save.
+- **Your §1 fixes**: `withBlocks` scoping — kept, thanks. SSE/auth fixes —
+  untouched.
+
+## §7 smaller things
+
+- `npm run seed -- --customers <tenantId>` seeds 10 demo parents onto a
+  real tenant (already run for `VOiiaTnDNd03MLbZaVcM`). `seed --force` is
+  now scoped to the demo tenant only — it once wiped real tenants, which is
+  what "Unknown provider" was.
+- Blocks-builder first-run content: not seeded server-side for now — an
+  empty library + a "create example" action in the UI is my preference,
+  your call on the UX.
+
+## Still open on your side
+
+- The parent Browse now opens the real customer page (same `ParentPreview`,
+  fed by `GET /api/listings/{id}` via the new `CustomerPage` component in
+  `ListingWizard.tsx`) — but a standalone public `/book/{id}` route still
+  doesn't exist. When you build it, `CustomerPage` + that one GET is
+  everything you need.
+- Wiring your checkout's Confirm to `POST /api/bookings` and moving the
+  flow into Bookings (§6) — unblocked now.

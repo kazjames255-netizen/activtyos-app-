@@ -15,8 +15,16 @@ export interface ListingSummary {
   name: string;
   tenantId: string;
   tenantName: string;
-  passes: { name: string; price: number }[];
+  passes: { name: string; price: number; days?: number }[];
   blocks: BlockSummary[];
+  // Customer-page content (present on listings built with the wizard —
+  // the server persists the whole draft; see ServerListing in
+  // features/listings/ListingWizard.tsx for the full shape).
+  title?: string;
+  description?: string;
+  images?: { src: string; x: number; y: number; zoom: number }[];
+  pageStyle?: "playful" | "sport" | "navy";
+  opensAt?: string;
 }
 
 export interface CreateMyBookingInput {

@@ -9,6 +9,7 @@ import type { Booking } from "@/features/bookings/types";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import type { Child } from "./ChildrenApp";
 import type { BlockSummary, CreateMyBookingInput, ListingSummary } from "./types";
+import { CroppedImage, CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
 
 const METHODS = ["Card", "Tax-Free Childcare"];
 const MANUAL = "__manual__";
@@ -148,6 +149,20 @@ export function BrowseApp() {
   const [children, setChildren] = useState<Child[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  // The full customer page (GET /api/listings/:id — the same page the
+  // operator previews, rendered from the same server data).
+  const [page, setPage] = useState<ServerListing | null>(null);
+  const [pageBusy, setPageBusy] = useState<string | null>(null);
+  // Captured once per mount — the server enforces opensAt regardless.
+  const [now] = useState(() => Date.now());
+
+  const viewPage = (id: string) => {
+    setPageBusy(id);
+    apiGet<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
+      .then(setPage)
+      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t open the listing"))
+      .finally(() => setPageBusy(null));
+  };
 
   const loadListings = useCallback(() => {
     apiGet<ListingSummary[]>("/api/listings")
@@ -183,21 +198,41 @@ export function BrowseApp() {
       <div className="grid gap-3.5 lg:grid-cols-2">
         {listings.map((l) => {
           const from = Math.min(...l.passes.map((p) => p.price));
+          const hero = l.images?.[0];
+          const opensLater = !!l.opensAt && new Date(l.opensAt).getTime() > now;
           return (
-            <Card key={l.id} className="p-4">
+            <Card key={l.id} className="overflow-hidden p-0">
+              {hero && (
+                <button type="button" onClick={() => viewPage(l.id)} className="block h-[120px] w-full overflow-hidden" aria-label={`View ${l.name}`}>
+                  <CroppedImage im={hero} className="h-full w-full" />
+                </button>
+              )}
+              <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[15.5px] font-extrabold">{l.name}</div>
+                  <div className="text-[15.5px] font-extrabold">{l.title || l.name}</div>
                   <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
                     by <span className="font-bold text-[var(--ink-2)]">{l.tenantName}</span> ·{" "}
                     {l.blocks.length} block{l.blocks.length === 1 ? "" : "s"} · from {money(from)}
                   </div>
                 </div>
-                {openId !== l.id && l.blocks.some((b) => b.open) && (
-                  <Button variant="primary" onClick={() => setOpenId(l.id)}>
-                    Book
+                <div className="flex flex-none items-center gap-1.5">
+                  <Button onClick={() => viewPage(l.id)} disabled={pageBusy === l.id}>
+                    {pageBusy === l.id ? "Opening…" : "View"}
                   </Button>
-                )}
+                  {opensLater ? (
+                    <span className="rounded-full bg-[#fff7ed] px-2.5 py-[5px] text-[11px] font-bold text-[#9a3412]">
+                      ⏰ Opens {new Date(l.opensAt!).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                    </span>
+                  ) : (
+                    openId !== l.id &&
+                    l.blocks.some((b) => b.open) && (
+                      <Button variant="primary" onClick={() => setOpenId(l.id)}>
+                        Book
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {l.passes.map((p) => (
@@ -212,10 +247,34 @@ export function BrowseApp() {
               {openId === l.id && (
                 <BookForm listing={l} savedChildren={children} onDone={() => setOpenId(null)} />
               )}
+              </div>
             </Card>
           );
         })}
       </div>
+
+      {page && (
+        <div onClick={(e) => e.target === e.currentTarget && setPage(null)} className="fixed inset-0 z-[10000] flex items-start justify-center overflow-auto bg-black/60 p-4 sm:p-6">
+          <div className="w-full max-w-[1040px]">
+            <div className="mb-2 flex items-center justify-between text-white">
+              <span className="text-[13px] font-bold">{page.title || page.name} — {page.tenantName}</span>
+              <button type="button" onClick={() => setPage(null)} aria-label="Close" className="text-[22px] leading-none">×</button>
+            </div>
+            <CustomerPage listing={page} />
+            <div className="sticky bottom-3 mt-3 flex justify-center">
+              {(() => {
+                const summary = listings.find((x) => x.id === page.id);
+                const bookable = summary?.blocks.some((b) => b.open) && !(page.opensAt && new Date(page.opensAt).getTime() > now);
+                return bookable ? (
+                  <Button variant="primary" onClick={() => { setOpenId(page.id); setPage(null); }}>
+                    Book this activity
+                  </Button>
+                ) : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

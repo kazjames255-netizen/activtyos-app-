@@ -1,10 +1,68 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.6.0 — Listings persist the WHOLE builder draft
+
+    Answers to the listings handoff's §0, now live:
+
+    1. **Saving a listing generates dated `blocks` — yes.** The run recipe
+       (`runFrom` / `runTo` / `blockMode` / `days` / `datesOff`) is turned into
+       real dated runs on every create/update: weekly mode makes one block per
+       calendar week, `custom` one block for the range. Generated blocks carry
+       `auto: true`; blocks made by hand via `POST /api/blocks` are never
+       touched. Re-saving *updates* matching blocks in place (`bookedCount`
+       and open/closed survive); runs that leave the recipe are deleted when
+       empty, closed when booked. No client ever creates blocks for a listing.
+    2. **Free-text `dates` is therefore moot** — parent bookings always attach
+       to a `blockId`, so capacity + waitlist are always enforced.
+    3. **Capacity lives on the generated blocks**, sourced from
+       `maxAttendees` (blank = effectively unlimited). `capacityScope` is
+       stored; both scopes enforce per block for now (per-session counts are a
+       later refinement).
+    4. **"Take a booking" belongs in Bookings**, writing through
+       `POST /api/bookings` as it stands. The operator-typed `amount` is the
+       operator's authorised price (their explicit override); PARENT bookings
+       never send an amount — see below.
+
+    Also new:
+
+    - `POST /api/listings` / `PUT` accept the **entire wizard draft**
+      (title, images, sections, run recipe, capacity, policy, discounts,
+      `pageStyle`…) and store it verbatim — the listing doc IS the draft.
+      `name` mirrors `title`; `passes` stays the priced-tickets snapshot.
+    - **`visibility` is enforced**: the browse feed (`GET /api/listings`)
+      returns only `status: live`, `visibility: public`, unarchived listings.
+      `hidden` = *unlisted*: excluded from the feed but fully readable and
+      bookable via the new **`GET /api/listings/{id}`** (the direct link).
+      Foreign drafts/archived 404 there; your own tenant sees everything.
+    - `GET /api/listings/{id}` **embeds** what the customer page needs:
+      `blocks` (dated runs + availability), `bundle` (the block bundle's
+      server-resolved passes/timings/periods) and `library` (the venue,
+      add-ons, staff and categories the listing references).
+    - **`opensAt` is enforced server-side**: parent bookings before it are
+      rejected `409` with `opensAt` in the body (show the countdown).
+      Draft/archived listings also can't be booked (`409`).
+    - **Parent booking prices are fully server-computed**: the pass price
+      with the listing's automatic `discounts` applied (multi-person →
+      multi-session → early-bird, best rule wins — the same shared engine
+      the builder previews, `features/listings/discounts.ts`).
+    - **Tenant library** (`GET`/`PUT /api/library`): the shared option lists
+      (categories, venues, provided/safety/SEND/outcomes, add-ons, staff)
+      that were browser-localStorage. One object per tenant, realtime
+      collection name `library`.
+    - **Image uploads** (`POST /api/uploads` → `{url}`; public
+      `GET /api/images/{id}`): listing/library images must be uploaded
+      first — data URLs inside listing docs are rejected (Firestore's 1MB
+      doc limit).
+    - "Send to listings" pass snapshots now include `days` (session count),
+      which discount thresholds use.
+    - `DELETE /api/listings/{id}` cascades the listing's empty blocks and
+      409s when any block has bookings (archive instead).
 
     ## v0.5.0 — Blocks BUILDER (periods / passes / bundles)
 
@@ -102,6 +160,11 @@ tags:
   - name: my
     description: The signed-in parent's own bookings
   - name: listings
+    description: Listings store the whole builder draft; the run recipe generates dated blocks
+  - name: library
+    description: The tenant's shared listing option lists (venues, add-ons, staff…)
+  - name: uploads
+    description: Image storage — upload first, store the returned URL
   - name: blocks
     description: A listing's bookable runs — capacity, sessions, waitlist
   - name: blocks-builder
@@ -388,8 +451,14 @@ paths:
       description: |
         Creates a booking **in the listing's tenant** with
         `status: "Approval needed"` and `pay: "Unpaid"`. Booker name/email
-        come from the token; `amount` is resolved server-side from the
-        listing's pass price.
+        come from the token; `amount` is resolved **entirely server-side**:
+        the listing's pass price with its automatic discounts applied
+        (multi-person → multi-session → early-bird; best rule of each kind
+        wins). Parents never send a price.
+
+        Rejected `409` when: the listing is a draft/archived; `opensAt` is
+        in the future (the response body includes `opensAt` — show the
+        countdown); or the block is full and the listing's waitlist is off.
       requestBody:
         required: true
         content:
@@ -414,6 +483,8 @@ paths:
               schema: { $ref: "#/components/schemas/Booking" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Not open for booking (draft/archived, before opensAt, or full with waitlist off)
 
   /api/my/bookings/{ref}/cancel:
     post:
@@ -515,12 +586,15 @@ paths:
   /api/listings:
     get:
       tags: [listings]
-      summary: List listings
+      summary: Browse feed (or my tenant's listings with ?mine=1)
       description: |
-        Default: every tenant's listings with `tenantId` / `tenantName`
-        (feeds the parent Browse view; any authenticated user). With
-        `?mine=1`: only the caller's own tenant's listings (the operator
-        management view).
+        Default: the parent marketplace — only `status: live`,
+        `visibility: public`, unarchived listings, every tenant, with
+        `tenantId` / `tenantName` and joined `blocks`. Hidden listings are
+        *unlisted*: absent here, fully served by `GET /api/listings/{id}`.
+
+        With `?mine=1`: ALL of the caller's own tenant's listings — drafts,
+        hidden and archived included (the operator management view).
       parameters:
         - name: mine
           in: query
@@ -538,27 +612,17 @@ paths:
     post:
       tags: [listings]
       summary: Create a listing in the caller's own tenant
-      description: Operators with write access (company/freelancer/franchise).
+      description: |
+        Operators with write access (company/freelancer/franchise). Send the
+        **whole builder draft** (see `ListingDraft`) — it is stored verbatim,
+        `name` mirrors `title`, and the run recipe is turned into dated
+        `blocks` automatically (see the v0.6.0 notes). Images must be
+        uploaded first (`POST /api/uploads`) — data URLs are rejected.
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [name, passes, blocks]
-              properties:
-                name: { type: string, example: Autumn Multi-Sports Camp }
-                passes:
-                  type: array
-                  items:
-                    type: object
-                    required: [name, price]
-                    properties:
-                      name: { type: string, example: Day pass }
-                      price: { type: number, example: 42 }
-                blocks:
-                  type: array
-                  items: { type: string, example: "Week 1 · 27 – 31 Oct 2027" }
+            schema: { $ref: "#/components/schemas/ListingDraft" }
       responses:
         "201":
           description: The created listing
@@ -570,9 +634,36 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/listings/{id}:
+    get:
+      tags: [listings]
+      summary: One listing — the direct link (`/book/{id}` reads this)
+      description: |
+        Returns `hidden` listings too (hidden = unlisted but bookable by
+        link). Drafts/archived 404 unless the caller's tenant owns them.
+        Embeds everything the customer page needs — `blocks` (dated runs +
+        availability), `bundle` (the block bundle's server-resolved
+        passes / timings / periods) and `library` (the venue, add-ons,
+        staff and categories this listing references).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The listing with blocks, bundle and library embedded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListingDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [listings]
       summary: Update one of my tenant's listings
+      description: |
+        Accepts the full draft or a partial patch (e.g. just `{visibility}`
+        or `{archived}`). Changing any run-recipe field re-syncs the
+        generated blocks.
       parameters:
         - name: id
           in: path
@@ -582,21 +673,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [name, passes, blocks]
-              properties:
-                name: { type: string }
-                passes:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name: { type: string }
-                      price: { type: number }
-                blocks:
-                  type: array
-                  items: { type: string }
+            schema: { $ref: "#/components/schemas/ListingDraft" }
       responses:
         "200":
           description: The updated listing
@@ -610,7 +687,10 @@ paths:
     delete:
       tags: [listings]
       summary: Delete one of my tenant's listings
-      description: Past bookings keep their denormalised listing name.
+      description: |
+        Cascades the listing's (empty) blocks. 409 when any block has booked
+        places — archive the listing instead. Past bookings keep their
+        denormalised listing name.
       parameters:
         - name: id
           in: path
@@ -621,6 +701,102 @@ paths:
           description: Deleted
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The listing has bookings — archive it instead
+
+  /api/library:
+    get:
+      tags: [library]
+      summary: My tenant's shared listing library
+      description: |
+        The option lists reused across all of a tenant's listings —
+        categories, venues, provided / safety / SEND / outcomes chips,
+        add-ons, staff, emojis. `null` until first saved. Any member of the
+        tenant may read; parents never call this (the slice a listing uses is
+        embedded in `GET /api/listings/{id}`). Realtime collection:
+        `library`.
+      responses:
+        "200":
+          description: The library object, or null
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [library]
+      summary: Replace my tenant's library
+      description: |
+        Operators only. Whole-object replace. Add-on images must be uploaded
+        via `POST /api/uploads` first (413 when the object is oversized).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categories: { type: array, items: { type: object } }
+                venues: { type: array, items: { type: object } }
+                provided: { type: array, items: { type: string } }
+                safety: { type: array, items: { type: string } }
+                send: { type: array, items: { type: string } }
+                outcomes: { type: array, items: { type: string } }
+                addons: { type: array, items: { type: object } }
+                staff: { type: array, items: { type: object } }
+                emojis: { type: object }
+      responses:
+        "200":
+          description: The stored library
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413":
+          description: Library too large
+
+  /api/uploads:
+    post:
+      tags: [uploads]
+      summary: Upload an image (operators)
+      description: |
+        Body `{dataUrl}` — a base64 `data:image/*` URL (the builder's
+        canvas-compressed JPEGs). Returns the public URL to store in the
+        listing/library. Max ~900KB decoded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dataUrl]
+              properties:
+                dataUrl: { type: string, example: "data:image/jpeg;base64,/9j/4AAQ…" }
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  url: { type: string, example: "http://localhost:4000/api/images/aB3…" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413":
+          description: Image too large
+
+  /api/images/{id}:
+    get:
+      tags: [uploads]
+      summary: Serve an uploaded image (public, no auth)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The image bytes (immutable cache headers)
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/blocks:
@@ -1555,25 +1731,112 @@ components:
                   additionalProperties: { type: number }
                   description: '"{passId}_{periodId}" → price'
 
-    Listing:
+    ListingDraft:
       type: object
+      description: |
+        The builder's draft, stored verbatim (`WizardDraft` in
+        features/listings/ListingWizard.tsx is the source of truth for the
+        full field list — unknown fields are stripped, so extend the server
+        schema when the builder grows a new one). Creating requires `title`
+        or `name`; updates may be partial. The run-recipe fields
+        (`runFrom`, `runTo`, `blockMode`, `days`, `datesOff`,
+        `maxAttendees`, `blockId`) generate/re-sync the dated blocks.
       properties:
-        id: { type: string, example: lst-1 }
-        name: { type: string, example: Summer Holiday Camp 2027 }
-        tenantId: { type: string, example: apf-demo }
-        tenantName: { type: string, example: APF Activity Camps }
+        title: { type: string, example: Summer Holiday Camp }
+        name: { type: string, description: Mirrors title; legacy clients may send it alone. }
         passes:
           type: array
+          description: Priced-tickets snapshot (written by the bundle's "send to listings").
           items:
             type: object
             required: [name, price]
             properties:
               name: { type: string, example: 4-day pass }
               price: { type: number, example: 160 }
-        blocks:
+              days: { type: number, example: 4, description: Session count — discount thresholds use it. }
+        images:
           type: array
-          description: Joined from the blocks collection (read-only here).
-          items: { $ref: "#/components/schemas/Block" }
+          items:
+            type: object
+            properties:
+              src: { type: string, description: "URL from POST /api/uploads — data URLs are rejected." }
+              x: { type: number }
+              y: { type: number }
+              zoom: { type: number }
+        description: { type: string }
+        runFrom: { type: string, example: "2026-08-03" }
+        runTo: { type: string, example: "2026-08-14" }
+        blockMode: { type: string, enum: [weekly, custom] }
+        days: { type: array, items: { type: integer }, description: "Weekdays 0=Sun … 6=Sat" }
+        datesOff: { type: array, items: { type: string } }
+        maxAttendees: { type: string, example: "24" }
+        capacityScope: { type: string, enum: [day, listing] }
+        blockId: { type: string, nullable: true, description: The block bundle whose periods time the sessions. }
+        visibility: { type: string, enum: [public, hidden] }
+        opensAt: { type: string, example: "2026-08-01T09:00", description: Booking held until then (server-enforced). }
+        status: { type: string, enum: [draft, live] }
+        archived: { type: boolean }
+        waitlist: { type: boolean }
+        pageStyle: { type: string, enum: [playful, sport, navy] }
+        discounts:
+          type: array
+          description: Automatic discount rules (see features/listings/discounts.ts).
+          items: { type: object }
+
+    Listing:
+      allOf:
+        - $ref: "#/components/schemas/ListingDraft"
+        - type: object
+          properties:
+            id: { type: string, example: lst-1 }
+            tenantId: { type: string, example: apf-demo }
+            tenantName: { type: string, example: APF Activity Camps }
+            blocks:
+              type: array
+              description: Joined from the blocks collection (read-only — generated from the run recipe).
+              items: { $ref: "#/components/schemas/Block" }
+
+    ListingDetail:
+      allOf:
+        - $ref: "#/components/schemas/Listing"
+        - type: object
+          properties:
+            bundle:
+              type: object
+              nullable: true
+              description: The listing's block bundle, server-priced.
+              properties:
+                id: { type: string }
+                name: { type: string }
+                passes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      days: { type: number }
+                      price: { type: number }
+                timings:
+                  type: object
+                  description: '"{passId}_{periodId}" → price'
+                periods:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      title: { type: string }
+                      start: { type: string, example: "09:00" }
+                      finish: { type: string, example: "15:30" }
+            library:
+              type: object
+              description: The slice of the tenant library this listing references.
+              properties:
+                venue: { type: object, nullable: true }
+                addons: { type: array, items: { type: object } }
+                staff: { type: array, items: { type: object } }
+                categories: { type: array, items: { type: object } }
 
     Customer:
       type: object

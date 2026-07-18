@@ -14,8 +14,10 @@ import { bookings } from "./routes/bookings";
 import { customers } from "./routes/customers";
 import { events } from "./routes/events";
 import { invitePreview, invites } from "./routes/invites";
+import { library } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
+import { images, uploads } from "./routes/uploads";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
 import { me, tenants } from "./routes/tenants";
@@ -49,6 +51,10 @@ app.use("/api/invites", invitePreview);
 // headers), so it mounts before the header-based auth middleware.
 app.use("/api/events", events);
 
+// Images are public (<img> tags can't send Authorization; ids are the
+// secret). Uploading them requires an operator account — see routes/uploads.
+app.use("/api/images", images);
+
 app.use("/api", requireAuth, attachRole);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
@@ -59,6 +65,8 @@ app.use("/api/blocks", blocks);
 app.use("/api/periods", periods);
 app.use("/api/passes", passes);
 app.use("/api/block-bundles", blockBundles);
+app.use("/api/library", library);
+app.use("/api/uploads", uploads);
 app.use("/api/my", my);
 app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);

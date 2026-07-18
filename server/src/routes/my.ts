@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
+import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
 import {
   blockCountDelta,
   bookingSeats,
@@ -110,8 +111,25 @@ my.post("/bookings", async (req, res) => {
     name: string;
     tenantId: string;
     tenantName?: string;
-    passes: { name: string; price: number }[];
+    passes: { name: string; price: number; days?: number }[];
+    status?: string;
+    archived?: boolean;
+    opensAt?: string;
+    waitlist?: boolean;
+    discounts?: DiscountRule[];
   };
+  // Lifecycle gates — the client-side lock is a courtesy, this is the control.
+  if ((listing.status ?? "live") !== "live" || listing.archived) {
+    res.status(409).json({ error: "This listing isn't open for booking" });
+    return;
+  }
+  if (listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {
+    res.status(409).json({
+      error: `Booking hasn't opened yet — it opens ${new Date(listing.opensAt).toLocaleString("en-GB")}`,
+      opensAt: listing.opensAt,
+    });
+    return;
+  }
   const pass = listing.passes.find((p) => p.name === input.pass);
   if (!pass) {
     res.status(400).json({ error: `Listing has no pass "${input.pass}"` });
@@ -133,6 +151,8 @@ my.post("/bookings", async (req, res) => {
 
       const seats = 1;
       const hasSpace = block.open && block.bookedCount + seats <= block.capacity;
+      if (!hasSpace && listing.waitlist === false)
+        throw new HttpError(409, "This block is full and the waitlist is off");
       // Waitlist position among existing waitlisted bookings for this block.
       let waitPos = 0;
       if (!hasSpace) {
@@ -141,6 +161,15 @@ my.post("/bookings", async (req, res) => {
         );
         waitPos = waiting.size + 1;
       }
+
+      // The server decides the price: the pass's stored price with the
+      // listing's automatic discounts applied (same engine the builder
+      // previews — features/listings/discounts.ts).
+      const { total } = applyDiscounts(
+        listing.discounts ?? [],
+        [{ name: pass.name, price: pass.price, days: pass.days ?? block.sessions.length }],
+        1,
+      );
 
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
       const b: Booking = {
@@ -153,7 +182,7 @@ my.post("/bookings", async (req, res) => {
             listing: listing.name,
             pass: input.pass,
             dates: block.name,
-            amount: pass.price,
+            amount: total,
             method: input.method,
           },
           nextBid,

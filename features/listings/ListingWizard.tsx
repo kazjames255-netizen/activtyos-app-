@@ -272,125 +272,11 @@ export interface WizardDraft {
 export type PageTheme = "playful" | "sport" | "navy";
 
 // ── Automatic discounts ────────────────────────────────────────────────────
-// Three rule types. Multi-session is always applied after multi-person, and
-// where rules conflict the booker gets the best price.
-export type DiscountKind = "person" | "session" | "early";
-export interface DiscountRule {
-  id: string;
-  kind: DiscountKind;
-  name: string; // shown to bookers
-  passNames: string[]; // which tickets it applies to; [] = all
-  enabled: boolean;
-  /** person: applies when attendees > this. session: when sessions > this. */
-  moreThan: number;
-  /** person only — who in the booking gets the discount. */
-  appliesTo: "all" | "after1" | "second";
-  method: "price" | "subtract" | "percent";
-  value: number; // £ for price/subtract, % for percent
-  /** early only — must book on or before this date. */
-  beforeDate: string;
-}
-export function emptyRule(kind: DiscountKind): DiscountRule {
-  return {
-    id: uid(),
-    kind,
-    name: "",
-    passNames: [],
-    enabled: true,
-    moreThan: kind === "session" ? 3 : 1,
-    appliesTo: "after1",
-    method: kind === "session" ? "percent" : "subtract",
-    value: 0,
-    beforeDate: "",
-  };
-}
-/** Plain-English summary shown to the operator and the booker. */
-export function ruleSummary(r: DiscountRule): string {
-  const amount = r.method === "percent" ? `${r.value}%` : money(r.value);
-  const who = r.appliesTo === "all" ? "every attendee" : r.appliesTo === "second" ? "attendee 2 only" : "each attendee after the first";
-  if (r.kind === "person")
-    return r.method === "price"
-      ? `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${who} pays ${amount} per ticket`
-      : `More than ${r.moreThan} attendee${r.moreThan === 1 ? "" : "s"} — ${amount} off for ${who}`;
-  if (r.kind === "session") return `Book more than ${r.moreThan} sessions — ${amount} off`;
-  return `Book by ${r.beforeDate || "the cut-off date"} — ${amount} off`;
-}
-
-export interface DiscountLine { name: string; amount: number; scope: string }
-/**
- * Work out what comes off a basket. Returns each applied rule's saving.
- * Multi-person runs first, then multi-session on the reduced total, then
- * early bird; where several rules of a kind match, the best one wins.
- */
-export function applyDiscounts(
-  rules: DiscountRule[],
-  items: { name: string; price: number; days: number }[],
-  attendees: number,
-  today = new Date().toISOString().slice(0, 10),
-): { lines: DiscountLine[]; total: number } {
-  const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
-  if (!items.length) return { lines: [], total: 0 };
-  const live = rules.filter((r) => r.enabled);
-  const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
-  const scopeOf = (r: DiscountRule) => (r.passNames.length === 0 ? "All passes" : r.passNames.join(", "));
-  const off = (r: DiscountRule, unit: number) =>
-    r.method === "percent" ? (unit * r.value) / 100 : r.method === "subtract" ? Math.min(unit, r.value) : Math.max(0, unit - r.value);
-
-  const lines: DiscountLine[] = [];
-  let running = gross;
-
-  // 1) Multi-person — priced per discounted attendee, per covered ticket.
-  const person = live.filter((r) => r.kind === "person" && attendees > r.moreThan);
-  let bestPerson: { r: DiscountRule; amount: number } | null = null;
-  for (const r of person) {
-    const heads = r.appliesTo === "all" ? attendees : r.appliesTo === "second" ? Math.min(1, attendees - 1) : attendees - 1;
-    const amount = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + off(r, i.price), 0) * Math.max(0, heads);
-    if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount };
-  }
-  if (bestPerson) {
-    lines.push({ name: bestPerson.r.name || ruleSummary(bestPerson.r), amount: bestPerson.amount, scope: scopeOf(bestPerson.r) });
-    running -= bestPerson.amount;
-  }
-
-  // A rule limited to certain tickets may only discount those tickets' share
-  // of the basket — not the whole thing.
-  const shareOf = (r: DiscountRule) => {
-    if (r.passNames.length === 0) return 1;
-    const covered = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.price, 0) * attendees;
-    return gross > 0 ? covered / gross : 0;
-  };
-
-  // 2) Multi-session — on the already-reduced total, counting only the
-  //    sessions on tickets this rule covers.
-  const session = live.filter((r) => {
-    if (r.kind !== "session") return false;
-    const sessions = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.days, 0) * attendees;
-    return sessions > r.moreThan;
-  });
-  let bestSession: { r: DiscountRule; amount: number } | null = null;
-  for (const r of session) {
-    const amount = off(r, running * shareOf(r));
-    if (amount > 0 && (!bestSession || amount > bestSession.amount)) bestSession = { r, amount };
-  }
-  if (bestSession) {
-    lines.push({ name: bestSession.r.name || ruleSummary(bestSession.r), amount: bestSession.amount, scope: scopeOf(bestSession.r) });
-    running -= bestSession.amount;
-  }
-
-  // 3) Early bird.
-  const early = live.filter((r) => r.kind === "early" && r.beforeDate && today <= r.beforeDate);
-  let bestEarly: { r: DiscountRule; amount: number } | null = null;
-  for (const r of early) {
-    const amount = off(r, running * shareOf(r));
-    if (amount > 0 && (!bestEarly || amount > bestEarly.amount)) bestEarly = { r, amount };
-  }
-  if (bestEarly) {
-    lines.push({ name: bestEarly.r.name || ruleSummary(bestEarly.r), amount: bestEarly.amount, scope: scopeOf(bestEarly.r) });
-    running -= bestEarly.amount;
-  }
-
-  return { lines, total: Math.max(0, Math.round(running * 100) / 100) };
-}
+// The engine lives in ./discounts — shared verbatim with the server, which
+// prices every parent booking with it. Re-exported so existing imports hold.
+export { applyDiscounts, emptyRule, ruleSummary } from "./discounts";
+export type { DiscountKind, DiscountLine, DiscountRule } from "./discounts";
+import { applyDiscounts, emptyRule, ruleSummary, type DiscountKind, type DiscountRule } from "./discounts";
 
 // Every heading a parent sees, so the operator can reword all of them.
 // `about` falls back to the editable "Section title" from step 2.
@@ -525,6 +411,106 @@ export function listingRunsOn(draft: WizardDraft, iso: string): boolean {
   return genDates(draft.runFrom, draft.runTo, draft.days).includes(iso) && !(draft.datesOff || []).includes(iso);
 }
 
+// Swap any data-URL images for uploaded ones (POST /api/uploads → URL).
+// Already-uploaded images pass through untouched, so re-saving is free.
+async function uploadImages(arr: ListingImage[]): Promise<ListingImage[]> {
+  return Promise.all(
+    (arr ?? []).map(async (im) =>
+      im.src.startsWith("data:")
+        ? { ...im, src: (await apiPost<{ url: string }>("/api/uploads", { dataUrl: im.src })).url }
+        : im,
+    ),
+  );
+}
+
+// ── Server-persisted listings ──────────────────────────────────────────────
+// GET /api/listings/:id returns the draft fields verbatim plus everything the
+// customer page needs resolved server-side: dated blocks, the block bundle's
+// prices/timings, and the slice of the tenant library the listing references.
+export interface ServerListing extends Omit<Partial<WizardDraft>, "id"> {
+  id: string;
+  name: string;
+  tenantName?: string;
+  passes: { name: string; price: number; days?: number }[];
+  blocks?: { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean }[];
+  bundle?: {
+    id: string;
+    name: string;
+    passes: { id: string; name: string; days: number; price: number }[];
+    timings: Record<string, number>;
+    periods: { id: string; title: string; start: string; finish: string }[];
+  } | null;
+  library?: {
+    venue: { id: string; name: string; address: string } | null;
+    addons: LocalState["addons"];
+    staff: LocalState["staff"];
+    categories: { id: string; name: string }[];
+  } | null;
+}
+
+/** A server listing doc → the WizardDraft shape everything here renders. */
+export function draftFromListing(l: ServerListing): WizardDraft {
+  const norm = (arr: unknown) =>
+    ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
+  return {
+    ...emptyDraft(),
+    ...l,
+    id: l.id,
+    title: (l.title ?? l.name) || "",
+    images: norm(l.images),
+    gallery: norm(l.gallery),
+    bookRules: l.bookRules ?? {},
+    ticketOverrides: l.ticketOverrides ?? {},
+  };
+}
+
+/** Booking model from the server's resolved bundle (parents can't read the
+ * operator blocks-builder endpoints — /:id embeds everything they need). */
+export function bookingFromBundle(bundle: ServerListing["bundle"]): BlockBooking | null {
+  if (!bundle || !bundle.passes.length) return null;
+  const passes: BookPass[] = bundle.passes.map((p) => ({ id: p.id, name: p.name, days: p.days, basePrice: p.price }));
+  const periods: BookPeriod[] = [...bundle.periods]
+    .sort((a, b) => pHours(b) - pHours(a))
+    .map((p) => ({ id: p.id, title: p.title, start: p.start, finish: p.finish, range: `${to12h(p.start)}–${to12h(p.finish)}` }));
+  const priceFor = (passId: string, periodId: string | null) => {
+    const base = passes.find((p) => p.id === passId)?.basePrice ?? 0;
+    if (!periodId) return base;
+    return bundle.timings[`${passId}_${periodId}`] ?? base;
+  };
+  return { passes, periods, priceFor };
+}
+
+/** The customer page a PARENT sees — rendered purely from the API's
+ * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
+ * "Preview as a parent" (same ParentPreview component, same data shape). */
+export function CustomerPage({ listing }: { listing: ServerListing }) {
+  const d = draftFromListing(listing);
+  const lib = listing.library;
+  const local: LocalState = {
+    categories: lib?.categories ?? [],
+    venues: lib?.venue ? [lib.venue] : [],
+    provided: [],
+    safety: [],
+    send: [],
+    outcomes: [],
+    addons: lib?.addons ?? [],
+    staff: lib?.staff ?? [],
+    emojis: {},
+  };
+  return (
+    <ParentPreview
+      d={d}
+      venue={lib?.venue ?? null}
+      local={local}
+      booking={bookingFromBundle(listing.bundle)}
+      addons={lib?.addons ?? []}
+      theme={d.pageStyle ?? "playful"}
+      brand={listing.tenantName}
+      full
+    />
+  );
+}
+
 // Standalone customer-page preview (for the "View" action on the Listings tab).
 export function ListingPreview({ draft, local }: { draft: WizardDraft; local: LocalState }) {
   const blocks = useBlocks();
@@ -632,11 +618,18 @@ export function ListingWizard({
     setMsg(null);
     try {
       const passes = tickets.length ? tickets.map((t) => ({ name: t.name, price: t.price })) : [{ name: "Standard", price: 0 }];
-      const body = { name: d.title.trim() || "Untitled listing", passes };
-      let id = d.id;
+      // Images go to POST /api/uploads first — the listing doc stores URLs
+      // only (the server rejects data URLs; Firestore caps docs at 1MB).
+      const images = await uploadImages(d.images);
+      const gallery = await uploadImages(d.gallery);
+      // The WHOLE draft persists server-side — the listing doc IS the draft,
+      // so the customer page renders identically on any machine.
+      const { id: draftId, ...draftBody } = { ...d, images, gallery };
+      const body = { ...draftBody, status, name: d.title.trim() || "Untitled listing", passes };
+      let id = draftId;
       if (id) await api(`/api/listings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
       else id = (await apiPost<{ id: string }>("/api/listings", body)).id;
-      const next = { ...d, id, status };
+      const next = { ...d, images, gallery, id, status };
       setD(next);
       saveDraft(id!, next);
       setBusy(false);
@@ -2385,10 +2378,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, surf }: BookVi
   );
 }
 
-function ParentPreview({ d, venue, local, booking, addons, full, theme = "playful", onTheme }: {
+function ParentPreview({ d, venue, local, booking, addons, full, theme = "playful", onTheme, brand }: {
   d: WizardDraft; venue: Venue | null; local: LocalState;
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
+  /** The provider's brand in the page header. Defaults to the signed-in
+   * account (right for the operator's own preview, wrong for a parent). */
+  brand?: string;
 }) {
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
   const imgs = d.images;
@@ -2409,7 +2405,7 @@ function ParentPreview({ d, venue, local, booking, addons, full, theme = "playfu
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} theme={theme} />;
   const opens = useOpensAt(d.opensAt);
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, brand: brand ?? myBrand() };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -2441,6 +2437,7 @@ interface PageProps {
   /** Set once in Locations, not per listing. */
   whereHead: { eyebrow: string; title: string };
   opens: { locked: boolean; countdown: string; opensLabel: string };
+  brand: string;
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // Dark surfaces for the Sport-style pages — swappable so the same design can be
@@ -2499,7 +2496,7 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary }: PageProps) {
+function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
   const chip = (o: string, fb: string, i: number) => (
@@ -2514,7 +2511,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   return (
     <div className="overflow-hidden rounded-[26px] border border-[#e8edf7]" style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? "0 40px 90px -60px rgba(30,50,90,.4)" : undefined }}>
       <div className="flex items-center justify-between bg-white px-6 py-4">
-        <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{myBrand()}</span>
+        <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{brand}</span>
         <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
       </div>
       <div className={full ? "p-6 lg:p-7" : "p-5"}>
@@ -2644,7 +2641,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         {/* footer */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl px-6 py-5" style={{ background: DEEP, color: "#cdd8f0" }}>
-          <div className="text-[17px] font-extrabold text-white">{myBrand()}</div>
+          <div className="text-[17px] font-extrabold text-white">{brand}</div>
           <div className="text-[11px] opacity-70">Bookings powered by ActivityOS</div>
         </div>
       </div>
@@ -2653,7 +2650,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
@@ -2664,7 +2661,7 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
   return (
     <div className="overflow-hidden rounded-[18px] border" style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: LINEs }}>
-        <span className={`text-[18px] font-black ${cond}`}>{myBrand()}</span>
+        <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
         <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
@@ -2858,7 +2855,7 @@ function SportPage({ d, venue, whereHead, opens, staffNames, cats, heroCat, town
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-5 text-[12px]" style={{ borderColor: LINEs, color: MUTs }}>
-        <span className={`font-black ${cond} text-white`}>{myBrand()}</span>
+        <span className={`font-black ${cond} text-white`}>{brand}</span>
         <span>Bookings powered by ActivityOS</span>
       </div>
     </div>

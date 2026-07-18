@@ -7,7 +7,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { VenueMap } from "./VenueMap";
-import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, setDraftVisibility, getDraftArchived, setDraftArchived, copyDraft, type WizardDraft } from "./ListingWizard";
+import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -21,16 +21,11 @@ import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, Croppe
 // live parent preview is PHASE B.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface Ticket {
-  name: string;
-  price: number;
-}
-interface Listing {
-  id: string;
-  name: string;
-  passes: Ticket[];
-  blocks?: { id: string; name: string; spotsLeft: number; capacity: number; open: boolean }[];
-}
+// A listing from the API now carries the whole wizard draft (the server
+// persists it verbatim) plus the joined blocks. Older docs may predate that —
+// `serverDraft` returns null for those and localStorage remains the fallback.
+type Listing = ServerListing;
+const serverDraft = (l: Listing): WizardDraft | null => (l.title != null ? draftFromListing(l) : null);
 interface Category {
   id: string;
   name: string;
@@ -171,6 +166,20 @@ function saveLocal(s: LocalState) {
 
 type Tab = "listings" | "categories" | "locations";
 
+// The library lives server-side now (PUT /api/library — shared across the
+// tenant's machines and embedded into the parent's customer page). Add-on
+// images upload first so the library stores URLs, not data URLs.
+async function putLibrary(s: LocalState): Promise<void> {
+  const addons = await Promise.all(
+    s.addons.map(async (a) =>
+      a.image?.startsWith("data:")
+        ? { ...a, image: (await apiPost<{ url: string }>("/api/uploads", { dataUrl: a.image })).url }
+        : a,
+    ),
+  );
+  await api("/api/library", { method: "PUT", body: JSON.stringify({ ...s, addons }) });
+}
+
 function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
   const jump = "font-bold text-[var(--brand-ink,#1d3a8f)] underline underline-offset-2";
   return (
@@ -259,16 +268,46 @@ export function FreelancerListingsApp() {
     void refresh();
   }, [refresh]);
   useRealtime(["listings", "blocks"], refresh);
+  // Library: server first (shared across machines), localStorage as the
+  // offline cache. A tenant with no server library yet gets this browser's
+  // local one (or the seed) migrated up automatically.
+  const libDirty = useRef(false);
+  const libTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocal(loadLocal());
+    let alive = true;
+    apiGet<Partial<LocalState> | null>("/api/library")
+      .then((lib) => {
+        if (!alive) return;
+        if (lib) setLocal({ ...seedLocal(), ...lib });
+        else {
+          const start = loadLocal();
+          setLocal(start);
+          void putLibrary(start).catch(() => {});
+        }
+      })
+      .catch(() => {
+        if (alive) setLocal(loadLocal());
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
   useEffect(() => {
-    if (local) saveLocal(local);
+    if (!local) return;
+    saveLocal(local);
+    if (!libDirty.current) return;
+    libDirty.current = false;
+    // Debounced — typing in the categories/venues managers shouldn't PUT
+    // per keystroke.
+    if (libTimer.current) clearTimeout(libTimer.current);
+    libTimer.current = setTimeout(() => void putLibrary(local).catch(() => {}), 800);
   }, [local]);
+  useEffect(() => () => { if (libTimer.current) clearTimeout(libTimer.current); }, []);
 
-  const patchLocal = (fn: (s: LocalState) => LocalState) =>
+  const patchLocal = (fn: (s: LocalState) => LocalState) => {
+    libDirty.current = true;
     setLocal((prev) => (prev ? fn(prev) : prev));
+  };
 
   if (!listings || !local)
     return (
@@ -368,13 +407,18 @@ export function FreelancerListingsApp() {
           drafts={drafts}
           local={local}
           onEdit={(l) => {
-            const saved = loadDrafts()[l.id];
+            const saved = serverDraft(l) ?? loadDrafts()[l.id];
             setWizard({ draft: saved ?? { ...emptyDraft(), id: l.id, title: l.name }, key: l.id });
           }}
           onResume={(key, dr) => setWizard({ draft: dr, key })}
           onDeleteDraft={(key) => { if (confirm("Delete this draft?")) { deleteDraft(key); setTick((t) => t + 1); } }}
-          onView={(l) => setViewing(loadDrafts()[l.id] ?? { ...emptyDraft(), id: l.id, title: l.name })}
-          onSetVisibility={(l, vis) => { setDraftVisibility(l.id, vis); setTick((t) => t + 1); }}
+          onView={(l) => setViewing(serverDraft(l) ?? loadDrafts()[l.id] ?? { ...emptyDraft(), id: l.id, title: l.name })}
+          onSetVisibility={(l, vis) => {
+            api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ visibility: vis }) })
+              .then(() => refresh())
+              .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t change visibility"));
+            setTick((t) => t + 1);
+          }}
           visTick={tick}
           onError={setError}
           refresh={refresh}
@@ -502,7 +546,13 @@ function ListingsTab({
   const bookedCount = (l: Listing) => (l.blocks ?? []).reduce((s, b) => s + Math.max(0, b.capacity - b.spotsLeft), 0);
   async function duplicate(l: Listing) {
     try {
-      const created = await apiPost<{ id: string }>("/api/listings", { name: `${l.name} (copy)`, passes: l.passes });
+      // Copy the full server draft when there is one (the server strips
+      // read-only fields like tenantId/blocks); legacy docs copy name+passes.
+      const dr = serverDraft(l);
+      const body = dr
+        ? { ...dr, id: undefined, title: `${l.name} (copy)`, name: `${l.name} (copy)`, status: "draft", archived: false, passes: l.passes }
+        : { name: `${l.name} (copy)`, passes: l.passes };
+      const created = await apiPost<{ id: string }>("/api/listings", body);
       copyDraft(l.id, created.id, { title: `${l.name} (copy)`, archived: false });
       refresh();
       setArchiveTick((t) => t + 1);
@@ -526,7 +576,12 @@ function ListingsTab({
       onError(e instanceof Error ? e.message : "Delete failed");
     }
   }
-  const archive = (l: Listing, v: boolean) => { setDraftArchived(l.id, v); setArchiveTick((t) => t + 1); };
+  const archive = (l: Listing, v: boolean) => {
+    api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ archived: v }) })
+      .then(() => refresh())
+      .catch((e) => onError(e instanceof Error ? e.message : "Archive failed"));
+    setArchiveTick((t) => t + 1);
+  };
   const copyLink = (l: Listing) => {
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
     navigator.clipboard?.writeText(link).then(() => { setCopiedId(l.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {});
@@ -537,7 +592,7 @@ function ListingsTab({
   const query = q.trim().toLowerCase();
   const allDrafts = loadDrafts();
   const rows = listings.map((l) => {
-    const dr = allDrafts[l.id];
+    const dr = serverDraft(l) ?? allDrafts[l.id];
     const info = dr ? listingRowInfo(dr) : null;
     const apiBlocks = l.blocks ?? [];
     const cap = apiBlocks.length ? apiBlocks.reduce((s2, b) => s2 + b.capacity, 0) : info?.capacity ?? null;
@@ -555,7 +610,7 @@ function ListingsTab({
       start: info?.from || "",
       end: info?.to || "",
       isLive: info ? info.live : true,
-      archived: getDraftArchived(l.id),
+      archived: l.archived ?? getDraftArchived(l.id),
     };
   });
 
@@ -586,7 +641,8 @@ function ListingsTab({
         default: return byDate(a.start, b.start, 1);
       }
     });
-  const archivedList = listings.filter((l) => getDraftArchived(l.id));
+  const archivedList = listings.filter((l) => l.archived ?? getDraftArchived(l.id));
+  const visibilityOf = (l: Listing) => l.visibility ?? getDraftVisibility(l.id);
 
   // Offer the whole library, not just what's already in use — an operator
   // looking for "Northampton" shouldn't have to know whether anything is
@@ -750,16 +806,16 @@ function ListingsTab({
                   <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
                     <span key={visTick} className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11px] font-semibold">
                       {(["public", "hidden"] as const).map((v) => {
-                        const on = getDraftVisibility(l.id) === v;
+                        const on = visibilityOf(l) === v;
                         return <button key={v} type="button" onClick={() => setVisibility(l, v)} title={v === "public" ? "Listed on your booking page — parents can find and book it" : "Unlisted — off your booking page, but the direct link still books"} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? "Public" : "Hidden"}</button>;
                       })}
                     </span>
                     {visNote === l.id && (
                       <div className="order-last w-full rounded-lg border px-3 py-2 text-[11.5px] leading-[1.5]"
-                        style={getDraftVisibility(l.id) === "public"
+                        style={visibilityOf(l) === "public"
                           ? { background: "var(--brand-soft)", borderColor: "transparent", color: "var(--brand-ink)" }
                           : { background: "#fff7ed", borderColor: "#fed7aa", color: "#9a3412" }}>
-                        {getDraftVisibility(l.id) === "public" ? (
+                        {visibilityOf(l) === "public" ? (
                           <><b>Public</b> — listed on your booking page. Any parent can find it, see the prices and book a place.</>
                         ) : (
                           <><b>Hidden</b> — not listed on your booking page, so parents can&rsquo;t find it by browsing. Anyone you send the <b>🔗 Link</b> to can still book as normal — handy for a private group, a school, or returning families.</>
