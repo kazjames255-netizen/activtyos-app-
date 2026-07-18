@@ -278,14 +278,21 @@ my.post("/bookings", async (req, res) => {
     const c = p.item.child.trim();
     byChild.set(c, [...(byChild.get(c) ?? ""), lineKey(p)].sort().join("~"));
   }
-  const uniform = new Set(byChild.values()).size === 1;
-  const engineLines = uniform
-    ? [...new Map(priced.map((p) => [lineKey(p), p])).values()]
-    : priced;
+  // Multi-person rules are decided per line now, so the basket no longer has to
+  // be uniform for them to apply — two children on the same week earn the
+  // sibling discount even if one of them skips another week entirely. Group the
+  // priced lines and tell the engine how many children are on each.
+  const grouped = new Map<string, { pass: string; base: number; days: number; heads: number }>();
+  for (const p of priced) {
+    const key = lineKey(p);
+    const g = grouped.get(key);
+    if (g) g.heads += 1;
+    else grouped.set(key, { pass: p.item.pass, base: p.base, days: p.days.length, heads: 1 });
+  }
   const { total: discounted } = applyDiscounts(
     listing.discounts ?? [],
-    engineLines.map((p) => ({ name: p.item.pass, price: p.base, days: p.days.length })),
-    uniform ? attendees : 1,
+    [...grouped.values()].map((g) => ({ name: g.pass, price: g.base, days: g.days, heads: g.heads })),
+    attendees,
   );
   const passGross = round2(priced.reduce((s, p) => s + p.base, 0));
   const discountOff = Math.max(0, round2(passGross - discounted));

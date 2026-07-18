@@ -2088,19 +2088,15 @@ function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: nu
   const priceOf = (x: BasketItem) => priceEdit[x.id] ?? x.price;
   const headsOn = (x: BasketItem) => (parentMode ? childrenOn(x.id).length : attendees);
   // Priced per child per line, so a second child doubles that line.
+  // Priced per child per line, so a second child doubles that line — and the
+  // engine now sees those head counts, so a sibling discount lands only where
+  // children are genuinely on the same pass.
   const subtotal = basket.reduce((s, x) => s + priceOf(x) * headsOn(x), 0);
-  const assumed = basket.reduce((s, x) => s + priceOf(x), 0) * attendees;
-  const raw = applyDiscounts(
+  const { lines: discountLines, total } = applyDiscounts(
     d.discounts ?? [],
-    basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length })),
+    basket.map((x) => ({ name: x.name, price: priceOf(x), days: x.dates.length, heads: headsOn(x) })),
     attendees,
   );
-  // The engine (shared with the server) assumes every child is on every pass.
-  // That's the usual case; where it isn't, scale the discount to the gross
-  // actually being charged rather than change a contract the server relies on.
-  const factor = assumed > 0 ? subtotal / assumed : 1;
-  const discountLines = raw.lines.map((l) => ({ ...l, amount: Math.round(l.amount * factor * 100) / 100 }));
-  const total = Math.max(0, Math.round((subtotal - discountLines.reduce((s, l) => s + l.amount, 0)) * 100) / 100);
   const saved = Math.max(0, Math.round((subtotal - total) * 100) / 100);
   // "21st, 22nd, 23rd, 24th August" — grouped by month so the month isn't
   // repeated, and readable on the row itself rather than hidden in a tooltip.

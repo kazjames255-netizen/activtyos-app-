@@ -67,11 +67,18 @@ export interface DiscountLine { name: string; amount: number; scope: string }
  */
 export function applyDiscounts(
   rules: DiscountRule[],
-  items: { name: string; price: number; days: number }[],
+  /**
+   * One entry per thing being bought. `heads` is how many children are on it —
+   * a multi-person rule only applies where children are on the SAME line,
+   * because that's what a sibling discount is for. Omit it and every item is
+   * assumed to carry `attendees`, which is the old behaviour.
+   */
+  items: { name: string; price: number; days: number; heads?: number }[],
   attendees: number,
   today = new Date().toISOString().slice(0, 10),
 ): { lines: DiscountLine[]; total: number } {
-  const gross = items.reduce((s, i) => s + i.price, 0) * attendees;
+  const headsOf = (i: { heads?: number }) => Math.max(0, i.heads ?? attendees);
+  const gross = items.reduce((s, i) => s + i.price * headsOf(i), 0);
   if (!items.length) return { lines: [], total: 0 };
   const live = rules.filter((r) => r.enabled);
   const covers = (r: DiscountRule, n: string) => r.passNames.length === 0 || r.passNames.includes(n);
@@ -83,11 +90,16 @@ export function applyDiscounts(
   let running = gross;
 
   // 1) Multi-person — priced per discounted attendee, per covered ticket.
-  const person = live.filter((r) => r.kind === "person" && attendees > r.moreThan);
+  // Judged line by line: two children on the same week earn it, one child on
+  // each of two weeks doesn't — they're never actually a pair.
+  const discountedHeads = (r: DiscountRule, n: number) =>
+    Math.max(0, r.appliesTo === "all" ? n : r.appliesTo === "second" ? Math.min(1, n - 1) : n - 1);
+  const person = live.filter((r) => r.kind === "person");
   let bestPerson: { r: DiscountRule; amount: number } | null = null;
   for (const r of person) {
-    const heads = r.appliesTo === "all" ? attendees : r.appliesTo === "second" ? Math.min(1, attendees - 1) : attendees - 1;
-    const amount = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + off(r, i.price), 0) * Math.max(0, heads);
+    const amount = items
+      .filter((i) => covers(r, i.name) && headsOf(i) > r.moreThan)
+      .reduce((s, i) => s + off(r, i.price) * discountedHeads(r, headsOf(i)), 0);
     if (amount > 0 && (!bestPerson || amount > bestPerson.amount)) bestPerson = { r, amount };
   }
   if (bestPerson) {
@@ -99,7 +111,7 @@ export function applyDiscounts(
   // of the basket — not the whole thing.
   const shareOf = (r: DiscountRule) => {
     if (r.passNames.length === 0) return 1;
-    const covered = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.price, 0) * attendees;
+    const covered = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.price * headsOf(i), 0);
     return gross > 0 ? covered / gross : 0;
   };
 
@@ -107,7 +119,7 @@ export function applyDiscounts(
   //    sessions on tickets this rule covers.
   const session = live.filter((r) => {
     if (r.kind !== "session") return false;
-    const sessions = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.days, 0) * attendees;
+    const sessions = items.filter((i) => covers(r, i.name)).reduce((s, i) => s + i.days * headsOf(i), 0);
     return sessions > r.moreThan;
   });
   let bestSession: { r: DiscountRule; amount: number } | null = null;
