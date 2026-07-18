@@ -3,6 +3,7 @@ import type { PortalKey } from "./nav/config";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
+import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
@@ -35,7 +36,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   },
   freelancer: {
     bookings: BookingsApp,
-    listings: ListingsApp,
+    listings: FreelancerListingsApp,
     blocks: BlocksApp,
     timetable: TimetableApp,
   },
