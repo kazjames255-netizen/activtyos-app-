@@ -735,3 +735,8 @@ as well as `periodId`. ⚠️ One line needed on your side: include
 `timing: item.timing` in the POST items, or every timing books at the
 base pass price — the preview showed a timed price while the server
 charged the untimed one.
+
+**Update — done for you (same day):** your basket now carries `periodId`
+(the label in `timing` stays display-only) and the checkout POST includes
+it, so the server prices the chosen timing exactly as your preview shows.
+Nothing left on your side for this one.

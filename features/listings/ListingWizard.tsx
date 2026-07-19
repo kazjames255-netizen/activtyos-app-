@@ -566,7 +566,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       );
       // One line per child per pass, holding only the days that child is on —
       // a family where one sibling skips Wednesday is two different bookings.
-      type Line = { blockId: string; pass: string; dates: string[]; child: string; itemId: string };
+      type Line = { blockId: string; pass: string; dates: string[]; child: string; itemId: string; periodId?: string };
       const lines: Line[] = [];
       for (const item of basket) {
         const perChild = new Map<string, string[]>();
@@ -578,7 +578,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
         for (const [child, dates] of perChild) {
           const blk = blockOn(listing.blocks, dates[0]);
           if (!blk) throw new Error("Those dates aren't open for booking any more.");
-          lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id });
+          lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId });
         }
       }
       if (!lines.length) throw new Error("Nobody is on any of these days yet.");
@@ -595,7 +595,8 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
             // That child's own extras on that line, with the days they picked.
             const sel = addonSel[`${l.itemId}|${l.child}`] ?? {};
             const addons = Object.entries(sel).map(([id, days]) => ({ id, ...(days[0] === "*" ? {} : { days }) }));
-            return { pass: l.pass, dates: l.dates, child: l.child, ...(addons.length ? { addons } : {}) };
+            // periodId makes the server price the chosen timing, not the base pass.
+            return { pass: l.pass, dates: l.dates, child: l.child, ...(l.periodId ? { periodId: l.periodId } : {}), ...(addons.length ? { addons } : {}) };
           }),
         });
         refs.push(...res.bookings.map((x) => x.ref));
