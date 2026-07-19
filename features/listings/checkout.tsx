@@ -12,26 +12,29 @@
 // right.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { get as apiGet, api } from "@/lib/api";
-import { money } from "@/features/bookings/helpers";
+import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
+import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
 import type { WizardDraft } from "./ListingWizard";
 
+export type ParentRow = { id: string; name: string; email?: string; children?: ChildProfile[] };
+
 export function useParents(skip = false) {
-  const [list, setList] = useState<{ id: string; name: string; email?: string }[]>([]);
+  const [list, setList] = useState<ParentRow[]>([]);
   // Derived, not set in the effect: a parent never has an address book to load.
   const [state, setState] = useState<"loading" | "ready" | "error">(skip ? "ready" : "loading");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (skip) return; // parents can't read /api/customers, and shouldn't
     let alive = true;
-    apiGet<{ id: string; name?: string; email?: string }[]>("/api/customers")
+    apiGet<{ id: string; name?: string; email?: string; children?: ChildProfile[] }[]>("/api/customers")
       .then((cs) => {
         if (!alive) return;
-        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email })));
+        setList(cs.map((c) => ({ id: c.id, name: c.name || c.email || "Unnamed", email: c.email, children: c.children ?? [] })));
         setState("ready");
       })
       // An empty address book and a failed request look identical otherwise.
@@ -46,6 +49,8 @@ export function useParents(skip = false) {
   }, [skip]);
   return { list, state, error };
 }
+export type CkStage = "parent" | "who" | "extras" | "pay";
+
 export type CkTheme = {
   bg: string; line: string; ink: string; muted: string;
   accent: string; accentInk: string; round: string; inputBg: string;
@@ -55,9 +60,16 @@ export type CkTheme = {
 export type ChildProfile = {
   id?: string; name: string; dob?: string;
   allergies?: string; medical?: string; likes?: string; dislikes?: string;
+  /** SEND / additional needs, in the parent's words. */
+  send?: string;
+  /** An EHCP or SEND plan: the id of the uploaded file and the name it came in
+   *  under. The bytes live in storage, not here. Only offered once they've
+   *  said there are needs — an upload box on its own asks a question the
+   *  parent hasn't been asked yet. */
+  sendPlanId?: string; sendPlanName?: string;
   photoConsent?: boolean;
-  /** Colours the child's chip so a list of saved names is scannable. Optional
-   *  — a child who doesn't fit either gets the neutral chip, not a demand. */
+  /** Required when adding a child; optional on the type because children saved
+   *  before this was asked for don't have one. Those keep the neutral chip. */
   sex?: "boy" | "girl";
 };
 
@@ -97,8 +109,25 @@ export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
   if (Number.isFinite(to) && age > to) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
   return null;
 }
-export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAdded }: {
+/** Going back was a faint line of underlined text; at every stage it is now a
+ *  button that looks like one, so the way out is as findable as the way on. */
+function BackBtn({ tk, onClick, children, className = "" }: {
+  tk: CkTheme; onClick: () => void; children: React.ReactNode; className?: string;
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`inline-flex items-center gap-1.5 border-2 px-3.5 py-2 text-[12.5px] font-extrabold ${tk.round} ${className}`}
+      style={{ borderColor: `${tk.muted}80`, color: tk.ink, background: "transparent" }}>
+      <span aria-hidden>←</span>{children}
+    </button>
+  );
+}
+export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAdded, canSave = true }: {
   d: WizardDraft; tk: CkTheme;
+  /** False for an operator: these are someone else's children, and
+   *  /api/my/children is the operator's own family. Edits stay on the booking
+   *  until there's an endpoint for writing to a customer's record. */
+  canSave?: boolean;
   saved: ChildProfile[];
   roster: ChildProfile[];
   setRoster: (c: ChildProfile[]) => void;
@@ -112,22 +141,41 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState<ChildProfile>({ name: "", photoConsent: false });
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
-  const inp = `w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`;
-  const inpStyle = { background: tk.inputBg, borderColor: tk.line, color: tk.ink };
+  const inp = `aos-in w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`;
+  // tk.line is a hairline meant for dividers; on the dark themes it left the
+  // fields with no visible edge at all.
+  const inpStyle = { background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink };
   const problem = draft.name.trim() ? ageProblem(d, draft) : null;
+  // Name, date of birth and boy/girl are required: the age gate can't judge a
+  // booking without a birthday, and registers are drawn up from both. All of
+  // them at once, not the first — being sent back three times running for one
+  // more field each time is the worst version of this.
+  const missing = [
+    !draft.name.trim() && "their name",
+    !draft.dob && "their date of birth",
+    !draft.sex && "boy or girl",
+  ].filter(Boolean) as string[];
+  // The button stays live and answers when pressed. A dead button tells you
+  // nothing about why it is dead.
+  const [tried, setTried] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const planRef = useRef<HTMLInputElement>(null);
+  const [planPct, setPlanPct] = useState<number | null>(null);
+  const flag = (bad: boolean) => (tried && bad ? { borderColor: "#f87171", boxShadow: "0 0 0 1px #f87171" } : null);
 
   const add = () => {
-    if (!draft.name.trim() || problem) return;
+    if (missing.length || problem) { setTried(true); return; }
     if (editing !== null) {
       setRoster(roster.map((c, i) => (i === editing ? draft : c)));
       // Keep their saved profile in step with the edit, when there is one.
-      if (draft.id) void api(`/api/my/children/${encodeURIComponent(draft.id)}`, { method: "PUT", body: JSON.stringify(draft) }).catch(() => {});
+      if (canSave && draft.id) void api(`/api/my/children/${encodeURIComponent(draft.id)}`, { method: "PUT", body: JSON.stringify(draft) }).catch(() => {});
     } else {
       onAdded(draft.name.trim());
       setRoster([...roster, draft]);
     }
     setDraft({ name: "", photoConsent: false });
     setEditing(null);
+    setTried(false);
     setOpen(false);
   };
 
@@ -214,31 +262,102 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
           <div className="flex flex-wrap gap-2">
             <div className="min-w-[150px] flex-1">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Child&rsquo;s name</div>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className={inp} style={inpStyle} />
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Child&rsquo;s name <span style={{ color: "#f87171" }}>*</span></div>
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
             </div>
             <div className="w-[150px]">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Date of birth</div>
-              <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })} className={inp} style={inpStyle} />
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Date of birth <span style={{ color: "#f87171" }}>*</span></div>
+              <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })}
+                className={inp} style={{ ...inpStyle, ...flag(!draft.dob) }} />
             </div>
           </div>
 
           {problem && (
-            <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{problem}</div>
+            <div className={`mt-2 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
+              style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>{problem}</div>
           )}
 
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Allergies <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Allergies <span className="font-normal">— optional</span></div>
             <input value={draft.allergies ?? ""} onChange={(e) => setDraft({ ...draft, allergies: e.target.value })}
               placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Medical <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Medical <span className="font-normal">— optional</span></div>
             <input value={draft.medical ?? ""} onChange={(e) => setDraft({ ...draft, medical: e.target.value })}
               placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.muted }}>Likes &amp; dislikes <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>SEND / additional needs <span className="font-normal">— optional</span></div>
+            <input value={draft.send ?? ""} onChange={(e) => setDraft({ ...draft, send: e.target.value })}
+              placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
+            {/* The upload only appears once they've told us there's something
+                to support — asking for a plan before that is asking twice. */}
+            {!!draft.send?.trim() && (
+              <div className={`mt-2 border border-dashed p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}4d` }}>
+                <div className="text-[11px] font-bold" style={{ color: tk.ink }}>
+                  SEND or EHCP plan <span className="font-normal">— optional</span>
+                </div>
+                <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+                  If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
+                </div>
+                {draft.sendPlanId ? (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold" style={{ color: tk.ink }}>
+                      📎 {draft.sendPlanName ?? "Plan attached"}
+                    </span>
+                    <button type="button" onClick={() => setDraft({ ...draft, sendPlanId: undefined, sendPlanName: undefined })}
+                      className="text-[11px] font-bold" style={{ color: tk.muted }}>Remove</button>
+                  </div>
+                ) : planPct !== null ? (
+                  <div className="mt-2">
+                    <div className="text-[11.5px] font-bold" style={{ color: tk.ink }}>Uploading… {Math.round(planPct * 100)}%</div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ background: `${tk.ink}26` }}>
+                      <div className="h-full rounded-full" style={{ width: `${planPct * 100}%`, background: tk.accent }} />
+                    </div>
+                  </div>
+                ) : (
+                  // The bare file input rendered as the browser's own grey
+                  // "Choose File / No file chosen", which reads as a disabled
+                  // label rather than something to press.
+                  <button type="button" onClick={() => planRef.current?.click()}
+                    className={`mt-2 flex w-full items-center justify-center gap-2 border-2 px-3 py-2.5 text-[12.5px] font-extrabold ${tk.round}`}
+                    style={{ borderColor: tk.accent, color: tk.accent, background: "transparent" }}>
+                    <span aria-hidden>📎</span> Choose a file to upload
+                  </button>
+                )}
+                {!draft.sendPlanId && (
+                  <input ref={planRef} type="file" accept="application/pdf,image/*" className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f) return;
+                      if (f.size > PLAN_MAX_BYTES) {
+                        setPlanError(`${f.name} is ${Math.round(f.size / 1_000_000)}MB — the limit is ${PLAN_MAX_BYTES / 1_000_000}MB.`);
+                        return;
+                      }
+                      setPlanError(null);
+                      setPlanPct(0);
+                      try {
+                        const ref = await uploadPlan(f, setPlanPct);
+                        setDraft({ ...draft, sendPlanId: ref.id, sendPlanName: ref.name });
+                      } catch (err) {
+                        setPlanError(err instanceof Error ? err.message : "That upload didn't finish — try again.");
+                      } finally {
+                        setPlanPct(null);
+                      }
+                    }} />
+                )}
+                {planError && (
+                  <div className="mt-1.5 text-[11px] font-bold" style={{ color: "#fca5a5" }}>{planError}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Likes &amp; dislikes <span className="font-normal">— optional</span></div>
             <div className="mb-1 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
               What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
             </div>
@@ -251,19 +370,21 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           </div>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Boy or girl?</span>
+            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Boy or girl? <span style={{ color: "#f87171" }}>*</span></span>
             {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => {
               const on = draft.sex === v;
               const c = sexTint(v);
               return (
                 <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
                   className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                  style={on ? { borderColor: c.border, background: c.bg, color: c.ink } : { borderColor: tk.line, color: tk.muted }}>
+                  style={on
+                    ? { borderColor: c.border, background: c.bg, color: c.ink }
+                    : { borderColor: `${tk.ink}59`, color: tk.ink, ...flag(!draft.sex) }}>
                   {l}
                 </button>
               );
             })}
-            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>Only used to colour their name in your list — leave it if you&rsquo;d rather not say.</span>
+            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>Used on the register and to colour their name in your list.</span>
           </div>
 
           <div className="mt-2.5 flex items-center gap-2">
@@ -273,15 +394,22 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 className={`border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
                 style={draft.photoConsent === v
                   ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                  : { borderColor: tk.line, color: tk.muted }}>{l as string}</button>
+                  : { borderColor: `${tk.ink}59`, color: tk.ink }}>{l as string}</button>
             ))}
           </div>
 
+          {tried && missing.length > 0 && !problem && (
+            <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
+              style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>
+              Before you can add {draft.name.trim() || "this child"}, we still need{" "}
+              {missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`}.
+            </div>
+          )}
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={add} disabled={!draft.name.trim() || !!problem}
-              className={`flex-1 py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
+            <button type="button" onClick={add}
+              className={`flex-1 py-2 text-[12.5px] font-extrabold ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? "Save details" : "Add child"}</button>
-            <button type="button" onClick={() => { setOpen(false); setEditing(null); setDraft({ name: "", photoConsent: false }); }}
+            <button type="button" onClick={() => { setOpen(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
               className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
           </div>
         </div>
@@ -292,16 +420,19 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
   booking?: { busy: boolean; error: string | null };
 }) {
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
-  const [method, setMethod] = useState("card");
+  const [method, setMethod] = useState<string>(parentMode ? "card" : PAY_METHODS[0]);
   // Two stages. Sorting out who's on which pass and picking everyone's lunches
   // at the same time is two jobs on one screen; the first has to be right
   // before the second even makes sense.
-  const [ckStage, setCkStage] = useState<"who" | "extras" | "pay">("who");
+  // Operators walk the same road as parents — dates, children, extras, pay —
+  // with one stage in front of it: whose booking this is. A parent already is
+  // the parent, so they start at "who".
+  const [ckStage, setCkStage] = useState<CkStage>(parentMode ? "who" : "parent");
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
   // see. Restored on the way out, including if the tab closes mid-booking.
@@ -323,7 +454,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // ref mutated inside a setState updater, which React re-runs, so a newly
   // added child could be filtered straight back out.
   const [q, setQ] = useState("");
-  const [bulk, setBulk] = useState("");
+  // A family being created on the call. Held here until there's a server route
+  // that can make the account — see §H of the backend handoff.
+  const [np, setNp] = useState({ name: "", email: "", phone: "", address: "" });
+  const npReady = np.name.trim().length > 1 && /.+@.+\..+/.test(np.email.trim()) && !!np.phone.trim() && !!np.address.trim();
   const matches = q.trim()
     ? parents.filter((p) => `${p.name} ${p.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6)
     : [];
@@ -332,6 +466,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     // Signed out this 401s, which is fine — they just type the details in.
     apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
   }, [parentMode]);
+  // An operator's "saved children" are the ones on the family they've just
+  // found, so the same one-tap row works for them too.
+  const savedFor = parentMode ? saved : (parents.find((p) => p.id === b.parent?.id)?.children ?? []);
   // Each rule's saving, broken down by the basket line that earned it.
   const savingsOn = (id: string) => {
     const i = b.basket.findIndex((x) => x.id === id);
@@ -348,7 +485,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Each child's extras are chosen separately, so the total is simply the sum
   // of what was chosen — no head-count multiplier guessing on their behalf.
   const addonTotal = b.basket.reduce((sum, item) => {
-    const kids = parentMode ? b.childrenOn(item.id) : [""];
+    const kids = b.childrenOn(item.id);
     return sum + kids.reduce((t, kid) => {
       const sel = b.addonSel[b.addonKey(item.id, kid)] ?? {};
       return t + Object.entries(sel).reduce((n, [aid, days]) => {
@@ -368,12 +505,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   //     needs somebody on it; it needn't be the same child throughout.
   // A pass is a block: a child is on all of its days or none. So the only
   // thing to check is that somebody is on each line.
-  const shortPasses = !parentMode ? [] : b.basket.filter((x) => b.childrenOn(x.id).length === 0);
+  const shortPasses = b.basket.filter((x) => b.childrenOn(x.id).length === 0);
 
   // Overlapping passes: a 5 day pass covering the 27th–31st and a 4 day pass
   // covering the 28th–31st are easy to end up with, and nobody can attend the
   // same day twice — they'd be paying for it twice.
-  const clashes = !parentMode ? [] : (() => {
+  const clashes = (() => {
     // Two sessions in one day are fine — a morning club and an afternoon one —
     // so this asks whether the times overlap, not just whether the dates match.
     const mins = (t?: string) => {
@@ -411,12 +548,37 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     return out;
   })();
   const clashesOn = (id: string) => clashes.filter((c) => c.itemIds.includes(id));
-  const unassigned = parentMode ? shortPasses.length : b.basket.filter((x) => !(b.assign[x.id] ?? "").trim()).length;
+  const unassigned = shortPasses.length;
   const label = { fontSize: 10, letterSpacing: "0.12em" } as const;
 
   // Where we are in the sequence: dates, children, one step per extra, pay.
-  const steps = parentMode ? ["Dates", "Children", ...ordered.map((_, i) => `Extra ${i + 1}`), "Pay"] : [];
-  const stepNow = ckStage === "who" ? 1 : ckStage === "extras" ? 2 + extraIdx : steps.length - 1;
+  // Each extra is named, because "Extra 2" tells a parent looking for the
+  // t-shirt nothing at all.
+  const steps = [
+    "Dates",
+    ...(parentMode ? [] : ["Parent"]),
+    "Children",
+    ...ordered.map((a) => a.name),
+    parentMode ? "Pay" : "Payment",
+  ];
+  /** Where "Children" sits — one further along for an operator. */
+  const whoAt = parentMode ? 1 : 2;
+  const stepNow = ckStage === "parent" ? 1
+    : ckStage === "who" ? whoAt
+    : ckStage === "extras" ? whoAt + 1 + extraIdx
+    : steps.length - 1;
+  // Anything already passed can be jumped straight back to. Forward is not
+  // offered: the extras depend on who is on which pass, so skipping ahead
+  // would ask a question whose answer isn't settled yet.
+  const goStep = (i: number) => {
+    if (i >= stepNow) return;
+    if (i === 0) { b.setStage("pick"); return; }
+    if (!parentMode && i === 1) { setCkStage("parent"); return; }
+    if (i === whoAt) { setCkStage("who"); return; }
+    if (i === steps.length - 1) { setCkStage("pay"); return; }
+    setExtraIdx(i - whoAt - 1);
+    setCkStage("extras");
+  };
 
   // Past the dates the checkout is the whole page, so children and their days
   // lay out across instead of down — a family of three across two weeks was a
@@ -433,23 +595,32 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         : "p-5"}
       style={{ background: tk.bg }}>
       <div className={parentMode ? "mx-auto w-full max-w-[900px]" : ""}>
-      {parentMode && steps.length > 0 && (
-        <div className="mb-3 flex items-center gap-1.5">
-          {steps.map((name, i) => (
-            <span key={name} className="flex flex-1 flex-col gap-1" title={name}>
-              <span className="h-[3px] rounded-full transition-colors"
-                style={{ background: i <= stepNow ? tk.accent : tk.line }} />
-            </span>
-          ))}
-          <span className="ml-1 flex-none text-[10.5px] font-bold" style={{ color: tk.muted }}>
-            {steps[stepNow]}
-          </span>
+      {/* The whole route, named and walkable. A single "Change lunches &
+          extras" meant a parent who wanted the t-shirt had to re-walk the
+          lunches to reach it. */}
+      {steps.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {steps.map((name, i) => {
+            const done = i < stepNow, now = i === stepNow;
+            return (
+              <button key={`${name}-${i}`} type="button" onClick={() => goStep(i)} disabled={i > stepNow}
+                title={done ? `Back to ${name.toLowerCase()}` : name}
+                className={`border-2 px-2.5 py-1 text-[11.5px] font-extrabold transition-colors ${tk.round}`}
+                style={now
+                  ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
+                  : done
+                    ? { borderColor: `${tk.ink}59`, color: tk.ink, background: "transparent", cursor: "pointer" }
+                    : { borderColor: tk.line, color: tk.muted, background: "transparent" }}>
+                {done && <span aria-hidden>← </span>}{name}
+              </button>
+            );
+          })}
         </div>
       )}
       {/* What's being booked. For a parent this is already spelled out on each
           line below — pass, dates, timing, price — so listing it again here was
           the same information twice. */}
-      {!parentMode && (
+      {!parentMode && ckStage === "pay" && (
         <div className="flex flex-col gap-2">
         {b.basket.map((x) => (
           <div key={x.id} className="flex items-start justify-between gap-3 text-[12.5px]">
@@ -477,65 +648,114 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       </div>
       )}
 
-      {/* 1 · find the parent — operators only; a parent is already themselves */}
-      {!parentMode && <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>1 · Find parent</div>}
-      {parentMode ? null : b.parent ? (
-        <div className={`mt-2 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
-          <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>{b.parent.name}</span>
+      {/* Whose booking this is — operators only; a parent is already themselves.
+          Two routes, said out loud: the family exists, or you're creating them.
+          The second needs details the operator has to ask for on the call, so
+          it says which ones before they start rather than after. */}
+      {parentMode || ckStage !== "parent" ? null : b.parent ? (
+        <div className={`mt-4 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
+          <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>
+            {b.parent.name}
+            {b.parent.id === "new" && <span className="ml-1.5 text-[11px] font-normal" style={{ color: tk.muted }}>— new account</span>}
+          </span>
           <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Change</button>
         </div>
       ) : (
         <>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
-            className={`mt-2 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-          <div className="mt-1 text-[10.5px]" style={{ color: parentsState === "error" ? "#dc2626" : tk.muted }}>
-            {parentsState === "loading"
-              ? "Loading your parents…"
-              : parentsState === "error"
-                ? `Couldn't load your parents — ${parentsError}`
-                : parents.length === 0
-                  ? "No parents registered to your account yet — type a name to book for someone new."
-                  : `${parents.length} parent${parents.length === 1 ? "" : "s"} registered`}
-          </div>
-          {q.trim() && (
-            <div className="mt-1.5 flex flex-col gap-1">
-              {matches.map((p) => (
-                <button key={p.id} type="button" onClick={() => { b.setParent(p); setQ(""); }}
-                  className={`border px-3 py-2 text-left text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
-                  <b>{p.name}</b>{p.email ? <span className="ml-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
-                </button>
-              ))}
-              {matches.length === 0 && (
-                <button type="button" onClick={() => { b.setParent({ id: "new", name: q.trim() }); setQ(""); }}
-                  className={`border border-dashed px-3 py-2 text-left text-[12px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.muted }}>
-                  {parents.length === 0 ? `No parents registered yet — book for “${q.trim()}” as a new parent` : `No match — book for “${q.trim()}” as a new parent`}
-                </button>
-              )}
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.ink }}>Whose booking is this?</div>
+
+          <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+            <div className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>1 · They&rsquo;re on your books</div>
+            <div className="mb-2 mt-0.5 text-[11.5px] leading-[1.5]" style={{ color: tk.ink }}>
+              Anyone who has booked with you before. The booking goes on the account they already
+              have, with their children ready to pick. Someone who only registered — and never
+              booked with you — won&rsquo;t be here; use option 2 and we&rsquo;ll link their account.
             </div>
-          )}
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
+              className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+            <div className="mt-1 text-[11px]" style={{ color: parentsState === "error" ? "#fca5a5" : tk.ink }}>
+              {parentsState === "loading"
+                ? "Loading your parents…"
+                : parentsState === "error"
+                  ? `Couldn't load your parents — ${parentsError}`
+                  : parents.length === 0
+                    ? "No families on your account yet — use option 2."
+                    : `${parents.length} famil${parents.length === 1 ? "y" : "ies"} on your account`}
+            </div>
+            {q.trim() && (
+              <div className="mt-1.5 flex flex-col gap-1">
+                {matches.map((p) => (
+                  <button key={p.id} type="button" onClick={() => { b.setParent(p); setQ(""); }}
+                    className={`border px-3 py-2 text-left text-[12.5px] ${tk.round}`} style={{ borderColor: tk.line, color: tk.ink }}>
+                    <b>{p.name}</b>{p.email ? <span className="ml-1.5 text-[11px]" style={{ color: tk.muted }}>{p.email}</span> : null}
+                  </button>
+                ))}
+                {matches.length === 0 && (
+                  <div className="text-[11px]" style={{ color: tk.muted }}>Nobody by that name has booked with you — use option 2 below.</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+            <div className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>2 · Anyone else</div>
+            <div className="mt-0.5 text-[11.5px] leading-[1.5]" style={{ color: tk.ink }}>
+              New to you, or registered but never booked. If that email already has an ActivityOS
+              account we&rsquo;ll use it rather than making a second; if not, they get one. Either way
+              they&rsquo;re emailed the booking, a way to set a password, and a link to pay. Ask them for:
+            </div>
+            <div className="mt-1.5 mb-2 text-[11px] leading-[1.6]" style={{ color: tk.ink }}>
+              <b>Now:</b> their name, email, phone and address.<br />
+              <b>Next step:</b> each child&rsquo;s name, date of birth and boy/girl.
+            </div>
+            {(["name", "email", "phone", "address"] as const).map((k) => (
+              <div key={k} className="mb-1.5">
+                <div className="mb-1 text-[10.5px] font-bold" style={{ color: tk.ink }}>
+                  {{ name: "Parent's full name", email: "Email", phone: "Phone", address: "Address" }[k]}
+                </div>
+                <input value={np[k]} onChange={(e) => setNp({ ...np, [k]: e.target.value })}
+                  className={`aos-in w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`}
+                  style={{ background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink }} />
+              </div>
+            ))}
+            {/* A mistyped address creates an account for a stranger holding a
+                child's name and date of birth, so it gets read back. */}
+            {npReady && (
+              <div className={`mb-2 border px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
+                style={{ borderColor: tk.accent, background: `${tk.accent}1a`, color: tk.ink }}>
+                Their login and booking go to <b>{np.email.trim()}</b> — read it back to them before you carry on.
+              </div>
+            )}
+            <button type="button" disabled={!npReady}
+              onClick={() => b.setParent({ id: "new", name: np.name.trim(), email: np.email.trim(), phone: np.phone.trim(), address: np.address.trim() })}
+              className={`w-full py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
+              style={{ background: tk.accent, color: tk.accentInk }}>
+              {npReady ? `Set up ${np.name.trim()} →` : "Fill in all four to carry on"}
+            </button>
+          </div>
         </>
       )}
 
+      {!parentMode && ckStage === "parent" && (
+        <button type="button" disabled={!b.parent} onClick={() => setCkStage("who")}
+          className={`mt-3 w-full py-2.5 text-[13px] font-extrabold disabled:opacity-40 ${tk.round}`}
+          style={{ background: tk.accent, color: tk.accentInk }}>
+          {b.parent ? `Book for ${b.parent.name} →` : "Find the parent first"}
+        </button>
+      )}
+
       {/* 2 · a child and their extras, per pass */}
-      {(parentMode ? ckStage === "who" : !!b.parent) && (
+      {ckStage === "who" && (
         <>
-          {parentMode && (
-            <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster}
+          {(
+            <ChildrenPanel d={d} tk={tk} saved={savedFor} roster={roster} setRoster={setRoster} canSave={parentMode}
               comingCount={(name) => b.basket.filter((x) => b.childrenOn(x.id).includes(name)).length}
                       onUnassignAll={(name) => b.basket.forEach((x) => { if (b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })}
               onAdded={(name) => b.clearRemovalsFor(name)}
  />
           )}
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{parentMode ? "2 · Who's on each pass" : "2 · Who's going & extras"}</div>
-          {!parentMode && (
-            <div className="mt-2 flex gap-1.5">
-              <input value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="Add the same child to every pass…"
-                className={`w-full border px-3 py-2 text-[12.5px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-              <button type="button" disabled={!bulk.trim()} onClick={() => { b.assignAll(bulk.trim()); setBulk(""); }}
-                className={`flex-none px-3 text-[12px] font-bold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}>Add to all</button>
-            </div>
-          )}
-          {parentMode && (
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>Who&rsquo;s on each pass</div>
+          {(
             <div className="mt-1.5 text-[11px]" style={{ color: tk.muted }}>
               {roster.length === 0
                 ? "Add a child above to get started."
@@ -556,7 +776,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
                       {x.timing && <span className="block text-[11px] font-bold" style={{ color: tk.accent }}>🕘 {x.timing}</span>}
                     </span>
-                    {parentMode && (() => {
+                    {(() => {
                       const heads = b.childrenOn(x.id).length;
                       return (
                         <span className="flex-none text-right text-[12px]">
@@ -565,21 +785,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         </span>
                       );
                     })()}
-                    {parentMode && (
-                      <button type="button" onClick={() => b.removeItem(x.id)}
-                        title={x.dates.length === 1 ? "Remove this day" : `Remove this ${x.dates.length}-day pass`}
-                        className="flex-none px-1 text-[15px] leading-none"
-                        style={{ color: tk.muted }}>×</button>
-                    )}
-                    {!parentMode && (
-                      <input value={b.assign[x.id] ?? ""} onChange={(e) => b.assignTo(x.id, e.target.value)} placeholder="Child's name"
-                        className={`w-[130px] flex-none border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-                    )}
+                    <button type="button" onClick={() => b.removeItem(x.id)}
+                      title={x.dates.length === 1 ? "Remove this day" : `Remove this ${x.dates.length}-day pass`}
+                      className="flex-none px-1 text-[15px] leading-none"
+                      style={{ color: tk.muted }}>×</button>
                   </div>
 
                   {/* Every day, not just the first few — you can't take a child
                       off a day the list doesn't show. */}
-                  {parentMode && (
+                  {(
                     <div className="mt-2">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[11px]" style={{ color: tk.muted }}>
@@ -667,7 +881,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
       {/* Totals belong to the paying step. Showing prices and discounts while
           someone is choosing lunches was two conversations at once. */}
-      {(!parentMode || ckStage === "pay") && (
+      {ckStage === "pay" && (
       <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
@@ -708,7 +922,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       </div>
       )}
 
-      {parentMode && ckStage === "who" && (() => {
+      {ckStage === "who" && (() => {
         const ready = roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0;
         const next = "Next";
         return (
@@ -739,20 +953,28 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 : unassigned > 0 || shortPasses.length > 0 ? "Put a child on every pass"
                 : next}
             </button>
-            <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>
+            <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">Back to dates</BackBtn>
           </>
         );
       })()}
 
       {/* Extras, one per step, in the panel — no popup. Same accent as the rest
           of the flow so moving between steps feels continuous. */}
-      {parentMode && ckStage === "extras" && ordered[extraIdx] && (() => {
+      {ckStage === "extras" && ordered[extraIdx] && (() => {
         const a = ordered[extraIdx];
         const perDay = a.type === "perday";
         const kids = [...new Set(b.basket.flatMap((x) => b.childrenOn(x.id)))];
         const anyPicked = b.basket.some((x) => kids.some((k) => b.addonDays(x.id, k, a.id).length > 0));
         const last = extraIdx === ordered.length - 1;
         const clearAll = () => b.basket.forEach((x) => kids.forEach((k) => b.setAddonDays(x.id, k, a.id, [])));
+        // A t-shirt with no size is an order the provider can't fill, so the
+        // step won't close over one.
+        const unanswered = b.basket.flatMap((x) =>
+          b.childrenOn(x.id)
+            .filter((k) => b.addonDays(x.id, k, a.id).length > 0)
+            .flatMap((k) => (a.questions ?? [])
+              .filter((q) => q.required && !(b.answers(x.id, k, a.id)[q.id] ?? "").trim())
+              .map((q) => ({ kid: k, label: q.label }))));
         // What this extra costs, per child and in total, plus where the
         // booking stands — without repeating the pass lines from two steps ago.
         const costFor = (kid: string) =>
@@ -762,66 +984,81 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           if (n < 0) { if (extraIdx === 0) setCkStage("who"); else setExtraIdx(extraIdx - 1); return; }
           if (last) setCkStage("pay"); else setExtraIdx(extraIdx + 1);
         };
+        // Bar pieces, built once and arranged two ways below — a photo changes
+        // the shape of this bar, not the things on it.
+        // Dressed as the "Choose dates & times" header the parent has already
+        // met: the panel's own gradient, an italic uppercase title with the
+        // price opposite, and the description in a translucent strip.
+        const BAR = tk.bar, BAR_INK = tk.barInk;
+        const onBar = BAR.includes("gradient") ? "#0047ff" : BAR;
+        const solid = { borderColor: BAR_INK, background: BAR_INK, color: onBar };
+        const ghost = { borderColor: `${BAR_INK}66`, background: "rgba(255,255,255,.15)", color: BAR_INK };
+        const btn = `flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`;
+        const every = b.basket.every((x) =>
+          b.childrenOn(x.id).every((k) => b.addonDays(x.id, k, a.id).length === (perDay ? x.dates.length : 1)));
+        // The shortcut only earns its place when there's something to shortcut:
+        // a one-off for a single child is one tap either way, and "every day"
+        // is meaningless on something that isn't per-day.
+        const sweep = kids.length > 1
+          ? (perDay ? "Everyone, every day" : "Everyone")
+          : (perDay ? "Every day" : null);
+        const buttons = (
+          <div className="flex flex-none flex-wrap gap-2">
+            {sweep && (
+              <button type="button"
+                onClick={() => b.basket.forEach((x) => b.childrenOn(x.id).forEach((k) =>
+                  b.setAddonDays(x.id, k, a.id, every ? [] : perDay ? [...x.dates] : ["*"])))}
+                className={btn} style={every ? solid : ghost}>
+                {every ? `✓ ${sweep}` : sweep}
+              </button>
+            )}
+            {/* Once something's chosen the way on is Next, and it belongs here
+                too — with everyone sorted in one tap, the buttons at the bottom
+                are a scroll away past sixty date tiles. */}
+            {anyPicked ? (
+              <button type="button" onClick={() => step(1)} disabled={unanswered.length > 0}
+                className={`${btn} disabled:opacity-50`} style={solid}>Next →</button>
+            ) : (
+              <button type="button" onClick={() => { clearAll(); step(1); }}
+                className={btn} style={ghost}>Skip →</button>
+            )}
+          </div>
+        );
+        const eyebrow = (
+          <div className="font-bold uppercase" style={{ ...label, color: BAR_INK, opacity: 0.75 }}>
+            Extra {extraIdx + 1} of {ordered.length}
+          </div>
+        );
         return (
           <div key={a.id} className="aos-step mt-4">
             {/* One bar carrying the whole extra: what it is, what it costs, its
                 description, and the way past it. */}
-            <div className={`p-3.5 ${tk.round}`} style={{ background: tk.bar }}>
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl text-[24px]"
-                  style={{ background: "rgba(255,255,255,.25)" }}>
-                  {a.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={a.image} alt="" className="h-11 w-11 rounded-xl object-cover" />
-                  ) : (a.emoji || "✨")}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold uppercase" style={{ ...label, color: tk.accentInk, opacity: 0.7 }}>
-                    Extra {extraIdx + 1} of {ordered.length}
-                  </div>
-                  <div className="text-[17px] font-extrabold leading-tight" style={{ color: tk.barInk }}>{a.name}</div>
-                </div>
-                <div className="flex-none text-right">
-                  <div className="text-[17px] font-extrabold" style={{ color: tk.barInk }}>{money(a.price)}</div>
-                  <div className="text-[10.5px]" style={{ color: tk.barInk, opacity: 0.75 }}>{perDay ? "per day" : "one-off"}</div>
-                </div>
-                {/* The common answer: everyone, every day. Doing it child by
-                    child and pass by pass is a dozen taps for the usual case. */}
-                {(() => {
-                  const every = b.basket.every((x) =>
-                    b.childrenOn(x.id).every((k) => b.addonDays(x.id, k, a.id).length === (perDay ? x.dates.length : 1)));
-                  return (
-                    <button type="button"
-                      onClick={() => b.basket.forEach((x) => b.childrenOn(x.id).forEach((k) =>
-                        b.setAddonDays(x.id, k, a.id, every ? [] : perDay ? [...x.dates] : ["*"])))}
-                      className={`flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`}
-                      style={every
-                        ? { borderColor: tk.barInk, background: tk.barInk, color: tk.bar.includes("gradient") ? "#0047ff" : tk.bar }
-                        : { borderColor: tk.barInk, color: tk.barInk }}>
-                      {every ? "✓ Everyone, every day" : "Everyone, every day"}
-                    </button>
-                  );
-                })()}
-                {/* Once something's chosen the way on is Next, and it belongs
-                    here too — with everyone sorted in one tap, the buttons at
-                    the bottom are a scroll away past sixty date tiles. */}
-                {anyPicked ? (
-                  <button type="button" onClick={() => step(1)}
-                    className={`flex-none border-2 px-4 py-1.5 text-[12px] font-extrabold ${tk.round}`}
-                    style={{ borderColor: tk.barInk, background: tk.barInk, color: tk.bar.includes("gradient") ? "#0047ff" : tk.bar }}>
-                    {last ? "Done →" : "Next →"}
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => { clearAll(); step(1); }}
-                    className={`flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`}
-                    style={{ borderColor: `${tk.barInk}66`, color: tk.barInk }}>
-                    Skip
-                  </button>
+            <div className={`px-5 py-3.5 ${tk.round}`} style={{ background: BAR }}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                {a.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.image} alt={a.name}
+                    className={`aspect-square w-[86px] flex-none object-cover ${tk.round}`}
+                    style={{ boxShadow: "0 0 0 2px rgba(255,255,255,.5)" }} />
                 )}
+                <div className="min-w-0 flex-1">
+                  {eyebrow}
+                  {/* Title left, price opposite — the shape of the dates header. */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span className="text-[18px] font-black uppercase italic" style={{ color: BAR_INK }}>{a.name}</span>
+                    <span className="text-[12px]" style={{ color: BAR_INK, opacity: 0.8 }}>
+                      <b className="italic" style={{ opacity: 1 }}>{money(a.price)}</b> {perDay ? "per day" : "one-off"}
+                    </span>
+                  </div>
+                  {a.description && (
+                    <div className="mt-2 flex items-start gap-1.5 rounded px-2.5 py-1.5 text-[11.5px] font-semibold backdrop-blur-sm"
+                      style={{ background: "rgba(255,255,255,.15)", color: BAR_INK }}>
+                      <span aria-hidden>👉</span><span>{a.description}</span>
+                    </div>
+                  )}
+                </div>
+                {buttons}
               </div>
-              {a.description && (
-                <p className="mt-2 text-[12px] leading-[1.5]" style={{ color: tk.barInk, opacity: 0.85 }}>{a.description}</p>
-              )}
             </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -879,6 +1116,46 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                             })}
                           </div>
                           )}
+                          {/* Whatever the provider needs to know before they can
+                              supply it — a size, a meal choice. Asked once per
+                              child, and only once they're actually having it. */}
+                          {days.length > 0 && (a.questions ?? []).length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {(a.questions ?? []).map((q) => {
+                                const val = b.answers(x.id, kid, a.id)[q.id] ?? "";
+                                const needsAnswer = !!q.required && !val.trim();
+                                return (
+                                  <div key={q.id} className="min-w-[170px] flex-1">
+                                    <div className="mb-1 text-[10.5px] font-bold" style={{ color: tk.ink }}>
+                                      {q.label}{q.required && <span style={{ color: "#f87171" }}> *</span>}
+                                    </div>
+                                    {q.type === "choice" ? (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {(q.options ?? []).map((o) => {
+                                          const picked = val === o;
+                                          return (
+                                            <button key={o} type="button"
+                                              onClick={() => b.setAnswer(x.id, kid, a.id, q.id, picked ? "" : o)}
+                                              className={`border-2 px-2.5 py-1 text-[11.5px] font-bold ${tk.round}`}
+                                              style={picked
+                                                ? { borderColor: kc.bg, background: kc.bg, color: kc.ink }
+                                                : { borderColor: needsAnswer ? "#f87171" : `${tk.ink}59`, color: tk.ink }}>
+                                              {o}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <input value={val} onChange={(e) => b.setAnswer(x.id, kid, a.id, q.id, e.target.value)}
+                                        placeholder="Your answer…"
+                                        className={`aos-in w-full border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`}
+                                        style={{ background: tk.inputBg, color: tk.ink, borderColor: needsAnswer ? "#f87171" : `${tk.ink}4d` }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -903,11 +1180,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               <div className="mt-1.5 flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
                 <span>Passes</span><span>{money(b.total)}</span>
               </div>
-              {addonTotal > 0 && (
-                <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
-                  <span>Extras</span><span>{money(addonTotal)}</span>
-                </div>
-              )}
+              {/* Named, not lumped: "Extras £50" doesn't tell you the t-shirts
+                  from the lunches, which is the thing you'd want to change. */}
+              {ordered.map((ex) => {
+                const total = b.basket.reduce((t, x) =>
+                  t + b.childrenOn(x.id).reduce((n, k) => n + costOf(ex, b.addonDays(x.id, k, ex.id)), 0), 0);
+                if (total <= 0) return null;
+                return (
+                  <div key={ex.id} className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
+                    <span>{ex.name}</span><span>{money(total)}</span>
+                  </div>
+                );
+              })}
               <div className="mt-1 flex items-baseline justify-between text-[14px] font-extrabold">
                 <span style={{ color: tk.ink }}>So far</span>
                 <span style={{ color: tk.accent }}>{money(b.total + addonTotal)}</span>
@@ -915,49 +1199,58 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              <button type="button" onClick={() => step(-1)} className="text-[12px] font-bold" style={{ color: tk.muted }}>← Back</button>
-              {/* Only while nothing's chosen — offering to decline something
-                  they've just picked reads as a way to undo it. */}
-              {!anyPicked && (
+              <BackBtn tk={tk} onClick={() => step(-1)}>
+                Back to {extraIdx === 0 ? "children" : ordered[extraIdx - 1].name}
+              </BackBtn>
+              {/* One way on, never two: Skip until something is chosen, Next
+                  after. Offering to decline what they've just picked reads as
+                  a way to undo it, and both at once is a choice with no answer. */}
+              {anyPicked ? (
+                <button type="button" onClick={() => step(1)} disabled={unanswered.length > 0}
+                  className={`ml-auto px-5 py-2 text-[12.5px] font-extrabold disabled:opacity-50 ${tk.round}`}
+                  style={{ background: tk.accent, color: tk.accentInk, boxShadow: `0 10px 22px -12px ${tk.accent}` }}>
+                  {unanswered.length ? `${unanswered[0].kid} needs ${unanswered[0].label.toLowerCase()}` : "Next →"}
+                </button>
+              ) : (
                 <button type="button" onClick={() => { clearAll(); step(1); }}
                   className={`ml-auto border-2 px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
                   style={{ borderColor: tk.muted, color: tk.ink }}>
-                  Skip
+                  Skip →
                 </button>
               )}
-              <button type="button" onClick={() => step(1)}
-                className={`${anyPicked ? "ml-auto " : ""}px-5 py-2 text-[12.5px] font-extrabold ${tk.round}`}
-                style={{ background: tk.accent, color: tk.accentInk, boxShadow: `0 10px 22px -12px ${tk.accent}` }}>
-                {last ? (anyPicked ? "Done — how you'll pay" : "Skip — how you'll pay") : "Next"}
-              </button>
             </div>
           </div>
         );
       })()}
 
 
-      {parentMode && ckStage === "pay" && addons.length > 0 && (
-        <button type="button" onClick={() => { setExtraIdx(0); setCkStage("extras"); }}
-          className="mt-3 text-[11.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
-          ← Change lunches &amp; extras
-        </button>
+      {/* No "change extras" button here any more — the tabs above go straight
+          to the one they want, by name. */}
+      {ckStage === "pay" && (
+        <BackBtn tk={tk} onClick={() => { if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
+          Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
+        </BackBtn>
       )}
-      {parentMode && ckStage === "pay" && !addons.length && (
-        <button type="button" onClick={() => setCkStage("who")}
-          className="mt-3 text-[11.5px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
-          ← Back to who&rsquo;s coming
-        </button>
-      )}
-      {parentMode && ckStage === "pay" && (
+      {ckStage === "pay" && (
         <div className="mt-3">
-          <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>How you&rsquo;ll pay</div>
+          <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>
+            {parentMode ? "How you\u2019ll pay" : "How the parent is paying"}
+          </div>
           <select value={method} onChange={(e) => setMethod(e.target.value)}
             className={`mt-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }}>
-            <option value="card">Card</option>
-            <option value="bank">Bank transfer</option>
-            <option value="cash">Cash on the day</option>
+            {(parentMode
+              ? [["card", "Card"], ["bank", "Bank transfer"], ["cash", "Cash on the day"]]
+              : PAY_METHODS.map((m) => [m, m])
+            ).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          {!parentMode && (
+            <div className={`mt-2 border px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
+              style={{ borderColor: tk.line, color: tk.muted }}>
+              The booking is held as <b>Invoice sent</b> and the parent gets the payment-link
+              email. Mark it paid from the booking itself once the money lands.
+            </div>
+          )}
         </div>
       )}
 
@@ -965,14 +1258,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
       )}
 
-      {(!parentMode || ckStage === "pay") && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && roster.length === 0) || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
+      {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
+        disabled={(!parentMode && !b.parent) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // A parent's confirm actually books; the operator preview still just
           // shows the done screen until the operator flow is wired.
           if (parentMode && onBook) onBook({
-            method, basket: b.basket, addonSel: b.addonSel, children: roster,
+            method, basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
           });
@@ -980,13 +1273,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         }}>
         {booking?.busy ? "Booking…"
           : !parentMode && !b.parent ? "Find the parent first"
-          : parentMode && roster.length === 0 ? "Add a child first"
+          : roster.length === 0 ? "Add a child first"
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
           : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
           : shortPasses.length > 0 ? `One child needs all ${shortPasses[0].dates.length} days of the ${shortPasses[0].name}`
-          : `Confirm & pay ${money(grandTotal)}`}
+          : parentMode ? `Confirm & pay ${money(grandTotal)}`
+          : `Send payment link & create · ${money(grandTotal)}`}
       </button>}
-      {!parentMode && <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>}
+
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
       </div>
     </div>

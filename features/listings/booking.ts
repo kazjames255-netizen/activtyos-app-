@@ -73,7 +73,10 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [child, setChild] = useState("");
   // Operator-side checkout: which parent it's for, a child per pass, and any
   // add-ons. Attendees is derived from the children actually assigned.
-  const [parent, setParent] = useState<{ id: string; name: string } | null>(null);
+  // id "new" means a family being created on the call rather than one already
+  // on the account; the contact details come with it so the booking write can
+  // make the account. See §H of the backend handoff.
+  const [parent, setParent] = useState<{ id: string; name: string; email?: string; phone?: string; address?: string } | null>(null);
   const [assign, setAssign] = useState<Record<string, string>>({});
   // Add-ons are chosen per pass (so per child), and per-day ones record which
   // days they cover: { passId: { addonId: [dates] } }.
@@ -317,7 +320,19 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     });
   const addonDays = (itemId: string, child: string, addonId: string) => addonSel[addonKey(itemId, child)]?.[addonId] ?? [];
 
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  // Answers to an add-on's questions — a t-shirt size, a meal choice. Kept
+  // beside the days rather than inside them: an answer is per child per
+  // add-on, not per day, and clearing the add-on clears its answers with it.
+  const [addonAns, setAddonAns] = useState<Record<string, Record<string, string>>>({});
+  const ansKey = (itemId: string, child: string, addonId: string) => `${itemId}|${child}|${addonId}`;
+  const setAnswer = (itemId: string, child: string, addonId: string, qId: string, value: string) =>
+    setAddonAns((all) => {
+      const key = ansKey(itemId, child, addonId);
+      return { ...all, [key]: { ...(all[key] ?? {}), [qId]: value } };
+    });
+  const answers = (itemId: string, child: string, addonId: string) => addonAns[ansKey(itemId, child, addonId)] ?? {};
+
+  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }

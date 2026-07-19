@@ -3,254 +3,192 @@
 import { useEffect, useState } from "react";
 import { useBookingsStore } from "./store";
 import { get as apiGet } from "@/lib/api";
-import { Button } from "@/components/ui";
+import { BookingOnly, type ServerListing } from "@/features/listings/ListingWizard";
+import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 
-// Fallbacks while /api/listings loads (also used if the fetch fails).
-const LISTINGS = ["Summer Holiday Camp 2027", "Easter Football Camp", "After-School Dance Club"];
-const PASSES = ["5-day week pass", "4-day pass", "1-day pass"];
-const BLOCKS = [
-  "Week 1 · 28 Jul – 1 Aug 2027",
-  "Week 2 · 4 – 8 Aug 2027",
-  "Week 3 · 11 – 15 Aug 2027",
-  "Single day · Wed 30 Jul 2027",
-  "Taster · Mon 28 Jul 2027",
-];
-const METHODS = ["Card", "Tax-Free Childcare", "HAF (funded £0)", "PayPal"];
-
-interface Listing {
-  id: string;
-  name: string;
-  passes: { name: string; price: number }[];
-  blocks: { id: string; name: string; spotsLeft: number; open: boolean }[];
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  children?: { name: string; age?: number }[];
-}
-
-const inputCls =
-  "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none";
-const labelCls = "text-[11.5px] font-bold text-[var(--ink)]";
+// ─────────────────────────────────────────────────────────────────────────
+// Take a booking — the same booking flow a parent gets, run by an operator.
+//
+// This used to be its own flat form: one child, one pass, whole block, and an
+// amount the operator typed in. That could not express what the listings can
+// (per-day passes, several children, add-ons, sibling discounts), and its
+// hand-typed price was a second opinion on what a booking costs.
+//
+// So it renders the listing's own widget instead. Choose the listing here;
+// everything past that — pass, timing, dates, who's coming, extras, payment —
+// is the component the customer page uses, in operator mode. One flow, one
+// price, no drift.
+// ─────────────────────────────────────────────────────────────────────────
 
 export function TakeBookingModal() {
   const show = useBookingsStore((s) => s.showCreate);
   const close = useBookingsStore((s) => s.close);
-  const createBooking = useBookingsStore((s) => s.createBooking);
   const setShow = useBookingsStore.setState;
 
-  const [listings, setListings] = useState<Listing[] | null>(null);
-  // Existing families for "find parent": typing a known name fills their
-  // email/phone, and their children become one-click child picks.
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [f, setF] = useState({
-    booker: "",
-    email: "",
-    child: "",
-    age: "",
-    listing: LISTINGS[0],
-    pass: PASSES[0],
-    dates: BLOCKS[0],
-    amount: "",
-    method: METHODS[0],
-  });
+  // The list endpoint returns the listing docs and their blocks; only
+  // /api/listings/:id embeds the bundle (passes and timings) and the library
+  // (add-ons, venue). The widget needs both, so the dropdown is filled from
+  // the list and the chosen one is fetched in full.
+  type Row = {
+    id: string; name: string; title?: string; status?: string; archived?: boolean;
+    blockId?: string | null; blocks?: { startDate?: string }[];
+    venueId?: string | null; categoryIds?: string[];
+  };
+  const [listings, setListings] = useState<Row[] | null>(null);
+  // Venue and category names for the pills — the listing docs carry ids only.
+  const [lib, setLib] = useState<{ venues?: { id: string; name: string }[]; categories?: { id: string; name: string }[] } | null>(null);
+  const [q, setQ] = useState("");
+  const [venue, setVenue] = useState("");
+  const [cat, setCat] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [id, setId] = useState("");
+  // One piece of state, not three: which listing is loaded, and whether the
+  // one being asked for has arrived. Setting "loading" and clearing "full"
+  // synchronously in the effect cascaded a render before the fetch even began.
+  const [full, setFull] = useState<ServerListing | null>(null);
 
   useEffect(() => {
     if (!show || listings) return;
-    apiGet<Listing[]>("/api/listings")
-      .then((ls) => {
-        if (!ls.length) return;
+    // ?mine=1 — the operator's own listings. Without it this is the public
+    // browse feed, i.e. every provider on the platform, and you could take a
+    // booking on somebody else's listing.
+    apiGet<Row[]>("/api/listings?mine=1")
+      .then((all) => {
+        // Only what can actually be booked: live, not archived, with a pricing
+        // block and dated runs. A draft with no block renders the widget's
+        // "pick a block in Tickets & pricing" dead end, which is a listing
+        // problem the operator can do nothing about from here.
+        const ls = all.filter((l) =>
+          !l.archived && (l.status ?? "live") === "live" && !!l.blockId && (l.blocks?.length ?? 0) > 0);
         setListings(ls);
-        setF((prev) => ({
-          ...prev,
-          listing: ls[0].name,
-          pass: ls[0].passes[0]?.name ?? prev.pass,
-          dates: ls[0].blocks[0]?.id ?? prev.dates,
-          amount: ls[0].passes[0] ? String(ls[0].passes[0].price) : prev.amount,
-        }));
+        if (ls.length) setId(ls[0].id);
       })
-      .catch(() => {
-        /* keep the hardcoded fallbacks */
-      });
+      .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load your listings"));
   }, [show, listings]);
+
   useEffect(() => {
-    if (!show) return;
-    apiGet<Customer[]>("/api/customers")
-      .then(setCustomers)
-      .catch(() => {
-        /* manual entry still works */
-      });
-  }, [show]);
+    if (!show || lib) return;
+    apiGet<{ venues?: { id: string; name: string }[]; categories?: { id: string; name: string }[] }>("/api/library")
+      .then(setLib)
+      .catch(() => setLib({}));  // the pills just don't appear
+  }, [show, lib]);
+
+  // Same three controls as the Listings tab, for the same reason: a provider
+  // with forty listings can't find one in a dropdown.
+  const countBy = (pick: (r: Row) => boolean) => (listings ?? []).filter(pick).length;
+  const venueOpts = (lib?.venues ?? [])
+    .map((v) => ({ ...v, n: countBy((r) => r.venueId === v.id) })).filter((v) => v.n > 0);
+  const catOpts = (lib?.categories ?? [])
+    .map((c) => ({ ...c, n: countBy((r) => (r.categoryIds ?? []).includes(c.id)) })).filter((c) => c.n > 0);
+  const query = q.trim().toLowerCase();
+  const shown = (listings ?? []).filter((l) => {
+    if (query && !`${l.title ?? ""} ${l.name}`.toLowerCase().includes(query)) return false;
+    if (venue && l.venueId !== venue) return false;
+    if (cat && !(l.categoryIds ?? []).includes(cat)) return false;
+    return true;
+  });
+
+  // A filter that hides the chosen listing selects the first one still
+  // visible, rather than leaving the dropdown blank with the old listing's
+  // widget underneath it.
+  const activeId = shown.some((l) => l.id === id) ? id : (shown[0]?.id ?? "");
+  // Derived, not a third piece of state: setting a "loading" flag inside the
+  // effect cascaded a render before the fetch had even begun.
+  const loading = !!activeId && !error && full?.id !== activeId;
+
+  useEffect(() => {
+    if (!activeId) return;
+    let alive = true;
+    apiGet<ServerListing>(`/api/listings/${encodeURIComponent(activeId)}`)
+      .then((l) => { if (alive) { setFull(l); setError(null); } })
+      .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "Couldn't load that listing"); });
+    return () => { alive = false; };
+  }, [activeId]);
 
   if (!show) return null;
-
-  const current = listings?.find((l) => l.name === f.listing);
-  const listingNames = listings?.map((l) => l.name) ?? LISTINGS;
-  const passes = current?.passes?.length ? current.passes.map((p) => p.name) : PASSES;
-  const structuredBlocks = current?.blocks ?? null;
 
   const dismiss = () => {
     setShow({ showCreate: false });
     close();
   };
 
-  const submit = () => {
-    if (!f.booker.trim()) {
-      alert("Enter the booker name.");
-      return;
-    }
-    createBooking({
-      booker: f.booker,
-      email: f.email,
-      child: f.child,
-      age: parseInt(f.age, 10) || 0,
-      listing: f.listing,
-      pass: f.pass,
-      // f.dates carries a block id when real blocks exist, else a label.
-      ...(structuredBlocks ? { blockId: f.dates } : { dates: f.dates }),
-      amount: parseFloat(f.amount) || 0,
-      method: f.method,
-    });
-  };
-
-  const matchedCustomer = customers.find((c) => c.name === f.booker) ?? null;
-
-  const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setF((prev) => {
-      const next = { ...prev, [k]: e.target.value };
-      // Picking a known parent fills their contact details; picking one of
-      // their children fills the age from the family record.
-      if (k === "booker") {
-        const c = customers.find((x) => x.name === e.target.value);
-        if (c) next.email = c.email ?? next.email;
-      }
-      if (k === "child") {
-        const kid = matchedCustomer?.children?.find((x) => x.name === e.target.value);
-        if (kid?.age !== undefined) next.age = String(kid.age);
-      }
-      // Changing listing resets pass/block to that listing's options;
-      // changing either autofills the amount from the pass price.
-      if (k === "listing" && listings) {
-        const l = listings.find((x) => x.name === e.target.value);
-        if (l) {
-          next.pass = l.passes[0]?.name ?? next.pass;
-          next.dates = l.blocks[0]?.id ?? next.dates;
-          if (l.passes[0]) next.amount = String(l.passes[0].price);
-        }
-      }
-      if (k === "pass" && listings) {
-        const l = listings.find((x) => x.name === next.listing);
-        const p = l?.passes.find((x) => x.name === e.target.value);
-        if (p) next.amount = String(p.price);
-      }
-      return next;
-    });
-
   return (
     <div
       onClick={(e) => e.target === e.currentTarget && dismiss()}
       className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8"
     >
-      <div className="w-full max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-[22px] py-5 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
+      <div className="w-full max-w-[1100px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-[22px] py-5 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         <div className="mb-2 flex items-center gap-2.5">
           <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">Take a booking</h3>
-          <span
-            onClick={dismiss}
-            className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]"
-          >
-            ×
-          </span>
+          <span onClick={dismiss} className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]">×</span>
         </div>
-        <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">
-          Book on a customer’s behalf (e.g. a phone booking). We’ll <b>email the parent a secure
-          payment link</b> — the booking sits as <b>Invoice sent</b> until they pay, then flips to{" "}
-          <b>Paid</b>. Capacity &amp; double-booking guards still apply.
+        <div className="mb-3 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+          A phone booking, on the same screen a parent sees. We&rsquo;ll <b>email them a payment
+          link</b>; it sits as <b>Invoice sent</b> until they pay.
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className={labelCls}>
-            Booker name {customers.length > 0 && <span className="font-normal text-[var(--ink-3)]">(type to find a parent)</span>}
-            <input className={inputCls} value={f.booker} onChange={upd("booker")} list="tb-customers" />
-            <datalist id="tb-customers">
-              {customers.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.email}
-                </option>
-              ))}
-            </datalist>
-          </label>
-          <label className={labelCls}>
-            Booker email
-            <input className={inputCls} value={f.email} onChange={upd("email")} />
-          </label>
-          <label className={labelCls}>
-            Child name
-            <input className={inputCls} value={f.child} onChange={upd("child")} list="tb-children" />
-            {!!matchedCustomer?.children?.length && (
-              <datalist id="tb-children">
-                {matchedCustomer.children.map((k) => (
-                  <option key={k.name} value={k.name}>
-                    {k.age !== undefined ? `age ${k.age}` : ""}
-                  </option>
-                ))}
-              </datalist>
+        {error && <div className="mb-3 text-[12.5px] text-[var(--red)]">{error}</div>}
+
+        <div className="text-[11.5px] font-bold text-[var(--ink)]">Which listing?</div>
+
+        {(listings?.length ?? 0) > 1 && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[160px] flex-1 sm:max-w-[240px]">
+              <svg viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)] opacity-60">
+                <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
+                className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
+            </div>
+            {venueOpts.length > 0 && (
+              <Pill active={!!venue} onClear={() => setVenue("")}>
+                <PillSelect active={!!venue} value={venue} onChange={setVenue} title="Filter by location"
+                  options={[["", "Location"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
+              </Pill>
             )}
-          </label>
-          <label className={labelCls}>
-            Child age
-            <input type="number" className={inputCls} value={f.age} onChange={upd("age")} />
-          </label>
-          <label className={labelCls}>
-            Listing
-            <select className={inputCls} value={f.listing} onChange={upd("listing")}>
-              {listingNames.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Pass
-            <select className={inputCls} value={f.pass} onChange={upd("pass")}>
-              {passes.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-          <label className={`${labelCls} col-span-2`}>
-            Block / dates
-            <select className={inputCls} value={f.dates} onChange={upd("dates")}>
-              {structuredBlocks
-                ? structuredBlocks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} — {!b.open ? "closed" : b.spotsLeft > 0 ? `${b.spotsLeft} left` : "full (waitlists)"}
-                    </option>
-                  ))
-                : BLOCKS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Amount £ (from the pass)
-            <input type="number" className={inputCls} value={f.amount} onChange={upd("amount")} />
-          </label>
-          <label className={labelCls}>
-            How they’ll pay
-            <select className={inputCls} value={f.method} onChange={upd("method")}>
-              {METHODS.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+            {catOpts.length > 0 && (
+              <Pill active={!!cat} onClear={() => setCat("")}>
+                <PillSelect active={!!cat} value={cat} onChange={setCat} title="Filter by category"
+                  options={[["", "Category"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+              </Pill>
+            )}
+            {(q || venue || cat) && (
+              <button type="button" onClick={() => { setQ(""); setVenue(""); setCat(""); }}
+                className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
+            )}
+          </div>
+        )}
 
-        <div className="mt-3.5 flex gap-2">
-          <Button variant="primary" onClick={submit}>
-            Send payment link &amp; create
-          </Button>
-          <Button onClick={dismiss}>Cancel</Button>
-        </div>
+        <select
+          value={activeId}
+          onChange={(e) => setId(e.target.value)}
+          className="mt-1.5 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)] outline-none"
+        >
+          {shown.map((l) => (
+            <option key={l.id} value={l.id}>{l.title || l.name}</option>
+          ))}
+        </select>
+        {(listings?.length ?? 0) > 0 && shown.length === 0 && (
+          <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
+            No listing matches those filters.
+          </div>
+        )}
+
+        {(!listings || loading) && !error && (
+          <div className="mt-3 text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        )}
+        {listings?.length === 0 && (
+          <div className="mt-3 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
+            Nothing bookable yet. A listing shows up here once it&rsquo;s published and has its
+            dates and pricing set — Tickets &amp; pricing in the listing builder.
+          </div>
+        )}
+
+        {full?.id === activeId && (
+          <div className="mt-3">
+            <BookingOnly key={full.id} listing={full} />
+          </div>
+        )}
       </div>
     </div>
   );
