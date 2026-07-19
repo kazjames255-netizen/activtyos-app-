@@ -144,8 +144,25 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <div className="mt-1.5">
           <div className="text-[11px]" style={{ color: tk.muted }}>Click to add child to dates.</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {/* One chip per child. Saving the same name repeatedly used to
-                leave "+ sally" three times over, which reads as broken. */}
+            {/* Every saved child stays on the row whether they're coming or
+                not — one dropping out of sight because it hasn't been added
+                yet looks like it's been lost. The chip just changes state. */}
+            {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()].map((sv) => {
+              const bad = ageProblem(d, sv);
+              const added = roster.some((r) => (r.id && r.id === sv.id) || r.name === sv.name);
+              const c = sexTint(sv.sex, added);
+              return (
+                <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
+                  title={bad ?? (added ? `Take ${sv.name} off this booking` : `Add ${sv.name} to this booking`)}
+                  onClick={() => setRoster(added
+                    ? roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))
+                    : [...roster, sv])}
+                  className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
+                  style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
+                  {added ? "✓ " : "+ "}{sv.name}{bad ? " · out of age range" : ""}
+                </button>
+              );
+            })}
             {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()]
               .filter((sv) => !roster.some((r) => r.id === sv.id || r.name === sv.name))
               .map((sv) => {
@@ -168,23 +185,25 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <div className="mt-2 flex flex-col gap-1.5">
           {roster.map((c, i) => {
             const on = comingCount(c.name.trim());
+            // Same two strengths as the chips below: soft while a child is only
+            // listed, solid once they're on something.
             return (
               <div key={`${c.name}-${i}`} className={`border-2 px-3 py-2 ${tk.round}`}
-                style={on
-                  ? { borderColor: sexTint(c.sex).border, background: sexTint(c.sex).bg }
-                  : { borderColor: tk.line, background: "transparent" }}>
+                style={{ borderColor: sexTint(c.sex, !!on).border, background: sexTint(c.sex, !!on).bg }}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: on ? sexTint(c.sex).ink : tk.muted }}>
+                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: sexTint(c.sex, !!on).ink }}>
                     {c.name}
-                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
+                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: on ? "rgba(255,255,255,.8)" : tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
                     {!on && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>· not on this booking</span>}
                   </span>
+                  {/* On the solid fill the muted greys vanish, so the actions
+                      follow the row's state too. */}
                   <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
-                    className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Edit details</button>
+                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>Edit details</button>
                   <button type="button" onClick={() => (on ? onUnassignAll(c.name.trim()) : onAssignAll(c.name.trim()))}
-                    className="text-[11.5px] font-bold" style={{ color: tk.muted }}>{on ? "Not coming" : "Add to all"}</button>
+                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>{on ? "Not coming" : "Add to all"}</button>
                   <button type="button" onClick={() => remove(i)}
-                    className="text-[11.5px] font-bold" style={{ color: "#dc2626" }}>Remove</button>
+                    className="text-[11.5px] font-bold" style={{ color: on ? "#ffd7d7" : "#dc2626" }}>Remove</button>
                 </div>
               </div>
             );
