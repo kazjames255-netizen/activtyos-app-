@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -530,6 +530,11 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
   const d = draftFromListing(listing);
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   const [done, setDone] = useState<{ refs: string[]; total: number } | null>(null);
+  const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
+  useEffect(() => {
+    // Signed out this 401s, which just means there's nothing saved to match.
+    apiGet<ChildProfile[]>("/api/my/children").then(setSavedChildren).catch(() => {});
+  }, []);
   const lib = listing.library;
   const local: LocalState = {
     categories: lib?.categories ?? [],
@@ -550,10 +555,14 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
     try {
       // Save children we haven't seen before, so next time is one tap. A
       // failure here mustn't cost them the booking — it's a convenience.
+      // Only children we haven't got a profile for. Matching on name as well
+      // as id stops a second booking saving "sally" all over again — that's
+      // how the saved list ended up with the same child three times.
+      const known = new Set(savedChildren.map((c) => c.name.trim().toLowerCase()));
       await Promise.all(
-        children.filter((c) => !c.id && c.name.trim()).map((c) =>
-          apiPost("/api/my/children", c).catch(() => null),
-        ),
+        children
+          .filter((c) => !c.id && c.name.trim() && !known.has(c.name.trim().toLowerCase()))
+          .map((c) => apiPost("/api/my/children", c).catch(() => null)),
       );
       // One line per child per pass, holding only the days that child is on —
       // a family where one sibling skips Wednesday is two different bookings.
@@ -2003,7 +2012,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
   return (
     <div className="rounded-[26px] bg-white p-5" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="flex items-baseline justify-between">
-        <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Book your place</span>
+        <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Choose dates &amp; times</span>
         {b.pass && <span className="text-[13px] text-[#7a8194]">from <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
       </div>
       {b.hint && (
@@ -2071,7 +2080,18 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: col }} />{note.text}</div>;
           })()}
           <WaitlistPanel b={b} d={d} tone="light" />
-          <button className="mt-4 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: BLUE, boxShadow: b.canAdd ? "0 14px 26px -12px " + BLUE : "none" }} disabled={!b.canAdd} onClick={b.addToBasket}>
+          {/* Once something's in the basket the button has nothing to do until
+              more dates are picked, so it goes and says why instead. */}
+          {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
+            <div className="mt-4 flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee" }}>
+              <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
+              <p className="text-[12.5px] leading-[1.5]" style={{ color: "#0f5132" }}>
+                <b>In your basket.</b> Pick more dates above if you&rsquo;d like another pass — otherwise carry on below.
+              </p>
+            </div>
+          ) : (
+          <div className="relative mt-11">
+          <button className={`w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ background: BLUE, ["--aos-ready-ring" as string]: "rgba(47,107,216,.5)" } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}>
             {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                 <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
@@ -2082,6 +2102,9 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
               </span>
             ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more day${b.need - b.sel.length === 1 ? "" : "s"}` : "Pick a pass"}
           </button>
+          {b.canAdd && <span className="aos-point" aria-hidden>👇</span>}
+          </div>
+          )}
           {b.addPreview && (
             <div className="mt-2 rounded-2xl p-3" style={{ background: "#e4f8ee" }}>
               <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#047857" }}>
@@ -2129,7 +2152,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             <b style={{ color: DEEP }}>{money(b.total)}</b>
           </span>
         </div>
-        <button className="mt-3 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: DEEP }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}>Checkout ({b.basket.length})</button>
+        <button className="mt-3 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: DEEP }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</button>
       </div>
     </div>
   );
@@ -2171,7 +2194,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>
         <div className="flex items-baseline justify-between">
-          <span className="text-[18px] font-black italic uppercase text-white">Book your place</span>
+          <span className="text-[18px] font-black italic uppercase text-white">Choose dates &amp; times</span>
           {b.pass && <span className="text-[12px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
         </div>
         {b.hint && (
@@ -2231,7 +2254,16 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                 <span className="inline-block h-2 w-2" style={{ background: col }} />{note.text}</div>;
             })()}
             <WaitlistPanel b={b} d={d} tone="dark" />
-            <button className="mt-4 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
+            {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
+              <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
+                <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
+                <p className="text-[12.5px] leading-[1.5]" style={{ color: "#d7ffa8" }}>
+                  <b>In your basket.</b> Pick more dates above if you&rsquo;d like another pass — otherwise carry on below.
+                </p>
+              </div>
+            ) : (
+            <div className="relative mt-11">
+            <button className={`w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, ["--aos-ready-ring" as string]: "rgba(198,255,0,.55)" } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
@@ -2242,6 +2274,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   </span>
                 ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more` : "Pick a pass"}
               </span></button>
+            {b.canAdd && <span className="aos-point" aria-hidden>👇</span>}
+            </div>
+            )}
             {b.addPreview && (
               <div className="mt-2 border-l-[3px] p-3" style={{ borderLeftColor: LIME, background: CELL }}>
                 <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
@@ -2289,7 +2324,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <b className="italic text-white">{money(b.total)}</b>
             </span>
           </div>
-          <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>Checkout ({b.basket.length})</span></button>
+          <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
         </div>
       </div>
     </div>

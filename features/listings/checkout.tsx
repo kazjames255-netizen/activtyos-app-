@@ -51,7 +51,28 @@ export type ChildProfile = {
   id?: string; name: string; dob?: string;
   allergies?: string; medical?: string; likes?: string; dislikes?: string;
   photoConsent?: boolean;
+  /** Colours the child's chip so a list of saved names is scannable. Optional
+   *  — a child who doesn't fit either gets the neutral chip, not a demand. */
+  sex?: "boy" | "girl";
 };
+
+/** Chip colours: blue for boys, pink for girls, neutral when unsaid. */
+export function sexTint(sex: ChildProfile["sex"], on = false): { border: string; bg: string; ink: string } {
+  // Two strengths of the same colour: soft while a child is simply listed,
+  // solid once they're actually on something, so "chosen" is obvious at a
+  // glance rather than a shade apart.
+  if (sex === "boy")
+    return on
+      ? { border: "#1d5fd0", bg: "#2f7bf0", ink: "#ffffff" }
+      : { border: "#7fb0ff", bg: "#e8f1ff", ink: "#14448f" };
+  if (sex === "girl")
+    return on
+      ? { border: "#c9186b", bg: "#ec2f86", ink: "#ffffff" }
+      : { border: "#ff9ec4", bg: "#ffeaf3", ink: "#9d1d54" };
+  return on
+    ? { border: "#3f4658", bg: "#5a6478", ink: "#ffffff" }
+    : { border: "#d7dbe6", bg: "#f4f6fb", ink: "#3f4658" };
+}
 export function ageOn(dob: string | undefined, iso: string): number | null {
   if (!dob || !iso) return null;
   const b = new Date(`${dob}T00:00:00Z`), on = new Date(`${iso}T00:00:00Z`);
@@ -121,19 +142,24 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 
       {saved.length > 0 && (
         <div className="mt-1.5">
-          <div className="text-[11px]" style={{ color: tk.muted }}>Tap to add — we&rsquo;ll remember the details you gave us.</div>
+          <div className="text-[11px]" style={{ color: tk.muted }}>Click to add child to dates.</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {saved.filter((sv) => !roster.some((r) => r.id === sv.id || r.name === sv.name)).map((sv) => {
-              const bad = ageProblem(d, sv);
-              return (
-                <button key={sv.id ?? sv.name} type="button" disabled={!!bad} title={bad ?? undefined}
-                  onClick={() => setRoster([...roster, sv])}
-                  className={`border px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
-                  style={{ borderColor: tk.line, color: tk.ink }}>
-                  + {sv.name}{bad ? " · out of age range" : ""}
-                </button>
-              );
-            })}
+            {/* One chip per child. Saving the same name repeatedly used to
+                leave "+ sally" three times over, which reads as broken. */}
+            {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()]
+              .filter((sv) => !roster.some((r) => r.id === sv.id || r.name === sv.name))
+              .map((sv) => {
+                const bad = ageProblem(d, sv);
+                const c = sexTint(sv.sex);
+                return (
+                  <button key={sv.id ?? sv.name} type="button" disabled={!!bad} title={bad ?? undefined}
+                    onClick={() => setRoster([...roster, sv])}
+                    className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
+                    style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
+                    + {sv.name}{bad ? " · out of age range" : ""}
+                  </button>
+                );
+              })}
           </div>
         </div>
       )}
@@ -143,10 +169,12 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {roster.map((c, i) => {
             const on = comingCount(c.name.trim());
             return (
-              <div key={`${c.name}-${i}`} className={`border px-3 py-2 ${tk.round}`}
-                style={{ borderColor: on ? tk.accent : tk.line, background: on ? `${tk.accent}1a` : "transparent" }}>
+              <div key={`${c.name}-${i}`} className={`border-2 px-3 py-2 ${tk.round}`}
+                style={on
+                  ? { borderColor: sexTint(c.sex).border, background: sexTint(c.sex).bg }
+                  : { borderColor: tk.line, background: "transparent" }}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: on ? tk.ink : tk.muted }}>
+                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: on ? sexTint(c.sex).ink : tk.muted }}>
                     {c.name}
                     {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
                     {!on && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>· not on this booking</span>}
@@ -168,7 +196,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <button type="button" onClick={() => setOpen(true)}
           className={`mt-2 w-full border border-dashed px-3 py-2 text-[12.5px] font-bold ${tk.round}`}
           style={{ borderColor: tk.line, color: tk.ink }}>
-          ＋ Add a child
+          ＋ Add a new child
         </button>
       ) : (
         <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
@@ -208,6 +236,22 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })}
                 placeholder="Dislikes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
             </div>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Boy or girl?</span>
+            {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => {
+              const on = draft.sex === v;
+              const c = sexTint(v);
+              return (
+                <button key={v} type="button" onClick={() => setDraft({ ...draft, sex: on ? undefined : v })}
+                  className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                  style={on ? { borderColor: c.border, background: c.bg, color: c.ink } : { borderColor: tk.line, color: tk.muted }}>
+                  {l}
+                </button>
+              );
+            })}
+            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>Only used to colour their name in your list — leave it if you&rsquo;d rather not say.</span>
           </div>
 
           <div className="mt-2.5 flex items-center gap-2">
@@ -439,7 +483,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {/* 2 · a child and their extras, per pass */}
-      {(parentMode || b.parent) && (
+      {(parentMode ? ckStage === "who" : !!b.parent) && (
         <>
           {parentMode && (
             <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster}
@@ -459,8 +503,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           {parentMode && (
             <div className="mt-1.5 text-[11px]" style={{ color: tk.muted }}>
               {roster.length === 0
-                ? "Add a child above and they'll go on everything — then take them off anything they're not coming to."
-                : "Everyone's on everything. Tap a name to take them off. Multi-day passes are sold as a set, so a child is on all of it or none — use “Change which days” to move the days themselves."}
+                ? "Add a child above to get started."
+                : "Tap a name to take them off."}
             </div>
           )}
 
@@ -511,11 +555,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               title={x.dates.length === 1
                                 ? (going ? `Take ${name} off this day` : `Put ${name} on this day`)
                                 : (going ? `Take ${name} off this ${x.dates.length}-day pass` : `Put ${name} on this ${x.dates.length}-day pass`)}
-                              className={`border px-2.5 py-[3px] text-[11.5px] font-bold ${tk.round}`}
+                              className={`border-2 px-2.5 py-[3px] text-[11.5px] font-bold ${tk.round}`}
                               style={going
-                                ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                                : { borderColor: tk.line, color: tk.muted }}>
-                              {going ? "✓ " : "+ "}{name.split(" ")[0]}
+                                ? { borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg, color: sexTint(c.sex, true).ink }
+                                : { borderColor: sexTint(c.sex).border, background: sexTint(c.sex).bg, color: sexTint(c.sex).ink }}>
+                              {going ? "✓ " : "+ "}{name}
                             </button>
                           );
                         })}
@@ -565,7 +609,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </>
       )}
 
-      {/* totals */}
+      {/* Totals belong to the paying step. Showing prices and discounts while
+          someone is choosing lunches was two conversations at once. */}
+      {(!parentMode || ckStage === "pay") && (
       <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
         {b.discountLines.map((l, i) => (
           <div key={i} className="flex items-baseline justify-between gap-3 text-[11.5px]">
@@ -604,10 +650,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </span>
         </div>}
       </div>
+      )}
 
       {parentMode && ckStage === "who" && (() => {
         const ready = roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0;
-        const next = addons.length > 0 ? "Next — add lunches and extras" : "Next — how you'll pay";
+        const next = "Next";
         return (
           <>
             <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : "pay"); }}
