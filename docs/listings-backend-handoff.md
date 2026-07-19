@@ -725,3 +725,13 @@ link inside embeds); `data-store="TENANT_ID"` /
 website. Operators copy the snippet from the Listings tab header
 ("</> Embed"). The store page is deliberately simple — it's also what the
 future subdomains will serve, so restyle at will.
+
+**Checkout shape fix (19 Jul):** your unified checkout posts items as
+`{pass, dates, child, addons?}` — no `age`, no timing. The server now:
+fills the age from the family's saved child profile (name-matched,
+dob-derived; unknown child = 0 rather than failing the booking), and
+accepts **`timing`** (the period TITLE, which your basket already has)
+as well as `periodId`. ⚠️ One line needed on your side: include
+`timing: item.timing` in the POST items, or every timing books at the
+base pass price — the preview showed a timed price while the server
+charged the untimed one.

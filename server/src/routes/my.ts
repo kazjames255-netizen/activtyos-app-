@@ -41,10 +41,13 @@ const bookingsCol = db.collection("bookings");
 // treated as a one-item basket.
 const itemSchema = z.object({
   pass: z.string().min(1),
-  periodId: z.string().max(60).optional(), // bundle timing
+  periodId: z.string().max(60).optional(), // bundle timing, by id…
+  timing: z.string().max(120).optional(), // …or by period title (checkout sends titles)
   dates: z.array(z.string().max(10)).min(1).max(60).optional(), // chosen session days
   child: z.string().min(1).max(80),
-  age: z.number().int().nonnegative(),
+  // Optional: the checkout may only know the child's name — the server then
+  // fills the age from the family's saved child profile (dob-derived).
+  age: z.number().int().nonnegative().optional(),
   addons: z
     .array(z.object({ id: z.string().max(60), days: z.array(z.string().max(10)).max(60).optional() }))
     .max(20)
@@ -219,6 +222,21 @@ my.post("/bookings", async (req, res) => {
       periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
     }
   }
+  // Ages the checkout didn't send come from the family's saved child
+  // profiles (matched by name; dob-derived when no stored age).
+  const missingAge = input.items.some((i) => i.age === undefined);
+  const ageOf = new Map<string, number>();
+  if (missingAge) {
+    const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+    for (const d of kids.docs) {
+      const k = d.data() as { name: string; age?: number; dob?: string };
+      const age = k.age ?? ageFromDob(k.dob);
+      if (age !== undefined) ageOf.set(k.name.trim().toLowerCase(), age);
+    }
+  }
+  const itemAge = (i: { child: string; age?: number }) =>
+    i.age ?? ageOf.get(i.child.trim().toLowerCase()) ?? 0;
+
   const needsAddons = input.items.some((i) => i.addons?.length);
   const libAddons = new Map<string, { name: string; type: string; price: number }>();
   if (needsAddons) {
@@ -236,12 +254,18 @@ my.post("/bookings", async (req, res) => {
       if (!listedPass && !resolvedPass) throw new HttpError(400, `Listing has no pass "${item.pass}"`);
       let base = resolvedPass?.price ?? listedPass!.price;
       let timing: string | undefined;
-      if (item.periodId) {
+      // Timing by id, or by title (the checkout's basket knows titles).
+      let periodId = item.periodId;
+      if (!periodId && item.timing) {
+        for (const [pid, title] of periodTitle) if (title === item.timing) periodId = pid;
+        if (!periodId) throw new HttpError(400, `Unknown timing "${item.timing}"`);
+      }
+      if (periodId) {
         if (!resolved || !resolvedPass) throw new HttpError(400, "This listing has no timings");
-        const t = resolved.timings[`${resolvedPass.id}_${item.periodId}`];
+        const t = resolved.timings[`${resolvedPass.id}_${periodId}`];
         if (t === undefined) throw new HttpError(400, "Unknown timing for this pass");
         base = t;
-        timing = periodTitle.get(item.periodId);
+        timing = periodTitle.get(periodId);
       }
       const passDays = resolvedPass?.days ?? listedPass?.days;
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
@@ -357,7 +381,7 @@ my.post("/bookings", async (req, res) => {
             booker: bookerName,
             email,
             child: p.item.child,
-            age: p.item.age,
+            age: itemAge(p.item),
             listing: listing.name,
             pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
             dates: block.name,
