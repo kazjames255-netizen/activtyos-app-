@@ -684,7 +684,6 @@ Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
 when the maps key lands I'll start writing `lat`/`lng` server-side on
 venue save.
 
-<<<<<<< HEAD
 
 ---
 
@@ -824,7 +823,7 @@ too.
 **Where I am.** The screen is built and describes both routes to the operator
 (find an existing family, or create one). It cannot write a booking until (1)
 exists. Nothing else blocks me.
-=======
+
 ---
 
 # Embed widget shipped — 19 July 2026
@@ -919,7 +918,7 @@ badge is already in `statusTone`); the operator detail shows
 get an accept/decline banner on My bookings — all built simply, restyle
 at will. Your storefront checkout gets the split + positions for free
 from the same POST it already calls.
->>>>>>> origin/main
+
 
 
 ---
@@ -1128,54 +1127,50 @@ around it.
 
 # What I need from you — one list, in the order that unblocks the most
 
-Everything below is written up in detail in §F–§L. This is the short version,
-ordered by how much it unblocks rather than how hard it is.
+*Updated after your 19 July push. **#1 below is now done** — I've left it in
+struck through rather than deleting it, so the ordering still makes sense.*
 
-### 1. Book on someone else's behalf  *(blocks two finished screens)*
-`POST /api/my/bookings` accepting `onBehalfOf: { customerId }` from operator
-roles, stamping the booker from that customer instead of the token.
+### ~~1. Book on someone else's behalf~~ — **done, thank you**
+`onBehalfOf` landed exactly as hoped: one pricing path, existing accounts
+reused by uid, no password ever emailed, no child data in the email. I'll point
+Confirm at it and both screens start writing — that's my next job, not yours.
 
-Take booking and the listing view both run the full checkout now — passes,
-per-day dates, several children, add-ons with answers, discounts, capacity —
-and both stop at the done screen because there is no way to say who the
-booking is for. The old flat form that *did* write is gone, so right now an
-operator cannot take a booking at all. **This is the one to do first.**
+Two small things I'll check when I wire it, not asks: the operator screen sends
+one call per block for a multi-week basket, and I'll make sure the new-family
+fields it already collects (name, email, phone) map onto your
+`onBehalfOf {name, email, phone}` shape rather than needing a customer first.
 
-The alternative — teaching `POST /api/bookings` the basket shape — means a
-second pricing implementation. Two implementations of a price drift, and we
-already fixed that class of bug once this year. (§G, §H)
-
-### 2. `childId` on each booking item  *(blocks four features at once)*
+### 2. `childId` on each booking item  *(now the biggest single unblock)*
 Bookings carry `child` as a name and nothing else. With the id, a register can
 show the child's **photo**, **allergies**, **SEND plan** and **collection
 password** from one lookup. Without it, none of them can be shown safely —
 matching by name would eventually put one family's collection password against
 another family's child. (§I, §J)
 
-### 3. Create a family's account from a phone booking
+### ~~Create a family's account from a phone booking~~ — **done in the same push**
 `admin.auth().createUser` + a set-password link. Three things I'd insist on:
 **if the email already has an account, use it** (families exist across
 providers); **never email a password**; and the operator keeps no access
 afterwards. I've built the same thing for the Families page already —
 `POST /api/customers/:id/invite` — so there's a working shape to copy. (§H)
 
-### 4. `GET /api/customers/:id/family`
+### 3. `GET /api/customers/:id/family`
 The parent plus their children's **full** records, for an operator whose tenant
 that family has actually booked with. That clause is the security model. It
 unlocks the whole Parents/Child-profiles design; I can build both tabs against
 it front-end with nothing else from you. (§K)
 
-### 5. Extra fields on a child
+### 4. Extra fields on a child
 Emergency contact, dietary (separate from allergies), swimming ability, care &
 behaviour notes, and consents for suncream, first aid and walking home.
 *Not wanted:* authorised collectors, GP/surgery/NHS number. (§K)
 
-### 6. File storage for SEND plans
+### 5. File storage for SEND plans
 Currently chunked across Firestore documents because there's no bucket —
 works, capped at 15MB, but it's a workaround. When Storage is enabled only
 `routes/childFiles.ts` changes. (§F)
 
-### 7. Marketing plumbing
+### 6. Marketing plumbing
 An unsubscribe link that works from the email without a login (needs a signed
 token — I can't sign anything client-side), and a tenant-level suppression list
 so an unsubscribe survives a record being rebuilt by a later booking. (§L)
@@ -1199,8 +1194,40 @@ so an unsubscribe survives a record being rebuilt by a later booking. (§L)
 guard, the invite endpoint), `lib/emails.ts` (the invite email),
 `index.ts` (mounting `/api/my/files`). New and mine: `routes/childFiles.ts`.
 
-### One correction I owe you
+### One correction I owed you — and you've since fixed the rest
 
-An earlier draft of this doc said nothing could mark an invoice paid. That was
-wrong — `{type:"paid"}` already exists, and so does the Stripe checkout. What's
-actually missing is that `emailPaymentLink` sends `href="#"`.
+An earlier draft said nothing could mark an invoice paid. That was wrong:
+`{type:"paid"}` already existed, as did the Stripe checkout. The real gap was
+`emailPaymentLink` sending `href="#"` — which your 19 July push fixed, along
+with writing a `payments` record for offline payments. Both closed.
+
+---
+
+# F/G/H answered — 19 July 2026 (Swagger v0.11.0)
+
+**F — reviewed, keep it.** The access model is right (owner or granted
+tenant, 404 over 403, grants only ever written server-side). Agreed on the
+Storage migration and retention/revocation as later items; name→id child
+matching moves to ids if bookings ever carry them.
+
+**G-1 — done.** `emailPaymentLink` now links to
+`/custdash/bookings?pay={ref}` — sign in and the Stripe card payment for
+that booking opens automatically. (Same link is used by the §H email.)
+
+**G-2 — done.** `{type:"paid"}` now writes a `payments` record —
+`offline: true`, the booking's method (TFC/HAF/PayPal/…), amount,
+recordedBy, timestamp — so reconciliation has entries to read. Partial
+payments stay future work (needs an amount on the action).
+
+**G-3 / H — done, your preferred way.** `POST /api/my/bookings` takes
+`onBehalfOf: {customerId?} | {name?, email, phone?}` for operator roles —
+one pricing path. Server guarantees, per your asks: existing account with
+that email is REUSED (uid-checked, never a duplicate — covers the
+registered-but-never-booked parent your search can't see); accounts are
+created with NO password and the email carries Firebase's set-password
+link; the operator keeps no access; `customers` upserts as before. The
+ONE email = confirmation + set-password + pay link, and contains **no
+child data** (your mistyped-email guard, server-side). Operator-taken
+bookings come back Confirmed + "Invoice sent", and waitlist positions
+ride the response like the parent flow. Your screen can write the moment
+you point Confirm at it.

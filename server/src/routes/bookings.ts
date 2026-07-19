@@ -366,6 +366,23 @@ bookings.post("/:ref/actions", async (req, res) => {
       else if (action.type === "refund-approve") emailRefundApproved(updated, await tenantName());
     }
 
+    // Offline settlements (TFC, HAF, PayPal, cash) become payment records
+    // too — reconciliation needs an entry, not just a flag.
+    if (action.type === "paid") {
+      void db.collection("payments").add({
+        tenantId: updated.tenantId ?? scope.tenantId,
+        refs: [updated.ref],
+        email: updated.email,
+        amount: updated.amount,
+        currency: "gbp",
+        method: updated.method,
+        offline: true,
+        status: "recorded",
+        recordedBy: req.user?.email ?? "operator",
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     // Freed seats pass to the queue (auto mode); promotes report who's
     // still waiting so the UI can warn about overbooking.
     if (updated.blockId && (action.type === "decline" || action.type === "cancel"))

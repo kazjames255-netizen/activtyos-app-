@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
@@ -54,10 +55,11 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
   );
 }
 
-function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
+function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void; autoPay?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [paying, setPaying] = useState(false);
+  // The payment-link email lands on ?pay=REF — open that card's payment.
+  const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
   const answerOffer = async (action: "accept-offer" | "decline-offer") => {
     setOfferBusy(true);
@@ -175,6 +177,8 @@ export function MyBookingsApp() {
 
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
+  // The payment-link email deep-links here as ?pay=REF.
+  const payRef = useSearchParams().get("pay");
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
@@ -206,7 +210,7 @@ export function MyBookingsApp() {
       ) : (
         <div className="flex flex-col gap-3">
           {bookings.map((b) => (
-            <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />
+            <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
           ))}
         </div>
       )}
