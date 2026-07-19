@@ -802,7 +802,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     </button>
                   );
                 })()}
-                {!anyPicked && (
+                {/* Once something's chosen the way on is Next, and it belongs
+                    here too — with everyone sorted in one tap, the buttons at
+                    the bottom are a scroll away past sixty date tiles. */}
+                {anyPicked ? (
+                  <button type="button" onClick={() => step(1)}
+                    className={`flex-none border-2 px-4 py-1.5 text-[12px] font-extrabold ${tk.round}`}
+                    style={{ borderColor: tk.barInk, background: tk.barInk, color: tk.bar.includes("gradient") ? "#0047ff" : tk.bar }}>
+                    {last ? "Done →" : "Next →"}
+                  </button>
+                ) : (
                   <button type="button" onClick={() => { clearAll(); step(1); }}
                     className={`flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`}
                     style={{ borderColor: `${tk.barInk}66`, color: tk.barInk }}>
@@ -839,14 +848,17 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               style={{ background: kc.bg, color: kc.ink }}>{kid.trim().charAt(0).toUpperCase()}</span>
                             <b className="min-w-0 flex-1 truncate text-[13.5px]" style={{ color: kc.bg }}>{kid}</b>
                             <button type="button"
-                              onClick={() => b.setAddonDays(x.id, kid, a.id, all ? [] : [...x.dates])}
+                              onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : perDay ? [...x.dates] : ["*"])}
                               className={`flex-none border-2 px-3 py-1 text-[11.5px] font-extrabold ${tk.round}`}
-                              style={all
+                              style={(perDay ? all : days.length > 0)
                                 ? { borderColor: kc.bg, background: kc.bg, color: kc.ink }
                                 : { borderColor: kc.bg, background: "transparent", color: kc.bg }}>
-                              {all ? `✓ All ${x.dates.length} days` : "Every day"}
+                              {perDay
+                                ? (all ? `✓ All ${x.dates.length} days` : "Every day")
+                                : (days.length ? `✓ Yes · ${money(a.price)}` : `Add · ${money(a.price)}`)}
                             </button>
                           </div>
+                          {perDay && (
                           <div className="flex flex-wrap gap-1.5">
                             {x.dates.map((iso) => {
                               const active = days.includes(iso);
@@ -866,6 +878,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               );
                             })}
                           </div>
+                          )}
                         </div>
                       );
                     })}
