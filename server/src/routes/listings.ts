@@ -113,6 +113,9 @@ const baseListingSchema = z
     opensAt: z.string().max(25).optional(), // local datetime; blank = open now
     bookingType: z.enum(["auto", "manual"]).optional(),
     waitlist: z.boolean().optional(),
+    // "manual": the operator offers places. "auto": a freed seat is offered
+    // to the front of that date's queue automatically (2h hold each).
+    waitlistMode: z.enum(["manual", "auto"]).optional(),
     waitlistSize: z.string().max(10).optional(),
     cancellation: z.string().max(2_000).optional(),
     discounts: z.array(discountRuleSchema).max(30).optional(),
@@ -212,9 +215,13 @@ listings.get("/", async (req, res) => {
     res.json(list);
     return;
   }
+  // ?tenantId= narrows the public feed to ONE provider — the storefront
+  // page and embed widget use it ("all of this provider's activities").
+  const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
   const snap = await col.orderBy("name").get();
   const visible = snap.docs.filter((d) => {
     const l = d.data();
+    if (tenantFilter && l.tenantId !== tenantFilter) return false;
     return (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
   });
   res.json(await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))));

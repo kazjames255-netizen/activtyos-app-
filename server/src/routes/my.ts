@@ -24,7 +24,8 @@ import {
 
 const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-import { emailBookingRequestReceived } from "../lib/emails";
+import { emailBookingConfirmed, emailBookingRequestReceived } from "../lib/emails";
+import { queuePositions, triggerWaitlist } from "../lib/waitlist";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
 import { grantPlanAccess } from "./childFiles";
@@ -48,10 +49,13 @@ type LibAddon = {
 
 const itemSchema = z.object({
   pass: z.string().min(1),
-  periodId: z.string().max(60).optional(), // bundle timing
+  periodId: z.string().max(60).optional(), // bundle timing, by id…
+  timing: z.string().max(120).optional(), // …or by period title (checkout sends titles)
   dates: z.array(z.string().max(10)).min(1).max(60).optional(), // chosen session days
   child: z.string().min(1).max(80),
-  age: z.number().int().nonnegative(),
+  // Optional: the checkout may only know the child's name — the server then
+  // fills the age from the family's saved child profile (dob-derived).
+  age: z.number().int().nonnegative().optional(),
   addons: z
     .array(
       z.object({
@@ -194,6 +198,8 @@ my.post("/bookings", async (req, res) => {
     archived?: boolean;
     opensAt?: string;
     waitlist?: boolean;
+    waitlistSize?: string;
+    waitlistMode?: "manual" | "auto";
     bookingType?: "auto" | "manual";
     discounts?: DiscountRule[];
   };
@@ -239,6 +245,21 @@ my.post("/bookings", async (req, res) => {
       periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
     }
   }
+  // Ages the checkout didn't send come from the family's saved child
+  // profiles (matched by name; dob-derived when no stored age).
+  const missingAge = input.items.some((i) => i.age === undefined);
+  const ageOf = new Map<string, number>();
+  if (missingAge) {
+    const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+    for (const d of kids.docs) {
+      const k = d.data() as { name: string; age?: number; dob?: string };
+      const age = k.age ?? ageFromDob(k.dob);
+      if (age !== undefined) ageOf.set(k.name.trim().toLowerCase(), age);
+    }
+  }
+  const itemAge = (i: { child: string; age?: number }) =>
+    i.age ?? ageOf.get(i.child.trim().toLowerCase()) ?? 0;
+
   const needsAddons = input.items.some((i) => i.addons?.length);
   const libAddons = new Map<string, LibAddon>();
   if (needsAddons) {
@@ -256,12 +277,18 @@ my.post("/bookings", async (req, res) => {
       if (!listedPass && !resolvedPass) throw new HttpError(400, `Listing has no pass "${item.pass}"`);
       let base = resolvedPass?.price ?? listedPass!.price;
       let timing: string | undefined;
-      if (item.periodId) {
+      // Timing by id, or by title (the checkout's basket knows titles).
+      let periodId = item.periodId;
+      if (!periodId && item.timing) {
+        for (const [pid, title] of periodTitle) if (title === item.timing) periodId = pid;
+        if (!periodId) throw new HttpError(400, `Unknown timing "${item.timing}"`);
+      }
+      if (periodId) {
         if (!resolved || !resolvedPass) throw new HttpError(400, "This listing has no timings");
-        const t = resolved.timings[`${resolvedPass.id}_${item.periodId}`];
+        const t = resolved.timings[`${resolvedPass.id}_${periodId}`];
         if (t === undefined) throw new HttpError(400, "Unknown timing for this pass");
         base = t;
-        timing = periodTitle.get(item.periodId);
+        timing = periodTitle.get(periodId);
       }
       const passDays = resolvedPass?.days ?? listedPass?.days;
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
@@ -363,66 +390,103 @@ my.post("/bookings", async (req, res) => {
       if (block.listingId !== input.listingId || block.tenantId !== listing.tenantId)
         throw new HttpError(400, "Block does not belong to this listing");
 
-      const seatsWanted = priced.length;
-      // All or nothing: either every child gets a place or the whole basket
-      // joins the waitlist together — no splitting siblings.
-      // Day-scope capacity checks each DATE the basket wants; listing scope
-      // checks the block total (the old behaviour).
-      const wantedByDay: Record<string, number> = {};
-      for (const p of priced) for (const d of p.days) wantedByDay[d] = (wantedByDay[d] ?? 0) + 1;
+      // Split the basket by DATE-GROUP, never by child (§E): items sharing
+      // the same days book or queue together (siblings stay together on a
+      // date), but a full Tuesday doesn't stop Wednesday from booking.
+      const groups = new Map<string, number[]>(); // daysKey → priced indexes
+      priced.forEach((p, i) => {
+        const key = p.days.join(",");
+        groups.set(key, [...(groups.get(key) ?? []), i]);
+      });
+
+      // Existing queue depth per date (waitlist positions + the size cap).
+      const waitingSnap = await tx.get(
+        bookingsCol.where("blockId", "==", blockSnap.id).where("status", "==", "Waitlisted"),
+      );
+      const queueDepth: Record<string, number> = {};
+      for (const d of waitingSnap.docs) {
+        const wb = fromDoc(d.data() as BookingDoc);
+        for (const day of wb.days ?? block.sessions.map((s) => s.date))
+          queueDepth[day] = (queueDepth[day] ?? 0) + 1;
+      }
+      const queueCap = Math.floor(Number(listing.waitlistSize)) > 0 ? Math.floor(Number(listing.waitlistSize)) : null;
+
       const scope = block.capacityScope ?? "listing";
-      const dayCheck = scope === "day" ? daysHaveSpace(block, wantedByDay) : { fits: true as const };
-      const hasSpace =
-        block.open &&
-        (scope === "day" ? dayCheck.fits : block.bookedCount + seatsWanted <= block.capacity);
-      if (!hasSpace && listing.waitlist === false)
-        throw new HttpError(
-          409,
-          "fullDay" in dayCheck && dayCheck.fullDay
-            ? `${prettyDay(dayCheck.fullDay)} is full and the waitlist is off`
-            : "This block is full and the waitlist is off",
-        );
-      let waitPos = 0;
-      if (!hasSpace) {
-        const waiting = await tx.get(
-          bookingsCol.where("blockId", "==", blockSnap.id).where("status", "==", "Waitlisted"),
-        );
-        waitPos = waiting.size;
+      // Working copy — earlier groups' seats count against later groups.
+      let working = block;
+      const booked = new Set<number>();
+      for (const [, idxs] of groups) {
+        const wanted: Record<string, number> = {};
+        for (const i of idxs) for (const d of priced[i].days) wanted[d] = (wanted[d] ?? 0) + 1;
+        const fits =
+          working.open &&
+          (scope === "day"
+            ? daysHaveSpace(working, wanted).fits
+            : working.bookedCount + idxs.length <= working.capacity);
+        if (fits) {
+          for (const i of idxs) booked.add(i);
+          // Groups share identical days, so adding the group's seat count to
+          // each of those days (and the total) is exact.
+          working = { ...working, ...countsUpdate(working, idxs.length, Object.keys(wanted)) };
+        } else {
+          if (listing.waitlist === false) {
+            const fullDay = scope === "day" ? ("fullDay" in daysHaveSpace(working, wanted) ? daysHaveSpace(working, wanted).fullDay : undefined) : undefined;
+            throw new HttpError(409, fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off");
+          }
+          if (queueCap !== null) {
+            for (const d of Object.keys(wanted)) {
+              if ((queueDepth[d] ?? 0) + wanted[d] > queueCap)
+                throw new HttpError(409, `The waiting list for ${prettyDay(d)} is full`);
+            }
+          }
+        }
       }
 
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
-      const created: Booking[] = priced.map((p, i) => ({
-        ...buildBooking(
-          {
-            booker: bookerName,
-            email,
-            child: p.item.child,
-            age: p.item.age,
-            listing: listing.name,
-            pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
-            dates: block.name,
-            amount: amounts[i],
-            method: input.method,
-          },
-          nextBid + i,
-        ),
-        tenantId: listing.tenantId,
-        blockId: blockSnap.id,
-        seats: 1,
-        days: p.days,
-        ...(p.timing ? { timing: p.timing } : {}),
-        addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
-        sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
-        status: hasSpace ? placedStatus : "Waitlisted",
-        pay: "Unpaid",
-        note: hasSpace ? "" : `Waitlist position ${waitPos + i + 1}`,
-      }));
+      const queuePos: Record<string, number> = { ...queueDepth };
+      const created: Booking[] = priced.map((p, i) => {
+        const placed = booked.has(i);
+        let note = "";
+        if (!placed) {
+          note =
+            "Waiting list — " +
+            p.days
+              .map((d) => {
+                queuePos[d] = (queuePos[d] ?? 0) + 1;
+                return `position ${queuePos[d]} for ${prettyDay(d)}`;
+              })
+              .join(", ");
+        }
+        return {
+          ...buildBooking(
+            {
+              booker: bookerName,
+              email,
+              child: p.item.child,
+              age: itemAge(p.item),
+              listing: listing.name,
+              pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
+              dates: block.name,
+              amount: amounts[i],
+              method: input.method,
+            },
+            nextBid + i,
+          ),
+          tenantId: listing.tenantId,
+          blockId: blockSnap.id,
+          seats: 1,
+          days: p.days,
+          ...(p.timing ? { timing: p.timing } : {}),
+          addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
+          sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
+          status: placed ? placedStatus : "Waitlisted",
+          pay: "Unpaid",
+          note,
+        };
+      });
       tx.update(tenantRef, { nextBid: nextBid + created.length });
-      if (hasSpace) {
-        const dayCounts = { ...(block.dayCounts ?? {}) };
-        for (const [d, n] of Object.entries(wantedByDay)) dayCounts[d] = (dayCounts[d] ?? 0) + n;
-        tx.update(blockRef, { bookedCount: block.bookedCount + seatsWanted, dayCounts });
-      }
+      if (booked.size)
+        tx.update(blockRef, { bookedCount: working.bookedCount, dayCounts: working.dayCounts ?? {} });
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
@@ -445,7 +509,96 @@ my.post("/bookings", async (req, res) => {
         .map((c) => c.sendPlanId!);
       if (planIds.length) await grantPlanAccess(planIds, listing.tenantId);
     })().catch(() => {});
-    res.status(201).json(legacy.success ? bookings[0] : { bookings, total: target });
+    // "2nd in line for 12 Aug" — per-date queue positions for anything queued.
+    const queuedRefs = bookings.filter((b) => b.status === "Waitlisted").map((b) => b.ref);
+    const waitlist = queuedRefs.length ? await queuePositions(input.blockId, queuedRefs) : [];
+    res
+      .status(201)
+      .json(legacy.success ? bookings[0] : { bookings, total: target, ...(waitlist.length ? { waitlist } : {}) });
+  } catch (e) {
+    if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
+});
+
+// ——— Waiting-list offers (§E): a place is held for 2 hours; the family
+// accepts (→ Confirmed, then pays) or declines (→ back to the queue's next).
+
+async function ownOfferedBooking(email: string, ref: string) {
+  const matches = await bookingsCol
+    .where("email", "==", email)
+    .where("ref", "==", ref)
+    .limit(1)
+    .get();
+  return matches.empty ? null : matches.docs[0].ref;
+}
+
+my.post("/bookings/:ref/accept-offer", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) {
+    res.status(400).json({ error: "Account has no email address" });
+    return;
+  }
+  const ref = await ownOfferedBooking(email, req.params.ref);
+  if (!ref) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (b.status !== "Offered") throw new HttpError(409, `No open offer on this booking (${b.status})`);
+      if (b.offerExpiresAt && Date.now() > new Date(b.offerExpiresAt).getTime())
+        throw new HttpError(409, "This offer has expired — you're back in the queue");
+      // The seat was already held by the offer — no capacity movement.
+      b.status = "Confirmed";
+      b.note = "Offer accepted.";
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    const tenant = await db.collection("tenants").doc(updated.tenantId!).get();
+    emailBookingConfirmed(updated, tenant.data()?.name ?? "Your activity provider");
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+    else throw e;
+  }
+});
+
+my.post("/bookings/:ref/decline-offer", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) {
+    res.status(400).json({ error: "Account has no email address" });
+    return;
+  }
+  const ref = await ownOfferedBooking(email, req.params.ref);
+  if (!ref) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (b.status !== "Offered") throw new HttpError(409, `No open offer on this booking (${b.status})`);
+      let blockUpdate: { ref: FirebaseFirestore.DocumentReference; counts: ReturnType<typeof countsUpdate> } | null = null;
+      if (b.blockId) {
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
+        if (blockSnap.exists) {
+          const blockData = blockSnap.data() as BlockDoc;
+          blockUpdate = { ref: blockSnap.ref, counts: countsUpdate(blockData, -(b.seats ?? 1), bookingDays(b, blockData)) };
+        }
+      }
+      b.status = "Cancelled";
+      b.note = "Offer declined.";
+      tx.set(ref, toDoc(b));
+      if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
+      return b;
+    });
+    // The freed place passes down the queue (auto mode).
+    if (updated.blockId) void triggerWaitlist(updated.blockId);
+    res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;
@@ -506,6 +659,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
       return b;
     });
+    // A cancellation frees seats — the queue gets first refusal (auto mode).
+    if (updated.blockId) void triggerWaitlist(updated.blockId);
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

@@ -5,6 +5,10 @@ export type BookingStatus =
   | "Approval needed"
   | "Confirmed"
   | "Waitlisted"
+  // A place has been OFFERED off the waiting list — the seat is held until
+  // offerExpiresAt (2 hours); accept → Confirmed, decline/expiry → back to
+  // the queue / Cancelled.
+  | "Offered"
   | "Cancelled"
   | "Declined";
 
@@ -61,6 +65,9 @@ export interface Booking {
   days?: string[];
   /** The bundle timing chosen at checkout (period title, e.g. "Late pick-up"). */
   timing?: string;
+  /** Waiting-list offer window (status "Offered") — ISO timestamps. */
+  offeredAt?: string;
+  offerExpiresAt?: string;
   /** Stripe payment that settled this booking (set server-side on confirm).
    * stripeAccount is the provider's connected account it was charged on
    * (null = dev platform fallback). Refund-approve refunds through these. */

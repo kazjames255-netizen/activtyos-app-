@@ -5,6 +5,7 @@ import { canWrite, operatorScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { stripe, toPence } from "../lib/stripe";
+import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
 import {
   blockCountDelta,
   bookingDays,
@@ -18,6 +19,7 @@ import {
   emailBookingConfirmed,
   emailBookingDeclined,
   emailPaymentLink,
+  emailPlaceOffered,
   emailRefundApproved,
 } from "../lib/emails";
 import type { Booking } from "../../../features/bookings/types";
@@ -52,6 +54,9 @@ const actionSchema = z.discriminatedUnion("type", [
       "paid",
       "recon",
       "promote",
+      // Waiting list §E: hold the place for 2h while the family decides
+      // (vs promote = seat immediately, operator's overbook prerogative).
+      "offer",
       "refund-approve",
       "refund-decline",
       // resend mutates nothing — it re-sends the payment-link email
@@ -231,6 +236,13 @@ bookings.post("/", async (req, res) => {
       emailPaymentLink(booking, tenantName);
     void upsertCustomerFromBooking(tenantId, booking);
 
+    // "3 people are waiting for this date" — the take-a-booking UI shows
+    // this when a full date lands the booking on the waiting list.
+    if (booking.status === "Waitlisted" && booking.blockId) {
+      const waitlist = await queuePositions(booking.blockId, [booking.ref]);
+      res.status(201).json({ ...booking, ...(waitlist.length ? { waitlist } : {}) });
+      return;
+    }
     res.status(201).json(booking);
   } catch (e) {
     if (e instanceof BadRequest) res.status(400).json({ error: e.message });
@@ -272,6 +284,25 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
+
+      // An offer must be backed by a real free place (§E: "reject if the
+      // date is still full") — promote stays the overbooking override.
+      if (action.type === "offer") {
+        if (b.status !== "Waitlisted") throw new Conflict(`Only waitlisted bookings can be offered (this one is ${b.status})`);
+        if (b.blockId) {
+          const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
+          if (blockSnap.exists) {
+            const block = blockSnap.data() as BlockDoc;
+            const days = bookingDays(b, block);
+            const seats = bookingSeats(b);
+            const fits =
+              (block.capacityScope ?? "listing") === "day"
+                ? daysHaveSpace(block, Object.fromEntries(days.map((d) => [d, seats]))).fits
+                : block.bookedCount + seats <= block.capacity;
+            if (!block.open || !fits) throw new Conflict("That date is still full — free a place first (or promote to overbook)");
+          }
+        }
+      }
 
       switch (action.type) {
         case "cancel":
@@ -330,13 +361,25 @@ bookings.post("/:ref/actions", async (req, res) => {
     if (updated.email.includes("@")) {
       if (action.type === "approve" || action.type === "promote")
         emailBookingConfirmed(updated, await tenantName());
+      else if (action.type === "offer") emailPlaceOffered(updated, await tenantName());
       else if (action.type === "decline") emailBookingDeclined(updated, await tenantName());
       else if (action.type === "refund-approve") emailRefundApproved(updated, await tenantName());
+    }
+
+    // Freed seats pass to the queue (auto mode); promotes report who's
+    // still waiting so the UI can warn about overbooking.
+    if (updated.blockId && (action.type === "decline" || action.type === "cancel"))
+      void triggerWaitlist(updated.blockId);
+    if (action.type === "promote" && updated.blockId) {
+      const waiting = await waitingCount(updated.blockId, updated.days ?? []);
+      res.json({ ...updated, ...(waiting ? { waiting } : {}) });
+      return;
     }
 
     res.json(updated);
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Conflict) res.status(409).json({ error: e.message });
     else throw e;
   }
 });
@@ -393,6 +436,11 @@ bookings.post("/bulk", async (req, res) => {
     }
     return out.map((x) => x.b);
   });
+  // Bulk declines/cancellations free seats — let the queues know.
+  if (action === "decline" || action === "cancel" || action === "waitlist") {
+    for (const blockId of new Set(updated.map((b) => b.blockId).filter(Boolean) as string[]))
+      void triggerWaitlist(blockId);
+  }
   res.json(updated);
 });
 
@@ -427,3 +475,4 @@ async function refundStripePayment(b: Booking): Promise<void> {
 
 class NotFound extends Error {}
 class BadRequest extends Error {}
+class Conflict extends Error {}

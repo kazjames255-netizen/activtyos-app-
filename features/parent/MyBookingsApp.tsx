@@ -58,6 +58,17 @@ function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [offerBusy, setOfferBusy] = useState(false);
+  const answerOffer = async (action: "accept-offer" | "decline-offer") => {
+    setOfferBusy(true);
+    try {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/${action}`, {});
+      refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Something went wrong");
+    }
+    setOfferBusy(false);
+  };
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
   // Same rule as the server: confirmed places and operator invoices.
   const payable =
@@ -97,6 +108,22 @@ function BookingCard({ b, refresh }: { b: Booking; refresh: () => void }) {
           </Button>
         )}
       </div>
+
+      {b.status === "Offered" && (
+        <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
+          <b>A place has opened up!</b> It&apos;s held for you
+          {b.offerExpiresAt ? ` until ${new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""} —
+          accept to take it, or it passes to the next family.
+          <div className="mt-2 flex gap-2">
+            <Button sm variant="primary" disabled={offerBusy} onClick={() => answerOffer("accept-offer")}>
+              Accept the place
+            </Button>
+            <Button sm disabled={offerBusy} onClick={() => answerOffer("decline-offer")}>
+              Give it up
+            </Button>
+          </div>
+        </div>
+      )}
 
       {paying && <PayModal refs={[b.ref]} onClose={() => setPaying(false)} onPaid={refresh} />}
 

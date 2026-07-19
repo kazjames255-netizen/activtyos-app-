@@ -70,9 +70,23 @@ payments.post("/connect", async (req, res) => {
         email: req.user?.email ?? undefined,
         metadata: { tenantId: auth.tenantId },
         business_profile: { name: tenant.data()!.name },
+        // Capabilities must be REQUESTED explicitly — an Express account
+        // without card_payments completes onboarding but then rejects every
+        // charge ("cannot create a charge … without the card_payments
+        // capability").
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
       });
       accountId = account.id;
       await tenantRef.update({ stripeAccountId: accountId });
+    } else {
+      // Repair accounts created before capabilities were requested — the
+      // onboarding link below then collects anything newly required.
+      const account = await s.accounts.retrieve(accountId);
+      if (!account.capabilities?.card_payments) {
+        await s.accounts.update(accountId, {
+          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        });
+      }
     }
     const link = await s.accountLinks.create({
       account: accountId,
@@ -107,7 +121,10 @@ payments.get("/status", async (req, res) => {
     res.json({
       connected: true,
       accountId,
-      chargesEnabled: account.charges_enabled,
+      // "Can take card payments" = the capability is ACTIVE, not merely
+      // charges_enabled (which can be true while card_payments was never
+      // requested/granted).
+      chargesEnabled: account.charges_enabled && account.capabilities?.card_payments === "active",
       detailsSubmitted: account.details_submitted,
       payoutsEnabled: account.payouts_enabled,
       platformFallback,
@@ -190,7 +207,10 @@ payments.post("/checkout", async (req, res) => {
   let stripeAccount: string | null = null;
   if (accountId) {
     const account = await s.accounts.retrieve(accountId);
-    if (account.charges_enabled) stripeAccount = accountId;
+    // Both must hold: the account processes charges AND the card_payments
+    // capability is active (charges_enabled alone isn't enough).
+    if (account.charges_enabled && account.capabilities?.card_payments === "active")
+      stripeAccount = accountId;
   }
   if (!stripeAccount && !platformFallback) {
     res.status(409).json({ error: "This provider can't take card payments yet — they haven't finished Stripe onboarding" });

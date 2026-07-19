@@ -10,6 +10,7 @@ import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
+import { ScheduleApp } from "@/features/parent/ScheduleApp";
 import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { TeamApp } from "@/features/team/TeamApp";
@@ -60,6 +61,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     browse: BrowseApp,
     bookings: MyBookingsApp,
     children: ChildrenApp,
+    schedule: ScheduleApp,
   },
   platform: {
     dash: OverviewApp,

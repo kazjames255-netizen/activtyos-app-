@@ -426,9 +426,32 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             </>
           )}
           {b.status === "Waitlisted" && (
-            <Button variant="primary" onClick={() => act(b.ref, "promote")}>
-              Offer place / promote
-            </Button>
+            <>
+              <Button variant="primary" onClick={() => act(b.ref, "offer")}>
+                Offer place (2h hold)
+              </Button>
+              <Button onClick={() => act(b.ref, "promote")} title="Seat immediately — may overbook">
+                Promote now
+              </Button>
+            </>
+          )}
+          {b.status === "Offered" && (
+            <>
+              <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>
+                Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "…"}
+              </Badge>
+              <Button onClick={() => act(b.ref, "promote")} title="Confirm without waiting for the family">
+                Confirm now
+              </Button>
+            </>
+          )}
+          {b.cancel?.refund === "pending" && (
+            <>
+              <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
+                Approve refund{b.paymentIntentId ? " (via Stripe)" : ""}
+              </Button>
+              <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
+            </>
           )}
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
             <>
@@ -480,7 +503,11 @@ function RefundSummary({ booking }: { booking: Booking }) {
           <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>{label}</Badge>
         </div>
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
-          Action this refund in your payment provider — ActivityOS does not process payments.
+          {c.refund === "pending"
+            ? "The parent has asked to cancel — approve or decline the refund in the actions below."
+            : b.paymentIntentId
+              ? "Approved refunds go back to the parent's card automatically through your Stripe account."
+              : "This booking wasn't paid by card in ActivityOS — settle any refund directly with the parent."}
         </div>
       </div>
     </>

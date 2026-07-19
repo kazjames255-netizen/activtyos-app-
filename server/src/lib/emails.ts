@@ -98,3 +98,22 @@ export function emailRefundApproved(b: Booking, providerName: string): void {
     ),
   );
 }
+
+export function emailPlaceOffered(b: Booking, providerName: string): void {
+  const until = b.offerExpiresAt
+    ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  void sendMail(
+    b.email,
+    `A place has opened up — ${b.listing} (${b.ref})`,
+    layout(
+      providerName,
+      "A place is yours if you want it",
+      `<p style="font-size:14px">Good news ${b.booker} — a place has opened up on the dates you were
+       waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
+       <p style="font-size:14px">Sign in to <b>My bookings</b> and accept the offer to take the place —
+       if the hold runs out, it passes to the next family in the queue.</p>`,
+      b,
+    ),
+  );
+}

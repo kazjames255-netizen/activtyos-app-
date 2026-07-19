@@ -1,10 +1,38 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.9.1
+  version: 0.10.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.10.0 — The waiting list (handoff §E)
+
+    A waitlisted BOOKING is the queue entry — no separate collection.
+    Queues are **per date** (the booking's `days`), FIFO by ref.
+
+    - **Baskets split by date, never by child**: dates with space book,
+      full dates queue — all children on a date together. The checkout
+      response gains `waitlist: [{ref, date, position}]`
+      ("2nd in line for 12 Aug"). `listing.waitlistSize` caps each date's
+      queue (409 when full); `waitlist: false` still refuses instead.
+    - **New booking status `Offered`**: the seat is HELD (counts toward
+      capacity) for **2 hours** (`offeredAt` / `offerExpiresAt`). Parents
+      answer via `POST /api/my/bookings/{ref}/accept-offer` (→ Confirmed,
+      then pay as normal) or `/decline-offer` (→ Cancelled, place passes
+      on). Expired offers sweep back to Waitlisted automatically. Offered
+      children are NOT expected on registers.
+    - **Actions**: `offer` (new) = offer with the 2h hold — rejected 409
+      while the date is still full; `promote` stays the operator's
+      immediate, possibly overbooking, seat — its response now carries
+      `waiting` (how many are queued for those dates) so the UI can warn.
+      Operator-created bookings that land on the waitlist return their
+      `waitlist` positions too.
+    - **`listing.waitlistMode`** (builder step 11, now enforced):
+      `"manual"` (default) — nothing automatic, the operator chooses whom
+      to offer; `"auto"` — any freed seat (cancellation, decline, expiry)
+      is offered to the front of that date's queue, with one email
+      ("a place is yours for 2 hours").
 
     ## v0.9.1 — Day-accurate capacity + server-side publish validation
 
@@ -633,6 +661,41 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "409":
           description: Not open for booking (draft/archived, before opensAt, or full with waitlist off)
+
+  /api/my/bookings/{ref}/accept-offer:
+    post:
+      tags: [my]
+      summary: Accept a waiting-list offer (→ Confirmed)
+      description: The seat was already held by the offer; pay as normal afterwards. 409 when there's no open offer or it expired.
+      parameters:
+        - name: ref
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The confirmed booking
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: No open offer / offer expired
+
+  /api/my/bookings/{ref}/decline-offer:
+    post:
+      tags: [my]
+      summary: Decline a waiting-list offer (place passes on)
+      parameters:
+        - name: ref
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The cancelled booking; in auto mode the place is offered to the next in the queue
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: No open offer
 
   /api/my/bookings/{ref}/cancel:
     post:

@@ -43,6 +43,9 @@ export function useOpensAt(opensAt?: string) {
   return { locked, countdown, opensLabel };
 }
 export type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule;
+  /** The chosen period's id — sent to the server so timings PRICE correctly
+   * (the label in `timing` is display-only). */
+  periodId?: string;
   /** 24h "09:00"/"13:00" — two sessions in a day are fine if they don't overlap. */
   start?: string; finish?: string };
 // Shared booking logic — one source of truth, rendered in two visual themes.
@@ -216,10 +219,10 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     if (!canAdd || !pass) return;
     if (isSingle) {
       // One basket line per chosen day → as many 1-day passes as they want.
-      const items: BasketItem[] = [...sel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [day], rule, start: period?.start, finish: period?.finish }));
+      const items: BasketItem[] = [...sel].sort().map((day) => ({ id: uid() + day, name: pass.name, timing: period?.range ?? "", periodId: period?.id, price: unitPrice, dates: [day], rule, start: period?.start, finish: period?.finish }));
       setBasket((b) => [...b, ...items]);
     } else {
-      setBasket((b) => [...b, { id: uid(), name: pass.name, timing: period?.range ?? "", price: unitPrice, dates: [...sel].sort(), rule, start: period?.start, finish: period?.finish }]);
+      setBasket((b) => [...b, { id: uid(), name: pass.name, timing: period?.range ?? "", periodId: period?.id, price: unitPrice, dates: [...sel].sort(), rule, start: period?.start, finish: period?.finish }]);
     }
     setSel([]);
   };

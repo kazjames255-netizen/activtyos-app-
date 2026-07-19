@@ -684,6 +684,7 @@ Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
 when the maps key lands I'll start writing `lat`/`lng` server-side on
 venue save.
 
+<<<<<<< HEAD
 
 ---
 
@@ -823,3 +824,99 @@ too.
 **Where I am.** The screen is built and describes both routes to the operator
 (find an existing family, or create one). It cannot write a booking until (1)
 exists. Nothing else blocks me.
+=======
+---
+
+# Embed widget shipped — 19 July 2026
+
+Build item 11's second half. One line on any website:
+
+```html
+<script src="https://YOUR-ACTIVITYOS/embed.js" data-listing="LISTING_ID" async></script>
+```
+
+renders a **Book now** button that opens the real `/book/{id}` page in an
+overlay (Escape / backdrop closes). `data-mode="inline"` embeds the page
+directly instead, auto-sized via `postMessage` height reports from the
+page. `data-label` / `data-color` restyle the button. The origin comes
+from the script's own `src`, so one snippet works in dev and prod.
+
+Operators copy their snippet from the listing card's ⋯ menu ("</> Embed
+on my website"). In embeds the page hides the "My bookings" link (no
+trapping a provider's visitor in our dashboard) and keeps `?embed=1`
+through the sign-in round trip. The button styling is deliberately plain —
+restyle `public/embed.js` however you like; the postMessage contract is
+`{type: "activityos:height", value}` only.
+
+**Embed update (same day):** script-hoisting frameworks (next/script and
+friends) move the tag, so "insert beside my own script" was unreliable on
+React sites. embed.js now also supports mount elements —
+`<div data-activityos-book="LISTING_ID">` (+ optional data-mode/label/
+color) with the script loaded anywhere. A MutationObserver mounts
+late-rendered placeholders (SPA navigations included) exactly once;
+double-loading the script is guarded. The plain one-liner still works for
+static HTML.
+
+**Storefront embed (same day):** the widget now embeds a provider's WHOLE
+shop, not just one listing. `GET /api/listings?tenantId=` narrows the
+public feed to one provider; `/store/{tenantId}` renders their live
+listings as a grid (each card opens its `/book/{id}` page, with a back
+link inside embeds); `data-store="TENANT_ID"` /
+`<div data-activityos-store="TENANT_ID">` on the widget shows it on their
+website. Operators copy the snippet from the Listings tab header
+("</> Embed"). The store page is deliberately simple — it's also what the
+future subdomains will serve, so restyle at will.
+
+**Checkout shape fix (19 Jul):** your unified checkout posts items as
+`{pass, dates, child, addons?}` — no `age`, no timing. The server now:
+fills the age from the family's saved child profile (name-matched,
+dob-derived; unknown child = 0 rather than failing the booking), and
+accepts **`timing`** (the period TITLE, which your basket already has)
+as well as `periodId`. ⚠️ One line needed on your side: include
+`timing: item.timing` in the POST items, or every timing books at the
+base pass price — the preview showed a timed price while the server
+charged the untimed one.
+
+**Update — done for you (same day):** your basket now carries `periodId`
+(the label in `timing` stays display-only) and the checkout POST includes
+it, so the server prices the chosen timing exactly as your preview shows.
+Nothing left on your side for this one.
+
+---
+
+# §E shipped — 19 July 2026
+
+Built exactly as your corrected spec: bookings ARE the entries, three
+changes, no new collection. Swagger v0.10.0 has the full contract.
+
+1. **Queues are per date** — FIFO by ref within each date of the booking's
+   `days`. Checkout responses (and operator-created waitlisted bookings)
+   return `waitlist: [{ref, date, position}]`, so the confirmation can say
+   "2nd in line for 12 Aug". `waitlistSize` caps each date's queue (409
+   names the date).
+2. **Baskets split by date, never by child** — dates with space book, full
+   dates queue, siblings on the same date stay together (grouped by
+   identical day-sets). Your Mon–Wed-with-only-Monday-free parent now
+   books Monday and queues the rest.
+3. **`offer` = promote with a hold** — new booking status **`Offered`**:
+   seat held (counts toward capacity, NOT expected on registers) for
+   **2 hours** (`offerExpiresAt`); parents accept
+   (`POST /api/my/bookings/{ref}/accept-offer` → Confirmed → pay) or
+   decline (place passes on). Expired offers sweep back to the queue every
+   5 minutes. `offer` 409s while the date is still full; `promote` stays
+   your overbook override and now returns `waiting` (how many are queued
+   for those dates) for the warning you asked for.
+
+`waitlistMode` is enforced: `"manual"` (default) nothing automatic —
+operator sees the queue (waitlisted bookings carry `days` + note with
+positions) and offers whom they choose; `"auto"` — cancellations,
+declines and expiries offer the freed place to position 1 with one email
+("a place is yours for 2 hours").
+
+**For your UI:** the Bookings table needs the `Offered` status (amber
+badge is already in `statusTone`); the operator detail shows
+"Offer place (2h hold)" / "Promote now" on waitlisted bookings; parents
+get an accept/decline banner on My bookings — all built simply, restyle
+at will. Your storefront checkout gets the split + positions for free
+from the same POST it already calls.
+>>>>>>> origin/main

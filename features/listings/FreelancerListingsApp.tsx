@@ -404,9 +404,27 @@ export function FreelancerListingsApp() {
         </div>
         <div className="flex items-center gap-2.5">
           {tab === "listings" && (
-            <Button variant="primary" onClick={() => startNew()}>
-              ＋ New listing
-            </Button>
+            <>
+              <Button
+                onClick={() => {
+                  // The whole-storefront widget for the operator's own website.
+                  const tid = (listings?.[0] as { tenantId?: string } | undefined)?.tenantId;
+                  if (!tid) {
+                    alert("Create a listing first — the storefront embed shows your live listings.");
+                    return;
+                  }
+                  const snippet = `<script src="${window.location.origin}/embed.js" data-store="${tid}" async></script>`;
+                  navigator.clipboard?.writeText(snippet).then(() =>
+                    alert(`Copied! Paste this into your website's HTML for a button that opens your WHOLE storefront (every live listing):\n\n${snippet}\n\nTips:\n· data-mode="inline" embeds the storefront directly in the page\n· on React/Next sites, put <div data-activityos-store="${tid}"></div> where it should go and load the script anywhere`),
+                  ).catch(() => {});
+                }}
+              >
+                {"</>"} Embed
+              </Button>
+              <Button variant="primary" onClick={() => startNew()}>
+                ＋ New listing
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -631,6 +649,14 @@ function ListingsTab({
   const copyLink = (l: Listing) => {
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
     navigator.clipboard?.writeText(link).then(() => { setCopiedId(l.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {});
+  };
+  // The one-line "Book now" widget for the operator's OWN website — pastes
+  // anywhere HTML goes (Wix/WordPress/Squarespace embed blocks included).
+  const copyEmbed = (l: Listing) => {
+    const snippet = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed.js" data-listing="${l.id}" async></script>`;
+    navigator.clipboard?.writeText(snippet)
+      .then(() => alert(`Copied! Paste this into your website's HTML for a "Book now" button:\n\n${snippet}\n\nTips:\n· add data-mode="inline" to embed the whole booking page instead of a button\n· on React/Next sites, put <div data-activityos-book="${l.id}"></div> where the button should go and load the script however you like`))
+      .catch(() => {});
   };
 
   // Read localStorage once per render, then decorate each listing with the
@@ -886,6 +912,7 @@ function ListingsTab({
                             <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
                             <div className="absolute right-0 z-20 mt-1 w-[168px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] py-1 shadow-lg">
                               {[
+                                { label: "</> Embed on my website", fn: () => copyEmbed(l) },
                                 { label: "Duplicate", fn: () => duplicate(l) },
                                 { label: "Archive", fn: () => archive(l, true) },
                               ].map((a) => (
