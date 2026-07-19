@@ -2006,7 +2006,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
   if (b.stage === "checkout") return (
     <div className="overflow-hidden rounded-[26px] bg-white" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff" }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff", bar: `linear-gradient(120deg,${DEEP},${BLUE})`, barInk: "#fff" }} />
     </div>
   );
   return (
@@ -2187,7 +2187,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: `linear-gradient(120deg,${EL},#0090ff)`, barInk: "#fff" }} />
     </div>
   );
   return (
