@@ -618,6 +618,14 @@ function ListingsTab({
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
     navigator.clipboard?.writeText(link).then(() => { setCopiedId(l.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {});
   };
+  // The one-line "Book now" widget for the operator's OWN website — pastes
+  // anywhere HTML goes (Wix/WordPress/Squarespace embed blocks included).
+  const copyEmbed = (l: Listing) => {
+    const snippet = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed.js" data-listing="${l.id}" async></script>`;
+    navigator.clipboard?.writeText(snippet)
+      .then(() => alert(`Copied! Paste this into your website's HTML for a "Book now" button:\n\n${snippet}\n\nTip: add data-mode="inline" to embed the whole booking page instead of a button.`))
+      .catch(() => {});
+  };
 
   // Read localStorage once per render, then decorate each listing with the
   // numbers the filters, the sort and the card all need.
@@ -872,6 +880,7 @@ function ListingsTab({
                             <div className="fixed inset-0 z-10" onClick={() => setMenuId(null)} />
                             <div className="absolute right-0 z-20 mt-1 w-[168px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] py-1 shadow-lg">
                               {[
+                                { label: "</> Embed on my website", fn: () => copyEmbed(l) },
                                 { label: "Duplicate", fn: () => duplicate(l) },
                                 { label: "Archive", fn: () => archive(l, true) },
                               ].map((a) => (

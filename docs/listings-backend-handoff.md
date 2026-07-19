@@ -683,3 +683,26 @@ naming the full day under day scope.)
 Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
 when the maps key lands I'll start writing `lat`/`lng` server-side on
 venue save.
+
+---
+
+# Embed widget shipped — 19 July 2026
+
+Build item 11's second half. One line on any website:
+
+```html
+<script src="https://YOUR-ACTIVITYOS/embed.js" data-listing="LISTING_ID" async></script>
+```
+
+renders a **Book now** button that opens the real `/book/{id}` page in an
+overlay (Escape / backdrop closes). `data-mode="inline"` embeds the page
+directly instead, auto-sized via `postMessage` height reports from the
+page. `data-label` / `data-color` restyle the button. The origin comes
+from the script's own `src`, so one snippet works in dev and prod.
+
+Operators copy their snippet from the listing card's ⋯ menu ("</> Embed
+on my website"). In embeds the page hides the "My bookings" link (no
+trapping a provider's visitor in our dashboard) and keeps `?embed=1`
+through the sign-in round trip. The button styling is deliberately plain —
+restyle `public/embed.js` however you like; the postMessage contract is
+`{type: "activityos:height", value}` only.
