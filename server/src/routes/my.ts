@@ -27,6 +27,7 @@ const prettyDay = (iso: string) =>
 import { emailBookingRequestReceived } from "../lib/emails";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
+import { grantPlanAccess } from "./childFiles";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -39,6 +40,12 @@ const bookingsCol = db.collection("bookings");
 // One basket item = one child on one pass (optionally a specific timing and
 // specific days). The legacy single-booking shape is accepted too and
 // treated as a one-item basket.
+/** The library's own view of an add-on, including anything it asks the parent. */
+type LibAddon = {
+  id: string; name: string; type: string; price: number;
+  questions?: { id: string; label: string; type: "text" | "choice"; options?: string[]; required?: boolean }[];
+};
+
 const itemSchema = z.object({
   pass: z.string().min(1),
   periodId: z.string().max(60).optional(), // bundle timing
@@ -46,7 +53,15 @@ const itemSchema = z.object({
   child: z.string().min(1).max(80),
   age: z.number().int().nonnegative(),
   addons: z
-    .array(z.object({ id: z.string().max(60), days: z.array(z.string().max(10)).max(60).optional() }))
+    .array(
+      z.object({
+        id: z.string().max(60),
+        days: z.array(z.string().max(10)).max(60).optional(),
+        // Answers to that add-on's questions, keyed by question id — a size,
+        // a meal choice. Checked against the library definition below.
+        answers: z.record(z.string().max(60), z.string().trim().max(200)).optional(),
+      }),
+    )
     .max(20)
     .optional(),
 });
@@ -77,6 +92,11 @@ const childSchema = z.object({
   allergies: z.string().trim().max(300).optional(),
   medical: z.string().trim().max(300).optional(),
   send: z.string().trim().max(300).optional(),
+  // A SEND/EHCP plan, held by routes/childFiles.ts rather than inline: a real
+  // EHCP is a multi-page scan and would blow Firestore's 1MB document cap.
+  // Only the id and the filename live on the child.
+  sendPlanId: z.string().trim().max(60).optional(),
+  sendPlanName: z.string().trim().max(200).optional(),
   // What settles them and what doesn't — the things a parent tells you at the
   // door, kept so they don't have to say it twice.
   likes: z.string().trim().max(300).optional(),
@@ -220,10 +240,10 @@ my.post("/bookings", async (req, res) => {
     }
   }
   const needsAddons = input.items.some((i) => i.addons?.length);
-  const libAddons = new Map<string, { name: string; type: string; price: number }>();
+  const libAddons = new Map<string, LibAddon>();
   if (needsAddons) {
     const lib = await db.collection("libraries").doc(listing.tenantId).get();
-    for (const a of ((lib.data()?.addons ?? []) as { id: string; name: string; type: string; price: number }[]))
+    for (const a of ((lib.data()?.addons ?? []) as LibAddon[]))
       libAddons.set(a.id, a);
   }
 
@@ -257,7 +277,27 @@ my.post("/bookings", async (req, res) => {
         if (onDays.some((d) => !days.includes(d)))
           throw new HttpError(400, `Add-on "${def.name}" is on a day the pass isn't`);
         const price = def.type === "perday" ? round2(def.price * onDays.length) : def.price;
-        return { name: def.name, price, label: def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name };
+        // Judge the answers against the library, not the client: a required
+        // question left blank, or a size that isn't one of the offered ones,
+        // is an order the provider can't fill.
+        const answers: { label: string; value: string }[] = [];
+        for (const q of def.questions ?? []) {
+          const value = (a.answers ?? {})[q.id]?.trim() ?? "";
+          if (!value) {
+            if (q.required) throw new HttpError(400, `"${def.name}" needs an answer for ${q.label} (${item.child})`);
+            continue;
+          }
+          if (q.type === "choice" && (q.options ?? []).length && !(q.options ?? []).includes(value))
+            throw new HttpError(400, `"${value}" isn't one of the options for ${q.label}`);
+          answers.push({ label: q.label, value });
+        }
+        const suffix = answers.length ? ` (${answers.map((x) => `${x.label}: ${x.value}`).join(", ")})` : "";
+        return {
+          name: def.name,
+          price,
+          label: (def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name) + suffix,
+          ...(answers.length ? { answers } : {}),
+        };
       });
       return { item, base, timing, days, addons, addonsTotal: round2(addons.reduce((s, a) => s + a.price, 0)) };
     });
@@ -391,6 +431,20 @@ my.post("/bookings", async (req, res) => {
     emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
     // Keep Customers & families current (one upsert per child, same family).
     for (const b of bookings) void upsertCustomerFromBooking(listing.tenantId, b);
+    // The provider's staff can now read the SEND plans of the children they've
+    // just been given. Granted here rather than by the client, so a parent
+    // can't widen access to a file by asking; and only for the tenant they
+    // actually booked with. Fire-and-forget: a booking is not worth failing
+    // over a permission grant that can be retried on the next booking.
+    void (async () => {
+      const names = new Set(input.items.map((i) => i.child.trim().toLowerCase()));
+      const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+      const planIds = kids.docs
+        .map((d) => d.data() as { name?: string; sendPlanId?: string })
+        .filter((c) => c.sendPlanId && names.has((c.name ?? "").trim().toLowerCase()))
+        .map((c) => c.sendPlanId!);
+      if (planIds.length) await grantPlanAccess(planIds, listing.tenantId);
+    })().catch(() => {});
     res.status(201).json(legacy.success ? bookings[0] : { bookings, total: target });
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

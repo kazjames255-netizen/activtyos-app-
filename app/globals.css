@@ -185,3 +185,12 @@ h4 {
 }
 .aos-point-inline { display: inline-block; animation: aos-point-up 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .aos-point-inline { animation: none; } }
+
+/* Checkout inputs. Placeholders can't be set from an inline style, and the UA
+ * default is a mid grey that all but disappears on the dark page themes — so
+ * they take the field's own colour, dimmed. The field border does the same,
+ * since the themes' hairline is nearly invisible on dark. */
+.aos-in::placeholder {
+  color: currentColor;
+  opacity: 0.55;
+}

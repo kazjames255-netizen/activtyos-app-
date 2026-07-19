@@ -5,7 +5,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import type { AddonTemplate, LocalState, StaffMember, Venue } from "./FreelancerListingsApp";
+import type { AddonQuestion, AddonTemplate, LocalState, StaffMember, Venue } from "./FreelancerListingsApp";
 import { VenueMap } from "./VenueMap";
 import * as blocksApi from "@/features/blocks/blocksApi";
 import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./format";
@@ -550,7 +550,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
   // The basket is per child and per date; the API takes one block per call, so
   // a basket spanning two weeks goes as two calls. Flagged to Amir — the server
   // is the better place to accept a mixed basket.
-  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = []) {
+  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = [], addonAns: Record<string, Record<string, string>> = {}) {
     setBookState({ busy: true, error: null });
     try {
       // Save children we haven't seen before, so next time is one tap. A
@@ -594,7 +594,16 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
           items: items.map((l) => {
             // That child's own extras on that line, with the days they picked.
             const sel = addonSel[`${l.itemId}|${l.child}`] ?? {};
-            const addons = Object.entries(sel).map(([id, days]) => ({ id, ...(days[0] === "*" ? {} : { days }) }));
+            const addons = Object.entries(sel).map(([id, days]) => {
+              // Answers ride with the add-on they belong to, so the provider
+              // reads "tshirt — Age 7-8" rather than a size with no owner.
+              const ans = addonAns[`${l.itemId}|${l.child}|${id}`] ?? {};
+              return {
+                id,
+                ...(days[0] === "*" ? {} : { days }),
+                ...(Object.keys(ans).length ? { answers: ans } : {}),
+              };
+            });
             return { pass: l.pass, dates: l.dates, child: l.child, ...(addons.length ? { addons } : {}) };
           }),
         });
@@ -633,8 +642,41 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       brand={listing.tenantName}
       mode="parent"
       bookState={bookState}
-      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children)}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns)}
       full
+    />
+  );
+}
+
+/**
+ * Just the booking widget for a listing — pass, timing, dates, then the
+ * checkout — with no customer page around it. Take booking uses this: the
+ * operator has already chosen the listing from a dropdown, so the hero image
+ * and the "what's included" copy are page furniture they don't need.
+ *
+ * Same component the parent gets, in operator mode, so the two can't diverge.
+ */
+export function BookingOnly({ listing, onBook, bookState }: {
+  listing: ServerListing;
+  onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  bookState?: { busy: boolean; error: string | null };
+}) {
+  const d = draftFromListing(listing);
+  const lib = listing.library;
+  const dates = genDates(d.runFrom, d.runTo, d.days);
+  const capParsed = parseInt(d.maxAttendees, 10);
+  return (
+    <BookingWidget
+      d={d}
+      booking={bookingFromBundle(listing.bundle)}
+      weeks={groupWeeks(dates)}
+      spacesLeft={d.showSpaces && Number.isFinite(capParsed) ? capParsed : null}
+      addons={(lib?.addons ?? []).filter((a) => d.addonIds.includes(a.id))}
+      blocks={listing.blocks}
+      mode="operator"
+      onBook={onBook}
+      bookState={bookState}
+      theme={d.pageStyle ?? "playful"}
     />
   );
 }
@@ -1679,13 +1721,43 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   const [type, setType] = useState<"perday" | "once">("perday");
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
+  // Editing reuses the create form rather than a second one: same fields, same
+  // validation, and no chance of the two drifting apart.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [qs, setQs] = useState<AddonQuestion[]>([]);
   const types: Record<string, string> = { perday: "Per day", once: "One-off" };
-  const create = () => {
+  const clear = () => { setName(""); setPrice(""); setDesc(""); setType("perday"); setQs([]); setEditing(null); };
+  const startEdit = (a: AddonTemplate) => {
+    setEditing(a.id);
+    setName(a.name);
+    setType(a.type === "perday" ? "perday" : "once");
+    setPrice(String(a.price ?? ""));
+    setDesc(a.description ?? "");
+    setQs(a.questions ?? []);
+  };
+  const save = () => {
     if (name.trim().length < 2) return;
-    const a = { id: uid(), name: name.trim(), type, price: parseFloat(price) || 0, ...(desc.trim() ? { description: desc.trim() } : {}) };
-    patchLocal((s) => ({ ...s, addons: [...s.addons, a] }));
-    upd({ addonIds: [...d.addonIds, a.id] });
-    setName(""); setPrice(""); setDesc("");
+    // Questions with no label are half-typed rows, not questions.
+    const keep = qs.filter((q) => q.label.trim()).map((q) => ({
+      ...q,
+      label: q.label.trim(),
+      options: q.type === "choice" ? (q.options ?? []).map((o) => o.trim()).filter(Boolean) : undefined,
+    }));
+    const fields = {
+      name: name.trim(), type, price: parseFloat(price) || 0,
+      description: desc.trim() || undefined,
+      questions: keep.length ? keep : undefined,
+    };
+    if (editing) {
+      // A price change has to reach anything already using it, so patch in
+      // place rather than replacing the id.
+      patchLocal((s) => ({ ...s, addons: s.addons.map((x) => (x.id === editing ? { ...x, ...fields } : x)) }));
+    } else {
+      const a = { id: uid(), ...fields };
+      patchLocal((s) => ({ ...s, addons: [...s.addons, a] }));
+      upd({ addonIds: [...d.addonIds, a.id] });
+    }
+    clear();
   };
   return (
     <div className="max-w-[720px]">
@@ -1707,20 +1779,58 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
                   <span className="flex-none text-[11px] text-[var(--ink-3)]">{types[a.type] ?? "One-off"} · {money(a.price)}</span>
                 </button>
                 <AddonIcon addon={a} patchLocal={patchLocal} />
-                <button type="button" onClick={() => { patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                <button type="button" onClick={() => startEdit(a)} title={`Edit ${a.name}`}
+                  className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]">Edit</button>
+                <button type="button" onClick={() => { if (editing === a.id) clear(); patchLocal((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== a.id) })); upd({ addonIds: d.addonIds.filter((x) => x !== a.id) }); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
               </div>
             );
           })}
         </div>
       )}
-      <SectionHead icon="➕">Create a new add-on</SectionHead>
+      <SectionHead icon={editing ? "✏️" : "➕"}>{editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"}</SectionHead>
       <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
         <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hot lunch" className="w-full" /></div>
         <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
         <div className="w-[90px]"><FieldLabel>Price £</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
         <div className="w-full"><FieldLabel>Description <span className="font-normal text-[var(--ink-3)]">— optional, shown to parents</span></FieldLabel>
           <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Hot meal, dessert and a drink. Vegetarian by default — tell us about allergies when you book." className="w-full" /></div>
-        <Button variant="primary" onClick={create}>＋ Add</Button>
+        <div className="w-full">
+          <FieldLabel>Questions <span className="font-normal text-[var(--ink-3)]">— optional, asked per child at checkout</span></FieldLabel>
+          {qs.map((q, i) => {
+            const set = (patch: Partial<AddonQuestion>) => setQs(qs.map((x, n) => (n === i ? { ...x, ...patch } : x)));
+            return (
+              <div key={q.id} className="mb-1.5 flex flex-wrap items-end gap-2 rounded-lg border border-[var(--line)] p-2">
+                <div className="min-w-[150px] flex-1">
+                  <FieldLabel>Question</FieldLabel>
+                  <Input value={q.label} onChange={(e) => set({ label: e.target.value })} placeholder="e.g. T-shirt size" className="w-full" />
+                </div>
+                <div>
+                  <FieldLabel>Answer</FieldLabel>
+                  <Select value={q.type} onChange={(e) => set({ type: e.target.value as AddonQuestion["type"] })} className="w-[130px]">
+                    <option value="choice">Pick one</option>
+                    <option value="text">Type an answer</option>
+                  </Select>
+                </div>
+                {q.type === "choice" && (
+                  <div className="min-w-[180px] flex-1">
+                    <FieldLabel>Options <span className="font-normal text-[var(--ink-3)]">— comma separated</span></FieldLabel>
+                    <Input value={(q.options ?? []).join(", ")} onChange={(e) => set({ options: e.target.value.split(",") })}
+                      placeholder="Age 5-6, Age 7-8, Age 9-10" className="w-full" />
+                  </div>
+                )}
+                <label className="flex items-center gap-1.5 pb-2 text-[11.5px] font-bold text-[var(--ink-2)]">
+                  <input type="checkbox" checked={!!q.required} onChange={(e) => set({ required: e.target.checked })} />
+                  Must answer
+                </label>
+                <button type="button" onClick={() => setQs(qs.filter((_, n) => n !== i))}
+                  className="pb-2 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+              </div>
+            );
+          })}
+          <Button sm onClick={() => setQs([...qs, { id: uid(), label: "", type: "choice", options: [] }])}>＋ Add a question</Button>
+        </div>
+        <Button variant="primary" onClick={save}>{editing ? "Save changes" : "＋ Add"}</Button>
+        {editing && <Button onClick={clear}>Cancel</Button>}
       </div>
     </div>
   );
@@ -1883,7 +1993,7 @@ function myBrand() {
  * — so everyone gets the same starting gun on a popular run.
  */
 
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null } };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null } };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -1939,7 +2049,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 }
 
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful" }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme;
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme;
 }) {
   const b = useBooking(d, booking, weeks, blocks, mode);
   const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState };
@@ -2160,7 +2270,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf }: BookView & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#8f9bb0";
+  const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#adb8ca";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -2333,7 +2443,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
 
 function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand }: {
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
-  mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null };
+  mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
   /** The provider's brand in the page header. Defaults to the signed-in
@@ -2609,7 +2719,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
 function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand }: PageProps & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#8f9bb0";
+  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#adb8ca";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-2" : "grid-cols-1";

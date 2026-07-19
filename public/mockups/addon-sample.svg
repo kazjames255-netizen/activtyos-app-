@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#63b8f5"/><stop offset="1" stop-color="#bfe6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#sky)"/>
+  <rect y="255" width="400" height="145" fill="#63c98a"/>
+  <circle cx="325" cy="70" r="34" fill="#ffd54a"/>
+  <ellipse cx="95" cy="72" rx="46" ry="21" fill="#fff" opacity=".85"/>
+  <ellipse cx="140" cy="66" rx="30" ry="16" fill="#fff" opacity=".85"/>
+  <!-- three kids, simplest possible: head, body, legs -->
+  <g>
+    <circle cx="120" cy="196" r="26" fill="#f0b98a"/><rect x="94" y="226" width="52" height="66" rx="16" fill="#e2453f"/>
+    <rect x="104" y="288" width="14" height="42" rx="7" fill="#2f3a56"/><rect x="122" y="288" width="14" height="42" rx="7" fill="#2f3a56"/>
+  </g>
+  <g>
+    <circle cx="200" cy="180" r="30" fill="#c98b60"/><rect x="169" y="214" width="62" height="76" rx="18" fill="#f5b81f"/>
+    <rect x="180" y="286" width="16" height="46" rx="8" fill="#2f3a56"/><rect x="203" y="286" width="16" height="46" rx="8" fill="#2f3a56"/>
+  </g>
+  <g>
+    <circle cx="282" cy="198" r="25" fill="#8d5a3b"/><rect x="257" y="227" width="50" height="64" rx="15" fill="#2f6bd8"/>
+    <rect x="266" y="287" width="14" height="42" rx="7" fill="#2f3a56"/><rect x="284" y="287" width="14" height="42" rx="7" fill="#2f3a56"/>
+  </g>
+  <rect x="0" y="0" width="400" height="60" fill="#e2453f"/>
+  <text x="200" y="40" text-anchor="middle" font-family="Hanken Grotesk, system-ui, sans-serif" font-size="27" font-weight="800" fill="#fff">SAMPLE PHOTO</text>
+</svg>

@@ -18,6 +18,7 @@ import { library } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
 import { images, uploads } from "./routes/uploads";
+import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
 import { registers } from "./routes/registers";
@@ -80,6 +81,8 @@ app.use("/api/library", library);
 app.use("/api/payments", payments);
 app.use("/api/registers", registers);
 app.use("/api/uploads", uploads);
+// Before /api/my so the file routes aren't shadowed by anything there.
+app.use("/api/my/files", childFiles);
 app.use("/api/my", my);
 app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);

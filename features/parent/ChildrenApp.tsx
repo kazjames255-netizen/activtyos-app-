@@ -64,6 +64,7 @@ function Avatar({ child, size = 44 }: { child: Pick<Child, "name" | "photo">; si
 function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
+  const [sex, setSex] = useState<"boy" | "girl" | "">("");
   const [school, setSchool] = useState("");
   const [allergies, setAllergies] = useState("");
   const [medical, setMedical] = useState("");
@@ -91,7 +92,8 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
     try {
       await apiPost("/api/my/children", {
         name: name.trim(),
-        ...(dob.trim() ? { dob: dob.trim() } : {}),
+        dob: dob.trim(),
+        sex,
         ...(school.trim() ? { school: school.trim() } : {}),
         ...(allergies.trim() ? { allergies: allergies.trim() } : {}),
         ...(medical.trim() ? { medical: medical.trim() } : {}),
@@ -160,11 +162,26 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
           <div>
             <FieldLabel>Date of birth</FieldLabel>
             <Input
-              placeholder="DD MMM YYYY"
+              required
+              type="date"
               value={dob}
               onChange={(e) => setDob(e.target.value)}
               className="w-full"
             />
+          </div>
+          <div>
+            <FieldLabel>Boy or girl</FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setSex(v)}
+                  className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
+                  style={sex === v
+                    ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" }
+                    : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <FieldLabel>School</FieldLabel>
@@ -235,7 +252,8 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
           </div>
 
           {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
-          <Button variant="primary" type="submit" disabled={busy} className="w-full justify-center">
+          {!sex && <div className="text-[12px] text-[var(--ink-3)]">Still needed: boy or girl.</div>}
+          <Button variant="primary" type="submit" disabled={busy || !sex} className="w-full justify-center">
             {busy ? "Saving…" : "Save"}
           </Button>
         </form>

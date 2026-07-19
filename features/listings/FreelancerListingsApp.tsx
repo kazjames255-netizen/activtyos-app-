@@ -49,6 +49,16 @@ export interface Venue {
   lng?: number;
   zoom?: number;
 }
+export interface AddonQuestion {
+  id: string;
+  /** What the parent is asked — "T-shirt size", "Meal choice". */
+  label: string;
+  /** "choice" gives them the options and nothing else; "text" is free typing. */
+  type: "text" | "choice";
+  options?: string[];
+  required?: boolean;
+}
+
 export interface AddonTemplate {
   id: string;
   name: string;
@@ -64,6 +74,10 @@ export interface AddonTemplate {
   /** Shown beside the add-on on the customer page. An image wins over an emoji. */
   emoji?: string;
   image?: string;
+  /** Anything the provider needs to know per child before they can supply it —
+   *  a t-shirt size, a meal choice, a name to print. Asked at checkout, once
+   *  per child who takes the add-on. */
+  questions?: AddonQuestion[];
 }
 export interface StaffMember {
   id: string;
@@ -489,7 +503,7 @@ export function FreelancerListingsApp() {
 // Filter pills. A pill fills brand-blue while it's doing something, so the row
 // shows the current state at a glance instead of a wall of empty controls. The
 // native select chevron is replaced — it can't be recoloured for the filled state.
-function Pill({ active, onClear, children }: { active: boolean; onClear?: () => void; children: React.ReactNode }) {
+export function Pill({ active, onClear, children }: { active: boolean; onClear?: () => void; children: React.ReactNode }) {
   return (
     <span className="flex h-8 items-center gap-1.5 rounded-full border pl-3 pr-1 transition-colors"
       style={active ? { background: "var(--brand)", borderColor: "var(--brand)" } : { background: "var(--panel)", borderColor: "var(--line)" }}>
@@ -501,15 +515,15 @@ function Pill({ active, onClear, children }: { active: boolean; onClear?: () => 
   );
 }
 
-function PillSelect({ active, value, onChange, options, title }: { active: boolean; value: string; onChange: (v: string) => void; options: [string, string][]; title: string }) {
+export function PillSelect({ active, value, onChange, options, title }: { active: boolean; value: string; onChange: (v: string) => void; options: [string, string][]; title: string }) {
   return (
     <span className="relative flex items-center">
       <select value={value} onChange={(e) => onChange(e.target.value)} title={title}
         className="h-8 max-w-[165px] cursor-pointer appearance-none border-0 bg-transparent pr-4 text-[12.5px] font-semibold outline-none"
-        style={{ color: active ? "#fff" : "var(--ink-2)" }}>
+        style={{ color: active ? "#fff" : "var(--ink)" }}>
         {options.map(([v, label]) => <option key={v} value={v} style={{ color: "var(--ink)" }}>{label}</option>)}
       </select>
-      <span className="pointer-events-none absolute right-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-3)" }}>▼</span>
+      <span className="pointer-events-none absolute right-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-2)" }}>▼</span>
     </span>
   );
 }
@@ -723,7 +737,7 @@ function ListingsTab({
             <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.7" /><path d="M11 11l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…"
-            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--brand-2)]" />
+            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] pl-[32px] pr-3 text-[12.5px] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]" />
         </div>
 
         {venueOpts.length > 0 && (
@@ -746,10 +760,10 @@ function ListingsTab({
         </Pill>
 
         <Pill active={!!dateFilter} onClear={() => setDateFilter("")}>
-          <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: dateFilter ? "#fff" : "var(--ink-2)" }}>Runs on</span>
+          <span className="whitespace-nowrap text-[12.5px] font-semibold" style={{ color: dateFilter ? "#fff" : "var(--ink)" }}>Runs on</span>
           <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}
             className="h-full w-[112px] border-0 bg-transparent text-[12.5px] font-semibold outline-none"
-            style={{ color: dateFilter ? "#fff" : "var(--ink-2)", colorScheme: dateFilter ? "dark" : "light" }} />
+            style={{ color: dateFilter ? "#fff" : "var(--ink)", colorScheme: dateFilter ? "dark" : "light" }} />
         </Pill>
 
         {(q || dateFilter || venueFilter || catFilter || sortBy !== "soonest") && (
@@ -1223,7 +1237,7 @@ function LocationsTab({
                   placeholder={sel.kind === "online"
                     ? "A Zoom link is emailed the day before. Sessions start on the hour — please join a few minutes early."
                     : "Free car park off Purbeck Road. Drop-off at the main entrance — please don't use the leisure centre bays."}
-                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[12.5px] leading-[1.5] text-[var(--ink)] outline-none placeholder:text-[var(--ink-3)] focus:border-[var(--brand-2)]"
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[12.5px] leading-[1.5] text-[var(--ink)] outline-none placeholder:text-[var(--ink-2)] focus:border-[var(--brand-2)]"
                 />
               </div>
               <div className="mt-0.5 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">

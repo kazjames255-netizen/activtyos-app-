@@ -683,3 +683,143 @@ naming the full day under day scope.)
 Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
 when the maps key lands I'll start writing `lat`/`lng` server-side on
 venue save.
+
+
+---
+
+## F — SEND / EHCP plans: chunked storage, built
+
+**What's there.** The child form has a "SEND / additional needs" field, and
+typing anything into it reveals an optional upload for the child's SEND or EHCP
+plan. Because the project has no Storage bucket and Firestore caps a document
+at 1MB, the file is split client-side and stored a chunk per document:
+
+- `server/src/routes/childFiles.ts` — new, mine. `POST /api/my/files` reserves
+  a file, `PUT /api/my/files/:id/chunks/:n` sends each chunk,
+  `POST /api/my/files/:id/done` seals it (and counts the parts rather than
+  trusting the client), `GET /api/my/files/:id` reassembles and serves it.
+  Ceiling is 15MB across 30 chunks.
+- `features/listings/planUpload.ts` — the client half, with progress.
+- `childSchema` in `my.ts` now carries `sendPlanId` + `sendPlanName`. The bytes
+  are never on the child document.
+
+**Access — please read this bit.** These are special-category personal data
+under UK GDPR, so unlike `routes/uploads.ts` (public URL, unguessable id, fine
+for a listing photo) reads are authenticated and checked every time:
+
+- the parent who uploaded it, always;
+- an operator whose `tenantId` is on the file's `tenantIds`.
+
+That grant is written by the booking route — I added a fire-and-forget call at
+the end of `POST /api/my/bookings` that adds the listing's tenant to the plans
+of the children on that basket. The client can never widen access to its own
+file. Children are matched to plans **by name**, because that is what a booking
+carries; if bookings ever carry child ids, that lookup should move to ids.
+
+**Still worth doing when Storage is enabled.** Only `childFiles.ts` changes —
+same routes, same ids, bytes move to the bucket, chunking disappears. Two
+things I have not done and you may want: a retention rule (a plan probably
+shouldn't outlive the bookings that justified it), and revoking a `tenantId`
+once a family's last booking with that provider is long past.
+
+
+---
+
+## G — Operator checkout on the listing page
+
+**Correction to what I first wrote here.** I said nothing could mark an invoice
+paid. That was wrong — `POST /api/bookings/:ref/actions {type:"paid"}` already
+flips `pay` to `Paid`, and `/api/payments/checkout` already raises a Stripe
+PaymentIntent for a basket and confirms it. Apologies for the noise.
+
+**What's changed on my side.** The freelancer's listing view now runs the same
+checkout a parent sees — dates, children, per-child add-ons, discounts — with
+the family found by name or email first, and a last step recording how the
+parent is paying — using **your** four methods (Card / Tax-Free Childcare /
+HAF (funded £0) / PayPal), now a single shared constant so the Take booking
+modal and this screen can't drift apart.
+
+**What's actually outstanding**, as far as I can tell from your code:
+
+1. **The payment-link email has no link.** `emailPaymentLink` sends a button
+   with `href="#"` and a note saying online payment arrives with the Stripe
+   milestone. The Stripe endpoints now exist, so this looks like it just needs
+   pointing at a hosted pay page for `{refs}`. Is that milestone yours and
+   still open, or is it waiting on something?
+2. **Offline payments have no record.** `type:"paid"` is a flag, not an entry —
+   nothing captures which method settled it, when, or how much, so a partly
+   paid booking can't be represented and reconciliation has nothing to read.
+   That matters more now: Tax-Free Childcare, HAF and PayPal all settle
+   off-platform on their own timetable.
+3. **The operator checkout doesn't write yet.** It needs the "on behalf of"
+   decision: either `POST /api/my/bookings` accepting `onBehalfOf:
+   {customerId}` from operator roles (my preference — one pricing path, reused
+   for both audiences), or `POST /api/bookings` learning the basket shape,
+   which means a second pricing implementation and eventual drift.
+
+Only (3) blocks me. Tell me which way you want it and I'll build the client
+half the same day.
+
+
+---
+
+## H — Taking a booking over the phone: create the family's account
+
+**The idea (Kaz's, and I think it's the right one).** When a provider takes a
+booking on the phone, they collect the details anyway. Rather than filing that
+against a CRM row nobody can log into, create the family a real account, book
+onto it, and email them their booking, a way to set a password, and a link to
+pay. The family ends up owning their booking — they can see it, pay it, and
+reuse their children next time. No orphaned records, and the parent portal
+starts populated instead of empty.
+
+**What the operator collects**, and what I'm building the screen around:
+
+| Parent | Child (per child) |
+| --- | --- |
+| Full name | Name |
+| Email | Date of birth |
+| Phone | Boy / girl |
+| Address | (allergies, medical, SEND — optional) |
+
+**What I need from you.**
+
+1. **A way to book for someone else.** However the account is created, the
+   server still authenticates the *operator*. It needs to accept "create this
+   booking for parent X". My preference remains `POST /api/my/bookings` taking
+   `onBehalfOf: {uid | customerId}`, allowed only for operator roles, so the
+   pricing/discount/capacity path stays single. The alternative — teaching
+   `POST /api/bookings` the basket shape — means a second pricing
+   implementation, and two implementations of a price drift.
+
+2. **Account creation.** `admin.auth().createUser` for the email, role
+   `parent`, then the booking against that uid. Four things I'd ask for:
+   - **If the email already has an account, use it — don't create a second.**
+     This is the case most likely to bite, and it is not rare: a `customers`
+     record is only written by `upsertCustomerFromBooking`, i.e. on booking. So
+     a parent who registered on ActivityOS but has never booked *with this
+     provider* does not appear in the operator's search at all. The operator's
+     only route is option 2, and the server linking by email is the thing that
+     stops them ending up with two accounts. The screen says as much, but the
+     guarantee has to be server-side.
+   - **Never email a password.** Create with no password and send Firebase's
+     password-reset (or sign-in) link. A password in an inbox lives forever.
+   - The operator must not keep any access to the account afterwards.
+   - Upsert the `customers` record too, so the tenant's CRM still shows them
+     (`upsertCustomerFromBooking` presumably already covers this).
+
+3. **One email.** Booking confirmation + "set your password" + pay link, saying
+   plainly *who* booked it and *why* they have an account — that's the GDPR
+   basis as much as the courtesy. Related: `emailPaymentLink` currently sends
+   `href="#"`. Whatever we do here, that link needs to point at the Stripe
+   checkout you already built.
+
+**Risk worth designing for.** A mistyped email creates an account for a
+stranger containing a child's name and date of birth. I'm putting a read-back
+confirm in the UI ("that's smith@gmail.com — right?"), but a server-side
+guard — say, no child data in the email body itself — would be worth having
+too.
+
+**Where I am.** The screen is built and describes both routes to the operator
+(find an existing family, or create one). It cannot write a booking until (1)
+exists. Nothing else blocks me.

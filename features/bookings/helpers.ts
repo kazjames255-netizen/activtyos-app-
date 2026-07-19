@@ -1,5 +1,11 @@
 import type { Booking, BookingFilter, Kid } from "./types";
 
+/** How an operator records a parent paying. One list, shared by the Take
+ *  booking modal and the checkout on a listing's view page — two lists is how
+ *  a booking ends up with a method the other screen doesn't recognise. The
+ *  value is the label, because that is what the booking record stores. */
+export const PAY_METHODS = ["Card", "Tax-Free Childcare", "HAF (funded £0)", "PayPal"] as const;
+
 export const FILTER_TABS: [BookingFilter, string][] = [
   ["all", "All"],
   ["approval", "Approval needed"],
