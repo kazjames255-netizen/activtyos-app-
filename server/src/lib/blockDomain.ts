@@ -57,7 +57,7 @@ export function daysHaveSpace(
 
 /** Which booking statuses hold a place in a block. */
 export const countsTowardCapacity = (status: BookingStatus): boolean =>
-  status === "Confirmed" || status === "Approval needed";
+  status === "Confirmed" || status === "Approval needed" || status === "Offered";
 
 /** bookedCount delta for a status transition (0 when nothing changes). */
 export function blockCountDelta(

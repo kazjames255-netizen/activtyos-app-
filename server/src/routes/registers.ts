@@ -101,7 +101,8 @@ registers.get("/", async (req, res) => {
       .map((d) => fromDoc(d.data() as BookingDoc))
       // Expected = holds a place AND is booked for THIS day (bookings with
       // chosen days only appear on those; older whole-block bookings on all).
-      .filter((b) => countsTowardCapacity(b.status) && (!b.days || b.days.includes(date)))
+      // Offered holds a seat but isn't expected — they haven't accepted yet.
+      .filter((b) => countsTowardCapacity(b.status) && b.status !== "Offered" && (!b.days || b.days.includes(date)))
       .map((b) => ({
         ref: b.ref,
         booker: b.booker,
@@ -179,7 +180,7 @@ registers.post("/:blockId/:date/mark", async (req, res) => {
     return;
   }
   const booking = fromDoc(bookingSnap.docs[0].data() as BookingDoc);
-  if (!countsTowardCapacity(booking.status)) {
+  if (!countsTowardCapacity(booking.status) || booking.status === "Offered") {
     res.status(409).json({ error: `Booking is ${booking.status} — not expected on the register` });
     return;
   }

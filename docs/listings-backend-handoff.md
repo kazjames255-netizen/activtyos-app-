@@ -740,3 +740,41 @@ charged the untimed one.
 (the label in `timing` stays display-only) and the checkout POST includes
 it, so the server prices the chosen timing exactly as your preview shows.
 Nothing left on your side for this one.
+
+---
+
+# §E shipped — 19 July 2026
+
+Built exactly as your corrected spec: bookings ARE the entries, three
+changes, no new collection. Swagger v0.10.0 has the full contract.
+
+1. **Queues are per date** — FIFO by ref within each date of the booking's
+   `days`. Checkout responses (and operator-created waitlisted bookings)
+   return `waitlist: [{ref, date, position}]`, so the confirmation can say
+   "2nd in line for 12 Aug". `waitlistSize` caps each date's queue (409
+   names the date).
+2. **Baskets split by date, never by child** — dates with space book, full
+   dates queue, siblings on the same date stay together (grouped by
+   identical day-sets). Your Mon–Wed-with-only-Monday-free parent now
+   books Monday and queues the rest.
+3. **`offer` = promote with a hold** — new booking status **`Offered`**:
+   seat held (counts toward capacity, NOT expected on registers) for
+   **2 hours** (`offerExpiresAt`); parents accept
+   (`POST /api/my/bookings/{ref}/accept-offer` → Confirmed → pay) or
+   decline (place passes on). Expired offers sweep back to the queue every
+   5 minutes. `offer` 409s while the date is still full; `promote` stays
+   your overbook override and now returns `waiting` (how many are queued
+   for those dates) for the warning you asked for.
+
+`waitlistMode` is enforced: `"manual"` (default) nothing automatic —
+operator sees the queue (waitlisted bookings carry `days` + note with
+positions) and offers whom they choose; `"auto"` — cancellations,
+declines and expiries offer the freed place to position 1 with one email
+("a place is yours for 2 hours").
+
+**For your UI:** the Bookings table needs the `Offered` status (amber
+badge is already in `statusTone`); the operator detail shows
+"Offer place (2h hold)" / "Promote now" on waitlisted bookings; parents
+get an accept/decline banner on My bookings — all built simply, restyle
+at will. Your storefront checkout gets the split + positions for free
+from the same POST it already calls.

@@ -113,6 +113,9 @@ const baseListingSchema = z
     opensAt: z.string().max(25).optional(), // local datetime; blank = open now
     bookingType: z.enum(["auto", "manual"]).optional(),
     waitlist: z.boolean().optional(),
+    // "manual": the operator offers places. "auto": a freed seat is offered
+    // to the front of that date's queue automatically (2h hold each).
+    waitlistMode: z.enum(["manual", "auto"]).optional(),
     waitlistSize: z.string().max(10).optional(),
     cancellation: z.string().max(2_000).optional(),
     discounts: z.array(discountRuleSchema).max(30).optional(),

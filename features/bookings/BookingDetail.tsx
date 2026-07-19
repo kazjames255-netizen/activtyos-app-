@@ -426,9 +426,24 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             </>
           )}
           {b.status === "Waitlisted" && (
-            <Button variant="primary" onClick={() => act(b.ref, "promote")}>
-              Offer place / promote
-            </Button>
+            <>
+              <Button variant="primary" onClick={() => act(b.ref, "offer")}>
+                Offer place (2h hold)
+              </Button>
+              <Button onClick={() => act(b.ref, "promote")} title="Seat immediately — may overbook">
+                Promote now
+              </Button>
+            </>
+          )}
+          {b.status === "Offered" && (
+            <>
+              <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>
+                Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "…"}
+              </Badge>
+              <Button onClick={() => act(b.ref, "promote")} title="Confirm without waiting for the family">
+                Confirm now
+              </Button>
+            </>
           )}
           {b.cancel?.refund === "pending" && (
             <>

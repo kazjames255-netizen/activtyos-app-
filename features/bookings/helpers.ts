@@ -60,6 +60,7 @@ export function statusTone(status: string): BadgeTone {
     "Approval needed": AMBER,
     Confirmed: GREEN,
     Waitlisted: BLUE,
+    Offered: AMBER,
     Cancelled: RED,
     Declined: RED,
   };

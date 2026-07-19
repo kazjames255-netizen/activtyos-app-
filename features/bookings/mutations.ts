@@ -13,7 +13,10 @@ export type RowAction =
   | "recon"
   | "promote"
   | "refund-approve"
-  | "refund-decline";
+  | "refund-decline"
+  // Waiting list: offer the place with a 2-hour hold (vs "promote", the
+  // operator's immediate — possibly overbooking — seat).
+  | "offer";
 
 export type BulkAction = "approve" | "decline" | "waitlist" | "cancel";
 
@@ -41,6 +44,8 @@ function applyCancelState(b: Booking) {
   else if (r > 0) b.pay = "Partially refunded";
 }
 
+const nowIso = () => new Date().toISOString();
+
 export function applyRowAction(b: Booking, action: RowAction): void {
   if (action === "approve") b.status = "Confirmed";
   else if (action === "decline") b.status = "Declined";
@@ -49,6 +54,12 @@ export function applyRowAction(b: Booking, action: RowAction): void {
   else if (action === "promote") {
     b.status = "Confirmed";
     b.note = "Promoted from waitlist.";
+  } else if (action === "offer") {
+    const expires = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    b.status = "Offered";
+    b.offeredAt = nowIso();
+    b.offerExpiresAt = expires.toISOString();
+    b.note = "Place offered — held for 2 hours.";
   } else if (action === "refund-approve") {
     if (b.cancel) b.cancel.refund = "approved";
     b.pay = "Refunded";

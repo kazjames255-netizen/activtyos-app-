@@ -110,6 +110,13 @@ app.listen(port, () => {
   console.log(`ActivityOS API listening on http://localhost:${port}`);
 });
 
+// Waiting-list offers expire after 2 hours — sweep them back into the
+// queue (and pass the place down in auto mode). Startup + every 5 minutes.
+import("./lib/waitlist").then(({ expireOffers }) => {
+  void expireOffers();
+  setInterval(() => void expireOffers(), 5 * 60_000);
+});
+
 // Bootstrap the Platform (HQ) super-admin from env, if configured — so
 // setting ADMIN_EMAIL / ADMIN_PASSWORD in server/.env is all it takes.
 // Idempotent: an existing admin's password is never touched.
