@@ -706,3 +706,12 @@ trapping a provider's visitor in our dashboard) and keeps `?embed=1`
 through the sign-in round trip. The button styling is deliberately plain —
 restyle `public/embed.js` however you like; the postMessage contract is
 `{type: "activityos:height", value}` only.
+
+**Embed update (same day):** script-hoisting frameworks (next/script and
+friends) move the tag, so "insert beside my own script" was unreliable on
+React sites. embed.js now also supports mount elements —
+`<div data-activityos-book="LISTING_ID">` (+ optional data-mode/label/
+color) with the script loaded anywhere. A MutationObserver mounts
+late-rendered placeholders (SPA navigations included) exactly once;
+double-loading the script is guarded. The plain one-liner still works for
+static HTML.

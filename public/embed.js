@@ -1,45 +1,47 @@
 /**
  * ActivityOS "Book now" embed (build item 11).
  *
- * A provider pastes ONE line into their own website:
+ * Plain HTML sites — ONE line where the button should appear:
  *
  *   <script src="https://YOUR-ACTIVITYOS/embed.js" data-listing="LISTING_ID" async></script>
  *
- * and gets a Book-now button that opens the real ActivityOS booking page
- * (the customer page the operator designed, paying through their own
- * Stripe) in an overlay. Options via data attributes:
+ * React / Next.js / anything that hoists or defers scripts — a MOUNT
+ * ELEMENT where the button goes, plus the script anywhere (next/script,
+ * layout, whatever):
  *
- *   data-listing  (required)  the listing id — the 🔗 Link button's id
- *   data-mode     "button" (default) | "inline"
- *                 inline embeds the booking page directly in the page,
- *                 auto-sized to its content
+ *   <div data-activityos-book="LISTING_ID"></div>
+ *   <script src="https://YOUR-ACTIVITYOS/embed.js" async></script>
+ *
+ * Both render a Book-now button that opens the real ActivityOS booking
+ * page (the customer page the operator designed, paying through their own
+ * Stripe) in an overlay. Options, on the script tag or the mount element:
+ *
+ *   data-listing / data-activityos-book   (required)  the listing id
+ *   data-mode     "button" (default) | "inline" — inline embeds the whole
+ *                 booking page, auto-sized to its content
  *   data-label    button text (default "Book now")
  *   data-color    button background (default ActivityOS green)
  *
- * No dependencies, no globals beyond one namespaced init guard. The
- * ActivityOS origin is derived from this script's own src, so the same
- * snippet works in dev and production.
+ * Mount elements are picked up whenever they appear (SPA navigations and
+ * client-side renders included) and are never mounted twice. No
+ * dependencies; one global (window.ActivityOSEmbed.scan). The ActivityOS
+ * origin is derived from this script's own src, so the same snippet works
+ * in dev and production.
  */
 (function () {
   "use strict";
 
-  var script = document.currentScript;
-  if (!script) return;
-
-  var listing = script.getAttribute("data-listing");
-  if (!listing) {
-    console.warn("[activityos] embed.js needs data-listing=\"…\"");
-    return;
-  }
-  var mode = script.getAttribute("data-mode") === "inline" ? "inline" : "button";
-  var label = script.getAttribute("data-label") || "Book now";
-  var color = script.getAttribute("data-color") || "#15b364";
+  var script = document.currentScript || document.querySelector('script[src*="embed.js"]');
+  if (!script || !script.src) return;
   var origin = new URL(script.src).origin;
-  var pageUrl = origin + "/book/" + encodeURIComponent(listing) + "?embed=1";
 
-  function makeFrame() {
+  function pageUrl(listing) {
+    return origin + "/book/" + encodeURIComponent(listing) + "?embed=1";
+  }
+
+  function makeFrame(listing) {
     var frame = document.createElement("iframe");
-    frame.src = pageUrl;
+    frame.src = pageUrl(listing);
     frame.title = "Book with ActivityOS";
     frame.allow = "payment *"; // Stripe wallets inside the frame
     frame.style.border = "0";
@@ -55,28 +57,7 @@
     });
   }
 
-  if (mode === "inline") {
-    var holder = document.createElement("div");
-    holder.style.maxWidth = "1080px";
-    holder.style.margin = "0 auto";
-    var frame = makeFrame();
-    frame.style.height = "900px"; // until the first height message lands
-    listenForHeight(frame);
-    holder.appendChild(frame);
-    script.parentNode.insertBefore(holder, script.nextSibling);
-    return;
-  }
-
-  // Button mode: a styled button that opens a full-screen overlay.
-  var button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.setAttribute("data-activityos-book", listing);
-  button.style.cssText =
-    "display:inline-block;padding:12px 22px;border:0;border-radius:12px;cursor:pointer;" +
-    "font:700 15px/1 system-ui,-apple-system,sans-serif;color:#fff;background:" + color + ";";
-
-  button.addEventListener("click", function () {
+  function openOverlay(listing) {
     var overlay = document.createElement("div");
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,25,.62);" +
@@ -90,7 +71,7 @@
     close.style.cssText =
       "position:absolute;top:-4px;right:0;z-index:1;border:0;background:transparent;" +
       "color:#fff;font-size:30px;line-height:1;cursor:pointer;padding:4px 10px;";
-    var frame = makeFrame();
+    var frame = makeFrame(listing);
     frame.style.height = "min(92vh, 1400px)";
     frame.style.borderRadius = "18px";
     frame.style.background = "#f4f7ff";
@@ -112,7 +93,79 @@
     box.appendChild(frame);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
-  });
+  }
 
-  script.parentNode.insertBefore(button, script.nextSibling);
+  /** Render the widget into `host` (appended; the mount div is the target). */
+  function mount(host, opts) {
+    if (opts.mode === "inline") {
+      var frame = makeFrame(opts.listing);
+      frame.style.height = "900px"; // until the first height message lands
+      listenForHeight(frame);
+      host.appendChild(frame);
+      return;
+    }
+    var button = document.createElement("button");
+    button.type = "button";
+    button.textContent = opts.label;
+    button.style.cssText =
+      "display:inline-block;padding:12px 22px;border:0;border-radius:12px;cursor:pointer;" +
+      "font:700 15px/1 system-ui,-apple-system,sans-serif;color:#fff;background:" + opts.color + ";";
+    button.addEventListener("click", function () {
+      openOverlay(opts.listing);
+    });
+    host.appendChild(button);
+  }
+
+  function optsFrom(el, listing) {
+    return {
+      listing: listing,
+      mode: el.getAttribute("data-mode") === "inline" ? "inline" : "button",
+      label: el.getAttribute("data-label") || "Book now",
+      color: el.getAttribute("data-color") || "#15b364",
+    };
+  }
+
+  // Mount elements: <div data-activityos-book="LISTING_ID">. Scanned now,
+  // on DOM ready, and whenever new nodes appear (React renders after this
+  // script runs; SPA navigations remove and re-add them).
+  function scan() {
+    var nodes = document.querySelectorAll("[data-activityos-book]:not([data-activityos-mounted])");
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var listing = el.getAttribute("data-activityos-book");
+      if (!listing) continue;
+      el.setAttribute("data-activityos-mounted", "1");
+      mount(el, optsFrom(el, listing));
+    }
+  }
+
+  if (!window.ActivityOSEmbed) {
+    window.ActivityOSEmbed = { scan: scan };
+    var observer = new MutationObserver(scan);
+    function watch() {
+      scan();
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.body) watch();
+    else document.addEventListener("DOMContentLoaded", watch);
+  }
+
+  // Plain-HTML path: the script tag itself carries data-listing and the
+  // widget lands right where the tag was pasted. (Script loaders that hoist
+  // the tag — next/script etc. — should use a mount element instead.)
+  var inlineListing = script.getAttribute && script.getAttribute("data-listing");
+  if (inlineListing && script.parentNode && !script.hasAttribute("data-activityos-mounted")) {
+    script.setAttribute("data-activityos-mounted", "1");
+    var opts = optsFrom(script, inlineListing);
+    var holder;
+    if (opts.mode === "inline") {
+      holder = document.createElement("div");
+      holder.style.maxWidth = "1080px";
+      holder.style.margin = "0 auto";
+    } else {
+      holder = document.createElement("span");
+    }
+    script.parentNode.insertBefore(holder, script.nextSibling);
+    mount(holder, opts);
+  }
 })();

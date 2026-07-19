@@ -623,7 +623,7 @@ function ListingsTab({
   const copyEmbed = (l: Listing) => {
     const snippet = `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/embed.js" data-listing="${l.id}" async></script>`;
     navigator.clipboard?.writeText(snippet)
-      .then(() => alert(`Copied! Paste this into your website's HTML for a "Book now" button:\n\n${snippet}\n\nTip: add data-mode="inline" to embed the whole booking page instead of a button.`))
+      .then(() => alert(`Copied! Paste this into your website's HTML for a "Book now" button:\n\n${snippet}\n\nTips:\n· add data-mode="inline" to embed the whole booking page instead of a button\n· on React/Next sites, put <div data-activityos-book="${l.id}"></div> where the button should go and load the script however you like`))
       .catch(() => {});
   };
 
