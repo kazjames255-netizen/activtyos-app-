@@ -46,7 +46,12 @@ export function useParents(skip = false) {
   }, [skip]);
   return { list, state, error };
 }
-export type CkTheme = { bg: string; line: string; ink: string; muted: string; accent: string; accentInk: string; round: string; inputBg: string };
+export type CkTheme = {
+  bg: string; line: string; ink: string; muted: string;
+  accent: string; accentInk: string; round: string; inputBg: string;
+  /** The panel's own header colour — extras use it so the flow keeps one voice. */
+  bar: string; barInk: string;
+};
 export type ChildProfile = {
   id?: string; name: string; dob?: string;
   allergies?: string; medical?: string; likes?: string; dislikes?: string;
@@ -161,30 +166,37 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
       )}
 
       {roster.length > 0 && (
-        <div className="mt-2 flex flex-col gap-1.5">
+        <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {roster.map((c, i) => {
             const on = comingCount(c.name.trim());
             // Same two strengths as the chips below: soft while a child is only
             // listed, solid once they're on something.
             return (
               <div key={`${c.name}-${i}`} className={`border-2 px-3 py-2 ${tk.round}`}
-                style={{ borderColor: sexTint(c.sex, !!on).border, background: sexTint(c.sex, !!on).bg }}>
+                style={{ borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg }}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: sexTint(c.sex, !!on).ink }}>
+                  <span className="flex-1 text-[12.5px] font-bold" style={{ color: sexTint(c.sex, true).ink }}>
                     {c.name}
-                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: on ? "rgba(255,255,255,.8)" : tk.muted }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
-                    {!on && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>· not on this booking</span>}
+                    {c.dob && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "rgba(255,255,255,.8)" }}>age {ageOn(c.dob, d.runFrom) ?? "—"}</span>}
                   </span>
                   {/* On the solid fill the muted greys vanish, so the actions
                       follow the row's state too. */}
                   <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
-                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>Edit details</button>
+                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>Edit details</button>
                   {/* Off the booking entirely — their dates go and they drop
                       back to a pale chip above, ready to add again. Deleting
                       the profile belongs in the profile area, not mid-booking. */}
                   <button type="button"
                     onClick={() => { onUnassignAll(c.name.trim()); setRoster(roster.filter((_, n) => n !== i)); }}
-                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>Not coming</button>
+                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>Not coming</button>
+                </div>
+                {/* Says what just happened and where to change it — a child
+                    silently landing on every date is the surprise worth
+                    heading off. */}
+                <div className="mt-1 text-[11px] leading-[1.45]" style={{ color: "rgba(255,255,255,.85)" }}>
+                  {on > 0
+                    ? "Added to all dates — you can take them off individual dates below."
+                    : "Not on any dates yet — tap their name on a pass below."}
                 </div>
               </div>
             );
@@ -290,6 +302,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // at the same time is two jobs on one screen; the first has to be right
   // before the second even makes sense.
   const [ckStage, setCkStage] = useState<"who" | "extras" | "pay">("who");
+  // The full-page checkout scrolls itself, so the page underneath must stop —
+  // otherwise there are two scrollbars and the outer one moves nothing you can
+  // see. Restored on the way out, including if the tab closes mid-booking.
+  useEffect(() => {
+    if (!parentMode) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [parentMode]);
   const [extraIdx, setExtraIdx] = useState(0);
   // Per-day extras first, one-offs last: a t-shirt is a yes/no and belongs
   // after the choices that need thought.
@@ -397,8 +418,21 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const steps = parentMode ? ["Dates", "Children", ...ordered.map((_, i) => `Extra ${i + 1}`), "Pay"] : [];
   const stepNow = ckStage === "who" ? 1 : ckStage === "extras" ? 2 + extraIdx : steps.length - 1;
 
+  // Past the dates the checkout is the whole page, so children and their days
+  // lay out across instead of down — a family of three across two weeks was a
+  // long scroll in a 340px column.
   return (
-    <div className="p-5" style={{ background: tk.bg }}>
+    <>
+    {/* Past the dates the checkout takes the whole page. The listing has done
+        its job by then, and a half-visible page behind competes with the thing
+        being filled in. */}
+    {parentMode && <div className="fixed inset-0 z-30" style={{ background: tk.bg }} aria-hidden />}
+    <div
+      className={parentMode
+        ? "fixed inset-0 z-40 overflow-y-auto px-5 py-6 sm:px-8"
+        : "p-5"}
+      style={{ background: tk.bg }}>
+      <div className={parentMode ? "mx-auto w-full max-w-[900px]" : ""}>
       {parentMode && steps.length > 0 && (
         <div className="mb-3 flex items-center gap-1.5">
           {steps.map((name, i) => (
@@ -509,10 +543,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             </div>
           )}
 
-          <div className="mt-2 flex flex-col gap-2">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {b.basket.map((x) => {
               return (
-                <div key={x.id} className={`border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+                // Quietly raised off the page — a lighter panel and a single
+                // hairline. Enough to separate three passes without decorating
+                // them.
+                <div key={x.id} className={`p-4 ${tk.round}`}
+                  style={{ background: tk.inputBg, border: `2px solid ${tk.muted}55` }}>
                   <div className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 text-[11.5px]" style={{ color: tk.muted }}>
                       <b style={{ color: tk.ink }}>{x.name}</b> · {b.datesPretty(x.dates)}
@@ -559,7 +597,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               className={`border-2 px-2.5 py-[3px] text-[11.5px] font-bold ${tk.round}`}
                               style={going
                                 ? { borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg, color: sexTint(c.sex, true).ink }
-                                : { borderColor: sexTint(c.sex).border, background: sexTint(c.sex).bg, color: sexTint(c.sex).ink }}>
+                                : { borderColor: "#c3c9d6", background: "#eceff5", color: "#5a6478" }}>
                               {going ? "✓ " : "+ "}{name}
                             </button>
                           );
@@ -580,19 +618,36 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       )}
                       {/* The saving on the line that earned it — a lump at the
                           bottom doesn't tell you which choice paid off. */}
-                      {savingsOn(x.id).length > 0 && (
-                        <div className="mt-1.5 flex flex-col gap-0.5 border-t pt-1.5" style={{ borderColor: tk.line }}>
-                          {savingsOn(x.id).map((sv) => (
-                            <div key={sv.name} className="flex items-baseline justify-between gap-3 text-[11px]">
-                              <span className="min-w-0" style={{ color: tk.muted }}>
-                                {sv.name}
-                                {sv.terms && <span className="ml-1 opacity-70">({sv.terms})</span>}
-                              </span>
-                              <span className="flex-none font-bold" style={{ color: tk.accent }}>−{money(sv.amount)}</span>
+                      {/* Cost, what came off, what's left — the three numbers a
+                          parent wants, in that order, on the pass they apply to. */}
+                      {(() => {
+                        const savings = savingsOn(x.id);
+                        const gross = b.priceOf(x) * b.childrenOn(x.id).length;
+                        const off = savings.reduce((t, sv) => t + sv.amount, 0);
+                        if (!b.childrenOn(x.id).length) return null;
+                        return (
+                          <div className="mt-2 flex flex-col gap-0.5 border-t pt-2" style={{ borderColor: tk.line }}>
+                            <div className="flex items-baseline justify-between gap-3 text-[11.5px]">
+                              <span style={{ color: tk.muted }}>Cost</span>
+                              <span style={{ color: tk.ink }}>{money(gross)}</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                            {savings.map((sv) => (
+                              <div key={sv.name} className="flex items-baseline justify-between gap-3 text-[11px]">
+                                <span className="min-w-0" style={{ color: tk.muted }}>
+                                  {sv.name}
+                                  {sv.terms && <span className="ml-1 opacity-70">({sv.terms})</span>}
+                                </span>
+                                <span className="flex-none font-bold" style={{ color: tk.accent }}>−{money(sv.amount)}</span>
+                              </div>
+                            ))}
+                            <div className="mt-0.5 flex items-baseline justify-between gap-3 border-t pt-1 text-[12.5px] font-extrabold"
+                              style={{ borderColor: tk.line }}>
+                              <span style={{ color: tk.ink }}>Pass total</span>
+                              <span style={{ color: tk.ink }}>{money(Math.max(0, gross - off))}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                       <button type="button" onClick={() => b.editDates(x.id)}
                         className="mt-1.5 text-[11px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
                         {x.dates.length === 1 ? "Change this date" : `Change which ${x.dates.length} days`}
@@ -658,6 +713,24 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const next = "Next";
         return (
           <>
+            {/* Where the booking stands, once rather than per card. */}
+            {b.basket.length > 0 && roster.length > 0 && (
+              <div className={`mt-4 flex items-baseline justify-between gap-3 border-2 px-4 py-3 ${tk.round}`}
+                style={{ borderColor: `${tk.muted}55`, background: tk.inputBg }}>
+                <span className="text-[12.5px] font-bold" style={{ color: tk.ink }}>
+                  Booking so far
+                  <span className="ml-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
+                    {b.basket.length} pass{b.basket.length === 1 ? "" : "es"}
+                    {b.saved > 0 ? ` · ${money(b.saved)} saved` : ""}
+                  </span>
+                </span>
+                <span className="flex items-baseline gap-2">
+                  {b.saved > 0 && <s className="text-[11.5px]" style={{ color: tk.muted }}>{money(b.subtotal)}</s>}
+                  <b className="text-[17px]" style={{ color: tk.ink }}>{money(b.total)}</b>
+                </span>
+              </div>
+            )}
+
             <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : "pay"); }}
               className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
@@ -680,31 +753,69 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const anyPicked = b.basket.some((x) => kids.some((k) => b.addonDays(x.id, k, a.id).length > 0));
         const last = extraIdx === ordered.length - 1;
         const clearAll = () => b.basket.forEach((x) => kids.forEach((k) => b.setAddonDays(x.id, k, a.id, [])));
+        // What this extra costs, per child and in total, plus where the
+        // booking stands — without repeating the pass lines from two steps ago.
+        const costFor = (kid: string) =>
+          b.basket.reduce((t, x) => t + costOf(a, b.addonDays(x.id, kid, a.id)), 0);
+        const thisExtra = kids.reduce((t, k) => t + costFor(k), 0);
         const step = (n: number) => {
           if (n < 0) { if (extraIdx === 0) setCkStage("who"); else setExtraIdx(extraIdx - 1); return; }
           if (last) setCkStage("pay"); else setExtraIdx(extraIdx + 1);
         };
         return (
           <div key={a.id} className="aos-step mt-4">
-            <div className="flex items-center gap-2.5">
-              {a.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={a.image} alt="" className="h-9 w-9 flex-none rounded-lg object-cover" />
-              ) : a.emoji ? <span className="text-[22px]">{a.emoji}</span> : null}
-              <div className="min-w-0 flex-1">
-                <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>
-                  Extra {extraIdx + 1} of {ordered.length}
+            {/* One bar carrying the whole extra: what it is, what it costs, its
+                description, and the way past it. */}
+            <div className={`p-3.5 ${tk.round}`} style={{ background: tk.bar }}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl text-[24px]"
+                  style={{ background: "rgba(255,255,255,.25)" }}>
+                  {a.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.image} alt="" className="h-11 w-11 rounded-xl object-cover" />
+                  ) : (a.emoji || "✨")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold uppercase" style={{ ...label, color: tk.accentInk, opacity: 0.7 }}>
+                    Extra {extraIdx + 1} of {ordered.length}
+                  </div>
+                  <div className="text-[17px] font-extrabold leading-tight" style={{ color: tk.barInk }}>{a.name}</div>
                 </div>
-                <div className="text-[15px] font-extrabold" style={{ color: tk.ink }}>{a.name}</div>
+                <div className="flex-none text-right">
+                  <div className="text-[17px] font-extrabold" style={{ color: tk.barInk }}>{money(a.price)}</div>
+                  <div className="text-[10.5px]" style={{ color: tk.barInk, opacity: 0.75 }}>{perDay ? "per day" : "one-off"}</div>
+                </div>
+                {/* The common answer: everyone, every day. Doing it child by
+                    child and pass by pass is a dozen taps for the usual case. */}
+                {(() => {
+                  const every = b.basket.every((x) =>
+                    b.childrenOn(x.id).every((k) => b.addonDays(x.id, k, a.id).length === (perDay ? x.dates.length : 1)));
+                  return (
+                    <button type="button"
+                      onClick={() => b.basket.forEach((x) => b.childrenOn(x.id).forEach((k) =>
+                        b.setAddonDays(x.id, k, a.id, every ? [] : perDay ? [...x.dates] : ["*"])))}
+                      className={`flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`}
+                      style={every
+                        ? { borderColor: tk.barInk, background: tk.barInk, color: tk.bar.includes("gradient") ? "#0047ff" : tk.bar }
+                        : { borderColor: tk.barInk, color: tk.barInk }}>
+                      {every ? "✓ Everyone, every day" : "Everyone, every day"}
+                    </button>
+                  );
+                })()}
+                {!anyPicked && (
+                  <button type="button" onClick={() => { clearAll(); step(1); }}
+                    className={`flex-none border-2 px-3 py-1.5 text-[12px] font-extrabold ${tk.round}`}
+                    style={{ borderColor: `${tk.barInk}66`, color: tk.barInk }}>
+                    Skip
+                  </button>
+                )}
               </div>
-              <div className="flex-none text-right">
-                <div className="text-[13px] font-extrabold" style={{ color: tk.ink }}>{money(a.price)}</div>
-                <div className="text-[10.5px]" style={{ color: tk.muted }}>{perDay ? "per day" : "one-off"}</div>
-              </div>
+              {a.description && (
+                <p className="mt-2 text-[12px] leading-[1.5]" style={{ color: tk.barInk, opacity: 0.85 }}>{a.description}</p>
+              )}
             </div>
-            {a.description && <p className="mt-1.5 text-[12px] leading-[1.5]" style={{ color: tk.muted }}>{a.description}</p>}
 
-            <div className="mt-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {b.basket.map((x) => {
                 const on = b.childrenOn(x.id);
                 if (!on.length) return null;
@@ -718,49 +829,43 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     {on.map((kid) => {
                       const days = b.addonDays(x.id, kid, a.id);
                       const all = days.length === x.dates.length;
+                      // The child's own colour, so each block is theirs at a
+                      // glance rather than three identical grey lists.
+                      const kc = sexTint(roster.find((r) => r.name.trim() === kid)?.sex, true);
                       return (
-                        <div key={kid} className="mb-2.5 last:mb-0">
-                          <div className="mb-1.5 flex items-center justify-between gap-2">
-                            <b className="min-w-0 truncate text-[13px]" style={{ color: tk.ink }}>{kid}</b>
-                            {perDay ? (
-                              <button type="button"
-                                onClick={() => b.setAddonDays(x.id, kid, a.id, all ? [] : [...x.dates])}
-                                className={`flex-none border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                                style={{ borderColor: tk.line, color: tk.muted }}>
-                                {all ? "Clear" : "Every day"}
-                              </button>
-                            ) : (
-                              <button type="button"
-                                onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : ["*"])}
-                                className={`flex-none border-2 px-4 py-1.5 text-[12.5px] font-extrabold ${tk.round}`}
-                                style={days.length
-                                  ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                                  : { borderColor: tk.line, color: tk.muted }}>
-                                {days.length ? `✓ Yes · ${money(a.price)}` : "Add one"}
-                              </button>
-                            )}
+                        <div key={kid} className={`mb-2.5 border-l-4 py-1 pl-3 last:mb-0 ${tk.round}`} style={{ borderColor: kc.bg }}>
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold"
+                              style={{ background: kc.bg, color: kc.ink }}>{kid.trim().charAt(0).toUpperCase()}</span>
+                            <b className="min-w-0 flex-1 truncate text-[13.5px]" style={{ color: kc.bg }}>{kid}</b>
+                            <button type="button"
+                              onClick={() => b.setAddonDays(x.id, kid, a.id, all ? [] : [...x.dates])}
+                              className={`flex-none border-2 px-3 py-1 text-[11.5px] font-extrabold ${tk.round}`}
+                              style={all
+                                ? { borderColor: kc.bg, background: kc.bg, color: kc.ink }
+                                : { borderColor: kc.bg, background: "transparent", color: kc.bg }}>
+                              {all ? `✓ All ${x.dates.length} days` : "Every day"}
+                            </button>
                           </div>
-                          {perDay && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {x.dates.map((iso) => {
-                                const active = days.includes(iso);
-                                const dt = new Date(`${iso}T00:00:00Z`);
-                                return (
-                                  <button key={iso} type="button"
-                                    onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
-                                    className={`flex min-w-[58px] flex-col items-center gap-0.5 border-2 px-2 py-1.5 ${tk.round}`}
-                                    style={active
-                                      ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                                      : { borderColor: tk.line, color: tk.muted }}>
-                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.06em] opacity-80">
-                                      {dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
-                                    </span>
-                                    <span className="text-[15px] font-extrabold leading-none">{ordinal(dt.getUTCDate())}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1.5">
+                            {x.dates.map((iso) => {
+                              const active = days.includes(iso);
+                              const dt = new Date(`${iso}T00:00:00Z`);
+                              return (
+                                <button key={iso} type="button"
+                                  onClick={() => b.setAddonDays(x.id, kid, a.id, active ? days.filter((dd) => dd !== iso) : [...days, iso])}
+                                  className={`flex min-w-[44px] flex-col items-center gap-0.5 border-2 px-1.5 py-1 transition-transform ${tk.round}`}
+                                  style={active
+                                    ? { borderColor: kc.bg, background: kc.bg, color: kc.ink, transform: "translateY(-1px)", boxShadow: `0 6px 14px -8px ${kc.bg}` }
+                                    : { borderColor: tk.line, color: tk.muted }}>
+                                  <span className="text-[8px] font-bold uppercase tracking-[0.06em] opacity-80">
+                                    {dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
+                                  </span>
+                                  <span className="text-[12px] font-extrabold leading-none">{ordinal(dt.getUTCDate())}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })}
@@ -769,14 +874,47 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               })}
             </div>
 
+            <div className={`mt-3 border-t pt-2.5`} style={{ borderColor: tk.line }}>
+              {kids.filter((k) => costFor(k) > 0).map((k) => (
+                <div key={k} className="flex items-baseline justify-between text-[11.5px]">
+                  <span style={{ color: tk.muted }}>{k} · {a.name}</span>
+                  <span style={{ color: tk.ink }}>{money(costFor(k))}</span>
+                </div>
+              ))}
+              {thisExtra > 0 && (
+                <div className="mt-0.5 flex items-baseline justify-between text-[12px] font-bold">
+                  <span style={{ color: tk.ink }}>{a.name} total</span>
+                  <span style={{ color: tk.ink }}>{money(thisExtra)}</span>
+                </div>
+              )}
+              <div className="mt-1.5 flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
+                <span>Passes</span><span>{money(b.total)}</span>
+              </div>
+              {addonTotal > 0 && (
+                <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
+                  <span>Extras</span><span>{money(addonTotal)}</span>
+                </div>
+              )}
+              <div className="mt-1 flex items-baseline justify-between text-[14px] font-extrabold">
+                <span style={{ color: tk.ink }}>So far</span>
+                <span style={{ color: tk.accent }}>{money(b.total + addonTotal)}</span>
+              </div>
+            </div>
+
             <div className="mt-3 flex items-center gap-2">
               <button type="button" onClick={() => step(-1)} className="text-[12px] font-bold" style={{ color: tk.muted }}>← Back</button>
-              <button type="button" onClick={() => { clearAll(); step(1); }}
-                className={`ml-auto border px-3 py-2 text-[12px] font-bold ${tk.round}`}
-                style={{ borderColor: tk.line, color: tk.muted }}>No thanks</button>
+              {/* Only while nothing's chosen — offering to decline something
+                  they've just picked reads as a way to undo it. */}
+              {!anyPicked && (
+                <button type="button" onClick={() => { clearAll(); step(1); }}
+                  className={`ml-auto border-2 px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
+                  style={{ borderColor: tk.muted, color: tk.ink }}>
+                  Skip
+                </button>
+              )}
               <button type="button" onClick={() => step(1)}
-                className={`px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
-                style={{ background: tk.accent, color: tk.accentInk }}>
+                className={`${anyPicked ? "ml-auto " : ""}px-5 py-2 text-[12.5px] font-extrabold ${tk.round}`}
+                style={{ background: tk.accent, color: tk.accentInk, boxShadow: `0 10px 22px -12px ${tk.accent}` }}>
                 {last ? (anyPicked ? "Done — how you'll pay" : "Skip — how you'll pay") : "Next"}
               </button>
             </div>
@@ -837,6 +975,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       </button>}
       {!parentMode && <button className="mt-2 w-full text-[12px] font-bold" style={{ color: tk.muted }} onClick={() => b.setStage("pick")}>← Back to dates</button>}
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
+      </div>
     </div>
+    </>
   );
 }
