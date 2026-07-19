@@ -159,7 +159,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "blocks", legacyView: "admin-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "locations", legacyView: "admin-locations", label: "Locations", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "listings", legacyView: "listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "customers", legacyView: "admin-customers", label: "Parents", icon: { type: "glyph", value: "◉" }, badge: null },
+        { view: "customers", legacyView: "admin-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "messages", legacyView: "messages", label: "Messages", icon: { type: "glyph", value: "▧" }, badge: "2" },
         { view: "email", legacyView: "admin-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
         { view: "tasks", legacyView: "tasks", label: "Tasks", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: "7" },
@@ -193,7 +193,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "listings", legacyView: "franchise-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "blocks", legacyView: "franchise-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "franchise-bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: "2" },
-        { view: "customers", legacyView: "franchise-customers", label: "Parents", icon: { type: "glyph", value: "◉" }, badge: null },
+        { view: "customers", legacyView: "franchise-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
     },
     {
@@ -302,7 +302,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "blocks", legacyView: "freelancer-blocks", label: "Sessions & blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: "1" },
-        { view: "customers", legacyView: "freelancer-customers", label: "Parents", icon: { type: "glyph", value: "◉" }, badge: null },
+        { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
     },
     {
@@ -428,7 +428,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "customers", legacyView: "staff-customers", label: "My parents", icon: { type: "glyph", value: "◑" }, badge: null },
+        { view: "customers", legacyView: "staff-customers", label: "My families", icon: { type: "glyph", value: "◑" }, badge: null },
       ],
     },
     {

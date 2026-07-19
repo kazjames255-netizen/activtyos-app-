@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bookings — 10 bolder options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.wrap{background:#f5f8fd;padding:16px;border-radius:12px;overflow-x:auto}
+.mo{font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:800;white-space:nowrap}
+.ok{background:#e7f8ee;color:#0f7a44}.warn{background:#fdf1dd;color:#a35b06}
+.bad{background:#fdebec;color:#bb1620}.grey{background:#eef0f6;color:#5b6478}
+.av{width:34px;height:34px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex:none}
+.card{background:#fff;border:1px solid #e6ebf5;border-radius:16px}
+/* 1 — kanban */
+.kan{display:flex;gap:10px;min-width:820px}
+.kcol{flex:1;background:#fff;border:1px solid #e6ebf5;border-radius:14px;padding:9px}
+.kh{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin:2px 4px 9px}
+.kc{background:#f7f9fd;border:1px solid #e9edf6;border-radius:11px;padding:9px 10px;margin-bottom:7px}
+/* 2 — colour bands */
+.band{border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:16px;color:#fff;margin-bottom:9px}
+.band b.n{font-size:19px;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-.01em}
+/* 3 — dark deck */
+.dark{background:#12141b;border-radius:18px;padding:16px}
+.dc{display:flex;align-items:center;gap:14px;padding:13px 15px;border-radius:13px;background:#1b1e27;margin-bottom:8px;color:#eef1f7}
+/* 4 — ticket */
+.tick{display:flex;background:#fff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;margin-bottom:9px}
+.stub{width:96px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:12px 6px}
+.perf{border-left:2px dashed #dbe3f2}
+/* 5 — poster tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;min-width:660px}
+.tile{border-radius:16px;overflow:hidden;border:1px solid #e6ebf5;background:#fff}
+.thead{height:74px;display:flex;align-items:flex-end;padding:10px 12px;color:#fff;font-weight:800;font-size:14px}
+/* 6 — rail */
+.rail{display:flex;gap:8px;min-width:760px}
+.day{flex:1;background:#fff;border:1px solid #e6ebf5;border-radius:13px;padding:8px;min-height:120px}
+.dh{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#8a93a8;margin-bottom:7px;text-align:center}
+.chip{border-radius:9px;padding:6px 7px;font-size:10.5px;font-weight:700;color:#fff;margin-bottom:5px;line-height:1.25}
+/* 7 — split */
+.split{display:flex;gap:11px;min-width:760px}
+/* 8 — ring */
+.ring{width:44px;height:44px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex:none}
+/* 9 — receipt */
+.rec{background:#fff;border:1px solid #e6ebf5;border-radius:14px;padding:14px 16px;margin-bottom:9px}
+.dash{border-top:2px dashed #e6ebf5;margin:10px -16px}
+/* 10 — hero numbers */
+.stat{flex:1;border-radius:14px;padding:13px 15px;color:#fff}
+.statn{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="on" href="/mockups/bookings.html">Bookings</a><a href="/mockups/addon-bar.html">Add-on bar</a><a href="/mockups/filter-bars.html">Filter bar</a><a href="/mockups/categories.html">Categories</a></nav>
+<h1>Bookings — 10 bolder options</h1>
+<p class="sub">Scrapped the table variants. These change what the screen <i>is</i>, not just its padding. Same page background. Give me a number.</p>
+
+<!-- 1 -->
+<section class="opt"><header><span class="num">1</span><h2>Board</h2><span class="note">Columns by what needs doing. Drag a booking from Unpaid to Paid. The list stops being a list.</span></header>
+<div class="body"><div class="wrap"><div class="kan">
+  <div class="kcol"><div class="kh" style="color:#a35b06">⚠ Approval <span class="pill warn" style="margin-left:auto">1</span></div>
+    <div class="kc"><b style="font-size:12.5px">Tom Ellis</b><div style="font-size:10.5px;color:#8a93a8">Football · Wk 2 · 1 child</div><b style="font-size:13px">£30.00</b></div></div>
+  <div class="kcol"><div class="kh" style="color:#a35b06">💷 Unpaid <span class="pill warn" style="margin-left:auto">2</span></div>
+    <div class="kc"><b style="font-size:12.5px">Sarah Doyle</b><div style="font-size:10.5px;color:#8a93a8">Football · Wk 1 · 1 child</div><b style="font-size:13px">£30.00</b></div>
+    <div class="kc"><b style="font-size:12.5px">Nadia Khan</b><div style="font-size:10.5px;color:#8a93a8">Football · Wk 1 · 2 children</div><b style="font-size:13px">£60.00</b></div></div>
+  <div class="kcol"><div class="kh" style="color:#0f7a44">✓ Paid <span class="pill ok" style="margin-left:auto">1</span></div>
+    <div class="kc"><b style="font-size:12.5px">Amir</b><div style="font-size:10.5px;color:#8a93a8">Football · Wk 1 · 1 child</div><b style="font-size:13px">£30.00</b></div></div>
+  <div class="kcol"><div class="kh" style="color:#bb1620">✕ Cancelled <span class="pill bad" style="margin-left:auto">1</span></div>
+    <div class="kc" style="opacity:.65"><b style="font-size:12.5px">Priya Shah</b><div style="font-size:10.5px;color:#8a93a8">Football · Wk 1 · 2 children</div><b style="font-size:13px">£150.00</b></div></div>
+</div></div></div></section>
+
+<!-- 2 -->
+<section class="opt"><header><span class="num">2</span><h2>Colour bands</h2><span class="note">Each booking a full-width band in its status colour, name set big and italic — the checkout's voice.</span></header>
+<div class="body"><div class="wrap">
+  <div class="band" style="background:linear-gradient(100deg,#0b8a4b,#15b364)"><b class="n">Amir</b><span style="opacity:.9;font-size:12px">Football Match · 1 day pass · Wk 1 · 1 child</span><span style="margin-left:auto;font-size:20px;font-weight:800" class="mo">£30.00</span><span class="pill" style="background:rgba(255,255,255,.22);color:#fff">✓ Paid</span></div>
+  <div class="band" style="background:linear-gradient(100deg,#c07a06,#f5b81f)"><b class="n">Sarah Doyle</b><span style="opacity:.92;font-size:12px">Football Match · 1 day pass · Wk 1 · 1 child</span><span style="margin-left:auto;font-size:20px;font-weight:800" class="mo">£30.00</span><span class="pill" style="background:rgba(255,255,255,.25);color:#fff">Chase →</span></div>
+  <div class="band" style="background:linear-gradient(100deg,#5b6478,#8a93a8)"><b class="n">Priya Shah</b><span style="opacity:.92;font-size:12px">Football Match · 5 day pass · Wk 1 · 2 children</span><span style="margin-left:auto;font-size:20px;font-weight:800" class="mo">£150.00</span><span class="pill" style="background:rgba(255,255,255,.22);color:#fff">Refunded</span></div>
+</div></div></section>
+
+<!-- 3 -->
+<section class="opt"><header><span class="num">3</span><h2>Dark deck</h2><span class="note">A dark panel inside the light page, lime for money — the customer page's palette, brought inside.</span></header>
+<div class="body"><div class="wrap"><div class="dark">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:11px"><b style="color:#fff;font-size:15px;font-style:italic;text-transform:uppercase">This week</b><span style="color:#8f9bb0;font-size:11.5px">4 bookings</span><b style="margin-left:auto;color:#c6ff00;font-size:17px" class="mo">£240.00</b></div>
+  <div class="dc"><span class="av" style="background:#2f7bf0">A</span><div style="flex:1"><b style="font-size:13px">Amir</b><div style="font-size:10.5px;color:#8f9bb0">Football Match · 1 day pass · Wk 1</div></div><span class="pill" style="background:rgba(198,255,0,.15);color:#c6ff00">Paid</span><b class="mo" style="font-size:15px">£30.00</b></div>
+  <div class="dc"><span class="av" style="background:#ec2f86">S</span><div style="flex:1"><b style="font-size:13px">Sarah Doyle</b><div style="font-size:10.5px;color:#8f9bb0">Football Match · 1 day pass · Wk 1</div></div><span class="pill" style="background:rgba(245,184,31,.16);color:#f5b81f">Unpaid</span><b class="mo" style="font-size:15px">£30.00</b></div>
+  <div class="dc"><span class="av" style="background:#6a4fd0">P</span><div style="flex:1"><b style="font-size:13px">Priya Shah</b><div style="font-size:10.5px;color:#8f9bb0">Football Match · 5 day pass · Wk 1</div></div><span class="pill" style="background:rgba(255,255,255,.1);color:#aeb3c2">Refunded</span><b class="mo" style="font-size:15px">£150.00</b></div>
+</div></div></div></section>
+
+<!-- 4 -->
+<section class="opt"><header><span class="num">4</span><h2>Tickets</h2><span class="note">Each booking is a torn ticket: the stub carries the date, the body the family. Playful and unmistakably ours.</span></header>
+<div class="body"><div class="wrap">
+  <div class="tick"><div class="stub" style="background:linear-gradient(160deg,#1d3a8f,#2f6bd8)"><span style="font-size:9.5px;font-weight:800;letter-spacing:.08em;opacity:.85">MON</span><span style="font-size:26px;font-weight:800;line-height:1">20</span><span style="font-size:10px;opacity:.85">JUL 26</span></div>
+    <div class="perf" style="flex:1;display:flex;align-items:center;gap:14px;padding:13px 16px"><span class="av" style="background:#2f6bd8">A</span><div style="flex:1"><b style="font-size:14px">Amir</b> <span style="font-size:10.5px;color:#8a93a8">APF-10315</span><div style="font-size:11px;color:#5b6478">Football Match · 1 day pass · 1 child</div></div><span class="pill ok">✓ Paid</span><b style="font-size:16px" class="mo">£30.00</b></div></div>
+  <div class="tick"><div class="stub" style="background:linear-gradient(160deg,#a35b06,#f5b81f)"><span style="font-size:9.5px;font-weight:800;letter-spacing:.08em;opacity:.85">MON</span><span style="font-size:26px;font-weight:800;line-height:1">20</span><span style="font-size:10px;opacity:.85">JUL 26</span></div>
+    <div class="perf" style="flex:1;display:flex;align-items:center;gap:14px;padding:13px 16px"><span class="av" style="background:#e2453f">S</span><div style="flex:1"><b style="font-size:14px">Sarah Doyle</b> <span style="font-size:10.5px;color:#8a93a8">APF-10314</span><div style="font-size:11px;color:#5b6478">Football Match · 1 day pass · 1 child</div></div><span class="pill warn">Unpaid</span><b style="font-size:16px" class="mo">£30.00</b></div></div>
+</div></div></section>
+
+<!-- 5 -->
+<section class="opt"><header><span class="num">5</span><h2>Poster tiles</h2><span class="note">A grid, each tile headed in its listing's colour. Best when you run several different activities.</span></header>
+<div class="body"><div class="wrap"><div class="tiles">
+  <div class="tile"><div class="thead" style="background:linear-gradient(140deg,#0047ff,#2f7dff)">Football Match</div><div style="padding:11px 13px"><b style="font-size:14px">Amir</b><div style="font-size:11px;color:#8a93a8;margin-bottom:8px">1 day pass · Mon 20 Jul · 1 child</div><div style="display:flex;align-items:center;gap:8px"><span class="pill ok">Paid</span><b style="margin-left:auto;font-size:16px" class="mo">£30.00</b></div></div></div>
+  <div class="tile"><div class="thead" style="background:linear-gradient(140deg,#0047ff,#2f7dff)">Football Match</div><div style="padding:11px 13px"><b style="font-size:14px">Sarah Doyle</b><div style="font-size:11px;color:#8a93a8;margin-bottom:8px">1 day pass · Mon 20 Jul · 1 child</div><div style="display:flex;align-items:center;gap:8px"><span class="pill warn">Unpaid</span><b style="margin-left:auto;font-size:16px" class="mo">£30.00</b></div></div></div>
+  <div class="tile"><div class="thead" style="background:linear-gradient(140deg,#6a4fd0,#a855f7)">Summer Camp</div><div style="padding:11px 13px"><b style="font-size:14px">Priya Shah</b><div style="font-size:11px;color:#8a93a8;margin-bottom:8px">5 day pass · Mon 20 Jul · 2 children</div><div style="display:flex;align-items:center;gap:8px"><span class="pill grey">Refunded</span><b style="margin-left:auto;font-size:16px" class="mo">£150.00</b></div></div></div>
+</div></div></div></section>
+
+<!-- 6 -->
+<section class="opt"><header><span class="num">6</span><h2>Week rail</h2><span class="note">Bookings sit on the days they happen. You read the week, not the ledger.</span></header>
+<div class="body"><div class="wrap"><div class="rail">
+  <div class="day"><div class="dh">Mon 20</div><div class="chip" style="background:#2f6bd8">Amir<br><span style="opacity:.85;font-weight:600">£30 · paid</span></div><div class="chip" style="background:#f5b81f;color:#3a2a00">Sarah D<br><span style="opacity:.8;font-weight:600">£30 · unpaid</span></div></div>
+  <div class="day"><div class="dh">Tue 21</div><div class="chip" style="background:#6a4fd0">Priya S<br><span style="opacity:.85;font-weight:600">£150 · refund</span></div></div>
+  <div class="day"><div class="dh">Wed 22</div></div>
+  <div class="day"><div class="dh">Thu 23</div><div class="chip" style="background:#15b364">Tom E<br><span style="opacity:.85;font-weight:600">£30 · paid</span></div></div>
+  <div class="day"><div class="dh">Fri 24</div><div class="chip" style="background:#ec2f86">Nadia K<br><span style="opacity:.85;font-weight:600">£60 · unpaid</span></div></div>
+</div></div></div></section>
+
+<!-- 7 -->
+<section class="opt"><header><span class="num">7</span><h2>List and pane</h2><span class="note">Pick on the left, the whole booking opens on the right — no modal, no losing your place.</span></header>
+<div class="body"><div class="wrap"><div class="split">
+  <div class="card" style="width:240px;flex:none;padding:7px">
+    <div style="padding:9px 10px;border-radius:10px;background:linear-gradient(100deg,#0047ff,#2f7dff);color:#fff;margin-bottom:5px"><b style="font-size:12.5px">Amir</b><div style="font-size:10.5px;opacity:.9">£30.00 · Paid</div></div>
+    <div style="padding:9px 10px;border-radius:10px;margin-bottom:5px"><b style="font-size:12.5px">Sarah Doyle</b><div style="font-size:10.5px;color:#8a93a8">£30.00 · Unpaid</div></div>
+    <div style="padding:9px 10px;border-radius:10px"><b style="font-size:12.5px">Priya Shah</b><div style="font-size:10.5px;color:#8a93a8">£150.00 · Refunded</div></div>
+  </div>
+  <div class="card" style="flex:1;padding:16px">
+    <div style="display:flex;align-items:center;gap:12px"><span class="av" style="background:#2f6bd8;width:42px;height:42px;font-size:16px">A</span><div><b style="font-size:17px">Amir</b><div style="font-size:11.5px;color:#8a93a8">APF-10315 · amir@example.com</div></div><span class="pill ok" style="margin-left:auto">✓ Paid</span></div>
+    <div style="margin-top:13px;display:flex;gap:9px">
+      <div style="flex:1;background:#f7f9fd;border-radius:11px;padding:10px"><div style="font-size:10px;font-weight:800;color:#8a93a8;text-transform:uppercase;letter-spacing:.07em">Activity</div><b style="font-size:12.5px">Football Match</b><div style="font-size:11px;color:#5b6478">1 day pass · Full Day</div></div>
+      <div style="flex:1;background:#f7f9fd;border-radius:11px;padding:10px"><div style="font-size:10px;font-weight:800;color:#8a93a8;text-transform:uppercase;letter-spacing:.07em">When</div><b style="font-size:12.5px">Mon 20 Jul 2026</b><div style="font-size:11px;color:#5b6478">Week 1 · 1 session</div></div>
+      <div style="flex:1;background:#f7f9fd;border-radius:11px;padding:10px"><div style="font-size:10px;font-weight:800;color:#8a93a8;text-transform:uppercase;letter-spacing:.07em">Total</div><b style="font-size:15px" class="mo">£30.00</b><div style="font-size:11px;color:#0f7a44">Paid by card</div></div>
+    </div>
+    <div style="margin-top:11px;display:flex;gap:7px"><button class="btn pri" style="height:30px">Message</button><button class="btn" style="height:30px">Refund</button><button class="btn" style="height:30px">Cancel</button></div>
+  </div>
+</div></div></div></section>
+
+<!-- 8 -->
+<section class="opt"><header><span class="num">8</span><h2>Payment rings</h2><span class="note">A ring per booking showing how much of it is settled — part-payments and deposits read at a glance.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:6px 0">
+  <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #eef1f8">
+    <div class="ring" style="background:conic-gradient(#15b364 100%,#e9edf6 0);color:#0f7a44"><span style="background:#fff;width:33px;height:33px;border-radius:99px;display:flex;align-items:center;justify-content:center">100%</span></div>
+    <div style="flex:1"><b style="font-size:14px">Amir</b><div style="font-size:11px;color:#8a93a8">Football Match · Mon 20 Jul · 1 child</div></div><b style="font-size:16px" class="mo">£30.00</b></div>
+  <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #eef1f8">
+    <div class="ring" style="background:conic-gradient(#f5b81f 50%,#e9edf6 0);color:#a35b06"><span style="background:#fff;width:33px;height:33px;border-radius:99px;display:flex;align-items:center;justify-content:center">50%</span></div>
+    <div style="flex:1"><b style="font-size:14px">Nadia Khan</b><div style="font-size:11px;color:#8a93a8">Football Match · Mon 20 Jul · 2 children · deposit paid</div></div><b style="font-size:16px" class="mo">£60.00</b></div>
+  <div style="display:flex;align-items:center;gap:14px;padding:12px 16px">
+    <div class="ring" style="background:conic-gradient(#e9edf6 100%,#e9edf6 0);color:#8a93a8"><span style="background:#fff;width:33px;height:33px;border-radius:99px;display:flex;align-items:center;justify-content:center">0%</span></div>
+    <div style="flex:1"><b style="font-size:14px">Sarah Doyle</b><div style="font-size:11px;color:#8a93a8">Football Match · Mon 20 Jul · 1 child</div></div><b style="font-size:16px" class="mo">£30.00</b></div>
+</div></div></div></section>
+
+<!-- 9 -->
+<section class="opt"><header><span class="num">9</span><h2>Money on top</h2><span class="note">Three big figures lead the page, and the list below is filtered by tapping one.</span></header>
+<div class="body"><div class="wrap">
+  <div style="display:flex;gap:10px;margin-bottom:11px">
+    <div class="stat" style="background:linear-gradient(135deg,#0b8a4b,#15b364)"><div style="font-size:10.5px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.07em">Taken</div><div class="statn mo">£1,240</div><div style="font-size:10.5px;opacity:.9">28 bookings</div></div>
+    <div class="stat" style="background:linear-gradient(135deg,#c07a06,#f5b81f)"><div style="font-size:10.5px;font-weight:700;opacity:.95;text-transform:uppercase;letter-spacing:.07em">Owed</div><div class="statn mo">£390</div><div style="font-size:10.5px;opacity:.95">9 unpaid · chase →</div></div>
+    <div class="stat" style="background:linear-gradient(135deg,#1d3a8f,#2f6bd8)"><div style="font-size:10.5px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.07em">This week</div><div class="statn mo">£240</div><div style="font-size:10.5px;opacity:.9">4 bookings</div></div>
+  </div>
+  <div class="card" style="padding:6px 0">
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid #eef1f8"><span class="av" style="background:#2f6bd8">A</span><div style="flex:1"><b style="font-size:13px">Amir</b><div style="font-size:10.5px;color:#8a93a8">Football Match · Mon 20 Jul</div></div><span class="pill ok">Paid</span><b class="mo">£30.00</b></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 15px"><span class="av" style="background:#e2453f">S</span><div style="flex:1"><b style="font-size:13px">Sarah Doyle</b><div style="font-size:10.5px;color:#8a93a8">Football Match · Mon 20 Jul</div></div><span class="pill warn">Unpaid</span><b class="mo">£30.00</b></div>
+  </div>
+</div></div></section>
+
+<!-- 10 -->
+<section class="opt"><header><span class="num">10</span><h2>Receipts</h2><span class="note">Each booking laid out like the receipt the parent gets — passes, extras and discount itemised on the row.</span></header>
+<div class="body"><div class="wrap">
+  <div class="rec">
+    <div style="display:flex;align-items:center;gap:11px"><span class="av" style="background:#2f6bd8">A</span><div style="flex:1"><b style="font-size:14px">Amir</b> <span style="font-size:10.5px;color:#8a93a8">APF-10315 · Mon 20 Jul 2026</span></div><span class="pill ok">✓ Paid</span></div>
+    <div class="dash"></div>
+    <div style="font-size:11.5px;color:#5b6478;display:flex;justify-content:space-between"><span>Football Match — 1 day pass × 1 child</span><span class="mo">£30.00</span></div>
+    <div style="font-size:11.5px;color:#5b6478;display:flex;justify-content:space-between"><span>Hot lunch × 1 day</span><span class="mo">£5.00</span></div>
+    <div style="font-size:11.5px;color:#0f7a44;display:flex;justify-content:space-between"><span>Early bird −10%</span><span class="mo">−£3.50</span></div>
+    <div class="dash"></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:12.5px">Total</b><b style="font-size:18px" class="mo">£31.50</b></div>
+  </div>
+  <div class="rec">
+    <div style="display:flex;align-items:center;gap:11px"><span class="av" style="background:#e2453f">S</span><div style="flex:1"><b style="font-size:14px">Sarah Doyle</b> <span style="font-size:10.5px;color:#8a93a8">APF-10314 · Mon 20 Jul 2026</span></div><span class="pill warn">Unpaid · chase</span></div>
+    <div class="dash"></div>
+    <div style="font-size:11.5px;color:#5b6478;display:flex;justify-content:space-between"><span>Football Match — 1 day pass × 1 child</span><span class="mo">£30.00</span></div>
+    <div class="dash"></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:12.5px">Total</b><b style="font-size:18px" class="mo">£30.00</b></div>
+  </div>
+</div></div></section>
+
+<p class="sub" style="margin:32px 0 60px">A number, or a mix — "1 for the layout, 3's colours". Still not it? Say what you'd want to feel when the page loads and I'll go again.</p>
+</div>
+</body>
+</html>

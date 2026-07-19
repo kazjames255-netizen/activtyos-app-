@@ -69,6 +69,7 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
   const [allergies, setAllergies] = useState("");
   const [medical, setMedical] = useState("");
   const [send, setSend] = useState("");
+  const [collectionPassword, setCollectionPassword] = useState("");
   const [photoConsent, setPhotoConsent] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +99,7 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
         ...(allergies.trim() ? { allergies: allergies.trim() } : {}),
         ...(medical.trim() ? { medical: medical.trim() } : {}),
         ...(send.trim() ? { send: send.trim() } : {}),
+        ...(collectionPassword.trim() ? { collectionPassword: collectionPassword.trim() } : {}),
         photoConsent,
         ...(photo ? { photo } : {}),
       });
@@ -143,9 +145,17 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
                 "+"
               )}
             </button>
-            <Button type="button" onClick={() => fileRef.current?.click()}>
-              {photo ? "Change photo" : "Upload photo"}
-            </Button>
+            {/* The upload was here with nothing saying what it was for. A
+                parent uploads a photo of their child when they know why. */}
+            <div className="min-w-0 flex-1">
+              <Button type="button" onClick={() => fileRef.current?.click()}>
+                {photo ? "Change photo" : "Add a photo"}
+              </Button>
+              <div className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
+                Optional. It goes on the register so staff who haven&rsquo;t met them know who
+                they&rsquo;re greeting, and who they&rsquo;re handing over to at the end of the day.
+              </div>
+            </div>
             <input ref={fileRef} type="file" accept="image/*" onChange={pickPhoto} className="hidden" />
           </div>
 
@@ -211,6 +221,24 @@ function AddChildModal({ onDone }: { onDone: (changed: boolean) => void }) {
               placeholder="Describe needs"
               value={send}
               onChange={(e) => setSend(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          {/* Safeguarding. Says what it is for, because a field called
+              "password" with no explanation gets left blank. */}
+          <div>
+            <FieldLabel>Collection password</FieldLabel>
+            <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
+              Pick a word only your family knows. If <b className="text-[var(--ink-2)]">anyone other than you</b>{" "}
+              comes to collect them — a grandparent, a friend, another parent on the school run — staff will ask
+              for it, and won&rsquo;t hand over without it. Staff can see this word, so don&rsquo;t reuse a
+              password from anywhere else.
+            </div>
+            <Input
+              placeholder="e.g. Bluebell"
+              value={collectionPassword}
+              onChange={(e) => setCollectionPassword(e.target.value)}
               className="w-full"
             />
           </div>

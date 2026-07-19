@@ -96,6 +96,10 @@ const childSchema = z.object({
   allergies: z.string().trim().max(300).optional(),
   medical: z.string().trim().max(300).optional(),
   send: z.string().trim().max(300).optional(),
+  // Safeguarding: the word anyone other than the usual adult must give to
+  // collect this child. Plain text on purpose — staff read it off the
+  // register — so it must never be treated as, or reused as, a credential.
+  collectionPassword: z.string().trim().max(60).optional(),
   // A SEND/EHCP plan, held by routes/childFiles.ts rather than inline: a real
   // EHCP is a multi-page scan and would blow Firestore's 1MB document cap.
   // Only the id and the filename live on the child.

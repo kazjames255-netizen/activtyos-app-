@@ -113,9 +113,24 @@ export function TakeBookingModal() {
   };
 
   return (
+    // The Bookings page runs the light palette its neighbours use; this modal
+    // deliberately doesn't inherit it. It carries the booking widget, which is
+    // built for the dark customer-page themes — on white it read as a bright
+    // slab dropped into the page.
     <div
       onClick={(e) => e.target === e.currentTarget && dismiss()}
       className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8"
+      style={
+        {
+          "--bg": "#0f1115",
+          "--surface": "#181a21",
+          "--panel": "#21242e",
+          "--ink": "#f2f4f8",
+          "--ink-2": "#aeb3c2",
+          "--ink-3": "#787e8e",
+          "--line": "#2a2e39",
+        } as React.CSSProperties
+      }
     >
       <div className="w-full max-w-[1100px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-[22px] py-5 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         <div className="mb-2 flex items-center gap-2.5">
