@@ -290,9 +290,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
           <div className="flex flex-wrap gap-2">
             <div className="min-w-[150px] flex-1">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Child&rsquo;s name <span style={{ color: "#f87171" }}>*</span></div>
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Child&rsquo;s full name <span style={{ color: "#f87171" }}>*</span></div>
               <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
+                placeholder="First and last name" className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
             </div>
             <div className="w-[150px]">
               <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Date of birth <span style={{ color: "#f87171" }}>*</span></div>

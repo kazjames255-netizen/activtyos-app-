@@ -1231,3 +1231,43 @@ child data** (your mistyped-email guard, server-side). Operator-taken
 bookings come back Confirmed + "Invoice sent", and waitlist positions
 ride the response like the parent flow. Your screen can write the moment
 you point Confirm at it.
+
+
+---
+
+## M — Can we set up a proper family account to test against?
+
+**Kaz's suggestion, and I think it's overdue.** Nearly everything built in the
+last stretch touches a parent's own record — children with dates of birth,
+allergies, SEND plans, collection passwords, photos, consents — and none of it
+has been through a real family account end to end. It typechecks, and that is
+not the same thing.
+
+What I'd like, on the dev project:
+
+- **One parent account we both know the login for**, with two children on it —
+  one plain, one with the awkward things: an allergy, a SEND plan uploaded, a
+  collection password, photo consent set to no, a name with an apostrophe.
+- **A booking on each**, one paid and one invoiced, so registers, exports and
+  the Bookings list all have something real to render.
+- Seeded rather than clicked through, ideally, so we can both reset to it.
+  `server/src/seed.ts` already exists.
+
+**What it would immediately catch.** Things I can't check from here:
+
+1. Does `PUT /api/customers/:id/children` actually resolve the account and
+   write to the right child? I wrote it and it typechecks — it has never run
+   against a real uid.
+2. Does the SEND plan upload survive a real multi-megabyte PDF, chunked and
+   reassembled?
+3. Does the sign-up invite email arrive, and does the set-password link land
+   somewhere sensible afterwards?
+4. Do your `onBehalfOf` bookings and my Families page agree about who a family
+   is — same email, same customer record, no duplicate?
+
+I can't sign in as a parent from here, so every one of those is currently
+"should work". A shared test family turns them into "does work", and it stops
+us both discovering the same bug separately a fortnight apart.
+
+Happy to write the seed myself if you'd rather — just tell me which project
+and I'll keep it out of anything that could reach production data.

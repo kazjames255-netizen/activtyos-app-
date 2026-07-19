@@ -17,7 +17,37 @@ const childSchema = z.object({
   name: z.string().trim().min(1).max(80),
   age: z.number().int().min(0).max(17).optional(),
   dob: z.string().trim().max(20).optional(),
+  // A SEND plan the PROVIDER holds — emailed to them, uploaded here, read by
+  // their staff. Deliberately on the customer record and not the family's:
+  // it's the provider's copy of a document the parent already has, so it
+  // carries none of the "which version is true" risk that duplicating
+  // allergies would. The bytes live in /api/my/files, owned by the operator.
+  sendPlanId: z.string().trim().max(60).optional(),
+  sendPlanName: z.string().trim().max(200).optional(),
 });
+/**
+ * What an operator may write onto a family's child record.
+ *
+ * Everything the parent can enter, because the provider takes the same
+ * details over the phone — there is no field only one of them may fill in.
+ * Files (photo, SEND plan) are the exception: they're uploaded, not typed.
+ */
+const childDetailSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  age: z.number().int().min(0).max(17).optional(),
+  dob: z.string().trim().max(20).optional(),
+  allergies: z.string().trim().max(300).optional(),
+  medical: z.string().trim().max(300).optional(),
+  send: z.string().trim().max(300).optional(),
+  collectionPassword: z.string().trim().max(60).optional(),
+  likes: z.string().trim().max(300).optional(),
+  dislikes: z.string().trim().max(300).optional(),
+  photoConsent: z.boolean().optional(),
+  /** Who to ring if the parent can't be reached. Name and number in one
+   *  field — the provider takes it on the call as one sentence. */
+  emergencyContact: z.string().trim().max(200).optional(),
+});
+
 const customerSchema = z.object({
   // `name` stays the composite every other screen reads; the parts are kept
   // alongside so an email can open "Dear Sarah" rather than "Dear Sarah Doyle".
@@ -32,6 +62,10 @@ const customerSchema = z.object({
   // would have been personal data held for no purpose.
   locationId: z.string().trim().max(60).optional(),
   locationName: z.string().trim().max(120).optional(),
+  /** The provider's own notes. Never shown to the family — say so on screen,
+   *  because a note written believing it's private and then surfaced is worse
+   *  than no notes at all. */
+  notes: z.string().trim().max(2000).optional(),
   /** PECR: marketing email needs consent. Absent means no, never assumed. */
   marketingOptIn: z.boolean().optional(),
   /** When it was given, and how. Consent you can't date or account for is
@@ -227,4 +261,83 @@ customers.post("/:id/invite", async (req, res) => {
     console.error("[customers] invite failed:", msg);
     res.status(502).json({ error: msg });
   }
+});
+
+
+// PUT /api/customers/:id/children — write a child's details to the FAMILY's
+// own record, not to a copy on the customer.
+//
+// The provider takes allergies over the phone; the parent may edit them in
+// their app tonight. Two copies of that would disagree eventually, and a
+// register showing the stale one is how a child gets given something they
+// react to. So there is exactly one child record, owned by the parent, and
+// this writes into it.
+//
+// Which means it needs the family to HAVE an account. Resolved by email —
+// and the uid is stamped on the customer while we're here, so the link
+// stops being an email lookup (§K's first ask, half-done as a side effect).
+customers.put("/:id/children", async (req, res) => {
+  const own = await ownCustomer(req, req.params.id);
+  if (own.status !== 200) {
+    res
+      .status(own.status)
+      .json({ error: own.status === 403 ? "Requires an operator account" : "Customer not found" });
+    return;
+  }
+  const parsed = z
+    .object({ children: z.array(childDetailSchema).max(20) })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+
+  const email = ((own.snap.data()!.email as string) ?? "").trim();
+  if (!email.includes("@")) {
+    res.status(409).json({ error: "That family has no email address, so there's no account to write to." });
+    return;
+  }
+
+  let uid: string;
+  try {
+    uid = (await auth.getUserByEmail(email)).uid;
+  } catch {
+    res.status(409).json({
+      error: "That family hasn't set up an account yet — send them a sign-up link first, then these details will save to their profile.",
+    });
+    return;
+  }
+  if (own.snap.data()!.uid !== uid) await own.snap.ref.update({ uid });
+
+  const col2 = db.collection("children");
+  const existing = await col2.where("parentUid", "==", uid).get();
+  const byName = new Map(
+    existing.docs.map((d) => [((d.data().name as string) ?? "").trim().toLowerCase(), d]),
+  );
+
+  const written: string[] = [];
+  for (const k of parsed.data.children) {
+    const key = k.name.trim().toLowerCase();
+    if (!key) continue;
+    // Only the fields the operator actually filled in. A blank box means
+    // "I don't know", not "the parent was wrong" — it must never blank out
+    // something the family has already told us.
+    const patch: Record<string, unknown> = { name: k.name.trim(), parentUid: uid };
+    for (const f of [
+      "age", "dob", "allergies", "medical", "send", "collectionPassword",
+      "likes", "dislikes", "emergencyContact",
+    ] as const) {
+      const v = k[f];
+      if (v !== undefined && String(v).trim() !== "") patch[f] = v;
+    }
+    // A consent is a yes or a no, so "unset" has to mean untouched — hence
+    // the explicit undefined check rather than falling through the loop.
+    if (k.photoConsent !== undefined) patch.photoConsent = k.photoConsent;
+    const doc = byName.get(key);
+    if (doc) await doc.ref.set(patch, { merge: true });
+    else await col2.add(patch);
+    written.push(k.name.trim());
+  }
+
+  res.json({ ok: true, written, uid });
 });

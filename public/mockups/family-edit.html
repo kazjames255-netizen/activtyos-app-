@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Family edit — 10 options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/mockups/mock.css">
+<style>
+.wrap{background:#f5f8fd;padding:16px;border-radius:12px}
+.card{background:#fff;border:1px solid #e6ebf5;border-radius:16px}
+label.f{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#8a93a8;margin:0 0 3px}
+.in{width:100%;height:32px;border:1px solid #e2e7f2;border-radius:9px;background:#fff;padding:0 9px;font:inherit;font-size:12.5px;color:#171534;outline:none}
+.in:focus{border-color:#2f6bd8}
+.grid{display:grid;gap:9px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:2fr 1fr 1fr}
+.chip{display:inline-block;border:1px dashed #dbe2f0;border-radius:99px;padding:2px 9px;font-size:10.5px;color:#8a93a8;margin:0 4px 4px 0}
+.own{display:inline-block;border-radius:99px;padding:2px 8px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#fff}
+.sec{font-size:11px;font-weight:800;color:#5b6478;margin:0 0 6px}
+.mut{font-size:10.5px;color:#8a93a8;font-weight:500}
+.av{width:28px;height:28px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex:none}
+.btn2{height:32px;border-radius:99px;border:1px solid #e2e7f2;background:#fff;font:inherit;font-size:12px;font-weight:700;color:#4b5570;padding:0 14px;cursor:pointer}
+.btn2.p{background:#15b364;border-color:#15b364;color:#fff}
+.row{display:flex;align-items:center;gap:9px}
+h3.gr{margin:28px 0 10px;font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#8a93a8}
+</style>
+</head>
+<body>
+<div class="page">
+<nav class="nav"><a class="on" href="/mockups/family-edit.html">Family edit</a><a href="/mockups/bookings.html">Bookings</a><a href="/mockups/addon-bar.html">Add-on bar</a></nav>
+<h1>The family form — 10 options</h1>
+<p class="sub">Same content each time: the family, one child, what the provider owns versus what the parent owns, and the notes. What changes is how it's arranged and how hard it works to show that ownership split. Pick a number.</p>
+
+<!-- 1 -->
+<section class="opt"><header><span class="num">1</span><h2>Coloured head, stacked</h2><span class="note">Roughly what's built now — the family's stage colour across the top, sections down the page.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="overflow:hidden">
+  <div style="background:linear-gradient(100deg,#15b364,#15b364cc);color:#fff;padding:10px 14px" class="row">
+    <span class="av" style="background:rgba(255,255,255,.25)">O</span><b style="font-size:14px;flex:1">Omar Haddad</b>
+    <span class="own" style="background:rgba(255,255,255,.22)">Editing</span>
+  </div>
+  <div style="padding:14px">
+    <div class="grid g4" style="margin-bottom:10px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+    <div class="card" style="overflow:hidden;margin-bottom:10px">
+      <div class="row" style="padding:7px 11px;background:#f7f9fd;border-bottom:1px solid #eef1f8"><span class="av" style="background:#15b364;width:24px;height:24px;font-size:11px">S</span><b style="font-size:12.5px;flex:1">Sami Haddad</b><span class="own" style="background:#15b364">Your copy</span></div>
+      <div style="padding:10px"><div class="grid g3"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">Date of birth</label><input class="in" type="date"></div></div></div>
+      <div style="padding:10px;border-top:1px solid #eef1f8;border-left:4px solid #15b364;background:#15b3640d">
+        <div class="sec" style="color:#15b364">👪 The family's own record <span class="mut">— writes to their profile</span></div>
+        <div class="grid g2"><div><label class="f">Allergies</label><input class="in" placeholder="Nuts, dairy…"></div><div><label class="f">Collection password</label><input class="in" placeholder="e.g. Bluebell"></div></div>
+        <div style="margin-top:8px"><span class="chip">Photo permission · not listed</span><span class="chip">School · not listed</span><span class="chip">SEND plan · not listed</span></div>
+      </div>
+    </div>
+    <label class="f">Notes — only your team</label><input class="in" placeholder="Dad collects on Fridays…">
+  </div>
+</div></div></div></section>
+
+<!-- 2 -->
+<section class="opt"><header><span class="num">2</span><h2>Two columns</h2><span class="note">Family on the left, children on the right. Half the height, nothing hidden.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:14px;display:grid;grid-template-columns:300px 1fr;gap:16px">
+  <div>
+    <div class="sec">The family</div>
+    <div class="grid" style="gap:8px">
+      <div><label class="f">First name</label><input class="in" value="Omar"></div>
+      <div><label class="f">Surname</label><input class="in" value="Haddad"></div>
+      <div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div>
+      <div><label class="f">Phone</label><input class="in" value="+44 7700 900302"></div>
+      <div><label class="f">Notes — only your team</label><input class="in" placeholder="Dad collects Fridays"></div>
+    </div>
+  </div>
+  <div style="border-left:1px solid #eef1f8;padding-left:16px">
+    <div class="sec">Children <span class="mut">— 1</span></div>
+    <div class="card" style="padding:11px">
+      <div class="row" style="margin-bottom:9px"><span class="av" style="background:#15b364">S</span><b style="font-size:13px;flex:1">Sami Haddad</b><span class="own" style="background:#15b364">Your copy</span></div>
+      <div class="grid g3" style="margin-bottom:9px"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">DOB</label><input class="in" type="date"></div></div>
+      <div style="border-top:1px dashed #e2e7f2;padding-top:9px">
+        <div class="sec" style="color:#15b364">👪 Family's record</div>
+        <div class="grid g2"><div><label class="f">Allergies</label><input class="in"></div><div><label class="f">Collection password</label><input class="in"></div></div>
+      </div>
+    </div>
+  </div>
+</div></div></div></section>
+
+<!-- 3 -->
+<section class="opt"><header><span class="num">3</span><h2>Tabs</h2><span class="note">Family / Children / Notes. Shortest page of the ten; one thing at a time.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="overflow:hidden">
+  <div class="row" style="gap:0;border-bottom:1px solid #eef1f8;padding:0 8px">
+    <span style="padding:10px 14px;font-size:12.5px;font-weight:800;color:#1d3a8f;border-bottom:2.5px solid #1d3a8f">Family</span>
+    <span style="padding:10px 14px;font-size:12.5px;font-weight:700;color:#8a93a8">Children <b style="color:#5b6478">1</b></span>
+    <span style="padding:10px 14px;font-size:12.5px;font-weight:700;color:#8a93a8">Notes</span>
+    <span style="margin-left:auto;padding-right:8px"><button class="btn2 p">Save</button></span>
+  </div>
+  <div style="padding:14px"><div class="grid g4"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+  <div class="grid g2" style="margin-top:9px"><div><label class="f">Phone</label><input class="in" value="+44 7700 900302"></div><div><label class="f">Location</label><input class="in" value="Bedford"></div></div></div>
+</div></div></div></section>
+
+<!-- 4 -->
+<section class="opt"><header><span class="num">4</span><h2>Children fold away</h2><span class="note">One line per child; open the one you're changing. Best when a family has three or four.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:14px">
+  <div class="grid g4" style="margin-bottom:12px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+  <div class="sec">Children</div>
+  <div class="card" style="margin-bottom:6px;overflow:hidden">
+    <div class="row" style="padding:9px 11px;background:#f7f9fd"><span class="av" style="background:#15b364;width:24px;height:24px;font-size:11px">S</span><b style="font-size:12.5px;flex:1">Sami Haddad <span class="mut">· 9</span></b><span class="mut">▾ open</span></div>
+    <div style="padding:11px">
+      <div class="grid g3" style="margin-bottom:9px"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">DOB</label><input class="in" type="date"></div></div>
+      <div class="grid g2"><div><label class="f" style="color:#15b364">Allergies · family's record</label><input class="in"></div><div><label class="f" style="color:#15b364">Collection password · family's record</label><input class="in"></div></div>
+    </div>
+  </div>
+  <div class="row" style="padding:9px 11px;border:1px solid #e6ebf5;border-radius:12px"><span class="av" style="background:#6a4fd0;width:24px;height:24px;font-size:11px">L</span><b style="font-size:12.5px;flex:1">Layla Haddad <span class="mut">· 6</span></b><span class="mut">▸ closed</span></div>
+</div></div></div></section>
+
+<!-- 5 -->
+<section class="opt"><header><span class="num">5</span><h2>Children as a table</h2><span class="note">Edit in place, several children at a glance. Densest of the ten.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:14px">
+  <div class="grid g4" style="margin-bottom:12px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+  <div class="sec">Children <span class="mut">— green columns save to the family's own record</span></div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr><th style="text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:#8a93a8;padding:0 6px 5px">Name</th><th style="text-align:left;font-size:9.5px;text-transform:uppercase;color:#8a93a8;padding:0 6px 5px">Age</th><th style="text-align:left;font-size:9.5px;text-transform:uppercase;color:#8a93a8;padding:0 6px 5px">DOB</th><th style="text-align:left;font-size:9.5px;text-transform:uppercase;color:#15b364;padding:0 6px 5px">Allergies</th><th style="text-align:left;font-size:9.5px;text-transform:uppercase;color:#15b364;padding:0 6px 5px">Password</th></tr>
+    <tr><td style="padding:3px 6px"><input class="in" value="Sami Haddad"></td><td style="padding:3px 6px;width:70px"><input class="in" value="9"></td><td style="padding:3px 6px;width:130px"><input class="in" type="date"></td><td style="padding:3px 6px;background:#15b3640d"><input class="in"></td><td style="padding:3px 6px;background:#15b3640d"><input class="in"></td></tr>
+    <tr><td style="padding:3px 6px"><input class="in" value="Layla Haddad"></td><td style="padding:3px 6px"><input class="in" value="6"></td><td style="padding:3px 6px"><input class="in" type="date"></td><td style="padding:3px 6px;background:#15b3640d"><input class="in" value="Nuts"></td><td style="padding:3px 6px;background:#15b3640d"><input class="in"></td></tr>
+  </table>
+</div></div></div></section>
+
+<!-- 6 -->
+<section class="opt"><header><span class="num">6</span><h2>Settings style</h2><span class="note">Label on the left, field on the right, a rule between each. Quiet and very readable.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:4px 16px">
+  <div style="display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #f1f4fa"><b style="font-size:12.5px">Name</b><div class="row"><input class="in" value="Omar" style="max-width:180px"><input class="in" value="Haddad" style="max-width:180px"></div></div>
+  <div style="display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #f1f4fa"><b style="font-size:12.5px">Contact</b><div class="row"><input class="in" value="omar.h@email.com" style="max-width:220px"><input class="in" value="+44 7700 900302" style="max-width:170px"></div></div>
+  <div style="display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start;padding:11px 0;border-bottom:1px solid #f1f4fa"><div><b style="font-size:12.5px">Sami Haddad</b><div class="mut">Your copy</div></div><div class="row"><input class="in" value="Sami Haddad" style="max-width:200px"><input class="in" value="9" style="max-width:70px"><input class="in" type="date" style="max-width:150px"></div></div>
+  <div style="display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start;padding:11px 0"><div><b style="font-size:12.5px;color:#15b364">Sami — family's record</b><div class="mut">Saves to their profile</div></div><div class="row"><input class="in" placeholder="Allergies" style="max-width:200px"><input class="in" placeholder="Collection password" style="max-width:200px"></div></div>
+</div></div></div></section>
+
+<!-- 7 -->
+<section class="opt"><header><span class="num">7</span><h2>Ownership side by side</h2><span class="note">Two panels, plainly labelled: what you hold, what they hold. The split does the explaining.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:14px">
+  <div class="row" style="margin-bottom:11px"><span class="av" style="background:#15b364">S</span><b style="font-size:14px;flex:1">Sami Haddad</b></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+    <div style="border:1px solid #e6ebf5;border-radius:13px;padding:11px">
+      <div class="sec">📋 Yours to keep <span class="mut">— your copy</span></div>
+      <div class="grid" style="gap:8px"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div class="grid g2"><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">DOB</label><input class="in" type="date"></div></div></div>
+    </div>
+    <div style="border:1px solid #bfe6cf;background:#15b3640d;border-radius:13px;padding:11px">
+      <div class="sec" style="color:#0b8a4b">👪 Theirs <span class="mut">— saves to the family's profile</span></div>
+      <div class="grid" style="gap:8px"><div><label class="f">Allergies</label><input class="in"></div><div><label class="f">Collection password</label><input class="in"></div></div>
+      <div style="margin-top:8px"><span class="chip">Photo permission · not listed</span><span class="chip">SEND plan · not listed</span></div>
+    </div>
+  </div>
+</div></div></div></section>
+
+<!-- 8 -->
+<section class="opt"><header><span class="num">8</span><h2>Child tiles</h2><span class="note">Each child a tile; press one to edit it below. Reads like the rest of the app.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:14px">
+  <div class="grid g4" style="margin-bottom:12px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+  <div class="sec">Children</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
+    <div style="border:2px solid #15b364;border-radius:13px;padding:9px 13px;min-width:140px"><div class="row"><span class="av" style="background:#15b364;width:24px;height:24px;font-size:11px">S</span><div><b style="font-size:12.5px;display:block">Sami</b><span class="mut">9 · editing</span></div></div></div>
+    <div style="border:1px solid #e6ebf5;border-radius:13px;padding:9px 13px;min-width:140px;opacity:.75"><div class="row"><span class="av" style="background:#6a4fd0;width:24px;height:24px;font-size:11px">L</span><div><b style="font-size:12.5px;display:block">Layla</b><span class="mut">6</span></div></div></div>
+    <div style="border:1px dashed #dbe2f0;border-radius:13px;padding:9px 13px;color:#8a93a8;font-size:12px;display:flex;align-items:center">＋ Add</div>
+  </div>
+  <div style="border:1px solid #e6ebf5;border-radius:13px;padding:11px">
+    <div class="grid g3" style="margin-bottom:9px"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">DOB</label><input class="in" type="date"></div></div>
+    <div class="grid g2"><div><label class="f" style="color:#15b364">Allergies</label><input class="in"></div><div><label class="f" style="color:#15b364">Collection password</label><input class="in"></div></div>
+  </div>
+</div></div></div></section>
+
+<!-- 9 -->
+<section class="opt"><header><span class="num">9</span><h2>Sticky save bar</h2><span class="note">Form scrolls, the actions never move — and it says what's unsaved.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="overflow:hidden">
+  <div style="padding:14px">
+    <div class="grid g4" style="margin-bottom:10px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+    <div class="grid g3"><div><label class="f">Sami — full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f" style="color:#15b364">Allergies · family's</label><input class="in" value="Nuts"></div></div>
+  </div>
+  <div class="row" style="border-top:1px solid #eef1f8;background:#f7f9fd;padding:9px 14px">
+    <span style="font-size:11.5px;color:#a35b06">● 2 unsaved changes — allergies will go to the family's profile</span>
+    <span style="margin-left:auto;display:flex;gap:7px"><button class="btn2">Cancel</button><button class="btn2 p">Save</button></span>
+  </div>
+</div></div></div></section>
+
+<!-- 10 -->
+<section class="opt"><header><span class="num">10</span><h2>No boxes</h2><span class="note">Typography and rules only — no cards inside cards. The calmest of the ten.</span></header>
+<div class="body"><div class="wrap"><div class="card" style="padding:18px 20px">
+  <div style="font-size:16px;font-weight:800;margin-bottom:2px">Omar Haddad</div>
+  <div class="mut" style="margin-bottom:14px">Customer · Bedford · 2 bookings</div>
+
+  <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a93a8;border-bottom:1px solid #eef1f8;padding-bottom:5px;margin-bottom:10px">The family</div>
+  <div class="grid g4" style="margin-bottom:18px"><div><label class="f">First name</label><input class="in" value="Omar"></div><div><label class="f">Surname</label><input class="in" value="Haddad"></div><div><label class="f">Email</label><input class="in" value="omar.h@email.com"></div></div>
+
+  <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a93a8;border-bottom:1px solid #eef1f8;padding-bottom:5px;margin-bottom:10px">Sami Haddad <span style="color:#c3cadd">— your copy</span></div>
+  <div class="grid g3" style="margin-bottom:14px"><div><label class="f">Full name</label><input class="in" value="Sami Haddad"></div><div><label class="f">Age</label><input class="in" value="9"></div><div><label class="f">DOB</label><input class="in" type="date"></div></div>
+
+  <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0b8a4b;border-bottom:1px solid #cdebd9;padding-bottom:5px;margin-bottom:10px">Sami — the family's own record</div>
+  <div class="grid g2"><div><label class="f">Allergies</label><input class="in"></div><div><label class="f">Collection password</label><input class="in"></div></div>
+  <div style="margin-top:9px"><span class="chip">Photo permission · not listed</span><span class="chip">School · not listed</span><span class="chip">SEND plan · not listed</span></div>
+</div></div></div></section>
+
+<p class="sub" style="margin:30px 0 60px">A number, or a mix — "7's split inside 4's folding". Options 2, 5 and 7 are the ones I'd argue for: 2 halves the height, 5 is best with several children, 7 makes the ownership split impossible to miss.</p>
+</div>
+</body>
+</html>
