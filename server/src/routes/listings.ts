@@ -212,9 +212,13 @@ listings.get("/", async (req, res) => {
     res.json(list);
     return;
   }
+  // ?tenantId= narrows the public feed to ONE provider — the storefront
+  // page and embed widget use it ("all of this provider's activities").
+  const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
   const snap = await col.orderBy("name").get();
   const visible = snap.docs.filter((d) => {
     const l = d.data();
+    if (tenantFilter && l.tenantId !== tenantFilter) return false;
     return (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
   });
   res.json(await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))));

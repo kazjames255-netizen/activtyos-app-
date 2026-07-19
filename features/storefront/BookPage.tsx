@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { apiPublic } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
@@ -19,12 +20,13 @@ export function BookPage({ id }: { id: string }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // ?embed=1 = we're inside a provider's website via public/embed.js:
   // hide the ActivityOS chrome and report our height to the parent so
-  // inline embeds size themselves. (Safe as a lazy initializer: the SSR
-  // and hydration renders both show the loading state, which doesn't
-  // depend on this flag.)
-  const [embedded] = useState(
-    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("embed"),
-  );
+  // inline embeds size themselves. useSearchParams (not a one-shot read):
+  // client-side navigations from an embedded storefront mount this page
+  // before window.location settles.
+  const sp = useSearchParams();
+  const embedded = sp.has("embed");
+  // Arrived from an embedded storefront grid — offer the way back.
+  const fromStore = sp.get("from") === "store";
 
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
@@ -67,7 +69,14 @@ export function BookPage({ id }: { id: string }) {
   return (
     <div className="min-h-screen bg-[#f4f7ff] pb-16">
       <div className="mx-auto flex max-w-[1040px] items-center justify-between px-4 pb-1 pt-4 text-[12.5px]">
-        <span className="font-bold text-[#4a4763]">{listing.tenantName}</span>
+        <span className="font-bold text-[#4a4763]">
+          {embedded && fromStore && (
+            <button type="button" onClick={() => window.history.back()} className="mr-2 font-bold text-[#2f6bd8] underline">
+              ← All activities
+            </button>
+          )}
+          {listing.tenantName}
+        </span>
         {signedIn === false ? (
           // Inside an embed, keep ?embed=1 through the sign-in round trip so
           // we come back still chromeless in the provider's iframe.

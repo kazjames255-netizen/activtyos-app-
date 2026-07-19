@@ -715,3 +715,13 @@ color) with the script loaded anywhere. A MutationObserver mounts
 late-rendered placeholders (SPA navigations included) exactly once;
 double-loading the script is guarded. The plain one-liner still works for
 static HTML.
+
+**Storefront embed (same day):** the widget now embeds a provider's WHOLE
+shop, not just one listing. `GET /api/listings?tenantId=` narrows the
+public feed to one provider; `/store/{tenantId}` renders their live
+listings as a grid (each card opens its `/book/{id}` page, with a back
+link inside embeds); `data-store="TENANT_ID"` /
+`<div data-activityos-store="TENANT_ID">` on the widget shows it on their
+website. Operators copy the snippet from the Listings tab header
+("</> Embed"). The store page is deliberately simple — it's also what the
+future subdomains will serve, so restyle at will.

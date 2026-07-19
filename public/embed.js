@@ -16,7 +16,9 @@
  * page (the customer page the operator designed, paying through their own
  * Stripe) in an overlay. Options, on the script tag or the mount element:
  *
- *   data-listing / data-activityos-book   (required)  the listing id
+ *   data-listing / data-activityos-book    one LISTING (the 🔗 Link id)
+ *   data-store   / data-activityos-store   the provider's WHOLE storefront
+ *                                          (every live listing, bookable)
  *   data-mode     "button" (default) | "inline" — inline embeds the whole
  *                 booking page, auto-sized to its content
  *   data-label    button text (default "Book now")
@@ -35,13 +37,13 @@
   if (!script || !script.src) return;
   var origin = new URL(script.src).origin;
 
-  function pageUrl(listing) {
-    return origin + "/book/" + encodeURIComponent(listing) + "?embed=1";
+  function pageUrl(kind, id) {
+    return origin + (kind === "store" ? "/store/" : "/book/") + encodeURIComponent(id) + "?embed=1";
   }
 
-  function makeFrame(listing) {
+  function makeFrame(kind, id) {
     var frame = document.createElement("iframe");
-    frame.src = pageUrl(listing);
+    frame.src = pageUrl(kind, id);
     frame.title = "Book with ActivityOS";
     frame.allow = "payment *"; // Stripe wallets inside the frame
     frame.style.border = "0";
@@ -57,7 +59,7 @@
     });
   }
 
-  function openOverlay(listing) {
+  function openOverlay(kind, id) {
     var overlay = document.createElement("div");
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,25,.62);" +
@@ -71,7 +73,7 @@
     close.style.cssText =
       "position:absolute;top:-4px;right:0;z-index:1;border:0;background:transparent;" +
       "color:#fff;font-size:30px;line-height:1;cursor:pointer;padding:4px 10px;";
-    var frame = makeFrame(listing);
+    var frame = makeFrame(kind, id);
     frame.style.height = "min(92vh, 1400px)";
     frame.style.borderRadius = "18px";
     frame.style.background = "#f4f7ff";
@@ -98,7 +100,7 @@
   /** Render the widget into `host` (appended; the mount div is the target). */
   function mount(host, opts) {
     if (opts.mode === "inline") {
-      var frame = makeFrame(opts.listing);
+      var frame = makeFrame(opts.kind, opts.id);
       frame.style.height = "900px"; // until the first height message lands
       listenForHeight(frame);
       host.appendChild(frame);
@@ -111,16 +113,17 @@
       "display:inline-block;padding:12px 22px;border:0;border-radius:12px;cursor:pointer;" +
       "font:700 15px/1 system-ui,-apple-system,sans-serif;color:#fff;background:" + opts.color + ";";
     button.addEventListener("click", function () {
-      openOverlay(opts.listing);
+      openOverlay(opts.kind, opts.id);
     });
     host.appendChild(button);
   }
 
-  function optsFrom(el, listing) {
+  function optsFrom(el, kind, id) {
     return {
-      listing: listing,
+      kind: kind,
+      id: id,
       mode: el.getAttribute("data-mode") === "inline" ? "inline" : "button",
-      label: el.getAttribute("data-label") || "Book now",
+      label: el.getAttribute("data-label") || (kind === "store" ? "Book activities" : "Book now"),
       color: el.getAttribute("data-color") || "#15b364",
     };
   }
@@ -129,13 +132,16 @@
   // on DOM ready, and whenever new nodes appear (React renders after this
   // script runs; SPA navigations remove and re-add them).
   function scan() {
-    var nodes = document.querySelectorAll("[data-activityos-book]:not([data-activityos-mounted])");
+    var nodes = document.querySelectorAll(
+      "[data-activityos-book]:not([data-activityos-mounted]), [data-activityos-store]:not([data-activityos-mounted])",
+    );
     for (var i = 0; i < nodes.length; i++) {
       var el = nodes[i];
+      var store = el.getAttribute("data-activityos-store");
       var listing = el.getAttribute("data-activityos-book");
-      if (!listing) continue;
+      if (!store && !listing) continue;
       el.setAttribute("data-activityos-mounted", "1");
-      mount(el, optsFrom(el, listing));
+      mount(el, store ? optsFrom(el, "store", store) : optsFrom(el, "book", listing));
     }
   }
 
@@ -153,10 +159,11 @@
   // Plain-HTML path: the script tag itself carries data-listing and the
   // widget lands right where the tag was pasted. (Script loaders that hoist
   // the tag — next/script etc. — should use a mount element instead.)
+  var inlineStore = script.getAttribute && script.getAttribute("data-store");
   var inlineListing = script.getAttribute && script.getAttribute("data-listing");
-  if (inlineListing && script.parentNode && !script.hasAttribute("data-activityos-mounted")) {
+  if ((inlineListing || inlineStore) && script.parentNode && !script.hasAttribute("data-activityos-mounted")) {
     script.setAttribute("data-activityos-mounted", "1");
-    var opts = optsFrom(script, inlineListing);
+    var opts = inlineStore ? optsFrom(script, "store", inlineStore) : optsFrom(script, "book", inlineListing);
     var holder;
     if (opts.mode === "inline") {
       holder = document.createElement("div");
