@@ -62,6 +62,15 @@ export type ChildProfile = {
   allergies?: string; medical?: string; likes?: string; dislikes?: string;
   /** SEND / additional needs, in the parent's words. */
   send?: string;
+  /** A face for the register. Optional, and asked for with a reason rather
+   *  than as another empty field — staff who have never met the child use it
+   *  to know who they're handing over at the end of the day. */
+  photo?: string;
+  /** The word anyone other than the usual adult must say to collect this
+   *  child. A safeguarding control, not a credential: staff read it off the
+   *  register, so it is stored and shown in plain text and must never be
+   *  reused as an account password. */
+  collectionPassword?: string;
   /** An EHCP or SEND plan: the id of the uploaded file and the name it came in
    *  under. The bytes live in storage, not here. Only offered once they've
    *  said there are needs — an upload box on its own asks a question the
@@ -72,6 +81,24 @@ export type ChildProfile = {
    *  before this was asked for don't have one. Those keep the neutral chip. */
   sex?: "boy" | "girl";
 };
+
+/**
+ * A child's photo, centre-cropped to a 128px square and re-encoded. Small
+ * enough to sit on the child record without threatening Firestore's 1MB
+ * document limit, which a phone photo would do several times over.
+ */
+export async function squareAvatar(file: File): Promise<string> {
+  const img = document.createElement("img");
+  const url = URL.createObjectURL(file);
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const min = Math.min(img.width, img.height);
+  canvas.getContext("2d")!.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
+  URL.revokeObjectURL(url);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
 
 /** Chip colours: blue for boys, pink for girls, neutral when unsaid. */
 export function sexTint(sex: ChildProfile["sex"], on = false): { border: string; bg: string; ink: string } {
@@ -160,6 +187,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   const [tried, setTried] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const planRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
   const [planPct, setPlanPct] = useState<number | null>(null);
   const flag = (bad: boolean) => (tried && bad ? { borderColor: "#f87171", boxShadow: "0 0 0 1px #f87171" } : null);
 
@@ -277,6 +305,69 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             <div className={`mt-2 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>{problem}</div>
           )}
+
+          {/* After the name, so it can be asked for by name, and so the two
+              required fields lead the form. Asked with a reason attached —
+              "add a photo" on its own is just another empty box. */}
+          <div className={`mt-2.5 flex items-center gap-3 border border-dashed p-2.5 ${tk.round}`}
+            style={{ borderColor: `${tk.ink}33` }}>
+            <button type="button" onClick={() => photoRef.current?.click()}
+              className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-full border-2 border-dashed"
+              style={{ borderColor: `${tk.ink}40`, color: tk.muted }}
+              title={draft.photo ? "Change photo" : "Add a photo"}>
+              {draft.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={draft.photo} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[20px]">📷</span>
+              )}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11.5px] font-bold" style={{ color: tk.ink }}>
+                A photo of {draft.name.trim() || "your child"} <span className="font-normal">— optional</span>
+              </div>
+              <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+                It goes on the register so staff who haven&rsquo;t met them know who they&rsquo;re
+                greeting, and who they&rsquo;re handing over to at the end of the day.
+              </div>
+              {draft.photo ? (
+                <button type="button" onClick={() => setDraft({ ...draft, photo: undefined })}
+                  className="mt-1 text-[10.5px] font-bold" style={{ color: tk.muted }}>Remove photo</button>
+              ) : (
+                <button type="button" onClick={() => photoRef.current?.click()}
+                  className={`mt-1.5 border-2 px-2.5 py-1 text-[11px] font-extrabold ${tk.round}`}
+                  style={{ borderColor: tk.accent, color: tk.accent }}>📷 Add a photo</button>
+              )}
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const data = await squareAvatar(f).catch(() => null);
+                if (data) setDraft({ ...draft, photo: data });
+              }} />
+          </div>
+
+          {/* Safeguarding, so it says plainly what it's for and when it's
+              used. A parent who doesn't understand the field leaves it blank,
+              and then nobody can collect but them. */}
+          <div className={`mt-2.5 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}33` }}>
+            <div className="mb-1 text-[11.5px] font-bold" style={{ color: tk.ink }}>
+              Collection password <span className="font-normal">— optional</span>
+            </div>
+            <div className="mb-1.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+              Pick a word only your family knows. If <b style={{ color: tk.ink }}>anyone other than you</b> comes
+              to collect {draft.name.trim() || "your child"} — a grandparent, a friend, another parent on the
+              school run — staff will ask them for it, and won&rsquo;t hand over without it.
+            </div>
+            <input value={draft.collectionPassword ?? ""}
+              onChange={(e) => setDraft({ ...draft, collectionPassword: e.target.value })}
+              placeholder="e.g. Bluebell" className={inp} style={inpStyle} />
+            <div className="mt-1 text-[10px] leading-[1.4]" style={{ color: tk.muted }}>
+              Staff can see this word, so don&rsquo;t use a password from anywhere else.
+            </div>
+          </div>
 
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Allergies <span className="font-normal">— optional</span></div>
@@ -1077,12 +1168,19 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       const all = days.length === x.dates.length;
                       // The child's own colour, so each block is theirs at a
                       // glance rather than three identical grey lists.
-                      const kc = sexTint(roster.find((r) => r.name.trim() === kid)?.sex, true);
+                      const rec = roster.find((r) => r.name.trim() === kid);
+                      const kc = sexTint(rec?.sex, true);
                       return (
                         <div key={kid} className={`mb-2.5 border-l-4 py-1 pl-3 last:mb-0 ${tk.round}`} style={{ borderColor: kc.bg }}>
                           <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold"
-                              style={{ background: kc.bg, color: kc.ink }}>{kid.trim().charAt(0).toUpperCase()}</span>
+                            {rec?.photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={rec.photo} alt="" className="h-6 w-6 flex-none rounded-full object-cover"
+                                style={{ boxShadow: `0 0 0 2px ${kc.bg}` }} />
+                            ) : (
+                              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold"
+                                style={{ background: kc.bg, color: kc.ink }}>{kid.trim().charAt(0).toUpperCase()}</span>
+                            )}
                             <b className="min-w-0 flex-1 truncate text-[13.5px]" style={{ color: kc.bg }}>{kid}</b>
                             <button type="button"
                               onClick={() => b.setAddonDays(x.id, kid, a.id, days.length ? [] : perDay ? [...x.dates] : ["*"])}

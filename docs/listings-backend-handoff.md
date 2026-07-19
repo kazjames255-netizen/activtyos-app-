@@ -684,7 +684,6 @@ Venue extras (kind/facilities/lat/lng/…) persist verbatim as you said;
 when the maps key lands I'll start writing `lat`/`lng` server-side on
 venue save.
 
-<<<<<<< HEAD
 
 ---
 
@@ -919,7 +918,288 @@ badge is already in `statusTone`); the operator detail shows
 get an accept/decline banner on My bookings — all built simply, restyle
 at will. Your storefront checkout gets the split + positions for free
 from the same POST it already calls.
->>>>>>> origin/main
+
+
+
+---
+
+## I — A child's photo needs to reach the booking, not just their profile
+
+**Why.** A photo on the register is a safeguarding tool: staff who have never
+met a child use it to know who they are greeting and, more to the point, who
+they are handing over at the end of the day. It only does that job if it
+travels with the booking.
+
+**Where it is now.** `childSchema` already carries `photo` (a 128px square
+data URL, ~10–20KB), and parents can add one in their profile area and while
+adding a child mid-booking. Both places now say what it is for, which is why a
+parent would bother.
+
+**What's missing, and it's on your side.** A booking record stores
+`child: string` — the name, nothing else. So the bookings list, the booking
+detail and the registers cannot show a face even when one exists, and matching
+by name is the wrong idea: two families with a Sophie, or a parent who typed
+"sophie" one time and "Sophie" the next, and the register shows the wrong
+child's photo. That is a safeguarding bug, not a cosmetic one.
+
+**What I'd ask for:** the child's **id** on each booking item, so the photo (and
+allergies, and the SEND plan) can be resolved from the child record rather than
+guessed from a string. Then:
+
+- the bookings list can show the children on a booking, not the booker's initial;
+- registers can print faces;
+- a photo updated in the profile appears everywhere at once, because nothing is
+  copied.
+
+Copying the photo onto the booking would also work and needs no lookup, but it
+goes stale the day a parent updates it, and it puts a child's face in a second
+place we then have to remember to delete. I'd rather have the id.
+
+**One consent detail.** `photoConsent` on the child governs whether they may
+appear in Moments/newsfeed photos. It should *not* gate the register photo —
+different purpose, different basis — but a parent may reasonably expect it to,
+so the copy in both upload spots says what the photo is for. Worth agreeing
+between us before either of us builds on it.
+
+
+---
+
+## J — Collection password (safeguarding)
+
+**What it is.** A word the family chooses. If anyone other than the usual adult
+comes to collect a child — a grandparent, a friend, the other parent on the
+school run — staff ask for it and don't hand the child over without it.
+Standard practice in childcare, and we had no field for it.
+
+**Built.** `collectionPassword` on the child, captured in both places a child
+is added (the parent's profile area, and mid-booking — which is also the
+operator's phone-booking flow), with copy explaining what it's for and when
+it's used. Added to `childSchema` in `my.ts`. Max 60 chars, optional.
+
+**Deliberately plain text.** Staff have to read it to check it, so it can't be
+hashed. Two consequences worth agreeing:
+
+- Both forms tell the parent "staff can see this word, so don't reuse a
+  password from anywhere else". Please don't let it become an auth credential
+  anywhere.
+- It should be visible to staff working that booking, and to nobody else. Same
+  access question as the SEND plan in §I.
+
+**What's needed from you.** Like the photo, it's useless until it reaches the
+register — and a register is per session, built from bookings, which currently
+carry the child's *name* only. So this rides on the same fix: **`childId` on
+each booking item**. With that, the register can print the child's photo, their
+allergies, their SEND plan and their collection password from one lookup.
+
+Without it, none of the four can be shown safely — and matching by name would
+eventually show one family's collection password against another family's
+child, which is the worst possible version of this feature.
+
+
+---
+
+## K — Parents area: the operator can't read a family's real records
+
+**The design.** Two tabs. *Parents* — a searchable list with each family's
+children, booking count and spend, filterable by location and listing.
+*Child profiles* — the full safeguarding record per child: allergies,
+medications, emergency meds, dietary, SEND plan (viewable/downloadable), GP and
+NHS number, swimming ability, consents (photo / suncream / first aid / walk
+home), care and behaviour notes, emergency contact, authorised collectors and
+the collection password.
+
+**The principle behind it, which I think is right:** the provider types almost
+nothing. Adding a customer captures name, email and phone — that's it. Everything
+else is entered once by the parent in their own account and *surfaces* here. The
+child record is the single source of truth; this page is a read of it.
+
+**And it fills from manual bookings too.** When a provider takes a booking over
+the phone they enter the parent's details and each child's — name, date of
+birth, boy/girl, allergies, medical, SEND, collection password, photo. All of
+that has to land on the same records this page reads, not in a parallel copy.
+So the phone-booking write (§H) and this page are two ends of one thing: the
+operator's typing populates the family's account, and the family's own edits
+update what the operator sees. Whichever way a detail arrives, there is one
+record of it.
+
+**Why none of it can be built yet.** Three things are missing, and the first is
+the blocker.
+
+1. **Nothing links a tenant's customer to the parent's account.** A `customers`
+   record is matched to a booking by email; it holds no `uid`. So there is no
+   path from "this family books with me" to "these are their children".
+2. **`children` are scoped by `parentUid`.** An operator has no permitted read.
+   Today the only children an operator can see are the thin name-and-age copies
+   on the customer record — which is why I removed that field from the add form
+   rather than keep two versions of a child in the system.
+3. **Most of the fields don't exist.** A child record currently holds: name,
+   age, dob, school, sex, allergies, medical, send, sendPlanId, likes,
+   dislikes, collectionPassword, photo, photoConsent.
+
+   The design needs, additionally: **emergency contact** (name, relationship,
+   phone), **dietary** (distinct from allergies), **swimming ability**,
+   **care & behaviour notes**, and consents for **suncream**, **first aid**
+   and **walking home alone** — each a yes/no the parent gives, like
+   photoConsent.
+
+   *Not wanted, despite appearing on the mockup: authorised collectors, and
+   GP / surgery / NHS number.* The collection password covers who may collect;
+   a named-collector list is a second thing to keep in step with it, and
+   medical-record identifiers are more data than a session provider needs to
+   hold.
+
+**What I'd ask you to build.**
+
+- `uid` on the customer record, set when a booking is made and when an invite
+  is accepted, so customer ↔ account is a real link rather than an email match.
+- `GET /api/customers/:id/family` — the parent plus their children's full
+  records, for an operator **whose tenant that family has actually booked
+  with**. That last clause is the whole security model: a tenant may read the
+  medical details of children attending their sessions and nobody else's.
+- The extra child fields above, so parents can enter them once.
+- A rule on who inside a tenant sees the safeguarding block. The design says
+  "visible to permitted roles only" — my reading is owner and staff working
+  that session; not, say, a marketing user. Your call, but it needs to be a
+  role check rather than a UI hide.
+- Retention: how long a tenant keeps reading a family's records after their
+  last booking. Medical and safeguarding data on children shouldn't sit
+  visible to a provider indefinitely.
+
+**What I'll do once it exists.** Build both tabs against it. The list, the
+location and listing filters, the search, the child profile cards, the SEND
+plan download (§F is already built), and the safeguarding block. None of it
+needs anything from you beyond that one endpoint and the fields.
+
+**One thing worth deciding together.** The mockup shows the collection password
+in plain text on screen (BLUEBIRD). That is correct — staff have to read it —
+but it means the Parents area is a screen full of children's medical and
+safeguarding data, and should probably be excluded from any screen-sharing,
+demo or export path we build later.
+
+
+---
+
+## L — Marketing consent, and what the marketing area will need
+
+**Two rules now enforced in `routes/customers.ts`.**
+
+1. **A family with bookings can't be deleted.** `DELETE /api/customers/:id`
+   409s if any booking in that tenant carries their email. Deleting them would
+   leave bookings whose family record has gone — a register naming a child
+   nobody can look up — and would destroy the record of what they consented
+   to. The UI doesn't offer it either, but the server is the rule.
+
+2. **Consent is dated and attributed.** `marketingOptIn` now comes with
+   `marketingOptInAt` and `marketingSource`, stamped server-side and only on
+   the transition — re-saving a phone number doesn't refresh the date, or the
+   record stops meaning "they agreed on this day". Turning it off clears both.
+   Consent you can't date or account for is consent you can't rely on if
+   anyone ever asks, which under PECR they may.
+
+**What the marketing area will need from this, when we build it.**
+
+- **The list**: customers where `marketingOptIn` is true, filterable by
+  `locationId` — the two fields exist for exactly this.
+- **An unsubscribe that works from the email**, not only from the operator's
+  screen. A one-click link, no login: a parent who has to sign in to stop
+  emails will mark you as spam instead. It needs a signed token per recipient
+  and an endpoint that flips `marketingOptIn` to false and stamps the time.
+  That's yours — I can't sign anything client-side.
+- **Suppression that survives deletion.** If a family is ever removed and
+  later re-added by a booking, `upsertCustomerFromBooking` recreates them
+  without `marketingOptIn`, so the default is "don't email" — that's the right
+  way round and worth keeping. But someone who *actively unsubscribed* should
+  stay unsubscribed even if their record is rebuilt, which means a small
+  tenant-level suppression list keyed by email, separate from the customer
+  record.
+- **Per-tenant, never platform-wide.** They consented to hear from one
+  provider. A family on two providers' books has consented twice or once, and
+  the marketing area must never read across tenants.
+
+**One thing I'd push back on if it comes up:** don't add "email everyone who
+has booked" as a shortcut. A booking is not consent to marketing — it's the
+soft opt-in at best, and only for similar services with an unsubscribe in
+every message. Better to make the consent tick easy to collect than to work
+around it.
+
+
+---
+
+# What I need from you — one list, in the order that unblocks the most
+
+*Updated after your 19 July push. **#1 below is now done** — I've left it in
+struck through rather than deleting it, so the ordering still makes sense.*
+
+### ~~1. Book on someone else's behalf~~ — **done, thank you**
+`onBehalfOf` landed exactly as hoped: one pricing path, existing accounts
+reused by uid, no password ever emailed, no child data in the email. I'll point
+Confirm at it and both screens start writing — that's my next job, not yours.
+
+Two small things I'll check when I wire it, not asks: the operator screen sends
+one call per block for a multi-week basket, and I'll make sure the new-family
+fields it already collects (name, email, phone) map onto your
+`onBehalfOf {name, email, phone}` shape rather than needing a customer first.
+
+### 2. `childId` on each booking item  *(now the biggest single unblock)*
+Bookings carry `child` as a name and nothing else. With the id, a register can
+show the child's **photo**, **allergies**, **SEND plan** and **collection
+password** from one lookup. Without it, none of them can be shown safely —
+matching by name would eventually put one family's collection password against
+another family's child. (§I, §J)
+
+### ~~Create a family's account from a phone booking~~ — **done in the same push**
+`admin.auth().createUser` + a set-password link. Three things I'd insist on:
+**if the email already has an account, use it** (families exist across
+providers); **never email a password**; and the operator keeps no access
+afterwards. I've built the same thing for the Families page already —
+`POST /api/customers/:id/invite` — so there's a working shape to copy. (§H)
+
+### 3. `GET /api/customers/:id/family`
+The parent plus their children's **full** records, for an operator whose tenant
+that family has actually booked with. That clause is the security model. It
+unlocks the whole Parents/Child-profiles design; I can build both tabs against
+it front-end with nothing else from you. (§K)
+
+### 4. Extra fields on a child
+Emergency contact, dietary (separate from allergies), swimming ability, care &
+behaviour notes, and consents for suncream, first aid and walking home.
+*Not wanted:* authorised collectors, GP/surgery/NHS number. (§K)
+
+### 5. File storage for SEND plans
+Currently chunked across Firestore documents because there's no bucket —
+works, capped at 15MB, but it's a workaround. When Storage is enabled only
+`routes/childFiles.ts` changes. (§F)
+
+### 6. Marketing plumbing
+An unsubscribe link that works from the email without a login (needs a signed
+token — I can't sign anything client-side), and a tenant-level suppression list
+so an unsubscribe survives a record being rebuilt by a later booking. (§L)
+
+---
+
+### Decisions rather than code
+
+- **Who inside a tenant sees safeguarding data.** Needs to be a role check, not
+  a UI hide. (§K)
+- **Retention** — how long a provider keeps reading a family's medical records
+  after their last booking. (§I, §K)
+- **`photoConsent`** governs Moments/newsfeed photos. Kaz's call, and I agree:
+  a photo a parent uploads may be used anywhere *staff* work; consent still
+  gates anything another family or the public can see. (§I)
+
+### Things I changed in your files — all flagged in the PRs
+
+`routes/my.ts` (childSchema fields, add-on answers, SEND-plan access grant),
+`routes/customers.ts` (name parts, location, consent stamping, the delete
+guard, the invite endpoint), `lib/emails.ts` (the invite email),
+`index.ts` (mounting `/api/my/files`). New and mine: `routes/childFiles.ts`.
+
+### One correction I owed you — and you've since fixed the rest
+
+An earlier draft said nothing could mark an invoice paid. That was wrong:
+`{type:"paid"}` already existed, as did the Stripe checkout. The real gap was
+`emailPaymentLink` sending `href="#"` — which your 19 July push fixed, along
+with writing a `payments` record for offline payments. Both closed.
 
 ---
 

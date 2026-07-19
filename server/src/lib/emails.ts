@@ -119,6 +119,48 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
   );
 }
 
+
+/**
+ * "You can see what's on" — the invite an operator sends after a phone
+ * enquiry. Carries a set-password link, never a password.
+ *
+ * Says who created the account and why, because an unexplained login is
+ * indistinguishable from a phishing email — and tells them how to be rid of
+ * it, which is both courteous and the lawful basis for having made it.
+ */
+export function emailSignUpInvite(p: {
+  to: string;
+  firstName: string;
+  providerName: string;
+  link: string;
+  existed: boolean;
+}): void {
+  const cta = p.existed ? "Sign in" : "Set your password";
+  void sendMail(
+    p.to,
+    `${p.providerName} — see what's coming up`,
+    `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
+      <h2 style="font-size:19px;margin:0 0 10px">Hi ${p.firstName}, here's your account</h2>
+      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
+        ${p.existed
+          ? `You already have an ActivityOS account, so ${p.providerName}'s listings are waiting for you when you sign in.`
+          : `${p.providerName} set up an account for you after your enquiry, so you can see every session they're running, with dates and places left.`}
+      </p>
+      <p style="margin:0 0 16px">
+        <a href="${p.link}" style="display:inline-block;background:#2f6bd8;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">${cta}</a>
+      </p>
+      <p style="font-size:12.5px;line-height:1.55;color:#5b6478;margin:0 0 8px">
+        We haven't set a password for you — that link lets you choose your own. Your name and
+        email are already filled in, so there's nothing to type twice.
+      </p>
+      <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
+        Didn't ask for this? Ignore this email and nothing happens, or reply and we'll delete
+        the account.
+      </p>
+    </div>`,
+  );
+}
+
 /** §H — the ONE email when an operator books for a family: confirmation +
  * set-your-password (new accounts) + pay link. Deliberately NO child data:
  * a mistyped address must never leak a child's details. */

@@ -8,6 +8,8 @@ import type { BulkAction, CreateBookingInput, RefundType, RowAction } from "./mu
 export type TakeBookingInput = Omit<CreateBookingInput, "dates"> &
   ({ blockId: string; dates?: undefined } | { dates: string; blockId?: undefined });
 import { get as apiGet, post as apiPost } from "@/lib/api";
+import { bookingsToCsv, csvFilename } from "./helpers";
+import { downloadCsv } from "./exportFile";
 
 // The store no longer owns booking mutations — every change is a call to the
 // Express API (which runs the shared logic from ./mutations inside a
@@ -132,7 +134,10 @@ export const useBookingsStore = create<BookingsState>()(
           return;
         }
         if (action === "export") {
-          setTimeout(() => alert(`Exported ${n} booking(s) to CSV.`), 40);
+          // The selected ones, in the order they appear on screen.
+          const picked = get().bookings.filter((b) => refs.includes(b.ref));
+          downloadCsv(csvFilename("bookings-selected"), bookingsToCsv(picked));
+          set((s) => void (s.selected = {}));
           return;
         }
         void run(async () => {
