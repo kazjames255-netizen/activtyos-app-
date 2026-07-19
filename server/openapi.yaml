@@ -1,10 +1,29 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.10.0
+  version: 0.11.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.11.0 — Booking for a family (handoff §G/§H) + real pay links
+
+    - **`POST /api/my/bookings` accepts `onBehalfOf`** (operator roles only):
+      `{customerId?}` or `{name?, email, phone?}`. Same pricing/capacity/
+      discount path as parents; the booking lands on the FAMILY's account —
+      an existing ActivityOS account with that email is reused (never
+      duplicated), otherwise one is created with **no password** and the
+      single confirmation email includes Firebase's set-password link and
+      the pay link. That email deliberately contains **no child data** (a
+      mistyped address must never leak a child's details). Operator-taken
+      bookings are Confirmed + `pay: "Invoice sent"`; `opensAt` doesn't
+      bind operators.
+    - **`emailPaymentLink` has a real link** now: it deep-links to
+      `/custdash/bookings?pay={ref}`, which auto-opens the Stripe card
+      payment for that booking after sign-in.
+    - **Offline settlements are recorded**: the `paid` action writes a
+      `payments` record (`offline: true`, method, amount, recordedBy) so
+      TFC/HAF/PayPal have an entry for reconciliation, not just a flag.
 
     ## v0.10.0 — The waiting list (handoff §E)
 

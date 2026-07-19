@@ -24,7 +24,13 @@ import {
 
 const prettyDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-import { emailBookingConfirmed, emailBookingRequestReceived } from "../lib/emails";
+import {
+  emailBookingConfirmed,
+  emailBookingRequestReceived,
+  emailFamilyBookingCreated,
+} from "../lib/emails";
+import { auth as fbAuth } from "../firebase";
+import { canWrite } from "../middleware/role";
 import { queuePositions, triggerWaitlist } from "../lib/waitlist";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
@@ -74,6 +80,16 @@ const basketSchema = z.object({
   blockId: z.string().min(1),
   method: z.string().min(1),
   items: z.array(itemSchema).min(1).max(20),
+  // Operators only (§G-3/§H): book FOR a family — same pricing/capacity
+  // path, the booking lands on their account (found or created by email).
+  onBehalfOf: z
+    .object({
+      customerId: z.string().max(60).optional(),
+      name: z.string().trim().max(120).optional(),
+      email: z.string().trim().email().max(160).optional(),
+      phone: z.string().trim().max(40).optional(),
+    })
+    .optional(),
 });
 const legacySchema = z.object({
   listingId: z.string().min(1),
@@ -183,6 +199,52 @@ my.post("/bookings", async (req, res) => {
   }
   const input = parsed.data;
 
+  // "On behalf of": the operator authenticates, the FAMILY owns the booking.
+  let familyEmail = email;
+  let familyName = req.user?.name || email.split("@")[0];
+  let accountCreated = false;
+  let passwordLink: string | null = null;
+  const onBehalf = "onBehalfOf" in input ? input.onBehalfOf : undefined;
+  if (onBehalf) {
+    const authCtx = req.auth!;
+    if (!canWrite(authCtx.role) || !authCtx.tenantId) {
+      res.status(403).json({ error: "Booking for a family requires an operator account" });
+      return;
+    }
+    let target = { name: onBehalf.name ?? "", email: onBehalf.email ?? "", phone: onBehalf.phone ?? "" };
+    if (onBehalf.customerId) {
+      const cust = await db.collection("customers").doc(onBehalf.customerId).get();
+      if (!cust.exists || cust.data()!.tenantId !== authCtx.tenantId) {
+        res.status(404).json({ error: "Customer not found" });
+        return;
+      }
+      const c = cust.data() as { name?: string; email?: string; phone?: string };
+      target = { name: target.name || c.name || "", email: target.email || c.email || "", phone: target.phone || c.phone || "" };
+    }
+    if (!target.email) {
+      res.status(400).json({ error: "The family needs an email address" });
+      return;
+    }
+    // Find-or-create is the server's guarantee against duplicate accounts:
+    // an email that already has an ActivityOS account gets THIS booking on
+    // that account, never a second one.
+    try {
+      await fbAuth.getUserByEmail(target.email);
+    } catch {
+      const created = await fbAuth.createUser({
+        email: target.email,
+        displayName: target.name || undefined,
+        // No password — they set their own via the emailed link. A password
+        // in an inbox lives forever.
+      });
+      await db.collection("users").doc(created.uid).set({ email: target.email, role: "parent", chosen: true });
+      accountCreated = true;
+      passwordLink = await fbAuth.generatePasswordResetLink(target.email).catch(() => null);
+    }
+    familyEmail = target.email;
+    familyName = target.name || target.email.split("@")[0];
+  }
+
   const listingSnap = await db.collection("listings").doc(input.listingId).get();
   if (!listingSnap.exists) {
     res.status(400).json({ error: "Unknown listing" });
@@ -208,7 +270,11 @@ my.post("/bookings", async (req, res) => {
     res.status(409).json({ error: "This listing isn't open for booking" });
     return;
   }
-  if (listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {
+  if (onBehalf && listing.tenantId !== req.auth!.tenantId) {
+    res.status(404).json({ error: "Listing not found" });
+    return;
+  }
+  if (!onBehalf && listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {
     res.status(409).json({
       error: `Booking hasn't opened yet — it opens ${new Date(listing.opensAt).toLocaleString("en-GB")}`,
       opensAt: listing.opensAt,
@@ -374,12 +440,13 @@ my.post("/bookings", async (req, res) => {
   const drift = round2(target - amounts.reduce((s, a) => round2(s + a), 0));
   if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + drift);
 
-  const bookerName = req.user?.name || email.split("@")[0];
+  const bookerName = familyName;
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
   const blockRef = db.collection("blocks").doc(input.blockId);
   // Auto-confirm listings seat parents immediately; manual ones hold the
-  // place pending the operator's approval. Unpaid until payments land.
-  const placedStatus = listing.bookingType === "auto" ? "Confirmed" : "Approval needed";
+  // place pending the operator's approval. Operator-taken bookings are the
+  // approval — Confirmed straight away, invoiced. Unpaid until paid.
+  const placedStatus = onBehalf ? "Confirmed" : listing.bookingType === "auto" ? "Confirmed" : "Approval needed";
 
   try {
     const bookings = await db.runTransaction(async (tx) => {
@@ -461,7 +528,7 @@ my.post("/bookings", async (req, res) => {
           ...buildBooking(
             {
               booker: bookerName,
-              email,
+              email: familyEmail,
               child: p.item.child,
               age: itemAge(p.item),
               listing: listing.name,
@@ -480,7 +547,7 @@ my.post("/bookings", async (req, res) => {
           addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
           sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
           status: placed ? placedStatus : "Waitlisted",
-          pay: "Unpaid",
+          pay: onBehalf && placed ? "Invoice sent" : "Unpaid",
           note,
         };
       });
@@ -491,8 +558,18 @@ my.post("/bookings", async (req, res) => {
       return created;
     });
 
-    // One email for the basket, not one per child.
-    emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
+    // One email for the basket, not one per child. On-behalf bookings get
+    // the account+pay email instead (no child data in it — a mistyped
+    // address must never leak a child's details).
+    if (onBehalf) {
+      if (bookings[0].email.includes("@"))
+        emailFamilyBookingCreated(bookings, listing.tenantName ?? listing.name, {
+          accountCreated,
+          passwordLink,
+        });
+    } else {
+      emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
+    }
     // Keep Customers & families current (one upsert per child, same family).
     for (const b of bookings) void upsertCustomerFromBooking(listing.tenantId, b);
     // The provider's staff can now read the SEND plans of the children they've

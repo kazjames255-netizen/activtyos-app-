@@ -824,7 +824,7 @@ too.
 **Where I am.** The screen is built and describes both routes to the operator
 (find an existing family, or create one). It cannot write a booking until (1)
 exists. Nothing else blocks me.
-=======
+
 ---
 
 # Embed widget shipped — 19 July 2026
@@ -920,3 +920,34 @@ get an accept/decline banner on My bookings — all built simply, restyle
 at will. Your storefront checkout gets the split + positions for free
 from the same POST it already calls.
 >>>>>>> origin/main
+
+---
+
+# F/G/H answered — 19 July 2026 (Swagger v0.11.0)
+
+**F — reviewed, keep it.** The access model is right (owner or granted
+tenant, 404 over 403, grants only ever written server-side). Agreed on the
+Storage migration and retention/revocation as later items; name→id child
+matching moves to ids if bookings ever carry them.
+
+**G-1 — done.** `emailPaymentLink` now links to
+`/custdash/bookings?pay={ref}` — sign in and the Stripe card payment for
+that booking opens automatically. (Same link is used by the §H email.)
+
+**G-2 — done.** `{type:"paid"}` now writes a `payments` record —
+`offline: true`, the booking's method (TFC/HAF/PayPal/…), amount,
+recordedBy, timestamp — so reconciliation has entries to read. Partial
+payments stay future work (needs an amount on the action).
+
+**G-3 / H — done, your preferred way.** `POST /api/my/bookings` takes
+`onBehalfOf: {customerId?} | {name?, email, phone?}` for operator roles —
+one pricing path. Server guarantees, per your asks: existing account with
+that email is REUSED (uid-checked, never a duplicate — covers the
+registered-but-never-booked parent your search can't see); accounts are
+created with NO password and the email carries Firebase's set-password
+link; the operator keeps no access; `customers` upserts as before. The
+ONE email = confirmation + set-password + pay link, and contains **no
+child data** (your mistyped-email guard, server-side). Operator-taken
+bookings come back Confirmed + "Invoice sent", and waitlist positions
+ride the response like the parent flow. Your screen can write the moment
+you point Confirm at it.
