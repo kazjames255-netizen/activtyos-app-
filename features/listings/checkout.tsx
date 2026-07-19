@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from "react";
-import { get as apiGet, api, del } from "@/lib/api";
+import { get as apiGet, api } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import type { useBooking, BasketItem } from "./booking";
@@ -92,7 +92,7 @@ export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
   if (Number.isFinite(to) && age > to) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
   return null;
 }
-export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAssignAll }: {
+export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAdded }: {
   d: WizardDraft; tk: CkTheme;
   saved: ChildProfile[];
   roster: ChildProfile[];
@@ -100,7 +100,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   /** How many basket lines this child is currently on. */
   comingCount: (name: string) => number;
   onUnassignAll: (name: string) => void;
-  onAssignAll: (name: string) => void;
+  /** Clears any "taken off this pass" marks, so a child added is on everything. */
+  onAdded: (name: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -117,6 +118,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
       // Keep their saved profile in step with the edit, when there is one.
       if (draft.id) void api(`/api/my/children/${encodeURIComponent(draft.id)}`, { method: "PUT", body: JSON.stringify(draft) }).catch(() => {});
     } else {
+      onAdded(draft.name.trim());
       setRoster([...roster, draft]);
     }
     setDraft({ name: "", photoConsent: false });
@@ -124,17 +126,6 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     setOpen(false);
   };
 
-  /** Removing is deleting them from the account — worth asking about. */
-  const remove = (i: number) => {
-    const c = roster[i];
-    const savedProfile = !!c.id;
-    const msg = savedProfile
-      ? `Remove ${c.name} from your account?\n\nThis deletes their details — allergies, medical, likes and dislikes — and you'd have to enter them again next time.\n\nTo keep the profile and just leave them off this booking, use "Not coming" instead.`
-      : `Remove ${c.name}?\n\nYou haven't saved their details yet, so they'll be lost.`;
-    if (!confirm(msg)) return;
-    if (c.id) void del(`/api/my/children/${encodeURIComponent(c.id)}`).catch(() => {});
-    setRoster(roster.filter((_, n) => n !== i));
-  };
 
   return (
     <>
@@ -154,29 +145,17 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               return (
                 <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
                   title={bad ?? (added ? `Take ${sv.name} off this booking` : `Add ${sv.name} to this booking`)}
-                  onClick={() => setRoster(added
-                    ? roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))
-                    : [...roster, sv])}
+                  onClick={() => {
+                    if (added) { setRoster(roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))); return; }
+                    onAdded(sv.name.trim());
+                    setRoster([...roster, sv]);
+                  }}
                   className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
                   style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
                   {added ? "✓ " : "+ "}{sv.name}{bad ? " · out of age range" : ""}
                 </button>
               );
             })}
-            {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()]
-              .filter((sv) => !roster.some((r) => r.id === sv.id || r.name === sv.name))
-              .map((sv) => {
-                const bad = ageProblem(d, sv);
-                const c = sexTint(sv.sex);
-                return (
-                  <button key={sv.id ?? sv.name} type="button" disabled={!!bad} title={bad ?? undefined}
-                    onClick={() => setRoster([...roster, sv])}
-                    className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
-                    style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
-                    + {sv.name}{bad ? " · out of age range" : ""}
-                  </button>
-                );
-              })}
           </div>
         </div>
       )}
@@ -200,10 +179,12 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                       follow the row's state too. */}
                   <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
                     className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>Edit details</button>
-                  <button type="button" onClick={() => (on ? onUnassignAll(c.name.trim()) : onAssignAll(c.name.trim()))}
-                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>{on ? "Not coming" : "Add to all"}</button>
-                  <button type="button" onClick={() => remove(i)}
-                    className="text-[11.5px] font-bold" style={{ color: on ? "#ffd7d7" : "#dc2626" }}>Remove</button>
+                  {/* Off the booking entirely — their dates go and they drop
+                      back to a pale chip above, ready to add again. Deleting
+                      the profile belongs in the profile area, not mid-booking. */}
+                  <button type="button"
+                    onClick={() => { onUnassignAll(c.name.trim()); setRoster(roster.filter((_, n) => n !== i)); }}
+                    className="text-[11.5px] font-bold" style={{ color: on ? "rgba(255,255,255,.9)" : tk.muted }}>Not coming</button>
                 </div>
               </div>
             );
@@ -507,8 +488,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           {parentMode && (
             <ChildrenPanel d={d} tk={tk} saved={saved} roster={roster} setRoster={setRoster}
               comingCount={(name) => b.basket.filter((x) => b.childrenOn(x.id).includes(name)).length}
-              onUnassignAll={(name) => b.basket.forEach((x) => { if (b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })}
-              onAssignAll={(name) => b.basket.forEach((x) => { if (!b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })} />
+                      onUnassignAll={(name) => b.basket.forEach((x) => { if (b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })}
+              onAdded={(name) => b.clearRemovalsFor(name)}
+ />
           )}
           <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{parentMode ? "2 · Who's on each pass" : "2 · Who's going & extras"}</div>
           {!parentMode && (
