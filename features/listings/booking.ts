@@ -167,6 +167,16 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
       const list = m[id] ?? [];
       return { ...m, [id]: list.includes(name) ? list.filter((n) => n !== name) : [...list, name] };
     });
+  /**
+   * Forget every exception recorded against a child. A child added to the
+   * booking is on everything — but taking them off the booking writes a
+   * removal on each pass, and those outlived them: adding the same child back
+   * left them listed and on nothing, looking like the click hadn't worked.
+   */
+  const clearRemovalsFor = (name: string) =>
+    setRemoved((m) => Object.fromEntries(
+      Object.entries(m).map(([id, names]) => [id, names.filter((n) => n !== name)]),
+    ));
 
   const attendees = parentMode
     ? Math.max(1, rosterNames.length)
@@ -305,6 +315,6 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const addonDays = (itemId: string, child: string, addonId: string) => addonSel[addonKey(itemId, child)]?.[addonId] ?? [];
 
   return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
-    roster, setRoster, childrenOn, toggleChild, headsOn, rosterNames,
+    roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
