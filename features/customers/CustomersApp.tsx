@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
-import { sessionIsoDates } from "@/features/bookings/helpers";
+import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
+import { uploadPlan } from "@/features/listings/planUpload";
 import { FamiliesExport, type FamilyRow } from "./FamiliesExport";
 import type { Booking } from "@/features/bookings/types";
 
@@ -22,6 +22,9 @@ interface Child {
   name: string;
   age?: number;
   dob?: string;
+  /** The provider's own copy of a SEND plan, emailed to them by the family. */
+  sendPlanId?: string;
+  sendPlanName?: string;
   /** The parent's own photo of them. Not on these thin records yet — it
    *  arrives with the account link (§K) — but the circle is built to show it
    *  the day it does, because a face is the point of a register. */
@@ -37,6 +40,7 @@ interface Customer {
   locationId?: string;
   locationName?: string;
   marketingOptIn?: boolean;
+  notes?: string;
   children?: Child[];
   /** Set once they've been invited to set a password. */
   invitedAt?: string;
@@ -49,11 +53,27 @@ interface Draft {
   phone: string;
   locationId: string;
   marketingOptIn: boolean;
+  notes: string;
+  children: {
+    name: string;
+    age: string;
+    dob: string;
+    allergies: string;
+    medical: string;
+    send: string;
+    collectionPassword: string;
+    likes: string;
+    dislikes: string;
+    photoConsent: "" | "yes" | "no";
+    emergencyContact: string;
+    sendPlanId: string;
+    sendPlanName: string;
+  }[];
 }
 
 const emptyDraft = (): Draft => ({
   id: null, firstName: "", lastName: "", email: "", phone: "",
-  locationId: "", marketingOptIn: false,
+  locationId: "", marketingOptIn: false, notes: "", children: [],
 });
 
 /**
@@ -88,125 +108,91 @@ const STAGES: { key: Stage; label: string; hint: string; colour: string }[] = [
  * as many as we like without the card getting louder — and it can say which
  * ones aren't possible for this family rather than silently hiding them.
  */
-function ContactMenu({ email, phone, name }: { email?: string; phone?: string; name: string }) {
-  const btn = useRef<HTMLButtonElement>(null);
-  const [box, setBox] = useState<DOMRect | null>(null);
+/**
+ * The second face of a family card. The card slides across to it and back —
+ * no overlay, no portal, nothing covering the list.
+ *
+ * Two earlier attempts sat *on top of* the card: a dropdown (clipped by the
+ * card's own overflow, then painted over by the next card down) and a panel
+ * in a portal (which escaped the page's palette and came out black). Sliding
+ * within the card has neither problem, because it never leaves the card.
+ */
+function ContactPane({
+  email,
+  phone,
+  name,
+  onBack,
+}: {
+  email?: string;
+  phone?: string;
+  name: string;
+  onBack: () => void;
+}) {
   const digits = (phone ?? "").replace(/\D/g, "");
   // A UK mobile typed as 07… won't work on wa.me, which wants the country code.
   const intl = digits.startsWith("0") ? `44${digits.slice(1)}` : digits;
   const usable = digits.length >= 10;
 
-  // Rendered into <body>, not into the card: inside it, the card clipped it
-  // with overflow-hidden and the next card down painted over it.
-  //
-  // Which brings its own catch — a portal escapes the page's palette too. The
-  // light theme is set on a wrapper div in this view, so out here --surface
-  // falls back to the portal's dark value and the panel came out black. Hence
-  // the palette repeated on the panel itself.
-  const LIGHT = {
-    "--surface": "#ffffff",
-    "--panel": "#f5f8fd",
-    "--ink": "#171534",
-    "--ink-2": "#4a4763",
-    "--ink-3": "#8a86a3",
-    "--line": "#ece6f1",
-  } as React.CSSProperties;
-
-  useEffect(() => {
-    if (!box) return;
-    const shut = () => setBox(null);
-    window.addEventListener("resize", shut);
-    // Capture phase: the list scrolls inside <main>, not the window.
-    window.addEventListener("scroll", shut, true);
-    return () => {
-      window.removeEventListener("resize", shut);
-      window.removeEventListener("scroll", shut, true);
-    };
-  }, [box]);
-
-  /** Cover the whole card, not just hang off the button. */
-  const open = () => {
-    const card = btn.current?.closest("[data-family-card]");
-    const r = (card ?? btn.current)?.getBoundingClientRect();
-    if (r) setBox(r);
-  };
-
   const item =
-    "flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] font-bold text-[var(--ink)] transition-colors hover:border-[var(--ink-3)]";
+    "flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:border-[var(--ink-3)]";
   const dead =
-    "flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3 py-2 text-[12.5px] text-[var(--ink-3)]";
+    "flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3 py-2 text-[12px] text-[var(--ink-3)]";
 
   return (
-    <>
-      <button
-        ref={btn}
-        type="button"
-        onClick={() => (box ? setBox(null) : open())}
-        className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
-      >
-        Contact ▾
-      </button>
+    <div className="flex h-full flex-col p-4 pl-5">
+      <div className="mb-2.5 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+        >
+          ← Back
+        </button>
+        <b className="min-w-0 flex-1 truncate text-[13px] text-[var(--ink)]">Contact {name}</b>
+      </div>
 
-      {box &&
-        createPortal(
-          <>
-            <div className="fixed inset-0 z-[9998] bg-black/20" onClick={() => setBox(null)} />
-            <div
-              className="fixed z-[9999] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3.5 shadow-[0_20px_44px_-18px_rgba(9,20,44,.55)]"
-              style={{ ...LIGHT, top: box.top, left: box.left, width: box.width, minHeight: box.height, maxHeight: "80vh" }}
-            >
-              <div className="mb-2.5 flex items-center gap-2">
-                <b className="min-w-0 flex-1 truncate text-[13.5px] text-[var(--ink)]">
-                  Contact {name}
-                </b>
-                <button
-                  type="button"
-                  onClick={() => setBox(null)}
-                  aria-label="Close"
-                  className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[15px] leading-none text-[var(--ink-3)] hover:text-[var(--ink)]"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                {email ? (
-                  <a href={`mailto:${email}`} className={item} onClick={() => setBox(null)}>
-                    ✉ <span className="min-w-0 flex-1 truncate">Email <span className="font-normal text-[var(--ink-3)]">{email}</span></span>
-                  </a>
-                ) : (
-                  <span className={dead}>✉ No email address on file</span>
-                )}
-                {usable ? (
-                  <>
-                    <a href={`https://wa.me/${intl}`} target="_blank" rel="noreferrer" className={item} onClick={() => setBox(null)}>
-                      💬 WhatsApp
-                    </a>
-                    <a href={`sms:${phone}`} className={item} onClick={() => setBox(null)}>
-                      📱 Text message
-                    </a>
-                    <a href={`tel:${phone}`} className={item} onClick={() => setBox(null)}>
-                      📞 Call <span className="font-normal text-[var(--ink-3)]">{phone}</span>
-                    </a>
-                  </>
-                ) : (
-                  <span className={dead}>📱 No phone number on file</span>
-                )}
-                <a
-                  href={`/freelancer/messages?to=${encodeURIComponent(email ?? name)}`}
-                  className={item}
-                  onClick={() => setBox(null)}
-                >
-                  💌 Message in ActivityOS
-                </a>
-              </div>
-            </div>
-          </>,
-          document.body,
+      <div className="grid gap-1.5 sm:grid-cols-2">
+        {email ? (
+          <a href={`mailto:${email}`} className={item}>
+            ✉ <span className="min-w-0 flex-1 truncate">Email</span>
+          </a>
+        ) : (
+          <span className={dead}>✉ No email</span>
         )}
-    </>
+        {usable ? (
+          <>
+            <a href={`https://wa.me/${intl}`} target="_blank" rel="noreferrer" className={item}>
+              💬 WhatsApp
+            </a>
+            <a href={`sms:${phone}`} className={item}>
+              📱 Text message
+            </a>
+            <a href={`tel:${phone}`} className={item}>
+              📞 Call
+            </a>
+          </>
+        ) : (
+          <span className={dead}>📱 No phone number</span>
+        )}
+        <a href={`/freelancer/messages?to=${encodeURIComponent(email ?? name)}`} className={item}>
+          💌 Message in app
+        </a>
+      </div>
+
+      {(email || usable) && (
+        <div className="mt-2 truncate text-[10.5px] text-[var(--ink-3)]">
+          {[email, phone].filter(Boolean).join(" · ")}
+        </div>
+      )}
+    </div>
   );
 }
+
+/** A colour per child within a family, so the tiles are told apart at a glance. */
+const KID_TINTS = ["#2f6bd8", "#6a4fd0", "#0b8a4b", "#e22295", "#0ea5e9"];
+
+/** Identifies a child across the two views, so a chip can open their profile. */
+const childKey = (familyId: string, name: string) => `${familyId}::${name}`;
 
 /** One line of a child's detail. Declared out here, not inside render. */
 function Row({ label, value }: { label: string; value?: string }) {
@@ -235,6 +221,8 @@ export function CustomersApp() {
   const [loc, setLoc] = useState("");
   const [day, setDay] = useState("");
   const [openKid, setOpenKid] = useState<string | null>(null);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [kidIdx, setKidIdx] = useState(0);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
@@ -242,7 +230,7 @@ export function CustomersApp() {
   // Bookings and spend per family. Aggregated here from the tenant's own
   // bookings rather than stored on the customer, so it can never go stale or
   // disagree with the Bookings page.
-  const [stats, setStats] = useState<Record<string, { n: number; days: string[] }>>({});
+  const [stats, setStats] = useState<Record<string, { n: number; days: string[]; kids: string[] }>>({});
 
   const refresh = useCallback(() => {
     apiGet<Customer[]>("/api/customers")
@@ -263,15 +251,19 @@ export function CustomersApp() {
       .catch(() => {});
     apiGet<Booking[]>("/api/bookings")
       .then((bs) => {
-        const by: Record<string, { n: number; days: string[] }> = {};
+        const by: Record<string, { n: number; days: string[]; kids: string[] }> = {};
         for (const b of bs) {
           const key = (b.email ?? "").trim().toLowerCase();
           // A cancelled booking isn't a booking they made — counting it would
           // put someone who booked once and cancelled into "Repeat".
           if (!key || b.status === "Cancelled") continue;
-          const row = (by[key] ??= { n: 0, days: [] });
+          const row = (by[key] ??= { n: 0, days: [], kids: [] });
           row.n += 1;
           row.days.push(...sessionIsoDates(b));
+          for (const k of bookingKids(b)) {
+            const nm = (k.name ?? "").trim().toLowerCase();
+            if (nm && !row.kids.includes(nm)) row.kids.push(nm);
+          }
         }
         setStats(by);
       })
@@ -298,6 +290,18 @@ export function CustomersApp() {
       // or removed from the library later.
       locationName: venues.find((v) => v.id === draft.locationId)?.name ?? "",
       marketingOptIn: draft.marketingOptIn,
+      notes: draft.notes.trim(),
+      // Sent back deliberately. `children` has `.default([])` on the server,
+      // so leaving it out of a PUT doesn't mean "unchanged" — it means an
+      // empty array, and every edit was quietly wiping the family's children.
+      children: draft.children
+        .filter((k) => k.name.trim())
+        .map((k) => ({
+          name: k.name.trim(),
+          ...(k.age.trim() ? { age: parseInt(k.age, 10) || 0 } : {}),
+          ...(k.dob.trim() ? { dob: k.dob.trim() } : {}),
+          ...(k.sendPlanId ? { sendPlanId: k.sendPlanId, sendPlanName: k.sendPlanName } : {}),
+        })),
     };
     try {
       const saved = draft.id
@@ -317,6 +321,44 @@ export function CustomersApp() {
               e instanceof Error ? e.message : "unknown error"
             }`,
           );
+        }
+      }
+      // Anything the operator typed into a parent-owned field goes to the
+      // family's record, not onto our copy. Its own call because it can fail
+      // for a reason that has nothing to do with the customer save — chiefly
+      // "they haven't got an account yet".
+      const detail = draft.children
+        .filter(
+          (k) =>
+            k.name.trim() &&
+            (k.allergies || k.medical || k.send || k.collectionPassword || k.likes || k.dislikes || k.photoConsent || k.emergencyContact),
+        )
+        .map((k) => ({
+          name: k.name.trim(),
+          ...(k.dob.trim() ? { dob: k.dob.trim() } : {}),
+          ...(k.allergies.trim() ? { allergies: k.allergies.trim() } : {}),
+          ...(k.medical.trim() ? { medical: k.medical.trim() } : {}),
+          ...(k.send.trim() ? { send: k.send.trim() } : {}),
+          ...(k.collectionPassword.trim() ? { collectionPassword: k.collectionPassword.trim() } : {}),
+          ...(k.likes.trim() ? { likes: k.likes.trim() } : {}),
+          ...(k.dislikes.trim() ? { dislikes: k.dislikes.trim() } : {}),
+          ...(k.photoConsent ? { photoConsent: k.photoConsent === "yes" } : {}),
+          ...(k.emergencyContact.trim() ? { emergencyContact: k.emergencyContact.trim() } : {}),
+        }));
+      if (detail.length) {
+        try {
+          await api(`/api/customers/${encodeURIComponent(saved.id)}/children`, {
+            method: "PUT",
+            body: JSON.stringify({ children: detail }),
+          });
+        } catch (e) {
+          setError(
+            `Saved ${body.name}, but the children's details didn't — ${
+              e instanceof Error ? e.message : "unknown error"
+            }`,
+          );
+          setBusy(false);
+          return;
         }
       }
       setDraft(null);
@@ -355,6 +397,7 @@ export function CustomersApp() {
     // scrollIntoView, not window.scrollTo: the portal scrolls an inner <main>,
     // not the window, so scrolling the window moves nothing at all.
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setKidIdx(0);
     setDraft({
       id: c.id,
       firstName: c.firstName ?? splitName(c.name).firstName,
@@ -363,6 +406,24 @@ export function CustomersApp() {
       phone: c.phone ?? "",
       locationId: c.locationId ?? "",
       marketingOptIn: !!c.marketingOptIn,
+      notes: c.notes ?? "",
+      children: (c.children ?? []).map((k) => ({
+        name: k.name,
+        age: k.age !== undefined ? String(k.age) : "",
+        dob: k.dob ?? "",
+        // Blank until we can read the family's record — typing here writes
+        // to theirs rather than filling a copy of our own.
+        allergies: "",
+        medical: "",
+        send: "",
+        collectionPassword: "",
+        likes: "",
+        dislikes: "",
+        photoConsent: "",
+        emergencyContact: "",
+        sendPlanId: k.sendPlanId ?? "",
+        sendPlanName: k.sendPlanName ?? "",
+      })),
     });
   };
 
@@ -394,6 +455,13 @@ export function CustomersApp() {
   // Thin for now (name and age): the full profile — allergies, SEND, the
   // collection password — lives on the parent's own child record, which an
   // operator can't read yet. See §K of the backend handoff.
+  // The colour of whoever is being edited — a new family has no stage yet, so
+  // it borrows the brand blue.
+  const draftTint = draft?.id
+    ? (STAGES.find((x) => x.key === stageOf((customers ?? []).find((c) => c.id === draft.id)!))?.colour ??
+      "#2f6bd8")
+    : "#2f6bd8";
+
   const kids = shown.flatMap((c) =>
     (c.children ?? []).map((k) => ({ ...k, family: c })),
   );
@@ -473,8 +541,26 @@ export function CustomersApp() {
       )}
 
       {draft && (
-        <Card className="mb-3.5 p-4">
-          <div className="mb-2 text-[13.5px] font-extrabold">{draft.id ? "View / edit" : "Add family"}</div>
+        <div className="mb-3.5 max-w-[1100px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_10px_30px_-22px_rgba(9,20,44,.6)]">
+          {/* A coloured head, in the family's own stage colour — the form
+              should feel like it belongs to the card you opened it from. */}
+          <div
+            className="flex items-center gap-2.5 px-4 py-2.5 text-white"
+            style={{ background: `linear-gradient(100deg, ${draftTint}, ${draftTint}cc)` }}
+          >
+            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white/25 text-[13px] font-extrabold">
+              {(draft.firstName.trim() || "?").charAt(0).toUpperCase()}
+            </span>
+            <b className="min-w-0 flex-1 truncate text-[14px]">
+              {draft.id
+                ? [draft.firstName, draft.lastName].filter(Boolean).join(" ") || "This family"
+                : "Add a family"}
+            </b>
+            <span className="flex-none rounded-full bg-white/20 px-2 py-[2px] text-[10px] font-extrabold uppercase tracking-[0.06em]">
+              {draft.id ? "Editing" : "New"}
+            </span>
+          </div>
+          <div className="p-4">
           <div className="grid gap-2.5 sm:grid-cols-4">
             <div>
               <FieldLabel>First name</FieldLabel>
@@ -521,6 +607,296 @@ export function CustomersApp() {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Children as tiles: pick one, edit it below. A family with three
+              was three stacked cards and a very long form; this is one row
+              and one editor, however many there are. */}
+          {draft.id && (
+            <div className="mt-3">
+              <div className="mb-1.5 text-[11.5px] font-extrabold">
+                Children{" "}
+                <span className="font-normal text-[var(--ink-3)]">
+                  {draft.children.length === 0
+                    ? "— none yet"
+                    : `— ${draft.children.length} on this family`}
+                </span>
+              </div>
+
+              <div className="mb-2.5 flex flex-wrap gap-2">
+                {draft.children.map((k, i) => {
+                  const on = kidIdx === i;
+                  const c2 = KID_TINTS[i % KID_TINTS.length];
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setKidIdx(i)}
+                      className={`flex min-w-[150px] items-center gap-2 rounded-xl px-3 py-2 text-left transition-all ${
+                        on ? "border-2" : "border opacity-75 hover:opacity-100"
+                      }`}
+                      style={{ borderColor: on ? c2 : "var(--line)", background: "var(--surface)" }}
+                    >
+                      <span
+                        className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white"
+                        style={{ background: c2 }}
+                      >
+                        {(k.name.trim() || "?").charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12.5px] font-extrabold">
+                          {k.name.trim().split(" ")[0] || "New child"}
+                        </span>
+                        <span className="block text-[10.5px] text-[var(--ink-3)]">
+                          {k.age ? `${k.age}` : "age —"}
+                          {on ? " · editing" : ""}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft({
+                      ...draft,
+                      children: [
+                        ...draft.children,
+                        {
+                          name: "", age: "", dob: "", allergies: "", medical: "", send: "",
+                          collectionPassword: "", likes: "", dislikes: "", photoConsent: "",
+                          emergencyContact: "", sendPlanId: "", sendPlanName: "",
+                        },
+                      ],
+                    });
+                    setKidIdx(draft.children.length);
+                  }}
+                  className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]"
+                >
+                  ＋ Add
+                </button>
+              </div>
+
+              {draft.children[kidIdx] &&
+                (() => {
+                  const k = draft.children[kidIdx];
+                  const c2 = KID_TINTS[kidIdx % KID_TINTS.length];
+                  const set = (patch: Partial<typeof k>) =>
+                    setDraft({
+                      ...draft,
+                      children: draft.children.map((x, j) => (j === kidIdx ? { ...x, ...patch } : x)),
+                    });
+                  const bookedNames =
+                    stats[(draft.email ?? "").trim().toLowerCase()]?.kids ?? [];
+                  const hasBooked = bookedNames.includes(k.name.trim().toLowerCase());
+                  const typed = Object.entries(k).some(
+                    ([f, v]) => f !== "name" && String(v ?? "").trim() !== "",
+                  );
+                  const removeKid = () => {
+                    if (hasBooked) return;
+                    if (
+                      (typed || k.name.trim()) &&
+                      !confirm(
+                        `Remove ${k.name.trim() || "this child"} from the family? Anything typed about them here goes too.`,
+                      )
+                    )
+                      return;
+                    setDraft({ ...draft, children: draft.children.filter((_, j) => j !== kidIdx) });
+                    setKidIdx(Math.max(0, kidIdx - 1));
+                  };
+                  return (
+                    <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+                      <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-1.5">
+                        <b className="min-w-0 flex-1 truncate text-[12px]">
+                          {k.name.trim() || "New child"}
+                        </b>
+                        {hasBooked ? (
+                          <span
+                            className="text-[10.5px] text-[var(--ink-3)]"
+                            title="This child has been on a booking — their record has to stay"
+                          >
+                            Has bookings
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={removeKid}
+                            className="text-[11px] font-bold text-[var(--ink-3)] transition-colors hover:text-[var(--red,#e21d27)]"
+                          >
+                            Remove child
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid gap-2 p-3 sm:grid-cols-4">
+                        <div className="sm:col-span-2">
+                          <FieldLabel>Full name</FieldLabel>
+                          <Input value={k.name} placeholder="First and last name" onChange={(e) => set({ name: e.target.value })} className="w-full" />
+                        </div>
+                        <div>
+                          <FieldLabel>Age</FieldLabel>
+                          <Input value={k.age} type="number" placeholder="—" onChange={(e) => set({ age: e.target.value })} className="w-full" />
+                        </div>
+                        <div>
+                          <FieldLabel>Date of birth</FieldLabel>
+                          <Input value={k.dob} type="date" onChange={(e) => set({ dob: e.target.value })} className="w-full" />
+                        </div>
+                      </div>
+
+                      {/* Writes to the family's own record, so it looks like a
+                          different thing — because it is one. */}
+                      <div
+                        className="border-t px-3 py-2.5"
+                        style={{ borderColor: "var(--line)", borderLeft: `4px solid ${c2}`, background: `${c2}0d` }}
+                      >
+                        <div className="mb-1.5 flex flex-wrap items-baseline gap-1.5">
+                          <b className="text-[11.5px]" style={{ color: c2 }}>
+                            👪 The family&rsquo;s own record
+                          </b>
+                          <span className="text-[10.5px] text-[var(--ink-3)]">
+                            — typing here writes to their profile, not a copy
+                          </span>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                          {(
+                            [
+                              ["allergies", "Allergies", "Nuts, dairy…"],
+                              ["medical", "Medical", "Asthma inhaler…"],
+                              ["send", "SEND / additional needs", "Autism, 1:1 support…"],
+                              ["collectionPassword", "Collection password", "e.g. Bluebell"],
+                              ["likes", "Likes", "Football, drawing"],
+                              ["dislikes", "Dislikes", "Loud rooms"],
+                              ["emergencyContact", "Emergency contact", "Aunt Priya · 07700 900123"],
+                            ] as [keyof typeof k, string, string][]
+                          ).map(([f, label, ph]) => (
+                            <div key={f}>
+                              <FieldLabel>{label}</FieldLabel>
+                              <Input value={k[f]} placeholder={ph} onChange={(e) => set({ [f]: e.target.value })} className="w-full" />
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
+                          <span className="text-[11px] font-bold">Photo consent</span>
+                          {(
+                            [
+                              ["yes", "Yes"],
+                              ["no", "No"],
+                            ] as ["yes" | "no", string][]
+                          ).map(([v, l]) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => set({ photoConsent: k.photoConsent === v ? "" : v })}
+                              className="rounded-full border-2 px-2.5 py-[2px] text-[11px] font-bold transition-colors"
+                              style={
+                                k.photoConsent === v
+                                  ? { borderColor: c2, background: c2, color: "#fff" }
+                                  : { borderColor: "var(--line)", color: "var(--ink-2)" }
+                              }
+                            >
+                              {l}
+                            </button>
+                          ))}
+                          <span className="text-[10.5px] text-[var(--ink-3)]">
+                            {k.photoConsent ? "Will save to their profile" : "Not answered yet"}
+                          </span>
+                        </div>
+
+                        {/* Your copy of a plan the family emailed you — read
+                            by your staff, not shown back to the parent, who
+                            has the original. Because it's yours and not a
+                            second version of theirs, it carries none of the
+                            "which one is true" risk. */}
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
+                          <span className="text-[11px] font-bold">SEND plan</span>
+                          {k.sendPlanId ? (
+                            <>
+                              <a
+                                href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/my/files/${k.sendPlanId}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="max-w-[220px] truncate rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[2px] text-[11px] font-bold text-[var(--ink)]"
+                              >
+                                📎 {k.sendPlanName || "Open plan"}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => set({ sendPlanId: "", sendPlanName: "" })}
+                                className="text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <label className="cursor-pointer rounded-full border-2 px-2.5 py-[2px] text-[11px] font-bold" style={{ borderColor: c2, color: c2 }}>
+                                📎 Upload
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/*"
+                                  className="hidden"
+                                  onChange={async (e) => {
+                                    const f = e.target.files?.[0];
+                                    e.target.value = "";
+                                    if (!f) return;
+                                    setError(null);
+                                    try {
+                                      const ref = await uploadPlan(f);
+                                      set({ sendPlanId: ref.id, sendPlanName: ref.name });
+                                    } catch (err) {
+                                      setError(err instanceof Error ? err.message : "Upload failed");
+                                    }
+                                  }}
+                                />
+                              </label>
+                              <span className="text-[10.5px] text-[var(--ink-3)]">
+                                Your copy, for your staff — the parent isn&rsquo;t shown it
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          <span className="rounded-full border border-dashed border-[var(--line)] px-2 py-[2px] text-[10.5px] text-[var(--ink-3)]">
+                            Photo · uploaded by the parent
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+              {draft.children.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">
+                  They&rsquo;ll appear here with their first booking, or add one above.
+                </div>
+              )}
+
+              <div className="mt-1.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
+                Name and age are your copy. Everything in the tinted panel is the family&rsquo;s
+                record — <b>either of you can fill it in</b>, and it writes to their profile so
+                there&rsquo;s only ever one version. They need an account first: send them a
+                sign-up link and it&rsquo;ll save.
+              </div>
+            </div>
+          )}
+
+          {/* Says plainly that the family never sees these. A note written
+              believing it's private and later surfaced is worse than having
+              no notes at all. */}
+          <div className="mt-2.5">
+            <FieldLabel>
+              Notes{" "}
+              <span className="font-normal text-[var(--ink-3)]">— only your team sees these, never the family</span>
+            </FieldLabel>
+            <textarea
+              value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+              rows={2}
+              placeholder="Rang about August, wants the Bedford site, dad collects on Fridays…"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)] outline-none"
+            />
           </div>
 
           {/* Marketing email needs consent under PECR, and the answer has to
@@ -573,7 +949,8 @@ export function CustomersApp() {
             every live listing and its dates. Their name and email carry over — it won&rsquo;t
             ask again.
           </div>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* The pipeline, and the filter. Each tile is a stage and pressing one
@@ -710,9 +1087,9 @@ export function CustomersApp() {
           </Card>
         ) : (
           <div className="grid gap-2.5 lg:grid-cols-2">
-            {kids.map((k, i) => {
+            {kids.map((k) => {
               const st = STAGES.find((x) => x.key === stageOf(k.family))!;
-              const key = `${k.family.id}-${k.name}-${i}`;
+              const key = childKey(k.family.id, k.name);
               return (
                 <div
                   key={key}
@@ -801,7 +1178,7 @@ export function CustomersApp() {
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {shown.map((c) => {
-            const st = stats[(c.email ?? "").trim().toLowerCase()] ?? { n: 0, spend: 0 };
+            const st = stats[(c.email ?? "").trim().toLowerCase()] ?? { n: 0, days: [], kids: [] };
             // The card wears its stage colour — the same four as the tiles
             // above — so the list is scannable by where people have got to.
             // A per-family colour looked pretty and told you nothing.
@@ -809,17 +1186,22 @@ export function CustomersApp() {
             const stageDef = STAGES.find((x) => x.key === stageNow)!;
             const tint = stageDef.colour;
             return (
-              // No overflow-hidden here: it clipped the Contact menu to the
-              // card, which is why the menu opened invisibly. The spine rounds
-              // its own left corners instead of relying on the clip.
               <div
                 key={c.id}
-                data-family-card
-                className="group relative rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-px hover:shadow-[0_14px_30px_-20px_rgba(9,20,44,.6)]"
+                className="group relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-px hover:shadow-[0_14px_30px_-20px_rgba(9,20,44,.6)]"
               >
                 {/* The family's own colour down the edge — a wall of white
                     cards is the thing that made this page a wall. */}
-                <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl" style={{ background: tint }} />
+                <span className="absolute inset-y-0 left-0 z-10 w-1.5" style={{ background: tint }} />
+
+                {/* Two faces, one card. The track is twice the width and
+                    slides by half — so the contact options arrive from the
+                    right rather than landing on top of anything. */}
+                <div
+                  className="flex w-[200%] transition-transform duration-300 ease-out"
+                  style={{ transform: contactId === c.id ? "translateX(-50%)" : "translateX(0)" }}
+                >
+                <div className="w-1/2 flex-none">
 
                 {/* No avatar on a family. It's an adult we'll never have a
                     photo of, so the circle was two initials in a colour the
@@ -860,14 +1242,22 @@ export function CustomersApp() {
                         <span className="text-[11px] text-[var(--ink-3)]">No children on record</span>
                       ) : (
                         (c.children ?? []).map((k) => (
-                          <span
+                          <button
                             key={k.name}
-                            className="rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
+                            type="button"
+                            title={`Open ${k.name}'s profile`}
+                            onClick={() => {
+                              // Straight to that child, in the other view.
+                              setView("children");
+                              setOpenKid(childKey(c.id, k.name));
+                              topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                            className="rounded-full border px-2.5 py-[3px] text-[11px] font-bold transition-colors hover:brightness-95"
                             style={{ borderColor: `${tint}44`, background: `${tint}12`, color: "var(--ink-2)" }}
                           >
                             {k.name}
                             {k.age !== undefined ? ` · ${k.age}` : ""}
-                          </span>
+                          </button>
                         ))
                       )}
                     </div>
@@ -887,7 +1277,13 @@ export function CustomersApp() {
                 {/* Actions sit on their own strip: reachable, but not shouting
                     over the family's name the way two buttons at the top did. */}
                 <div className="flex flex-wrap items-center gap-1.5 rounded-b-2xl border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 pl-5">
-                  <ContactMenu email={c.email} phone={c.phone} name={c.name} />
+                  <button
+                    type="button"
+                    onClick={() => setContactId(c.id)}
+                    className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+                  >
+                    Contact →
+                  </button>
                   {canWrite && (c.email ?? "").includes("@") && (
                     <button
                       type="button"
@@ -929,6 +1325,21 @@ export function CustomersApp() {
                       )}
                     </>
                   )}
+                </div>
+                </div>
+
+                <div className="w-1/2 flex-none">
+                  {/* Mounted only while it's the one showing, so a hundred
+                      cards aren't each holding a hidden contact pane. */}
+                  {contactId === c.id && (
+                    <ContactPane
+                      email={c.email}
+                      phone={c.phone}
+                      name={c.name}
+                      onBack={() => setContactId(null)}
+                    />
+                  )}
+                </div>
                 </div>
               </div>
             );
