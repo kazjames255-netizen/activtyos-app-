@@ -81,6 +81,8 @@ const childSchema = z.object({
   // door, kept so they don't have to say it twice.
   likes: z.string().trim().max(300).optional(),
   dislikes: z.string().trim().max(300).optional(),
+  /** Colours the child's chip in the parent's list. Optional by design. */
+  sex: z.enum(["boy", "girl"]).optional(),
   // Photo consent — safeguarding: may this child appear in photos
   // (Moments/newsfeed)? Defaults to NO (privacy-safe).
   photoConsent: z.boolean().optional().default(false),
