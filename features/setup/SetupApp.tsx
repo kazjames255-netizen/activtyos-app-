@@ -14,6 +14,7 @@ import {
   type QuestionType,
   type TenantSettings,
 } from "@/lib/settings";
+import { policyWording, sortBands, HOURS, type CancellationPolicy, type RefundBand } from "@/lib/cancellation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Setup & features — the real screen, replacing the legacy mock.
@@ -231,6 +232,101 @@ function Section({ title, lede, children }: { title: string; lede?: string; chil
       {lede && <p className="mb-2 mt-0.5 text-[12px] leading-[1.5] text-[var(--ink-3)]">{lede}</p>}
       {children}
     </Card>
+  );
+}
+
+// ── Cancellation policy ────────────────────────────────────────────────────
+
+const NOTICE_CHOICES: [number, string][] = [
+  [HOURS.twoWeeks, "2 weeks"],
+  [HOURS.week, "1 week"],
+  [72, "3 days"],
+  [HOURS.twoDays, "48 hours"],
+  [HOURS.day, "24 hours"],
+  [12, "12 hours"],
+];
+
+/**
+ * The refund rules, as rules.
+ *
+ * The wording underneath is generated live, so the provider can see exactly
+ * what a parent will read as they change the numbers. That's the whole point
+ * of the rewrite: prose typed separately from the rules drifts away from
+ * them, and then the page promises one thing while the system does another.
+ */
+function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChange: (p: CancellationPolicy) => void }) {
+  const bands = sortBands(policy.bands);
+  const tiers = bands.filter((b) => b.hoursBefore > 0);
+  const floor = bands.find((b) => b.hoursBefore <= 0) ?? { hoursBefore: 0, refundPercent: 0 };
+
+  const write = (nextTiers: RefundBand[], nextFloor: RefundBand) =>
+    onChange({ ...policy, bands: [...sortBands(nextTiers), nextFloor] });
+
+  return (
+    <div>
+      {tiers.map((b, i) => (
+        <div key={i} className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
+          <span className="text-[12px] font-bold">Cancel at least</span>
+          <Select
+            value={String(b.hoursBefore)}
+            onChange={(e) => write(tiers.map((x, j) => (j === i ? { ...x, hoursBefore: Number(e.target.value) } : x)), floor)}
+          >
+            {NOTICE_CHOICES.map(([h, l]) => (
+              <option key={h} value={h}>{l}</option>
+            ))}
+            {/* A stored value we don't offer must still show, or changing
+                anything else would silently move it. */}
+            {!NOTICE_CHOICES.some(([h]) => h === b.hoursBefore) && (
+              <option value={b.hoursBefore}>{b.hoursBefore} hours</option>
+            )}
+          </Select>
+          <span className="text-[12px] font-bold">before it starts →</span>
+          <NumberBox
+            value={b.refundPercent}
+            onChange={(n) => write(tiers.map((x, j) => (j === i ? { ...x, refundPercent: n } : x)), floor)}
+            min={0}
+            max={100}
+            suffix="% back"
+          />
+          <button
+            type="button"
+            aria-label="Remove this tier"
+            onClick={() => write(tiers.filter((_, j) => j !== i), floor)}
+            className="ml-auto px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+
+      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--line)] p-2.5">
+        <span className="text-[12px] font-bold">Any later than that →</span>
+        <NumberBox
+          value={floor.refundPercent}
+          onChange={(n) => write(tiers, { hoursBefore: 0, refundPercent: n })}
+          min={0}
+          max={100}
+          suffix="% back"
+        />
+        <span className="text-[11px] text-[var(--ink-3)]">Including after it has started.</span>
+      </div>
+
+      <Button onClick={() => write([...tiers, { hoursBefore: HOURS.day, refundPercent: 25 }], floor)}>
+        ＋ Add a notice period
+      </Button>
+
+      <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+          What parents will read
+        </div>
+        <div className="text-[12.5px] leading-[1.55]">{policyWording({ ...policy, wording: undefined })}</div>
+        <div className="mt-2 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
+          Written from the rules above and offered first when you build a listing. When someone
+          cancels, the same rules work out what&apos;s owed and show it to you — you always decide
+          whether to send it. ActivityOS never moves money.
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -708,15 +804,10 @@ export function SetupApp() {
       {tab === "listings" && (
         <>
           <Section
-            title="Cancellation policies"
-            lede="The wording offered when you build a listing. The first is the default on a new listing — put your usual one at the top."
+            title="Cancellation & refunds"
+            lede="How much comes back, and how much notice it takes. Set the rules and the wording writes itself — so what a parent is told and what gets worked out when they cancel can never say different things."
           >
-            <ListEditor
-              items={settings.cancellationPolicies}
-              onChange={(v) => set("cancellationPolicies", v)}
-              placeholder="Add a policy — how it reads to a parent"
-              warn="Listings already using this wording keep it. It just stops being offered."
-            />
+            <PolicyEditor policy={settings.cancellationPolicy} onChange={(p) => set("cancellationPolicy", p)} />
           </Section>
 
           <Section title="Defaults for a new listing" lede="What a new listing starts with. You can still change any of it per listing.">
@@ -772,10 +863,22 @@ export function SetupApp() {
 
           <Section
             title="Cancellation reasons"
-            lede="Offered when you cancel a booking, so you can report on why places are being lost. Leave the list empty to keep typing a reason each time."
+            lede="Offered when a booking is cancelled, so you can report on why places are being lost."
           >
+            <Row label="Ask you for a reason" hint="Off means you're never made to answer — cancel and move on.">
+              <Toggle on={settings.askReasonOperator} onChange={(v) => set("askReasonOperator", v)} />
+            </Row>
+            <Row
+              label="Ask parents for a reason"
+              hint="When a parent cancels their own booking. Useful for spotting patterns, but it's one more step between them and a thing they've already decided to do."
+              note="Parents can't self-cancel yet (Amir)"
+            >
+              <Toggle on={settings.askReasonParent} onChange={(v) => set("askReasonParent", v)} />
+            </Row>
+            <div className="mt-2.5">
             <NotWired>Saved here, but cancelling a booking still writes an automatic reason — wiring pending.</NotWired>
             <ListEditor items={settings.cancellationReasons} onChange={(v) => set("cancellationReasons", v)} placeholder="e.g. Coach unavailable" />
+            </div>
           </Section>
         </>
       )}

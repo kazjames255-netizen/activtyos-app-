@@ -1508,3 +1508,70 @@ That anonymous-read constraint is worth remembering generally: **any setting
 that has to affect the public storefront needs to be denormalised onto the
 listing**, the way you already embed categories. Tenant settings only reach
 signed-in screens.
+
+---
+
+## O — Cancellation policy is now rules, not prose
+
+Kaz spotted the flaw in what I'd shipped: a policy written only as a sentence
+("cancel 48 hours before for a full refund") **can't do anything**. The
+provider still reads it, works out the notice period by hand, and decides the
+refund themselves — which is exactly the arithmetic a computer should do, and
+exactly where a tired human quietly stops being consistent.
+
+Worth noting the legacy mock had this right: its Bookings tab specified a
+"refund % per notice window" editor. My spec lost it.
+
+**The policy is now bands**, in `lib/cancellation.ts`:
+
+```ts
+{ bands: [
+    { hoursBefore: 168, refundPercent: 100 },  // a week
+    { hoursBefore: 48,  refundPercent: 50 },
+    { hoursBefore: 0,   refundPercent: 0 },    // anything later
+  ] }
+```
+
+**The prose is generated from the bands**, not typed alongside them. One
+source of truth, so what a parent is told and what the system works out can
+never drift apart. A provider can override the wording, but then owns keeping
+the two in step.
+
+`refundFor(policy, firstSessionIso, paid, nowIso)` returns the recommendation.
+It's shown in the operator's cancel panel and prefills the partial-refund box —
+**a suggestion, never an action.** ActivityOS still doesn't move money.
+
+It returns **null** rather than guessing when it can't tell: no session date, a
+free-text session ("Week 1"), no amount. A confident wrong number about someone
+else's money is worse than no number.
+
+41 assertions cover it, including the one that was wrong first time:
+`Math.round(37.55 * 50) / 100` gives **£18.77, not £18.78**, because
+`37.55 * 50` is `1877.4999999999998` in binary floating point — a penny short
+on every refund landing on a half. It works in integer pence now.
+
+### What I need from you
+
+1. **Parent self-cancel has to run the same rules server-side.** The moment a
+   parent can cancel their own booking, the refund can't be worked out in the
+   browser — it's money, and the client is not trustworthy for it. `refundFor`
+   is deliberately pure with no React or browser dependency, so it can be
+   lifted into the API as-is. Please don't reimplement it; two copies of refund
+   arithmetic will disagree eventually, and the disagreement will be about
+   someone's money.
+
+2. **Store the policy on the booking at the time of booking.** A provider who
+   changes their policy in March must not retroactively change what's owed on a
+   booking made in January. Suggest stamping `cancellationPolicy` onto the
+   booking when it's created, and having `refundFor` read *that*, not the
+   current tenant setting. This is the one that's cheap now and horrible later.
+
+3. **`reason` on cancel** (already asked for in §N) — now with a matching
+   setting. A provider can turn the reason prompt off for themselves and,
+   separately, for parents. `askReasonOperator` / `askReasonParent`.
+
+4. **The policy needs to reach the storefront.** Same anonymous-read
+   constraint: the wording is already denormalised onto the listing as
+   `cancellation`, which is fine for display. But if parents ever see "you'd
+   get £X back" before confirming a cancellation, the *bands* need to be on the
+   listing too.

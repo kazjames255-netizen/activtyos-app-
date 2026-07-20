@@ -12,6 +12,7 @@ import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./for
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings } from "@/lib/settings";
+import { policyWording, type CancellationPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import type { ChildProfile } from "./checkout";
 // Re-exported so existing importers don't have to care that these moved.
@@ -363,7 +364,7 @@ export function emptyDraft(defaults?: {
   defaultCapacity: number;
   defaultRunningDays: number[];
   showSpaces: boolean;
-  cancellationPolicies: string[];
+  cancellationPolicy?: CancellationPolicy;
 }): WizardDraft {
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
@@ -371,7 +372,7 @@ export function emptyDraft(defaults?: {
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
-    cancellation: defaults?.cancellationPolicies?.[0] ?? CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
+    cancellation: defaults?.cancellationPolicy ? policyWording(defaults.cancellationPolicy) : CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
   };
 }
 
@@ -1947,10 +1948,12 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
     ["hidden", "Hidden link", "Not searchable — anyone with the link can book · schools, HAF, private groups"],
   ];
   const book: [WizardDraft["bookingType"], string][] = [["auto", "Automatic approval"], ["manual", "Manual approval"]];
-  // The provider's own wording, set in Setup & features. Falls back to the
-  // built-in list if they've emptied it — a policy step with nothing to pick
-  // is worse than one offering a sensible default.
-  const policies = wizSettings.cancellationPolicies.length ? wizSettings.cancellationPolicies : CANCELLATION_POLICIES;
+  // The provider's own policy, generated from their refund rules in Setup &
+  // features, offered first. The old fixed list stays behind it: a provider
+  // can still pick different wording for one listing, they just no longer
+  // have to invent it — and picking wording that contradicts the rules is now
+  // a visible choice rather than the only option.
+  const policies = [policyWording(wizSettings.cancellationPolicy), ...CANCELLATION_POLICIES];
   return (
     <div className="max-w-[720px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />

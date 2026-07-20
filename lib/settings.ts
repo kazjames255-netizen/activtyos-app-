@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { DEFAULT_POLICY, type CancellationPolicy } from "@/lib/cancellation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -145,9 +146,17 @@ export interface TenantSettings {
   // ── Bookings & payments ──
   payMethods: string[];
   cancellationReasons: string[];
+  /** Ask the operator why, when they cancel. Off = don't make them answer. */
+  askReasonOperator: boolean;
+  /** Ask the parent why, when they cancel their own booking. */
+  askReasonParent: boolean;
+  /**
+   * The refund rules. Prose is generated from these rather than typed, so
+   * what a parent is told and what the system works out can never disagree.
+   */
+  cancellationPolicy: CancellationPolicy;
 
   // ── Listings ──
-  cancellationPolicies: string[];
   defaultCapacity: number;
   defaultRunningDays: number[];
   /** Show "only N places left" at or below this many. 0 turns it off. */
@@ -219,15 +228,10 @@ export const DEFAULT_SETTINGS: TenantSettings = {
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Cash on the day"],
   cancellationReasons: ["Illness", "Weather", "Staffing", "Venue unavailable", "Parent request", "Duplicate booking"],
+  askReasonOperator: true,
+  askReasonParent: false,
+  cancellationPolicy: DEFAULT_POLICY,
 
-  cancellationPolicies: [
-    "No refunds are given except in the case of a cancellation by the organiser.",
-    "Refunds are not generally available, but may be considered with sufficient notice.",
-    "Cancel at least 24 hours before the session for a full refund.",
-    "Cancel at least 48 hours before the session for a full refund.",
-    "Cancel more than one week before the session for a full refund.",
-    "Cancel more than two weeks before the session for a full refund.",
-  ],
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],
   lowPlacesAt: 5,
@@ -258,6 +262,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     pipelineStages: s.pipelineStages?.length ? s.pipelineStages : DEFAULT_SETTINGS.pipelineStages,
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
+    cancellationPolicy: s.cancellationPolicy?.bands?.length ? s.cancellationPolicy : DEFAULT_SETTINGS.cancellationPolicy,
     genderOptions: s.genderOptions?.length ? s.genderOptions : DEFAULT_SETTINGS.genderOptions,
   };
 }
