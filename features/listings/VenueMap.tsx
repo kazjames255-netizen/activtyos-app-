@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 // Shared between the operator's Locations tab and the customer page, so it
 // lives outside both (ListingWizard and FreelancerListingsApp already import
 // each other's types — a component import either way would be a cycle).
@@ -7,15 +9,16 @@
 export const MIN_Z = 8;
 export const MAX_Z = 18;
 
+// Tiles come from OUR server (/api/geo/tiles) — Ordnance Survey when keyed,
+// OSM otherwise — so the map key stays server-side and this works inside the
+// embed widget on providers' own sites. Web Mercator ZXY, standard slippy.
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const TILE = 256;
+
 /**
- * OpenStreetMap embed centred on the venue's saved pin.
- *
- * The iframe is cross-origin, so it can't report a zoom back to us — the +/−
- * buttons own it and the value is stored on the venue. OSM's own attribution
- * footer wraps to three lines at this width and swamps the map, and can't be
- * restyled from outside; instead the iframe renders at double width (where the
- * footer is one small line), is scaled by half, and the strip is cropped. Our
- * own attribution goes underneath — ODbL requires it either way.
+ * A minimal slippy map centred on the venue's pin — a grid of proxied tiles
+ * positioned so the pin sits in the middle, with a pin marker and +/− zoom.
+ * Dependency-free; the zoom value is owned here and stored on the venue.
  */
 export function VenueMap({
   lat,
@@ -31,24 +34,67 @@ export function VenueMap({
   onZoom?: (z: number) => void;
   height?: number;
 }) {
-  if (lat === undefined || lng === undefined) return null;
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver((e) => setWidth(e[0].contentRect.width));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
 
+  if (lat === undefined || lng === undefined) return null;
   const z = Math.min(MAX_Z, Math.max(MIN_Z, zoom ?? 15));
-  // 580 CSS px of map at this zoom, then halved by the scale below.
-  const lonSpan = (360 * 580) / (256 * Math.pow(2, z));
-  const latSpan = lonSpan * 0.62;
-  const bbox = [lng - lonSpan / 2, lat - latSpan / 2, lng + lonSpan / 2, lat + latSpan / 2].join(",");
+
+  // Pin → global pixel at this zoom.
+  const n = 2 ** z;
+  const xF = ((lng + 180) / 360) * n;
+  const latRad = (lat * Math.PI) / 180;
+  const yF = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+  const centerPx = xF * TILE;
+  const centerPy = yF * TILE;
+  const w = width || 300;
+  const originX = centerPx - w / 2;
+  const originY = centerPy - height / 2;
+
+  const tilesEls: React.ReactNode[] = [];
+  if (width > 0) {
+    const x0 = Math.floor(originX / TILE);
+    const x1 = Math.floor((originX + w) / TILE);
+    const y0 = Math.floor(originY / TILE);
+    const y1 = Math.floor((originY + height) / TILE);
+    for (let tx = x0; tx <= x1; tx++) {
+      for (let ty = y0; ty <= y1; ty++) {
+        if (ty < 0 || ty >= n) continue;
+        const wx = ((tx % n) + n) % n; // wrap x
+        tilesEls.push(
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${tx}-${ty}`}
+            src={`${API}/api/geo/tiles/${z}/${wx}/${ty}.png`}
+            alt=""
+            width={TILE}
+            height={TILE}
+            className="absolute select-none"
+            style={{ left: tx * TILE - originX, top: ty * TILE - originY }}
+            draggable={false}
+          />,
+        );
+      }
+    }
+  }
 
   return (
     <div>
-      <div className="relative overflow-hidden rounded-lg border border-[var(--line)]" style={{ height }}>
-        <iframe
-          title="Venue location"
-          src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`}
-          loading="lazy"
-          className="absolute left-0 top-0 border-0"
-          style={{ width: "200%", height: height * 2 + 60, transform: "scale(0.5)", transformOrigin: "top left", marginTop: -15 }}
-        />
+      <div ref={ref} className="relative overflow-hidden rounded-lg border border-[var(--line)]" style={{ height }}>
+        {tilesEls}
+        {/* pin, dead centre */}
+        <div className="pointer-events-none absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%, -100%)" }}>
+          <svg width="22" height="30" viewBox="0 0 22 30" aria-hidden>
+            <path d="M11 0C5 0 0 4.7 0 10.6 0 18 11 30 11 30s11-12 11-19.4C22 4.7 17 0 11 0z" fill="#e22295" />
+            <circle cx="11" cy="10.6" r="4" fill="#fff" />
+          </svg>
+        </div>
         {onZoom && (
           <div className="absolute right-1.5 top-1.5 flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] shadow-sm">
             <button type="button" onClick={() => onZoom(Math.min(MAX_Z, z + 1))} disabled={z >= MAX_Z}
@@ -58,10 +104,8 @@ export function VenueMap({
           </div>
         )}
       </div>
-      <div className="mt-1 text-[10px] text-[var(--ink-3)]">
-        Map data ©{" "}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener" className="underline">OpenStreetMap</a>{" "}
-        contributors
+      <div className="mt-1 text-right text-[9.5px] leading-none text-[var(--ink-3)]">
+        Contains OS data © Crown copyright &amp; database rights
       </div>
     </div>
   );

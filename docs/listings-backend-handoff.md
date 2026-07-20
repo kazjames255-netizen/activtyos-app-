@@ -1354,3 +1354,16 @@ against the real API, not guessed.
 Maps tiles via a small server proxy (so the tile key stays server-side and
 embeds keep working). Both need the real service to build/verify — a
 half-day once the account exists.
+
+**§B maps — DONE (20 July, key in).** Ordnance Survey is fully wired:
+- `GET /api/geo/search` uses OS Names (postcodes + places) with BNG→WGS84
+  conversion (proj4), Nominatim fallback on any failure. Verified: real
+  UK postcodes resolve to correct lat/lng.
+- `GET /api/geo/tiles/:z/:x/:y.png` proxies OS Maps raster tiles (key
+  server-side, week-cached, public so `<img>`/embeds work). OSM fallback
+  when no key.
+- `VenueMap.tsx` rewritten from the OSM iframe to a dependency-free slippy
+  map reading the proxy — renders real OS "Light" tiles, pin centred, zoom
+  buttons. Attribution updated to "Contains OS data © Crown copyright".
+No key ever reaches the browser; the embed widget keeps working on other
+sites. Nothing left on this — restyle the map however you like.

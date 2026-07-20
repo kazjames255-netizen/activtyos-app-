@@ -13,11 +13,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/proj4": "^2.5.6",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0",
     "nodemailer": "^9.0.3",
+    "proj4": "^2.20.9",
     "stripe": "^22.3.2",
     "swagger-ui-express": "^5.0.1",
     "yaml": "^2.9.0",

@@ -1321,6 +1321,32 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/geo/search:
+    get:
+      tags: [meta]
+      summary: Geocode a UK postcode/address (server-side; OS when keyed)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, example: "MK14 6BN" }
+      responses:
+        "200":
+          description: "[{label, lat, lng}] — Ordnance Survey Names, Nominatim fallback"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/geo/tiles/{z}/{x}/{y}:
+    get:
+      tags: [meta]
+      summary: Map tile (public; OS Maps proxied so the key stays server-side)
+      security: []
+      parameters:
+        - { name: z, in: path, required: true, schema: { type: integer } }
+        - { name: x, in: path, required: true, schema: { type: integer } }
+        - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
+      responses:
+        "200": { description: PNG tile (week-cached, immutable) }
+
   /api/ratios:
     get:
       tags: [ratios]

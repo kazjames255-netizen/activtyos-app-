@@ -21,7 +21,7 @@ import { images, uploads } from "./routes/uploads";
 import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
-import { geo } from "./routes/geo";
+import { geo, tiles } from "./routes/geo";
 import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { payments } from "./routes/payments";
@@ -63,6 +63,10 @@ app.use("/api/events", events);
 // Images are public (<img> tags can't send Authorization; ids are the
 // secret). Uploading them requires an operator account — see routes/uploads.
 app.use("/api/images", images);
+
+  // Map tiles are public (proxied so the OS key stays server-side; <img>/map
+  // tags can't send auth). See routes/geo.ts.
+  app.use("/api/geo/tiles", tiles);
 
 // Listings are the public storefront: browsing and the /book/{id} page work
 // signed-out (anonymous = parent-shaped permissions — live+public feed,
