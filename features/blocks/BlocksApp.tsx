@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { HowItWorks } from "@/components/HowItWorks";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
 
@@ -256,38 +257,21 @@ export function BlocksApp() {
         </div>
       )}
 
-      {/* How it works (the single explanation) */}
-      <Card className="mb-3.5 p-4" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--brand)" }}>
-        <h3 className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          How it works
-        </h3>
-        <p className="mt-1 text-[13px] text-[var(--ink-3)]">
-          Build your reusable scheduling patterns once, then reuse them across every listing:
+      <HowItWorks
+        video="Periods, passes, building a block, and how the pricing calculator fills in the shorter passes."
+        minutes="2 min"
+      >
+        <p className="mb-2">
+          Build a scheduling pattern once and reuse it on every listing:{" "}
+          <b className="text-[var(--ink-2)]">periods</b> are the time windows (early drop-off,
+          standard day), <b className="text-[var(--ink-2)]">passes</b> are how long a parent books
+          (one day, a full week).
         </p>
-        <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 text-[12.5px] text-[var(--ink-2)]">
-          <li>
-            <b className="text-[var(--ink)]">Make your periods</b> — the session time windows
-            (Early drop-off, Standard day, Late pick-up…).
-          </li>
-          <li>
-            <b className="text-[var(--ink)]">Make your passes</b> — how long a parent books (a
-            single day, a full 5-day week).
-          </li>
-          <li>
-            <b className="text-[var(--ink)]">Build a block</b> — click{" "}
-            <b className="text-[var(--ink)]">+ Add to block</b> on the periods &amp; passes you
-            want, name it, and move it to your Block Library.
-          </li>
-          <li>
-            <b className="text-[var(--ink)]">Sort pricing</b> — set the full price for the longest
-            pass; the shorter passes and each timing are calculated for you (edit any to override).
-          </li>
-          <li>
-            <b className="text-[var(--ink)]">Send to a listing</b> — reuse or duplicate the same
-            block across every listing.
-          </li>
-        </ol>
-      </Card>
+        <p>
+          Add the ones you want to a block, name it, then set the price of the longest pass — every
+          shorter pass and timing is worked out for you, and you can override any of them.
+        </p>
+      </HowItWorks>
 
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>

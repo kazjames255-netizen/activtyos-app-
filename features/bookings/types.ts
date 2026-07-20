@@ -77,6 +77,8 @@ export interface Booking {
    * (null = dev platform fallback). Refund-approve refunds through these. */
   paymentIntentId?: string;
   stripeAccount?: string | null;
+  /** When the booking was taken. Absent on anything created before this. */
+  createdAt?: string;
   booker: string;
   email: string;
   phone: string;

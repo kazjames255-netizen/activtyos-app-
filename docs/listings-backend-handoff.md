@@ -1127,8 +1127,9 @@ around it.
 
 # What I need from you — one list, in the order that unblocks the most
 
-*Updated after your 19 July push. **#1 below is now done** — I've left it in
-struck through rather than deleting it, so the ordering still makes sense.*
+*Updated after your 20 July pushes. Almost everything on this list is now
+done — struck through rather than deleted, so the history reads. The three
+that remain are at the bottom.*
 
 ### ~~1. Book on someone else's behalf~~ — **done, thank you**
 `onBehalfOf` landed exactly as hoped: one pricing path, existing accounts
@@ -1140,42 +1141,44 @@ one call per block for a multi-week basket, and I'll make sure the new-family
 fields it already collects (name, email, phone) map onto your
 `onBehalfOf {name, email, phone}` shape rather than needing a customer first.
 
-### 2. `childId` on each booking item  *(now the biggest single unblock)*
-Bookings carry `child` as a name and nothing else. With the id, a register can
-show the child's **photo**, **allergies**, **SEND plan** and **collection
-password** from one lookup. Without it, none of them can be shown safely —
-matching by name would eventually put one family's collection password against
-another family's child. (§I, §J)
+### ~~2. `childId` on each booking item~~ — **done**
+Landed with the safeguarding read. This was the one blocking four things at
+once; a register can now resolve a child's photo, allergies, SEND plan and
+collection password from one lookup instead of matching on a name.
 
-### ~~Create a family's account from a phone booking~~ — **done in the same push**
-`admin.auth().createUser` + a set-password link. Three things I'd insist on:
-**if the email already has an account, use it** (families exist across
-providers); **never email a password**; and the operator keeps no access
-afterwards. I've built the same thing for the Families page already —
-`POST /api/customers/:id/invite` — so there's a working shape to copy. (§H)
+### ~~3. `GET /api/customers/:id/family`~~ — **done**
+### ~~4. Extra fields on a child~~ — **done**
+Dietary, swimming, care notes, and the suncream / first aid / walk-home
+consents are all on `childSchema` now. One note: I'd split **emergency contact**
+into `emergencyName` + `emergencyPhone` in the same window you added
+`emergencyContact` as a single string. I kept the split on the merge — a
+register prints the name and dials the number, and nothing was reading the
+combined field yet. Shout if you'd rather have it back the other way.
 
-### 3. `GET /api/customers/:id/family`
-The parent plus their children's **full** records, for an operator whose tenant
-that family has actually booked with. That clause is the security model. It
-unlocks the whole Parents/Child-profiles design; I can build both tabs against
-it front-end with nothing else from you. (§K)
-
-### 4. Extra fields on a child
-Emergency contact, dietary (separate from allergies), swimming ability, care &
-behaviour notes, and consents for suncream, first aid and walking home.
-*Not wanted:* authorised collectors, GP/surgery/NHS number. (§K)
-
-### 5. File storage for SEND plans
-Currently chunked across Firestore documents because there's no bucket —
-works, capped at 15MB, but it's a workaround. When Storage is enabled only
-`routes/childFiles.ts` changes. (§F)
-
-### 6. Marketing plumbing
-An unsubscribe link that works from the email without a login (needs a signed
-token — I can't sign anything client-side), and a tenant-level suppression list
-so an unsubscribe survives a record being rebuilt by a later booking. (§L)
+### ~~Maps (§B)~~ — **done**
+Ordnance Survey geocoding with the key server-side, and the tile proxy. That
+closes the last thing that needed procurement.
 
 ---
+
+### Still open
+
+**1. File storage for SEND plans.** Chunked across Firestore documents because
+there's no bucket — works, capped at 15MB, but it's a workaround. When Storage
+is enabled only `routes/childFiles.ts` changes. (§F)
+
+**2. Marketing plumbing.** An unsubscribe that works from the email without a
+login (needs a signed token — I can't sign anything client-side), and a
+tenant-level suppression list so an unsubscribe survives a record being rebuilt
+by a later booking. (§L)
+
+**3. A shared test family (§M).** Now the most valuable of the three. Between
+your last two pushes and mine, the amount of code touching a parent's own
+record has roughly doubled, and none of it has run end to end. Specifically I
+still can't check: whether `PUT /api/customers/:id/children` resolves a real
+uid and writes to the right child; whether a real multi-megabyte SEND plan
+survives chunking; whether the sign-up invite email arrives; and whether your
+`onBehalfOf` bookings and my Families page agree about who a family *is*.
 
 ### Decisions rather than code
 

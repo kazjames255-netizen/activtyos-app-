@@ -163,6 +163,10 @@ export function applyParentCancel(b: Booking, msg?: string): void {
 export function buildBooking(input: CreateBookingInput, bid: number): Booking {
   const haf = input.method.indexOf("HAF") > -1;
   return {
+    // When it was taken. Nothing recorded this before, so "newest first" had
+    // to be inferred from the ref number — which works, but can't answer
+    // "what came in this week".
+    createdAt: new Date().toISOString(),
     ref: "APF-" + bid,
     bid: "03073" + bid,
     booker: input.booker,

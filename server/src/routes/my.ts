@@ -121,8 +121,10 @@ const childSchema = z.object({
   // register — so it must never be treated as, or reused as, a credential.
   collectionPassword: z.string().trim().max(60).optional(),
   /** Who to ring if the parent can't be reached. Either of them can fill it
-   *  in — the provider usually takes it on the call. */
-  emergencyContact: z.string().trim().max(200).optional(),
+   *  in — the provider usually takes it on the call. Split, because a
+   *  register prints the name and dials the number. */
+  emergencyName: z.string().trim().max(80).optional(),
+  emergencyPhone: z.string().trim().max(40).optional(),
   // §K safeguarding record — entered once by the parent, surfaced to the
   // provider whose sessions the child attends.
   dietary: z.string().trim().max(300).optional(), // distinct from allergies

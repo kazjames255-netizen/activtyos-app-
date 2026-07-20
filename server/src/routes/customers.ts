@@ -43,9 +43,10 @@ const childDetailSchema = z.object({
   likes: z.string().trim().max(300).optional(),
   dislikes: z.string().trim().max(300).optional(),
   photoConsent: z.boolean().optional(),
-  /** Who to ring if the parent can't be reached. Name and number in one
-   *  field — the provider takes it on the call as one sentence. */
-  emergencyContact: z.string().trim().max(200).optional(),
+  /** Who to ring if the parent can't be reached. Two fields, not one string:
+   *  a register needs to print the name and dial the number separately. */
+  emergencyName: z.string().trim().max(80).optional(),
+  emergencyPhone: z.string().trim().max(40).optional(),
 });
 
 const customerSchema = z.object({
@@ -325,7 +326,7 @@ customers.put("/:id/children", async (req, res) => {
     const patch: Record<string, unknown> = { name: k.name.trim(), parentUid: uid };
     for (const f of [
       "age", "dob", "allergies", "medical", "send", "collectionPassword",
-      "likes", "dislikes", "emergencyContact",
+      "likes", "dislikes", "emergencyName", "emergencyPhone",
     ] as const) {
       const v = k[f];
       if (v !== undefined && String(v).trim() !== "") patch[f] = v;
