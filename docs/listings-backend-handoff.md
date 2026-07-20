@@ -1822,3 +1822,60 @@ server-side:
 
 The button no longer says "Confirm & pay" for a voucher booking — they aren't
 paying on our page — it says "Confirm booking".
+
+---
+
+# ⭐ CURRENT STATE — read this first (updated end of this session)
+
+Everything below in §A–§Q is the running detail. This is the summary.
+
+## What's landed on `main` and needs nothing from you
+- Setup & features is a real screen (was a static mock). Five tabs: Child
+  questions, Cancellations & refunds, New listing defaults, Payments,
+  Childcare vouchers.
+- Child questions, cancellation policies (with live refund arithmetic),
+  scoped cancellation reasons, £0/free-ticket handling, and the whole voucher
+  flow are all wired front-end.
+- `PUT /api/library` bug fixed (was `.set()`, deleting any omitted key).
+- `GET /api/public/library/:tenantId` added — parent-facing settings for the
+  signed-out booking page (allowlist; leaks nothing operator-internal). This
+  is the interim; folding these fields into `/api/listings/:id` is the proper
+  home (see "anonymous read" below).
+
+## What YOU still need to build — the whole list, ordered
+1. **`answers` on the child record** — `z.record(z.string().max(2_000)).optional()`.
+   Do NOT reuse the six typed fields (swimming enum etc.); answers key by
+   question id. Unblocks provider-defined child questions. `careNotes` is now
+   dead — drop it whenever.
+2. **Voucher pay state** — a booking whose `method` starts "Childcare voucher"
+   must be written `pay: "Awaiting voucher payment"`, not `"Unpaid"`
+   (`my.ts:587` ignores the method today). Styling/filter/badge already built.
+3. **£0 booking must not be "Unpaid"** — same line: a zero total → `"Funded"`
+   (state already exists), and no payment-link email.
+4. **Cancellation policy on the booking** — stamp the resolved policy (inline
+   copy, not an id) at creation, so changing terms in March doesn't change what
+   a January booking is owed. Also `cancellationPolicyId` on the listing draft
+   schema (Zod strips it today).
+5. **`reason` + `voucherScheme` on the booking** — `reason: z.string().max(120).optional()`
+   for cancellations; the scheme is currently folded into the method string, a
+   dedicated field is cleaner.
+6. **Parent self-cancel runs `refundFor` server-side** — it's pure (no React),
+   lift it as-is; don't reimplement refund arithmetic.
+7. **Voucher hold flag** — surface bookings sitting on "Awaiting voucher
+   payment" past their pay-by date (a filter/count). It FLAGS, never
+   auto-cancels — Kaz's decision, so a late reconciliation doesn't bin a
+   family's booking.
+8. **Gender enum → string** — child schema is `z.enum(["boy","girl"])`; the
+   shipped options include "Prefer not to say", which it rejects. Checkout
+   stays on Boy/Girl until this changes.
+9. **Multiple emergency contacts** — the setting goes to 4; the record holds
+   one name/phone pair.
+10. **Per-booking child answers (later)** — an every-booking question's answer
+    currently overwrites the last one on the child. History needs an `answers`
+    map on the booking too. Not urgent.
+
+## The rule that keeps biting: anonymous read
+The storefront is read with no token. Any setting that must affect the public
+booking page has to be denormalised onto the listing (like categories already
+are) OR served by the public library endpoint. Tenant settings alone only
+reach signed-in screens. This caught the places-left threshold AND vouchers.
