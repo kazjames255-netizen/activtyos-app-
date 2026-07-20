@@ -1495,14 +1495,13 @@ Since the note above I've wired everything that didn't need you:
 **Four still need you.** Three are the ones above (gender enum, cancellation
 reason field, multiple emergency contacts). The fourth turned up while wiring:
 
-4. **"Only N places left" threshold.** It has to live on the *listing*, not
-   on tenant settings, because the storefront is read anonymously — a parent
-   browsing has no token, so `/api/library` isn't readable to them and the
-   threshold would silently fall back to the default on the only screen it
-   matters on. Cheapest fix: accept `lowPlacesAt: z.number().int().min(0).max(50).optional()`
-   on the listing draft schema, same as any other draft field, and I'll stamp
-   it at creation from the provider's setting. Until then the row is marked
-   "not used yet" on screen.
+4. ~~**"Only N places left" threshold.**~~ **Dropped — nothing needed.** The
+   rule already scales on its own: `min(5, a third of capacity)`, so an
+   8-place class warns at 3 and a 60-place camp at 5. The setting was a knob
+   for something already handled, and a pure percentage would be worse at both
+   ends (20% of 200 is "only 40 left", which reads as broken). If it ever
+   needs tuning it belongs per-listing beside the capacity it relates to, not
+   as a tenant setting.
 
 That anonymous-read constraint is worth remembering generally: **any setting
 that has to affect the public storefront needs to be denormalised onto the
@@ -1626,3 +1625,257 @@ the policy computed a clean answer — a dated session, a known amount, an
 unambiguous band — and falling back to review for everything else. And never
 for a provider-initiated cancellation of a whole session, where someone should
 look at the list before a few thousand pounds goes out at once.
+
+---
+
+## P — A £0 booking is created "Unpaid"
+
+`server/src/routes/my.ts:587`:
+
+```ts
+pay: onBehalf && placed ? "Invoice sent" : "Unpaid",
+```
+
+Nothing checks the total. So a **HAF-funded or free place is written as
+`Unpaid`** and sits in the provider's unpaid filter forever, looking like money
+is owed. Someone eventually chases a family for £0.
+
+The fix is judged on the **total, not the method name** — a provider can call a
+method anything, but a zero total is a zero total:
+
+```ts
+pay: total <= 0 ? "Funded" : onBehalf && placed ? "Invoice sent" : "Unpaid",
+```
+
+`"Funded"` already exists as a pay state — `payTone` styles it and `payLabel`
+renders it as "Funded £0" — so nothing new is needed downstream. It's already
+in the export filters too.
+
+Worth checking the same rule anywhere else a payment status is set, and that a
+£0 booking never triggers a payment-link email. I've done the operator-facing
+half: the checkout no longer promises "Invoice sent · payment link" when the
+total is zero, and says "Nothing to collect" instead.
+
+I also added **"Free place"** to the default payment methods, which didn't
+exist.
+
+### While you're there — the two payment lists
+
+Worth knowing they're deliberately different, because it looks like a bug:
+
+- **Operators** pick from the provider's own list (Setup & features) — Card,
+  Bank transfer, TFC, vouchers, HAF, Free place, Cash.
+- **Parents** booking online get a fixed three: Card, Bank transfer, Cash on
+  the day.
+
+The parent's three are **payment rails, not labels** — "Card" routes to Stripe
+and the others don't — so they can't be provider-renameable without breaking
+where the money goes. If that ever needs to change, it should be a choice of
+*which rails are offered*, never free text.
+
+### §P — the free-ticket case, front end done
+
+A listing can be genuinely free (a taster, a funded programme). What a parent
+now sees when the total is £0:
+
+- **No payment method at all.** Asking someone how they'd like to settle £0 is
+  nonsense. They get "Nothing to pay &mdash; confirm it below and you're done."
+- **The button says "Confirm booking"**, not "Confirm & pay £0.00".
+- The operator side **keeps** the method picker even at £0, because "HAF" and
+  "Free place" are how a funded place is recorded and reported on. Their
+  button reads "Create booking &middot; nothing to collect".
+
+All of it keys off the **grand total** &mdash; passes plus add-ons, after any
+override &mdash; not the pass price. A free pass with a £5 t-shirt still has
+£5 to collect, and my first cut of this got that wrong by checking the pass
+total alone.
+
+So the only thing left on your side is the status: a £0 booking must not be
+written `Unpaid`, and must not trigger a payment-link email.
+
+---
+
+## Q — Childcare vouchers: pay elsewhere, reconcile here
+
+Employer voucher schemes (Edenred, Computershare, Fideliti…) work nothing like
+the card flow: **the parent pays on the scheme's own website**, days later, and
+you match the money up by hand when it lands. Front end is built; three things
+are yours.
+
+**Tax-Free Childcare is deliberately not part of this.** It's HMRC rather than
+an employer scheme, identified by an Ofsted number, and you have reconciliation
+coming for it — so it stays its own payment method and I've kept it out of the
+voucher list to avoid unpicking it later.
+
+### What's built
+
+- **Settings → Payments → Childcare vouchers.** The ten usual UK schemes,
+  seeded by name and blank. Each holds a list of **labelled details** rather
+  than one reference string, because schemes ask for different things — Sodexo
+  wants a setting name, Computershare an account number, some an Ofsted number
+  — and the labels are editable, since no fixed set covers them all. A scheme
+  is only offered to parents once at least one detail is filled in: sending
+  someone to Edenred with nothing to quote is worse than not offering it.
+- **A hold period** (default 7 days), tenant-wide rather than per scheme:
+  they all take about the same few working days, and the thing being protected
+  is the place.
+- **Checkout**: "Childcare vouchers" appears for parents only if at least one
+  reference is set. Choosing it asks **which scheme they use** — their employer
+  decides it, so they know — then shows that scheme's reference, the amount,
+  and the hold period. There's a "mine isn't listed" escape.
+- **`"Awaiting voucher payment"`** is styled (blue, distinct from Unpaid's
+  amber), shortened to "Awaiting voucher" on badges, included in the unpaid
+  filter and in the export's payment-state list.
+
+### What I need from you
+
+1. **Accept the pay state.** A voucher booking should be written
+   `pay: "Awaiting voucher payment"`, not `"Unpaid"`. They need different
+   actions from a provider — Unpaid means chase the parent, this means watch
+   for a third party's money — and mixing them makes both lists useless.
+
+2. **Store which scheme they picked.** `voucherScheme: z.string().max(60).optional()`
+   on the booking. This is what makes manual reconciliation tractable: "£120
+   arrived from Edenred" against forty pending bookings is a needle-in-a-
+   haystack; filtered to the four who said Edenred, it's obvious.
+
+3. **The email.** Booking ref, the scheme's name and reference, the amount, and
+   the deadline. It must be **re-sendable from the booking** — this is exactly
+   the email people lose, and the provider will be asked for it constantly.
+
+### Decided: it flags, it never auto-cancels
+
+Kaz's call, and the reasoning is worth keeping: **if a provider is a day late
+reconciling a payment that did arrive, an automatic cancellation throws away a
+family's booking because of the provider's admin.** So past the hold period the
+booking is flagged for the provider to look at, and the decision stays theirs.
+
+What you'd build: a way to surface bookings sitting on
+`"Awaiting voucher payment"` past their pay-by date — a filter or a count on
+the Bookings screen is plenty. No job that cancels anything.
+
+4. **Store both dates on the booking.** `voucherSendBy` and `voucherReceiveBy`
+   (ISO dates), computed at checkout by `voucherWindow()` in `lib/vouchers.ts`.
+   Store rather than recompute: they'd drift the moment a provider changes a
+   setting, and the parent was shown a specific date.
+
+### The deadline is not just the hold period
+
+Worth reading `lib/vouchers.ts` before touching this. A flat "held for 7 days"
+is wrong twice over when a camp is close: a place can't be held past the day it
+runs, and voucher money doesn't move fast enough anyway.
+
+**There are two dates, not one**, and collapsing them was a bug I shipped first
+time round: a camp starting the 10th with money that takes 3 days to clear told
+the parent "pay by the 10th", so it would have landed after their child had
+already been.
+
+- **`receiveBy`** — when the money must be with the provider.
+  `voucherDueByDays` sets it: by the start day, the day before, up to a week
+  before. Several providers require payment before the child's first day, which
+  is what this is for.
+- **`sendBy`** — when the parent must send it: `receiveBy` minus the clearing
+  time, and never later than the hold period. **This is the date the parent is
+  shown**, because telling someone the arrival date when the money spends days
+  in transit is telling them to be late.
+
+It never prints a deadline in the past — an impossible window clamps to today
+and reports too-close.
+
+The pay-by date you store and chase against should be `sendBy`.
+What happens when a booking starts sooner than `voucherClearDays` (default 3)
+is the **provider's choice**, not a rule I baked in — `voucherWhenClose`:
+
+- `hide` (default) — not offered, and the parent is told why rather than the
+  option silently vanishing
+- `warn` — offered with a caution to pay today, and that the place may not hold
+- `approve` — offered, but the booking waits for the provider to accept it
+- `normal` — no special handling
+
+**Only `approve` needs you:** that booking should land as
+`status: "Approval needed"` rather than confirmed. The other three are done.
+The row says so on screen when it's selected.
+
+35 assertions cover that, including the boundaries: exactly enough runway is
+enough, a booking starting today is refused, and an offered window is never
+shorter than a day. The same function should decide the email's deadline and
+anything that chases.
+
+
+### §Q — confirmed: voucher bookings DO reach the operator, but land as "Unpaid"
+
+Traced end to end. A parent's voucher booking posts to `/api/my/bookings` like
+any other, so it **does** appear in the operator's Bookings area. Two gaps, both
+server-side:
+
+1. **It lands as `pay: "Unpaid"`, not `"Awaiting voucher payment"`.** `my.ts:587`
+   sets `pay: onBehalf && placed ? "Invoice sent" : "Unpaid"` — nothing looks at
+   the method. So a voucher booking sits in the unpaid filter as if the parent
+   owes money directly. Judge on the method: a `method` starting "Childcare
+   voucher" → `"Awaiting voucher payment"`.
+
+2. **The scheme.** The front end now folds the chosen scheme into the method
+   string — the booking stores `method: "Childcare voucher — Edenred"` rather
+   than a bare `"voucher"`, so it's at least reconcilable today. A dedicated
+   `voucherScheme` field on the booking is still cleaner for filtering; the
+   value is already in the method string to migrate from.
+
+The button no longer says "Confirm & pay" for a voucher booking — they aren't
+paying on our page — it says "Confirm booking".
+
+---
+
+# ⭐ CURRENT STATE — read this first (updated end of this session)
+
+Everything below in §A–§Q is the running detail. This is the summary.
+
+## What's landed on `main` and needs nothing from you
+- Setup & features is a real screen (was a static mock). Five tabs: Child
+  questions, Cancellations & refunds, New listing defaults, Payments,
+  Childcare vouchers.
+- Child questions, cancellation policies (with live refund arithmetic),
+  scoped cancellation reasons, £0/free-ticket handling, and the whole voucher
+  flow are all wired front-end.
+- `PUT /api/library` bug fixed (was `.set()`, deleting any omitted key).
+- `GET /api/public/library/:tenantId` added — parent-facing settings for the
+  signed-out booking page (allowlist; leaks nothing operator-internal). This
+  is the interim; folding these fields into `/api/listings/:id` is the proper
+  home (see "anonymous read" below).
+
+## What YOU still need to build — the whole list, ordered
+1. **`answers` on the child record** — `z.record(z.string().max(2_000)).optional()`.
+   Do NOT reuse the six typed fields (swimming enum etc.); answers key by
+   question id. Unblocks provider-defined child questions. `careNotes` is now
+   dead — drop it whenever.
+2. **Voucher pay state** — a booking whose `method` starts "Childcare voucher"
+   must be written `pay: "Awaiting voucher payment"`, not `"Unpaid"`
+   (`my.ts:587` ignores the method today). Styling/filter/badge already built.
+3. **£0 booking must not be "Unpaid"** — same line: a zero total → `"Funded"`
+   (state already exists), and no payment-link email.
+4. **Cancellation policy on the booking** — stamp the resolved policy (inline
+   copy, not an id) at creation, so changing terms in March doesn't change what
+   a January booking is owed. Also `cancellationPolicyId` on the listing draft
+   schema (Zod strips it today).
+5. **`reason` + `voucherScheme` on the booking** — `reason: z.string().max(120).optional()`
+   for cancellations; the scheme is currently folded into the method string, a
+   dedicated field is cleaner.
+6. **Parent self-cancel runs `refundFor` server-side** — it's pure (no React),
+   lift it as-is; don't reimplement refund arithmetic.
+7. **Voucher hold flag** — surface bookings sitting on "Awaiting voucher
+   payment" past their pay-by date (a filter/count). It FLAGS, never
+   auto-cancels — Kaz's decision, so a late reconciliation doesn't bin a
+   family's booking.
+8. **Gender enum → string** — child schema is `z.enum(["boy","girl"])`; the
+   shipped options include "Prefer not to say", which it rejects. Checkout
+   stays on Boy/Girl until this changes.
+9. **Multiple emergency contacts** — the setting goes to 4; the record holds
+   one name/phone pair.
+10. **Per-booking child answers (later)** — an every-booking question's answer
+    currently overwrites the last one on the child. History needs an `answers`
+    map on the booking too. Not urgent.
+
+## The rule that keeps biting: anonymous read
+The storefront is read with no token. Any setting that must affect the public
+booking page has to be denormalised onto the listing (like categories already
+are) OR served by the public library endpoint. Tenant settings alone only
+reach signed-in screens. This caught the places-left threshold AND vouchers.

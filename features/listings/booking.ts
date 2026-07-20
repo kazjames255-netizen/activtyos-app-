@@ -190,7 +190,12 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
 
   // Automatic discounts come off here so the basket shows what's really owed.
   const priceOf = (x: BasketItem) => priceEdit[x.id] ?? x.price;
-  const headsOn = (x: BasketItem) => (parentMode ? childrenOn(x.id).length : attendees);
+  // A pass in the basket is for at least one child — children are named on the
+  // next stage, so before then childrenOn is empty and the total would read £0
+  // against a line showing its price. Floor at one so the basket shows what
+  // they're committing to; it recomputes upward the moment a second child is
+  // put on the pass.
+  const headsOn = (x: BasketItem) => (parentMode ? Math.max(1, childrenOn(x.id).length) : attendees);
   // Priced per child per line, so a second child doubles that line.
   // Priced per child per line, so a second child doubles that line — and the
   // engine now sees those head counts, so a sibling discount lands only where

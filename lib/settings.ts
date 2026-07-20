@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_POLICIES, type NamedPolicy } from "@/lib/cancellation";
+import type { WhenTooClose } from "@/lib/vouchers";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -98,12 +99,125 @@ export interface ChildQuestion {
   replaces?: string;
 }
 
-export interface PipelineStage {
+/**
+ * A reason a booking was cancelled.
+ *
+ * Scoped, because the two sides cancel for different reasons and shouldn't
+ * see each other's list. "Venue unavailable" in a parent's dropdown is
+ * nonsense, and "Staffing" tells them something about your operation that
+ * isn't theirs to know. "Illness" belongs to both.
+ */
+export interface CancelReason {
   id: string;
   label: string;
-  hint: string;
-  colour: string;
+  /** Who is offered it when they cancel. */
+  who: "both" | "provider" | "parent";
 }
+
+export const DEFAULT_CANCEL_REASONS: CancelReason[] = [
+  { id: "illness", label: "Illness", who: "both" },
+  { id: "weather", label: "Weather", who: "provider" },
+  { id: "staffing", label: "Staffing", who: "provider" },
+  { id: "venue", label: "Venue unavailable", who: "provider" },
+  { id: "too-few", label: "Too few booked", who: "provider" },
+  { id: "asked", label: "Family asked us to", who: "provider" },
+  { id: "plans", label: "Plans changed", who: "parent" },
+  { id: "childcare", label: "No longer need the childcare", who: "parent" },
+  { id: "cost", label: "Cost", who: "parent" },
+  { id: "duplicate", label: "Booked by mistake", who: "both" },
+];
+
+/**
+ * A sensible starting scope for a reason, read from its wording.
+ *
+ * Only strong signals count. "Venue unavailable" is obviously yours and
+ * "Cost" is obviously theirs, but plenty of reasons genuinely belong to both,
+ * and a confident wrong guess is worse than none — the provider has to notice
+ * it before fixing it. Anything unclear stays on "both", which is safe
+ * because it hides nothing from anyone.
+ */
+export function inferWho(label: string): CancelReason["who"] {
+  const t = label.toLowerCase();
+  // Things only a provider can cause or know about.
+  if (/venue|facilit|pool|pitch|hall|staff|coach|tutor|instructor|teacher|weather|snow|flood|ice|storm|closure|closed|too few|under.?subscribed|minimum number|our (error|mistake)|we cancel/.test(t))
+    return "provider";
+  // Things only a family can decide.
+  if (/plans?|holiday|cost|afford|price|money|no longer need|childcare|changed (their )?mind|moved away|another (club|camp|activity)/.test(t))
+    return "parent";
+  return "both";
+}
+
+/** The reasons offered to one side or the other. */
+export const reasonsFor = (all: CancelReason[], who: "provider" | "parent"): CancelReason[] =>
+  all.filter((r) => r.who === "both" || r.who === who);
+
+/**
+ * A childcare-voucher scheme the provider is registered with.
+ *
+ * The reference is what a parent has to quote to send money — an Edenred
+ * account number, a Fideliti code. A scheme with no reference filled in is
+ * never shown to parents: sending someone to Edenred with nothing to quote is
+ * worse than not offering it, because they'll get halfway and ring you.
+ *
+ * Tax-Free Childcare is deliberately NOT one of these. It's HMRC rather than
+ * an employer scheme, it's identified by an Ofsted number, and it has its own
+ * reconciliation being built.
+ */
+export interface VoucherDetail {
+  id: string;
+  /** What it's called — schemes ask for different things. Editable, because
+   *  no fixed set covers them all. */
+  label: string;
+  value: string;
+}
+
+/**
+ * A childcare-voucher scheme the provider is registered with.
+ *
+ * Details rather than a single reference: Sodexo wants your setting name,
+ * Computershare an account number, some want an Ofsted number. A parent given
+ * the wrong kind of identifier can't complete the payment.
+ *
+ * A scheme with nothing filled in is never shown to parents — sending someone
+ * to Edenred with nothing to quote is worse than not offering it, because they
+ * get halfway and ring you.
+ *
+ * Tax-Free Childcare is deliberately NOT one of these. It's HMRC rather than
+ * an employer scheme and has its own reconciliation being built.
+ */
+export interface VoucherProvider {
+  id: string;
+  name: string;
+  details: VoucherDetail[];
+}
+
+/** The labels schemes usually ask for. Starting points, not a fixed list. */
+export const VOUCHER_DETAIL_LABELS = ["Account number/ID", "Setting name", "Ofsted/Regulator No"];
+
+/** Details actually filled in — the only ones worth showing anyone. */
+export const filledDetails = (v: VoucherProvider): VoucherDetail[] =>
+  v.details.filter((d) => d.value.trim().length > 0);
+
+/** The schemes a parent can actually be sent to. */
+export const liveVouchers = (all: VoucherProvider[]): VoucherProvider[] =>
+  all.filter((v) => filledDetails(v).length > 0);
+
+/** The UK schemes providers are usually registered with. Blank to start. */
+export const DEFAULT_VOUCHERS: VoucherProvider[] = [
+  "Edenred",
+  "Computershare",
+  "Fideliti",
+  "Care-4",
+  "KiddiVouchers",
+  "Caboodle",
+  "Sodexo",
+  "Co-operative Flexible Benefits",
+  "Enjoy Benefits",
+  "Salary Extras",
+].map((name) => {
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return { id, name, details: [{ id: `${id}-acc`, label: "Account number/ID", value: "" }] };
+});
 
 export interface TenantSettings {
   // ── People & safeguarding ──
@@ -145,7 +259,7 @@ export interface TenantSettings {
 
   // ── Bookings & payments ──
   payMethods: string[];
-  cancellationReasons: string[];
+  cancellationReasons: CancelReason[];
   /**
    * What happens when a refund is due.
    *
@@ -158,6 +272,30 @@ export interface TenantSettings {
    * unless a provider deliberately turns it on.
    */
   refundApproval: "review" | "auto";
+  /** Childcare-voucher schemes you're registered with, and your reference. */
+  voucherProviders: VoucherProvider[];
+  /**
+   * How long a place is held while waiting for voucher money to arrive.
+   *
+   * One number for all schemes rather than per scheme: they all take roughly
+   * the same few working days, and the thing being protected is the place, not
+   * the scheme. Without a limit an unpaid voucher booking holds a place
+   * forever — you lose the place and the money.
+   */
+  voucherHoldDays: number;
+  /**
+   * How long voucher money takes to reach you. Vouchers aren't offered at all
+   * when a booking starts sooner than this — taking a payment that cannot
+   * arrive in time just moves the problem to the morning of the camp.
+   */
+  voucherClearDays: number;
+  /**
+   * How many days before the first session the money must have arrived.
+   * 0 means "by the day it starts"; 1 means "the day before", and so on.
+   */
+  voucherDueByDays: number;
+  /** What to do when a booking starts sooner than the money can arrive. */
+  voucherWhenClose: WhenTooClose;
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -175,14 +313,8 @@ export interface TenantSettings {
   // ── Listings ──
   defaultCapacity: number;
   defaultRunningDays: number[];
-  /** Show "only N places left" at or below this many. 0 turns it off. */
-  lowPlacesAt: number;
   showSpaces: boolean;
 
-  // ── Families ──
-  pipelineStages: PipelineStage[];
-  /** Bookings before a family counts as "repeat". */
-  repeatAt: number;
 }
 
 // The fields that shipped as fixed columns on the child record, restated as
@@ -242,8 +374,13 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, send: 200, likes: 80, dislikes: 80 },
 
-  payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Cash on the day"],
-  cancellationReasons: ["Illness", "Weather", "Staffing", "Venue unavailable", "Parent request", "Duplicate booking"],
+  payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
+  cancellationReasons: DEFAULT_CANCEL_REASONS,
+  voucherProviders: DEFAULT_VOUCHERS,
+  voucherHoldDays: 7,
+  voucherClearDays: 3,
+  voucherDueByDays: 0,
+  voucherWhenClose: "hide",
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
@@ -251,16 +388,8 @@ export const DEFAULT_SETTINGS: TenantSettings = {
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],
-  lowPlacesAt: 5,
   showSpaces: true,
 
-  pipelineStages: [
-    { id: "lead", label: "Lead", hint: "Enquired, never booked, not invited yet", colour: "#e22295" },
-    { id: "invited", label: "Invited", hint: "Sent a sign-up link, hasn't booked yet", colour: "#2f6bd8" },
-    { id: "customer", label: "Customer", hint: "Booked with you once", colour: "#15b364" },
-    { id: "repeat", label: "Repeat", hint: "Booked more than once — they came back", colour: "#6a4fd0" },
-  ],
-  repeatAt: 2,
 };
 
 /**
@@ -277,9 +406,30 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     ...DEFAULT_SETTINGS,
     ...s,
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
-    pipelineStages: s.pipelineStages?.length ? s.pipelineStages : DEFAULT_SETTINGS.pipelineStages,
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
+    // Schemes held a single `reference` string before they held labelled
+    // details. Lift rather than drop — a provider's account numbers are not
+    // something to make them type again.
+    voucherProviders: (s.voucherProviders ?? []).length
+      ? (s.voucherProviders as unknown[]).map((v) => {
+          const p = v as VoucherProvider & { reference?: string };
+          if (p.details) return p;
+          return { id: p.id, name: p.name, details: [{ id: `${p.id}-acc`, label: "Account number/ID", value: p.reference ?? "" }] };
+        })
+      : DEFAULT_SETTINGS.voucherProviders,
     cancellationPolicies: s.cancellationPolicies?.length ? s.cancellationPolicies : DEFAULT_SETTINGS.cancellationPolicies,
+    // Reasons were a flat string[] before they were scoped. Anything stored
+    // under the old shape is lifted rather than thrown away — a provider's own
+    // wording is theirs, and it lands on "both", which is what it effectively
+    // was.
+    cancellationReasons: (s.cancellationReasons ?? []).length
+      ? (s.cancellationReasons as unknown[]).map((r, i) =>
+          // Old flat strings get a scope guessed from their wording rather
+          // than all landing on "both" — otherwise every provider who already
+          // had a list has to re-classify the whole thing by hand.
+          typeof r === "string" ? { id: `r${i}`, label: r, who: inferWho(r) } : (r as CancelReason),
+        )
+      : DEFAULT_SETTINGS.cancellationReasons,
     genderOptions: s.genderOptions?.length ? s.genderOptions : DEFAULT_SETTINGS.genderOptions,
   };
 }
@@ -382,17 +532,28 @@ export function useSettings(): SettingsState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // A save that has happened locally but may not be back from the server yet.
+  // Until it settles, a realtime reload must not overwrite what's on screen.
+  const quietUntil = useRef(0);
+  const pending = useRef<LibraryShape>({});
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const load = useCallback(
     () =>
       apiGet<LibraryShape | null>("/api/library").then(
         (lib) => {
+          setLoading(false);
+          // Our own write echoes back down the realtime channel, and a
+          // half-typed name would be replaced by whatever the server last
+          // saw. Typing into a field and watching characters vanish is what
+          // "it isn't editable" actually looks like.
+          if (Date.now() < quietUntil.current) return;
           setSettings(withDefaults(lib?.settings));
           // An empty array is a real answer — the provider deleted every
           // question. Only an absent key means "never set up", which seeds
-          // the six that shipped as fixed columns.
+          // the ones that shipped as fixed columns.
           setQuestions(lib?.childQuestions ?? SEEDED_QUESTIONS);
           setError(null);
-          setLoading(false);
         },
         (e: unknown) => {
           setError(e instanceof Error ? e.message : "Couldn't load your settings");
@@ -407,24 +568,50 @@ export function useSettings(): SettingsState {
   }, [load]);
   useRealtime(["library"], () => void load());
 
+  const flush = useCallback(async () => {
+    const body = pending.current;
+    pending.current = {};
+    if (!Object.keys(body).length) return;
+    try {
+      await api("/api/library", { method: "PUT", body: JSON.stringify(body) });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save — your change may not have stuck");
+      quietUntil.current = 0;
+      void load(); // put the UI back to what's actually stored
+      return;
+    }
+    // Stay quiet a moment longer: the echo arrives after the write returns.
+    quietUntil.current = Date.now() + 2_000;
+  }, [load]);
+
   const save = useCallback(
     async ({ settings: next, questions: nextQ }: { settings?: TenantSettings; questions?: ChildQuestion[] }) => {
       // Optimistic: a toggle that waits for a round-trip before moving feels
       // broken, and this screen is nothing but toggles.
-      if (next) setSettings(next);
-      if (nextQ) setQuestions(nextQ);
-      const body: LibraryShape = {};
-      if (next) body.settings = next;
-      if (nextQ) body.childQuestions = nextQ;
-      try {
-        await api("/api/library", { method: "PUT", body: JSON.stringify(body) });
-        setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Couldn't save — your change may not have stuck");
-        void load(); // put the UI back to what's actually stored
+      if (next) {
+        setSettings(next);
+        pending.current.settings = next;
       }
+      if (nextQ) {
+        setQuestions(nextQ);
+        pending.current.childQuestions = nextQ;
+      }
+      // Coalesce: a name being typed is one save, not one per keystroke.
+      quietUntil.current = Date.now() + 10_000;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => void flush(), 500);
     },
-    [load],
+    [flush],
+  );
+
+  // Leaving the screen mid-keystroke must not lose the change.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      void flush();
+    },
+    [flush],
   );
 
   return { settings, questions, loading, save, error };
@@ -435,7 +622,18 @@ export function useSettings(): SettingsState {
  * Bookings) rather than edit them. Falls back to the defaults on any error:
  * a parent must never be blocked from booking because a settings fetch failed.
  */
-export function useTenantSettings(): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
+/**
+ * Read-only settings for the screens that consume them.
+ *
+ * `tenantId` is for the signed-out booking page: a parent has no account, so
+ * the authed /api/library 401s them and the public slice has to be fetched by
+ * tenant instead. Operator screens omit it — they're always signed in — and
+ * fall straight through to the authed read.
+ *
+ * Falls back to the defaults on any error: a parent must never be blocked from
+ * booking because a settings fetch failed.
+ */
+export function useTenantSettings(tenantId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
   const [state, setState] = useState<{ settings: TenantSettings; questions: ChildQuestion[]; ready: boolean }>({
     settings: DEFAULT_SETTINGS,
     questions: SEEDED_QUESTIONS,
@@ -444,20 +642,26 @@ export function useTenantSettings(): { settings: TenantSettings; questions: Chil
 
   useEffect(() => {
     let live = true;
-    apiGet<LibraryShape | null>("/api/library")
-      .then((lib) => {
-        if (!live) return;
-        setState({
-          settings: withDefaults(lib?.settings),
-          questions: lib?.childQuestions ?? SEEDED_QUESTIONS,
-          ready: true,
-        });
-      })
-      .catch(() => live && setState((s) => ({ ...s, ready: true })));
+    const apply = (lib: LibraryShape | null) => {
+      if (!live) return;
+      setState({
+        settings: withDefaults(lib?.settings),
+        questions: lib?.childQuestions ?? SEEDED_QUESTIONS,
+        ready: true,
+      });
+    };
+    const publicRead = () =>
+      tenantId
+        ? apiGet<LibraryShape | null>(`/api/public/library/${tenantId}`).then(apply, () => live && setState((s) => ({ ...s, ready: true })))
+        : (live && setState((s) => ({ ...s, ready: true })), Promise.resolve());
+
+    // Signed-in read first; a parent (401, or no token) falls back to the
+    // public slice keyed by the listing's tenant.
+    apiGet<LibraryShape | null>("/api/library").then(apply, () => void publicRead());
     return () => {
       live = false;
     };
-  }, []);
+  }, [tenantId]);
 
   return state;
 }

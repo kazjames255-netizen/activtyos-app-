@@ -38,6 +38,7 @@ export interface NamedPolicy extends CancellationPolicy {
   name: string;
 }
 
+
 export const HOURS = { day: 24, twoDays: 48, week: 168, twoWeeks: 336 } as const;
 
 /** A middling default: full refund a week out, half at 48 hours, nothing after. */
@@ -49,8 +50,39 @@ export const DEFAULT_POLICY: CancellationPolicy = {
   ],
 };
 
+/**
+ * The usual policies, ready to use.
+ *
+ * Seeded rather than left to the provider to invent, because "add a policy"
+ * on an empty screen asks someone to design a refund scheme from nothing.
+ * These are the shapes real providers actually use; edit the numbers, rename
+ * them, delete the ones you don't want. Standard first — it's the one most
+ * listings will use, and it's what a new listing starts on.
+ */
 export const DEFAULT_POLICIES: NamedPolicy[] = [
   { id: "standard", name: "Standard", ...DEFAULT_POLICY },
+  {
+    id: "flexible",
+    name: "Flexible",
+    bands: [
+      { hoursBefore: HOURS.day, refundPercent: 100 },
+      { hoursBefore: 0, refundPercent: 0 },
+    ],
+  },
+  {
+    id: "strict",
+    name: "Strict",
+    bands: [
+      { hoursBefore: HOURS.twoWeeks, refundPercent: 100 },
+      { hoursBefore: HOURS.week, refundPercent: 50 },
+      { hoursBefore: 0, refundPercent: 0 },
+    ],
+  },
+  {
+    id: "none",
+    name: "No refunds",
+    bands: [{ hoursBefore: 0, refundPercent: 0 }],
+  },
 ];
 
 /**

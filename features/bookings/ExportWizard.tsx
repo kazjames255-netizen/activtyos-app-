@@ -28,7 +28,7 @@ import { Button } from "@/components/ui";
 type Format = "csv" | "pdf";
 
 const STATUSES = ["Approval needed", "Confirmed", "Waitlisted", "Offered", "Cancelled", "Declined"];
-const PAYMENTS = ["Paid", "Unpaid", "Invoice sent", "Refunded", "Partially refunded", "Funded"];
+const PAYMENTS = ["Paid", "Unpaid", "Invoice sent", "Awaiting voucher payment", "Refunded", "Partially refunded", "Funded"];
 
 /**
  * How the place was funded. Read from the payment method rather than a field

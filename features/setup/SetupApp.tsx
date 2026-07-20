@@ -13,8 +13,13 @@ import {
   type ChildQuestion,
   type QuestionType,
   type TenantSettings,
+  inferWho,
+  filledDetails,
+  VOUCHER_DETAIL_LABELS,
+  type CancelReason,
+  type VoucherProvider,
 } from "@/lib/settings";
-import { policyWording, sortBands, HOURS, DEFAULT_POLICY, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
+import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Setup & features — the real screen, replacing the legacy mock.
@@ -37,7 +42,7 @@ import { policyWording, sortBands, HOURS, DEFAULT_POLICY, type CancellationPolic
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "listings" | "bookings" | "families";
+type Tab = "people" | "cancel" | "defaults" | "bookings" | "vouchers";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -225,6 +230,188 @@ function NotWired({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Cancellation reasons, each scoped to who's offered it.
+ *
+ * One flat list can't serve both sides: "Venue unavailable" in a parent's
+ * dropdown is nonsense, and "Staffing" tells them something about how you run
+ * that isn't theirs to know. The scope sits on the row rather than being two
+ * separate lists to keep in step.
+ */
+function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v: CancelReason[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const WHO: [CancelReason["who"], string][] = [["provider", "You"], ["parent", "Parents"], ["both", "Both"]];
+  const add = () => {
+    const label = draft.trim();
+    if (!label) return;
+    // Guessed from the wording — "Coach unavailable" is obviously yours.
+    onChange([...items, { id: uid(), label, who: inferWho(label) }]);
+    setDraft("");
+  };
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+        <span className="flex-1">Reason</span>
+        <span className="w-[190px]">Offered to</span>
+        <span className="w-[22px]" />
+      </div>
+      <div className="mb-2 flex flex-col gap-1.5">
+        {items.map((r, i) => (
+          <div key={r.id} className="flex items-center gap-2">
+            <Input
+              value={r.label}
+              onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+              className="flex-1"
+              maxLength={60}
+            />
+            <span className="inline-flex w-[190px] overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
+              {WHO.map(([v, l]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => onChange(items.map((x, j) => (j === i ? { ...x, who: v } : x)))}
+                  className="flex-1 px-2 py-1 transition-colors"
+                  style={r.who === v ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}
+                >
+                  {l}
+                </button>
+              ))}
+            </span>
+            <button
+              type="button"
+              aria-label={`Remove ${r.label}`}
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
+              className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
+            >
+              &#10005;
+            </button>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="text-[12px] text-[var(--ink-3)]">
+            No reasons — whoever cancels just types one, or leaves it blank.
+          </div>
+        )}
+      </div>
+      <div className="flex gap-1.5">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+          placeholder="e.g. Coach unavailable"
+          className="flex-1"
+        />
+        <Button onClick={add}>&#65291; Add</Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The voucher schemes a provider is registered with.
+ *
+ * Labelled details rather than one reference: Sodexo wants a setting name,
+ * Computershare an account number, some an Ofsted number. The labels are
+ * editable because no fixed set covers them all.
+ */
+function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange: (v: VoucherProvider[]) => void }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const live = items.filter((v) => filledDetails(v).length).length;
+  const patch = (i: number, fn: (v: VoucherProvider) => VoucherProvider) =>
+    onChange(items.map((x, j) => (j === i ? fn(x) : x)));
+
+  return (
+    <div>
+      {items.map((v, i) => {
+        const open = openId === v.id;
+        const filled = filledDetails(v);
+        return (
+          <div key={v.id} className="mb-2 rounded-xl border border-[var(--line)] p-2.5" style={filled.length ? undefined : { opacity: 0.72 }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={v.name}
+                onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))}
+                placeholder="Scheme name"
+                className="w-[190px]"
+                maxLength={50}
+              />
+              <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-3)]">
+                {filled.length
+                  ? filled.map((d) => `${d.label}: ${d.value}`).join("  ·  ")
+                  : "Not registered — parents won’t be offered this one"}
+              </span>
+              <Button sm onClick={() => setOpenId(open ? null : v.id)}>{open ? "Done" : "Details"}</Button>
+              <button
+                type="button"
+                aria-label={`Remove ${v.name}`}
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
+              >
+                &#10005;
+              </button>
+            </div>
+
+            {open && (
+              <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
+                <div className="mb-1.5 flex items-center gap-2 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+                  <span className="w-[190px]">What they call it</span>
+                  <span className="flex-1">What to quote</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {v.details.map((d, k) => (
+                    <div key={d.id} className="flex items-center gap-2">
+                      <Input
+                        value={d.label}
+                        onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, label: e.target.value } : y)) }))}
+                        list="voucher-detail-labels"
+                        className="w-[190px]"
+                        maxLength={40}
+                      />
+                      <Input
+                        value={d.value}
+                        onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, value: e.target.value } : y)) }))}
+                        placeholder="e.g. 0026978613"
+                        className="flex-1"
+                        maxLength={60}
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${d.label}`}
+                        onClick={() => patch(i, (x) => ({ ...x, details: x.details.filter((_, n) => n !== k) }))}
+                        className="w-[22px] text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
+                      >
+                        &#10005;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <Button sm className="mt-2" onClick={() => patch(i, (x) => ({ ...x, details: [...x.details, { id: uid(), label: "", value: "" }] }))}>
+                  &#65291; Add a detail
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <datalist id="voucher-detail-labels">
+        {VOUCHER_DETAIL_LABELS.map((l) => <option key={l} value={l} />)}
+      </datalist>
+
+      <div className="mt-1 flex items-center gap-2">
+        <Button onClick={() => onChange([...items, { id: uid(), name: "", details: [{ id: uid(), label: "Account number/ID", value: "" }] }])}>
+          &#65291; Add a scheme
+        </Button>
+        <span className="text-[11.5px] text-[var(--ink-3)]">
+          {live === 0
+            ? "None filled in yet — parents won’t be offered vouchers at all."
+            : `${live} scheme${live === 1 ? "" : "s"} offered to parents.`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, lede, children }: { title: string; lede?: string; children: React.ReactNode }) {
   return (
     <Card className="mb-3.5 p-4">
@@ -237,14 +424,29 @@ function Section({ title, lede, children }: { title: string; lede?: string; chil
 
 // ── Cancellation policy ────────────────────────────────────────────────────
 
-const NOTICE_CHOICES: [number, string][] = [
+/**
+ * Every notice period, grouped, with the usual ones pulled to the top.
+ *
+ * A short list of six is quicker to use and wrong for anyone who needs 36
+ * hours or a month. Showing everything and *saying* which are common gets
+ * both: the provider who wants "48 hours" finds it immediately, and the one
+ * running residentials can still pick 4 weeks.
+ */
+const COMMON_NOTICE: [number, string][] = [
   [HOURS.twoWeeks, "2 weeks"],
   [HOURS.week, "1 week"],
-  [72, "3 days"],
   [HOURS.twoDays, "48 hours"],
   [HOURS.day, "24 hours"],
-  [12, "12 hours"],
 ];
+
+const NOTICE_GROUPS: { label: string; items: [number, string][] }[] = [
+  { label: "Most used", items: COMMON_NOTICE },
+  { label: "Hours", items: Array.from({ length: 23 }, (_, i) => [i + 1, `${i + 1} hour${i === 0 ? "" : "s"}`] as [number, string]) },
+  { label: "Days", items: Array.from({ length: 6 }, (_, i) => [(i + 1) * 24, `${i + 1} day${i === 0 ? "" : "s"}`] as [number, string]) },
+  { label: "Weeks", items: Array.from({ length: 8 }, (_, i) => [(i + 1) * HOURS.week, `${i + 1} week${i === 0 ? "" : "s"}`] as [number, string]) },
+];
+
+const NOTICE_CHOICES: [number, string][] = NOTICE_GROUPS.flatMap((g) => g.items);
 
 /**
  * The refund rules, as rules.
@@ -263,29 +465,27 @@ function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange:
         return (
           <div key={p.id} className="mb-2.5 rounded-xl border border-[var(--line)] p-2.5">
             <div className="flex flex-wrap items-center gap-2">
+              {i === 0 && (
+                <span
+                  title="New listings start on this one."
+                  className="rounded-full bg-[var(--brand-soft)] px-2 py-[2px] text-[10px] font-extrabold text-[var(--brand-ink)]"
+                >
+                  DEFAULT
+                </span>
+              )}
               <Input
                 value={p.name}
                 onChange={(e) => onChange(policies.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
-                placeholder="e.g. Holiday camps"
+                placeholder="Name this policy"
                 className="w-[190px]"
                 maxLength={40}
               />
-              <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-3)]">
-                {policyWording({ ...p, wording: undefined })}
+              <span className="min-w-0 flex-1 text-[11.5px] text-[var(--ink-3)]">
+                {sortBands(p.bands)
+                  .map((b) => (b.hoursBefore > 0 ? `${NOTICE_CHOICES.find(([h]) => h === b.hoursBefore)?.[1] ?? `${b.hoursBefore}h`}: ${b.refundPercent}%` : `later: ${b.refundPercent}%`))
+                  .join("  ·  ")}
               </span>
               <Button sm onClick={() => setOpenId(open ? null : p.id)}>{open ? "Done" : "Edit rules"}</Button>
-              <Button
-                sm
-                variant="danger"
-                disabled={policies.length === 1}
-                title={policies.length === 1 ? "You need at least one policy" : undefined}
-                onClick={() => {
-                  if (!confirm(`Delete "${p.name || "this policy"}"?\n\nListings already using it keep the wording they were published with, but new cancellations will fall back to your first policy.`)) return;
-                  onChange(policies.filter((_, j) => j !== i));
-                }}
-              >
-                Delete
-              </Button>
             </div>
             {open && (
               <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
@@ -295,16 +495,6 @@ function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange:
           </div>
         );
       })}
-      <Button
-        variant="primary"
-        onClick={() => {
-          const p: NamedPolicy = { id: uid(), name: "", ...DEFAULT_POLICY };
-          onChange([...policies, p]);
-          setOpenId(p.id);
-        }}
-      >
-        ＋ Add a policy
-      </Button>
     </div>
   );
 }
@@ -317,58 +507,84 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
   const write = (nextTiers: RefundBand[], nextFloor: RefundBand) =>
     onChange({ ...policy, bands: [...sortBands(nextTiers), nextFloor] });
 
+  // The floor is "less than your shortest notice period", so it says that
+  // rather than "any later than that", which left the reader working out
+  // later than *what*.
+  const shortest = tiers.length ? tiers[tiers.length - 1].hoursBefore : 0;
+  const shortestLabel = NOTICE_CHOICES.find(([h]) => h === shortest)?.[1] ?? `${shortest} hours`;
+  const cell = "px-2 py-2";
+
   return (
     <div>
-      {tiers.map((b, i) => (
-        <div key={i} className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
-          <span className="text-[12px] font-bold">Cancel at least</span>
-          <Select
-            value={String(b.hoursBefore)}
-            onChange={(e) => write(tiers.map((x, j) => (j === i ? { ...x, hoursBefore: Number(e.target.value) } : x)), floor)}
-          >
-            {NOTICE_CHOICES.map(([h, l]) => (
-              <option key={h} value={h}>{l}</option>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[12.5px]">
+          <thead>
+            <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
+              <th className={`${cell} text-left font-extrabold`}>Notice the family gives</th>
+              <th className={`${cell} text-left font-extrabold`}>They get back</th>
+              <th className={cell} />
+            </tr>
+          </thead>
+          <tbody>
+            {tiers.map((b, i) => (
+              <tr key={i} className="border-t border-[var(--line)]">
+                <td className={cell}>
+                  <span className="flex items-center gap-1.5">
+                    <Select
+                      value={String(b.hoursBefore)}
+                      onChange={(e) => write(tiers.map((x, j) => (j === i ? { ...x, hoursBefore: Number(e.target.value) } : x)), floor)}
+                    >
+                      {NOTICE_GROUPS.map((g) => (
+                        <optgroup key={g.label} label={g.label}>
+                          {g.items.map(([h, l]) => (
+                            <option key={`${g.label}-${h}`} value={h}>{l}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </Select>
+                    <span className="whitespace-nowrap text-[var(--ink-3)]">or more</span>
+                  </span>
+                </td>
+                <td className={cell}>
+                  <NumberBox
+                    value={b.refundPercent}
+                    onChange={(n) => write(tiers.map((x, j) => (j === i ? { ...x, refundPercent: n } : x)), floor)}
+                    min={0}
+                    max={100}
+                    suffix="%"
+                  />
+                </td>
+                <td className={`${cell} text-right`}>
+                  <button
+                    type="button"
+                    aria-label="Remove this row"
+                    onClick={() => write(tiers.filter((_, j) => j !== i), floor)}
+                    className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
+                  >
+                    &#10005;
+                  </button>
+                </td>
+              </tr>
             ))}
-            {/* A stored value we don't offer must still show, or changing
-                anything else would silently move it. */}
-            {!NOTICE_CHOICES.some(([h]) => h === b.hoursBefore) && (
-              <option value={b.hoursBefore}>{b.hoursBefore} hours</option>
-            )}
-          </Select>
-          <span className="text-[12px] font-bold">before it starts →</span>
-          <NumberBox
-            value={b.refundPercent}
-            onChange={(n) => write(tiers.map((x, j) => (j === i ? { ...x, refundPercent: n } : x)), floor)}
-            min={0}
-            max={100}
-            suffix="% back"
-          />
-          <button
-            type="button"
-            aria-label="Remove this tier"
-            onClick={() => write(tiers.filter((_, j) => j !== i), floor)}
-            className="ml-auto px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-[var(--line)] p-2.5">
-        <span className="text-[12px] font-bold">Any later than that →</span>
-        <NumberBox
-          value={floor.refundPercent}
-          onChange={(n) => write(tiers, { hoursBefore: 0, refundPercent: n })}
-          min={0}
-          max={100}
-          suffix="% back"
-        />
-        <span className="text-[11px] text-[var(--ink-3)]">Including after it has started.</span>
+            <tr className="border-t border-[var(--line)] bg-[var(--panel)]">
+              <td className={cell}>
+                <span className="font-semibold">{tiers.length ? `Less than ${shortestLabel}` : "Any notice at all"}</span>
+                <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">including after it has started</span>
+              </td>
+              <td className={cell}>
+                <NumberBox value={floor.refundPercent} onChange={(n) => write(tiers, { hoursBefore: 0, refundPercent: n })} min={0} max={100} suffix="%" />
+              </td>
+              <td className={cell} />
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <Button onClick={() => write([...tiers, { hoursBefore: HOURS.day, refundPercent: 25 }], floor)}>
-        ＋ Add a notice period
-      </Button>
+      <div className="mt-2">
+        <Button onClick={() => write([...tiers, { hoursBefore: HOURS.day, refundPercent: 25 }], floor)}>
+          &#65291; Add a row
+        </Button>
+      </div>
 
       <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
         <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
@@ -376,9 +592,8 @@ function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChan
         </div>
         <div className="text-[12.5px] leading-[1.55]">{policyWording({ ...policy, wording: undefined })}</div>
         <div className="mt-2 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-          Written from the rules above and offered first when you build a listing. When someone
-          cancels, the same rules work out what&apos;s owed and show it to you — you always decide
-          whether to send it. ActivityOS never moves money.
+          Written from the rows above. When someone cancels, the same rows work out what&apos;s owed
+          and show it to you &mdash; you always decide whether to send it. ActivityOS never moves money.
         </div>
       </div>
     </div>
@@ -711,9 +926,10 @@ export function SetupApp() {
 
   const TABS: [Tab, string][] = [
     ["people", "Child questions"],
-    ["listings", "Listings & sessions"],
-    ["bookings", "Bookings & payments"],
-    ["families", "Families"],
+    ["cancel", "Cancellations & refunds"],
+    ["defaults", "New listing defaults"],
+    ["bookings", "Payments"],
+    ["vouchers", "Childcare vouchers"],
   ];
 
   return (
@@ -735,8 +951,8 @@ export function SetupApp() {
           no Save button — each change is stored the moment you make it.
         </p>
         <p>
-          The four tabs match the four screens they govern. If a setting isn&apos;t here yet, it&apos;s
-          because it&apos;s still fixed in the product — tell us and it moves.
+          Each tab is one job. If a setting isn&apos;t here yet, it&apos;s because it&apos;s still
+          fixed in the product — tell us and it moves.
         </p>
       </HowItWorks>
 
@@ -778,7 +994,7 @@ export function SetupApp() {
               hint={
                 dobLock.forcedBy.length
                   ? `Locked on: ${dobLock.forcedBy.length === 1 ? `“${dobLock.forcedBy[0].label}” is` : `${dobLock.forcedBy.length} questions are`} only asked about certain ages, and there's no age without a date of birth. Remove the age range to unlock this.`
-                  : "Off lets you save a child from a phone enquiry before you have their DOB. Ages, age-range checks and ratio bands all need it, so they stay blank until it's filled in — and any question you give an age range to (a walk-home consent, say) can't be asked at all without it, so setting one will switch this back on."
+                  : "Required: a child can't be saved without one. Optional: they can — useful when someone rings up and you haven't asked yet. The catch is that a child's age is worked out from their date of birth, so until it's there you won't see their age anywhere, listing age limits won't be checked for them, and they won't count towards a ratio band. Give any question an age range and this switches back on, because there's no age to match against."
               }
             >
               <Toggle
@@ -856,11 +1072,11 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "listings" && (
+      {tab === "cancel" && (
         <>
           <Section
             title="Cancellation & refunds"
-            lede="How much comes back, and how much notice it takes. Write as many as you need — a holiday camp and a weekly club rarely want the same notice period — then pick one for each listing as you build it. Set the rules and the wording writes itself, so what a parent is told and what gets worked out when they cancel can never say different things."
+            lede="The usual policies, ready to use — edit the numbers and rename them to suit you. You pick one for each listing as you build it, and the first is what a new listing starts on. The wording writes itself from the rules, so what a parent is told and what gets worked out when they cancel can never say different things."
           >
             <PolicyList policies={settings.cancellationPolicies} onChange={(v) => set("cancellationPolicies", v)} />
 
@@ -886,7 +1102,29 @@ export function SetupApp() {
               )}
             </div>
           </Section>
+          <Section
+            title="Cancellation reasons"
+            lede="Offered when a booking is cancelled, so you can report on why places are being lost."
+          >
+            <Row label="Ask you for a reason" hint="Off means you're never made to answer — cancel and move on.">
+              <Toggle on={settings.askReasonOperator} onChange={(v) => set("askReasonOperator", v)} />
+            </Row>
+            <Row
+              label="Ask parents for a reason"
+              hint="When a parent cancels their own booking. Useful for spotting patterns, but it's one more step between them and a thing they've already decided to do."
+              note="Parents can't self-cancel yet (Amir)"
+            >
+              <Toggle on={settings.askReasonParent} onChange={(v) => set("askReasonParent", v)} />
+            </Row>
+            <div className="mt-2.5">
+            <ReasonEditor items={settings.cancellationReasons} onChange={(v) => set("cancellationReasons", v)} />
+            </div>
+          </Section>
+        </>
+      )}
 
+      {tab === "defaults" && (
+        <>
           <Section title="Defaults for a new listing" lede="What a new listing starts with. You can still change any of it per listing.">
             <Row label="Capacity" hint="A tutoring provider's default is 8; a holiday camp's is 60.">
               <NumberBox value={settings.defaultCapacity} onChange={(n) => set("defaultCapacity", n)} min={1} max={999} suffix="places" />
@@ -914,11 +1152,8 @@ export function SetupApp() {
                 })}
               </div>
             </Row>
-            <Row label="Show places left to parents" hint="Off hides remaining-place counts on your booking page entirely.">
+            <Row label="Show places left to parents" hint="Off hides remaining-place counts on your booking page entirely. When it&rsquo;s on, the &ldquo;only N places left&rdquo; note appears on its own at a third of capacity, capped at five — so an 8-place class warns at 3 and a 60-place camp warns at 5. Nothing to set.">
               <Toggle on={settings.showSpaces} onChange={(v) => set("showSpaces", v)} />
-            </Row>
-            <Row note="Saved, not used yet — needs a field on the listing (Amir)" label='Say "only N places left" at' hint="Below this many, parents see a scarcity note. Set to 0 to never show it — five left out of sixty is not the same as five out of eight.">
-              <NumberBox value={settings.lowPlacesAt} onChange={(n) => set("lowPlacesAt", n)} min={0} max={50} suffix="places" />
             </Row>
           </Section>
         </>
@@ -928,7 +1163,7 @@ export function SetupApp() {
         <>
           <Section
             title="How parents pay"
-            lede="The payment methods you record when you take a booking yourself. These are stored on the booking and drive the funding column in your exports. Parents paying online still see Card, Bank transfer and Cash — those are payment rails, not labels, so they aren't renameable here."
+            lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
           >
             <ListEditor
               items={settings.payMethods}
@@ -936,73 +1171,78 @@ export function SetupApp() {
               placeholder="e.g. Standing order"
               warn="Bookings already recorded against it keep the method. It just stops being offered on new ones."
             />
-          </Section>
-
-          <Section
-            title="Cancellation reasons"
-            lede="Offered when a booking is cancelled, so you can report on why places are being lost."
-          >
-            <Row label="Ask you for a reason" hint="Off means you're never made to answer — cancel and move on.">
-              <Toggle on={settings.askReasonOperator} onChange={(v) => set("askReasonOperator", v)} />
-            </Row>
-            <Row
-              label="Ask parents for a reason"
-              hint="When a parent cancels their own booking. Useful for spotting patterns, but it's one more step between them and a thing they've already decided to do."
-              note="Parents can't self-cancel yet (Amir)"
-            >
-              <Toggle on={settings.askReasonParent} onChange={(v) => set("askReasonParent", v)} />
-            </Row>
-            <div className="mt-2.5">
-            <NotWired>Saved here, but cancelling a booking still writes an automatic reason — wiring pending.</NotWired>
-            <ListEditor items={settings.cancellationReasons} onChange={(v) => set("cancellationReasons", v)} placeholder="e.g. Coach unavailable" />
+            <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+              <b className="text-[var(--ink-2)]">Parents booking online see a different list</b> —
+              Card, Bank transfer and Cash on the day. Those three are payment rails rather than
+              labels: &ldquo;Card&rdquo; sends them to Stripe and the others don&rsquo;t, so renaming
+              them here would break where the money goes. The list above is for bookings
+              <i> you</i> record.
+              <br />
+              <br />
+              A booking that comes to <b>£0</b> &mdash; a funded or free place &mdash; skips payment
+              entirely. No invoice, no payment link.
             </div>
           </Section>
         </>
       )}
 
-      {tab === "families" && (
+      {tab === "vouchers" && (
         <>
           <Section
-            title="Your pipeline"
-            lede="The four stages on the Families screen. Rename them to your own language and set the colour each one shows in — the stage colour is also the family's tile colour."
+            title="Childcare vouchers"
+            lede="Parents paying by employer voucher pay on their scheme’s own website, not here — so they need whatever that scheme asks for. Some want an account number, some your setting name, some an Ofsted number, so the labels are yours to write. Fill in the schemes you’re registered with; anything left blank isn’t offered."
           >
-            {settings.pipelineStages.map((st, i) => (
-              <div key={st.id} className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
-                <input
-                  type="color"
-                  value={st.colour}
-                  onChange={(e) => set("pipelineStages", settings.pipelineStages.map((x, j) => (j === i ? { ...x, colour: e.target.value } : x)))}
-                  className="h-8 w-8 cursor-pointer rounded-lg border border-[var(--line)] bg-transparent p-0.5"
-                  aria-label={`${st.label} colour`}
-                />
-                <Input
-                  value={st.label}
-                  onChange={(e) => set("pipelineStages", settings.pipelineStages.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-                  className="w-[150px]"
-                  maxLength={24}
-                />
-                <Input
-                  value={st.hint}
-                  onChange={(e) => set("pipelineStages", settings.pipelineStages.map((x, j) => (j === i ? { ...x, hint: e.target.value } : x)))}
-                  className="min-w-[200px] flex-1"
-                  maxLength={60}
-                />
-              </div>
-            ))}
-            <p className="mt-1 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              The four stages themselves are fixed — a family moves between them automatically as
-              they&apos;re invited and as they book, so the product needs to know which is which.
-              What they&apos;re called and how they look is yours.
-            </p>
-          </Section>
+            <VoucherEditor items={settings.voucherProviders} onChange={(v) => set("voucherProviders", v)} />
 
-          <Section title="When a family counts as repeat">
-            <Row label="Bookings needed" hint="Two is right for a holiday-camp provider. A weekly club where every family books ten times a term will want it higher, or nobody is ever anything but 'repeat'.">
-              <NumberBox value={settings.repeatAt} onChange={(n) => set("repeatAt", n)} min={2} max={20} suffix="bookings" />
-            </Row>
+            <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5">
+              <Row
+                label="Hold the place for"
+                hint="After this the booking is flagged for you to look at — nothing is cancelled automatically. That's deliberate: if you're a day late reconciling a payment that did arrive, an automatic cancellation would throw away a family's booking over your admin. The call stays yours."
+                note="The flag needs building (Amir)"
+              >
+                <NumberBox value={settings.voucherHoldDays} onChange={(n) => set("voucherHoldDays", n)} min={1} max={60} suffix="days" />
+              </Row>
+              <Row
+                label="Money must reach you"
+                hint="Most providers want it in before the child turns up. Set how far ahead — the parent is told to send it earlier still, since voucher money spends a few days in transit."
+              >
+                <Select value={String(settings.voucherDueByDays)} onChange={(e) => set("voucherDueByDays", Number(e.target.value))}>
+                  <option value="0">By the day it starts</option>
+                  <option value="1">The day before it starts</option>
+                  <option value="2">2 days before</option>
+                  <option value="3">3 days before</option>
+                  <option value="7">A week before</option>
+                </Select>
+              </Row>
+              <Row
+                label="If it starts too soon"
+                hint="A camp starting tomorrow can't be paid for by voucher in time. What happens then is your call — the parent is told what's going on either way."
+                note={settings.voucherWhenClose === "approve" ? "Holding for approval needs building (Amir)" : undefined}
+              >
+                <Select value={settings.voucherWhenClose} onChange={(e) => set("voucherWhenClose", e.target.value as TenantSettings["voucherWhenClose"])}>
+                  <option value="hide">Don&rsquo;t offer vouchers</option>
+                  <option value="warn">Offer them, but warn</option>
+                  <option value="approve">Offer them, but I approve first</option>
+                  <option value="normal">Take it as a normal booking</option>
+                </Select>
+              </Row>
+              <Row
+                label="Voucher money takes"
+                hint="How long it takes to reach you. Vouchers aren't offered on a booking starting sooner than this — a payment that can't arrive in time isn't a payment, it's you chasing someone on the morning of the camp."
+              >
+                <NumberBox value={settings.voucherClearDays} onChange={(n) => set("voucherClearDays", n)} min={0} max={14} suffix="days" />
+              </Row>
+            </div>
+
+            <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+              <b className="text-[var(--ink-2)]">Tax-Free Childcare isn’t here.</b> It’s HMRC rather
+              than an employer scheme, it uses your Ofsted number, and it’s getting its own
+              reconciliation — so it stays a payment method in its own right.
+            </div>
           </Section>
         </>
       )}
+
     </OperatorPage>
   );
 }

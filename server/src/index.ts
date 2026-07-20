@@ -14,7 +14,7 @@ import { bookings } from "./routes/bookings";
 import { customers } from "./routes/customers";
 import { events } from "./routes/events";
 import { invitePreview, invites } from "./routes/invites";
-import { library } from "./routes/library";
+import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
 import { images, uploads } from "./routes/uploads";
@@ -73,6 +73,9 @@ app.use("/api/images", images);
 // hidden by direct link, drafts 404). A token still changes what you see
 // (?mine=1, own drafts) and writes still require an operator.
 app.use("/api/listings", optionalAuth, attachRoleOptional, listings);
+
+// Parent-facing settings for the signed-out booking page (see library.ts).
+app.use("/api/public/library", optionalAuth, libraryPublic);
 
 app.use("/api", requireAuth, attachRole);
 // Tenant scope is enforced inside each route from the authenticated account

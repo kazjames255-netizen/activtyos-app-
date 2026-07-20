@@ -16,7 +16,7 @@ import {
   statusTone,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
-import { useTenantSettings } from "@/lib/settings";
+import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, policyById } from "@/lib/cancellation";
 
 function Tile({ big, small }: { big: string; small: string }) {
@@ -162,6 +162,10 @@ function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: nu
   );
 }
 
+// Sentinel for "none of these fit" — not a reason, so it can never be
+// mistaken for one in the stored value.
+const OTHER = "__other__";
+
 function CancelPanel({ booking }: { booking: Booking }) {
   const setRefund = useBookingsStore((s) => s.setRefund);
   const doCancel = useBookingsStore((s) => s.doCancel);
@@ -185,6 +189,13 @@ function CancelPanel({ booking }: { booking: Booking }) {
   // first, and the panel says which one it's using rather than quietly
   // assuming.
   const [policyId, setPolicyId] = useState<string | undefined>(undefined);
+  const [pickedReason, setPickedReason] = useState("");
+  const [otherText, setOtherText] = useState("");
+  const offeredReasons = reasonsFor(settings.cancellationReasons, initiator);
+  // Derived, not stored: switching who cancelled swaps the list, and a reason
+  // from the other side must not stay quietly selected underneath.
+  const other = pickedReason === OTHER;
+  const reason = other ? otherText.trim() : offeredReasons.some((r) => r.label === pickedReason) ? pickedReason : "";
   const policy = policyById(settings.cancellationPolicies, policyId);
   const advice = refundFor(
     policy ?? { bands: [] },
@@ -268,6 +279,61 @@ function CancelPanel({ booking }: { booking: Booking }) {
               <option key={p.id} value={p.id}>{p.name || "Untitled policy"}</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {/* Only the reasons that belong to whoever cancelled. Switching between
+          "we cancelled" and "the family asked" swaps the list — offering
+          "Venue unavailable" for a family's change of mind is how a reason
+          code ends up meaning nothing when you come to report on it. */}
+      {settings.askReasonOperator && offeredReasons.length > 0 && (
+        <div className="mb-3">
+          <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+            Why? <span className="font-bold normal-case tracking-normal text-[var(--ink-3)]">— optional</span>
+          </div>
+          <div className="flex flex-wrap gap-[7px]">
+            {offeredReasons.map((r) => (
+              <span
+                key={r.id}
+                onClick={() => setPickedReason(reason === r.label ? "" : r.label)}
+                className={
+                  "cursor-pointer rounded-lg border-[1.5px] px-2.5 py-[5px] text-[11.5px] font-bold " +
+                  (reason === r.label
+                    ? "border-[var(--cta,#e22295)] bg-[var(--cta,#e22295)] text-white"
+                    : "border-[var(--line-2)] bg-[var(--surface)] text-[var(--ink-2)]")
+                }
+              >
+                {r.label}
+              </span>
+            ))}
+            {/* None of the presets fit. Without this, whoever is cancelling
+                either picks a reason that's nearly right — which quietly
+                poisons the reporting — or leaves it blank. */}
+            <span
+              onClick={() => setPickedReason(other ? "" : OTHER)}
+              className={
+                "cursor-pointer rounded-lg border-[1.5px] px-2.5 py-[5px] text-[11.5px] font-bold " +
+                (other
+                  ? "border-[var(--cta,#e22295)] bg-[var(--cta,#e22295)] text-white"
+                  : "border-dashed border-[var(--line-2)] bg-[var(--surface)] text-[var(--ink-2)]")
+              }
+            >
+              Something else
+            </span>
+          </div>
+          {other && (
+            <input
+              autoFocus
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              placeholder="In your own words"
+              maxLength={120}
+              className="mt-2 w-full max-w-[380px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
+            />
+          )}
+          <div className="mt-1.5 text-[10.5px] font-semibold text-[#8a5300]">
+            &#9888; Recorded on screen only — the API has no field for a reason yet (Amir).
+          </div>
         </div>
       )}
 
