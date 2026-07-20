@@ -111,7 +111,7 @@ type Stage = "lead" | "invited" | "customer" | "repeat";
  * twice is worth several who book once, and it's the only number here that
  * says whether they liked it.
  */
-const STAGE_FALLBACK: { key: Stage; label: string; hint: string; colour: string }[] = [
+const STAGES: { key: Stage; label: string; hint: string; colour: string }[] = [
   { key: "lead", label: "Lead", hint: "Enquired, never booked, not invited yet", colour: "#e22295" },
   { key: "invited", label: "Invited", hint: "Sent a sign-up link, hasn't booked yet", colour: "#2f6bd8" },
   { key: "customer", label: "Customer", hint: "Booked with you once", colour: "#15b364" },
@@ -240,14 +240,6 @@ export function CustomersApp() {
   // the defaults if the fetch fails — a settings blip must not hide fields
   // that staff are relying on.
   const { questions: childQuestions, settings } = useTenantSettings();
-  // The four stages are fixed — a family moves between them automatically, so
-  // the product has to know which is which — but their names and colours are
-  // the provider's, set in Setup & features. Anything they haven't named
-  // falls back to the built-in wording rather than rendering blank.
-  const STAGES = STAGE_FALLBACK.map((f) => {
-    const own = settings.pipelineStages.find((p) => p.id === f.key);
-    return own ? { ...f, label: own.label || f.label, hint: own.hint || f.hint, colour: own.colour || f.colour } : f;
-  });
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -487,10 +479,7 @@ export function CustomersApp() {
 
   const stageOf = (c: Customer): Stage => {
     const st = stats[(c.email ?? "").trim().toLowerCase()];
-    // How many bookings make a family "repeat" is the provider's call — two is
-    // right for a holiday camp, but a weekly club where everyone books ten
-    // times a term would have nothing but repeats.
-    if (st && st.n >= settings.repeatAt) return "repeat";
+    if (st && st.n > 1) return "repeat";
     if (st && st.n > 0) return "customer";
     return c.invitedAt ? "invited" : "lead";
   };

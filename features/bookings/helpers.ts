@@ -236,7 +236,7 @@ export function matchesFilter(b: Booking, f: BookingFilter): boolean {
     case "waitlisted":
       return b.status === "Waitlisted";
     case "unpaid":
-      return b.pay === "Unpaid" || b.pay === "Invoice sent";
+      return b.pay === "Unpaid" || b.pay === "Invoice sent" || b.pay === "Awaiting voucher payment";
     case "cancelled":
       return b.status === "Cancelled" || b.status === "Declined";
     case "refunds":
@@ -282,6 +282,9 @@ export function payTone(pay: string): BadgeTone {
     Paid: GREEN,
     Unpaid: AMBER,
     "Invoice sent": AMBER,
+    // Distinct from Unpaid on purpose: nobody is being chased for this one
+    // yet, they're waiting on a third party to send money.
+    "Awaiting voucher payment": BLUE,
     Refunded: GREY,
     "Partially refunded": AMBER,
     Funded: BLUE,
@@ -290,7 +293,10 @@ export function payTone(pay: string): BadgeTone {
 }
 
 export function payLabel(pay: string): string {
-  return pay === "Funded" ? "Funded £0" : pay;
+  if (pay === "Funded") return "Funded £0";
+  // The full phrase is too long for a badge sitting in a row of them.
+  if (pay === "Awaiting voucher payment") return "Awaiting voucher";
+  return pay;
 }
 
 // Attendee helpers — a booking is either multi-kid (kids[]) or single child.

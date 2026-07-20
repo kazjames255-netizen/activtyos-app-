@@ -368,14 +368,17 @@ export function emptyDraft(defaults?: {
   showSpaces: boolean;
   cancellationPolicies?: NamedPolicy[];
 }): WizardDraft {
+  const firstLive = (defaults?.cancellationPolicies ?? [])[0];
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
     categoryIds: [], venueId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
-    cancellation: defaults?.cancellationPolicies?.[0] ? policyWording({ ...defaults.cancellationPolicies[0], wording: undefined }) : CANCELLATION_POLICIES[3],
-    cancellationPolicyId: defaults?.cancellationPolicies?.[0]?.id, discounts: [], status: "draft", pageStyle: "playful",
+    // The first policy still in use — a new listing must never start on one
+    // the provider has switched off.
+    cancellation: firstLive ? policyWording({ ...firstLive, wording: undefined }) : CANCELLATION_POLICIES[3],
+    cancellationPolicyId: firstLive?.id, discounts: [], status: "draft", pageStyle: "playful",
   };
 }
 

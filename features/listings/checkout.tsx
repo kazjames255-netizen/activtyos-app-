@@ -17,7 +17,8 @@ import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
-import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor } from "@/lib/settings";
+import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, filledDetails } from "@/lib/settings";
+import { voucherWindow, offerVouchers } from "@/lib/vouchers";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
@@ -51,6 +52,9 @@ export function useParents(skip = false) {
   }, [skip]);
   return { list, state, error };
 }
+/** "My scheme isn't listed" — never a real scheme id. */
+const NOT_LISTED = "__not_listed__";
+
 export type CkStage = "parent" | "who" | "extras" | "pay";
 
 export type CkTheme = {
@@ -648,6 +652,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // a method the provider has removed, and there's no moment where the two
   // disagree if it's computed.
   const payList: readonly string[] = ckSettings.payMethods.length ? ckSettings.payMethods : PAY_METHODS;
+  // Voucher schemes with a reference filled in — the only ones a parent can
+  // actually be sent to.
+  const vouchers = liveVouchers(ckSettings.voucherProviders);
+  const [voucherId, setVoucherId] = useState<string>("");
+  // The earliest day anyone is actually booked in — what the deadline has to
+  // respect. Nothing dated (free-text sessions) leaves it undefined, which
+  // the window handles.
+  const firstDate = b.basket.flatMap((x) => x.dates).sort()[0];
+  const vWindow = voucherWindow(new Date().toISOString(), firstDate, ckSettings.voucherHoldDays, ckSettings.voucherClearDays, ckSettings.voucherDueByDays);
+  const chosenVoucher = vouchers.find((v) => v.id === voucherId) ?? null;
   const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
@@ -1466,7 +1480,19 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
         </BackBtn>
       )}
-      {ckStage === "pay" && (
+      {/* Nothing to pay: a parent isn't asked how they'd like to settle £0.
+          The operator still picks one, because "HAF" and "Free place" are how
+          a funded place gets recorded and reported on even when no money
+          moves. */}
+      {ckStage === "pay" && grandTotal <= 0 && parentMode && (
+        <div className={`mt-3 border px-3 py-2.5 text-[12.5px] leading-[1.5] ${tk.round}`}
+          style={{ borderColor: tk.line, color: tk.ink }}>
+          <b>Nothing to pay.</b> <span style={{ color: tk.muted }}>This booking is free &mdash;
+          confirm it below and you&rsquo;re done.</span>
+        </div>
+      )}
+
+      {ckStage === "pay" && !(grandTotal <= 0 && parentMode) && (
         <div className="mt-3">
           <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>
             {parentMode ? "How you\u2019ll pay" : "How the parent is paying"}
@@ -1475,15 +1501,132 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             className={`mt-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }}>
             {(parentMode
-              ? [["card", "Card"], ["bank", "Bank transfer"], ["cash", "Cash on the day"]]
+              // Vouchers only appear once the provider has a reference to
+              // quote. Offering the option with nothing behind it sends a
+              // parent to Edenred to guess.
+              ? [["card", "Card"], ["bank", "Bank transfer"], ["cash", "Cash on the day"],
+                 ...(vouchers.length && offerVouchers(ckSettings.voucherWhenClose, vWindow) ? [["voucher", "Childcare vouchers"]] : [])]
               : payList.map((m) => [m, m])
             ).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+
+          {/* Hidden, so say why — an option that silently vanishes is a
+              phone call. */}
+          {parentMode && vouchers.length > 0 && vWindow.tooClose && vWindow.closeReason
+            && ckSettings.voucherWhenClose === "hide" && (
+            <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>
+              Childcare vouchers aren&rsquo;t available for this booking &mdash; {vWindow.closeReason},
+              and voucher payments take a few working days to reach us.
+            </div>
+          )}
+
+          {/* Paying by voucher happens on the scheme's own website, so this
+              has to hand over everything needed to do it: which scheme, the
+              reference to quote, the amount, and by when. */}
+          {parentMode && method === "voucher" && (
+            <div className={`mt-2 border px-3 py-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
+              <div className="text-[12px] font-bold" style={{ color: tk.ink }}>Which scheme do you use?</div>
+              <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+                Your employer decides this. Telling us means we can match your payment when it
+                arrives.
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {vouchers.map((v) => (
+                  <button key={v.id} type="button" onClick={() => setVoucherId(v.id)}
+                    className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                    style={voucherId === v.id
+                      ? { borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }
+                      : { borderColor: `${tk.ink}40`, color: tk.muted }}>
+                    {v.name}
+                  </button>
+                ))}
+                {/* No list is complete, and a parent whose scheme is missing
+                    must not be stuck. */}
+                <button type="button" onClick={() => setVoucherId(NOT_LISTED)}
+                  className={`border-2 border-dashed px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                  style={voucherId === NOT_LISTED
+                    ? { borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }
+                    : { borderColor: `${tk.ink}40`, color: tk.muted }}>
+                  Mine isn&rsquo;t listed
+                </button>
+              </div>
+
+              {chosenVoucher && (
+                <div className={`mt-2.5 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}26`, background: tk.inputBg }}>
+                  <div className="text-[11px]" style={{ color: tk.muted }}>Pay {chosenVoucher.name} using</div>
+                  {/* Every detail they've given us, labelled. A scheme asking
+                      for a setting name and getting an account number is a
+                      payment that doesn't arrive. */}
+                  {filledDetails(chosenVoucher).map((d) => (
+                    <div key={d.id} className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-[11px]" style={{ color: tk.muted }}>{d.label}</span>
+                      <span className="text-[14.5px] font-extrabold" style={{ color: tk.ink }}>{d.value}</span>
+                    </div>
+                  ))}
+                  <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                    Send <b style={{ color: tk.ink }}>{money(grandTotal)}</b> through their website,
+                    quoting {filledDetails(chosenVoucher).length === 1 ? "that" : "those"} details.
+                    We&rsquo;ll email {filledDetails(chosenVoucher).length === 1 ? "it" : "them"} to
+                    you as well.
+                  </div>
+                </div>
+              )}
+              {voucherId === NOT_LISTED && (
+                <div className="mt-2.5 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                  No problem — book anyway and we&rsquo;ll be in touch with how to pay.
+                </div>
+              )}
+
+              {/* Too close for the money to land, but the provider allows it
+                  anyway. Saying so plainly is the difference between a parent
+                  who pays today and one who finds out at the gate. */}
+              {vWindow.tooClose && ckSettings.voucherWhenClose !== "hide" && (
+                <div className={`mt-2.5 border-2 px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
+                  style={{ borderColor: "#f59e0b", color: tk.ink }}>
+                  <b>Heads up &mdash; {vWindow.closeReason}.</b>{" "}
+                  <span style={{ color: tk.muted }}>
+                    Voucher payments usually take a few working days to reach us, so please send it
+                    today.{" "}
+                    {ckSettings.voucherWhenClose === "approve"
+                      ? "We'll check it's arrived and confirm your place."
+                      : "If it doesn't arrive in time we may not be able to hold the place."}
+                  </span>
+                </div>
+              )}
+
+              <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>
+                {/* One date, and it's the send-by. The arrival date is real
+                    and the provider chases against it, but a parent given two
+                    has to work out which one is theirs — and telling them when
+                    it must ARRIVE, when it spends days in transit, is telling
+                    them to be late. */}
+                Please send it by <b style={{ color: tk.ink }}>{vWindow.sendBy ? fmtDate(vWindow.sendBy) : `${vWindow.daysToPay} days from now`}</b>{" "}
+                so it reaches us in time. Your place is held until then; after that it may be
+                released, so tell us if something&rsquo;s gone wrong rather than leaving it. The
+                booking shows as <b style={{ color: tk.ink }}>awaiting voucher payment</b> until the
+                money arrives.
+              </div>
+            </div>
+          )}
           {!parentMode && (
             <div className={`mt-2 border px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
               style={{ borderColor: tk.line, color: tk.muted }}>
-              The booking is held as <b>Invoice sent</b> and the parent gets the payment-link
-              email. Mark it paid from the booking itself once the money lands.
+              {/* Judged on the total, not the method name. A funded or free
+                  place has nothing to invoice, and telling the operator a
+                  payment link is on its way — then leaving the booking sat at
+                  "Unpaid" — starts someone chasing money that was never
+                  owed. */}
+              {grandTotal <= 0 ? (
+                <>
+                  Nothing to collect &mdash; this booking is <b>£0</b>, so no invoice or payment
+                  link is sent.
+                </>
+              ) : (
+                <>
+                  The booking is held as <b>Invoice sent</b> and the parent gets the payment-link
+                  email. Mark it paid from the booking itself once the money lands.
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1512,6 +1655,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
           : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
           : shortPasses.length > 0 ? `One child needs all ${shortPasses[0].dates.length} days of the ${shortPasses[0].name}`
+          // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
+          // something that isn't going to happen.
+          : grandTotal <= 0 ? (parentMode ? "Confirm booking" : "Create booking · nothing to collect")
           : parentMode ? `Confirm & pay ${money(grandTotal)}`
           : `Send payment link & create · ${money(grandTotal)}`}
       </button>}
