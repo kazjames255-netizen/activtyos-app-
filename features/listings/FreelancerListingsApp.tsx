@@ -1316,10 +1316,10 @@ function tidyAddress(label: string): string {
 }
 
 /**
- * Address lookup against OpenStreetMap's Nominatim — free and keyless, which
- * matters because we have no geocoding on the backend yet. Searches on demand
- * rather than per keystroke: their usage policy asks for that, and it stops a
- * half-typed postcode burning a request.
+ * Address lookup via OUR server (`/api/geo/search`) — the browser never calls
+ * a geocoder directly, so no map key or third-party request leaks to the
+ * client or to embeds on providers' own sites. Searches on demand (not per
+ * keystroke) to keep the volume down.
  */
 function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
   const [q, setQ] = useState("");
@@ -1332,13 +1332,10 @@ function AddressFinder({ onPick }: { onPick: (hit: Hit) => void }) {
     setState("busy");
     setHits(null);
     try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=gb&limit=6&q=${encodeURIComponent(term)}`,
-        { headers: { Accept: "application/json" } },
+      const raw = await apiGet<{ label: string; lat: number; lng: number }[]>(
+        `/api/geo/search?q=${encodeURIComponent(term)}`,
       );
-      if (!r.ok) throw new Error(String(r.status));
-      const raw = (await r.json()) as { display_name: string; lat: string; lon: string }[];
-      setHits(raw.map((h) => ({ label: h.display_name, lat: parseFloat(h.lat), lng: parseFloat(h.lon) })));
+      setHits(raw.map((h) => ({ label: h.label, lat: h.lat, lng: h.lng })));
       setState("idle");
     } catch {
       setState("error");

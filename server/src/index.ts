@@ -21,6 +21,8 @@ import { images, uploads } from "./routes/uploads";
 import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
+import { geo, tiles } from "./routes/geo";
+import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
@@ -62,6 +64,10 @@ app.use("/api/events", events);
 // secret). Uploading them requires an operator account — see routes/uploads.
 app.use("/api/images", images);
 
+  // Map tiles are public (proxied so the OS key stays server-side; <img>/map
+  // tags can't send auth). See routes/geo.ts.
+  app.use("/api/geo/tiles", tiles);
+
 // Listings are the public storefront: browsing and the /book/{id} page work
 // signed-out (anonymous = parent-shaped permissions — live+public feed,
 // hidden by direct link, drafts 404). A token still changes what you see
@@ -80,6 +86,8 @@ app.use("/api/block-bundles", blockBundles);
 app.use("/api/library", library);
 app.use("/api/payments", payments);
 app.use("/api/registers", registers);
+app.use("/api/ratios", ratios);
+app.use("/api/geo", geo);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
 app.use("/api/my/files", childFiles);

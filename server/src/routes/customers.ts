@@ -342,3 +342,60 @@ customers.put("/:id/children", async (req, res) => {
 
   res.json({ ok: true, written, uid });
 });
+
+// GET /api/customers/:id/family — the parent plus their children's FULL
+// records (§K), for an operator whose tenant the family has actually booked
+// with. That booking relationship is the security model: a tenant may read
+// the safeguarding details of children attending its sessions, and no one
+// else's. Merely typing a stranger's email into POST /customers must NOT
+// grant a read of that stranger's children — hence the booking check.
+customers.get("/:id/family", async (req, res) => {
+  const own = await ownCustomer(req, req.params.id);
+  if (own.status !== 200) {
+    res
+      .status(own.status)
+      .json({ error: own.status === 403 ? "Requires an operator account" : "Customer not found" });
+    return;
+  }
+  const cust = own.snap.data() as { name?: string; email?: string; phone?: string; uid?: string; tenantId: string };
+  const email = (cust.email ?? "").trim();
+
+  // The relationship gate: at least one booking with this tenant.
+  const booked = email
+    ? await db
+        .collection("bookings")
+        .where("tenantId", "==", cust.tenantId)
+        .where("email", "==", email)
+        .limit(1)
+        .get()
+    : { empty: true };
+  if (booked.empty) {
+    res.status(403).json({ error: "This family hasn't booked with you — you can only see families attending your sessions." });
+    return;
+  }
+
+  // Resolve the parent account (stamp the uid link if we can, so next time
+  // it's a lookup by id). No account yet → return what the customer holds.
+  let uid = cust.uid;
+  if (!uid && email) {
+    try {
+      uid = (await auth.getUserByEmail(email)).uid;
+      await own.snap.ref.update({ uid });
+    } catch {
+      /* no account yet */
+    }
+  }
+  let children: Record<string, unknown>[] = [];
+  if (uid) {
+    const snap = await db.collection("children").where("parentUid", "==", uid).get();
+    children = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+  }
+  res.json({
+    id: own.snap.id,
+    name: cust.name ?? "",
+    email,
+    phone: cust.phone ?? "",
+    hasAccount: !!uid,
+    children,
+  });
+});

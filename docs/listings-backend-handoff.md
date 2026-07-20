@@ -1127,8 +1127,9 @@ around it.
 
 # What I need from you — one list, in the order that unblocks the most
 
-*Updated after your 19 July push. **#1 below is now done** — I've left it in
-struck through rather than deleting it, so the ordering still makes sense.*
+*Updated after your 20 July pushes. Almost everything on this list is now
+done — struck through rather than deleted, so the history reads. The three
+that remain are at the bottom.*
 
 ### ~~1. Book on someone else's behalf~~ — **done, thank you**
 `onBehalfOf` landed exactly as hoped: one pricing path, existing accounts
@@ -1140,42 +1141,44 @@ one call per block for a multi-week basket, and I'll make sure the new-family
 fields it already collects (name, email, phone) map onto your
 `onBehalfOf {name, email, phone}` shape rather than needing a customer first.
 
-### 2. `childId` on each booking item  *(now the biggest single unblock)*
-Bookings carry `child` as a name and nothing else. With the id, a register can
-show the child's **photo**, **allergies**, **SEND plan** and **collection
-password** from one lookup. Without it, none of them can be shown safely —
-matching by name would eventually put one family's collection password against
-another family's child. (§I, §J)
+### ~~2. `childId` on each booking item~~ — **done**
+Landed with the safeguarding read. This was the one blocking four things at
+once; a register can now resolve a child's photo, allergies, SEND plan and
+collection password from one lookup instead of matching on a name.
 
-### ~~Create a family's account from a phone booking~~ — **done in the same push**
-`admin.auth().createUser` + a set-password link. Three things I'd insist on:
-**if the email already has an account, use it** (families exist across
-providers); **never email a password**; and the operator keeps no access
-afterwards. I've built the same thing for the Families page already —
-`POST /api/customers/:id/invite` — so there's a working shape to copy. (§H)
+### ~~3. `GET /api/customers/:id/family`~~ — **done**
+### ~~4. Extra fields on a child~~ — **done**
+Dietary, swimming, care notes, and the suncream / first aid / walk-home
+consents are all on `childSchema` now. One note: I'd split **emergency contact**
+into `emergencyName` + `emergencyPhone` in the same window you added
+`emergencyContact` as a single string. I kept the split on the merge — a
+register prints the name and dials the number, and nothing was reading the
+combined field yet. Shout if you'd rather have it back the other way.
 
-### 3. `GET /api/customers/:id/family`
-The parent plus their children's **full** records, for an operator whose tenant
-that family has actually booked with. That clause is the security model. It
-unlocks the whole Parents/Child-profiles design; I can build both tabs against
-it front-end with nothing else from you. (§K)
-
-### 4. Extra fields on a child
-Emergency contact, dietary (separate from allergies), swimming ability, care &
-behaviour notes, and consents for suncream, first aid and walking home.
-*Not wanted:* authorised collectors, GP/surgery/NHS number. (§K)
-
-### 5. File storage for SEND plans
-Currently chunked across Firestore documents because there's no bucket —
-works, capped at 15MB, but it's a workaround. When Storage is enabled only
-`routes/childFiles.ts` changes. (§F)
-
-### 6. Marketing plumbing
-An unsubscribe link that works from the email without a login (needs a signed
-token — I can't sign anything client-side), and a tenant-level suppression list
-so an unsubscribe survives a record being rebuilt by a later booking. (§L)
+### ~~Maps (§B)~~ — **done**
+Ordnance Survey geocoding with the key server-side, and the tile proxy. That
+closes the last thing that needed procurement.
 
 ---
+
+### Still open
+
+**1. File storage for SEND plans.** Chunked across Firestore documents because
+there's no bucket — works, capped at 15MB, but it's a workaround. When Storage
+is enabled only `routes/childFiles.ts` changes. (§F)
+
+**2. Marketing plumbing.** An unsubscribe that works from the email without a
+login (needs a signed token — I can't sign anything client-side), and a
+tenant-level suppression list so an unsubscribe survives a record being rebuilt
+by a later booking. (§L)
+
+**3. A shared test family (§M).** Now the most valuable of the three. Between
+your last two pushes and mine, the amount of code touching a parent's own
+record has roughly doubled, and none of it has run end to end. Specifically I
+still can't check: whether `PUT /api/customers/:id/children` resolves a real
+uid and writes to the right child; whether a real multi-megabyte SEND plan
+survives chunking; whether the sign-up invite email arrives; and whether your
+`onBehalfOf` bookings and my Families page agree about who a family *is*.
 
 ### Decisions rather than code
 
@@ -1271,3 +1274,99 @@ us both discovering the same bug separately a fortnight apart.
 
 Happy to write the seed myself if you'd rather — just tell me which project
 and I'll keep it out of anything that could reach production data.
+
+---
+
+# childId + family safeguarding read — 20 July 2026 (Swagger v0.12.0)
+
+**§I/§J — done (your #2, the big one).** Booking items now take **`childId`**.
+Send the saved child's id and the booking is stamped with it; registers then
+resolve the **photo, allergies, SEND (+ "plan on file"), and collection
+password** from the child record — never by name. When no id is sent the server
+falls back to a name match against the *account's own* children (so existing
+flows keep working), and an unknown name gets no id rather than a guess. A
+foreign id is never trusted.
+
+**Your one-line wiring:** include `childId: <saved child id>` on each item your
+checkout posts when the parent/operator picked a saved child. Without it,
+registers still work but can't show the safeguarding data for that child (which
+is the safe failure, not a wrong one). My RegistersApp already renders the
+photo + allergy/SEND/collection-password chips off it.
+
+**§K — the read endpoint is built.** `GET /api/customers/:id/family` returns the
+parent + their children's **full** records, but only to an operator **whose
+tenant the family has actually booked with** — I gate on a real booking, not
+just a customer row, so adding a stranger's email via `POST /customers` can't
+be used to read their children. It also stamps the `uid` link. Build both tabs
+against it; the SEND-plan download (§F) already works.
+
+**customer↔account `uid`** is now set on the booking path too (not only your
+invite/children endpoints), and the customer's thin child list carries a
+`childId`, so the Families page can join to the real record.
+
+**Extra child fields (§K #4) added to `childSchema`:** `dietary`, `swimming`
+(none/weak/confident/strong), `careNotes`, and consents `suncreamConsent` /
+`firstAidConsent` / `walkHomeConsent`. Not added, per your note: authorised
+collectors and GP/NHS number.
+
+**Still yours / still decisions:** which roles inside a tenant see the
+safeguarding block (a role check, not a UI hide); retention after a family's
+last booking; marketing unsubscribe token + suppression list (§L); the maps
+key (§B); and the shared seeded test family (§M) — happy to seed it, tell me
+if you'd rather.
+
+---
+
+# Ratios & groups — 20 July 2026 (Swagger v0.13.0)
+
+First "Run the day" feature, and the first thing to stand on the childId
+foundation. `GET /api/ratios?date=` gives each session its children (ages +
+SEND resolved from the child record), the **required staff** for the age mix,
+who's assigned, and the per-group breakdown; `PUT /api/ratios/:blockId/:date`
+saves named groups with their children and staff. Staff come from the tenant
+library (`library.staff`); the ratio table is UK camp defaults (1:8 for 5–7,
+1:10 for 8+, tighter under 5), mixed ages summed and rounded up. SEND is
+surfaced, never auto-applied. Realtime collection `ratioGroups`.
+
+A simple `RatiosApp` is registered on the `ratios` slug (all four operator/
+staff portals) — restyle at will; the maths and persistence are the point.
+
+Also fixed a data bug your Families page would have shown: a basket of N
+children created N duplicate customer rows (the per-booking upsert raced).
+Baskets now upsert the family once.
+
+---
+
+# §B maps — geocoding moved server-side; OS-ready — 20 July 2026
+
+Step 1 of the Ordnance Survey move (Amir's call). **Geocoding no longer runs
+in the browser.** `AddressFinder` now calls `GET /api/geo/search?q=` — the
+server does the lookup, so no map key or third-party request reaches the
+client or the embed widget. Auth-required; the picked hit still saves lat/lng
+on the venue exactly as before, so your `VenueMap` and the customer page are
+unchanged.
+
+Provider is env-chosen (`OS_API_KEY` in `server/.env`). Until the key lands it
+falls back to server-side Nominatim (low volume, proper User-Agent). The OS
+Names path is deliberately left for the key — OS returns British National Grid
+eastings/northings, so the BNG→WGS84 transform has to be built and verified
+against the real API, not guessed.
+
+**Still to do once the key is in (`OS_API_KEY`):** wire OS Names in
+`routes/geo.ts`, and replace the OSM tile iframe in `VenueMap.tsx` with OS
+Maps tiles via a small server proxy (so the tile key stays server-side and
+embeds keep working). Both need the real service to build/verify — a
+half-day once the account exists.
+
+**§B maps — DONE (20 July, key in).** Ordnance Survey is fully wired:
+- `GET /api/geo/search` uses OS Names (postcodes + places) with BNG→WGS84
+  conversion (proj4), Nominatim fallback on any failure. Verified: real
+  UK postcodes resolve to correct lat/lng.
+- `GET /api/geo/tiles/:z/:x/:y.png` proxies OS Maps raster tiles (key
+  server-side, week-cached, public so `<img>`/embeds work). OSM fallback
+  when no key.
+- `VenueMap.tsx` rewritten from the OSM iframe to a dependency-free slippy
+  map reading the proxy — renders real OS "Light" tiles, pin centred, zoom
+  buttons. Attribution updated to "Contains OS data © Crown copyright".
+No key ever reaches the browser; the embed widget keeps working on other
+sites. Nothing left on this — restyle the map however you like.

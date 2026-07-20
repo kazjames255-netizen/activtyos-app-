@@ -95,6 +95,33 @@ registers.get("/", async (req, res) => {
     listingSnaps.map((s) => [s.id, s.exists ? ((s.data()!.name as string) ?? "") : "(deleted listing)"]),
   );
 
+  // Resolve each booking's child record (by id) so the register can show the
+  // face, allergies, SEND plan and collection password — a safeguarding read,
+  // scoped to children booked into THIS tenant's sessions. Never by name.
+  const childIds = new Set<string>();
+  for (const snap of bookingSnaps)
+    for (const d of snap.docs) {
+      const b = fromDoc(d.data() as BookingDoc);
+      if (b.childId) childIds.add(b.childId);
+    }
+  const childDocs = childIds.size
+    ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid)))
+    : [];
+  const childById = new Map(
+    childDocs.filter((d) => d.exists).map((d) => {
+      const c = d.data() as Record<string, unknown>;
+      return [d.id, {
+        photo: c.photo as string | undefined,
+        allergies: c.allergies as string | undefined,
+        medical: c.medical as string | undefined,
+        send: c.send as string | undefined,
+        sendPlanId: c.sendPlanId as string | undefined,
+        sendPlanName: c.sendPlanName as string | undefined,
+        collectionPassword: c.collectionPassword as string | undefined,
+      }];
+    }),
+  );
+
   const out = todays.map(({ id, block, session }, i) => {
     const entries = regSnaps[i].exists ? ((regSnaps[i].data() as RegisterDoc).entries ?? {}) : {};
     const attendees = bookingSnaps[i].docs
@@ -111,6 +138,9 @@ registers.get("/", async (req, res) => {
         children: b.kids?.length
           ? b.kids.map((k) => ({ name: k.name, age: k.age }))
           : [{ name: b.child, age: b.age }],
+        // Safeguarding, resolved from the child record (only when the booking
+        // carries a real childId — never guessed from the name).
+        child: b.childId ? childById.get(b.childId) ?? null : null,
         attendance: entries[b.ref] ?? null,
       }))
       .sort((a, b) => (a.children[0].name < b.children[0].name ? -1 : 1));

@@ -19,12 +19,21 @@ interface Attendance {
   outAt: string | null;
   by: string;
 }
+interface SafeguardingRecord {
+  photo?: string;
+  allergies?: string;
+  medical?: string;
+  send?: string;
+  sendPlanName?: string;
+  collectionPassword?: string;
+}
 interface Attendee {
   ref: string;
   booker: string;
   bookingStatus: string;
   seats: number;
   children: { name: string; age?: number }[];
+  child: SafeguardingRecord | null;
   attendance: Attendance | null;
 }
 interface Session {
@@ -85,20 +94,44 @@ function AttendeeRow({
         : st === "absent"
           ? "Absent"
           : "Expected";
+  const sg = a.child;
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] py-2 first:border-t-0">
+      {sg?.photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={sg.photo} alt="" className="h-9 w-9 flex-none rounded-full object-cover" />
+      )}
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-bold">
           {a.children.map((c) => `${c.name}${c.age !== undefined ? ` (${c.age})` : ""}`).join(", ")}
         </div>
         <div className="truncate text-[11.5px] text-[var(--ink-3)]">
           {a.booker} · #{a.ref}
-          {a.bookingStatus !== "Confirmed" && (
-            <span className="ml-1.5">
-              <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{a.bookingStatus}</Badge>
-            </span>
-          )}
         </div>
+        {sg && (sg.allergies || sg.send || sg.collectionPassword) && (
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {sg.allergies && (
+              <span className="rounded px-1.5 py-[1px] text-[10.5px] font-bold" style={{ background: "var(--red-soft,#fdebec)", color: "var(--red,#e21d27)" }} title="Allergies">
+                ⚠ {sg.allergies}
+              </span>
+            )}
+            {(sg.send || sg.sendPlanName) && (
+              <span className="rounded px-1.5 py-[1px] text-[10.5px] font-bold" style={{ background: "var(--brand-soft,#e7f0ff)", color: "var(--brand-ink,#1d3a8f)" }} title="SEND">
+                SEND{sg.sendPlanName ? " · plan on file" : ""}
+              </span>
+            )}
+            {sg.collectionPassword && (
+              <span className="rounded px-1.5 py-[1px] text-[10.5px] font-bold" style={{ background: "#fdf3d8", color: "#9a5a00" }} title="Collection password — ask before handing over">
+                🔑 {sg.collectionPassword}
+              </span>
+            )}
+          </div>
+        )}
+        {a.bookingStatus !== "Confirmed" && (
+          <div className="mt-1">
+            <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{a.bookingStatus}</Badge>
+          </div>
+        )}
       </div>
       <span className="rounded-full px-2.5 py-[3px] text-[11px] font-bold" style={tone}>
         {label}

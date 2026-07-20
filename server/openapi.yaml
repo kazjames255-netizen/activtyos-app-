@@ -1,10 +1,53 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.11.0
+  version: 0.13.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.13.0 — Ratios & groups (Run the day)
+
+    - **`GET /api/ratios?date=`** — every session the tenant runs that day
+      with its children (ages + SEND resolved from the child record),
+      the **required staff** for the age mix, the staff assigned, and the
+      group breakdown. Staff read; platform via `?tenantId=`.
+    - **`PUT /api/ratios/:blockId/:date`** — save the session's groups
+      `[{id, name, childIds, staffIds}]` (operators). One doc per session
+      (`ratioGroups/{blockId}_{date}`), realtime collection `ratioGroups`.
+    - Ratio maths: UK camp defaults (1:3 under-2 … 1:8 age 5–7, 1:10 age
+      8+); mixed ages summed as fractional demand and rounded up, floor of
+      one adult. SEND children are surfaced (`sendCount`), never auto-
+      adjusted — the operator's call. Staff come from the tenant library.
+    - **Bugfix:** a basket of N children created N duplicate customer rows
+      (the per-booking upsert raced). Baskets now upsert the family once.
+
+    ## v0.12.0 — childId on bookings + the family safeguarding read (§I/§J/§K)
+
+    The safeguarding foundation Kaz's registers, ratios and child-profile
+    screens need — no more matching children by name string.
+
+    - **Booking items accept `childId`** (the saved child's record id). When
+      present it's authoritative; otherwise the server falls back to a
+      name match against the ACCOUNT's own children (parent = caller,
+      operator `onBehalfOf` = the family). The resolved `childId` is stamped
+      on the booking, and name/age come from the record. A foreign id is
+      never trusted; an unknown name gets no id (no guessing).
+    - **Registers resolve safeguarding data from `childId`** — photo,
+      allergies, SEND (+ plan on file) and collection password — a server
+      read scoped to children booked into that tenant's session. Attendees
+      now carry a `child` safeguarding object (null when no confident id).
+    - **`GET /api/customers/:id/family`** — the parent + their children's
+      FULL records, for an operator **whose tenant the family has actually
+      booked with** (a booking check, not just a customer row — so an
+      operator can't harvest a stranger's children by typing their email).
+      Stamps the customer↔account `uid` link on the way.
+    - **`customers.uid`** is now set on the booking path too (not only
+      Kaz's invite/children endpoints), and the customer's thin child list
+      keeps a `childId` so the Families page joins to the real record.
+    - **Extra child fields** (§K): `dietary`, `swimming`
+      (none/weak/confident/strong), `careNotes`, and consents
+      `suncreamConsent` / `firstAidConsent` / `walkHomeConsent`.
 
     ## v0.11.0 — Booking for a family (handoff §G/§H) + real pay links
 
@@ -318,6 +361,8 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
+  - name: ratios
+    description: Staff:child ratios and grouping children per session
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1276,6 +1321,89 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/geo/search:
+    get:
+      tags: [meta]
+      summary: Geocode a UK postcode/address (server-side; OS when keyed)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, example: "MK14 6BN" }
+      responses:
+        "200":
+          description: "[{label, lat, lng}] — Ordnance Survey Names, Nominatim fallback"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/geo/tiles/{z}/{x}/{y}:
+    get:
+      tags: [meta]
+      summary: Map tile (public; OS Maps proxied so the key stays server-side)
+      security: []
+      parameters:
+        - { name: z, in: path, required: true, schema: { type: integer } }
+        - { name: x, in: path, required: true, schema: { type: integer } }
+        - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
+      responses:
+        "200": { description: PNG tile (week-cached, immutable) }
+
+  /api/ratios:
+    get:
+      tags: [ratios]
+      summary: The day's sessions with staffing ratios and groups
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, example: "2026-08-03" }
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only
+          schema: { type: string }
+      responses:
+        "200":
+          description: "{date, bands, sessions[]} — each session: children, requiredStaff, staffAssigned, met, groups"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/ratios/{blockId}/{date}:
+    put:
+      tags: [ratios]
+      summary: Save a session's groups + staffing (operators)
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: date
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groups]
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      childIds: { type: array, items: { type: string } }
+                      staffIds: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/registers:
     get:
       tags: [registers]
@@ -1630,6 +1758,43 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/customers/{id}/family:
+    get:
+      tags: [customers]
+      summary: A family's full safeguarding records (§K)
+      description: |
+        The parent plus their children's FULL records — for an operator
+        whose tenant the family has ACTUALLY booked with (a booking check,
+        not just a customer row: an operator can't harvest a stranger's
+        children by adding their email). Resolves and stamps the
+        customer↔account `uid` link. Children come from the parent's own
+        `children` records, so they're always current.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The family and their children's records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  email: { type: string }
+                  phone: { type: string }
+                  hasAccount: { type: boolean }
+                  children:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChildProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: This family hasn't booked with your tenant
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/customers/{id}:
     put:
