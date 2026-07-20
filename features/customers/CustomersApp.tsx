@@ -7,6 +7,7 @@ import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
+import { CHILD_LIMITS } from "@/features/listings/checkout";
 import { FamiliesExport, type FamilyRow } from "./FamiliesExport";
 import type { Booking } from "@/features/bookings/types";
 
@@ -767,13 +768,35 @@ export function CustomersApp() {
                               ["likes", "Likes", "Football, drawing"],
                               ["dislikes", "Dislikes", "Loud rooms"],
                               ["emergencyContact", "Emergency contact", "Aunt Priya · 07700 900123"],
-                            ] as [keyof typeof k, string, string][]
-                          ).map(([f, label, ph]) => (
-                            <div key={f}>
-                              <FieldLabel>{label}</FieldLabel>
-                              <Input value={k[f]} placeholder={ph} onChange={(e) => set({ [f]: e.target.value })} className="w-full" />
-                            </div>
-                          ))}
+                            ] as [keyof typeof CHILD_LIMITS, string, string][]
+                          ).map(([f, label, ph]) => {
+                            const max = CHILD_LIMITS[f];
+                            const left = max - String(k[f] ?? "").length;
+                            return (
+                              <div key={f}>
+                                <FieldLabel>
+                                  {label}
+                                  {/* Only once it's nearly full — a counter on
+                                      an empty box is noise. */}
+                                  {left <= 25 && (
+                                    <span
+                                      className="ml-1 font-normal"
+                                      style={{ color: left <= 0 ? "var(--red,#e21d27)" : "var(--ink-3)" }}
+                                    >
+                                      {left} left
+                                    </span>
+                                  )}
+                                </FieldLabel>
+                                <Input
+                                  value={k[f]}
+                                  maxLength={max}
+                                  placeholder={ph}
+                                  onChange={(e) => set({ [f]: e.target.value })}
+                                  className="w-full"
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">

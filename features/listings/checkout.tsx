@@ -100,6 +100,26 @@ export async function squareAvatar(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
+/**
+ * How long each free-text field on a child may be.
+ *
+ * Not arbitrary: these land in registers and CSV exports, and a paragraph in
+ * an "allergies" column makes both unreadable. Short enough to force the
+ * useful sentence, long enough for a real answer — "Nuts (EpiPen in bag),
+ * dairy" fits in 140.
+ *
+ * Shared with the operator's copy of this form so the two can't disagree.
+ */
+export const CHILD_LIMITS = {
+  allergies: 140,
+  medical: 140,
+  send: 200,
+  likes: 80,
+  dislikes: 80,
+  collectionPassword: 40,
+  emergencyContact: 100,
+} as const;
+
 /** Chip colours: blue for boys, pink for girls, neutral when unsaid. */
 export function sexTint(sex: ChildProfile["sex"], on = false): { border: string; bg: string; ink: string } {
   // Two strengths of the same colour: soft while a child is simply listed,
@@ -362,6 +382,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               school run — staff will ask them for it, and won&rsquo;t hand over without it.
             </div>
             <input value={draft.collectionPassword ?? ""}
+              maxLength={CHILD_LIMITS.collectionPassword}
               onChange={(e) => setDraft({ ...draft, collectionPassword: e.target.value })}
               placeholder="e.g. Bluebell" className={inp} style={inpStyle} />
             <div className="mt-1 text-[10px] leading-[1.4]" style={{ color: tk.muted }}>
@@ -372,17 +393,17 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Allergies <span className="font-normal">— optional</span></div>
             <input value={draft.allergies ?? ""} onChange={(e) => setDraft({ ...draft, allergies: e.target.value })}
-              placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
+              maxLength={CHILD_LIMITS.allergies} placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Medical <span className="font-normal">— optional</span></div>
             <input value={draft.medical ?? ""} onChange={(e) => setDraft({ ...draft, medical: e.target.value })}
-              placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
+              maxLength={CHILD_LIMITS.medical} placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>SEND / additional needs <span className="font-normal">— optional</span></div>
             <input value={draft.send ?? ""} onChange={(e) => setDraft({ ...draft, send: e.target.value })}
-              placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
+              maxLength={CHILD_LIMITS.send} placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
             {/* The upload only appears once they've told us there's something
                 to support — asking for a plan before that is asking twice. */}
             {!!draft.send?.trim() && (
@@ -453,9 +474,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
             </div>
             <div className="flex flex-wrap gap-2">
-              <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })}
+              <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })} maxLength={CHILD_LIMITS.likes}
                 placeholder="Likes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
-              <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })}
+              <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })} maxLength={CHILD_LIMITS.dislikes}
                 placeholder="Dislikes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
             </div>
           </div>
