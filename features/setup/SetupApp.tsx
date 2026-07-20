@@ -14,7 +14,7 @@ import {
   type QuestionType,
   type TenantSettings,
 } from "@/lib/settings";
-import { policyWording, sortBands, HOURS, type CancellationPolicy, type RefundBand } from "@/lib/cancellation";
+import { policyWording, sortBands, HOURS, DEFAULT_POLICY, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Setup & features — the real screen, replacing the legacy mock.
@@ -254,6 +254,61 @@ const NOTICE_CHOICES: [number, string][] = [
  * of the rewrite: prose typed separately from the rules drifts away from
  * them, and then the page promises one thing while the system does another.
  */
+function PolicyList({ policies, onChange }: { policies: NamedPolicy[]; onChange: (v: NamedPolicy[]) => void }) {
+  const [openId, setOpenId] = useState<string | null>(policies[0]?.id ?? null);
+  return (
+    <div>
+      {policies.map((p, i) => {
+        const open = openId === p.id;
+        return (
+          <div key={p.id} className="mb-2.5 rounded-xl border border-[var(--line)] p-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={p.name}
+                onChange={(e) => onChange(policies.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                placeholder="e.g. Holiday camps"
+                className="w-[190px]"
+                maxLength={40}
+              />
+              <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-3)]">
+                {policyWording({ ...p, wording: undefined })}
+              </span>
+              <Button sm onClick={() => setOpenId(open ? null : p.id)}>{open ? "Done" : "Edit rules"}</Button>
+              <Button
+                sm
+                variant="danger"
+                disabled={policies.length === 1}
+                title={policies.length === 1 ? "You need at least one policy" : undefined}
+                onClick={() => {
+                  if (!confirm(`Delete "${p.name || "this policy"}"?\n\nListings already using it keep the wording they were published with, but new cancellations will fall back to your first policy.`)) return;
+                  onChange(policies.filter((_, j) => j !== i));
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+            {open && (
+              <div className="mt-3 border-t border-dashed border-[var(--line)] pt-3">
+                <PolicyEditor policy={p} onChange={(next) => onChange(policies.map((x, j) => (j === i ? { ...x, ...next } : x)))} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <Button
+        variant="primary"
+        onClick={() => {
+          const p: NamedPolicy = { id: uid(), name: "", ...DEFAULT_POLICY };
+          onChange([...policies, p]);
+          setOpenId(p.id);
+        }}
+      >
+        ＋ Add a policy
+      </Button>
+    </div>
+  );
+}
+
 function PolicyEditor({ policy, onChange }: { policy: CancellationPolicy; onChange: (p: CancellationPolicy) => void }) {
   const bands = sortBands(policy.bands);
   const tiers = bands.filter((b) => b.hoursBefore > 0);
@@ -805,9 +860,31 @@ export function SetupApp() {
         <>
           <Section
             title="Cancellation & refunds"
-            lede="How much comes back, and how much notice it takes. Set the rules and the wording writes itself — so what a parent is told and what gets worked out when they cancel can never say different things."
+            lede="How much comes back, and how much notice it takes. Write as many as you need — a holiday camp and a weekly club rarely want the same notice period — then pick one for each listing as you build it. Set the rules and the wording writes itself, so what a parent is told and what gets worked out when they cancel can never say different things."
           >
-            <PolicyEditor policy={settings.cancellationPolicy} onChange={(p) => set("cancellationPolicy", p)} />
+            <PolicyList policies={settings.cancellationPolicies} onChange={(v) => set("cancellationPolicies", v)} />
+
+            <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5">
+              <Row
+                label="When a refund is due"
+                hint="Right now nothing moves money on its own — every refund waits for you, and you action it in your own payment provider. Automatic would issue it through Stripe the moment the policy works one out."
+                note="Automatic needs building (Amir)"
+              >
+                <Select
+                  value={settings.refundApproval}
+                  onChange={(e) => set("refundApproval", e.target.value as TenantSettings["refundApproval"])}
+                >
+                  <option value="review">Flag it for me to approve</option>
+                  <option value="auto">Issue it automatically</option>
+                </Select>
+              </Row>
+              {settings.refundApproval === "auto" && (
+                <NotWired>
+                  A refund can&apos;t be un-sent. Until this is built, refunds still wait for you —
+                  which is the safe way round for it to be wrong.
+                </NotWired>
+              )}
+            </div>
           </Section>
 
           <Section title="Defaults for a new listing" lede="What a new listing starts with. You can still change any of it per listing.">

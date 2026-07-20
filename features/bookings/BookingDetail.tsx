@@ -17,7 +17,7 @@ import {
 } from "./helpers";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 import { useTenantSettings } from "@/lib/settings";
-import { refundFor } from "@/lib/cancellation";
+import { refundFor, policyById } from "@/lib/cancellation";
 
 function Tile({ big, small }: { big: string; small: string }) {
   return (
@@ -173,8 +173,21 @@ function CancelPanel({ booking }: { booking: Booking }) {
   // the partial box and shows its working, and the provider overrules it by
   // typing. Null when we can't tell — a confident wrong number about someone
   // else's money is worse than no number.
+  // Who decided this — not who's clicking. An operator cancels for both
+  // reasons from the same screen: their own session falling through, and a
+  // parent ringing up. Nothing on the booking can tell the two apart, so it
+  // has to be asked, and it changes the answer completely.
+  const [initiator, setInitiator] = useState<"provider" | "parent">("parent");
+  // Which policy applied to THIS booking is a question the booking can't
+  // answer yet — it stores the listing's name, not its id, so there's nothing
+  // to look the policy up by. Amir stamping the policy onto the booking is
+  // the real fix (§O). Until then the operator confirms it, defaulting to the
+  // first, and the panel says which one it's using rather than quietly
+  // assuming.
+  const [policyId, setPolicyId] = useState<string | undefined>(undefined);
+  const policy = policyById(settings.cancellationPolicies, policyId);
   const advice = refundFor(
-    settings.cancellationPolicy,
+    policy ?? { bands: [] },
     // Earliest dated session, not the first listed: the notice period runs
     // from when the child was next due in, and sessions aren't guaranteed to
     // be in order. Free-text sessions ("Week 1") parse to nothing and
@@ -182,10 +195,14 @@ function CancelPanel({ booking }: { booking: Booking }) {
     sessionIsoDates(booking).sort()[0],
     booking.amount,
     new Date().toISOString(),
+    initiator,
   );
-  const [partial, setPartial] = useState(
-    advice?.percent && advice.percent < 100 ? advice.amount : booking.amount ? Math.round(booking.amount / 2) : 0,
-  );
+  // The amount follows the advice until the operator types over it, and then
+  // stays put. Held as "what they typed, or nothing yet" rather than seeded
+  // once: switching who cancelled changes what's owed, and a box still showing
+  // the old figure is the kind of thing that gets sent.
+  const [typed, setTyped] = useState<number | null>(null);
+  const partial = typed ?? advice?.amount ?? (booking.amount ? Math.round(booking.amount / 2) : 0);
 
   const RBtn = ({ t, label }: { t: "full" | "partial" | "none"; label: string }) => (
     <span
@@ -210,6 +227,50 @@ function CancelPanel({ booking }: { booking: Booking }) {
         You decide the refund. ActivityOS never moves money — action any refund in your own payment
         provider.
       </div>
+      <div className="mb-3">
+        <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+          Whose decision was this?
+        </div>
+        <div className="flex flex-wrap gap-[7px]">
+          {([
+            ["parent", "The family asked", "They've changed their mind, or rung you about it. Your notice periods apply."],
+            ["provider", "We cancelled it", "Venue gone, coach ill, too few booked. The family did nothing wrong, so everything goes back."],
+          ] as const).map(([v, label, why]) => (
+            <span
+              key={v}
+              title={why}
+              onClick={() => setInitiator(v)}
+              className={
+                "cursor-pointer rounded-lg border-[1.5px] px-3 py-[7px] text-[12px] font-bold " +
+                (initiator === v
+                  ? "border-[var(--cta,#e22295)] bg-[var(--cta,#e22295)] text-white"
+                  : "border-[var(--line-2)] bg-[var(--surface)] text-[var(--ink-2)]")
+              }
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Only worth asking when there's more than one to choose from. */}
+      {initiator === "parent" && settings.cancellationPolicies.length > 1 && (
+        <div className="mb-3">
+          <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+            Which policy applies?
+          </div>
+          <select
+            value={policy?.id ?? ""}
+            onChange={(e) => setPolicyId(e.target.value)}
+            className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
+          >
+            {settings.cancellationPolicies.map((p) => (
+              <option key={p.id} value={p.id}>{p.name || "Untitled policy"}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {advice && (
         <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <div className="text-[12.5px] font-extrabold">
@@ -235,7 +296,7 @@ function CancelPanel({ booking }: { booking: Booking }) {
           </label>
           <input
             value={partial}
-            onChange={(e) => setPartial(parseFloat(e.target.value) || 0)}
+            onChange={(e) => setTyped(parseFloat(e.target.value) || 0)}
             className="max-w-[160px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
           />
         </div>

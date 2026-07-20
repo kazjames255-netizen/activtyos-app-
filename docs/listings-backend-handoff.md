@@ -1575,3 +1575,54 @@ on every refund landing on a half. It works in integer pence now.
    `cancellation`, which is fine for display. But if parents ever see "you'd
    get £X back" before confirming a cancellation, the *bands* need to be on the
    listing too.
+
+### §O update — policies are named, and picked per listing
+
+Kaz's call: policies are written in Setup & features and **one is chosen per
+listing** as it's built. A holiday camp and a weekly club rarely want the same
+notice period.
+
+Two consequences for you.
+
+**5. The listing needs `cancellationPolicyId`.** The wizard already stores it
+on the draft alongside the generated `cancellation` wording, but Zod strips
+unknown keys so it never reaches Firestore. One line:
+`cancellationPolicyId: z.string().max(40).optional()`.
+
+**6. The booking needs the policy stamped on it — this is now the important
+one.** A booking currently stores `listing` as a *name*, not an id, so there is
+nothing to look a policy up by. The operator's cancel panel has to ask which
+policy applies and default to the first, which is a guess dressed as a
+question.
+
+Stamping the resolved policy onto the booking at creation fixes both that and
+the March-changes-January problem in one go. Inline copy rather than an id
+reference — if a provider edits "Holiday camps" in March, a January booking
+must keep January's terms, and an id would follow the edit.
+
+### Also — who cancelled changes the answer
+
+`refundFor` now takes an `initiator`. A **provider** cancelling refunds in full
+whatever the notice bands say: the family did nothing wrong, and charging them
+for a flooded venue is indefensible. The bands only apply to a family changing
+their mind — **including when they ring up and the operator cancels for them**,
+which is exactly why this can't be inferred from who is signed in.
+
+The default is `"parent"` — the strict reading. A missing argument must never
+silently authorise a full refund.
+
+When you lift this server-side for parent self-cancel, that path is always
+`"parent"`. Only an operator action can be provider-initiated, and only when
+they say so.
+
+### And auto-issue
+
+There's now a `refundApproval` setting: `"review"` (today's behaviour — flag it,
+provider actions it) or `"auto"`. Auto is marked as needing you and does
+nothing yet; selecting it says so rather than pretending.
+
+If you build it: **a refund cannot be un-sent.** Worth only auto-issuing where
+the policy computed a clean answer — a dated session, a known amount, an
+unambiguous band — and falling back to review for everything else. And never
+for a provider-initiated cancellation of a whole session, where someone should
+look at the list before a few thousand pounds goes out at once.

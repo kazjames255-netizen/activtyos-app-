@@ -31,6 +31,13 @@ export interface CancellationPolicy {
   wording?: string;
 }
 
+/** A policy with a name, so a listing can point at one. */
+export interface NamedPolicy extends CancellationPolicy {
+  id: string;
+  /** What the provider calls it — "Holiday camps", "Weekly clubs". */
+  name: string;
+}
+
 export const HOURS = { day: 24, twoDays: 48, week: 168, twoWeeks: 336 } as const;
 
 /** A middling default: full refund a week out, half at 48 hours, nothing after. */
@@ -41,6 +48,22 @@ export const DEFAULT_POLICY: CancellationPolicy = {
     { hoursBefore: 0, refundPercent: 0 },
   ],
 };
+
+export const DEFAULT_POLICIES: NamedPolicy[] = [
+  { id: "standard", name: "Standard", ...DEFAULT_POLICY },
+];
+
+/**
+ * The policy a listing uses, by id.
+ *
+ * Falls back to the first rather than to nothing: a listing whose policy was
+ * deleted still has to be able to answer "what do we owe?", and the provider's
+ * first policy is a better guess than no refund at all.
+ */
+export function policyById(policies: NamedPolicy[], id: string | undefined): NamedPolicy | null {
+  if (!policies.length) return null;
+  return policies.find((p) => p.id === id) ?? policies[0];
+}
 
 /** Bands longest-notice first, which is the order they're applied in. */
 export const sortBands = (bands: RefundBand[]): RefundBand[] =>
@@ -111,8 +134,31 @@ export function refundFor(
   firstSessionIso: string | undefined,
   paid: number | undefined,
   nowIso: string,
+  /**
+   * Whose decision this was — not who clicked the button.
+   *
+   * A provider cancelling their own session refunds in full whatever the
+   * notice bands say: the family did nothing wrong, and charging them for a
+   * flooded venue is indefensible. The bands only ever apply to a family
+   * changing their mind — including when they ring up and the operator does
+   * it for them, which is why this can't be inferred from who is signed in.
+   */
+  initiator: "provider" | "parent" = "parent",
 ): RefundAdvice | null {
-  if (!firstSessionIso || paid == null || !Number.isFinite(paid)) return null;
+  if (paid == null || !Number.isFinite(paid)) return null;
+
+  if (initiator === "provider") {
+    const pence = Math.round(paid * 100);
+    return {
+      percent: 100,
+      amount: pence / 100,
+      hoursNotice: 0,
+      band: null,
+      reason: "You cancelled this, so the full amount goes back — your notice periods don't apply.",
+    };
+  }
+
+  if (!firstSessionIso) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(firstSessionIso)) return null;
 
   // The session date carries no time, so treat it as starting at midnight —
