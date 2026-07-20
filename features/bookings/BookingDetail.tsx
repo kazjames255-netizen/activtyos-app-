@@ -12,9 +12,12 @@ import {
   payTone,
   refundedTotal,
   sessionCount,
+  sessionIsoDates,
   statusTone,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
+import { useTenantSettings } from "@/lib/settings";
+import { refundFor } from "@/lib/cancellation";
 
 function Tile({ big, small }: { big: string; small: string }) {
   return (
@@ -164,7 +167,25 @@ function CancelPanel({ booking }: { booking: Booking }) {
   const doCancel = useBookingsStore((s) => s.doCancel);
   const cancelAbort = useBookingsStore((s) => s.cancelAbort);
   const rt = booking._refundType || "full";
-  const [partial, setPartial] = useState(booking.amount ? Math.round(booking.amount / 2) : 0);
+  const { settings } = useTenantSettings();
+  // What the provider's own policy says is owed, given how much notice this
+  // cancellation actually gives. A recommendation, not an action: it prefills
+  // the partial box and shows its working, and the provider overrules it by
+  // typing. Null when we can't tell — a confident wrong number about someone
+  // else's money is worse than no number.
+  const advice = refundFor(
+    settings.cancellationPolicy,
+    // Earliest dated session, not the first listed: the notice period runs
+    // from when the child was next due in, and sessions aren't guaranteed to
+    // be in order. Free-text sessions ("Week 1") parse to nothing and
+    // correctly leave us with no advice to give.
+    sessionIsoDates(booking).sort()[0],
+    booking.amount,
+    new Date().toISOString(),
+  );
+  const [partial, setPartial] = useState(
+    advice?.percent && advice.percent < 100 ? advice.amount : booking.amount ? Math.round(booking.amount / 2) : 0,
+  );
 
   const RBtn = ({ t, label }: { t: "full" | "partial" | "none"; label: string }) => (
     <span
@@ -189,6 +210,16 @@ function CancelPanel({ booking }: { booking: Booking }) {
         You decide the refund. ActivityOS never moves money — action any refund in your own payment
         provider.
       </div>
+      {advice && (
+        <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
+          <div className="text-[12.5px] font-extrabold">
+            Your policy says {advice.percent === 100 ? "a full refund" : advice.percent === 0 ? "no refund" : `${advice.percent}% — ${money(advice.amount)}`}
+          </div>
+          <div className="mt-0.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">
+            {advice.reason} Change it below if this one&apos;s different — it&apos;s a suggestion, not a rule.
+          </div>
+        </div>
+      )}
       <div className="mb-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
         Refund the parent?
       </div>
