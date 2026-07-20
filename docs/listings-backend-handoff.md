@@ -1331,3 +1331,26 @@ staff portals) — restyle at will; the maths and persistence are the point.
 Also fixed a data bug your Families page would have shown: a basket of N
 children created N duplicate customer rows (the per-booking upsert raced).
 Baskets now upsert the family once.
+
+---
+
+# §B maps — geocoding moved server-side; OS-ready — 20 July 2026
+
+Step 1 of the Ordnance Survey move (Amir's call). **Geocoding no longer runs
+in the browser.** `AddressFinder` now calls `GET /api/geo/search?q=` — the
+server does the lookup, so no map key or third-party request reaches the
+client or the embed widget. Auth-required; the picked hit still saves lat/lng
+on the venue exactly as before, so your `VenueMap` and the customer page are
+unchanged.
+
+Provider is env-chosen (`OS_API_KEY` in `server/.env`). Until the key lands it
+falls back to server-side Nominatim (low volume, proper User-Agent). The OS
+Names path is deliberately left for the key — OS returns British National Grid
+eastings/northings, so the BNG→WGS84 transform has to be built and verified
+against the real API, not guessed.
+
+**Still to do once the key is in (`OS_API_KEY`):** wire OS Names in
+`routes/geo.ts`, and replace the OSM tile iframe in `VenueMap.tsx` with OS
+Maps tiles via a small server proxy (so the tile key stays server-side and
+embeds keep working). Both need the real service to build/verify — a
+half-day once the account exists.
