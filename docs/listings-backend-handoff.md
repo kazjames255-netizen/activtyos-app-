@@ -1271,3 +1271,43 @@ us both discovering the same bug separately a fortnight apart.
 
 Happy to write the seed myself if you'd rather — just tell me which project
 and I'll keep it out of anything that could reach production data.
+
+---
+
+# childId + family safeguarding read — 20 July 2026 (Swagger v0.12.0)
+
+**§I/§J — done (your #2, the big one).** Booking items now take **`childId`**.
+Send the saved child's id and the booking is stamped with it; registers then
+resolve the **photo, allergies, SEND (+ "plan on file"), and collection
+password** from the child record — never by name. When no id is sent the server
+falls back to a name match against the *account's own* children (so existing
+flows keep working), and an unknown name gets no id rather than a guess. A
+foreign id is never trusted.
+
+**Your one-line wiring:** include `childId: <saved child id>` on each item your
+checkout posts when the parent/operator picked a saved child. Without it,
+registers still work but can't show the safeguarding data for that child (which
+is the safe failure, not a wrong one). My RegistersApp already renders the
+photo + allergy/SEND/collection-password chips off it.
+
+**§K — the read endpoint is built.** `GET /api/customers/:id/family` returns the
+parent + their children's **full** records, but only to an operator **whose
+tenant the family has actually booked with** — I gate on a real booking, not
+just a customer row, so adding a stranger's email via `POST /customers` can't
+be used to read their children. It also stamps the `uid` link. Build both tabs
+against it; the SEND-plan download (§F) already works.
+
+**customer↔account `uid`** is now set on the booking path too (not only your
+invite/children endpoints), and the customer's thin child list carries a
+`childId`, so the Families page can join to the real record.
+
+**Extra child fields (§K #4) added to `childSchema`:** `dietary`, `swimming`
+(none/weak/confident/strong), `careNotes`, and consents `suncreamConsent` /
+`firstAidConsent` / `walkHomeConsent`. Not added, per your note: authorised
+collectors and GP/NHS number.
+
+**Still yours / still decisions:** which roles inside a tenant see the
+safeguarding block (a role check, not a UI hide); retention after a family's
+last booking; marketing unsubscribe token + suppression list (§L); the maps
+key (§B); and the shared seeded test family (§M) — happy to seed it, tell me
+if you'd rather.

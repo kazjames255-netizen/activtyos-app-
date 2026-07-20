@@ -25,6 +25,10 @@ export type RefundKind = "full" | "partial" | "none" | "approved" | "declined" |
 
 export interface Kid {
   name: string;
+  /** The child's record id (children collection). Present when booked from a
+   *  saved profile — lets registers resolve the face, allergies, SEND plan
+   *  and collection password rather than guessing from the name. */
+  childId?: string;
   age?: number;
   dob?: string;
   dates?: string[];
@@ -77,6 +81,8 @@ export interface Booking {
   email: string;
   phone: string;
   child: string;
+  /** Resolved child record id (see Kid.childId). */
+  childId?: string;
   age?: number;
   dob?: string;
   kids?: Kid[];

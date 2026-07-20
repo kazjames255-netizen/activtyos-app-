@@ -1,10 +1,37 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.11.0
+  version: 0.12.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.12.0 — childId on bookings + the family safeguarding read (§I/§J/§K)
+
+    The safeguarding foundation Kaz's registers, ratios and child-profile
+    screens need — no more matching children by name string.
+
+    - **Booking items accept `childId`** (the saved child's record id). When
+      present it's authoritative; otherwise the server falls back to a
+      name match against the ACCOUNT's own children (parent = caller,
+      operator `onBehalfOf` = the family). The resolved `childId` is stamped
+      on the booking, and name/age come from the record. A foreign id is
+      never trusted; an unknown name gets no id (no guessing).
+    - **Registers resolve safeguarding data from `childId`** — photo,
+      allergies, SEND (+ plan on file) and collection password — a server
+      read scoped to children booked into that tenant's session. Attendees
+      now carry a `child` safeguarding object (null when no confident id).
+    - **`GET /api/customers/:id/family`** — the parent + their children's
+      FULL records, for an operator **whose tenant the family has actually
+      booked with** (a booking check, not just a customer row — so an
+      operator can't harvest a stranger's children by typing their email).
+      Stamps the customer↔account `uid` link on the way.
+    - **`customers.uid`** is now set on the booking path too (not only
+      Kaz's invite/children endpoints), and the customer's thin child list
+      keeps a `childId` so the Families page joins to the real record.
+    - **Extra child fields** (§K): `dietary`, `swimming`
+      (none/weak/confident/strong), `careNotes`, and consents
+      `suncreamConsent` / `firstAidConsent` / `walkHomeConsent`.
 
     ## v0.11.0 — Booking for a family (handoff §G/§H) + real pay links
 
@@ -1630,6 +1657,43 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/customers/{id}/family:
+    get:
+      tags: [customers]
+      summary: A family's full safeguarding records (§K)
+      description: |
+        The parent plus their children's FULL records — for an operator
+        whose tenant the family has ACTUALLY booked with (a booking check,
+        not just a customer row: an operator can't harvest a stranger's
+        children by adding their email). Resolves and stamps the
+        customer↔account `uid` link. Children come from the parent's own
+        `children` records, so they're always current.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The family and their children's records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  email: { type: string }
+                  phone: { type: string }
+                  hasAccount: { type: boolean }
+                  children:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChildProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: This family hasn't booked with your tenant
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/customers/{id}:
     put:

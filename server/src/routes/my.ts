@@ -59,6 +59,10 @@ const itemSchema = z.object({
   timing: z.string().max(120).optional(), // …or by period title (checkout sends titles)
   dates: z.array(z.string().max(10)).min(1).max(60).optional(), // chosen session days
   child: z.string().min(1).max(80),
+  // The saved child's record id, when booked from a profile. Lets the server
+  // stamp a real id on the booking so registers resolve the face/allergies/
+  // SEND/collection-password rather than guessing from the name.
+  childId: z.string().max(60).optional(),
   // Optional: the checkout may only know the child's name — the server then
   // fills the age from the family's saved child profile (dob-derived).
   age: z.number().int().nonnegative().optional(),
@@ -119,6 +123,14 @@ const childSchema = z.object({
   /** Who to ring if the parent can't be reached. Either of them can fill it
    *  in — the provider usually takes it on the call. */
   emergencyContact: z.string().trim().max(200).optional(),
+  // §K safeguarding record — entered once by the parent, surfaced to the
+  // provider whose sessions the child attends.
+  dietary: z.string().trim().max(300).optional(), // distinct from allergies
+  swimming: z.enum(["none", "weak", "confident", "strong"]).optional(),
+  careNotes: z.string().trim().max(500).optional(), // care & behaviour
+  suncreamConsent: z.boolean().optional(),
+  firstAidConsent: z.boolean().optional(),
+  walkHomeConsent: z.boolean().optional(),
   // A SEND/EHCP plan, held by routes/childFiles.ts rather than inline: a real
   // EHCP is a multi-page scan and would blow Firestore's 1MB document cap.
   // Only the id and the filename live on the child.
@@ -209,6 +221,7 @@ my.post("/bookings", async (req, res) => {
   // "On behalf of": the operator authenticates, the FAMILY owns the booking.
   let familyEmail = email;
   let familyName = req.user?.name || email.split("@")[0];
+  let familyUid: string | null = req.user?.uid ?? null;
   let accountCreated = false;
   let passwordLink: string | null = null;
   const onBehalf = "onBehalfOf" in input ? input.onBehalfOf : undefined;
@@ -236,7 +249,7 @@ my.post("/bookings", async (req, res) => {
     // an email that already has an ActivityOS account gets THIS booking on
     // that account, never a second one.
     try {
-      await fbAuth.getUserByEmail(target.email);
+      familyUid = (await fbAuth.getUserByEmail(target.email)).uid;
     } catch {
       const created = await fbAuth.createUser({
         email: target.email,
@@ -245,6 +258,7 @@ my.post("/bookings", async (req, res) => {
         // in an inbox lives forever.
       });
       await db.collection("users").doc(created.uid).set({ email: target.email, role: "parent", chosen: true });
+      familyUid = created.uid;
       accountCreated = true;
       passwordLink = await fbAuth.generatePasswordResetLink(target.email).catch(() => null);
     }
@@ -318,20 +332,32 @@ my.post("/bookings", async (req, res) => {
       periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
     }
   }
-  // Ages the checkout didn't send come from the family's saved child
-  // profiles (matched by name; dob-derived when no stored age).
-  const missingAge = input.items.some((i) => i.age === undefined);
-  const ageOf = new Map<string, number>();
-  if (missingAge) {
-    const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+  // Resolve each item's child against the ACCOUNT's saved profiles (the
+  // caller for a parent booking, the family for an operator's onBehalfOf),
+  // so the booking carries a real childId — not a name we later guess from.
+  // childId (when the checkout sends one) is authoritative; name is the
+  // fallback for typed-in children.
+  const accountUid = familyUid; // parent = caller's uid, onBehalfOf = family's
+  const childById = new Map<string, { id: string; name: string; age?: number; dob?: string }>();
+  const childByName = new Map<string, { id: string; name: string; age?: number; dob?: string }>();
+  if (accountUid) {
+    const kids = await childrenCol.where("parentUid", "==", accountUid).get();
     for (const d of kids.docs) {
       const k = d.data() as { name: string; age?: number; dob?: string };
-      const age = k.age ?? ageFromDob(k.dob);
-      if (age !== undefined) ageOf.set(k.name.trim().toLowerCase(), age);
+      const rec = { id: d.id, name: k.name, age: k.age, dob: k.dob };
+      childById.set(d.id, rec);
+      childByName.set((k.name ?? "").trim().toLowerCase(), rec);
     }
   }
-  const itemAge = (i: { child: string; age?: number }) =>
-    i.age ?? ageOf.get(i.child.trim().toLowerCase()) ?? 0;
+  const resolveChild = (i: { child: string; childId?: string; age?: number }) => {
+    // A childId must belong to this account — never trust a foreign id.
+    const rec = (i.childId && childById.get(i.childId)) || childByName.get(i.child.trim().toLowerCase());
+    return {
+      childId: rec?.id,
+      name: rec?.name ?? i.child,
+      age: i.age ?? rec?.age ?? ageFromDob(rec?.dob) ?? 0,
+    };
+  };
 
   const needsAddons = input.items.some((i) => i.addons?.length);
   const libAddons = new Map<string, LibAddon>();
@@ -531,13 +557,14 @@ my.post("/bookings", async (req, res) => {
               })
               .join(", ");
         }
+        const rc = resolveChild(p.item);
         return {
           ...buildBooking(
             {
               booker: bookerName,
               email: familyEmail,
-              child: p.item.child,
-              age: itemAge(p.item),
+              child: rc.name,
+              age: rc.age,
               listing: listing.name,
               pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
               dates: block.name,
@@ -546,6 +573,7 @@ my.post("/bookings", async (req, res) => {
             },
             nextBid + i,
           ),
+          ...(rc.childId ? { childId: rc.childId } : {}),
           tenantId: listing.tenantId,
           blockId: blockSnap.id,
           seats: 1,
@@ -578,7 +606,8 @@ my.post("/bookings", async (req, res) => {
       emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
     }
     // Keep Customers & families current (one upsert per child, same family).
-    for (const b of bookings) void upsertCustomerFromBooking(listing.tenantId, b);
+    for (const b of bookings)
+      void upsertCustomerFromBooking(listing.tenantId, { ...b, uid: familyUid });
     // The provider's staff can now read the SEND plans of the children they've
     // just been given. Granted here rather than by the client, so a parent
     // can't widen access to a file by asking; and only for the tenant they
