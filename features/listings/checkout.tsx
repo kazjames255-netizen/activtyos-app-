@@ -179,7 +179,7 @@ function BackBtn({ tk, onClick, children, className = "" }: {
     </button>
   );
 }
-export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAdded, canSave = true }: {
+export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, onUnassignAll, onAdded, canSave = true, tenantId }: {
   d: WizardDraft; tk: CkTheme;
   /** False for an operator: these are someone else's children, and
    *  /api/my/children is the operator's own family. Edits stay on the booking
@@ -193,6 +193,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   onUnassignAll: (name: string) => void;
   /** Clears any "taken off this pass" marks, so a child added is on everything. */
   onAdded: (name: string) => void;
+  /** The listing's tenant, so a signed-out parent can read that provider's
+   *  public settings (child questions, char limits, DOB rule). */
+  tenantId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -207,7 +210,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // age. `d.runFrom` rather than today, matching ageProblem above: the age
   // that matters is the one they'll be on the first day they attend, and two
   // age rules disagreeing on the same screen would be indefensible.
-  const { questions: allQuestions, settings } = useTenantSettings();
+  const { questions: allQuestions, settings } = useTenantSettings(tenantId);
   // The form asks the "once" questions only. The every-booking ones are
   // rendered per child on the roster above, so listing them here too would
   // ask the same thing twice on the same screen.
@@ -624,11 +627,13 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     </>
   );
 }
-export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking }: {
+export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
   onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
   booking?: { busy: boolean; error: string | null };
+  /** The listing's tenant, for the signed-out parent's public settings read. */
+  tenantId?: string;
 }) {
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
@@ -645,7 +650,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const [ckStage, setCkStage] = useState<CkStage>(parentMode ? "who" : "parent");
   // The provider's own child questions, for the every-booking ones this stage
   // both asks and enforces.
-  const { questions: ckQuestions, settings: ckSettings } = useTenantSettings();
+  const { questions: ckQuestions, settings: ckSettings } = useTenantSettings(tenantId);
   // Settings arrive after first paint, so the state above starts on the
   // compiled-in default. Derive the one actually in force rather than
   // correcting the state afterwards: a booking must never be recorded against
@@ -978,7 +983,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {ckStage === "who" && (
         <>
           {(
-            <ChildrenPanel d={d} tk={tk} saved={savedFor} roster={roster} setRoster={setRoster} canSave={parentMode}
+            <ChildrenPanel d={d} tk={tk} tenantId={tenantId} saved={savedFor} roster={roster} setRoster={setRoster} canSave={parentMode}
               comingCount={(name) => b.basket.filter((x) => b.childrenOn(x.id).includes(name)).length}
                       onUnassignAll={(name) => b.basket.forEach((x) => { if (b.childrenOn(x.id).includes(name)) b.toggleChild(x.id, name); })}
               onAdded={(name) => b.clearRemovalsFor(name)}
@@ -1642,8 +1647,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // A parent's confirm actually books; the operator preview still just
           // shows the done screen until the operator flow is wired.
+          // For a voucher the scheme is part of the answer — a bookings list
+          // showing "voucher" with no scheme can't be reconciled against the
+          // money when it arrives. Fold it into the stored method so it's
+          // there even before the server learns the dedicated field (§Q).
+          const submitMethod =
+            method === "voucher"
+              ? chosenVoucher
+                ? `Childcare voucher — ${chosenVoucher.name}`
+                : "Childcare voucher"
+              : method;
           if (parentMode && onBook) onBook({
-            method, basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
+            method: submitMethod, basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
           });
@@ -1658,6 +1673,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
           // something that isn't going to happen.
           : grandTotal <= 0 ? (parentMode ? "Confirm booking" : "Create booking · nothing to collect")
+          // Paying by voucher happens on the scheme's website, not here — so
+          // the button confirms the booking, it doesn't take a payment.
+          : parentMode && method === "voucher" ? "Confirm booking"
           : parentMode ? `Confirm & pay ${money(grandTotal)}`
           : `Send payment link & create · ${money(grandTotal)}`}
       </button>}

@@ -622,7 +622,18 @@ export function useSettings(): SettingsState {
  * Bookings) rather than edit them. Falls back to the defaults on any error:
  * a parent must never be blocked from booking because a settings fetch failed.
  */
-export function useTenantSettings(): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
+/**
+ * Read-only settings for the screens that consume them.
+ *
+ * `tenantId` is for the signed-out booking page: a parent has no account, so
+ * the authed /api/library 401s them and the public slice has to be fetched by
+ * tenant instead. Operator screens omit it — they're always signed in — and
+ * fall straight through to the authed read.
+ *
+ * Falls back to the defaults on any error: a parent must never be blocked from
+ * booking because a settings fetch failed.
+ */
+export function useTenantSettings(tenantId?: string): { settings: TenantSettings; questions: ChildQuestion[]; ready: boolean } {
   const [state, setState] = useState<{ settings: TenantSettings; questions: ChildQuestion[]; ready: boolean }>({
     settings: DEFAULT_SETTINGS,
     questions: SEEDED_QUESTIONS,
@@ -631,20 +642,26 @@ export function useTenantSettings(): { settings: TenantSettings; questions: Chil
 
   useEffect(() => {
     let live = true;
-    apiGet<LibraryShape | null>("/api/library")
-      .then((lib) => {
-        if (!live) return;
-        setState({
-          settings: withDefaults(lib?.settings),
-          questions: lib?.childQuestions ?? SEEDED_QUESTIONS,
-          ready: true,
-        });
-      })
-      .catch(() => live && setState((s) => ({ ...s, ready: true })));
+    const apply = (lib: LibraryShape | null) => {
+      if (!live) return;
+      setState({
+        settings: withDefaults(lib?.settings),
+        questions: lib?.childQuestions ?? SEEDED_QUESTIONS,
+        ready: true,
+      });
+    };
+    const publicRead = () =>
+      tenantId
+        ? apiGet<LibraryShape | null>(`/api/public/library/${tenantId}`).then(apply, () => live && setState((s) => ({ ...s, ready: true })))
+        : (live && setState((s) => ({ ...s, ready: true })), Promise.resolve());
+
+    // Signed-in read first; a parent (401, or no token) falls back to the
+    // public slice keyed by the listing's tenant.
+    apiGet<LibraryShape | null>("/api/library").then(apply, () => void publicRead());
     return () => {
       live = false;
     };
-  }, []);
+  }, [tenantId]);
 
   return state;
 }

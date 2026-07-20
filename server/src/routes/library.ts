@@ -84,3 +84,59 @@ library.put("/", async (req, res) => {
   await ref.set(doc);
   res.json(doc);
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Public, read-only slice of a tenant's settings — for the signed-out
+// booking page.
+//
+// The parent booking flow needs the child questions, the voucher schemes
+// (with references — that's the whole point, they go and pay with them) and
+// the checkout toggles. A parent has no account, so /api/library above 401s
+// them. This serves only what the storefront legitimately shows a stranger,
+// keyed by the tenant id the public listing already carries.
+//
+// A denylist, not an allowlist, would leak the next provider-internal field
+// someone adds. So this hand-picks the parent-facing settings and drops the
+// rest — cancellationReasons in particular, which carries the operator's own
+// "Staffing" / "Venue unavailable" wording that isn't a stranger's business.
+//
+// Interim: the cleaner home for this is the /api/listings/:id payload, the
+// way categories are already embedded (see the backend handoff, §"anonymous
+// read"). This unblocks the front end without waiting for that.
+// ─────────────────────────────────────────────────────────────────────────
+
+const PUBLIC_SETTINGS_KEYS = [
+  "requireDob",
+  "collectGender",
+  "genderOptions",
+  "collectPhoto",
+  "askPhotoConsent",
+  "collectSend",
+  "collectSendPlan",
+  "collectionCheck",
+  "charLimits",
+  "voucherProviders",
+  "voucherHoldDays",
+  "voucherClearDays",
+  "voucherDueByDays",
+  "voucherWhenClose",
+] as const;
+
+export const libraryPublic = Router();
+
+// GET /api/public/library/:tenantId — no auth. Parent-facing settings only.
+libraryPublic.get("/:tenantId", async (req, res) => {
+  const { tenantId } = req.params;
+  if (!tenantId) {
+    res.status(400).json({ error: "tenantId required" });
+    return;
+  }
+  const snap = await db.collection("libraries").doc(tenantId).get();
+  const data = (snap.data() ?? {}) as Record<string, unknown>;
+  const src = (data.settings ?? {}) as Record<string, unknown>;
+
+  const settings: Record<string, unknown> = {};
+  for (const k of PUBLIC_SETTINGS_KEYS) if (k in src) settings[k] = src[k];
+
+  res.json({ settings, childQuestions: data.childQuestions ?? null });
+});

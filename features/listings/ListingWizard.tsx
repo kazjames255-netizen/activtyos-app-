@@ -494,6 +494,7 @@ async function uploadImages(arr: ListingImage[]): Promise<ListingImage[]> {
 export interface ServerListing extends Omit<Partial<WizardDraft>, "id"> {
   id: string;
   name: string;
+  tenantId?: string;
   tenantName?: string;
   passes: { name: string; price: number; days?: number }[];
   blocks?: { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean }[];
@@ -662,6 +663,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       addons={lib?.addons ?? []}
       theme={d.pageStyle ?? "playful"}
       brand={listing.tenantName}
+      tenantId={listing.tenantId}
       mode="parent"
       bookState={bookState}
       onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns)}
@@ -2041,7 +2043,7 @@ function myBrand() {
  * — so everyone gets the same starting gun on a popular run.
  */
 
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null } };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -2096,11 +2098,11 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   );
 }
 
-function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful" }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme;
+function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
   const b = useBooking(d, booking, weeks, blocks, mode);
-  const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState };
+  const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId };
   // Checkout is much shorter than the calendar it replaces, so without this the
   // card collapses and leaves you staring at whitespace. "nearest" nudges it
   // into view only if it isn't already — no jump to the top of the page.
@@ -2142,7 +2144,7 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
 
 
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
-function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState }: BookView) {
+function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId }: BookView) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
   const idle = { background: "#fff", color: INKp, borderColor: LINEp };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -2164,7 +2166,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
   if (b.stage === "checkout") return (
     <div className="overflow-hidden rounded-[26px] bg-white" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff", bar: `linear-gradient(120deg,${DEEP},${BLUE})`, barInk: "#fff" }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff", bar: `linear-gradient(120deg,${DEEP},${BLUE})`, barInk: "#fff" }} />
     </div>
   );
   return (
@@ -2317,7 +2319,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
 }
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
-function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf }: BookView & { surf: Surf }) {
+function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf, tenantId }: BookView & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#adb8ca";
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
@@ -2345,7 +2347,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: `linear-gradient(120deg,${EL},#0090ff)`, barInk: "#fff" }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: `linear-gradient(120deg,${EL},#0090ff)`, barInk: "#fff" }} />
     </div>
   );
   return (
@@ -2489,7 +2491,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   );
 }
 
-function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand }: {
+function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, tenantId }: {
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
   mode?: "operator" | "parent"; onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
@@ -2497,6 +2499,9 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   /** The provider's brand in the page header. Defaults to the signed-in
    * account (right for the operator's own preview, wrong for a parent). */
   brand?: string;
+  /** The listing's tenant, so a signed-out parent can read that provider's
+   *  public settings (vouchers, child questions). */
+  tenantId?: string;
 }) {
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
   const imgs = d.images;
@@ -2518,7 +2523,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
-  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} />;
+  const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
   const opens = useOpensAt(d.opensAt);
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand() };
 

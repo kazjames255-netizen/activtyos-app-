@@ -1800,3 +1800,25 @@ The row says so on screen when it's selected.
 enough, a booking starting today is refused, and an offered window is never
 shorter than a day. The same function should decide the email's deadline and
 anything that chases.
+
+
+### §Q — confirmed: voucher bookings DO reach the operator, but land as "Unpaid"
+
+Traced end to end. A parent's voucher booking posts to `/api/my/bookings` like
+any other, so it **does** appear in the operator's Bookings area. Two gaps, both
+server-side:
+
+1. **It lands as `pay: "Unpaid"`, not `"Awaiting voucher payment"`.** `my.ts:587`
+   sets `pay: onBehalf && placed ? "Invoice sent" : "Unpaid"` — nothing looks at
+   the method. So a voucher booking sits in the unpaid filter as if the parent
+   owes money directly. Judge on the method: a `method` starting "Childcare
+   voucher" → `"Awaiting voucher payment"`.
+
+2. **The scheme.** The front end now folds the chosen scheme into the method
+   string — the booking stores `method: "Childcare voucher — Edenred"` rather
+   than a bare `"voucher"`, so it's at least reconcilable today. A dedicated
+   `voucherScheme` field on the booking is still cleaner for filtering; the
+   value is already in the method string to migrate from.
+
+The button no longer says "Confirm & pay" for a voucher booking — they aren't
+paying on our page — it says "Confirm booking".
