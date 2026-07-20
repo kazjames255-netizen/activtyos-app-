@@ -1370,3 +1370,141 @@ half-day once the account exists.
   buttons. Attribution updated to "Contains OS data © Crown copyright".
 No key ever reaches the browser; the embed widget keeps working on other
 sites. Nothing left on this — restyle the map however you like.
+
+---
+
+## N — Provider-defined child questions (built, needs one server change)
+
+**What changed.** The six extra child fields you shipped — `dietary`, `swimming`,
+`careNotes`, `suncreamConsent`, `firstAidConsent`, `walkHomeConsent` — were my
+spec, and my spec was wrong. They assume every provider wants the same six.
+A swim school needs swim ability; a coding club doesn't and will wonder why
+it's on their form. Meanwhile the question they actually need — "which school
+run do they come from?" — can't be added at all.
+
+So they're now **provider-defined questions**, set in a new Setup & features
+screen, and five of the six are seeded as editable defaults so nothing changes
+under an existing provider. A provider can rename, reorder, hide, delete, or
+scope any of them, and add their own.
+
+**Nothing of yours needs deleting.** Your six fields still exist and still
+validate. They're simply no longer written to, because:
+
+### The one thing I need from you
+
+**Accept `answers` on the child record.**
+
+```ts
+answers: z.record(z.string().max(2_000)).optional()
+```
+
+A flat map, question id → answer as a string. That's it.
+
+I did **not** write answers into your six typed fields, deliberately:
+`swimming` is `z.enum(["none","weak","confident","strong"])` and the three
+consents are booleans. The moment a provider renames "Weak" to "Beginner" or
+adds a fifth option, the enum rejects a legitimate answer — and the enum being
+wrong is the whole reason these stopped being fixed columns. Strings survive
+renaming; enums don't.
+
+Each seeded question carries a `replaces` field naming the old column, purely
+so the mapping is documented if you ever want to migrate historic values.
+
+### Two smaller notes
+
+- **`careNotes` is now dead.** It asked the same thing as the built-in likes &
+  dislikes pair, so families would have written the same answer twice and staff
+  would have had to read both to be sure they had it. Nothing writes to it.
+  Drop it whenever suits.
+- **Storage.** Questions and settings live in `libraries/{tenantId}` under
+  `settings` and `childQuestions`, on the existing whitelist. No new
+  collection.
+
+### A bug I fixed in your library route
+
+`PUT /api/library` did `.set(doc)` — a whole-document replace, so **any key the
+caller left out was deleted**. Harmless while one screen owned the library and
+always sent all of it. The moment Setup started writing `settings` while the
+Listings screen kept sending only its own ten keys, saving a category would
+have silently wiped every setting.
+
+It's a read-modify-write now: keys present in the body replace their stored
+value wholesale, keys absent are left alone. I didn't use
+`.set(..., {merge:true})` because merge descends into nested maps, and removing
+an emoji from `emojis` would then never propagate.
+
+### Per-booking answers — the one thing I can't do alone
+
+A question can be set to "ask every booking" (for things that go stale — "any
+injuries this week?"). Today the new answer **replaces** the old one on the
+child record. Staff always read the current answer, which is the part that
+matters for safety, but there's no history: you can't see what was said in
+March alongside August.
+
+Per-booking history needs an `answers` map on the **booking** as well as the
+child. Not urgent, and no rush — but worth knowing the limitation exists before
+someone asks why the audit trail is missing.
+
+### Three more settings that need you before I can wire them
+
+The Setup screen stores these correctly and each one is marked "wiring
+pending" on screen, so nobody is misled. Nine of the twelve are mine to
+finish. These three aren't:
+
+1. **Gender options — `sex: z.enum(["boy","girl"])` (`my.ts:146`).**
+   A provider can now set their own list, and the shipped default includes
+   **"Prefer not to say"** — which your enum rejects today. That's my
+   inconsistency, not yours; I've left the checkout on Boy/Girl until this
+   moves. Suggest `z.string().max(40).optional()`, since any fixed set is
+   wrong for somebody. The client keeps `sexTint()` colours keyed on the first
+   two values and falls back to neutral for anything else.
+
+2. **Cancellation reasons — nothing accepts one.** `mutations.ts` writes an
+   automatic string ("Cancelled by provider.") and no route takes a `reason`
+   field. A provider wanting Illness / Weather / Staffing for reporting needs
+   `reason: z.string().max(120).optional()` on the cancel endpoints, stored
+   alongside the existing message. Cheap now, and there's nothing to migrate.
+
+3. **More than one emergency contact.** The child record holds a single
+   `emergencyName` / `emergencyPhone` pair. The setting goes up to four, which
+   needs those to become an array. Lowest priority of the three — say if
+   you'd rather I drop the setting back to one until it's worth doing.
+
+**Not on your list:** payment methods are already `z.string().min(1)`
+(`bookings.ts:98`), so that one is purely mine. Same for cancellation policy
+wording, new-listing defaults, the low-places threshold, the pipeline stage
+names and colours, and the repeat threshold — all client-side, all mine.
+
+### Update — eight of the twelve are wired now
+
+Since the note above I've wired everything that didn't need you:
+
+- **Payment methods** → the operator's method picker (`z.string()` already, so
+  nothing needed). Parents still see Card / Bank transfer / Cash: those route
+  to Stripe or don't, so they're rails, not labels.
+- **Pipeline stages and the repeat threshold** → the Families screen. Stage
+  keys stay fixed (the product has to know which is which); names and colours
+  are the provider's.
+- **Cancellation policy wording** → the listing builder's step 11.
+- **New-listing defaults** (capacity, running days, show-spaces) → applied
+  when a listing is created.
+- **Collection check** → off / PIN / password, including the wording and
+  keypad on the parent's field.
+- **Character limits** → both the checkout and the Families form.
+
+**Four still need you.** Three are the ones above (gender enum, cancellation
+reason field, multiple emergency contacts). The fourth turned up while wiring:
+
+4. **"Only N places left" threshold.** It has to live on the *listing*, not
+   on tenant settings, because the storefront is read anonymously — a parent
+   browsing has no token, so `/api/library` isn't readable to them and the
+   threshold would silently fall back to the default on the only screen it
+   matters on. Cheapest fix: accept `lowPlacesAt: z.number().int().min(0).max(50).optional()`
+   on the listing draft schema, same as any other draft field, and I'll stamp
+   it at creation from the provider's setting. Until then the row is marked
+   "not used yet" on screen.
+
+That anonymous-read constraint is worth remembering generally: **any setting
+that has to affect the public storefront needs to be denormalised onto the
+listing**, the way you already embed categories. Tenant settings only reach
+signed-in screens.

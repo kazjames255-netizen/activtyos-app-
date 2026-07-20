@@ -11,6 +11,7 @@ import * as blocksApi from "@/features/blocks/blocksApi";
 import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./format";
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
+import { useTenantSettings } from "@/lib/settings";
 import { CheckoutPanel } from "./checkout";
 import type { ChildProfile } from "./checkout";
 // Re-exported so existing importers don't have to care that these moved.
@@ -350,14 +351,27 @@ export function publishBlockers(d: WizardDraft, ticketCount: number): { step: nu
   return out;
 }
 
-export function emptyDraft(): WizardDraft {
+/**
+ * A brand-new listing.
+ *
+ * `defaults` comes from Setup & features. It's optional so the handful of
+ * callers that only need a shape (previews, tests) don't have to hold
+ * settings — those keep the compiled-in values, which are the same numbers
+ * the settings default to.
+ */
+export function emptyDraft(defaults?: {
+  defaultCapacity: number;
+  defaultRunningDays: number[];
+  showSpaces: boolean;
+  cancellationPolicies: string[];
+}): WizardDraft {
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
-    categoryIds: [], venueId: null, allowOutOfRange: false, maxAttendees: "60", capacityScope: "listing", showSpaces: true,
+    categoryIds: [], venueId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
-    runFrom: "", runTo: "", blockMode: "weekly", days: [1, 2, 3, 4, 5], datesOff: [], blockId: null,
+    runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
-    cancellation: CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
+    cancellation: defaults?.cancellationPolicies?.[0] ?? CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
   };
 }
 
@@ -1927,12 +1941,16 @@ function BookingOpens({ value, onChange }: { value: string; onChange: (v: string
 }
 
 function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  const { settings: wizSettings } = useTenantSettings();
   const vis: [WizardDraft["visibility"], string, string][] = [
     ["public", "Public", "Visible in search & browse"],
     ["hidden", "Hidden link", "Not searchable — anyone with the link can book · schools, HAF, private groups"],
   ];
   const book: [WizardDraft["bookingType"], string][] = [["auto", "Automatic approval"], ["manual", "Manual approval"]];
-  const policies = CANCELLATION_POLICIES;
+  // The provider's own wording, set in Setup & features. Falls back to the
+  // built-in list if they've emptied it — a policy step with nothing to pick
+  // is worse than one offering a sensible default.
+  const policies = wizSettings.cancellationPolicies.length ? wizSettings.cancellationPolicies : CANCELLATION_POLICIES;
   return (
     <div className="max-w-[720px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />

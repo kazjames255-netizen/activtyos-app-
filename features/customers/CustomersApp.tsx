@@ -9,6 +9,8 @@ import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
 import { HowItWorks } from "@/components/HowItWorks";
+import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
+import { QuestionFields } from "@/components/QuestionFields";
 
 /**
  * A child's age, worked out from their date of birth rather than stored.
@@ -82,6 +84,8 @@ interface Draft {
     emergencyPhone: string;
     sendPlanId: string;
     sendPlanName: string;
+    /** Answers to the provider's own questions, keyed by question id. */
+    answers: Record<string, string>;
   }[];
 }
 
@@ -107,7 +111,7 @@ type Stage = "lead" | "invited" | "customer" | "repeat";
  * twice is worth several who book once, and it's the only number here that
  * says whether they liked it.
  */
-const STAGES: { key: Stage; label: string; hint: string; colour: string }[] = [
+const STAGE_FALLBACK: { key: Stage; label: string; hint: string; colour: string }[] = [
   { key: "lead", label: "Lead", hint: "Enquired, never booked, not invited yet", colour: "#e22295" },
   { key: "invited", label: "Invited", hint: "Sent a sign-up link, hasn't booked yet", colour: "#2f6bd8" },
   { key: "customer", label: "Customer", hint: "Booked with you once", colour: "#15b364" },
@@ -232,6 +236,18 @@ const splitName = (name: string) => {
 };
 
 export function CustomersApp() {
+  // The provider's own child questions, set in Setup & features. Falls back to
+  // the defaults if the fetch fails — a settings blip must not hide fields
+  // that staff are relying on.
+  const { questions: childQuestions, settings } = useTenantSettings();
+  // The four stages are fixed — a family moves between them automatically, so
+  // the product has to know which is which — but their names and colours are
+  // the provider's, set in Setup & features. Anything they haven't named
+  // falls back to the built-in wording rather than rendering blank.
+  const STAGES = STAGE_FALLBACK.map((f) => {
+    const own = settings.pipelineStages.find((p) => p.id === f.key);
+    return own ? { ...f, label: own.label || f.label, hint: own.hint || f.hint, colour: own.colour || f.colour } : f;
+  });
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -296,10 +312,18 @@ export function CustomersApp() {
     if (!draft || !draft.firstName.trim()) return;
     // A child without a date of birth has no reliable age, and age is what
     // decides which group they're in. Named, so it's obvious which one.
-    const noDob = draft.children.filter((k) => k.name.trim() && !k.dob.trim());
+    //
+    // Whether it's compulsory is the provider's call in Setup — except that
+    // an age-gated question overrules them, since it can't be asked without
+    // an age. The message says which of the two is stopping them.
+    const dobRule = dobRequired(settings, childQuestions);
+    const noDob = dobRule.required ? draft.children.filter((k) => k.name.trim() && !k.dob.trim()) : [];
     if (noDob.length) {
+      const who = noDob.map((k) => k.name.trim()).join(", ");
       setError(
-        `Add a date of birth for ${noDob.map((k) => k.name.trim()).join(", ")} — their age is worked out from it, so a typed age would be wrong within a year.`,
+        dobRule.forcedBy.length && !settings.requireDob
+          ? `Add a date of birth for ${who} — “${dobRule.forcedBy[0].label}” is only asked about certain ages, and there's no age without one.`
+          : `Add a date of birth for ${who} — their age is worked out from it, so a typed age would be wrong within a year.`,
       );
       return;
     }
@@ -456,13 +480,17 @@ export function CustomersApp() {
         emergencyPhone: "",
         sendPlanId: k.sendPlanId ?? "",
         sendPlanName: k.sendPlanName ?? "",
+        answers: {},
       })),
     });
   };
 
   const stageOf = (c: Customer): Stage => {
     const st = stats[(c.email ?? "").trim().toLowerCase()];
-    if (st && st.n > 1) return "repeat";
+    // How many bookings make a family "repeat" is the provider's call — two is
+    // right for a holiday camp, but a weekly club where everyone books ten
+    // times a term would have nothing but repeats.
+    if (st && st.n >= settings.repeatAt) return "repeat";
     if (st && st.n > 0) return "customer";
     return c.invitedAt ? "invited" : "lead";
   };
@@ -687,6 +715,7 @@ export function CustomersApp() {
                           name: "", age: "", dob: "", allergies: "", medical: "", send: "",
                           collectionPassword: "", likes: "", dislikes: "", photoConsent: "",
                           emergencyName: "", emergencyPhone: "", sendPlanId: "", sendPlanName: "",
+                          answers: {},
                         },
                       ],
                     });
@@ -800,7 +829,7 @@ export function CustomersApp() {
                               ["emergencyPhone", "…and number", "07700 900123", 1],
                             ] as [keyof typeof CHILD_LIMITS, string, string, number][]
                           ).map(([f, label, ph, span]) => {
-                            const max = CHILD_LIMITS[f];
+                            const max = limitFor(settings, f, CHILD_LIMITS);
                             const left = max - String(k[f] ?? "").length;
                             return (
                               <div key={f} className={span === 2 ? "lg:col-span-2" : undefined}>
@@ -832,6 +861,21 @@ export function CustomersApp() {
                           })}
                         </div>
 
+                        {/* The provider's own questions, in the order they set
+                            in Setup. Rendered from the same list the parent
+                            answers at checkout — one question, one answer, two
+                            places to fill it in. */}
+                        <QuestionFields
+                          // No listing in hand here, so only the age rule
+                          // narrows the list — from the date of birth being
+                          // typed in the field above, so an age-gated question
+                          // appears the moment a real birthday is entered.
+                          questions={questionsFor(childQuestions, undefined, ageOn(k.dob, new Date().toISOString().slice(0, 10)))}
+                          answers={k.answers}
+                          onChange={(answers) => set({ answers })}
+                        />
+
+                        {settings.askPhotoConsent && (
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
                           <span className="text-[11px] font-bold">Photo consent</span>
                           {(
@@ -858,12 +902,14 @@ export function CustomersApp() {
                             {k.photoConsent ? "Will save to their profile" : "Not answered yet"}
                           </span>
                         </div>
+                        )}
 
                         {/* Your copy of a plan the family emailed you — read
                             by your staff, not shown back to the parent, who
                             has the original. Because it's yours and not a
                             second version of theirs, it carries none of the
                             "which one is true" risk. */}
+                        {settings.collectSend && settings.collectSendPlan && (
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
                           <span className="text-[11px] font-bold">SEND plan</span>
                           {k.sendPlanId ? (
@@ -912,6 +958,7 @@ export function CustomersApp() {
                             </>
                           )}
                         </div>
+                        )}
 
                         <div className="mt-2 flex flex-wrap gap-1">
                           <span className="rounded-full border border-dashed border-[var(--line)] px-2 py-[2px] text-[10.5px] text-[var(--ink-3)]">

@@ -27,6 +27,11 @@ const KEYS = [
   // the Locations tab rather than per listing. Without it here the PUT silently
   // dropped it and the operator's wording reverted on reload.
   "whereHeading",
+  // Setup & features (features/setup/SetupApp.tsx). `settings` is the flat bag
+  // of toggles, numbers and short lists; `childQuestions` is its own key
+  // because it is the largest and the one most likely to grow.
+  "settings",
+  "childQuestions",
 ] as const;
 
 const MAX_BYTES = 400_000; // well under Firestore's 1MB doc limit
@@ -54,7 +59,20 @@ library.put("/", async (req, res) => {
     res.status(400).json({ error: "Body must be an object" });
     return;
   }
-  const doc: Record<string, unknown> = { tenantId: auth.tenantId };
+  // Overlay onto what's already stored rather than replacing the document.
+  //
+  // This used to be a plain .set(), which deletes every key the caller leaves
+  // out. That was harmless while one screen owned the whole library and always
+  // sent all of it — but Setup & features now writes `settings` and
+  // `childQuestions` while the Listings screen still sends only its own ten
+  // keys, so saving a category would have silently wiped every setting.
+  //
+  // Read-modify-write rather than .set(..., {merge:true}): merge descends into
+  // nested maps, so removing an emoji from `emojis` would never propagate. A
+  // key that is present here still replaces its stored value wholesale.
+  const ref = db.collection("libraries").doc(auth.tenantId);
+  const existing = (await ref.get()).data() ?? {};
+  const doc: Record<string, unknown> = { ...existing, tenantId: auth.tenantId };
   for (const k of KEYS) if (k in body) doc[k] = body[k];
   const size = JSON.stringify(doc).length;
   if (size > MAX_BYTES) {
@@ -63,6 +81,6 @@ library.put("/", async (req, res) => {
     });
     return;
   }
-  await db.collection("libraries").doc(auth.tenantId).set(doc);
+  await ref.set(doc);
   res.json(doc);
 });

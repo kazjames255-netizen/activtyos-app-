@@ -7,6 +7,7 @@ import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
+import { SetupApp } from "@/features/setup/SetupApp";
 import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
@@ -25,9 +26,15 @@ import { TimetableApp } from "@/features/timetable/TimetableApp";
  *
  * Bookings is ONE component for all operator portals — the API scopes the
  * data to the signed-in account's tenant (see server/src/middleware/role.ts).
+ *
+ * Setup is the same: tenant settings are tenant settings whoever is signed in.
+ * Registering it for company and franchise also gives them their first real
+ * settings UI — the library editors live inside the freelancer Listings
+ * screen, so until now those two portals could edit none of it.
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType>>> = {
   company: {
+    setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
     timetable: TimetableApp,
@@ -38,6 +45,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     finance: PaymentsApp,
   },
   franchise: {
+    setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
     timetable: TimetableApp,
@@ -48,6 +56,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     finance: PaymentsApp,
   },
   freelancer: {
+    setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
     blocks: BlocksApp,
