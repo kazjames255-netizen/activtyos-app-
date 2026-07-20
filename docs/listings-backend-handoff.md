@@ -1311,3 +1311,23 @@ safeguarding block (a role check, not a UI hide); retention after a family's
 last booking; marketing unsubscribe token + suppression list (§L); the maps
 key (§B); and the shared seeded test family (§M) — happy to seed it, tell me
 if you'd rather.
+
+---
+
+# Ratios & groups — 20 July 2026 (Swagger v0.13.0)
+
+First "Run the day" feature, and the first thing to stand on the childId
+foundation. `GET /api/ratios?date=` gives each session its children (ages +
+SEND resolved from the child record), the **required staff** for the age mix,
+who's assigned, and the per-group breakdown; `PUT /api/ratios/:blockId/:date`
+saves named groups with their children and staff. Staff come from the tenant
+library (`library.staff`); the ratio table is UK camp defaults (1:8 for 5–7,
+1:10 for 8+, tighter under 5), mixed ages summed and rounded up. SEND is
+surfaced, never auto-applied. Realtime collection `ratioGroups`.
+
+A simple `RatiosApp` is registered on the `ratios` slug (all four operator/
+staff portals) — restyle at will; the maths and persistence are the point.
+
+Also fixed a data bug your Families page would have shown: a basket of N
+children created N duplicate customer rows (the per-booking upsert raced).
+Baskets now upsert the family once.

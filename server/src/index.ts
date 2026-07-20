@@ -21,6 +21,7 @@ import { images, uploads } from "./routes/uploads";
 import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
 import { registerRole } from "./routes/registerRole";
+import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
@@ -80,6 +81,7 @@ app.use("/api/block-bundles", blockBundles);
 app.use("/api/library", library);
 app.use("/api/payments", payments);
 app.use("/api/registers", registers);
+app.use("/api/ratios", ratios);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
 app.use("/api/my/files", childFiles);

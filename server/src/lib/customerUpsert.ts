@@ -53,3 +53,66 @@ export async function upsertCustomerFromBooking(
     console.error("[customers] upsert failed:", (e as Error).message);
   }
 }
+
+
+// One customer write for a whole basket (a basket is one family). Calling the
+// single-booking upsert per child races — N reads all see "no customer yet"
+// and create N duplicate rows. This merges all the basket's children into one
+// upsert instead.
+export async function upsertFamilyFromBasket(
+  tenantId: string,
+  family: {
+    booker: string;
+    email: string;
+    phone?: string;
+    uid?: string | null;
+    children: { name?: string; childId?: string; age?: number }[];
+  },
+): Promise<void> {
+  if (!family.email) return;
+  try {
+    const existing = await db
+      .collection("customers")
+      .where("tenantId", "==", tenantId)
+      .where("email", "==", family.email)
+      .limit(1)
+      .get();
+    // Distinct children (by childId, else name).
+    const seen = new Set<string>();
+    const kids = family.children
+      .filter((k) => (k.name ?? "").trim())
+      .map((k) => ({
+        name: (k.name ?? "").trim(),
+        ...(k.childId ? { childId: k.childId } : {}),
+        ...(k.age !== undefined ? { age: k.age } : {}),
+      }))
+      .filter((k) => {
+        const key = k.childId ?? k.name;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    if (existing.empty) {
+      await db.collection("customers").add({
+        tenantId,
+        name: family.booker,
+        email: family.email,
+        phone: family.phone ?? "",
+        ...(family.uid ? { uid: family.uid } : {}),
+        children: kids,
+      });
+      return;
+    }
+    const doc = existing.docs[0];
+    const children: { name?: string; childId?: string }[] = doc.data().children ?? [];
+    const missing = kids.filter(
+      (k) => !children.some((c) => (k.childId && c.childId === k.childId) || c.name === k.name),
+    );
+    const patch: Record<string, unknown> = {};
+    if (missing.length) patch.children = [...children, ...missing];
+    if (family.uid && doc.data().uid !== family.uid) patch.uid = family.uid;
+    if (Object.keys(patch).length) await doc.ref.update(patch);
+  } catch (e) {
+    console.error("[customers] family upsert failed:", (e as Error).message);
+  }
+}

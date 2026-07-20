@@ -1,10 +1,26 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.12.0
+  version: 0.13.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.13.0 — Ratios & groups (Run the day)
+
+    - **`GET /api/ratios?date=`** — every session the tenant runs that day
+      with its children (ages + SEND resolved from the child record),
+      the **required staff** for the age mix, the staff assigned, and the
+      group breakdown. Staff read; platform via `?tenantId=`.
+    - **`PUT /api/ratios/:blockId/:date`** — save the session's groups
+      `[{id, name, childIds, staffIds}]` (operators). One doc per session
+      (`ratioGroups/{blockId}_{date}`), realtime collection `ratioGroups`.
+    - Ratio maths: UK camp defaults (1:3 under-2 … 1:8 age 5–7, 1:10 age
+      8+); mixed ages summed as fractional demand and rounded up, floor of
+      one adult. SEND children are surfaced (`sendCount`), never auto-
+      adjusted — the operator's call. Staff come from the tenant library.
+    - **Bugfix:** a basket of N children created N duplicate customer rows
+      (the per-booking upsert raced). Baskets now upsert the family once.
 
     ## v0.12.0 — childId on bookings + the family safeguarding read (§I/§J/§K)
 
@@ -345,6 +361,8 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
+  - name: ratios
+    description: Staff:child ratios and grouping children per session
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1301,6 +1319,63 @@ paths:
         "200":
           description: "{status, paid} — bookings flip to Paid when succeeded"
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/ratios:
+    get:
+      tags: [ratios]
+      summary: The day's sessions with staffing ratios and groups
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, example: "2026-08-03" }
+        - name: tenantId
+          in: query
+          required: false
+          description: Platform accounts only
+          schema: { type: string }
+      responses:
+        "200":
+          description: "{date, bands, sessions[]} — each session: children, requiredStaff, staffAssigned, met, groups"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/ratios/{blockId}/{date}:
+    put:
+      tags: [ratios]
+      summary: Save a session's groups + staffing (operators)
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: date
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groups]
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      childIds: { type: array, items: { type: string } }
+                      staffIds: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/registers:

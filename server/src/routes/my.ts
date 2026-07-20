@@ -32,7 +32,7 @@ import {
 import { auth as fbAuth } from "../firebase";
 import { canWrite } from "../middleware/role";
 import { queuePositions, triggerWaitlist } from "../lib/waitlist";
-import { upsertCustomerFromBooking } from "../lib/customerUpsert";
+import { upsertFamilyFromBasket } from "../lib/customerUpsert";
 import { bookingDocId } from "./bookings";
 import { grantPlanAccess } from "./childFiles";
 
@@ -606,8 +606,13 @@ my.post("/bookings", async (req, res) => {
       emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
     }
     // Keep Customers & families current (one upsert per child, same family).
-    for (const b of bookings)
-      void upsertCustomerFromBooking(listing.tenantId, { ...b, uid: familyUid });
+    void upsertFamilyFromBasket(listing.tenantId, {
+      booker: bookerName,
+      email: familyEmail,
+      phone: onBehalf?.phone,
+      uid: familyUid,
+      children: bookings.map((b) => ({ name: b.child, childId: b.childId, age: b.age })),
+    });
     // The provider's staff can now read the SEND plans of the children they've
     // just been given. Granted here rather than by the client, so a parent
     // can't widen access to a file by asking; and only for the tenant they
