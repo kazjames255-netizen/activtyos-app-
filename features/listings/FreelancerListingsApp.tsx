@@ -7,6 +7,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { HowItWorks as HowItWorksPanel } from "@/components/HowItWorks";
+import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
@@ -254,7 +255,14 @@ export function FreelancerListingsApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, wizard, listings]);
 
-  const startNew = useCallback((venueId?: string) => setWizard({ draft: { ...emptyDraft(), venueId: venueId ?? null }, key: uid() }), []);
+  const { settings: fsSettings } = useTenantSettings();
+  // A new listing starts from the provider's own defaults (Setup & features)
+  // rather than the compiled-in ones — a tutoring provider whose classes hold
+  // eight shouldn't retype "60" on every listing.
+  const startNew = useCallback(
+    (venueId?: string) => setWizard({ draft: { ...emptyDraft(fsSettings), venueId: venueId ?? null }, key: uid() }),
+    [fsSettings],
+  );
 
   const drafts = useMemo(
     () => Object.entries(loadDrafts()).filter(([, dr]) => dr.id === null && (dr.title.trim() || dr.blockId || dr.description.trim())),

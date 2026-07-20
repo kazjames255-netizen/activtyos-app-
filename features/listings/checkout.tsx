@@ -17,6 +17,8 @@ import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
+import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor } from "@/lib/settings";
+import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
 import type { WizardDraft } from "./ListingWizard";
@@ -80,6 +82,9 @@ export type ChildProfile = {
   /** Required when adding a child; optional on the type because children saved
    *  before this was asked for don't have one. Those keep the neutral chip. */
   sex?: "boy" | "girl";
+  /** Answers to the provider's own child questions, keyed by question id.
+   *  Set in Setup & features — see lib/settings.ts. */
+  answers?: Record<string, string>;
 };
 
 /**
@@ -194,14 +199,33 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // fields with no visible edge at all.
   const inpStyle = { background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink };
   const problem = draft.name.trim() ? ageProblem(d, draft) : null;
+  // The provider's own questions, narrowed to this listing and this child's
+  // age. `d.runFrom` rather than today, matching ageProblem above: the age
+  // that matters is the one they'll be on the first day they attend, and two
+  // age rules disagreeing on the same screen would be indefensible.
+  const { questions: allQuestions, settings } = useTenantSettings();
+  // The form asks the "once" questions only. The every-booking ones are
+  // rendered per child on the roster above, so listing them here too would
+  // ask the same thing twice on the same screen.
+  const askQuestions = questionsFor(allQuestions, d.id ?? undefined, ageOn(draft.dob, d.runFrom)).filter(
+    (q) => !asksEveryBooking(q),
+  );
+  const needDob = dobRequired(settings, allQuestions).required;
+  const pinMode = settings.collectionCheck === "pin";
   // Name, date of birth and boy/girl are required: the age gate can't judge a
   // booking without a birthday, and registers are drawn up from both. All of
   // them at once, not the first — being sent back three times running for one
   // more field each time is the worst version of this.
   const missing = [
     !draft.name.trim() && "their name",
-    !draft.dob && "their date of birth",
-    !draft.sex && "boy or girl",
+    // Compulsory unless the provider has said otherwise — and never optional
+    // while a question is age-gated, because there is no age without it.
+    !draft.dob && needDob && "their date of birth",
+    !draft.sex && settings.collectGender && "boy or girl",
+    // A question the provider marked "must be answered" is as required as the
+    // built-ins, and joins the same one-shot list rather than being a second
+    // rejection after this one is satisfied.
+    ...unansweredRequired(askQuestions, draft.answers ?? {}).map((q) => q.label.toLowerCase()),
   ].filter(Boolean) as string[];
   // The button stays live and answers when pressed. A dead button tells you
   // nothing about why it is dead.
@@ -301,6 +325,38 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         </div>
       )}
 
+      {/* Questions the provider re-asks every booking.
+          These sit out here rather than inside "Edit details" on purpose: a
+          returning family never opens that form, so a question buried in it
+          would be asked once and never again — the exact opposite of what
+          "every booking" means. The answer refreshes the one on the child's
+          record, so staff always read the current one. */}
+      {roster.map((c, i) => {
+        const qs = questionsFor(allQuestions, d.id ?? undefined, ageOn(c.dob, d.runFrom)).filter(asksEveryBooking);
+        if (!qs.length) return null;
+        return (
+          <div key={`ask-${c.name}-${i}`} className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
+            <div className="text-[12px] font-bold" style={{ color: tk.ink }}>
+              About {c.name.trim() || "this child"}, for this booking
+            </div>
+            <QuestionFields
+              questions={qs}
+              answers={c.answers ?? {}}
+              onChange={(answers) => setRoster(roster.map((x, n) => (n === i ? { ...x, answers } : x)))}
+              tone={{
+                ink: tk.ink,
+                muted: tk.muted,
+                inputClass: inp,
+                inputStyle: inpStyle,
+                accent: tk.accent,
+                accentSoft: `${tk.accent}26`,
+                line: `${tk.ink}26`,
+              }}
+            />
+          </div>
+        );
+      })}
+
       {!open ? (
         <button type="button" onClick={() => setOpen(true)}
           className={`mt-2 w-full border border-dashed px-3 py-2 text-[12.5px] font-bold ${tk.round}`}
@@ -316,7 +372,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 placeholder="First and last name" className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
             </div>
             <div className="w-[150px]">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Date of birth <span style={{ color: "#f87171" }}>*</span></div>
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Date of birth {needDob ? <span style={{ color: "#f87171" }}>*</span> : <span className="font-normal">— optional</span>}</div>
               <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })}
                 className={inp} style={{ ...inpStyle, ...flag(!draft.dob) }} />
             </div>
@@ -330,6 +386,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {/* After the name, so it can be asked for by name, and so the two
               required fields lead the form. Asked with a reason attached —
               "add a photo" on its own is just another empty box. */}
+          {settings.collectPhoto && (
           <div className={`mt-2.5 flex items-center gap-3 border border-dashed p-2.5 ${tk.round}`}
             style={{ borderColor: `${tk.ink}33` }}>
             <button type="button" onClick={() => photoRef.current?.click()}
@@ -369,45 +426,50 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 if (data) setDraft({ ...draft, photo: data });
               }} />
           </div>
+          )}
 
           {/* Safeguarding, so it says plainly what it's for and when it's
               used. A parent who doesn't understand the field leaves it blank,
               and then nobody can collect but them. */}
+          {settings.collectionCheck !== "off" && (
           <div className={`mt-2.5 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}33` }}>
             <div className="mb-1 text-[11.5px] font-bold" style={{ color: tk.ink }}>
-              Collection password <span className="font-normal">— optional</span>
+              Collection {pinMode ? "PIN" : "password"} <span className="font-normal">— optional</span>
             </div>
             <div className="mb-1.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-              Pick a word only your family knows. If <b style={{ color: tk.ink }}>anyone other than you</b> comes
+              Pick {pinMode ? "a number" : "a word"} only your family knows. If <b style={{ color: tk.ink }}>anyone other than you</b> comes
               to collect {draft.name.trim() || "your child"} — a grandparent, a friend, another parent on the
               school run — staff will ask them for it, and won&rsquo;t hand over without it.
             </div>
             <input value={draft.collectionPassword ?? ""}
               maxLength={CHILD_LIMITS.collectionPassword}
               onChange={(e) => setDraft({ ...draft, collectionPassword: e.target.value })}
-              placeholder="e.g. Bluebell" className={inp} style={inpStyle} />
+              inputMode={pinMode ? "numeric" : undefined}
+              placeholder={pinMode ? "e.g. 4816" : "e.g. Bluebell"} className={inp} style={inpStyle} />
             <div className="mt-1 text-[10px] leading-[1.4]" style={{ color: tk.muted }}>
-              Staff can see this word, so don&rsquo;t use a password from anywhere else.
+              Staff can see this {pinMode ? "PIN" : "word"}, so don&rsquo;t use a password from anywhere else.
             </div>
           </div>
+          )}
 
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Allergies <span className="font-normal">— optional</span></div>
             <input value={draft.allergies ?? ""} onChange={(e) => setDraft({ ...draft, allergies: e.target.value })}
-              maxLength={CHILD_LIMITS.allergies} placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "allergies", CHILD_LIMITS)} placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Medical <span className="font-normal">— optional</span></div>
             <input value={draft.medical ?? ""} onChange={(e) => setDraft({ ...draft, medical: e.target.value })}
-              maxLength={CHILD_LIMITS.medical} placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "medical", CHILD_LIMITS)} placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
           </div>
+          {settings.collectSend && (
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>SEND / additional needs <span className="font-normal">— optional</span></div>
             <input value={draft.send ?? ""} onChange={(e) => setDraft({ ...draft, send: e.target.value })}
-              maxLength={CHILD_LIMITS.send} placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "send", CHILD_LIMITS)} placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
             {/* The upload only appears once they've told us there's something
                 to support — asking for a plan before that is asking twice. */}
-            {!!draft.send?.trim() && (
+            {settings.collectSendPlan && !!draft.send?.trim() && (
               <div className={`mt-2 border border-dashed p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}4d` }}>
                 <div className="text-[11px] font-bold" style={{ color: tk.ink }}>
                   SEND or EHCP plan <span className="font-normal">— optional</span>
@@ -468,6 +530,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               </div>
             )}
           </div>
+          )}
 
           <div className="mt-2">
             <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Likes &amp; dislikes <span className="font-normal">— optional</span></div>
@@ -475,13 +538,34 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
             </div>
             <div className="flex flex-wrap gap-2">
-              <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })} maxLength={CHILD_LIMITS.likes}
+              <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })} maxLength={limitFor(settings, "likes", CHILD_LIMITS)}
                 placeholder="Likes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
-              <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })} maxLength={CHILD_LIMITS.dislikes}
+              <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })} maxLength={limitFor(settings, "dislikes", CHILD_LIMITS)}
                 placeholder="Dislikes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
             </div>
           </div>
 
+          {/* The provider's own questions. Same list the operator sees on the
+              Families screen, so an answer given here is the answer there. */}
+          <QuestionFields
+            questions={askQuestions}
+            answers={draft.answers ?? {}}
+            onChange={(answers) => setDraft({ ...draft, answers })}
+            tone={{
+              ink: tk.ink,
+              muted: tk.muted,
+              inputClass: inp,
+              inputStyle: inpStyle,
+              accent: tk.accent,
+              accentSoft: `${tk.accent}26`,
+              line: `${tk.ink}26`,
+            }}
+          />
+
+          {/* A provider with no reason to ask can switch this off entirely in
+              Setup — asking a parent to sex their child for no purpose isn't
+              a neutral default. */}
+          {settings.collectGender && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
             <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Boy or girl? <span style={{ color: "#f87171" }}>*</span></span>
             {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => {
@@ -499,17 +583,23 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             })}
             <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>Used on the register and to colour their name in your list.</span>
           </div>
+          )}
 
-          <div className="mt-2.5 flex items-center gap-2">
-            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Happy for photos of them to be used?</span>
-            {[["Yes", true], ["No", false]].map(([l, v]) => (
-              <button key={String(l)} type="button" onClick={() => setDraft({ ...draft, photoConsent: v as boolean })}
-                className={`border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
-                style={draft.photoConsent === v
-                  ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
-                  : { borderColor: `${tk.ink}59`, color: tk.ink }}>{l as string}</button>
-            ))}
-          </div>
+          {/* Permission to USE photos of them — not the photo above, which is
+              for staff to recognise them. A provider who never publishes
+              photos shouldn't be asking families to rule on it. */}
+          {settings.askPhotoConsent && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Happy for photos of them to be used?</span>
+              {[["Yes", true], ["No", false]].map(([l, v]) => (
+                <button key={String(l)} type="button" onClick={() => setDraft({ ...draft, photoConsent: v as boolean })}
+                  className={`border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                  style={draft.photoConsent === v
+                    ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
+                    : { borderColor: `${tk.ink}59`, color: tk.ink }}>{l as string}</button>
+              ))}
+            </div>
+          )}
 
           {tried && missing.length > 0 && !problem && (
             <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
@@ -538,7 +628,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 }) {
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
-  const [method, setMethod] = useState<string>(parentMode ? "card" : PAY_METHODS[0]);
+  // The operator's method list is the provider's own (Setup & features); the
+  // parent's three are NOT, because "card" routes to Stripe and "bank" does
+  // not — those are payment rails, not labels a provider can rename.
+  const [rawMethod, setMethod] = useState<string>(parentMode ? "card" : PAY_METHODS[0]);
   // Two stages. Sorting out who's on which pass and picking everyone's lunches
   // at the same time is two jobs on one screen; the first has to be right
   // before the second even makes sense.
@@ -546,6 +639,16 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // with one stage in front of it: whose booking this is. A parent already is
   // the parent, so they start at "who".
   const [ckStage, setCkStage] = useState<CkStage>(parentMode ? "who" : "parent");
+  // The provider's own child questions, for the every-booking ones this stage
+  // both asks and enforces.
+  const { questions: ckQuestions, settings: ckSettings } = useTenantSettings();
+  // Settings arrive after first paint, so the state above starts on the
+  // compiled-in default. Derive the one actually in force rather than
+  // correcting the state afterwards: a booking must never be recorded against
+  // a method the provider has removed, and there's no moment where the two
+  // disagree if it's computed.
+  const payList: readonly string[] = ckSettings.payMethods.length ? ckSettings.payMethods : PAY_METHODS;
+  const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
   // see. Restored on the way out, including if the tab closes mid-booking.
@@ -1036,7 +1139,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "who" && (() => {
-        const ready = roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0;
+        // A question the provider marked "must be answered" and set to every
+        // booking is asked on this screen, after a child has been added — so
+        // the child form can't enforce it and this step has to. Named, so the
+        // parent isn't hunting a blank box down the page.
+        const outstanding = roster.flatMap((c) =>
+          unansweredRequired(
+            questionsFor(ckQuestions, d.id ?? undefined, ageOn(c.dob, d.runFrom)).filter(asksEveryBooking),
+            c.answers ?? {},
+          ).map((q) => ({ who: c.name.trim() || "this child", label: q.label })),
+        );
+        const ready =
+          roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && outstanding.length === 0;
         const next = "Next";
         return (
           <>
@@ -1064,6 +1178,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               {roster.length === 0 ? "Add a child first"
                 : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
                 : unassigned > 0 || shortPasses.length > 0 ? "Put a child on every pass"
+                : outstanding.length > 0 ? `Answer “${outstanding[0].label}” for ${outstanding[0].who}`
                 : next}
             </button>
             <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">Back to dates</BackBtn>
@@ -1361,7 +1476,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }}>
             {(parentMode
               ? [["card", "Card"], ["bank", "Bank transfer"], ["cash", "Cash on the day"]]
-              : PAY_METHODS.map((m) => [m, m])
+              : payList.map((m) => [m, m])
             ).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           {!parentMode && (
