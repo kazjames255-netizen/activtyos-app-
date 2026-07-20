@@ -12,6 +12,9 @@ import {
   money,
   payLabel,
   payTone,
+  bookedOn,
+  byNewest,
+  rangeDays,
   runsOn,
   sessionCount,
   statusTone,
@@ -19,12 +22,29 @@ import {
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { ExportWizard } from "./ExportWizard";
+import { HowItWorks } from "@/components/HowItWorks";
 
 /**
  * The list. With a booking open it becomes the left rail of a split view:
  * same filters and search, rows compressed to a name, an activity and an
  * amount, because the detail beside it is showing everything else.
  */
+/** "today", "yesterday", or "12 Jul" — the shape you'd say out loud. */
+function prettyBookedOn(b: { createdAt?: string }): string {
+  const d = bookedOn(b as never);
+  if (!d) return "";
+  const today = new Date().toISOString().slice(0, 10);
+  const y = new Date();
+  y.setUTCDate(y.getUTCDate() - 1);
+  if (d === today) return "today";
+  if (d === y.toISOString().slice(0, 10)) return "yesterday";
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
 export function BookingsList({ compact = false }: { compact?: boolean }) {
   const bookings = useBookingsStore((s) => s.bookings);
   const filter = useBookingsStore((s) => s.filter);
@@ -44,20 +64,31 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   // while working, not a view worth remembering between visits.
   const [listing, setListing] = useState("");
   const [day, setDay] = useState("");
+  const [range, setRange] = useState<"" | "today" | "yesterday" | "week">("");
   const [exporting, setExporting] = useState(false);
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
-  const list = bookings.filter(
-    (b) =>
-      matchesFilter(b, filter) &&
-      matchesSearch(b, query) &&
-      (!listing || b.listing === listing) &&
-      runsOn(b, day),
-  );
+  const bounds = range ? rangeDays(range) : null;
+  const list = bookings
+    .filter(
+      (b) =>
+        matchesFilter(b, filter) &&
+        matchesSearch(b, query) &&
+        (!listing || b.listing === listing) &&
+        (!bounds || (bookedOn(b) >= bounds.from && bookedOn(b) <= bounds.to)) &&
+        runsOn(b, day),
+    )
+    // Newest first, always — the one that just came in is the one you haven't
+    // seen. Sorted here rather than relying on whatever order the API returns.
+    .sort(byNewest);
 
   // Counts come from what the status tab and search already left, so a
   // listing showing "(3)" means three you can actually get to.
   const inScope = bookings.filter((b) => matchesFilter(b, filter) && matchesSearch(b, query));
+  // Anything taken before bookings recorded a date. A range filter can't judge
+  // these, so it says how many it had to leave out rather than pretending the
+  // answer is "none".
+  const undated = inScope.filter((b) => !b.createdAt).length;
   const listingOpts = [...new Set(inScope.map((b) => b.listing).filter(Boolean))]
     .sort()
     .map((name) => ({ name, n: inScope.filter((b) => b.listing === name).length }));
@@ -72,7 +103,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             Bookings
           </h3>
           <div className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {bookings.length} bookings · one place for approvals, waitlist, payments, refunds &
+            {bookings.length} bookings · newest first · approvals, waitlist, payments, refunds and
             manual bookings
           </div>
         </div>
@@ -89,6 +120,24 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           </Button>
         </div>
       </div>
+      )}
+
+      {!compact && (
+        <HowItWorks
+          video="Approving, chasing an unpaid booking, taking one over the phone, cancelling and refunding."
+          minutes="3 min"
+        >
+          <p className="mb-2">
+            Every booking you&rsquo;ve taken, however it came in. The tabs are the jobs:{" "}
+            <b className="text-[var(--ink-2)]">Approval needed</b> waits on you,{" "}
+            <b className="text-[var(--ink-2)]">Unpaid / invoiced</b> is money owed, and{" "}
+            <b className="text-[var(--ink-2)]">Waitlisted</b> is who&rsquo;s queuing for a place.
+          </p>
+          <p>
+            Open one to approve, mark it paid, move a day, cancel or refund. <b>Take a booking</b>{" "}
+            does the same as a parent&rsquo;s checkout, for a phone booking.
+          </p>
+        </HowItWorks>
       )}
 
       {/* Filter chips */}
@@ -136,11 +185,39 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               onChange={setListing}
               title="Filter by listing"
               options={[
-                ["", "Listing"],
+                ["", "All listings"],
                 ...listingOpts.map((l) => [l.name, `${l.name} (${l.n})`] as [string, string]),
               ]}
             />
           </Pill>
+
+          {/* When the booking was TAKEN, not when the child is in — that's
+              what "anything come in yesterday?" means. Attendance by date is
+              the "On this day" picker beside it, and the register. */}
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">
+            Booked
+          </span>
+          {(
+            [
+              ["today", "Today"],
+              ["yesterday", "Yesterday"],
+              ["week", "Last 7 days"],
+            ] as ["today" | "yesterday" | "week", string][]
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setRange(range === k ? "" : k)}
+              className="h-8 rounded-full border px-3 text-[12.5px] font-semibold transition-colors"
+              style={
+                range === k
+                  ? { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+                  : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink)" }
+              }
+            >
+              {label}
+            </button>
+          ))}
 
           <Pill active={!!day} onClear={() => setDay("")}>
             <span
@@ -158,16 +235,22 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             />
           </Pill>
 
-          {(listing || day) && (
+          {(listing || day || range) && (
             <>
               <span className="text-[11.5px] text-[var(--ink-3)]">
                 {list.length} of {inScope.length}
+                {range && undated > 0 && (
+                  <span title="Bookings taken before we started recording the date can't answer this">
+                    {" "}· {undated} undated
+                  </span>
+                )}
               </span>
               <button
                 type="button"
                 onClick={() => {
                   setListing("");
                   setDay("");
+                  setRange("");
                 }}
                 className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline"
               >
@@ -291,7 +374,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     {kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}
                   </span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">
-                    Booked by {b.booker} · {b.listing} · {b.pass}
+                    {/* On the row, not behind a click — "when did this come
+                        in" is the first thing asked of a bookings list. */}
+                    {b.createdAt ? `Booked ${prettyBookedOn(b)} · ` : ""}
+                    by {b.booker} · {b.listing} · {b.pass}
                   </span>
                 </span>
 

@@ -73,18 +73,21 @@ function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: nu
             {kid.dob ? ` · ${kid.dob}` : ""}
           </div>
         </div>
-        <button
-          onClick={() => cancelChild(booking.ref, ki)}
-          className="cursor-pointer whitespace-nowrap text-[11px] font-bold text-[var(--red)]"
-        >
-          Cancel place
-        </button>
+        {active.length > 1 && (
+          <button
+            onClick={() => cancelChild(booking.ref, ki)}
+            title={`Cancel all ${active.length} of ${kid.name || "this child"}'s days at once`}
+            className="cursor-pointer whitespace-nowrap text-[11px] font-bold text-[var(--red)]"
+          >
+            Cancel all {active.length} days
+          </button>
+        )}
       </div>
 
       {kid.dates && kid.dates.length > 0 && (
         <div className="mt-2.5">
           <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.03em] text-[var(--ink-3)]">
-            {active.length} of {kid.dates.length} days · change or cancel any date
+            {active.length} of {kid.dates.length} days · move or cancel any of them
           </div>
           <div>
             {kid.dates.map((dt) => {
@@ -105,17 +108,21 @@ function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: nu
                 <div key={dt}>
                   <div className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-[5px] text-[12px]">
                     <span className="flex-1">{dt}</span>
+                    {/* "Move" and not "Change": nothing is cancelled and no
+                        money moves — they still come, on another day. */}
                     <button
                       onClick={() => changeDay(booking.ref, ki, dt)}
+                      title="Keep the place, move it to another date"
                       className="cursor-pointer text-[11px] font-bold text-[var(--brand)]"
                     >
-                      Change
+                      Move
                     </button>
                     <button
                       onClick={() => cancelDay(booking.ref, ki, dt)}
+                      title="Cancel this one day and refund it"
                       className="cursor-pointer text-[11px] font-bold text-[var(--red)]"
                     >
-                      Cancel
+                      Cancel this day
                     </button>
                   </div>
                   {changing && (
@@ -242,6 +249,30 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             </h3>
             <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
               Booking ref <b className="text-[var(--ink-2)]">{b.ref}</b> · ID {b.bid}
+            </div>
+            {/* When it came in — the question you ask before "and what did
+                they book". Date and time, because two bookings on the same
+                day are told apart by the clock. */}
+            <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
+              {b.createdAt ? (
+                <>
+                  Booked{" "}
+                  <b className="text-[var(--ink-2)]">
+                    {new Date(b.createdAt).toLocaleString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </b>
+                </>
+              ) : (
+                <span title="Bookings taken before the date was recorded">
+                  Booked date not recorded
+                </span>
+              )}
             </div>
           </div>
         </div>

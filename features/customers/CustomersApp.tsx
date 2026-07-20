@@ -7,7 +7,19 @@ import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
-import { CHILD_LIMITS } from "@/features/listings/checkout";
+import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
+import { HowItWorks } from "@/components/HowItWorks";
+
+/**
+ * A child's age, worked out from their date of birth rather than stored.
+ *
+ * A typed age is right for a year and wrong for ever after — a five-year-old
+ * entered in 2026 is still five in 2031, on a register used to check they're
+ * in the right group. Date of birth is the fact; age is a view of it. The
+ * stored `age` is only a fallback for records that predate this.
+ */
+const ageOf = (c: { dob?: string; age?: number }): number | null =>
+  ageOn(c.dob, new Date().toISOString().slice(0, 10)) ?? (c.age ?? null);
 import { FamiliesExport, type FamilyRow } from "./FamiliesExport";
 import type { Booking } from "@/features/bookings/types";
 
@@ -66,7 +78,8 @@ interface Draft {
     likes: string;
     dislikes: string;
     photoConsent: "" | "yes" | "no";
-    emergencyContact: string;
+    emergencyName: string;
+    emergencyPhone: string;
     sendPlanId: string;
     sendPlanName: string;
   }[];
@@ -196,11 +209,18 @@ const KID_TINTS = ["#2f6bd8", "#6a4fd0", "#0b8a4b", "#e22295", "#0ea5e9"];
 const childKey = (familyId: string, name: string) => `${familyId}::${name}`;
 
 /** One line of a child's detail. Declared out here, not inside render. */
-function Row({ label, value }: { label: string; value?: string }) {
+function Row({ label, value, wide }: { label: string; value?: string; wide?: boolean }) {
+  const v = value?.trim();
   return (
-    <div className="flex gap-2">
-      <span className="w-[120px] flex-none text-[var(--ink-3)]">{label}</span>
-      <span className="min-w-0 flex-1 font-semibold">{value?.trim() ? value : "—"}</span>
+    <div className={wide ? "sm:col-span-2" : undefined}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">
+        {label}
+      </div>
+      {/* Stacked, not label-beside-value: an email in a half-width column
+          broke mid-address and wrapped under the next label. */}
+      <div className="break-words text-[12px] font-semibold" title={v || undefined}>
+        {v || "—"}
+      </div>
     </div>
   );
 }
@@ -274,6 +294,15 @@ export function CustomersApp() {
 
   async function save(sendInvite: boolean) {
     if (!draft || !draft.firstName.trim()) return;
+    // A child without a date of birth has no reliable age, and age is what
+    // decides which group they're in. Named, so it's obvious which one.
+    const noDob = draft.children.filter((k) => k.name.trim() && !k.dob.trim());
+    if (noDob.length) {
+      setError(
+        `Add a date of birth for ${noDob.map((k) => k.name.trim()).join(", ")} — their age is worked out from it, so a typed age would be wrong within a year.`,
+      );
+      return;
+    }
     setBusy(true);
     setError(null);
     // `name` stays the composite because every other screen reads it — the
@@ -299,8 +328,9 @@ export function CustomersApp() {
         .filter((k) => k.name.trim())
         .map((k) => ({
           name: k.name.trim(),
-          ...(k.age.trim() ? { age: parseInt(k.age, 10) || 0 } : {}),
-          ...(k.dob.trim() ? { dob: k.dob.trim() } : {}),
+          // Age isn't written when there's a date of birth: two facts that can
+          // disagree, one of which rots. Kept only for records with no dob.
+          ...(k.dob.trim() ? { dob: k.dob.trim() } : k.age.trim() ? { age: parseInt(k.age, 10) || 0 } : {}),
           ...(k.sendPlanId ? { sendPlanId: k.sendPlanId, sendPlanName: k.sendPlanName } : {}),
         })),
     };
@@ -332,7 +362,7 @@ export function CustomersApp() {
         .filter(
           (k) =>
             k.name.trim() &&
-            (k.allergies || k.medical || k.send || k.collectionPassword || k.likes || k.dislikes || k.photoConsent || k.emergencyContact),
+            (k.allergies || k.medical || k.send || k.collectionPassword || k.likes || k.dislikes || k.photoConsent || k.emergencyName || k.emergencyPhone),
         )
         .map((k) => ({
           name: k.name.trim(),
@@ -344,7 +374,8 @@ export function CustomersApp() {
           ...(k.likes.trim() ? { likes: k.likes.trim() } : {}),
           ...(k.dislikes.trim() ? { dislikes: k.dislikes.trim() } : {}),
           ...(k.photoConsent ? { photoConsent: k.photoConsent === "yes" } : {}),
-          ...(k.emergencyContact.trim() ? { emergencyContact: k.emergencyContact.trim() } : {}),
+          ...(k.emergencyName.trim() ? { emergencyName: k.emergencyName.trim() } : {}),
+          ...(k.emergencyPhone.trim() ? { emergencyPhone: k.emergencyPhone.trim() } : {}),
         }));
       if (detail.length) {
         try {
@@ -421,7 +452,8 @@ export function CustomersApp() {
         likes: "",
         dislikes: "",
         photoConsent: "",
-        emergencyContact: "",
+        emergencyName: "",
+        emergencyPhone: "",
         sendPlanId: k.sendPlanId ?? "",
         sendPlanName: k.sendPlanName ?? "",
       })),
@@ -507,33 +539,20 @@ export function CustomersApp() {
           )}
         </div>
       </div>
-      {/* Folded away by default, same as the Listings tab: useful the first
-          time, in the way every time after. */}
-      <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
-          <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-          <span>ℹ️ How it works</span>
-        </summary>
-        <div className="max-w-[760px] px-3.5 pb-3.5 pl-8 text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
-          <p className="mb-2">
-            Everyone who has enquired or booked, and where each of them has got to. Bookings
-            add and update people on their own — you never type a family in after they&rsquo;ve
-            booked.
-          </p>
-          <p className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
-            <b>Add a family when someone rings.</b>{" "}
-            Someone rings asking what&rsquo;s on: take their name, email and where they are, and
-            send them a sign-up link. They land in their own area with every live listing and its
-            dates, already registered — so they can book themselves at midnight without ringing
-            you back.
-          </p>
-          <p className="m-0">
-            It&rsquo;s also your marketing list. Tag a family with the location they asked about
-            and a campaign can go to everyone interested in that site; the consent tick records
-            who agreed to hear from you.
-          </p>
-        </div>
-      </details>
+      <HowItWorks
+        video="Adding a family from a phone call, sending the sign-up link, and what each pipeline stage means."
+        minutes="2 min"
+      >
+        <p className="mb-2">
+          Everyone who has enquired or booked, and where each of them has got to. Bookings add
+          people on their own — you never type a family in after they&rsquo;ve booked.
+        </p>
+        <p className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
+          <b>Add a family when someone rings.</b> Take their name and email, send a sign-up link,
+          and they land in their own area with every live listing — so they can book themselves
+          without ringing back.
+        </p>
+      </HowItWorks>
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">
@@ -649,7 +668,7 @@ export function CustomersApp() {
                           {k.name.trim().split(" ")[0] || "New child"}
                         </span>
                         <span className="block text-[10.5px] text-[var(--ink-3)]">
-                          {k.age ? `${k.age}` : "age —"}
+                          {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? "age —"}
                           {on ? " · editing" : ""}
                         </span>
                       </span>
@@ -667,7 +686,7 @@ export function CustomersApp() {
                         {
                           name: "", age: "", dob: "", allergies: "", medical: "", send: "",
                           collectionPassword: "", likes: "", dislikes: "", photoConsent: "",
-                          emergencyContact: "", sendPlanId: "", sendPlanName: "",
+                          emergencyName: "", emergencyPhone: "", sendPlanId: "", sendPlanName: "",
                         },
                       ],
                     });
@@ -735,12 +754,20 @@ export function CustomersApp() {
                           <Input value={k.name} placeholder="First and last name" onChange={(e) => set({ name: e.target.value })} className="w-full" />
                         </div>
                         <div>
-                          <FieldLabel>Age</FieldLabel>
-                          <Input value={k.age} type="number" placeholder="—" onChange={(e) => set({ age: e.target.value })} className="w-full" />
+                          <FieldLabel>
+                            Date of birth <span style={{ color: "var(--red,#e21d27)" }}>*</span>
+                          </FieldLabel>
+                          <Input value={k.dob} type="date" onChange={(e) => set({ dob: e.target.value })} className="w-full" />
                         </div>
                         <div>
-                          <FieldLabel>Date of birth</FieldLabel>
-                          <Input value={k.dob} type="date" onChange={(e) => set({ dob: e.target.value })} className="w-full" />
+                          <FieldLabel>Age</FieldLabel>
+                          {/* Worked out, not typed — see ageOf. */}
+                          <div className="flex h-[34px] items-center rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">
+                            {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? "—"}
+                            <span className="ml-1.5 text-[10.5px] font-normal text-[var(--ink-3)]">
+                              {k.dob ? "from date of birth" : "add a date of birth"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -761,19 +788,22 @@ export function CustomersApp() {
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                           {(
                             [
-                              ["allergies", "Allergies", "Nuts, dairy…"],
-                              ["medical", "Medical", "Asthma inhaler…"],
-                              ["send", "SEND / additional needs", "Autism, 1:1 support…"],
-                              ["collectionPassword", "Collection password", "e.g. Bluebell"],
-                              ["likes", "Likes", "Football, drawing"],
-                              ["dislikes", "Dislikes", "Loud rooms"],
-                              ["emergencyContact", "Emergency contact", "Aunt Priya · 07700 900123"],
-                            ] as [keyof typeof CHILD_LIMITS, string, string][]
-                          ).map(([f, label, ph]) => {
+                              // The wide ones get two columns: 140 characters
+                              // in a quarter-width box is a keyhole.
+                              ["allergies", "Allergies", "Nuts, dairy…", 2],
+                              ["medical", "Medical", "Asthma inhaler…", 2],
+                              ["send", "SEND / additional needs", "Autism, 1:1 support…", 2],
+                              ["collectionPassword", "Collection password", "e.g. Bluebell", 1],
+                              ["likes", "Likes", "Football, drawing", 1],
+                              ["dislikes", "Dislikes", "Loud rooms", 1],
+                              ["emergencyName", "Emergency contact — name", "Aunt Priya", 1],
+                              ["emergencyPhone", "…and number", "07700 900123", 1],
+                            ] as [keyof typeof CHILD_LIMITS, string, string, number][]
+                          ).map(([f, label, ph, span]) => {
                             const max = CHILD_LIMITS[f];
                             const left = max - String(k[f] ?? "").length;
                             return (
-                              <div key={f}>
+                              <div key={f} className={span === 2 ? "lg:col-span-2" : undefined}>
                                 <FieldLabel>
                                   {label}
                                   {/* Only once it's nearly full — a counter on
@@ -791,6 +821,9 @@ export function CustomersApp() {
                                   value={k[f]}
                                   maxLength={max}
                                   placeholder={ph}
+                                  // Hovering shows the whole thing when it's
+                                  // longer than the box.
+                                  title={k[f] || undefined}
                                   onChange={(e) => set({ [f]: e.target.value })}
                                   className="w-full"
                                 />
@@ -897,10 +930,10 @@ export function CustomersApp() {
               )}
 
               <div className="mt-1.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-                Name and age are your copy. Everything in the tinted panel is the family&rsquo;s
-                record — <b>either of you can fill it in</b>, and it writes to their profile so
-                there&rsquo;s only ever one version. They need an account first: send them a
-                sign-up link and it&rsquo;ll save.
+                Your list of children is built from their bookings. <b>Anything you type here
+                saves to the family&rsquo;s own record too</b>, so you and the parent are looking at
+                the same details — and either of you can fill any of it in. They need an account
+                for that: send a sign-up link if they haven&rsquo;t got one.
               </div>
             </div>
           )}
@@ -1029,7 +1062,7 @@ export function CustomersApp() {
               value={loc}
               onChange={setLoc}
               title="Filter by location"
-              options={[["", "Location"], ...venues.map((v) => [v.id, v.name] as [string, string])]}
+              options={[["", "All locations"], ...venues.map((v) => [v.id, v.name] as [string, string])]}
             />
           </Pill>
         )}
@@ -1139,8 +1172,8 @@ export function CustomersApp() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-1.5">
                       <span className="truncate text-[14px] font-extrabold">{k.name}</span>
-                      {k.age !== undefined && (
-                        <span className="text-[11.5px] text-[var(--ink-3)]">age {k.age}</span>
+                      {ageOf(k) !== null && (
+                        <span className="text-[11.5px] text-[var(--ink-3)]">age {ageOf(k)}</span>
                       )}
                     </div>
                     <div className="truncate text-[11.5px] text-[var(--ink-3)]">
@@ -1164,13 +1197,14 @@ export function CustomersApp() {
 
                 {key === openKid && (
                   <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3 pl-5">
-                    <div className="grid gap-x-4 gap-y-1.5 text-[12px] sm:grid-cols-2">
+                    <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
                       <Row label="Date of birth" value={k.dob} />
-                      <Row label="Age" value={k.age !== undefined ? String(k.age) : ""} />
+                      <Row label="Age" value={ageOf(k) !== null ? String(ageOf(k)) : ""} />
                       <Row label="Family" value={k.family.name} />
-                      <Row label="Contact" value={[k.family.email, k.family.phone].filter(Boolean).join(" · ")} />
-                      <Row label="Location" value={k.family.locationName} />
                       <Row label="Stage" value={st.label} />
+                      <Row label="Email" value={k.family.email} wide />
+                      <Row label="Phone" value={k.family.phone} />
+                      <Row label="Location" value={k.family.locationName} />
                     </div>
 
                     {/* Named rather than omitted. A blank allergies line reads
@@ -1279,7 +1313,7 @@ export function CustomersApp() {
                             style={{ borderColor: `${tint}44`, background: `${tint}12`, color: "var(--ink-2)" }}
                           >
                             {k.name}
-                            {k.age !== undefined ? ` · ${k.age}` : ""}
+                            {ageOf(k) !== null ? ` · ${ageOf(k)}` : ""}
                           </button>
                         ))
                       )}

@@ -142,6 +142,38 @@ export function sessionIsoDates(b: Booking): string[] {
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
+/**
+ * Newest first — the order a provider wants on landing, because the booking
+ * that just came in is the one they haven't seen.
+ *
+ * By `createdAt` where there is one, falling back to the reference number:
+ * refs increment per tenant, so a higher one was taken later. That fallback
+ * is what makes existing bookings sort sensibly instead of jumping to the
+ * bottom for want of a timestamp.
+ */
+export function byNewest(a: Booking, b: Booking): number {
+  if (a.createdAt && b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+  const num = (r: string) => parseInt(String(r).replace(/\D/g, ""), 10) || 0;
+  return num(b.ref) - num(a.ref);
+}
+
+/** The day a booking was taken, or "" if it predates us recording it. */
+export const bookedOn = (b: Booking) => (b.createdAt ?? "").slice(0, 10);
+
+/** Today, yesterday, the last 7 days — as ISO bounds. */
+export function rangeDays(key: "today" | "yesterday" | "week"): { from: string; to: string } {
+  const d = new Date();
+  const iso = (x: Date) => x.toISOString().slice(0, 10);
+  const today = iso(d);
+  if (key === "today") return { from: today, to: today };
+  const y = new Date(d);
+  y.setUTCDate(y.getUTCDate() - 1);
+  if (key === "yesterday") return { from: iso(y), to: iso(y) };
+  const w = new Date(d);
+  w.setUTCDate(w.getUTCDate() - 6);
+  return { from: iso(w), to: today };
+}
+
 /** Does any day of this booking fall inside the range? Blank ends are open. */
 export function inDateRange(b: Booking, from: string, to: string): boolean {
   if (!from && !to) return true;

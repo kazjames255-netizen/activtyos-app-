@@ -117,8 +117,10 @@ const childSchema = z.object({
   // register — so it must never be treated as, or reused as, a credential.
   collectionPassword: z.string().trim().max(60).optional(),
   /** Who to ring if the parent can't be reached. Either of them can fill it
-   *  in — the provider usually takes it on the call. */
-  emergencyContact: z.string().trim().max(200).optional(),
+   *  in — the provider usually takes it on the call. Split, because a
+   *  register prints the name and dials the number. */
+  emergencyName: z.string().trim().max(80).optional(),
+  emergencyPhone: z.string().trim().max(40).optional(),
   // A SEND/EHCP plan, held by routes/childFiles.ts rather than inline: a real
   // EHCP is a multi-page scan and would blow Firestore's 1MB document cap.
   // Only the id and the filename live on the child.

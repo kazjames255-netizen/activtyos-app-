@@ -117,7 +117,8 @@ export const CHILD_LIMITS = {
   likes: 80,
   dislikes: 80,
   collectionPassword: 40,
-  emergencyContact: 100,
+  emergencyName: 80,
+  emergencyPhone: 30,
 } as const;
 
 /** Chip colours: blue for boys, pink for girls, neutral when unsaid. */

@@ -139,10 +139,20 @@ bookings.get("/", async (req, res) => {
   }
 
   const snap = await q.get();
-  const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
+  // Firestore stamps every document with its own createTime, so a booking
+  // taken before the app started recording `createdAt` still knows when it
+  // was made. Real metadata, not a guess from the reference number — which
+  // matters, because "what came in yesterday" is answered from this.
+  const list = snap.docs.map((d) => withCreated(d));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   res.json(list);
 });
+
+/** A booking, with its own field taking precedence over Firestore's stamp. */
+function withCreated(d: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot) {
+  const b = fromDoc(d.data() as BookingDoc);
+  return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() };
+}
 
 // GET /api/bookings/:ref
 bookings.get("/:ref", async (req, res) => {
@@ -159,7 +169,9 @@ bookings.get("/:ref", async (req, res) => {
     res.status(404).json({ error: "Booking not found" });
     return;
   }
-  res.json(fromDoc(doc.data() as BookingDoc));
+  // Same fallback as the list, so opening a booking and seeing it in the list
+  // never disagree about when it was made.
+  res.json(withCreated(doc));
 });
 
 // POST /api/bookings — take a manual booking (into the caller's own scope)

@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { HowItWorks as HowItWorksPanel } from "@/components/HowItWorks";
 import { VenueMap } from "./VenueMap";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
@@ -206,30 +207,22 @@ async function putLibrary(s: LocalState): Promise<void> {
 function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
   const jump = "font-bold text-[var(--brand-ink,#1d3a8f)] underline underline-offset-2";
   return (
-    <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
-        <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-        <span>ℹ️ How it works</span>
-      </summary>
-      <div className="px-3.5 pb-3.5 pl-8 text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
-        <p className="mb-2">
-          A listing is one thing you sell — a holiday camp, a weekly club, a one-off session.
-        </p>
-        {/* The two things that have to exist first — the builder can't invent them mid-flow. */}
-        <p className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
-          <b>Set up your </b>
-          <button type="button" onClick={() => onTab("categories")} className={jump}>categories</button>
-          <b> and </b>
-          <button type="button" onClick={() => onTab("locations")} className={jump}>locations</button>
-          <b> first</b> — you pick from those lists inside the builder, and reuse them on every listing after.
-        </p>
-        <p>
-          The builder then walks you through it: describe it, set when it runs, add passes and prices,
-          then discounts, extras and staff. You can preview the customer page at any point.
-          It saves as you go, and nothing goes live until you publish.
-        </p>
-      </div>
-    </details>
+    <HowItWorksPanel
+      video="Building a listing end to end: categories and locations first, then the ten steps, preview, publish."
+      minutes="3 min"
+    >
+      <p className="mb-2">
+        A listing is one thing you sell — a holiday camp, a weekly club, a one-off session. The
+        builder walks you through it and saves as you go; nothing is live until you publish.
+      </p>
+      <p className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
+        <b>Set up your </b>
+        <button type="button" onClick={() => onTab("categories")} className={jump}>categories</button>
+        <b> and </b>
+        <button type="button" onClick={() => onTab("locations")} className={jump}>locations</button>
+        <b> first</b> — you pick from those lists inside the builder.
+      </p>
+    </HowItWorksPanel>
   );
 }
 
@@ -539,7 +532,11 @@ export function PillSelect({ active, value, onChange, options, title }: { active
       <select value={value} onChange={(e) => onChange(e.target.value)} title={title}
         className="h-8 max-w-[165px] cursor-pointer appearance-none border-0 bg-transparent pr-4 text-[12.5px] font-semibold outline-none"
         style={{ color: active ? "#fff" : "var(--ink)" }}>
-        {options.map(([v, label]) => <option key={v} value={v} style={{ color: "var(--ink)" }}>{label}</option>)}
+        {options.map(([v, label]) => (
+          <option key={v} value={v} style={{ color: "var(--ink)" }}>
+            {label}
+          </option>
+        ))}
       </select>
       <span className="pointer-events-none absolute right-0 text-[9px]" style={{ color: active ? "rgba(255,255,255,.8)" : "var(--ink-2)" }}>▼</span>
     </span>
@@ -769,14 +766,14 @@ function ListingsTab({
         {venueOpts.length > 0 && (
           <Pill active={!!venueFilter} onClear={() => setVenueFilter("")}>
             <PillSelect active={!!venueFilter} value={venueFilter} onChange={setVenueFilter} title="Filter by location"
-              options={[["", "Location"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
+              options={[["", "All locations"], ...venueOpts.map((v) => [v.id, `${v.name} (${v.n})`] as [string, string])]} />
           </Pill>
         )}
 
         {catOpts.length > 0 && (
           <Pill active={!!catFilter} onClear={() => setCatFilter("")}>
             <PillSelect active={!!catFilter} value={catFilter} onChange={setCatFilter} title="Filter by category"
-              options={[["", "Category"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
+              options={[["", "All categories"], ...catOpts.map((c) => [c.id, `${c.name} (${c.n})`] as [string, string])]} />
           </Pill>
         )}
 
