@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { DEFAULT_POLICY, type CancellationPolicy } from "@/lib/cancellation";
+import { DEFAULT_POLICIES, type NamedPolicy } from "@/lib/cancellation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -146,15 +146,31 @@ export interface TenantSettings {
   // ── Bookings & payments ──
   payMethods: string[];
   cancellationReasons: string[];
+  /**
+   * What happens when a refund is due.
+   *
+   * "review" (the default) flags it and waits for the provider — which is what
+   * happens today, since nothing moves money automatically.
+   *
+   * "auto" would issue it through Stripe without anyone clicking, for refunds
+   * the policy calculates cleanly. Faster for parents and less admin, but a
+   * refund is irreversible and a mistake can't be taken back, so it stays off
+   * unless a provider deliberately turns it on.
+   */
+  refundApproval: "review" | "auto";
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
   askReasonParent: boolean;
   /**
-   * The refund rules. Prose is generated from these rather than typed, so
-   * what a parent is told and what the system works out can never disagree.
+   * The refund rules, one set per policy. A provider writes them here and
+   * picks one when they build a listing — a holiday camp and a weekly club
+   * rarely want the same notice period.
+   *
+   * Prose is generated from the bands rather than typed, so what a parent is
+   * told and what the system works out can never disagree.
    */
-  cancellationPolicy: CancellationPolicy;
+  cancellationPolicies: NamedPolicy[];
 
   // ── Listings ──
   defaultCapacity: number;
@@ -228,9 +244,10 @@ export const DEFAULT_SETTINGS: TenantSettings = {
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Cash on the day"],
   cancellationReasons: ["Illness", "Weather", "Staffing", "Venue unavailable", "Parent request", "Duplicate booking"],
+  refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
-  cancellationPolicy: DEFAULT_POLICY,
+  cancellationPolicies: DEFAULT_POLICIES,
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],
@@ -262,7 +279,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     pipelineStages: s.pipelineStages?.length ? s.pipelineStages : DEFAULT_SETTINGS.pipelineStages,
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
-    cancellationPolicy: s.cancellationPolicy?.bands?.length ? s.cancellationPolicy : DEFAULT_SETTINGS.cancellationPolicy,
+    cancellationPolicies: s.cancellationPolicies?.length ? s.cancellationPolicies : DEFAULT_SETTINGS.cancellationPolicies,
     genderOptions: s.genderOptions?.length ? s.genderOptions : DEFAULT_SETTINGS.genderOptions,
   };
 }

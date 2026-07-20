@@ -12,7 +12,7 @@ import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./for
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings } from "@/lib/settings";
-import { policyWording, type CancellationPolicy } from "@/lib/cancellation";
+import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import type { ChildProfile } from "./checkout";
 // Re-exported so existing importers don't have to care that these moved.
@@ -283,6 +283,8 @@ export interface WizardDraft {
   /** Who decides when a place frees up — see step 11. */
   waitlistMode?: "manual" | "auto";
   cancellation: string;
+  /** Which named policy this listing uses — see lib/cancellation.ts. */
+  cancellationPolicyId?: string;
   discounts?: DiscountRule[];
   status: "draft" | "live";
   archived?: boolean;
@@ -364,7 +366,7 @@ export function emptyDraft(defaults?: {
   defaultCapacity: number;
   defaultRunningDays: number[];
   showSpaces: boolean;
-  cancellationPolicy?: CancellationPolicy;
+  cancellationPolicies?: NamedPolicy[];
 }): WizardDraft {
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
@@ -372,7 +374,8 @@ export function emptyDraft(defaults?: {
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
-    cancellation: defaults?.cancellationPolicy ? policyWording(defaults.cancellationPolicy) : CANCELLATION_POLICIES[3], discounts: [], status: "draft", pageStyle: "playful",
+    cancellation: defaults?.cancellationPolicies?.[0] ? policyWording({ ...defaults.cancellationPolicies[0], wording: undefined }) : CANCELLATION_POLICIES[3],
+    cancellationPolicyId: defaults?.cancellationPolicies?.[0]?.id, discounts: [], status: "draft", pageStyle: "playful",
   };
 }
 
@@ -1948,12 +1951,11 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
     ["hidden", "Hidden link", "Not searchable — anyone with the link can book · schools, HAF, private groups"],
   ];
   const book: [WizardDraft["bookingType"], string][] = [["auto", "Automatic approval"], ["manual", "Manual approval"]];
-  // The provider's own policy, generated from their refund rules in Setup &
-  // features, offered first. The old fixed list stays behind it: a provider
-  // can still pick different wording for one listing, they just no longer
-  // have to invent it — and picking wording that contradicts the rules is now
-  // a visible choice rather than the only option.
-  const policies = [policyWording(wizSettings.cancellationPolicy), ...CANCELLATION_POLICIES];
+  // The provider's own policies, written in Setup & features. Picking one here
+  // sets both the id (what the refund is worked out from) and the wording
+  // (what a parent reads) — they can't be chosen separately any more, because
+  // separately is how they came to disagree.
+  const ownPolicies = wizSettings.cancellationPolicies;
   return (
     <div className="max-w-[720px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
@@ -1999,7 +2001,28 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         </div>
       )}
       <SectionHead icon="📄">Cancellation policy</SectionHead>
-      <Select value={d.cancellation} onChange={(e) => upd({ cancellation: e.target.value })} className="w-full text-[12px]">{policies.map((p) => <option key={p} value={p}>{p}</option>)}</Select>
+      <Select
+        value={d.cancellationPolicyId ?? ownPolicies[0]?.id ?? ""}
+        onChange={(e) => {
+          const chosen = ownPolicies.find((p) => p.id === e.target.value);
+          // Store both: the id is what a refund is worked out from, the
+          // wording is what the storefront shows. Setting them together is the
+          // only way they stay in agreement.
+          if (chosen) upd({ cancellationPolicyId: chosen.id, cancellation: policyWording({ ...chosen, wording: undefined }) });
+        }}
+        className="w-full text-[12px]"
+      >
+        {ownPolicies.map((p) => (
+          <option key={p.id} value={p.id}>{p.name || "Untitled policy"}</option>
+        ))}
+      </Select>
+      <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+        {d.cancellation || "Pick a policy above."}
+      </div>
+      <div className="mt-1 text-[11px] text-[var(--ink-3)]">
+        Written from the rules in <b>Setup &amp; features → Bookings &amp; payments</b>. Change it
+        there and every listing using this policy follows.
+      </div>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
     </div>
   );
