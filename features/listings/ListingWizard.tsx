@@ -1617,6 +1617,11 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
       {tickets.length > 0 && (
         <div className="mt-3">
           <SectionHead icon="🎟️">Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
+          <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+            <b>Capacity</b> here limits how many of <em>that</em> pass can be booked — separate from the whole-listing total.
+            It&rsquo;s how you cap a <b>SEND / 1:1</b> pass to the number of dedicated staff you have: set it to, say, 2 and only two
+            1:1 places can be booked, so you&rsquo;re never committed to support you can&rsquo;t provide.
+          </p>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
             return (
