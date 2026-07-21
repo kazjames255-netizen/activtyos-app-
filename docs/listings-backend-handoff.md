@@ -1957,3 +1957,27 @@ and the dose history. Restyle at will.
 
 Pupils remaining: Meals & allergies, Moments. Moments (photo feed) really wants
 Firebase Storage — worth enabling when you can.
+
+---
+
+# Meals & allergies — 21 July 2026 (Swagger v0.17.0)
+
+Third Pupils feature. Two things that only matter together:
+
+- **`GET /api/meals?date=`** — the day's menu AND the dietary board: each
+  session's children with their allergies/dietary/medical (resolved from the
+  child record via `childId`), plus an **`alerts`** array wherever a child's
+  allergy matches an allergen tagged on the menu. Children with needs sort
+  first; `summary` counts children/needs/alerts; the 14 UK allergens ship as
+  `allergens`. The match is keyword-based (a child's `allergies` is free
+  text) — flagged for staff to verify, never suppressed.
+- **`PUT /api/meals/:date`** — operators set the menu (meals + allergen tags).
+  Staff read the board; parents 403. Realtime `menus`.
+
+`MealsApp` on the `meals` slug (all four operator/staff portals): date nav,
+menu editor with allergen chips, and the dietary board with the alerts
+highlighted red. Restyle at will.
+
+**Pupils is now: Registers ✅ · Incidents & Accidents ✅ · Medication ✅ ·
+Meals & allergies ✅ · Moments (needs Firebase Storage).** Enabling Storage is
+the last thing between here and the photo/newsfeed layer.

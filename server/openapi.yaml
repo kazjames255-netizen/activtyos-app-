@@ -1,10 +1,24 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.16.0
+  version: 0.17.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.17.0 — Meals & allergies (Pupils)
+
+    - **`GET /api/meals?date=`** — the day's menu plus the **dietary board**:
+      each session's children (resolved from bookings) with their allergies,
+      dietary needs and medical notes (from the child record via `childId`),
+      and an **`alerts`** array wherever a child's allergy matches an
+      allergen tagged on the menu (best-effort keyword match — surfaced for
+      staff to verify, never suppressed). Children with needs sort first.
+      `summary` counts children / dietary needs / alerts. Includes the 14 UK
+      allergens as `allergens`.
+    - **`PUT /api/meals/:date`** — set the day's menu (operators): meals
+      `[{type, description, allergens}]`. Staff read the board; parents 403.
+      Realtime `menus`.
 
     ## v0.16.0 — Medication (Pupils)
 
@@ -420,6 +434,8 @@ tags:
     description: Incidents & Accidents — the safeguarding log (staff record, operators manage)
   - name: medication
     description: Authorised medicines (parental consent) + the MAR (every dose given)
+  - name: meals
+    description: The day's menu + the dietary board (allergies matched against the menu)
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1403,6 +1419,44 @@ paths:
         - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
       responses:
         "200": { description: PNG tile (week-cached, immutable) }
+
+  /api/meals:
+    get:
+      tags: [meals]
+      summary: The day's menu + dietary board
+      parameters:
+        - { name: date, in: query, required: false, schema: { type: string } }
+        - { name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }
+      responses:
+        "200": { description: "{date, menu, allergens, sessions[] (children with allergies/dietary + alerts), summary}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    # (see /api/meals/{date} for setting the menu)
+
+  /api/meals/{date}:
+    put:
+      tags: [meals]
+      summary: Set the day's menu (operators)
+      parameters: [{ name: date, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [meals]
+              properties:
+                meals:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      type: { type: string }
+                      description: { type: string }
+                      allergens: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Saved }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/medications:
     get:
