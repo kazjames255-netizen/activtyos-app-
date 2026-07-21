@@ -11,6 +11,15 @@ import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
+import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
+import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
+import { MessagesApp } from "@/features/messages/MessagesApp";
+import { TasksApp } from "@/features/tasks/TasksApp";
+import { TripsApp } from "@/features/trips/TripsApp";
+import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
+import { CalendarApp } from "@/features/calendar/CalendarApp";
+import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
@@ -40,6 +49,7 @@ import { TimetableApp } from "@/features/timetable/TimetableApp";
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType>>> = {
   company: {
+    dashboard: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
@@ -55,8 +65,15 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   franchise: {
+    dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
@@ -72,8 +89,16 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   freelancer: {
+    dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
@@ -89,6 +114,13 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   staff: {
     registers: RegistersApp,
@@ -99,6 +131,10 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   custdash: {
     browse: BrowseApp,
@@ -106,6 +142,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     children: ChildrenApp,
     moments: ParentMomentsApp,
     schedule: ScheduleApp,
+    newsfeed: ParentNewsfeedApp,
+    messages: () => <MessagesApp mode="parent" />,
   },
   platform: {
     dash: OverviewApp,

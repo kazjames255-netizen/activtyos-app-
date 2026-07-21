@@ -2120,3 +2120,113 @@ Names, colours, age ranges, target ratios and max sizes are in
 `settings.ratioGroups` (tenant library - persisted). They're editable from
 **both** the Ratios & groups board and the listing's age-cap rows, one source
 of truth. You only need the per-listing `ageCaps` numbers.
+
+---
+
+# Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
+
+The rest of the **Run the day** section. Three new tenant-scoped, realtime
+collections, plus two UI-only reads over data you already serve. Same role
+model as everything else: staff use them, operators own them (delete =
+operators). Parents 403 on all of it.
+
+- **`/api/tasks`** — the team's shared to-do list. `{title, notes?, assignee?,
+  dueDate?, priority: low|normal|high, done}`. GET sorts open-first, then
+  priority, then due date; `PUT {done:true}` stamps `completedAt`. Staff +
+  operators create and tick; **operators delete**. Realtime `tasks`.
+- **`/api/trips`** — the off-site trip record. `{destination, date,
+  departTime?, returnTime?, transport?, childNames[], staff[], headcount?,
+  riskAssessment?, consentObtained, notes?, status}`. `headcount` defaults to
+  `childNames.length`. Staff + operators create/edit; **operators delete**.
+  Realtime `trips`.
+- **`/api/shifts`** — the staff rota. `{staffName, staffId?, date, start, end,
+  role?, listingId?, notes?}`. `GET ?from=&to=` windows a week; sorted by date
+  then start. Staff **read** (they need their own hours); **operators** write
+  and delete. Realtime `shifts`.
+- **Calendar** and **Locations** are UI only — **no new endpoints**. Calendar
+  reads every block's `sessions` off `GET /api/listings?mine=1` and lays them
+  on a month grid (session times, programme, `spotsLeft`, open/closed).
+  Locations reads `venues` off `GET /api/library` and shows each with the
+  shared `VenueMap` (the OS-tile map) — a read view; editing stays under
+  Listings → Locations.
+
+Apps registered: `TasksApp` (tasks), `TripsApp` (trips), `ScheduleApp`
+(schedule — aliased `RotaApp` to avoid the parent one), `CalendarApp`
+(calendar), `LocationsApp` (locations), across company/franchise/freelancer
+(company nav has no `schedule` slug, so it's the other four there) and the
+staff-facing ones on the staff portal. Restyle at will — all use the shared
+UI primitives and CSS vars.
+
+**Run the day: Ratios ✅ · Activity timetable ✅ · Tasks ✅ · Trips & visits ✅
+· Schedule & rota ✅ · Calendar ✅ · Locations ✅ — the whole section is done.**
+
+---
+
+# Operator dashboard — 21 July 2026 (Swagger v0.21.0)
+
+The landing screen (`dashboard` slug for company, `dash` for franchise/
+freelancer) — was a legacy prototype, now real. One read, **no new
+collection**, aggregating what the other routes already own.
+
+- **`GET /api/dashboard`** returns:
+  - `today` — sessions running today (listing, times, `booked`/`capacity`)
+    + the total `booked` on site.
+  - `next` + `upcoming[]` — the next session and the next few across open
+    blocks, each with `spotsLeft`.
+  - `bookings` — `live` (not cancelled/declined), `newThisWeek`, `waitlist`.
+  - `occupancy` — `booked`/`capacity`/`pct` across open runs whose sessions
+    haven't all passed.
+  - `money` — `takenThisWeek` (payment records in, refunds excluded),
+    `outstanding` (the same OWES rule reconciliation uses), `overdueVouchers`,
+    `awaitingVoucher`.
+  - `counts` — `listings`, `activeBlocks`.
+- Operators only (parents 403); platform passes `?tenantId=`. `DashboardApp`
+  subscribes to the existing `bookings`/`blocks`/`listings`/`payments`
+  realtime channels, so the numbers move live. Four stat cards + a "Today"
+  and "Coming up" list — restyle at will.
+
+---
+
+# Communication: Newsfeed + Messages — 21 July 2026 (Swagger v0.22.0)
+
+The first properly **two-sided** feature — providers and their families talk
+to each other. Everything is gated on a booking: you can only reach someone
+you have one with. This finally gives the parent portal inbound content.
+
+**Newsfeed — `/api/posts`** (collection `posts`):
+- `POST` (operators + staff) `{title?, body, photoUrl?}` — broadcast to all the
+  tenant's families. Photos via the existing `/api/uploads`. `DELETE /:id`
+  (operators).
+- `GET` is role-aware: operator/staff → the tenant's posts; **parent → the
+  feed of every provider they've booked** (posts carry `tenantName` so the
+  parent UI can label who each one's from). Distinct from Moments (photos OF a
+  child) — this is text the provider broadcasts.
+
+**Messages — `/api/messages`** (collections `threads` + `messages`):
+- One thread per (provider, parent) pair, id `${tenantId}__${email}` so both
+  sides always converge on the same conversation — no duplicates.
+- `GET /threads` — the caller's conversations (parent: theirs by email;
+  operator: the tenant's), newest first, each with `operatorUnread` /
+  `parentUnread`.
+- `GET /threads/:id` — the messages (oldest→newest) and **marks the caller's
+  side read**. 404 if it isn't yours.
+- `POST /` — send, creating the thread if needed. Operator body
+  `{parentEmail, parentName?, body}` (400 if that family isn't a customer);
+  parent body `{tenantId, body}` (403 if they haven't booked that provider).
+  Unread bumps the *other* side.
+- **`GET /api/my/providers`** → `[{tenantId, name}]` the parent has booked —
+  powers the newsfeed labels and the "message a provider" picker.
+
+Apps: `NewsfeedApp` (operator, `newsfeed` slug) + `ParentNewsfeedApp`
+(custdash `newsfeed`); one `MessagesApp` with a `mode="operator" | "parent"`
+prop registered on the `messages` slug for company/franchise/freelancer/staff
+and custdash. Realtime: `posts` / `threads` / `messages` (operators
+tenant-scoped; parents by email + a global posts feed). All booking-gating is
+server-side — the UI just renders threads and surfaces the 400/403.
+
+**Note for the customer portal you're building:** custdash now has real
+`newsfeed` and `messages` views wired to a booked provider — the two-sided
+loop you asked about (parent ↔ freelancer) is live to test against.
+
+Email (the third Communication item) is not built yet — Newsfeed + Messages
+cover the in-app channel; Email would be the out-of-app one.

@@ -66,6 +66,12 @@ events.get("/", async (req, res) => {
     listen(db.collection("children").where("parentUid", "==", decoded.uid), "children");
     listen(db.collection("listings"), "listings"); // the browse marketplace
     listen(db.collection("blocks"), "blocks"); // availability changes
+    listen(db.collection("posts"), "posts"); // providers' newsfeed
+    if (decoded.email) {
+      const em = decoded.email.toLowerCase();
+      listen(db.collection("threads").where("parentEmail", "==", em), "threads");
+      listen(db.collection("messages").where("parentEmail", "==", em), "messages");
+    }
   } else if (role === "platform") {
     listen(db.collection("tenants"), "tenants");
     listen(db.collection("bookings"), "bookings");
@@ -94,6 +100,12 @@ events.get("/", async (req, res) => {
     listen(db.collection("medicationAdmin").where("tenantId", "==", tenantId), "medicationAdmin");
     listen(db.collection("menus").where("tenantId", "==", tenantId), "menus");
     listen(db.collection("moments").where("tenantId", "==", tenantId), "moments");
+    listen(db.collection("tasks").where("tenantId", "==", tenantId), "tasks");
+    listen(db.collection("trips").where("tenantId", "==", tenantId), "trips");
+    listen(db.collection("shifts").where("tenantId", "==", tenantId), "shifts");
+    listen(db.collection("posts").where("tenantId", "==", tenantId), "posts");
+    listen(db.collection("threads").where("tenantId", "==", tenantId), "threads");
+    listen(db.collection("messages").where("tenantId", "==", tenantId), "messages");
   }
 
   // Keep intermediaries from closing the idle connection.
