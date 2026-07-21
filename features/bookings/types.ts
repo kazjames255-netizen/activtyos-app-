@@ -18,6 +18,7 @@ export type PayStatus =
   | "Invoice sent"
   | "Refunded"
   | "Partially refunded"
+  | "Partially paid"
   | "Funded"
   | string; // legacy also stores raw method placeholders like "—"
 
@@ -105,6 +106,9 @@ export interface Booking {
   pay: PayStatus;
   method: string;
   amount: number;
+  /** How much has actually been received (reconciliation). Absent = 0 for
+   *  Unpaid, treated as `amount` for Paid. Partial payments track it. */
+  amountPaid?: number;
   addons: string[];
   answers: [string, string][];
   note: string;

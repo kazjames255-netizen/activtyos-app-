@@ -287,6 +287,7 @@ export function payTone(pay: string): BadgeTone {
     "Awaiting voucher payment": BLUE,
     Refunded: GREY,
     "Partially refunded": AMBER,
+    "Partially paid": AMBER,
     Funded: BLUE,
   };
   return map[pay] || GREY;

@@ -10,6 +10,7 @@ import { MomentsApp } from "@/features/moments/MomentsApp";
 import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
+import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
@@ -53,6 +54,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
+    reconciliation: ReconciliationApp,
   },
   franchise: {
     setup: SetupApp,
@@ -69,6 +71,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
+    reconciliation: ReconciliationApp,
   },
   freelancer: {
     setup: SetupApp,
@@ -85,6 +88,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
+    reconciliation: ReconciliationApp,
   },
   staff: {
     registers: RegistersApp,
