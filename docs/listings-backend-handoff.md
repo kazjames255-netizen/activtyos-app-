@@ -2207,6 +2207,72 @@ is only the booking cap.
 
 ---
 
+## U — Amending booking dates (front end built, needs the endpoint + enforcement)
+
+Parents can now ask to move their session dates. The Settings UI and the parent
+flow are built; the endpoint and all the money/space logic are yours.
+
+**New settings** (in `library.settings`, already whitelisted in the public
+endpoint so the parent flow can read them):
+
+- `amendSelfService: boolean` — on = the parent reschedules themselves; off = it
+  creates a **request** you approve, exactly like a cancellation request.
+- `amendNoticeHours: number` — a session can't be moved within this many hours of
+  its **own** start (UI enters it as hours or days; always stored as hours).
+- `amendLimit: number` — max applied amends per booking (`0` = no limit).
+- `amendFee: number` — admin fee per amend, whole pounds (`0` = free).
+- `amendAllowCheaper: boolean` — may they move to a cheaper pass/date at all.
+- `allowCardRefund: boolean` — may money go back to the **card** at all, or is
+  every refund store credit (their wallet)?
+- `refundLetCustomerChoose: boolean` — when card refunds are allowed, does the
+  customer pick card vs credit, or does it always go to card?
+
+These last two govern **both** a cheaper amend and a cancellation refund — one
+money-back rule for the tenant.
+
+**New endpoint** — `POST /api/my/bookings/:ref/amend`, body
+`{ moves: Record<oldIsoDate, newIsoDate>, message?: string, refundTo?: "card" | "wallet" }`.
+(`refundTo` is only sent when the tenant lets the customer choose. When the
+booking has no per-day `days`, the front end sends `message` only — treat as a
+free-text request.)
+
+**Cancellation** (`POST /api/my/bookings/:ref/cancel`) now also sends
+`refundPref: "card" | "wallet"` — the family's *preference* for how any owed
+refund reaches them. It's only a preference: the **amount and eligibility follow
+the cancellation policy** (they can't insist on more), and card is only honoured
+if `allowCardRefund` is on.
+
+**Credit note on a no-refund** — new setting `noRefundCredit: boolean`. When the
+cancellation policy computes **£0 cash back** and this is on, issue a wallet
+**credit note for the full amount they paid** (never card — it's credit toward a
+future booking, not a refund). Only applies when the cash refund is zero; when
+the policy does give cash, ignore it. The parent is already told this may happen
+in the cancel dialog.
+
+Enforcement, per move:
+1. **Self-service gate.** If `amendSelfService` is false, don't apply — create a
+   pending request for the operator (reuse the cancellation-request plumbing) and
+   return. If true, apply transactionally.
+2. **Notice.** Reject a move whose **old** date is within `amendNoticeHours` of
+   now. The **new** date must be a running date of the **same listing** with
+   space — re-check the listing total, the **per-ticket capacity (§T)** and the
+   **age caps (§S)** for that date, exactly as a fresh booking would.
+3. **Limit.** Count applied amends on the booking; reject once `amendLimit`
+   reached (skip when `0`).
+4. **Fee.** Charge `amendFee` per amend if set.
+5. **Price difference.** Dearer new date/pass → collect the difference through the
+   normal checkout. Cheaper → only if `amendAllowCheaper`; hand the difference
+   back per the money-back rule: if `allowCardRefund` is off it's wallet credit;
+   if on, either the customer's `refundTo` (when `refundLetCustomerChoose`) or
+   card. Same rule applies to a cancellation refund (bounded by the policy).
+6. On success, update the booking's `days` and notify.
+
+Also wire the operator **"Change date"** button (`BookingDetail.tsx`, currently
+an `alert()` stub) to the same mechanic, and surface pending amend requests
+alongside cancellation requests when `amendSelfService` is off.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime

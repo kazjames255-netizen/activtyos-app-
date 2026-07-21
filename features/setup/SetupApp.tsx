@@ -120,6 +120,52 @@ function NumberBox({ value, onChange, min = 0, max = 999, suffix }: { value: num
   );
 }
 
+// A notice period a provider can express in hours, days, or "anytime" (0 = a
+// session can be moved right up to when it starts). Stored as hours.
+type NoticeUnit = "hours" | "days" | "anytime";
+function NoticeInput({ hours, onChange }: { hours: number; onChange: (h: number) => void }) {
+  const [unit, setUnit] = useState<NoticeUnit>(hours === 0 ? "anytime" : hours % 24 === 0 ? "days" : "hours");
+  const shown = unit === "days" ? Math.round(hours / 24) || 1 : hours || 1;
+  const apply = (n: number, u: NoticeUnit) => onChange(u === "anytime" ? 0 : Math.max(0, u === "days" ? n * 24 : n));
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {unit !== "anytime" && (
+        <Input
+          type="number"
+          min={1}
+          value={shown}
+          onChange={(e) => { const n = parseInt(e.target.value, 10); if (!Number.isNaN(n)) apply(n, unit); }}
+          className="w-[76px]"
+        />
+      )}
+      <Select value={unit} onChange={(e) => { const u = e.target.value as NoticeUnit; setUnit(u); apply(shown, u); }}>
+        <option value="hours">hours before</option>
+        <option value="days">days before</option>
+        <option value="anytime">anytime — no limit</option>
+      </Select>
+    </span>
+  );
+}
+
+// Amend limit: an "Endless" pill instead of a confusing 0. 0 = endless in the
+// store; a specific cap is any number ≥ 1.
+function MovesLimit({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const endless = value === 0;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(endless ? 3 : 0)}
+        className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
+        style={endless ? { borderColor: "transparent", background: "var(--brand-2)", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}
+      >
+        ♾ Endless
+      </button>
+      {!endless && <NumberBox value={value} onChange={(n) => onChange(Math.max(1, n))} min={1} max={20} suffix="moves" />}
+    </span>
+  );
+}
+
 /**
  * A field that can't be switched off. Shown rather than left out, so the
  * section reads as the complete list of what a family is asked — one headed
@@ -1096,7 +1142,7 @@ export function SetupApp() {
               <Toggle on={settings.collectGender} onChange={(v) => set("collectGender", v)} />
             </Row>
             {settings.collectGender && (
-              <Row label="Options offered" hint="What a parent can pick from." note="Not used yet — the child record only accepts Boy or Girl (Amir)">
+              <Row label="Options offered" hint="What a parent can pick from." note="Not shown in the forms yet — they still offer Boy/Girl">
                 <div className="w-[240px]">
                   <ListEditor items={settings.genderOptions} onChange={(v) => set("genderOptions", v)} placeholder="Add an option" />
                 </div>
@@ -1188,6 +1234,13 @@ export function SetupApp() {
                   which is the safe way round for it to be wrong.
                 </NotWired>
               )}
+              <Row
+                label="Credit note when no cash refund is due"
+                hint="When the policy works out to nothing back, still give the family a credit note for the full amount they paid to spend on a future booking. They keep the value, you keep the cash. Off means a no-refund is simply nothing back."
+                note={settings.noRefundCredit ? "Issuing the credit needs building (Amir)" : undefined}
+              >
+                <Toggle on={settings.noRefundCredit} onChange={(v) => set("noRefundCredit", v)} />
+              </Row>
             </div>
           </Section>
           <Section
@@ -1200,12 +1253,50 @@ export function SetupApp() {
             <Row
               label="Ask parents for a reason"
               hint="When a parent cancels their own booking. Useful for spotting patterns, but it's one more step between them and a thing they've already decided to do."
-              note="Parents can't self-cancel yet (Amir)"
             >
               <Toggle on={settings.askReasonParent} onChange={(v) => set("askReasonParent", v)} />
             </Row>
             <div className="mt-2.5">
             <ReasonEditor items={settings.cancellationReasons} onChange={(v) => set("cancellationReasons", v)} />
+            </div>
+          </Section>
+
+          <Section
+            title="Amending dates"
+            lede="Whether a parent can move their own session dates, and the rules for it. A move only ever goes to another running date of the same listing that still has space — never onto a full day or across the age caps."
+          >
+            <Row label="Let parents move their own dates" hint="On: they reschedule themselves, within the rules below. Off: they send a request and you approve it, like a cancellation.">
+              <Toggle on={settings.amendSelfService} onChange={(v) => set("amendSelfService", v)} />
+            </Row>
+            <Row label="How close to a session it can still move" hint="Inside this window it's locked — a place can't be juggled the night before. Enter it in hours or days, whichever reads better for you.">
+              <NoticeInput hours={settings.amendNoticeHours} onChange={(h) => set("amendNoticeHours", h)} />
+            </Row>
+            <Row label="Most moves per booking" hint="Stops one place being reshuffled endlessly, or leave it endless.">
+              <MovesLimit value={settings.amendLimit} onChange={(n) => set("amendLimit", n)} />
+            </Row>
+            <Row label="Admin fee per move" hint="Charged each time they move a date. Leave at 0 for free amends.">
+              <NumberBox value={settings.amendFee} onChange={(n) => set("amendFee", n)} min={0} max={200} suffix="£" />
+            </Row>
+            <Row label="Allow moving to a cheaper option" hint="Whether a parent may swap onto a shorter/cheaper pass or date. Off means moves can only be to the same price or more.">
+              <Toggle on={settings.amendAllowCheaper} onChange={(v) => set("amendAllowCheaper", v)} />
+            </Row>
+            {settings.amendAllowCheaper && (
+              <>
+                <Row label="A cheaper move can refund to a card" hint="On: the difference can go back to the card they paid with. Off: it's store credit in their wallet — money stays in the business.">
+                  <Toggle on={settings.allowCardRefund} onChange={(v) => set("allowCardRefund", v)} />
+                </Row>
+                {settings.allowCardRefund && (
+                  <Row label="Let them choose card or credit" hint="On: they pick when they move. Off: the difference always goes back to the card.">
+                    <Toggle on={settings.refundLetCustomerChoose} onChange={(v) => set("refundLetCustomerChoose", v)} labels={["They choose", "Always card"]} />
+                  </Row>
+                )}
+              </>
+            )}
+            <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.6] text-[var(--ink-3)]">
+              <b className="text-[var(--ink-2)]">Moving to something dearer</b> collects the difference at the point of the move —
+              the same checkout they already know. <b className="text-[var(--ink-2)]">Cancellations</b> are separate: the refund is
+              whatever the <em>cancellation policy</em> gives, and a family may take that as wallet credit if they&rsquo;d rather — but
+              can&rsquo;t demand more than the policy allows. Enforcement of every rule here is server-side and still being built.
             </div>
           </Section>
         </>
@@ -1285,8 +1376,7 @@ export function SetupApp() {
             <div className="mt-3 border-t border-dashed border-[var(--line)] pt-2.5">
               <Row
                 label="Hold the place for"
-                hint="After this the booking is flagged for you to look at — nothing is cancelled automatically. That's deliberate: if you're a day late reconciling a payment that did arrive, an automatic cancellation would throw away a family's booking over your admin. The call stays yours."
-                note="The flag needs building (Amir)"
+                hint="After this the booking is flagged for you to look at (overdue vouchers show on your dashboard) — nothing is cancelled automatically. That's deliberate: if you're a day late reconciling a payment that did arrive, an automatic cancellation would throw away a family's booking over your admin. The call stays yours."
               >
                 <NumberBox value={settings.voucherHoldDays} onChange={(n) => set("voucherHoldDays", n)} min={1} max={60} suffix="days" />
               </Row>

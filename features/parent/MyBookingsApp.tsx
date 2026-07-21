@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
@@ -12,8 +12,22 @@ import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => void }) {
   const [msg, setMsg] = useState("");
+  // A preference, not a demand: if the policy gives a refund, the family can
+  // take it as wallet credit instead of card. The amount still follows the
+  // cancellation policy — they can't insist on more.
+  const [refundPref, setRefundPref] = useState<"card" | "wallet">("card");
+  const [noRefundCredit, setNoRefundCredit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Does the provider still give a full-value credit note when the policy
+  // leaves no cash refund?
+  useEffect(() => {
+    if (!booking.tenantId) return;
+    apiPublic<{ settings: { noRefundCredit?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+      .then((r) => setNoRefundCredit(!!r.settings.noRefundCredit))
+      .catch(() => {});
+  }, [booking.tenantId]);
 
   async function submit() {
     setBusy(true);
@@ -21,6 +35,7 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
     try {
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
         msg: msg.trim() || undefined,
+        refundPref,
       });
       onDone();
     } catch (e) {
@@ -41,15 +56,167 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
         rows={2}
         className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
       />
+      <div className="mt-2">
+        <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">If a refund is due, I&rsquo;d prefer</div>
+        <div className="grid grid-cols-2 gap-2">
+          {([["card", "💳 Back to card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
+            <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
+              style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
         <Button variant="danger" sm onClick={submit} disabled={busy}>
           {busy ? "Sending…" : "Send cancellation request"}
         </Button>
       </div>
+      {noRefundCredit && (
+        <div className="mt-1.5 rounded-lg bg-[var(--green-soft,#e7f8ee)] px-2.5 py-1.5 text-[11px] font-semibold text-[#0f7a44]">
+          👛 Even if the policy leaves no refund, this provider gives you a <b>credit note for the full amount</b> to use on a future booking.
+        </div>
+      )}
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
         The provider reviews your request and decides the refund under their
-        cancellation policy.
+        cancellation policy — this is only your preference for how any refund reaches you.
+      </div>
+    </div>
+  );
+}
+
+type AmendPolicy = {
+  amendSelfService: boolean;
+  amendNoticeHours: number;
+  amendFee: number;
+  amendAllowCheaper: boolean;
+  allowCardRefund: boolean;
+  refundLetCustomerChoose: boolean;
+};
+
+const AMEND_FALLBACK: AmendPolicy = { amendSelfService: true, amendNoticeHours: 48, amendFee: 0, amendAllowCheaper: true, allowCardRefund: true, refundLetCustomerChoose: true };
+const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
+const fmtIso = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+};
+
+// Parent-facing "move my dates" flow. Presents the provider's rules (fetched
+// from the public settings) and either changes the dates or sends a request,
+// depending on the provider's self-service setting. Enforcement is server-side
+// (handoff §U) — this collects the intent and posts it.
+function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: boolean) => void }) {
+  const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
+  const [moves, setMoves] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState("");
+  const [refundTo, setRefundTo] = useState<"card" | "wallet">("card");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const days = booking.days ?? [];
+
+  useEffect(() => {
+    if (!booking.tenantId) return;
+    apiPublic<{ settings: Partial<AmendPolicy> }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+      .then((r) => setPolicy({ ...AMEND_FALLBACK, ...r.settings }))
+      .catch(() => {});
+  }, [booking.tenantId]);
+
+  const setMove = (oldIso: string, newIso: string) =>
+    setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
+
+  const selfService = policy.amendSelfService;
+  const hasChanges = Object.keys(moves).length > 0 || !!msg.trim();
+  // Where any money back goes, mirroring the provider's Money-back settings.
+  const letChoose = policy.amendAllowCheaper && policy.allowCardRefund && policy.refundLetCustomerChoose;
+  const cheaper = policy.amendAllowCheaper
+    ? !policy.allowCardRefund
+      ? "credited to your wallet"
+      : policy.refundLetCustomerChoose
+        ? "yours to take as a card refund or wallet credit"
+        : "refunded to your card"
+    : null;
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, {
+        moves,
+        message: msg.trim() || undefined,
+        ...(letChoose ? { refundTo } : {}),
+      });
+      onDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn’t submit — try again");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div onClick={(e) => e.target === e.currentTarget && onDone(false)} className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8">
+      <div className="w-full max-w-[460px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
+          <h3 className="m-0 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            {selfService ? "Change your dates" : "Request a date change"}
+          </h3>
+          <button type="button" onClick={() => onDone(false)} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]" aria-label="Close">×</button>
+        </div>
+
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <div className="text-[12px] text-[var(--ink-3)]">{booking.listing} · {booking.child} · {booking.pass}</div>
+
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] leading-[1.6] text-[var(--ink-2)]">
+            <div>• A date can be moved up to <b>{noticeLabel(policy.amendNoticeHours)}</b> before it — closer than that it&rsquo;s locked.</div>
+            <div>• A move only goes to another running date with space.</div>
+            {policy.amendFee > 0 && <div>• A <b>£{policy.amendFee}</b> admin fee applies to each change.</div>}
+            {cheaper ? <div>• Moving to something cheaper: the difference is <b>{cheaper}</b>.</div> : <div>• Moves must be to the same price or higher.</div>}
+            {!selfService && <div className="mt-1 text-[var(--ink-3)]">Your provider reviews change requests before they&rsquo;re applied.</div>}
+          </div>
+
+          {days.length > 0 ? (
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your dates</div>
+              <div className="flex flex-col gap-1.5">
+                {days.map((iso) => (
+                  <div key={iso} className="flex items-center gap-2 text-[12.5px]">
+                    <span className="w-[120px] font-semibold">{fmtIso(iso)}</span>
+                    <span className="text-[var(--ink-3)]">→</span>
+                    <input type="date" value={moves[iso] ?? ""} onChange={(e) => setMove(iso, e.target.value)}
+                      className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={`Move ${fmtIso(iso)} to`} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Leave a row blank to keep that date. Pick a new date to move it.</div>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">What change would you like?</div>
+              <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} placeholder="e.g. move the Wednesday session to the following Monday"
+                className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)] outline-none" />
+            </div>
+          )}
+
+          {letChoose && (
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">If money comes back, send it to</div>
+              <div className="grid grid-cols-2 gap-2">
+                {([["card", "💳 My card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setRefundTo(v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
+                    style={refundTo === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
+          <Button variant="primary" disabled={busy || !hasChanges} onClick={submit} className="w-full justify-center">
+            {busy ? "Sending…" : selfService ? "Confirm change" : "Send request"}
+          </Button>
+          <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">Applied once the backend is built (§U)</div>
+        </div>
       </div>
     </div>
   );
@@ -58,6 +225,7 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
 function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void; autoPay?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [amending, setAmending] = useState(false);
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -104,12 +272,19 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? "Hide details" : "Details"}
         </Button>
+        {b.status === "Confirmed" && (
+          <Button sm onClick={() => setAmending(true)}>
+            Change dates…
+          </Button>
+        )}
         {!cancelled && (
           <Button sm variant="cta" onClick={() => setCancelling((x) => !x)}>
             Cancel booking…
           </Button>
         )}
       </div>
+
+      {amending && <AmendModal booking={b} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
 
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
