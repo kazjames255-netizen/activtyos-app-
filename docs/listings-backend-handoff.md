@@ -2165,8 +2165,31 @@ places bookable. Same mechanism serves any scarce ticket type.
    /api/listings/:id` should expose remaining per-ticket capacity so the
    storefront can show "**SEND 1:1 — full for this date**" and disable that
    pass, rather than letting a parent pick it and bounce at checkout.
-3. `capacity` is stored as a string (`z.string().max(10)`) — parse and treat
-   blank/NaN as "no per-ticket cap, use listing default".
+3. `capacity` is stored as a string (`z.string().max(10)`). Parse it and treat
+   **blank/NaN = no per-ticket cap** (use listing default), and **`"0"` =
+   closed**: refuse every booking of that ticket and show it as closed in the
+   storefront (step 2's surfacing). Same semantics as age caps — blank ≠ 0.
+   This lets a provider shut a single pass (e.g. "SEND 1:1") without touching
+   the rest of the listing/block.
+
+### Hiding a ticket on a listing (new)
+
+`ticketOverrides[name]` now also carries **`hidden?: boolean`** — a per-listing
+choice to drop that pass from *this* camp without touching the block (e.g. offer
+only the 5-day pass on one listing). Two things needed:
+
+1. **Whitelist it — DONE (Kaz).** `hidden: z.boolean().optional()` is already
+   added to the `ticketOverrides` value schema (`listings.ts:100`), so the flag
+   now persists. This was the missing piece that made hidden passes reappear on
+   the customer page after a save.
+2. **Honour it at booking (yours).** Refuse a booking for a ticket whose
+   `hidden === true`, and leave it out of any per-ticket availability you
+   expose. The front end already filters hidden passes out of every customer
+   render (public page, previews, take-a-booking), so parents won't see them —
+   but validate server-side too, so a crafted request can't book a hidden pass.
+
+Front end guards against hiding *every* ticket (publish blocker), so you'll
+always have at least one visible pass.
 
 Not in scope here (front end not built yet, flag for later): making the ratios
 board treat a 1:1 ticket as a **dedicated adult** — +1 staff for that child,

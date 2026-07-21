@@ -101,6 +101,9 @@ const baseListingSchema = z
           ageFrom: z.string().max(10).optional(),
           ageTo: z.string().max(10).optional(),
           capacity: z.string().max(10).optional(),
+          // Per-listing "don't offer this pass here" flag. The storefront filters
+          // hidden passes out; booking-time refusal is still Amir's (handoff §T).
+          hidden: z.boolean().optional(),
         }),
       )
       .optional(),

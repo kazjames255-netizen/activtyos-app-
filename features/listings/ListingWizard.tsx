@@ -238,7 +238,7 @@ function blockBooking(store: BlocksStore, blockId: string | null): BlockBooking 
 }
 
 // ── Wizard draft ───────────────────────────────────────────────────────────
-interface TicketOverride { ageFrom?: string; ageTo?: string; capacity?: string }
+interface TicketOverride { ageFrom?: string; ageTo?: string; capacity?: string; hidden?: boolean }
 export interface ListingImage { src: string; x: number; y: number; zoom: number }
 export interface WizardDraft {
   id: string | null;
@@ -351,7 +351,7 @@ export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title
  * step that fixes it — "something's missing" without saying what is worse than
  * no check at all.
  */
-export function publishBlockers(d: WizardDraft, ticketCount: number): { step: number; what: string }[] {
+export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTicketCount?: number): { step: number; what: string }[] {
   // Referenced by key, not index — the steps get reordered and a stale number
   // would send someone to the wrong screen without failing.
   const at = (key: string) => Math.max(0, STEPS.findIndex((x) => x.key === key));
@@ -366,6 +366,7 @@ export function publishBlockers(d: WizardDraft, ticketCount: number): { step: nu
   }
   if (!d.blockId) out.push({ step: at("tickets"), what: "Pick a block so the listing has passes and prices" });
   else if (ticketCount === 0) out.push({ step: at("tickets"), what: "That block has no passes — add some in the Blocks area" });
+  else if (visibleTicketCount === 0) out.push({ step: at("tickets"), what: "Every ticket is hidden — show at least one, or parents have nothing to book" });
   // Capacity is deliberately not required — left blank the listing just
   // doesn't show capacity anywhere, which is a legitimate way to run one.
   return out;
@@ -562,6 +563,19 @@ export function bookingFromBundle(bundle: ServerListing["bundle"]): BlockBooking
   return { passes, periods, priceFor };
 }
 
+/**
+ * Drop passes hidden on this listing (`ticketOverrides[name].hidden`) from a
+ * booking, so the parent never sees them. The block is untouched — this is a
+ * per-listing choice applied at the point the customer page reads passes.
+ * Returns null when nothing bookable remains (publish blocks all-hidden, so in
+ * practice this only bites on a half-built draft).
+ */
+function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<string, TicketOverride>): BlockBooking | null {
+  if (!booking) return booking;
+  const passes = booking.passes.filter((p) => overrides[p.name]?.hidden !== true);
+  return passes.length ? { ...booking, passes } : null;
+}
+
 /** The customer page a PARENT sees — rendered purely from the API's
  * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
  * "Preview as a parent" (same ParentPreview component, same data shape). */
@@ -676,7 +690,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       d={d}
       venue={lib?.venue ?? null}
       local={local}
-      booking={bookingFromBundle(listing.bundle)}
+      booking={withoutHiddenPasses(bookingFromBundle(listing.bundle), d.ticketOverrides)}
       blocks={listing.blocks}
       addons={lib?.addons ?? []}
       theme={d.pageStyle ?? "playful"}
@@ -710,7 +724,7 @@ export function BookingOnly({ listing, onBook, bookState }: {
   return (
     <BookingWidget
       d={d}
-      booking={bookingFromBundle(listing.bundle)}
+      booking={withoutHiddenPasses(bookingFromBundle(listing.bundle), d.ticketOverrides)}
       weeks={groupWeeks(dates)}
       spacesLeft={d.showSpaces && Number.isFinite(capParsed) ? capParsed : null}
       addons={(lib?.addons ?? []).filter((a) => d.addonIds.includes(a.id))}
@@ -730,7 +744,7 @@ export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; loc
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const d2 = { ...draft, images: norm(draft.images), gallery: norm(draft.gallery), bookRules: draft.bookRules ?? {}, ticketOverrides: draft.ticketOverrides ?? {} };
   const venue = local.venues.find((v) => v.id === draft.venueId) || null;
-  const booking = blockBooking(blocks, draft.blockId);
+  const booking = withoutHiddenPasses(blockBooking(blocks, draft.blockId), d2.ticketOverrides);
   const addons = local.addons.filter((a) => draft.addonIds.includes(a.id));
   return <ParentPreview d={d2} venue={venue} local={local} booking={booking} addons={addons} blocks={runs} theme={theme} onTheme={setTheme} full />;
 }
@@ -784,7 +798,7 @@ export function ListingWizard({
   const blocks = useBlocks();
   const upd = (patch: Partial<WizardDraft>) => setD((p) => ({ ...p, ...patch }));
   const tickets = useMemo(() => blockTickets(blocks, d.blockId), [blocks, d.blockId]);
-  const booking = useMemo(() => blockBooking(blocks, d.blockId), [blocks, d.blockId]);
+  const booking = useMemo(() => withoutHiddenPasses(blockBooking(blocks, d.blockId), d.ticketOverrides), [blocks, d.blockId, d.ticketOverrides]);
   const venue = local.venues.find((v) => v.id === d.venueId) || null;
   const addons = local.addons.filter((a) => d.addonIds.includes(a.id));
 
@@ -794,7 +808,10 @@ export function ListingWizard({
     if (!quiet) setBusy(true);
     setMsg(null);
     try {
-      const passes = tickets.length ? tickets.map((t) => ({ name: t.name, price: t.price })) : [{ name: "Standard", price: 0 }];
+      // Hidden tickets are dropped from the offer — a per-listing choice that
+      // leaves the block untouched. Blank fallback stays "Standard".
+      const visibleTickets = tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true);
+      const passes = visibleTickets.length ? visibleTickets.map((t) => ({ name: t.name, price: t.price })) : [{ name: "Standard", price: 0 }];
       // Images go to POST /api/uploads first — the listing doc stores URLs
       // only (the server rejects data URLs; Firestore caps docs at 1MB).
       const images = await uploadImages(d.images);
@@ -839,7 +856,7 @@ export function ListingWizard({
   }, [d]);
 
   const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
-  const blockers = publishBlockers(d, tickets.length);
+  const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
   const publishAction = async () => {
     if (blockers.length) {
       // Send them to the first thing that's missing rather than making them hunt.
@@ -1578,6 +1595,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
 function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; blocks: BlocksStore; tickets: { name: string; days: number; price: number }[] }) {
   const ovUpd = (name: string, field: keyof TicketOverride, value: string) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
+  const toggleHidden = (name: string, hidden: boolean) =>
+    upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], hidden } } });
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
   const multiDay = tickets.filter((t) => t.days > 1);
   return (
@@ -1624,18 +1643,30 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
           </p>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
+            const closed = ov.capacity === "0";
+            const hidden = ov.hidden === true;
             return (
-              <div key={t.name} className="mb-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
-                <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
-                  <span className="font-bold">{t.name} <span className="text-[var(--ink-3)]">· {t.days} day{t.days === 1 ? "" : "s"}</span></span>
-                  <span className="font-bold">{money(t.price)}</span>
+              <div key={t.name} className="mb-1.5 rounded-lg border bg-[var(--panel)] p-2.5" style={{ borderColor: closed && !hidden ? "#f0b8b8" : "var(--line)", opacity: hidden ? 0.6 : 1 }}>
+                <div className="flex items-center justify-between gap-2 text-[12.5px]">
+                  <span className="font-bold">{t.name} <span className="text-[var(--ink-3)]">· {t.days} day{t.days === 1 ? "" : "s"}</span>
+                    {hidden && <span className="ml-2 rounded-full bg-[var(--surface)] px-2 py-[1px] text-[10.5px] font-extrabold text-[var(--ink-3)]">Hidden from parents</span>}
+                    {closed && !hidden && <span className="ml-2 rounded-full bg-[#fdebec] px-2 py-[1px] text-[10.5px] font-extrabold text-[#c0392b]">Closed — not bookable</span>}</span>
+                  <span className="flex items-center gap-2.5">
+                    <span className="font-bold">{money(t.price)}</span>
+                    <button type="button" onClick={() => toggleHidden(t.name, !hidden)} className="rounded-full border border-[var(--line)] px-2.5 py-[3px] text-[10.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
+                      {hidden ? "Show" : "Hide"}
+                    </button>
+                  </span>
                 </div>
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
-                  <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
-                  <div className="w-[110px]"><FieldLabel>Capacity</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" /></div>
-                  <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]">Blank = uses the listing defaults.</span>
-                </div>
+                {!hidden && (
+                  <div className="mt-1.5 flex flex-wrap items-end gap-2">
+                    <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
+                    <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
+                    <div className="w-[110px]"><FieldLabel>Capacity</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
+                    <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>, this pass alone stops selling.</span>
+                  </div>
+                )}
+                {hidden && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
               </div>
             );
           })}
@@ -2729,9 +2760,9 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const emo = (o: string, fb: string) => OPT_EMOJI[o] || local.emojis?.[o] || fb;
 
   const fromPrice = booking && booking.passes.length ? Math.min(...booking.passes.map((pp) => pp.basePrice)) : null;
-  // "5 day pass from £150" reads far better than a bare "from £30". Cap at 3
-  // so the row always fits.
-  const passSummary = (booking?.passes ?? []).slice(0, 3).map((pp) => ({ name: pp.name, price: pp.basePrice }));
+  // "5 day pass from £150" reads far better than a bare "from £30". Full list —
+  // the page shows the first few and a "+N more" toggle for the rest.
+  const passSummary = (booking?.passes ?? []).map((pp) => ({ name: pp.name, price: pp.basePrice }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
@@ -2831,6 +2862,12 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
+  // Show the first few passes, then a "+N more" toggle so a long block list
+  // doesn't run down the whole hero.
+  const [morePasses, setMorePasses] = useState(false);
+  const PASS_LIMIT = 5;
+  const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
+  const passesExtra = passSummary.length - PASS_LIMIT;
   const chip = (o: string, fb: string, i: number) => (
     <div key={o} className="flex items-center gap-2.5 rounded-2xl bg-[#f4f7ff] px-3 py-2.5">
       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-xl text-[15px]" style={{ background: ["#e7f0ff", "#e4f8ee", "#fff0f5", "#fff6e0", "#e0f5ff"][i % 5] }}>{emo(o, fb)}</span>
@@ -2882,12 +2919,17 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* pass prices — named, not a bare "from" figure */}
         {passSummary.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {passSummary.map((p) => (
+            {passesShown.map((p) => (
               <span key={p.name} className="inline-flex items-baseline gap-1.5 rounded-full bg-white px-3.5 py-2" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
                 <span className="text-[11.5px] font-bold" style={{ color: MUTp }}>{p.name}</span>
                 <span className="text-[13px] font-extrabold" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}>from {money(p.price)}</span>
               </span>
             ))}
+            {passesExtra > 0 && (
+              <button type="button" onClick={() => setMorePasses((v) => !v)} className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[12px] font-extrabold" style={{ background: DEEP, color: "#fff" }}>
+                {morePasses ? "Show fewer" : `+${passesExtra} more`}
+              </button>
+            )}
           </div>
         )}
 
@@ -2990,6 +3032,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const heroH = full ? 340 : 240;
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
+  const [morePasses, setMorePasses] = useState(false);
+  const PASS_LIMIT = 5;
+  const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
+  const passesExtra = passSummary.length - PASS_LIMIT;
   return (
     <div className="overflow-hidden rounded-[18px] border" style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: LINEs }}>
@@ -3171,12 +3217,17 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
                   <div className="mt-1.5 flex flex-col gap-1">
-                    {passSummary.map((pp) => (
+                    {passesShown.map((pp) => (
                       <div key={pp.name} className="flex items-baseline justify-between gap-2">
                         <span className="truncate text-[11px]" style={{ color: MUTs }}>{pp.name}</span>
                         <b className={`flex-none text-[13px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
                       </div>
                     ))}
+                    {passesExtra > 0 && (
+                      <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start text-[11px] font-black ${cond}`} style={{ color: LIME }}>
+                        {morePasses ? "Show fewer" : `+${passesExtra} more`}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
