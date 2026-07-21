@@ -110,6 +110,7 @@ const PUBLIC_SETTINGS_KEYS = [
   "collectGender",
   "genderOptions",
   "collectPhoto",
+  "collectDietary",
   "askPhotoConsent",
   "collectSend",
   "collectSendPlan",

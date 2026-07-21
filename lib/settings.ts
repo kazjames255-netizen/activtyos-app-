@@ -271,6 +271,9 @@ export interface TenantSettings {
    * easily want the second and refuse the first.
    */
   askPhotoConsent: boolean;
+  /** Whether to ask about dietary needs. Optional because not every provider
+   *  serves food — a sports coach hiring a pitch has no use for it. */
+  collectDietary: boolean;
   /** The SEND / additional-needs question itself. */
   collectSend: boolean;
   /**
@@ -286,7 +289,7 @@ export interface TenantSettings {
   emergencyContacts: number;
   collectionCheck: "off" | "pin" | "password";
   /** Longest a parent may write in each free-text child field. */
-  charLimits: { allergies: number; medical: number; send: number; likes: number; dislikes: number };
+  charLimits: { allergies: number; medical: number; dietary: number; send: number; likes: number; dislikes: number };
 
   // ── Bookings & payments ──
   payMethods: string[];
@@ -413,12 +416,13 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
   collectPhoto: true,
+  collectDietary: true,
   askPhotoConsent: true,
   collectSend: true,
   collectSendPlan: true,
   emergencyContacts: 1,
   collectionCheck: "password",
-  charLimits: { allergies: 140, medical: 140, send: 200, likes: 80, dislikes: 80 },
+  charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,

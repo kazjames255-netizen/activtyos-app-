@@ -2972,18 +2972,18 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 const isOpen = openPass === p.name;
                 const canOpen = !!(p.details || p.days);
                 return (
-                  <div key={p.name} className="overflow-hidden rounded-2xl bg-white" style={{ border: `1.5px solid ${isOpen ? BLUE : `${BLUE}22`}`, boxShadow: "0 4px 12px -8px rgba(30,50,90,.3)" }}>
-                    <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : p.name)} className="flex w-full items-center gap-3 px-2.5 py-2.5 text-left">
-                      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[14px] font-black text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>🎟</span>
+                  <div key={p.name} className="overflow-hidden rounded-xl bg-white" style={{ border: `1.5px solid ${isOpen ? BLUE : `${BLUE}22`}`, boxShadow: "0 3px 10px -8px rgba(30,50,90,.3)" }}>
+                    <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : p.name)} className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left">
+                      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-black text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>🎟</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
-                        {p.days ? <span className="text-[11px] font-semibold" style={{ color: MUTp }}>{p.days} day{p.days === 1 ? "" : "s"}</span> : null}
+                        <span className="block text-[11.5px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
+                        {p.days ? <span className="text-[10px] font-semibold" style={{ color: MUTp }}>{p.days} day{p.days === 1 ? "" : "s"}{canOpen ? " · tap for details" : ""}</span> : null}
                       </span>
-                      <span className="flex-none text-[16px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[9.5px] font-bold" style={{ color: MUTp }}>FROM </span>{money(p.price)}</span>
-                      {canOpen && <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white transition-transform" style={{ background: BLUE, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
+                      <span className="flex-none text-[13px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[8.5px] font-bold" style={{ color: MUTp }}>FROM </span>{money(p.price)}</span>
+                      {canOpen && <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white transition-transform" style={{ background: BLUE, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
                     </button>
                     {isOpen && (
-                      <div className="border-t px-3 py-2.5 text-[12.5px] leading-[1.6]" style={{ borderColor: "#eef2fb", color: "#3d4763", background: "#f8faff" }}>
+                      <div className="border-t px-3 py-2 text-[11.5px] leading-[1.55]" style={{ borderColor: "#eef2fb", color: "#3d4763", background: "#f8faff" }}>
                         {p.details || `A ${p.days}-day pass. Choose your dates when you book.`}
                       </div>
                     )}
@@ -3300,24 +3300,24 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
-                  <div className="mt-2 flex flex-col gap-1.5">
+                  <div className="mt-1.5 flex flex-col gap-1">
                     {passesShown.map((pp) => {
                       const isOpen = openPass === pp.name;
                       const canOpen = !!(pp.details || pp.days);
                       return (
-                        <div key={pp.name} className="overflow-hidden rounded-lg" style={{ background: surf.cell, borderLeft: `3px solid ${LIME}` }}>
-                          <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left">
+                        <div key={pp.name} className="overflow-hidden rounded-md" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>
+                          <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
                             <span className="min-w-0">
-                              <span className={`block truncate text-[12px] font-bold text-white ${cond}`}>{pp.name}</span>
-                              {pp.days ? <span className="text-[10px]" style={{ color: MUTs }}>{pp.days} day{pp.days === 1 ? "" : "s"}{canOpen ? " · tap for details" : ""}</span> : null}
+                              <span className={`block truncate text-[10.5px] font-bold text-white ${cond}`}>{pp.name}</span>
+                              {pp.days ? <span className="block whitespace-nowrap text-[9px]" style={{ color: MUTs }}>{pp.days} day{pp.days === 1 ? "" : "s"}{canOpen ? " · details" : ""}</span> : null}
                             </span>
-                            <span className="flex flex-none items-center gap-1.5">
-                              <b className="text-[15px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
-                              {canOpen && <span className="text-[12px] font-black transition-transform" style={{ color: LIME, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
+                            <span className="flex flex-none items-center gap-1">
+                              <b className="text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
+                              {canOpen && <span className="text-[10px] font-black transition-transform" style={{ color: LIME, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
                             </span>
                           </button>
                           {isOpen && (
-                            <div className="border-t px-2.5 py-2 text-[11.5px] leading-[1.55]" style={{ borderColor: LINEs, color: "#d7deea" }}>
+                            <div className="border-t px-2 py-1.5 text-[10.5px] leading-[1.5]" style={{ borderColor: LINEs, color: "#d7deea" }}>
                               {pp.details || `A ${pp.days}-day pass. Choose your dates when you book.`}
                             </div>
                           )}

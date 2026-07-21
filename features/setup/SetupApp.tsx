@@ -1062,6 +1062,14 @@ export function SetupApp() {
                 <Limit value={settings.charLimits.medical} onChange={(n) => set("charLimits", { ...settings.charLimits, medical: n })} />
               </span>
             </Row>
+            <Row label="Ask about dietary needs" hint="Vegetarian, halal, intolerances — separate from an allergy, which is a safety matter. Optional: a sports coach hiring a pitch provides no food and has no use for it, so switch it off.">
+              <span className="flex items-center gap-2">
+                {settings.collectDietary && (
+                  <Limit value={settings.charLimits.dietary} onChange={(n) => set("charLimits", { ...settings.charLimits, dietary: n })} />
+                )}
+                <Toggle on={settings.collectDietary} onChange={(v) => set("collectDietary", v)} />
+              </span>
+            </Row>
             <Row label="Likes & dislikes" hint="What settles them and what doesn't. Two short boxes — the first is likes, the second dislikes.">
               <span className="flex items-center gap-2">
                 <Limit value={settings.charLimits.likes} onChange={(n) => set("charLimits", { ...settings.charLimits, likes: n })} />
