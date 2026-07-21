@@ -2108,3 +2108,28 @@ UI primitives and CSS vars.
 
 **Run the day: Ratios ✅ · Activity timetable ✅ · Tasks ✅ · Trips & visits ✅
 · Schedule & rota ✅ · Calendar ✅ · Locations ✅ — the whole section is done.**
+
+---
+
+# Operator dashboard — 21 July 2026 (Swagger v0.21.0)
+
+The landing screen (`dashboard` slug for company, `dash` for franchise/
+freelancer) — was a legacy prototype, now real. One read, **no new
+collection**, aggregating what the other routes already own.
+
+- **`GET /api/dashboard`** returns:
+  - `today` — sessions running today (listing, times, `booked`/`capacity`)
+    + the total `booked` on site.
+  - `next` + `upcoming[]` — the next session and the next few across open
+    blocks, each with `spotsLeft`.
+  - `bookings` — `live` (not cancelled/declined), `newThisWeek`, `waitlist`.
+  - `occupancy` — `booked`/`capacity`/`pct` across open runs whose sessions
+    haven't all passed.
+  - `money` — `takenThisWeek` (payment records in, refunds excluded),
+    `outstanding` (the same OWES rule reconciliation uses), `overdueVouchers`,
+    `awaitingVoucher`.
+  - `counts` — `listings`, `activeBlocks`.
+- Operators only (parents 403); platform passes `?tenantId=`. `DashboardApp`
+  subscribes to the existing `bookings`/`blocks`/`listings`/`payments`
+  realtime channels, so the numbers move live. Four stat cards + a "Today"
+  and "Coming up" list — restyle at will.

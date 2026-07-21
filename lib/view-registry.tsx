@@ -11,6 +11,7 @@ import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
+import { DashboardApp } from "@/features/dashboard/DashboardApp";
 import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
@@ -45,6 +46,7 @@ import { TimetableApp } from "@/features/timetable/TimetableApp";
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType>>> = {
   company: {
+    dashboard: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
@@ -66,6 +68,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
   },
   franchise: {
+    dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: ListingsApp,
@@ -88,6 +91,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
   },
   freelancer: {
+    dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,

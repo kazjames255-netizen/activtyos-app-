@@ -25,6 +25,7 @@ import { medications } from "./routes/medications";
 import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
 import { reconciliation } from "./routes/reconciliation";
+import { dashboard } from "./routes/dashboard";
 import { shifts } from "./routes/shifts";
 import { tasks } from "./routes/tasks";
 import { trips } from "./routes/trips";
@@ -106,6 +107,7 @@ app.use("/api/reconciliation", reconciliation);
 app.use("/api/tasks", tasks);
 app.use("/api/trips", trips);
 app.use("/api/shifts", shifts);
+app.use("/api/dashboard", dashboard);
 app.use("/api/geo", geo);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.

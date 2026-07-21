@@ -1,10 +1,29 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.20.0
+  version: 0.21.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.21.0 — Operator dashboard (landing screen)
+
+    **`GET /api/dashboard`** — one read that aggregates data the other
+    routes already own into the operator's home screen. No new collection.
+    Returns:
+    - `today` — sessions running today (listing, times, `booked`/`capacity`)
+      and the total `booked` on site.
+    - `next` + `upcoming[]` — the next session and the next few, across open
+      blocks, with `spotsLeft`.
+    - `bookings` — `live` (not cancelled/declined), `newThisWeek`, `waitlist`.
+    - `occupancy` — `booked`/`capacity`/`pct` across open runs with sessions
+      still to come.
+    - `money` — `takenThisWeek` (payment records in, refunds excluded),
+      `outstanding` (same OWES rule as reconciliation), `overdueVouchers`,
+      `awaitingVoucher`.
+    - `counts` — `listings`, `activeBlocks`.
+    Operators only (platform via `?tenantId=`); realtime via the existing
+    `bookings`/`blocks`/`listings`/`payments` channels.
 
     ## v0.20.0 — Run the day: Tasks, Trips, Schedule (+ Calendar/Locations)
 
@@ -488,6 +507,8 @@ tags:
     description: Outstanding money matched to bookings (vouchers / TFC / bank / cash)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
+  - name: dashboard
+    description: The operator's landing screen — aggregated read over bookings/blocks/money
   - name: ratios
     description: Staff:child ratios and grouping children per session
   - name: tasks
@@ -1382,6 +1403,16 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/dashboard:
+    get:
+      tags: [dashboard]
+      summary: The operator's home screen — today, occupancy, money, what's next
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/tasks:
     get:
