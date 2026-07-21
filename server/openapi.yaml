@@ -1,10 +1,27 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.17.0
+  version: 0.18.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.18.0 — Moments (Pupils) — the photo feed, consent-gated
+
+    Completes Pupils. `/api/moments` — photos a provider shares of the day.
+    - **The rule: photo consent.** A child can only be tagged if their
+      record has `photoConsent: true` — enforced on every create AND edit
+      (409 naming the child), so a family that said "no photos" never
+      appears whatever the client sends.
+    - `POST /api/moments` (operators + staff): `{photoUrl (via
+      /api/uploads), caption, childIds}`.
+    - `GET /api/moments` is **role-aware**: a parent gets moments featuring
+      THEIR children (cross-provider); an operator/staff gets the tenant's
+      (optional `?date=` / `?childId=`).
+    - `GET /api/moments/taggable?date=` — the day's booked children who
+      HAVE consent, so the post UI only ever offers taggable kids.
+    - Photos use the existing Firestore-backed image store (`/api/uploads`
+      → `/api/images`) — no new storage service needed.
 
     ## v0.17.0 — Meals & allergies (Pupils)
 
@@ -436,6 +453,8 @@ tags:
     description: Authorised medicines (parental consent) + the MAR (every dose given)
   - name: meals
     description: The day's menu + the dietary board (allergies matched against the menu)
+  - name: moments
+    description: The photo feed — consent-gated; parents see their own child's moments
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1419,6 +1438,64 @@ paths:
         - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
       responses:
         "200": { description: PNG tile (week-cached, immutable) }
+
+  /api/moments:
+    get:
+      tags: [moments]
+      summary: Moments — parent's own child's (role parent) or the tenant's (operators)
+      parameters:
+        - { name: date, in: query, required: false, schema: { type: string } }
+        - { name: childId, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { description: Moments, newest first }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [moments]
+      summary: Share a moment (operators + staff)
+      description: Children can only be tagged if their record has photoConsent — 409 otherwise.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photoUrl]
+              properties:
+                photoUrl: { type: string, description: URL from POST /api/uploads }
+                caption: { type: string }
+                childIds: { type: array, items: { type: string } }
+      responses:
+        "201": { description: The moment }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: A tagged child has no photo consent }
+
+  /api/moments/taggable:
+    get:
+      tags: [moments]
+      summary: The day's booked children WITH photo consent (for the tag picker)
+      parameters: [{ name: date, in: query, required: false, schema: { type: string } }]
+      responses:
+        "200": { description: "[{childId, name}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/moments/{id}:
+    put:
+      tags: [moments]
+      summary: Edit caption/tags (operator or poster; re-checks consent)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Updated }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: A tagged child has no photo consent }
+    delete:
+      tags: [moments]
+      summary: Delete a moment (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/meals:
     get:

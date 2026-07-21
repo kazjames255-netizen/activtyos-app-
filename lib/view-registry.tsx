@@ -6,6 +6,8 @@ import { CustomersApp } from "@/features/customers/CustomersApp";
 import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { IncidentsApp } from "@/features/incidents/IncidentsApp";
 import { MealsApp } from "@/features/meals/MealsApp";
+import { MomentsApp } from "@/features/moments/MomentsApp";
+import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
@@ -48,6 +50,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
+    moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -63,6 +66,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
+    moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -78,6 +82,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
+    moments: MomentsApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -88,12 +93,14 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
+    moments: MomentsApp,
     customers: CustomersApp,
   },
   custdash: {
     browse: BrowseApp,
     bookings: MyBookingsApp,
     children: ChildrenApp,
+    moments: ParentMomentsApp,
     schedule: ScheduleApp,
   },
   platform: {

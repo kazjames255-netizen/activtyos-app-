@@ -1981,3 +1981,26 @@ highlighted red. Restyle at will.
 **Pupils is now: Registers ✅ · Incidents & Accidents ✅ · Medication ✅ ·
 Meals & allergies ✅ · Moments (needs Firebase Storage).** Enabling Storage is
 the last thing between here and the photo/newsfeed layer.
+
+---
+
+# Moments — 21 July 2026 (Swagger v0.18.0) — Pupils COMPLETE
+
+The photo feed, and it completes the Pupils section. Built on the existing
+Firestore-backed image store (`/api/uploads` → `/api/images`) — no new storage
+service, so nothing was blocked after all.
+
+- **Photo consent is the gate.** A child is only taggable if their record has
+  `photoConsent: true` — enforced on create and edit (409 naming them). The
+  post UI fetches `GET /api/moments/taggable?date=` (today's booked, consented
+  children), so a non-consented child is never even offered.
+- `GET /api/moments` is role-aware: a parent sees moments featuring THEIR
+  children (cross-provider); operators/staff see the tenant's.
+- `MomentsApp` on the `moments` slug (operator/staff): upload + caption + tag +
+  gallery. `ParentMomentsApp` on custdash `moments` ("My child's day"). Restyle
+  at will.
+
+**Pupils: Registers ✅ · Incidents & Accidents ✅ · Medication ✅ · Meals &
+allergies ✅ · Moments ✅ — the whole section is done.** When you move to a
+real object store (R2 / Firebase Storage) only `uploads.ts` changes; every
+photo URL and consumer stays the same.

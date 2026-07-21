@@ -20,6 +20,7 @@ import { my } from "./routes/my";
 import { images, uploads } from "./routes/uploads";
 import { incidents } from "./routes/incidents";
 import { meals } from "./routes/meals";
+import { moments } from "./routes/moments";
 import { medications } from "./routes/medications";
 import { childFiles } from "./routes/childFiles";
 import { platform } from "./routes/platform";
@@ -96,6 +97,7 @@ app.use("/api/ratios", ratios);
 app.use("/api/incidents", incidents);
 app.use("/api/medications", medications);
 app.use("/api/meals", meals);
+app.use("/api/moments", moments);
 app.use("/api/geo", geo);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
