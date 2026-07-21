@@ -215,6 +215,12 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
 
   const totalChildren = dayChildren.length;
   const staffOnDuty = new Set(Object.values(groupStaff).flat()).size;
+  // One adult can't supervise two rooms at once. We allow assigning the same
+  // person to more than one group (sometimes you're planning cover and haven't
+  // decided), but it's flagged: their coverage in each group is double-counted,
+  // so a "met" that leans on a double-booked adult isn't really met.
+  const staffGroupCount = Object.values(groupStaff).flat().reduce<Record<string, number>>((m, sid) => { m[sid] = (m[sid] ?? 0) + 1; return m; }, {});
+  const doubleBooked = staff.filter((m) => (staffGroupCount[m.id] ?? 0) > 1);
   const staffNeeded = groups.reduce((n, g) => n + staffForLine(inGroup(g.id).length, g.targetRatio), 0) + staffForLine(inGroup("__unplaced").length, 8);
   const within = staffOnDuty >= staffNeeded;
   const overall = staffOnDuty > 0 ? totalChildren / staffOnDuty : 0;
@@ -272,6 +278,19 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
           </div>
         </div>
 
+        {/* Same adult in more than one group — allowed, but they can't be in
+            two rooms at once, so say so plainly. */}
+        {doubleBooked.length > 0 && (
+          <div className="flex items-start gap-2 border-b border-[#f6c9cc] bg-[#fdebec] px-4 py-2 text-[11.5px] leading-[1.45] text-[#c0392b]">
+            <span className="text-[13px]">⚠</span>
+            <span>
+              <b>{doubleBooked.map((m) => `${m.first} ${m.last}`.trim() || "Staff").join(", ")}</b>{" "}
+              {doubleBooked.length === 1 ? "is" : "are"} assigned to more than one group. One adult can&rsquo;t cover two rooms at once —
+              any group leaning on them isn&rsquo;t really staffed. Assign someone else, or move them to a single group.
+            </span>
+          </div>
+        )}
+
         {/* Group cards */}
         <div className="grid gap-3 p-3 sm:grid-cols-2">
           {groups.map((g) => {
@@ -318,10 +337,14 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
                   <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-2">
                     {staff.map((m) => {
                       const on = (groupStaff[g.id] ?? []).includes(m.id);
+                      const clash = on && (staffGroupCount[m.id] ?? 0) > 1;
                       return (
-                        <button key={m.id} type="button" onClick={() => setStaffFor(g.id, m.id)} className="rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
-                          style={on ? { borderColor: "transparent", background: g.colour, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+                        <button key={m.id} type="button" onClick={() => setStaffFor(g.id, m.id)}
+                          title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : undefined}
+                          className="inline-flex items-center gap-1 rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
+                          style={on ? { borderColor: clash ? "#c0392b" : "transparent", background: g.colour, color: "#fff", boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
                           {`${m.first} ${m.last}`.trim() || "Staff"}
+                          {clash && <span aria-label="assigned to more than one group">⚠</span>}
                         </button>
                       );
                     })}

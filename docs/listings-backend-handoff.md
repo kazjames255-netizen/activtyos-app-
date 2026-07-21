@@ -2144,6 +2144,37 @@ public settings endpoint too, since the storefront's age→group check needs it.
 
 ---
 
+## T — Per-ticket capacity (stored, needs enforcing + surfacing)
+
+**The gap.** `ticketOverrides[name].capacity` is already stored (schema
+`listings.ts:97`, saved fine), but the booking capacity check in `my.ts`
+(~line 565) only counts against the **listing/block** total — the per-ticket
+cap is ignored, so it doesn't actually limit anything yet.
+
+**Why it matters now.** This is how a provider caps a **SEND / 1:1 pass** to
+the number of dedicated staff they have (Kaz: "cap the ticket, otherwise how
+can we do this?"). Set the "SEND 1:1" ticket's capacity to 2 → only two 1:1
+places bookable. Same mechanism serves any scarce ticket type.
+
+1. **Enforce at booking.** In the basket check, for each child taking ticket
+   `T` on a dated session: count existing bookings of `T` for that day (or for
+   the listing, if `capacityScope: "listing"`) and refuse if it would exceed
+   `ticketOverrides[T].capacity`. This is *on top of* the listing total and the
+   age caps — a booking must pass all three.
+2. **Surface it BEFORE checkout** — same rule as age caps (§S). `GET
+   /api/listings/:id` should expose remaining per-ticket capacity so the
+   storefront can show "**SEND 1:1 — full for this date**" and disable that
+   pass, rather than letting a parent pick it and bounce at checkout.
+3. `capacity` is stored as a string (`z.string().max(10)`) — parse and treat
+   blank/NaN as "no per-ticket cap, use listing default".
+
+Not in scope here (front end not built yet, flag for later): making the ratios
+board treat a 1:1 ticket as a **dedicated adult** — +1 staff for that child,
+excluded from the group's general ratio. That's a separate piece; this section
+is only the booking cap.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime
