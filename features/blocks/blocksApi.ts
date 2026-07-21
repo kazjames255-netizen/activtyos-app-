@@ -14,9 +14,11 @@ export interface ApiPass {
   id: string;
   name: string;
   days: number;
+  /** Optional blurb shown to customers under the pass name. */
+  details?: string;
 }
 export interface ResolvedPricing {
-  passes: { id: string; name: string; days: number; price: number }[];
+  passes: { id: string; name: string; days: number; price: number; details?: string }[];
   timings: Record<string, number>;
   perDay: number;
 }

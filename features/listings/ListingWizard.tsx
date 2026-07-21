@@ -82,7 +82,7 @@ function who() {
 
 // ── Blocks builder data (read-only, from localStorage) ─────────────────────
 interface BPeriod { id: string; title: string; start: string; finish: string }
-interface BPass { id: string; name: string; days: number }
+interface BPass { id: string; name: string; days: number; details?: string }
 interface BBlock {
   id: string; name: string; periodIds: string[]; passIds: string[];
   masterPrice?: number; calcOn?: boolean; passFlat?: Record<string, number>; passMode?: Record<string, string>;
@@ -167,7 +167,7 @@ function blockTickets(store: BlocksStore, blockId: string | null) {
   });
 }
 // 12-hour time label, e.g. "09:00" -> "9:00 AM"
-export interface BookPass { id: string; name: string; days: number; basePrice: number }
+export interface BookPass { id: string; name: string; days: number; basePrice: number; details?: string }
 export interface BookPeriod { id: string; title: string; start: string; finish: string; range: string }
 export type RunBlock = { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean };
 
@@ -216,6 +216,7 @@ function blockBooking(store: BlocksStore, blockId: string | null): BlockBooking 
     name: q.name,
     days: q.days,
     basePrice: resolvedBase.get(q.id) ?? basePrice(q, i),
+    details: q.details,
   }));
   const priceFor = (passId: string, periodId: string | null) => {
     const qi = passList.findIndex((p) => p.id === passId);
@@ -250,6 +251,10 @@ export interface WizardDraft {
   ageTo: string;
   categoryIds: string[];
   venueId: string | null;
+  /** Optional on-the-day contact number, shown to parents ONLY while the camp
+   *  is actually running (today within the run dates) — e.g. how to reach staff
+   *  during sessions. Blank = not shown. */
+  sitePhone?: string;
   allowOutOfRange: boolean;
   maxAttendees: string;
   capacityScope: "day" | "listing";
@@ -493,6 +498,14 @@ export function listingRunsOn(draft: WizardDraft, iso: string): boolean {
   return genDates(draft.runFrom, draft.runTo, draft.days).includes(iso) && !(draft.datesOff || []).includes(iso);
 }
 
+// True while the camp is currently on — today within the run window. Gates the
+// on-the-day contact number, which parents should only see during the camp.
+export function listingRunningNow(draft: WizardDraft): boolean {
+  if (!draft.runFrom || !draft.runTo) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return today >= draft.runFrom && today <= draft.runTo;
+}
+
 // Swap any data-URL images for uploaded ones (POST /api/uploads → URL).
 // Already-uploaded images pass through untouched, so re-saving is free.
 async function uploadImages(arr: ListingImage[]): Promise<ListingImage[]> {
@@ -519,7 +532,7 @@ export interface ServerListing extends Omit<Partial<WizardDraft>, "id"> {
   bundle?: {
     id: string;
     name: string;
-    passes: { id: string; name: string; days: number; price: number }[];
+    passes: { id: string; name: string; days: number; price: number; details?: string }[];
     timings: Record<string, number>;
     periods: { id: string; title: string; start: string; finish: string }[];
   } | null;
@@ -551,7 +564,7 @@ export function draftFromListing(l: ServerListing): WizardDraft {
  * operator blocks-builder endpoints — /:id embeds everything they need). */
 export function bookingFromBundle(bundle: ServerListing["bundle"]): BlockBooking | null {
   if (!bundle || !bundle.passes.length) return null;
-  const passes: BookPass[] = bundle.passes.map((p) => ({ id: p.id, name: p.name, days: p.days, basePrice: p.price }));
+  const passes: BookPass[] = bundle.passes.map((p) => ({ id: p.id, name: p.name, days: p.days, basePrice: p.price, details: p.details }));
   const periods: BookPeriod[] = [...bundle.periods]
     .sort((a, b) => pHours(b) - pHours(a))
     .map((p) => ({ id: p.id, title: p.title, start: p.start, finish: p.finish, range: `${to12h(p.start)}–${to12h(p.finish)}` }));
@@ -1236,6 +1249,10 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       </Select>
       <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in the Locations tab — just pick a venue here.</div>
 
+      <FieldLabel>On-the-day contact number <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
+      <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
+      <div className="mb-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Shown to parents on the listing <b>only while the camp is running</b> — a number to reach staff during session days. Hidden before it starts and after it ends.</div>
+
       <SectionHead icon="🏷️">Categories</SectionHead>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
       <div className="mb-3 flex flex-wrap gap-1.5">
@@ -1597,6 +1614,11 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], [field]: value } } });
   const toggleHidden = (name: string, hidden: boolean) =>
     upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], hidden } } });
+  // Close = capacity "0" (shows "Closed" to parents, not bookable). Reopen
+  // clears it back to the listing default. Distinct from Hide, which removes
+  // the pass from the listing entirely.
+  const toggleClosed = (name: string, close: boolean) =>
+    upd({ ticketOverrides: { ...d.ticketOverrides, [name]: { ...d.ticketOverrides[name], capacity: close ? "0" : "" } } });
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
   const multiDay = tickets.filter((t) => t.days > 1);
   return (
@@ -1642,32 +1664,52 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             the number of dedicated staff you have: set it to, say, 2 and only two 1:1 places a day can be booked, so
             you&rsquo;re never committed to support you can&rsquo;t provide.
           </p>
+          <div className="mb-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-[var(--ink-3)]">
+            <span><b className="text-[#c0392b]">Close</b> = parents still see it, marked <b>Closed</b> — can&rsquo;t book.</span>
+            <span><b className="text-[var(--ink-2)]">Hide</b> = removed from this listing entirely — parents never see it.</span>
+          </div>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
             const closed = ov.capacity === "0";
             const hidden = ov.hidden === true;
+            // Accent bar reads the ticket's state at a glance: brand blue = live,
+            // red = closed, grey = hidden.
+            const accent = hidden ? "var(--ink-3)" : closed ? "#e21d27" : "var(--brand-2,#2f6bd8)";
             return (
-              <div key={t.name} className="mb-1.5 rounded-lg border bg-[var(--panel)] p-2.5" style={{ borderColor: closed && !hidden ? "#f0b8b8" : "var(--line)", opacity: hidden ? 0.6 : 1 }}>
-                <div className="flex items-center justify-between gap-2 text-[12.5px]">
-                  <span className="font-bold">{t.name} <span className="text-[var(--ink-3)]">· {t.days} day{t.days === 1 ? "" : "s"}</span>
-                    {hidden && <span className="ml-2 rounded-full bg-[var(--surface)] px-2 py-[1px] text-[10.5px] font-extrabold text-[var(--ink-3)]">Hidden from parents</span>}
-                    {closed && !hidden && <span className="ml-2 rounded-full bg-[#fdebec] px-2 py-[1px] text-[10.5px] font-extrabold text-[#c0392b]">Closed — not bookable</span>}</span>
-                  <span className="flex items-center gap-2.5">
-                    <span className="font-bold">{money(t.price)}</span>
-                    <button type="button" onClick={() => toggleHidden(t.name, !hidden)} className="rounded-full border border-[var(--line)] px-2.5 py-[3px] text-[10.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
-                      {hidden ? "Show" : "Hide"}
-                    </button>
-                  </span>
-                </div>
-                {!hidden && (
-                  <div className="mt-1.5 flex flex-wrap items-end gap-2">
-                    <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
-                    <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
-                    <div className="w-[110px]"><FieldLabel>Capacity / day</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
-                    <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Per day.</b> <b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>, this pass alone stops selling.</span>
+              <div key={t.name} className="mb-2 flex overflow-hidden rounded-xl border bg-[var(--surface)]" style={{ borderColor: closed && !hidden ? "#f0b8b8" : "var(--line)", opacity: hidden ? 0.72 : 1, boxShadow: hidden ? "none" : "0 1px 0 rgba(20,30,60,.04)" }}>
+                <span className="w-[5px] flex-none" style={{ background: accent }} />
+                <div className="flex-1 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
+                      <span className="text-[14px] font-extrabold">{t.name}</span>
+                      <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} day{t.days === 1 ? "" : "s"}</span>
+                      {hidden && <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Hidden</span>}
+                      {closed && !hidden && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Closed</span>}
+                    </span>
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-[16px] font-black tracking-[-0.01em]" style={{ fontVariantNumeric: "tabular-nums", color: closed && !hidden ? "#c0392b" : "var(--ink)" }}>{money(t.price)}</span>
+                      {!hidden && (
+                        <button type="button" onClick={() => toggleClosed(t.name, !closed)} title={closed ? "Reopen — parents can book again" : "Close — shows as Closed, can't be booked"}
+                          className="rounded-full border px-3 py-[4px] text-[11px] font-bold transition-colors"
+                          style={closed ? { borderColor: "#e21d27", background: "#e21d27", color: "#fff" } : { borderColor: "#f0b8b8", color: "#c0392b" }}>
+                          {closed ? "Reopen" : "Close"}
+                        </button>
+                      )}
+                      <button type="button" onClick={() => toggleHidden(t.name, !hidden)} className="rounded-full border border-[var(--line)] px-3 py-[4px] text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
+                        {hidden ? "Show" : "Hide"}
+                      </button>
+                    </span>
                   </div>
-                )}
-                {hidden && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
+                  {!hidden && (
+                    <div className="mt-2.5 flex flex-wrap items-end gap-2">
+                      <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
+                      <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
+                      <div className="w-[110px]"><FieldLabel>Capacity / day</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
+                      <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Per day.</b> <b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>.</span>
+                    </div>
+                  )}
+                  {hidden && <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
+                </div>
               </div>
             );
           })}
@@ -2766,7 +2808,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const fromPrice = booking && booking.passes.length ? Math.min(...booking.passes.map((pp) => pp.basePrice)) : null;
   // "5 day pass from £150" reads far better than a bare "from £30". Full list —
   // the page shows the first few and a "+N more" toggle for the rest.
-  const passSummary = (booking?.passes ?? []).map((pp) => ({ name: pp.name, price: pp.basePrice }));
+  const passSummary = (booking?.passes ?? []).map((pp) => ({ name: pp.name, price: pp.basePrice, days: pp.days, details: pp.details }));
   // Which category sits on the hero image when several are chosen.
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
@@ -2799,7 +2841,7 @@ interface PageProps {
   town: string; runLabel: string; staff: LocalState["staff"]; staffNames: string[];
   addons: LocalState["addons"]; imgs: ListingImage[];
   widget: React.ReactNode; full?: boolean; emo: (o: string, fb: string) => string;
-  fromPrice: number | null; passSummary: { name: string; price: number }[]; spacesLeft: number | null;
+  fromPrice: number | null; passSummary: { name: string; price: number; days?: number; details?: string }[]; spacesLeft: number | null;
   /** Set once in Locations, not per listing. */
   whereHead: { eyebrow: string; title: string };
   opens: { locked: boolean; countdown: string; opensLabel: string };
@@ -2869,6 +2911,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   // Show the first few passes, then a "+N more" toggle so a long block list
   // doesn't run down the whole hero.
   const [morePasses, setMorePasses] = useState(false);
+  const [openPass, setOpenPass] = useState<string | null>(null);
   const PASS_LIMIT = 5;
   const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
   const passesExtra = passSummary.length - PASS_LIMIT;
@@ -2904,7 +2947,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
               </>
             )}
           </div>
-          <h1 className="mt-1 font-extrabold leading-[1.04] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 34 : 24 }}>{d.title || "Your listing title"}</h1>
+          <h1 className="mt-1 font-extrabold leading-[1.06] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 27 : 21 }}>{d.title || "Your listing title"}</h1>
           </div>
           {opens.locked && (
             <div className="flex-none rounded-2xl px-3.5 py-2 text-right" style={{ background: "#eef3ff", border: `1.5px solid ${BLUE}` }}>
@@ -2920,20 +2963,50 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           {heroCat && <span className="absolute left-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
         </div>
 
-        {/* pass prices — named, not a bare "from" figure */}
+        {/* passes — fancy accordion, tap to open details */}
         {passSummary.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {passesShown.map((p) => (
-              <span key={p.name} className="inline-flex items-baseline gap-1.5 rounded-full bg-white px-3.5 py-2" style={{ boxShadow: "0 2px 0 #e8edf7" }}>
-                <span className="text-[11.5px] font-bold" style={{ color: MUTp }}>{p.name}</span>
-                <span className="text-[13px] font-extrabold" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}>from {money(p.price)}</span>
-              </span>
-            ))}
-            {passesExtra > 0 && (
-              <button type="button" onClick={() => setMorePasses((v) => !v)} className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[12px] font-extrabold" style={{ background: DEEP, color: "#fff" }}>
-                {morePasses ? "Show fewer" : `+${passesExtra} more`}
-              </button>
-            )}
+          <div className="mt-4">
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em]" style={{ color: BLUE }}>Passes</div>
+            <div className="flex flex-col gap-2">
+              {passesShown.map((p) => {
+                const isOpen = openPass === p.name;
+                const canOpen = !!(p.details || p.days);
+                return (
+                  <div key={p.name} className="overflow-hidden rounded-2xl bg-white" style={{ border: `1.5px solid ${isOpen ? BLUE : `${BLUE}22`}`, boxShadow: "0 4px 12px -8px rgba(30,50,90,.3)" }}>
+                    <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : p.name)} className="flex w-full items-center gap-3 px-2.5 py-2.5 text-left">
+                      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[14px] font-black text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>🎟</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
+                        {p.days ? <span className="text-[11px] font-semibold" style={{ color: MUTp }}>{p.days} day{p.days === 1 ? "" : "s"}</span> : null}
+                      </span>
+                      <span className="flex-none text-[16px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[9.5px] font-bold" style={{ color: MUTp }}>FROM </span>{money(p.price)}</span>
+                      {canOpen && <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white transition-transform" style={{ background: BLUE, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
+                    </button>
+                    {isOpen && (
+                      <div className="border-t px-3 py-2.5 text-[12.5px] leading-[1.6]" style={{ borderColor: "#eef2fb", color: "#3d4763", background: "#f8faff" }}>
+                        {p.details || `A ${p.days}-day pass. Choose your dates when you book.`}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {passesExtra > 0 && (
+                <button type="button" onClick={() => setMorePasses((v) => !v)} className="self-start rounded-full px-4 py-1.5 text-[12px] font-extrabold text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>
+                  {morePasses ? "Show fewer" : `+${passesExtra} more`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* on-the-day contact — only while the camp is running */}
+        {d.sitePhone && listingRunningNow(d) && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee", border: "1.5px solid #b6e6c8" }}>
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: "#fff" }}>📞</span>
+            <div className="min-w-0">
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#0f7a44" }}>Camp is on now — reach staff</div>
+              <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className="text-[16px] font-black tracking-[-0.01em]" style={{ color: "#0b6b3a" }}>{d.sitePhone}</a>
+            </div>
           </div>
         )}
 
@@ -2949,7 +3022,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         <div className={`mt-5 ${full ? "grid items-start gap-6 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-4">
-            {d.description && <div className="rounded-3xl bg-white p-5 text-[15px] leading-[1.7]" style={{ color: "#3d4763", boxShadow: "0 2px 0 #e8edf7" }}>{d.description}</div>}
+            {d.description && <div className="rounded-3xl bg-white p-5 text-[13.5px] leading-[1.65]" style={{ color: "#3d4763", boxShadow: "0 2px 0 #e8edf7" }}>{d.description}</div>}
             {!full && <div id="aos-book">{widget}</div>}
             {d.sections.some((s) => s.text) && <PlayCard e="🎯" tint="#e7f0ff" title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{s.type}</div><p className="mt-1 text-[13.5px] leading-[1.6]" style={{ color: "#3d4763" }}>{s.text}</p></div>)}</PlayCard>}
             {d.outcomes.length > 0 && <PlayCard e="🌟" tint="#fff6e0" title={headingOf(d, "learn", "title")} sub={headingOf(d, "learn", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => chip(o, "⭐", i))}</div></PlayCard>}
@@ -3037,6 +3110,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
   const [morePasses, setMorePasses] = useState(false);
+  const [openPass, setOpenPass] = useState<string | null>(null);
   const PASS_LIMIT = 5;
   const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
   const passesExtra = passSummary.length - PASS_LIMIT;
@@ -3064,7 +3138,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             </>
           )}
         </div>
-        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 48 : 30, lineHeight: .92, color: "#fff" }}>{d.title || "Your listing title"}</h1>
+        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: "#fff" }}>{d.title || "Your listing title"}</h1>
         </div>
         {opens.locked && (
           <div className="flex-none border px-3.5 py-2 text-right" style={{ borderColor: LIME, background: PANEL }}>
@@ -3217,18 +3291,41 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 )}
               </div>
               )}
+              {d.sitePhone && listingRunningNow(d) && (
+                <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  <div className={lab} style={{ color: LIME }}>📞 camp is on now — reach staff</div>
+                  <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: "#fff" }}>{d.sitePhone}</a>
+                </div>
+              )}
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
-                  <div className="mt-1.5 flex flex-col gap-1">
-                    {passesShown.map((pp) => (
-                      <div key={pp.name} className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-[11px]" style={{ color: MUTs }}>{pp.name}</span>
-                        <b className={`flex-none text-[13px] font-black ${cond} text-white`} style={{ fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
-                      </div>
-                    ))}
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {passesShown.map((pp) => {
+                      const isOpen = openPass === pp.name;
+                      const canOpen = !!(pp.details || pp.days);
+                      return (
+                        <div key={pp.name} className="overflow-hidden rounded-lg" style={{ background: surf.cell, borderLeft: `3px solid ${LIME}` }}>
+                          <button type="button" onClick={() => canOpen && setOpenPass(isOpen ? null : pp.name)} className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left">
+                            <span className="min-w-0">
+                              <span className={`block truncate text-[12px] font-bold text-white ${cond}`}>{pp.name}</span>
+                              {pp.days ? <span className="text-[10px]" style={{ color: MUTs }}>{pp.days} day{pp.days === 1 ? "" : "s"}{canOpen ? " · tap for details" : ""}</span> : null}
+                            </span>
+                            <span className="flex flex-none items-center gap-1.5">
+                              <b className="text-[15px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>{money(pp.price)}</b>
+                              {canOpen && <span className="text-[12px] font-black transition-transform" style={{ color: LIME, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
+                            </span>
+                          </button>
+                          {isOpen && (
+                            <div className="border-t px-2.5 py-2 text-[11.5px] leading-[1.55]" style={{ borderColor: LINEs, color: "#d7deea" }}>
+                              {pp.details || `A ${pp.days}-day pass. Choose your dates when you book.`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     {passesExtra > 0 && (
-                      <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start text-[11px] font-black ${cond}`} style={{ color: LIME }}>
+                      <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start rounded-full px-3 py-1 text-[11px] font-black ${cond}`} style={{ background: LIME, color: "#12280a" }}>
                         {morePasses ? "Show fewer" : `+${passesExtra} more`}
                       </button>
                     )}
@@ -3282,7 +3379,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 
         <div className={`mt-8 ${full ? "grid items-start gap-7 lg:grid-cols-[1fr_360px]" : ""}`}>
           <div className="flex flex-col gap-6">
-            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[15px] leading-[1.7]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
+            {d.description && <div><div className="text-[12px] font-extrabold uppercase tracking-[0.14em]" style={{ color: LIME }}>{headingOf(d, "about", "title")}</div><p className="mt-1.5 text-[13.5px] leading-[1.65]" style={{ color: "#c3ccdb" }}>{d.description}</p></div>}
             {!full && <div id="aos-book">{widget}</div>}
             {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
             {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}

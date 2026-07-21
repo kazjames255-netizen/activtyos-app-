@@ -69,6 +69,8 @@ const baseListingSchema = z
     categoryIds: z.array(z.string().max(60)).max(50).optional(),
     heroCategoryId: z.string().max(60).nullable().optional(),
     venueId: z.string().max(60).nullable().optional(),
+    // On-the-day contact number, shown to parents only while the camp runs.
+    sitePhone: z.string().max(40).optional(),
     allowOutOfRange: z.boolean().optional(),
     // capacity
     maxAttendees: z.string().max(10).optional(),

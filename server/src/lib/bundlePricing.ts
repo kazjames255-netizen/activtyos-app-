@@ -16,6 +16,7 @@ export interface PassDoc {
   tenantId: string;
   name: string;
   days: number;
+  details?: string;
 }
 
 export interface BundleDoc {
@@ -46,7 +47,7 @@ export const periodHours = (p: Pick<PeriodDoc, "start" | "finish">) =>
 
 export interface ResolvedPricing {
   /** Passes sorted by days DESC (the first is the master) with final prices. */
-  passes: { id: string; name: string; days: number; price: number }[];
+  passes: { id: string; name: string; days: number; price: number; details?: string }[];
   /** "{passId}_{periodId}" → final per-timing price. */
   timings: Record<string, number>;
   perDay: number;
@@ -82,6 +83,7 @@ export function resolveBundlePricing(
     name: p.name,
     days: p.days,
     price: priceForPass(p, idx),
+    ...(p.details ? { details: p.details } : {}),
   }));
 
   const timings: Record<string, number> = {};
