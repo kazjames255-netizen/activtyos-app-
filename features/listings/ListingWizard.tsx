@@ -1637,9 +1637,10 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <div className="mt-3">
           <SectionHead icon="🎟️">Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-            <b>Capacity</b> here limits how many of <em>that</em> pass can be booked — separate from the whole-listing total.
-            It&rsquo;s how you cap a <b>SEND / 1:1</b> pass to the number of dedicated staff you have: set it to, say, 2 and only two
-            1:1 places can be booked, so you&rsquo;re never committed to support you can&rsquo;t provide.
+            <b>Capacity is per day</b> — how many of <em>that</em> pass can be booked on any one day, separate from the
+            whole-listing total. A room refills each day, so this resets daily. It&rsquo;s how you cap a <b>SEND / 1:1</b> pass to
+            the number of dedicated staff you have: set it to, say, 2 and only two 1:1 places a day can be booked, so
+            you&rsquo;re never committed to support you can&rsquo;t provide.
           </p>
           {tickets.map((t) => {
             const ov = d.ticketOverrides[t.name] || {};
@@ -1662,8 +1663,8 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   <div className="mt-1.5 flex flex-wrap items-end gap-2">
                     <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
                     <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
-                    <div className="w-[110px]"><FieldLabel>Capacity</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
-                    <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>, this pass alone stops selling.</span>
+                    <div className="w-[110px]"><FieldLabel>Capacity / day</FieldLabel><Input type="number" min={0} value={ov.capacity ?? ""} onChange={(e) => ovUpd(t.name, "capacity", e.target.value)} placeholder={d.maxAttendees} className="w-full" style={closed ? { borderColor: "#f0b8b8", color: "#c0392b", fontWeight: 700 } : undefined} /></div>
+                    <span className="pb-[6px] text-[10.5px] text-[var(--ink-3)]"><b>Per day.</b> <b>Blank</b> = listing default · <b className={closed ? "text-[#c0392b]" : undefined}>0 = closed</b>, this pass alone stops selling.</span>
                   </div>
                 )}
                 {hidden && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
@@ -2281,9 +2282,12 @@ type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: Blo
 function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: WizardDraft; tone: "light" | "dark" }) {
   if (!b.waitlistOn || !b.fullCount) return null;
   const dark = tone === "dark";
+  // Red, to match the "full" markers (a full day's dot is #ff5470). A warm,
+  // readable red — not alarm-red — so "full" reads consistently everywhere.
   const box = dark
-    ? { borderColor: "#ffb020", background: "#2a2110", color: "#ffd79a" }
-    : { borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" };
+    ? { borderColor: "#ff5470", background: "#2a1016", color: "#ffc2cd" }
+    : { borderColor: "#f6c9cc", background: "#fdecec", color: "#b3261e" };
+  const cta = dark ? "#e5484d" : "#dc2626";
 
   if (b.waitDone) {
     return (
@@ -2328,7 +2332,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
         <>
           <button type="button" onClick={() => b.setWaitDone(true)}
             className="mt-2.5 w-full rounded-xl py-2.5 text-[12.5px] font-extrabold text-white"
-            style={{ background: dark ? "#c2410c" : "#c2410c" }}>
+            style={{ background: cta }}>
             Join the waiting list for {b.waitSel.length} day{b.waitSel.length === 1 ? "" : "s"}
           </button>
           <div className="mt-1.5 text-[11px] leading-[1.45] opacity-90">
@@ -2432,7 +2436,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
         <>
           {step(1, "Choose your pass")}
           <div className="flex flex-wrap gap-2">
-            {b.passes.map((t) => <button key={t.id} type="button" onClick={() => { b.setPassId(t.id); }} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold" style={t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}</button>)}
+            {b.passes.map((t) => { const closed = b.passClosed(t.id); return <button key={t.id} type="button" disabled={closed} onClick={() => { if (!closed) b.setPassId(t.id); }} title={closed ? "This pass is closed for this camp" : undefined} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={closed ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed && <span className="ml-1.5 no-underline">· Closed</span>}</button>; })}
           </div>
           {b.periods.length > 0 && <>
             {step(2, "Choose a timing")}
@@ -2615,7 +2619,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
           <>
             {step(1, "Choose your pass")}
-            <div className="flex flex-wrap gap-2">{b.passes.map((t) => <button key={t.id} type="button" onClick={() => b.setPassId(t.id)} className="border px-4 py-2 text-[12.5px] font-bold" style={t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}</button>)}</div>
+            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); return <button key={t.id} type="button" disabled={closed} onClick={() => { if (!closed) b.setPassId(t.id); }} title={closed ? "This pass is closed for this camp" : undefined} className="border px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={closed ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed && <span className="ml-1.5 no-underline">· Closed</span>}</button>; })}</div>
             {b.periods.length > 0 && <>
               {step(2, "Choose a timing")}
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
