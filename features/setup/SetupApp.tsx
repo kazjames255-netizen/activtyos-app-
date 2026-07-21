@@ -16,8 +16,10 @@ import {
   inferWho,
   filledDetails,
   VOUCHER_DETAIL_LABELS,
+  DEFAULT_RATIO_GROUPS,
   type CancelReason,
   type VoucherProvider,
+  type RatioGroup,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 
@@ -42,7 +44,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "cancel" | "defaults" | "bookings" | "vouchers";
+type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -419,6 +421,83 @@ function Section({ title, lede, children }: { title: string; lede?: string; chil
       {lede && <p className="mb-2 mt-0.5 text-[12px] leading-[1.5] text-[var(--ink-3)]">{lede}</p>}
       {children}
     </Card>
+  );
+}
+
+// ── Age groups & rooms ──────────────────────────────────────────────────────
+
+/**
+ * The single source of truth for the tenant's age groups: name, colour, age
+ * band, target ratio and room size. Defined here once, then referenced
+ * everywhere — the Ratios & groups board, the cover calculator, and every
+ * listing's age caps. A listing can only cap a group *below* its room size,
+ * never above, so these numbers can't be contradicted from a listing. This is
+ * the same record the Ratios page shows; editing it in either place is the
+ * same edit.
+ */
+function GroupsEditor({ groups, onChange }: { groups: RatioGroup[]; onChange: (g: RatioGroup[]) => void }) {
+  const patch = (i: number, fn: (g: RatioGroup) => RatioGroup) => onChange(groups.map((x, j) => (j === i ? fn(x) : x)));
+  const num = (v: string, min: number) => Math.max(min, parseInt(v, 10) || min);
+  const inp = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]";
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[12.5px]">
+        <thead>
+          <tr className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--ink-3)]">
+            <th className="px-2 py-1.5 text-left font-extrabold">Colour</th>
+            <th className="px-2 py-1.5 text-left font-extrabold">Group</th>
+            <th className="px-2 py-1.5 text-left font-extrabold">Age</th>
+            <th className="px-2 py-1.5 text-left font-extrabold">Target ratio</th>
+            <th className="px-2 py-1.5 text-left font-extrabold">Room size</th>
+            <th className="px-2 py-1.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g, i) => (
+            <tr key={g.id} className="border-t border-[var(--line)]">
+              <td className="px-2 py-1.5">
+                <input type="color" value={g.colour} onChange={(e) => patch(i, (x) => ({ ...x, colour: e.target.value }))} className="h-7 w-10 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" aria-label={`${g.name} colour`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={g.name} onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))} className={`${inp} w-[130px] font-bold`} placeholder="Group name" />
+              </td>
+              <td className="px-2 py-1.5">
+                <span className="inline-flex items-center gap-1">
+                  <input type="number" min={0} max={21} value={g.ageFrom} onChange={(e) => patch(i, (x) => ({ ...x, ageFrom: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
+                  <span className="text-[var(--ink-3)]">to</span>
+                  <input type="number" min={0} max={21} value={g.ageTo} onChange={(e) => patch(i, (x) => ({ ...x, ageTo: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
+                  <span className="text-[var(--ink-3)]">yrs</span>
+                </span>
+              </td>
+              <td className="px-2 py-1.5">
+                <span className="inline-flex items-center gap-1">1 :<input type="number" min={1} value={g.targetRatio} onChange={(e) => patch(i, (x) => ({ ...x, targetRatio: num(e.target.value, 1) }))} className={`${inp} w-[56px]`} /></span>
+              </td>
+              <td className="px-2 py-1.5">
+                <input type="number" min={0} value={g.maxSize || ""} placeholder="no cap" onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[72px]`} />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={`Remove ${g.name}`} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-2.5 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onChange([...groups, { id: uid(), name: `Group ${groups.length + 1}`, colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
+          className="rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)]"
+        >
+          ＋ Add group
+        </button>
+        {groups.length === 0 && (
+          <button type="button" onClick={() => onChange(DEFAULT_RATIO_GROUPS)} className="text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)] underline">
+            Start from the standard groups
+          </button>
+        )}
+        <span className="text-[11px] text-[var(--ink-3)]">Leave <b>room size</b> blank for no cap.</span>
+      </div>
+    </div>
   );
 }
 
@@ -926,6 +1005,7 @@ export function SetupApp() {
 
   const TABS: [Tab, string][] = [
     ["people", "Child questions"],
+    ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
     ["bookings", "Payments"],
@@ -1238,6 +1318,40 @@ export function SetupApp() {
               <b className="text-[var(--ink-2)]">Tax-Free Childcare isn’t here.</b> It’s HMRC rather
               than an employer scheme, it uses your Ofsted number, and it’s getting its own
               reconciliation — so it stays a payment method in its own right.
+            </div>
+          </Section>
+        </>
+      )}
+
+      {tab === "groups" && (
+        <>
+          <Section
+            title="Age groups & rooms"
+            lede="Set your age groups once, here. Each has a colour, an age band, a target staffing ratio and a room size — the most children that group can hold. These are used everywhere: the Ratios & groups board, the cover calculator, and the age limits on every listing."
+          >
+            <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] px-3.5 py-3 text-[12px] leading-[1.6] text-[var(--ink-2)]">
+              <div className="mb-1 font-extrabold text-[var(--ink)]">Why this lives here, not in a listing</div>
+              These groups are your <b>one master record</b>. A listing can&rsquo;t change them —
+              when you set an age limit on a listing, you&rsquo;re only choosing how many of an
+              <em> existing</em> group to take that camp, and you can only go <b>below</b> the room
+              size, never above it. So a listing can never quietly contradict what you set here: the
+              room size is always the hard ceiling. Change a name, colour, ratio or room size here and
+              it updates the Ratios board and every listing at once.
+            </div>
+            <GroupsEditor groups={settings.ratioGroups} onChange={(v) => set("ratioGroups", v)} />
+            <div className="mt-3 border-t border-dashed border-[var(--line)] pt-1">
+              <Row
+                label="Let a listing adjust a group's age range"
+                hint="Off: the age bands above are fixed everywhere and can't be touched from a listing. On: a listing can narrow or shift a band for that camp only — e.g. run Explorers as 8–12 for one holiday club while the group stays 8–10 everywhere else. It only ever changes that listing; the master here, the Ratios board and your other listings are untouched. Names, colours, ratios and room sizes stay fixed here regardless."
+              >
+                <Toggle on={settings.allowListingAgeRange} onChange={(v) => set("allowListingAgeRange", v)} />
+              </Row>
+            </div>
+            <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[11.5px] leading-[1.6] text-[var(--ink-3)]">
+              <b className="text-[var(--ink-2)]">Room size vs listing cap.</b> Room size is the physical
+              limit of the space — what the group can ever hold. A <b>listing&rsquo;s</b> age cap is a
+              per-camp choice, e.g. &ldquo;only take 10 of the 20 this week&rdquo;. Statutory EYFS ratios for
+              the under-5s are applied automatically on the Ratios page and aren&rsquo;t set here.
             </div>
           </Section>
         </>
