@@ -2099,6 +2099,7 @@ needs the backend to store, enforce, and — the important one — surface.
    and `ageCapsOn: z.boolean().optional()` to `baseListingSchema` (listings.ts:57).
    Right now the schema strips them, so the config doesn't even survive a
    Publish. This one line unblocks Kaz testing the whole config lifecycle.
+   **Also add `ageRanges: z.record(z.string().max(60), z.object({ from: z.number().int().min(0).max(21), to: z.number().int().min(0).max(21) })).optional()`** — see the per-listing age-range note below.
 
 2. **Enforce at booking.** In the basket checkout (`my.ts`), for each child on
    each dated session: resolve the child's age -> its ratio group -> the
@@ -2116,10 +2117,30 @@ needs the backend to store, enforce, and — the important one — surface.
 
 ### Where the group definitions live
 
-Names, colours, age ranges, target ratios and max sizes are in
-`settings.ratioGroups` (tenant library - persisted). They're editable from
-**both** the Ratios & groups board and the listing's age-cap rows, one source
-of truth. You only need the per-listing `ageCaps` numbers.
+Names, colours, age ranges, target ratios and max sizes are the tenant's **one
+master record** in `settings.ratioGroups` (tenant library - persisted). As of
+now they're edited in **Setup → Age groups & rooms** (and, if you keep it, the
+Ratios board — same record). A listing **cannot** change a group's name,
+colour, ratio or room size; its age-cap rows are read-only for those. You only
+need the per-listing `ageCaps` numbers, which are already clamped on the
+front end to `min(dayTotal, budget, group.maxSize)` so a cap can never exceed
+the room size — but **re-clamp server-side**, don't trust the client.
+
+### Per-listing age-range override (new)
+
+There's a new tenant setting **`settings.allowListingAgeRange: boolean`**
+(default `false`). When a tenant turns it **on**, a listing may narrow/shift a
+group's age band **for that camp only** via **`ageRanges`** on the listing —
+`Record<ratioGroupId, {from, to}>`. The master `settings.ratioGroups` band is
+**never** touched; other listings and the Ratios board keep the master band.
+
+What this means for enforcement (step 2) and surfacing (step 3): when you
+resolve a child's age → ratio group **for a given listing**, use that listing's
+`ageRanges[groupId]` if present, else the master `settings.ratioGroups` band.
+So the age→group mapping is listing-scoped whenever an override exists. If
+`allowListingAgeRange` is `false`, ignore any stored `ageRanges` (treat as
+master) — the toggle is the gate. Whitelist `allowListingAgeRange` in the
+public settings endpoint too, since the storefront's age→group check needs it.
 
 ---
 

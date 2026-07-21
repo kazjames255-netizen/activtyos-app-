@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
@@ -159,6 +159,43 @@ function PolicyTable({ groups, onChange }: { groups: RatioGroup[]; onChange: (g:
 // ────────────────────────────────────────────────────────────────────────
 // Cover-by-group board — coloured group cards for the day.
 // ────────────────────────────────────────────────────────────────────────
+// Your team — add/remove staff here, saved to the same library list the
+// listing builder's Step 9 uses. Gives freelancers (who have no standalone
+// team screen) a place to manage staff, and it flows everywhere.
+function TeamManager({ staff, onChange }: { staff: StaffMember[]; onChange: (s: StaffMember[]) => void }) {
+  const [name, setName] = useState("");
+  const add = () => {
+    const t = name.trim();
+    if (!t) return;
+    const [first, ...rest] = t.split(" ");
+    onChange([...staff, { id: uid(), first, last: rest.join(" ") }]);
+    setName("");
+  };
+  return (
+    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+        🧑‍🏫 Your team <span className="font-normal text-[var(--ink-3)]">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
+      </summary>
+      <div className="px-3.5 pb-3.5">
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {staff.map((m) => (
+            <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 pl-3 pr-1.5 text-[12px] font-semibold">
+              {`${m.first} ${m.last}`.trim() || "Staff"}
+              <button type="button" aria-label={`Remove ${m.first}`} onClick={() => onChange(staff.filter((x) => x.id !== m.id))} className="px-1 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+            </span>
+          ))}
+          {staff.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No staff yet — add yourself and any helpers.</span>}
+        </div>
+        <div className="flex gap-1.5">
+          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Name — e.g. Alex Rivera"
+            className="w-[240px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+          <Button sm variant="primary" onClick={add}>＋ Add</Button>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   date: string; isToday: boolean; dayChildren: SessionChild[]; groups: RatioGroup[]; staff: StaffMember[];
   onDay: (by: number) => void;
@@ -437,7 +474,18 @@ export function RatiosApp() {
   }, [date]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ staff?: StaffMember[] } | null>("/api/library").then((l) => setStaffLib(l?.staff ?? [])).catch(() => {}); }, []);
-  useRealtime(["ratioGroups", "bookings", "blocks"], refresh);
+  useRealtime(["ratioGroups", "bookings", "blocks", "library"], refresh);
+
+  // Add/remove staff writes to the tenant library's `staff` list — the same
+  // one the listing builder's Step 9 edits — so a coach added here shows up
+  // there too, and vice versa. The library PUT is read-modify-write, so
+  // sending only `staff` merges without touching anything else.
+  const saveStaff = useCallback((next: StaffMember[]) => {
+    setStaffLib(next);
+    api("/api/library", { method: "PUT", body: JSON.stringify({ staff: next }) }).catch(() =>
+      setError("Couldn’t save your team — try again"),
+    );
+  }, []);
 
   const ready = loadedDate === date && sessions;
   const listings = useMemo(() => [...new Set((sessions ?? []).map((s) => s.listingName))].sort(), [sessions]);
@@ -509,6 +557,9 @@ export function RatiosApp() {
 
       {/* Calculator */}
       <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />
+
+      {/* Your team — add/manage staff, shared with the listing Staff step */}
+      <TeamManager staff={staffLib} onChange={saveStaff} />
 
       {/* Cover by group board */}
       {!ready ? (
