@@ -12,6 +12,9 @@ import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { ExpensesApp } from "@/features/money/ExpensesApp";
+import { PurchasingApp } from "@/features/money/PurchasingApp";
+import { SubscriptionApp } from "@/features/money/SubscriptionApp";
 import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
 import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
 import { MessagesApp } from "@/features/messages/MessagesApp";
@@ -71,6 +74,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    expenses: ExpensesApp,
+    purchasing: PurchasingApp,
+    subscription: SubscriptionApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -96,6 +102,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    expenses: ExpensesApp,
+    purchasing: PurchasingApp,
+    subscription: SubscriptionApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -121,6 +130,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    expenses: ExpensesApp,
+    purchasing: PurchasingApp,
+    subscription: SubscriptionApp,
   },
   staff: {
     registers: RegistersApp,

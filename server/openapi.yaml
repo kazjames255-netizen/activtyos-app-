@@ -1,10 +1,29 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.22.0
+  version: 0.23.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.23.0 — Money extras: Expenses, Purchasing, Subscription
+
+    Rounds out the Money section beyond Payments + Reconciliation. All three
+    are **operators-only** (staff don't see Money), tenant-scoped, platform via
+    `?tenantId=`.
+    - **`/api/expenses`** — outgoings. `POST` `{date, category, amount,
+      supplier?, notes?, receiptUrl?}`; `PUT/:id`, `DELETE/:id`. `GET` returns
+      `{items, summary:{total, count, byCategory}}`. Realtime `expenses`.
+    - **`/api/purchasing`** — purchase orders / supplier invoices. `{supplier,
+      reference?, date, dueDate?, amount, status: draft|sent|received|paid|
+      cancelled, notes?}`. `GET` returns `{items, summary:{count, outstanding,
+      overdue}}` — `outstanding` counts `sent`+`received` (committed, unpaid);
+      each item flags `overdue` when past `dueDate` and still unpaid. Realtime
+      `purchaseOrders`.
+    - **`/api/subscription`** — the tenant's plan. `GET` → `{current, plans[],
+      billingConfigured:false}`; `PUT` `{plan: starter|pro|premium}` records the
+      choice on the tenant. **No billing integration yet** — selecting a plan
+      stores intent, it does not charge (Stripe Billing is a later milestone).
 
     ## v0.22.0 — Communication: Newsfeed + Messages (two-sided)
 
@@ -529,6 +548,12 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: reconciliation
     description: Outstanding money matched to bookings (vouchers / TFC / bank / cash)
+  - name: expenses
+    description: The provider's outgoings (operators only)
+  - name: purchasing
+    description: Purchase orders & supplier invoices (operators only)
+  - name: subscription
+    description: The tenant's plan (records intent — no billing integration yet)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: dashboard
@@ -1439,6 +1464,131 @@ paths:
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/expenses:
+    get:
+      tags: [expenses]
+      summary: The tenant's expenses + a summary (operators only)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{items[], summary:{total, count, byCategory}}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [expenses]
+      summary: Log an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, category, amount]
+              properties:
+                date: { type: string }
+                category: { type: string }
+                amount: { type: number }
+                supplier: { type: string }
+                notes: { type: string }
+                receiptUrl: { type: string, description: "via /api/uploads" }
+      responses:
+        "201": { description: The created expense }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/expenses/{id}:
+    put:
+      tags: [expenses]
+      summary: Edit an expense
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: The updated expense }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [expenses]
+      summary: Delete an expense
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/purchasing:
+    get:
+      tags: [purchasing]
+      summary: Purchase orders / invoices + a summary (operators only)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{items[] (each with overdue flag), summary:{count, outstanding, overdue}}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [purchasing]
+      summary: Raise a purchase order / record a supplier invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplier, date, amount]
+              properties:
+                supplier: { type: string }
+                reference: { type: string }
+                date: { type: string }
+                dueDate: { type: string }
+                amount: { type: number }
+                status: { type: string, enum: [draft, sent, received, paid, cancelled], default: draft }
+                notes: { type: string }
+      responses:
+        "201": { description: The created order }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/purchasing/{id}:
+    put:
+      tags: [purchasing]
+      summary: Edit an order / move its status
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: The updated order }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [purchasing]
+      summary: Delete an order
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/subscription:
+    get:
+      tags: [subscription]
+      summary: The tenant's current plan + the catalogue
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{current, plans[], billingConfigured:false}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [subscription]
+      summary: Choose a plan (records intent — does not charge)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties: { plan: { type: string, enum: [starter, pro, premium] } }
+      responses:
+        "200": { description: "{current, plans[], billingConfigured:false}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 

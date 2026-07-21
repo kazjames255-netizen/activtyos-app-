@@ -2230,3 +2230,36 @@ loop you asked about (parent ↔ freelancer) is live to test against.
 
 Email (the third Communication item) is not built yet — Newsfeed + Messages
 cover the in-app channel; Email would be the out-of-app one.
+
+---
+
+# Money extras: Expenses, Purchasing, Subscription — 21 July 2026 (Swagger v0.23.0)
+
+Rounds out the Money section beyond Payments + Reconciliation. All three are
+**operators-only** (Money isn't a staff surface), tenant-scoped, platform via
+`?tenantId=`.
+
+- **Expenses** `/api/expenses` (collection `expenses`) — outgoings. `POST`
+  `{date, category, amount, supplier?, notes?, receiptUrl?}`; `PUT/:id`;
+  `DELETE/:id`. `GET` → `{items, summary:{total, count, byCategory}}`.
+  `ExpensesApp` on the `expenses` slug — add form, total + by-category cards,
+  list. Realtime `expenses`.
+- **Purchasing** `/api/purchasing` (collection `purchaseOrders`) — POs &
+  supplier invoices. `{supplier, reference?, date, dueDate?, amount, status:
+  draft|sent|received|paid|cancelled, notes?}`. `GET` → `{items, summary:
+  {count, outstanding, overdue}}`; `outstanding` = the `sent`+`received` total
+  (committed but unpaid); each item carries an `overdue` flag (past `dueDate`,
+  still unpaid). `PurchasingApp` on `purchasing` — inline status dropdown moves
+  an order draft→sent→received→paid. Realtime `purchaseOrders`.
+- **Subscription** `/api/subscription` — the tenant's plan, stored under
+  `tenant.subscription`. `GET` → `{current, plans[], billingConfigured:false}`;
+  `PUT {plan: starter|pro|premium}`. **Honest caveat: there's no billing
+  integration** — choosing a plan records the selection, it doesn't charge.
+  `SubscriptionApp` shows the three plan cards with the caveat banner. When
+  Stripe Billing lands, this endpoint gains the checkout/portal wiring and
+  `billingConfigured` flips true — the shape won't change.
+
+Money section: Payments/Finance ✅ · Reconciliation ✅ · **Expenses ✅ ·
+Purchasing ✅ · Subscription ✅** · (Split fees, Payouts & royalties still to
+come). Split fees in particular is a franchise-royalty calc — its own
+milestone.
