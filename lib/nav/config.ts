@@ -504,7 +504,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "children", legacyView: "custdash-children", label: "My children", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20a6 6 0 0 1 12 0\"></path><path d=\"M16 7a3 3 0 0 1 0 6\"></path><path d=\"M18 20a6 6 0 0 0-3-5\"></path></svg>" }, badge: null },
+        { view: "children", legacyView: "custdash-children", label: "Profiles", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20a6 6 0 0 1 12 0\"></path><path d=\"M16 7a3 3 0 0 1 0 6\"></path><path d=\"M18 20a6 6 0 0 0-3-5\"></path></svg>" }, badge: null },
         { view: "moments", legacyView: "custdash-moments", label: "My child's day", icon: { type: "glyph", value: "📷" }, badge: null },
         { view: "newsfeed", legacyView: "custdash-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "medication", legacyView: "custdash-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
@@ -513,12 +513,12 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      // Browse activities & My bookings live in the top bar (see Header) — an
+      // action a parent reaches from anywhere, not a place buried in a group.
       label: "Activities",
       pinned: false,
       footer: false,
       items: [
-        { view: "browse", legacyView: "custdash-browse", label: "Browse activities", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"></circle><path d=\"M21 21l-4.3-4.3\"></path></svg>" }, badge: null },
-        { view: "bookings", legacyView: "custdash-bookings", label: "My bookings", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 8h18M7 3v4M17 3v4\"></path><rect x=\"3\" y=\"6\" width=\"18\" height=\"15\" rx=\"2\"></rect></svg>" }, badge: "2" },
         { view: "schedule", legacyView: "custdash-schedule", label: "My schedule", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"></rect><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"></rect></svg>" }, badge: null },
       ],
     },
@@ -538,7 +538,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "messages", legacyView: "custdash-messages", label: "Messages", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3 7l9 6 9-6\"></path></svg>" }, badge: "1" },
         { view: "ai", legacyView: "custdash-ai", label: "AI assistant", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l3 3M15.4 15.4l3 3M18.4 5.6l-3 3M8.6 15.4l-3 3\"></path></svg>" }, badge: null },
         { view: "account", legacyView: "custdash-account", label: "My account", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"></circle><path d=\"M4 21a8 8 0 0 1 16 0\"></path></svg>" }, badge: null },
         { view: "account", legacyView: "custdash-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.4H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 5 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.1V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 .9 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z\"></path></svg>" }, badge: null },
