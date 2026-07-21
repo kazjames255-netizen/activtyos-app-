@@ -21,6 +21,7 @@ import {
   emailPaymentLink,
   emailPlaceOffered,
   emailRefundApproved,
+  emailVoucherInstructions,
 } from "../lib/emails";
 import type { Booking } from "../../../features/bookings/types";
 import {
@@ -67,6 +68,7 @@ const actionSchema = z.discriminatedUnion("type", [
     type: z.literal("cancel"),
     refund: z.enum(["full", "partial", "none"]),
     amount: z.number().nonnegative().optional(),
+    reason: z.string().max(120).optional(),
   }),
   z.object({ type: z.literal("cancel-child"), ki: z.number().int().nonnegative() }),
   z.object({
@@ -234,6 +236,9 @@ bookings.post("/", async (req, res) => {
               ...(hasSpace ? {} : { status: "Waitlisted" as const, note: "Waitlisted — block full." }),
             }
           : {}),
+        // A £0 booking (HAF / free place) is Funded, not Unpaid — judged on
+        // the amount, never the method's name.
+        ...(input.amount <= 0 ? { pay: "Funded" as const } : {}),
       };
       tx.update(tenantRef, { nextBid: nextBid + 1 });
       if (block && blockRef && hasSpace)
@@ -242,9 +247,9 @@ bookings.post("/", async (req, res) => {
       return b;
     });
 
-    // Manual bookings sit as "Invoice sent" until paid — the booker gets the
-    // payment-link email the UI has always promised.
-    if (booking.email.includes("@") && booking.status !== "Waitlisted")
+    // Manual bookings sit unpaid until settled — the booker gets the
+    // payment-link email. A £0 booking never gets a "pay this" email.
+    if (booking.email.includes("@") && booking.status !== "Waitlisted" && booking.amount > 0)
       emailPaymentLink(booking, tenantName);
     void upsertCustomerFromBooking(tenantId, booking);
 
@@ -281,12 +286,23 @@ bookings.post("/:ref/actions", async (req, res) => {
   };
 
   try {
-    // "resend" mutates nothing — just re-send the payment-link email.
+    // "resend" mutates nothing — re-send whichever email fits the booking:
+    // a voucher booking's instructions (the one people lose) or the pay link.
     if (action.type === "resend") {
       const snap = await ref.get();
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
-      if (b.email.includes("@")) emailPaymentLink(b, await tenantName());
+      if (b.email.includes("@")) {
+        if (b.pay === "Awaiting voucher payment" && b.voucherScheme) {
+          const lib = (await db.collection("libraries").doc(b.tenantId!).get()).data() ?? {};
+          const providers = ((lib.settings as Record<string, unknown> | undefined)?.voucherProviders ?? []) as { name: string; details?: { label: string; value: string }[] }[];
+          const scheme = providers.find((v) => v.name === b.voucherScheme);
+          if (scheme) emailVoucherInstructions(b, await tenantName(), { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) });
+          else emailPaymentLink(b, await tenantName());
+        } else {
+          emailPaymentLink(b, await tenantName());
+        }
+      }
       res.json(b);
       return;
     }
@@ -318,7 +334,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 
       switch (action.type) {
         case "cancel":
-          applyCancel(b, action.refund, action.amount);
+          applyCancel(b, action.refund, action.amount, action.reason);
           break;
         case "cancel-child":
           applyCancelChild(b, action.ki);

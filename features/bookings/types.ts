@@ -40,6 +40,8 @@ export interface CancelInfo {
   on: string;
   by: string;
   msg?: string;
+  /** Provider-defined reason (Illness / Weather / …) for reporting. */
+  reason?: string;
   refund?: RefundKind;
   amount?: number;
   refundOnly?: boolean;
@@ -72,6 +74,12 @@ export interface Booking {
   /** Waiting-list offer window (status "Offered") — ISO timestamps. */
   offeredAt?: string;
   offerExpiresAt?: string;
+  /** Childcare voucher booking (§Q): the scheme the family pays through, and
+   *  the dates they must send by / it must arrive by. pay is
+   *  "Awaiting voucher payment" until the money lands. */
+  voucherScheme?: string;
+  voucherSendBy?: string;
+  voucherReceiveBy?: string;
   /** Stripe payment that settled this booking (set server-side on confirm).
    * stripeAccount is the provider's connected account it was charged on
    * (null = dev platform fallback). Refund-approve refunds through these. */

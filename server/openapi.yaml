@@ -1,10 +1,32 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.13.0
+  version: 0.14.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.14.0 — Payment states, child questions, vouchers, refund rules (N–Q)
+
+    - **§P — £0 bookings are `Funded`, not `Unpaid`.** Judged on the total,
+      not the method: a HAF/free place no longer sits in the unpaid filter
+      forever, and gets no payment-link email.
+    - **§N — provider-defined child questions.** Child records accept an
+      `answers` map (question id → string); `sex` is now a free string
+      (was a fixed enum, so "Prefer not to say"/custom options work); cancel
+      endpoints accept a `reason` (Illness/Weather/…), stored on the cancel.
+    - **§Q — childcare vouchers.** `POST /api/my/bookings` takes
+      `voucherScheme` (the scheme id); the server computes the send-by /
+      receive-by dates from the tenant's voucher settings, writes the
+      booking `pay: "Awaiting voucher payment"` with `voucherScheme` +
+      `voucherSendBy` + `voucherReceiveBy`, and emails the scheme's
+      references + deadline (re-sendable via the `resend` action). Flags,
+      never auto-cancels.
+    - **§O — parent self-cancel refunds by policy, server-side.**
+      `POST /api/my/bookings/:ref/cancel` runs the listing's cancellation
+      policy (Kaz's pure `lib/cancellation.refundFor`) on the server — the
+      client never computes refund money — and records the recommended
+      amount on the request for the provider to approve.
 
     ## v0.13.0 — Ratios & groups (Run the day)
 

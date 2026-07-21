@@ -198,11 +198,44 @@ export function emailFamilyBookingCreated(
            <p><a href="${opts.passwordLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Set my password</a></p>`
         : ""
     }
-    <p style="font-size:14px">Then pay securely by card:</p>
-    <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>
+    ${total > 0
+      ? `<p style="font-size:14px">Then pay securely by card:</p>
+    <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>`
+      : `<p style="font-size:14px">There's nothing to pay for this booking.</p>`}
     <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">
       You're receiving this because ${providerName} made a booking for this email address.
       If that wasn't you, reply and tell them.</p>
   </div>`,
+  );
+}
+
+/** §Q — childcare voucher instructions: the scheme, its reference(s), the
+ * amount and the deadline. Re-sendable from the booking (people lose it). */
+export function emailVoucherInstructions(
+  b: Booking,
+  providerName: string,
+  scheme: { name: string; details: { label: string; value: string }[] },
+): void {
+  const refRows = scheme.details
+    .map((d) => `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0">${d.label}</td><td><b>${d.value}</b></td></tr>`)
+    .join("");
+  const sendBy = b.voucherSendBy
+    ? new Date(`${b.voucherSendBy}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
+    : null;
+  void sendMail(
+    b.email,
+    `Pay by childcare voucher — ${b.listing} (${b.ref})`,
+    layout(
+      providerName,
+      `Pay with ${scheme.name}`,
+      `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(b.amount)}</b> through
+        <b>${scheme.name}</b> on their own website, quoting:</p>
+       <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
+        <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref</td><td><b>${b.ref}</b></td></tr>
+        <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(b.amount)}</b></td></tr></table>
+       ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
+       <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
+      b,
+    ),
   );
 }

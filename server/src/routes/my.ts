@@ -28,11 +28,14 @@ import {
   emailBookingConfirmed,
   emailBookingRequestReceived,
   emailFamilyBookingCreated,
+  emailVoucherInstructions,
 } from "../lib/emails";
 import { auth as fbAuth } from "../firebase";
 import { canWrite } from "../middleware/role";
 import { queuePositions, triggerWaitlist } from "../lib/waitlist";
 import { upsertFamilyFromBasket } from "../lib/customerUpsert";
+import { voucherWindow } from "../../../lib/vouchers";
+import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
 import { bookingDocId } from "./bookings";
 import { grantPlanAccess } from "./childFiles";
 
@@ -84,6 +87,9 @@ const basketSchema = z.object({
   blockId: z.string().min(1),
   method: z.string().min(1),
   items: z.array(itemSchema).min(1).max(20),
+  // Childcare voucher booking (§Q): the scheme id the family picked. The
+  // server computes the pay-by dates from the tenant's voucher settings.
+  voucherScheme: z.string().max(60).optional(),
   // Operators only (§G-3/§H): book FOR a family — same pricing/capacity
   // path, the booking lands on their account (found or created by email).
   onBehalfOf: z
@@ -106,6 +112,9 @@ const legacySchema = z.object({
 
 const cancelSchema = z.object({
   msg: z.string().max(500).optional(),
+  // A provider-defined cancellation reason (Illness / Weather / …) for
+  // reporting, stored alongside the free-text message.
+  reason: z.string().max(120).optional(),
 });
 
 const childSchema = z.object({
@@ -142,8 +151,13 @@ const childSchema = z.object({
   // door, kept so they don't have to say it twice.
   likes: z.string().trim().max(300).optional(),
   dislikes: z.string().trim().max(300).optional(),
-  /** Colours the child's chip in the parent's list. Optional by design. */
-  sex: z.enum(["boy", "girl"]).optional(),
+  /** The child's chip colour keys on this. A free string, not an enum: the
+   *  provider sets their own list (incl. "Prefer not to say"), so any fixed
+   *  set is wrong for someone. */
+  sex: z.string().trim().max(40).optional(),
+  /** Provider-defined question answers (§N): question id → answer as a
+   *  string. Strings survive a provider renaming an option; enums don't. */
+  answers: z.record(z.string().max(60), z.string().max(2_000)).optional(),
   // Photo consent — safeguarding: may this child appear in photos
   // (Moments/newsfeed)? Defaults to NO (privacy-safe).
   photoConsent: z.boolean().optional().default(false),
@@ -362,11 +376,33 @@ my.post("/bookings", async (req, res) => {
   };
 
   const needsAddons = input.items.some((i) => i.addons?.length);
+  const wantsVoucher = "voucherScheme" in input ? input.voucherScheme : undefined;
   const libAddons = new Map<string, LibAddon>();
-  if (needsAddons) {
-    const lib = await db.collection("libraries").doc(listing.tenantId).get();
-    for (const a of ((lib.data()?.addons ?? []) as LibAddon[]))
-      libAddons.set(a.id, a);
+  let voucher: { name: string; details: { label: string; value: string }[] } | null = null;
+  let voucherWin: ReturnType<typeof voucherWindow> | null = null;
+  if (needsAddons || wantsVoucher) {
+    const lib = (await db.collection("libraries").doc(listing.tenantId).get()).data() ?? {};
+    for (const a of ((lib.addons ?? []) as LibAddon[])) libAddons.set(a.id, a);
+    if (wantsVoucher) {
+      const settings = (lib.settings ?? {}) as Record<string, unknown>;
+      const providers = (settings.voucherProviders ?? []) as { id: string; name: string; details?: { label: string; value: string }[] }[];
+      const scheme = providers.find((v) => v.id === wantsVoucher || v.name === wantsVoucher);
+      if (scheme) {
+        voucher = { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) };
+        // Earliest session across the basket → the window's "first session".
+        const first = input.items
+          .flatMap((i) => i.dates ?? [])
+          .concat(sessionDates)
+          .sort()[0];
+        voucherWin = voucherWindow(
+          new Date().toISOString(),
+          first,
+          Number(settings.voucherHoldDays ?? 7),
+          Number(settings.voucherClearDays ?? 3),
+          Number(settings.voucherDueByDays ?? 0),
+        );
+      }
+    }
   }
 
   // Price each item (base pass/timing + add-ons) and validate its days.
@@ -584,7 +620,24 @@ my.post("/bookings", async (req, res) => {
           addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
           sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
           status: placed ? placedStatus : "Waitlisted",
-          pay: onBehalf && placed ? "Invoice sent" : "Unpaid",
+          // Judged on the total, not the method: a HAF/free £0 place is Funded,
+          // never Unpaid. A voucher booking waits on the scheme's money, not
+          // the parent — a distinct state so the two chase lists don't mix.
+          pay:
+            amounts[i] <= 0
+              ? "Funded"
+              : placed && voucher
+                ? "Awaiting voucher payment"
+                : placed && onBehalf
+                  ? "Invoice sent"
+                  : "Unpaid",
+          ...(placed && voucher && amounts[i] > 0
+            ? {
+                voucherScheme: voucher.name,
+                ...(voucherWin?.sendBy ? { voucherSendBy: voucherWin.sendBy } : {}),
+                ...(voucherWin?.receiveBy ? { voucherReceiveBy: voucherWin.receiveBy } : {}),
+              }
+            : {}),
           note,
         };
       });
@@ -629,6 +682,13 @@ my.post("/bookings", async (req, res) => {
         .map((c) => c.sendPlanId!);
       if (planIds.length) await grantPlanAccess(planIds, listing.tenantId);
     })().catch(() => {});
+    // Voucher instructions — the scheme, its references and the deadline, so
+    // the family can go and pay. Re-sendable via the "resend" action.
+    if (voucher) {
+      const v = bookings.find((b) => b.pay === "Awaiting voucher payment");
+      if (v && v.email.includes("@"))
+        emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher);
+    }
     // "2nd in line for 12 Aug" — per-date queue positions for anything queued.
     const queuedRefs = bookings.filter((b) => b.status === "Waitlisted").map((b) => b.ref);
     const waitlist = queuedRefs.length ? await queuePositions(input.blockId, queuedRefs) : [];
@@ -751,6 +811,40 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     return;
   }
   const ref = matches.docs[0].ref;
+  const existing = fromDoc(matches.docs[0].data() as BookingDoc);
+
+  // §O — the refund is worked out by the SERVER from the listing's policy, not
+  // in the browser (it's money; the client isn't trusted for it). Same pure
+  // rules the operator's cancel panel shows. Reference reads, done up front.
+  const paid = existing.pay === "Paid" ? existing.amount : 0;
+  const firstSession = (existing.days ?? []).slice().sort()[0];
+  let policyAmount: number | null = null;
+  let policyReason: string | undefined;
+  try {
+    let policyId: string | undefined;
+    let tenantId: string | undefined = existing.tenantId;
+    if (existing.blockId) {
+      const blk = await db.collection("blocks").doc(existing.blockId).get();
+      const lid = blk.data()?.listingId as string | undefined;
+      if (lid) {
+        const lst = await db.collection("listings").doc(lid).get();
+        policyId = lst.data()?.cancellationPolicyId as string | undefined;
+        tenantId = (lst.data()?.tenantId as string | undefined) ?? tenantId;
+      }
+    }
+    const settings = tenantId
+      ? ((await db.collection("libraries").doc(tenantId).get()).data()?.settings as Record<string, unknown> | undefined)
+      : undefined;
+    const policies = (settings?.cancellationPolicies ?? []) as NamedPolicy[];
+    const policy = policyById(policies, policyId) ?? DEFAULT_POLICY;
+    const advice = refundFor(policy, firstSession, paid, new Date().toISOString(), "parent");
+    if (advice) {
+      policyAmount = advice.amount;
+      policyReason = advice.reason;
+    }
+  } catch (e) {
+    console.error("[cancel] policy refund calc failed:", (e as Error).message);
+  }
 
   try {
     const updated = await db.runTransaction(async (tx) => {
@@ -760,7 +854,14 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       if (b.email !== email) throw new HttpError(403, "Not your booking");
       if (b.status === "Cancelled") throw new HttpError(400, "Already cancelled");
       const oldStatus = b.status;
-      applyParentCancel(b, parsed.data.msg);
+      applyParentCancel(b, parsed.data.msg, parsed.data.reason);
+      // The policy's recommended refund rides on the request (pending the
+      // provider's approval; refund-approve refunds this figure via Stripe).
+      if (policyAmount !== null && b.cancel) {
+        b.cancel.amount = policyAmount;
+        b.cancel.refund = policyAmount >= (paid || 0) && paid > 0 ? "full" : policyAmount > 0 ? "partial" : "none";
+        if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
+      }
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;

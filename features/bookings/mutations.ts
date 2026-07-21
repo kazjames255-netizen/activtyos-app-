@@ -75,7 +75,7 @@ export function applyBulkAction(b: Booking, action: BulkAction): void {
   else if (action === "cancel") b.status = "Cancelled";
 }
 
-export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number): void {
+export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
   let amt = refund === "full" ? b.amount : 0;
   if (refund === "partial") amt = partialAmount || 0;
   if (b.past !== true) b.status = "Cancelled";
@@ -86,6 +86,7 @@ export function applyCancel(b: Booking, refund: RefundType, partialAmount?: numb
     amount: amt,
     refundOnly: b.past === true,
     msg: b.past === true ? "Refund issued by provider." : "Cancelled by provider.",
+    ...(reason ? { reason } : {}),
   };
   b.pay = refund === "full" ? "Refunded" : refund === "partial" ? "Partially refunded" : b.pay;
 }
@@ -150,13 +151,14 @@ export function applyNote(b: Booking, text: string): void {
 // Parent-initiated cancellation: a REQUEST, not a provider cancel. The refund
 // sits "pending" until the provider uses refund-approve / refund-decline
 // (applyRowAction above) — matching the legacy "cancelled by Booker" records.
-export function applyParentCancel(b: Booking, msg?: string): void {
+export function applyParentCancel(b: Booking, msg?: string, reason?: string): void {
   b.status = "Cancelled";
   b.cancel = {
     on: nowStr(),
     by: "Booker",
     refund: "pending",
     msg: msg || "Cancelled by the parent.",
+    ...(reason ? { reason } : {}),
   };
 }
 

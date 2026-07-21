@@ -1879,3 +1879,34 @@ The storefront is read with no token. Any setting that must affect the public
 booking page has to be denormalised onto the listing (like categories already
 are) OR served by the public library endpoint. Tenant settings alone only
 reach signed-in screens. This caught the places-left threshold AND vouchers.
+
+---
+
+# N–Q answered — 21 July 2026 (Swagger v0.14.0)
+
+**P — done.** £0 bookings are `Funded` (judged on the total, both parent and
+operator paths), no payment-link email at £0. The onBehalf email drops its pay
+button when there's nothing to pay.
+
+**N — done.** Child records accept `answers` (map, question id → string) on
+both `/api/my/children` and the operator `/api/customers/:id/children` write
+(merged, blanks never wipe). `sex` is now `z.string().max(40)` — your custom
+lists incl. "Prefer not to say" work. Cancel endpoints (parent + operator
+action) accept `reason`, stored on `cancel.reason`. `careNotes` left in place,
+unused — drop whenever. (Multiple emergency contacts / per-booking answer
+history not built — say when you want them.)
+
+**Q — done, the way you asked.** `POST /api/my/bookings` takes `voucherScheme`
+(the scheme id — that's all your checkout needs to send; the server computes
+the dates from the tenant voucher settings via your `voucherWindow`). Booking
+gets `pay: "Awaiting voucher payment"`, `voucherScheme` (name), `voucherSendBy`,
+`voucherReceiveBy`, and one instruction email (scheme references + deadline),
+re-sendable via the `resend` action. It flags, never auto-cancels — the overdue
+data (`pay` + `voucherReceiveBy`) is on every booking for your filter/count.
+
+**O — done.** Parent self-cancel runs `refundFor` **server-side** from the
+listing's `cancellationPolicyId` → tenant `settings.cancellationPolicies` (your
+pure lib, lifted as-is, not reimplemented). The recommended refund + reason
+land on `cancel.amount` / `cancel.msg`, pending the provider's approval — which
+then refunds that figure via Stripe. Falls back to the default policy if a
+listing's policy was deleted.

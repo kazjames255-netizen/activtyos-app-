@@ -47,6 +47,8 @@ const childDetailSchema = z.object({
    *  a register needs to print the name and dial the number separately. */
   emergencyName: z.string().trim().max(80).optional(),
   emergencyPhone: z.string().trim().max(40).optional(),
+  // Provider-defined question answers (§N) — same as the parent child schema.
+  answers: z.record(z.string().max(60), z.string().max(2_000)).optional(),
 });
 
 const customerSchema = z.object({
@@ -330,6 +332,13 @@ customers.put("/:id/children", async (req, res) => {
     ] as const) {
       const v = k[f];
       if (v !== undefined && String(v).trim() !== "") patch[f] = v;
+    }
+    // Merge provider-defined answers per question — a blank answer never
+    // blanks what the family already gave.
+    if (k.answers) {
+      const merged = { ...(byName.get(key)?.data().answers ?? {}) } as Record<string, string>;
+      for (const [qid, ans] of Object.entries(k.answers)) if (String(ans).trim() !== "") merged[qid] = ans;
+      patch.answers = merged;
     }
     // A consent is a yes or a no, so "unset" has to mean untouched — hence
     // the explicit undefined check rather than falling through the loop.
