@@ -5,6 +5,7 @@ import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { CustomersApp } from "@/features/customers/CustomersApp";
 import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { IncidentsApp } from "@/features/incidents/IncidentsApp";
+import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
@@ -44,6 +45,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ratios: RatiosApp,
     incidents: () => <IncidentsApp kind="incident" />,
     accidents: () => <IncidentsApp kind="accident" />,
+    medication: MedicationApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -57,6 +59,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ratios: RatiosApp,
     incidents: () => <IncidentsApp kind="incident" />,
     accidents: () => <IncidentsApp kind="accident" />,
+    medication: MedicationApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -70,6 +73,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ratios: RatiosApp,
     incidents: () => <IncidentsApp kind="incident" />,
     accidents: () => <IncidentsApp kind="accident" />,
+    medication: MedicationApp,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -78,6 +82,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ratios: RatiosApp,
     incidents: () => <IncidentsApp kind="incident" />,
     accidents: () => <IncidentsApp kind="accident" />,
+    medication: MedicationApp,
     customers: CustomersApp,
   },
   custdash: {

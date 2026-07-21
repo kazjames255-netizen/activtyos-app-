@@ -1,10 +1,26 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.15.0
+  version: 0.16.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.16.0 — Medication (Pupils)
+
+    Two records, because real practice is two things:
+    - **`/api/medications`** — an authorised medicine for a child with the
+      parent's consent (dose, condition, schedule, storage, expiry,
+      `consentGranted`). CRUD; staff record, operators manage. A medication
+      with a dose history can't be deleted — archive it (the MAR must
+      survive).
+    - **`POST /api/medications/:id/administer`** — log a dose given.
+      **Gated: no dose without `consentGranted`** (and not archived) — the
+      safety rule. Writes to the MAR with who gave it, when, and any notes.
+    - **`GET /api/medications/administrations?date=&childId=&medicationId=`**
+      — the MAR (Medication Administration Record).
+    Tenant-scoped, not parent-facing. Realtime `medications` +
+    `medicationAdmin`.
 
     ## v0.15.0 — Incidents & Accidents (Pupils)
 
@@ -402,6 +418,8 @@ tags:
     description: Staff:child ratios and grouping children per session
   - name: incidents
     description: Incidents & Accidents — the safeguarding log (staff record, operators manage)
+  - name: medication
+    description: Authorised medicines (parental consent) + the MAR (every dose given)
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1385,6 +1403,100 @@ paths:
         - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
       responses:
         "200": { description: PNG tile (week-cached, immutable) }
+
+  /api/medications:
+    get:
+      tags: [medication]
+      summary: Authorised medications (active; ?includeArchived=1 for all)
+      parameters:
+        - { name: childId, in: query, required: false, schema: { type: string } }
+        - { name: includeArchived, in: query, required: false, schema: { type: string, enum: ["1"] } }
+        - { name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }
+      responses:
+        "200": { description: Medications }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [medication]
+      summary: Authorise a medication (staff + operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childName, name, dose]
+              properties:
+                childName: { type: string }
+                childId: { type: string }
+                name: { type: string }
+                dose: { type: string }
+                condition: { type: string }
+                schedule: { type: string }
+                asNeeded: { type: boolean }
+                storage: { type: string }
+                heldOnSite: { type: boolean }
+                expiryDate: { type: string }
+                consentBy: { type: string }
+                consentDate: { type: string }
+                consentGranted: { type: boolean }
+      responses:
+        "201": { description: The authorised medication }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/medications/administrations:
+    get:
+      tags: [medication]
+      summary: The MAR — every dose given
+      parameters:
+        - { name: date, in: query, required: false, schema: { type: string } }
+        - { name: childId, in: query, required: false, schema: { type: string } }
+        - { name: medicationId, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { description: Administration events, newest first }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/medications/{id}:
+    put:
+      tags: [medication]
+      summary: Edit or archive a medication
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Updated }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [medication]
+      summary: Delete a medication (operators; 409 if it has a dose history)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Has a dose history — archive instead }
+
+  /api/medications/{id}/administer:
+    post:
+      tags: [medication]
+      summary: Record a dose given (gated on parental consent)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, doseGiven]
+              properties:
+                date: { type: string }
+                time: { type: string }
+                doseGiven: { type: string }
+                witnessedBy: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: The MAR entry }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: No consent on file, or archived }
 
   /api/incidents:
     get:

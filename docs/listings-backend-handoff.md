@@ -1932,3 +1932,28 @@ location, severity, witnesses, and `parentNotified`.
   the SEND-plan story).
 
 Next Pupils items when you want them: Medication, Meals & allergies, Moments.
+
+---
+
+# Medication — 21 July 2026 (Swagger v0.16.0)
+
+Second Pupils safeguarding feature, and it's two records because real practice
+is two things:
+
+- **`/api/medications`** — an authorised medicine for a child WITH the parent's
+  consent (dose, condition, schedule, storage, expiry, `consentGranted`). CRUD;
+  staff record, operators manage.
+- **`POST /api/medications/:id/administer`** — log a dose. **The gate: no dose
+  without `consentGranted`** (and not archived) — enforced server-side, 409.
+  Writes the MAR (who, when, dose, witnessed, notes).
+- **`GET /api/medications/administrations`** — the MAR, filterable by
+  date/child/medication.
+- A medication with a dose history **can't be deleted** — archive it, so the
+  MAR is never orphaned.
+
+`MedicationApp` on the `medication` slug (all four operator/staff portals):
+authorised meds per child, a "Record a dose" action (disabled without consent),
+and the dose history. Restyle at will.
+
+Pupils remaining: Meals & allergies, Moments. Moments (photo feed) really wants
+Firebase Storage — worth enabling when you can.
