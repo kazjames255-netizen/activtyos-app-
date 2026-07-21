@@ -12,6 +12,9 @@ import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
+import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
+import { MessagesApp } from "@/features/messages/MessagesApp";
 import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
@@ -66,6 +69,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     trips: TripsApp,
     calendar: CalendarApp,
     locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   franchise: {
     dash: DashboardApp,
@@ -89,6 +94,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     schedule: RotaApp,
     calendar: CalendarApp,
     locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   freelancer: {
     dash: DashboardApp,
@@ -112,6 +119,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     schedule: RotaApp,
     calendar: CalendarApp,
     locations: LocationsApp,
+    newsfeed: NewsfeedApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   staff: {
     registers: RegistersApp,
@@ -125,6 +134,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     tasks: TasksApp,
     trips: TripsApp,
     schedule: RotaApp,
+    messages: () => <MessagesApp mode="operator" />,
   },
   custdash: {
     browse: BrowseApp,
@@ -132,6 +142,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     children: ChildrenApp,
     moments: ParentMomentsApp,
     schedule: ScheduleApp,
+    newsfeed: ParentNewsfeedApp,
+    messages: () => <MessagesApp mode="parent" />,
   },
   platform: {
     dash: OverviewApp,

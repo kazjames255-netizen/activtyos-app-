@@ -2133,3 +2133,49 @@ collection**, aggregating what the other routes already own.
   subscribes to the existing `bookings`/`blocks`/`listings`/`payments`
   realtime channels, so the numbers move live. Four stat cards + a "Today"
   and "Coming up" list — restyle at will.
+
+---
+
+# Communication: Newsfeed + Messages — 21 July 2026 (Swagger v0.22.0)
+
+The first properly **two-sided** feature — providers and their families talk
+to each other. Everything is gated on a booking: you can only reach someone
+you have one with. This finally gives the parent portal inbound content.
+
+**Newsfeed — `/api/posts`** (collection `posts`):
+- `POST` (operators + staff) `{title?, body, photoUrl?}` — broadcast to all the
+  tenant's families. Photos via the existing `/api/uploads`. `DELETE /:id`
+  (operators).
+- `GET` is role-aware: operator/staff → the tenant's posts; **parent → the
+  feed of every provider they've booked** (posts carry `tenantName` so the
+  parent UI can label who each one's from). Distinct from Moments (photos OF a
+  child) — this is text the provider broadcasts.
+
+**Messages — `/api/messages`** (collections `threads` + `messages`):
+- One thread per (provider, parent) pair, id `${tenantId}__${email}` so both
+  sides always converge on the same conversation — no duplicates.
+- `GET /threads` — the caller's conversations (parent: theirs by email;
+  operator: the tenant's), newest first, each with `operatorUnread` /
+  `parentUnread`.
+- `GET /threads/:id` — the messages (oldest→newest) and **marks the caller's
+  side read**. 404 if it isn't yours.
+- `POST /` — send, creating the thread if needed. Operator body
+  `{parentEmail, parentName?, body}` (400 if that family isn't a customer);
+  parent body `{tenantId, body}` (403 if they haven't booked that provider).
+  Unread bumps the *other* side.
+- **`GET /api/my/providers`** → `[{tenantId, name}]` the parent has booked —
+  powers the newsfeed labels and the "message a provider" picker.
+
+Apps: `NewsfeedApp` (operator, `newsfeed` slug) + `ParentNewsfeedApp`
+(custdash `newsfeed`); one `MessagesApp` with a `mode="operator" | "parent"`
+prop registered on the `messages` slug for company/franchise/freelancer/staff
+and custdash. Realtime: `posts` / `threads` / `messages` (operators
+tenant-scoped; parents by email + a global posts feed). All booking-gating is
+server-side — the UI just renders threads and surfaces the 400/403.
+
+**Note for the customer portal you're building:** custdash now has real
+`newsfeed` and `messages` views wired to a booked provider — the two-sided
+loop you asked about (parent ↔ freelancer) is live to test against.
+
+Email (the third Communication item) is not built yet — Newsfeed + Messages
+cover the in-app channel; Email would be the out-of-app one.

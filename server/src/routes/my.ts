@@ -201,6 +201,19 @@ my.get("/bookings", async (req, res) => {
   res.json(list);
 });
 
+// GET /api/my/providers — the distinct providers the parent has booked with
+// (tenant id + name). Powers the newsfeed header and the "message a provider"
+// picker, so a parent only ever contacts someone they have a booking with.
+my.get("/providers", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const snap = await bookingsCol.where("email", "==", email).get();
+  const ids = [...new Set(snap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 30);
+  if (!ids.length) { res.json([]); return; }
+  const tenants = await db.getAll(...ids.map((id) => db.collection("tenants").doc(id)));
+  res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
+});
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // POST /api/my/bookings — parent checkout. Takes a BASKET (or the legacy
