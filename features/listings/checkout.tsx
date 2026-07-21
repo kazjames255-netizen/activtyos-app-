@@ -630,7 +630,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -1658,7 +1658,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 : "Childcare voucher"
               : method;
           if (parentMode && onBook) onBook({
-            method: submitMethod, basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
+            method: submitMethod,
+            // The scheme the parent picked — the backend keys the "Awaiting
+            // voucher payment" state off this, not the method string.
+            voucherScheme: method === "voucher" ? chosenVoucher?.name : undefined,
+            basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
           });
