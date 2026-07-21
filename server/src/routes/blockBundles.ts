@@ -40,6 +40,9 @@ const periodSchema = z
 const passSchema = z.object({
   name: z.string().trim().min(2).max(120),
   days: z.number().int().min(1).max(365),
+  // Optional blurb shown to customers under the pass name (what's included,
+  // who it suits). Flows through the pricing resolver onto the listing bundle.
+  details: z.string().trim().max(500).optional(),
 });
 
 const bundleSchema = z.object({

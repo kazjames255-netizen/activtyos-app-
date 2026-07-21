@@ -35,9 +35,10 @@ interface Pass {
   id: string;
   name: string;
   days: number;
+  details?: string;
 }
 interface ResolvedPricing {
-  passes: { id: string; name: string; days: number; price: number }[];
+  passes: { id: string; name: string; days: number; price: number; details?: string }[];
   timings: Record<string, number>; // "{passId}_{periodId}" → price
   perDay: number;
 }
@@ -457,22 +458,25 @@ function PassesColumn({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [days, setDays] = useState("1");
+  const [details, setDetails] = useState("");
   const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
     setDays("1");
+    setDetails("");
     setEditingId(null);
   }
   function openEdit(p: Pass) {
     setName(p.name);
     setDays(String(p.days));
+    setDetails(p.details ?? "");
     setEditingId(p.id);
     setOpen(true);
   }
   async function saveForm() {
     if (name.trim().length < 2) return;
-    const body = { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1) };
+    const body = { name: name.trim(), days: Math.max(1, parseInt(days, 10) || 1), details: details.trim() || undefined };
     setBusy(true);
     const ok = await act(() =>
       editingId
@@ -517,6 +521,17 @@ function PassesColumn({
             placeholder="Pass name (e.g. 5-day week pass)"
             className="w-full"
           />
+          <div>
+            <FieldLabel>Details for customers <span className="font-normal text-[var(--ink-3)]">— optional, shown under the name</span></FieldLabel>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="What's included, who it suits, anything a parent should know before booking this pass…"
+              rows={2}
+              maxLength={500}
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none"
+            />
+          </div>
           <div className="w-[120px]">
             <FieldLabel>Days</FieldLabel>
             <Input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} className="w-full" />
@@ -554,7 +569,7 @@ function PassesColumn({
           <PaletteCard
             key={p.id}
             title={p.name}
-            meta={`${p.days} day${p.days === 1 ? "" : "s"}`}
+            meta={`${p.days} day${p.days === 1 ? "" : "s"}${p.details ? " · has details" : ""}`}
             onAdd={() => addToDraft(p.id)}
             onEdit={() => openEdit(p)}
             onRemove={() => removePass(p.id)}
