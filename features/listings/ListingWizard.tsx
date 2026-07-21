@@ -2202,10 +2202,22 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   if (b.waitDone) {
     return (
       <div className="mt-3 rounded-2xl border p-3.5 text-[12px] leading-[1.55]" style={box}>
-        <b>You&rsquo;re on the waiting list.</b> We&rsquo;ll email you the moment a place comes up
-        {(d.waitlistMode ?? "manual") === "auto"
-          ? " — first in the queue gets it, and you'll have 2 hours to take it."
-          : " — the organiser will be in touch if one does."}
+        <b>You&rsquo;re on the waiting list.</b>
+        {/* Spell out exactly what they're queued for — a parent who booked
+            three separate dates needs to know which ones this covers. */}
+        {b.waitSel.length > 0 && (
+          <div className="mt-1.5 rounded-lg px-2.5 py-1.5" style={{ background: dark ? "#00000030" : "#ffffff80" }}>
+            <div className="font-bold">{b.datesPretty(b.waitSel)}</div>
+            {b.period?.range && <div className="opacity-90">{b.period.range}{b.pass?.name ? ` · ${b.pass.name}` : ""}</div>}
+          </div>
+        )}
+        <div className="mt-1.5">
+          We&rsquo;ll email you the moment a place comes up
+          {(d.waitlistMode ?? "manual") === "auto"
+            ? " — first in the queue gets it, and you'll have 2 hours to take it."
+            : " — the organiser will be in touch if one does."}
+          {" "}You can see this any time under <b>My waiting list</b> in your account.
+        </div>
       </div>
     );
   }
