@@ -165,6 +165,45 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
 }
 
 /** custdash/bookings — the signed-in parent's own bookings. */
+// A waitlisted place, shown up front so a parent can see exactly which dates
+// and times they're queued for — not buried in the general list.
+function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const leave = async () => {
+    if (!confirm(`Leave the waiting list for ${b.listing}?`)) return;
+    setBusy(true);
+    try {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/cancel`, {});
+      refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Couldn’t leave the waiting list");
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3.5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="text-[14px] font-extrabold text-[#9a3412]">{b.listing}</div>
+          <div className="text-[12px] text-[#b45309]">{b.child} · {b.pass}</div>
+        </div>
+        <Badge tone={{ bg: "#fed7aa", fg: "#9a3412" }}>On the waiting list</Badge>
+      </div>
+      {/* The exact dates + timings — each session string already carries both. */}
+      <div className="mt-2 rounded-lg bg-white/70 px-2.5 py-1.5">
+        <div className="text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[#b45309]">Waiting for</div>
+        {(b.sessions && b.sessions.length ? b.sessions : [b.dates]).map((s, i) => (
+          <div key={i} className="text-[12.5px] font-semibold text-[#7c2d12]">{s}</div>
+        ))}
+      </div>
+      <div className="mt-2 text-[11px] leading-[1.5] text-[#b45309]">
+        We&rsquo;ll email you the moment a place comes up. Nothing to pay unless you take it.
+      </div>
+      <Button sm className="mt-2" disabled={busy} onClick={leave}>{busy ? "Leaving…" : "Leave waiting list"}</Button>
+    </div>
+  );
+}
+
 export function MyBookingsApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -199,21 +238,40 @@ export function MyBookingsApp() {
           <Button variant="primary">+ Book an activity</Button>
         </Link>
       </div>
-      {bookings.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-          No bookings yet —{" "}
-          <Link href="/custdash/browse" className="font-bold text-[var(--brand-2)]">
-            browse activities
-          </Link>{" "}
-          to get started.
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {bookings.map((b) => (
-            <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        const waiting = bookings.filter((b) => b.status === "Waitlisted");
+        const rest = bookings.filter((b) => b.status !== "Waitlisted");
+        if (bookings.length === 0)
+          return (
+            <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
+              No bookings yet —{" "}
+              <Link href="/custdash/browse" className="font-bold text-[var(--brand-2)]">browse activities</Link> to get started.
+            </Card>
+          );
+        return (
+          <>
+            {waiting.length > 0 && (
+              <div className="mb-5">
+                <SectionHead>My waiting list</SectionHead>
+                <p className="mb-2 text-[12px] text-[var(--ink-3)]">Dates you&rsquo;re queued for — we&rsquo;ll be in touch the moment a place frees up.</p>
+                <div className="flex flex-col gap-2.5">
+                  {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />)}
+                </div>
+              </div>
+            )}
+            {rest.length > 0 && (
+              <>
+                {waiting.length > 0 && <SectionHead>My bookings</SectionHead>}
+                <div className="flex flex-col gap-3">
+                  {rest.map((b) => (
+                    <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

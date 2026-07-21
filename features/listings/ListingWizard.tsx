@@ -11,7 +11,7 @@ import * as blocksApi from "@/features/blocks/blocksApi";
 import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./format";
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
-import { useTenantSettings } from "@/lib/settings";
+import { useTenantSettings, useSettings, type RatioGroup } from "@/lib/settings";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import type { ChildProfile } from "./checkout";
@@ -253,6 +253,16 @@ export interface WizardDraft {
   allowOutOfRange: boolean;
   maxAttendees: string;
   capacityScope: "day" | "listing";
+  /**
+   * Optional per-age-group place caps, keyed by ratio-group id → max places.
+   * On top of maxAttendees: total still applies, this limits each age band.
+   * Front-end config only for now — enforcing it at booking needs the backend
+   * (handoff §S). A blank/absent entry means no cap for that group.
+   */
+  ageCaps?: Record<string, number>;
+  /** Whether age caps are in use — separate from the values, so the section
+   *  can be on with every band left blank (no limit). */
+  ageCapsOn?: boolean;
   showSpaces: boolean;
   /** Which category is featured on the hero image when several are chosen. */
   heroCategoryId?: string | null;
@@ -1244,9 +1254,139 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         </div>
       </div>
       <YesNo label="Show remaining spaces to parents?" value={d.showSpaces} onChange={(v) => upd({ showSpaces: v })} help="Displays “X spaces left” on the listing." />
+
+      <AgeCaps d={d} upd={upd} />
+
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">ⓘ These are defaults — each ticket can amend its own age &amp; capacity in <b>Tickets &amp; pricing</b>.</div>
       {/* patchLocal is unused here but kept for signature symmetry with other steps */}
       <span className="hidden">{typeof patchLocal}</span>
+    </div>
+  );
+}
+
+// Optional per-age-group place caps, drawn from the tenant's ratio groups so
+// the freelancer caps against the same rooms they staff. On top of the total
+// capacity above. Config only — the backend enforces it later (§S). This is
+// the honest home for what "max size" was pretending to be on the ratios board:
+// a booking-time limit, set before anyone books, not a flag on the day.
+function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  // Read-AND-write: the group name and age range are the shared tenant policy,
+  // editable here and reflected on the Ratios & groups board. One source of
+  // truth, edited from either screen.
+  const { settings, save } = useSettings();
+  const editGroup = (id: string, patch: Partial<RatioGroup>) =>
+    void save({ settings: { ...settings, ratioGroups: settings.ratioGroups.map((g) => (g.id === id ? { ...g, ...patch } : g)) } });
+  const from = parseInt(d.ageFrom, 10);
+  const to = parseInt(d.ageTo, 10);
+  // Only the groups that overlap this listing's age range are relevant.
+  const groups = settings.ratioGroups.filter(
+    (g) => (!Number.isFinite(to) || g.ageFrom <= to) && (!Number.isFinite(from) || g.ageTo >= from),
+  );
+  // These caps ALLOCATE the day's places across ages — so they can never add
+  // up to more than the total. Each one is clamped to whatever's left after
+  // the others, which makes "37 out of 22" impossible rather than something to
+  // explain away.
+  const totalCap = parseInt(d.maxAttendees, 10);
+  const ceiling = Number.isFinite(totalCap) && totalCap > 0 ? totalCap : Infinity;
+  const caps = d.ageCaps ?? {};
+  const on = d.ageCapsOn || Object.keys(caps).length > 0;
+  const capSum = groups.reduce((n, g) => n + (caps[g.id] ?? 0), 0);
+  const anySet = Object.keys(caps).length > 0;
+  const setCap = (id: string, v: string) => {
+    const next = { ...caps };
+    // Blank and zero are different: blank = no limit; 0 = closed, no child of
+    // that age can book. Only a truly empty field means "no limit".
+    if (v === "") { delete next[id]; upd({ ageCaps: next }); return; }
+    const raw = parseInt(v, 10);
+    if (Number.isNaN(raw) || raw < 0) return;
+    if (raw === 0) { next[id] = 0; upd({ ageCaps: next }); return; }
+    // A positive cap can't take more than the day total minus the others.
+    const others = capSum - (caps[id] ?? 0);
+    const budget = Number.isFinite(ceiling) ? Math.max(0, ceiling - others) : Infinity;
+    next[id] = Math.min(raw, budget);
+    upd({ ageCaps: next });
+  };
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[12.5px] font-bold">Limit places by age group, per day <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+          <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">
+            Cap only the ages you want to limit — you can set a max on one group and leave the rest blank,
+            and the day&rsquo;s {Number.isFinite(ceiling) ? `${ceiling} places` : "total"} still can&rsquo;t be exceeded
+            (the uncapped ages share whatever&rsquo;s left). <b>Blank = no limit; 0 = closed</b>, so no child that age
+            can book. <b>Per day</b>, since a room refills each day. Names and ages come from <b>Ratios &amp; groups</b>.
+          </div>
+        </div>
+        {!on && (
+          <button type="button" onClick={() => upd({ ageCapsOn: true })}
+            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">
+            Set age caps
+          </button>
+        )}
+      </div>
+
+      {on && (
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          {groups.map((g) => (
+            <div key={g.id} className="flex flex-wrap items-center gap-2">
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: g.colour }} />
+              {/* Name + age are the shared group — edit here, flows to Ratios. */}
+              <input value={g.name} onChange={(e) => editGroup(g.id, { name: e.target.value })}
+                className="w-[120px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] font-semibold" />
+              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-3)]">
+                <input type="number" min={0} max={21} value={g.ageFrom} onChange={(e) => editGroup(g.id, { ageFrom: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  className="w-[46px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[12px]" />
+                –
+                <input type="number" min={0} max={21} value={g.ageTo} onChange={(e) => editGroup(g.id, { ageTo: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  className="w-[46px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[12px]" />
+                yrs
+              </span>
+              <span className="ml-auto inline-flex items-center gap-1.5">
+                <input type="number" min={0} max={Number.isFinite(ceiling) ? ceiling : undefined} value={caps[g.id] ?? ""} placeholder="no limit"
+                  onChange={(e) => setCap(g.id, e.target.value)}
+                  className="w-[86px] rounded-lg border bg-[var(--surface)] px-2 py-1 text-[12.5px]"
+                  style={{ borderColor: caps[g.id] === 0 ? "#f0b8b8" : "var(--line)" }} />
+                <span className="text-[11px] font-bold" style={{ color: caps[g.id] === 0 ? "#c0392b" : "var(--ink-3)" }}>
+                  {caps[g.id] === 0 ? "closed" : "a day"}
+                </span>
+              </span>
+            </div>
+          ))}
+
+          {/* Allocation status. Over-spend is impossible (each cap is clamped
+              to what's left), so this only ever confirms or nudges. */}
+          {Number.isFinite(ceiling) && anySet && (() => {
+            // "Capped" = has a hard number, 0 included (closed is a limit too).
+            const allCapped = groups.every((g) => g.id in caps);
+            const diff = ceiling - capSum;
+            let tone: [string, string] = ["var(--surface)", "var(--ink-2)"];
+            let msg: React.ReactNode;
+            if (diff === 0) { tone = ["#e7f8ee", "#0f7a44"]; msg = <>✓ All <b>{ceiling}</b> places allocated by age.</>; }
+            else if (allCapped) { tone = ["#fff8ec", "#8a5300"]; msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — and every age is capped, so the last {diff} can never fill. Raise a limit or leave an age uncapped for the rest.</>; }
+            else { msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — the other {diff} stay open to the uncapped ages.</>; }
+            return <div className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold leading-[1.5]" style={{ background: tone[0], color: tone[1] }}>{msg}</div>;
+          })()}
+          <div className="mt-2 flex flex-wrap items-center gap-2.5 border-t border-[var(--line)] pt-2.5">
+            <button
+              type="button"
+              onClick={() => upd({ ageCapsOn: false, ageCaps: {} })}
+              className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
+            >
+              ✕ Turn off age caps
+            </button>
+            <span className="text-[11px] text-[var(--ink-3)]">Saves with the listing — use <b>Save draft</b> or <b>Publish</b> below.</span>
+            <span className="rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#8a5300]">Enforced once the backend is built (§S)</span>
+          </div>
+          <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+            👪 When an age is full, parents of that age will see &ldquo;<b>full for this age</b>&rdquo; on the listing before they start —
+            so nobody adds their child at checkout only to be turned away.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2062,10 +2202,22 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   if (b.waitDone) {
     return (
       <div className="mt-3 rounded-2xl border p-3.5 text-[12px] leading-[1.55]" style={box}>
-        <b>You&rsquo;re on the waiting list.</b> We&rsquo;ll email you the moment a place comes up
-        {(d.waitlistMode ?? "manual") === "auto"
-          ? " — first in the queue gets it, and you'll have 2 hours to take it."
-          : " — the organiser will be in touch if one does."}
+        <b>You&rsquo;re on the waiting list.</b>
+        {/* Spell out exactly what they're queued for — a parent who booked
+            three separate dates needs to know which ones this covers. */}
+        {b.waitSel.length > 0 && (
+          <div className="mt-1.5 rounded-lg px-2.5 py-1.5" style={{ background: dark ? "#00000030" : "#ffffff80" }}>
+            <div className="font-bold">{b.datesPretty(b.waitSel)}</div>
+            {b.period?.range && <div className="opacity-90">{b.period.range}{b.pass?.name ? ` · ${b.pass.name}` : ""}</div>}
+          </div>
+        )}
+        <div className="mt-1.5">
+          We&rsquo;ll email you the moment a place comes up
+          {(d.waitlistMode ?? "manual") === "auto"
+            ? " — first in the queue gets it, and you'll have 2 hours to take it."
+            : " — the organiser will be in touch if one does."}
+          {" "}You can see this any time under <b>My waiting list</b> in your account.
+        </div>
       </div>
     );
   }

@@ -2072,6 +2072,57 @@ on the HMRC EPP integration — this handles the manual matching meanwhile.
 
 ---
 
+## S — Age-band booking caps (front end built, needs enforcing)
+
+The honest home for what "max size" was pretending to be on the ratios board:
+a **booking-time limit per age, set before anyone books** — not a flag on the
+day when it's too late to act. Built in the listing builder (Capacity step);
+needs the backend to store, enforce, and — the important one — surface.
+
+### The model (agreed with Kaz)
+
+- A listing carries optional **`ageCaps`** — `Record<ratioGroupId, number>` —
+  plus a UI flag **`ageCapsOn: boolean`**. The keys are the tenant's ratio
+  groups (`settings.ratioGroups`, already persisted in the library), so a cap
+  is "at most N of this age band, **per day**".
+- **Blank / absent = no limit** for that age. **0 = closed** — no child of that
+  age can book at all. A positive number = the daily max for that age.
+- Caps **allocate** the day's places: the front end clamps their sum so it can
+  never exceed the listing's `maxAttendees`. The total still binds; uncapped
+  ages share whatever's unallocated.
+- It's a **daily** limit (a room refills each day), independent of
+  `capacityScope`.
+
+### Three things needed
+
+1. **Store it.** Add `ageCaps: z.record(z.string().max(60), z.number().int().min(0)).optional()`
+   and `ageCapsOn: z.boolean().optional()` to `baseListingSchema` (listings.ts:57).
+   Right now the schema strips them, so the config doesn't even survive a
+   Publish. This one line unblocks Kaz testing the whole config lifecycle.
+
+2. **Enforce at booking.** In the basket checkout (`my.ts`), for each child on
+   each dated session: resolve the child's age -> its ratio group -> the
+   listing's cap for that group. Refuse if the total is full **or** that age's
+   count for that day already meets its cap (cap 0 = always refuse). Age comes
+   from the child's DOB, which you already resolve for registers/ratios.
+
+3. **Surface it BEFORE checkout - non-negotiable.** `GET /api/listings/:id`
+   must return per-age availability per day, so the parent sees "**full for
+   this age**" on the listing *before* they pick dates and add a child. Kaz's
+   point, and he's right: a parent who gets to checkout, enters their child's
+   age, and is only then turned away will be furious. The scarcity flag stays
+   **total** for an anonymous browser (we don't know the age yet); the age
+   check bites the moment the age is known.
+
+### Where the group definitions live
+
+Names, colours, age ranges, target ratios and max sizes are in
+`settings.ratioGroups` (tenant library - persisted). They're editable from
+**both** the Ratios & groups board and the listing's age-cap rows, one source
+of truth. You only need the per-listing `ageCaps` numbers.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime

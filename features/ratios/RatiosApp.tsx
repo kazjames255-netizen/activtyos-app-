@@ -61,6 +61,28 @@ const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.r
 /** Staff for one line: ceil(children / ratio), matching the manual's board. */
 const staffForLine = (children: number, ratio: number) => (children > 0 ? Math.ceil(children / Math.max(1, ratio)) : 0);
 const ageRange = (g: RatioGroup) => `${g.ageFrom}-${g.ageTo} yrs`;
+/** "1:8" for a round ratio, "1:8.5" only when there's actually a fraction. */
+const fmtRatio = (n: number) => `1:${Number.isInteger(n) ? n : n.toFixed(1)}`;
+
+// Simple line icons for the status tiles — cleaner than emoji, one colour,
+// inherit white on the coloured square.
+const ICONS: Record<string, React.ReactNode> = {
+  children: (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="7" r="3" /><path d="M2 20a7 7 0 0 1 14 0" /><path d="M16 3.5a3 3 0 0 1 0 7M22 20a7 7 0 0 0-5-6.7" />
+    </svg>
+  ),
+  staff: (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /><path d="m9.5 4 2.5-2 2.5 2" />
+    </svg>
+  ),
+  groups: (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+    </svg>
+  ),
+};
 
 const EYFS_3TO5_QT = 13;
 
@@ -110,7 +132,7 @@ function PolicyTable({ groups, onChange }: { groups: RatioGroup[]; onChange: (g:
                   <span className="inline-flex items-center gap-1">1 :<input type="number" min={1} value={g.targetRatio} onChange={(e) => patch(i, (x) => ({ ...x, targetRatio: num(e.target.value, 1) }))} className={`${inp} w-[56px]`} /></span>
                 </td>
                 <td className="px-2 py-1.5">
-                  <input type="number" min={1} value={g.maxSize} onChange={(e) => patch(i, (x) => ({ ...x, maxSize: num(e.target.value, 1) }))} className={`${inp} w-[64px]`} />
+                  <input type="number" min={0} value={g.maxSize || ""} placeholder="none" onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[64px]`} />
                 </td>
                 <td className="px-2 py-1.5 text-right">
                   <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={`Remove ${g.name}`} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
@@ -119,13 +141,16 @@ function PolicyTable({ groups, onChange }: { groups: RatioGroup[]; onChange: (g:
             ))}
           </tbody>
         </table>
-        <button
-          type="button"
-          onClick={() => onChange([...groups, { id: uid(), name: `Group ${groups.length + 1}`, colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
-          className="mt-2 rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)]"
-        >
-          ＋ Add group
-        </button>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onChange([...groups, { id: uid(), name: `Group ${groups.length + 1}`, colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
+            className="rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)]"
+          >
+            ＋ Add group
+          </button>
+          <span className="text-[11px] text-[var(--ink-3)]">Leave <b>max size</b> blank for no cap — you won&apos;t be warned when a group goes over.</span>
+        </div>
       </div>
     </details>
   );
@@ -157,6 +182,12 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   const within = staffOnDuty >= staffNeeded;
   const overall = staffOnDuty > 0 ? totalChildren / staffOnDuty : 0;
   const unplaced = inGroup("__unplaced");
+  // Total room capacity across the groups (blank max = uncapped). Whether the
+  // day's children fit the rooms — separate from staffing, and from the
+  // listing's booking cap which limits intake before it ever gets here.
+  const capped = groups.filter((g) => g.maxSize > 0);
+  const totalCapacity = capped.reduce((n, g) => n + g.maxSize, 0);
+  const overGroups = groups.filter((g) => g.maxSize > 0 && inGroup(g.id).length > g.maxSize);
 
   const Chip = ({ c, colour, onRemove }: { c: SessionChild; colour?: string; onRemove?: () => void }) => (
     <span
@@ -175,7 +206,8 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   return (
     <div>
       <div className="mb-0.5 text-[15px] font-extrabold" style={{ color: "var(--brand-ink,#1d3a8f)" }}>Cover by group</div>
-      <p className="mb-2 text-[12px] text-[var(--ink-3)]">Use ‹ › to move between days · edit a name or target above, drag a child, or add a group — all live.</p>
+      <p className="mb-1 text-[12px] text-[var(--ink-3)]">Use ‹ › to move between days · edit a name or target above, drag a child, or add a group — all live.</p>
+      <p className="mb-2 text-[11px] text-[var(--ink-3)]"><b>Target</b> is the ratio you&rsquo;re aiming for; <b>Live</b> is the actual ratio right now (children &divide; staff you&rsquo;ve assigned) — it shows once staff are on.</p>
 
       <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
         {/* Board header bar */}
@@ -190,10 +222,15 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
           </div>
           <div className="flex items-center gap-3 text-[13px]" style={{ fontVariantNumeric: "tabular-nums" }}>
             <span><b className="text-[15px]">{totalChildren}</b> children</span>
+            {totalCapacity > 0 && (
+              <span title={`Total room capacity across your groups (${capped.length} of ${groups.length} groups have a max size)`}>
+                <b className="text-[15px]" style={overGroups.length ? { color: "#ffd3d3" } : undefined}>{totalChildren}/{totalCapacity}</b> capacity
+              </span>
+            )}
             <span><b className="text-[15px]">{staffOnDuty}</b> staff</span>
-            <span><b className="text-[15px]">{overall > 0 ? `1:${overall.toFixed(1)}` : `needs ${staffNeeded}`}</b></span>
-            <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
-              {within ? "WITHIN TARGET" : `SHORT ${staffNeeded - staffOnDuty}`}
+            <span><b className="text-[15px]">{overall > 0 ? fmtRatio(overall) : `needs ${staffNeeded}`}</b></span>
+            <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" title={within ? undefined : `You've assigned ${staffOnDuty}, this needs ${staffNeeded} — one adult per occupied group.`} style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
+              {within ? "WITHIN TARGET" : `NEEDS ${staffNeeded - staffOnDuty} MORE STAFF`}
             </span>
           </div>
         </div>
@@ -205,7 +242,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
             const need = staffForLine(kids.length, g.targetRatio);
             const have = (groupStaff[g.id] ?? []).length;
             const met = have >= need;
-            const over = kids.length > g.maxSize;
+            const over = g.maxSize > 0 && kids.length > g.maxSize;
             const live = have > 0 ? kids.length / have : 0;
             const isOver = dragOver === g.id;
             return (
@@ -224,14 +261,14 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
                     </div>
                     <div>
                       <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Live</div>
-                      <div className="text-[13px] font-extrabold">{live > 0 ? `1:${live.toFixed(1)}` : "—"}</div>
+                      <div className="text-[13px] font-extrabold">{live > 0 ? fmtRatio(live) : "—"}</div>
                     </div>
                   </div>
                 </div>
                 <div className="p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={met ? { background: "#e7f8ee", color: "#0f7a44" } : { background: "#fdebec", color: "#c0392b" }}>
-                      {met ? "ON TARGET" : "SHORT"} · {kids.length} / {have}
+                      {have} of {need} staff{have >= need ? " ✓" : ` · ${need - have} short`}
                     </span>
                     <span className="text-[11.5px] text-[var(--ink-3)]">needs {need} staff</span>
                     {over && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">Over max ({kids.length}/{g.maxSize})</span>}
@@ -289,7 +326,7 @@ function NumInput({ value, onChange, label, hint, ratio }: { value: number; onCh
   );
 }
 
-function RatioCalculator({ groups, dayChildren }: { groups: RatioGroup[]; dayChildren: SessionChild[] }) {
+function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup[]; dayChildren: SessionChild[]; dateText: string }) {
   const [eyfs, setEyfs] = useState<Record<string, number>>({ u2: 0, twos: 0, threeFive: 0 });
   const [qt, setQt] = useState(0);
   const [groupN, setGroupN] = useState<Record<string, number>>({});
@@ -332,10 +369,10 @@ function RatioCalculator({ groups, dayChildren }: { groups: RatioGroup[]; dayChi
       </summary>
       <div className="px-3.5 pb-3.5">
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--brand-ink,#1d3a8f)]">Check a live day against the guidance</div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--brand-ink,#1d3a8f)]">Check {dateText} against the guidance</div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={showLive} disabled={liveCount === 0} className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40" style={{ background: "var(--brand-ink,#1d3a8f)" }}>Show me live ({liveCount})</button>
-            <span className="text-[11px] text-[var(--ink-3)]">Drops the day&apos;s actual children into the calculator.</span>
+            <button type="button" onClick={showLive} disabled={liveCount === 0} className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40" style={{ background: "var(--brand-ink,#1d3a8f)" }}>Drop in {dateText} ({liveCount})</button>
+            <span className="text-[11px] text-[var(--ink-3)]">Drops the children booked for {dateText} into the calculator above.</span>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-[1fr_240px]">
@@ -422,10 +459,13 @@ export function RatiosApp() {
       lede="Set your groups and target ratios, and track live cover as you take registers"
       actions={
         listings.length > 0 ? (
-          <select value={listing} onChange={(e) => setListing(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]">
-            <option value="">All listings</option>
-            {listings.map((l) => <option key={l} value={l}>{l}</option>)}
-          </select>
+          <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
+            Listing
+            <select value={listing} onChange={(e) => setListing(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]">
+              <option value="">All listings (whole site)</option>
+              {listings.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </label>
         ) : undefined
       }
     >
@@ -458,9 +498,9 @@ export function RatiosApp() {
       {/* Hero tiles */}
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <HeroTile icon="👥" tint="#2f6bd8" label="Children on site" value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
-          <HeroTile icon="🧑‍🏫" tint="#e2225f" label="Staff on duty" value="—" sub="assign staff on the board below" />
-          <HeroTile icon="⚖️" tint="#0e9f6e" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
+          <HeroTile icon="children" tint="#2f6bd8" label="Children on site" value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
+          <HeroTile icon="staff" tint="#e2225f" label="Staff on duty" value="—" sub="assign staff on the board below" />
+          <HeroTile icon="groups" tint="#0e9f6e" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
         </div>
       )}
 
@@ -468,7 +508,7 @@ export function RatiosApp() {
       <PolicyTable groups={groups} onChange={(g) => void save({ settings: { ...settings, ratioGroups: g } })} />
 
       {/* Calculator */}
-      <RatioCalculator groups={groups} dayChildren={children} />
+      <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />
 
       {/* Cover by group board */}
       {!ready ? (
@@ -482,10 +522,10 @@ export function RatiosApp() {
   );
 }
 
-function HeroTile({ icon, tint, label, value, sub }: { icon: string; tint: string; label: string; value: number | string; sub: string }) {
+function HeroTile({ icon, tint, label, value, sub }: { icon: keyof typeof ICONS; tint: string; label: string; value: number | string; sub: string }) {
   return (
     <div className="rounded-xl border p-3.5" style={{ borderColor: `${tint}33`, background: `${tint}0d` }}>
-      <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg text-[16px]" style={{ background: tint }}>{icon}</div>
+      <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg text-white" style={{ background: tint }}>{ICONS[icon]}</div>
       <div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</div>
       <div className="mt-0.5 text-[26px] font-extrabold leading-none">{value}</div>
       <div className="mt-1 text-[11px] text-[var(--ink-3)]">{sub}</div>
