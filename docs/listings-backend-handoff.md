@@ -2004,3 +2004,28 @@ service, so nothing was blocked after all.
 allergies ✅ · Moments ✅ — the whole section is done.** When you move to a
 real object store (R2 / Firebase Storage) only `uploads.ts` changes; every
 photo URL and consumer stays the same.
+
+---
+
+# Reconciliation — 21 July 2026 (Swagger v0.19.0)
+
+The money-matching screen. Card settles via Stripe; TFC, vouchers, bank
+transfer and cash arrive off-platform, so they're matched here.
+
+- **`GET /api/reconciliation`** — outstanding bookings (Unpaid / Invoice sent /
+  Awaiting voucher / Partially paid, money still due), each with
+  `amount`/`amountPaid`/`outstanding`, method, voucher scheme, and an
+  `overdue` flag (voucher past its `voucherReceiveBy`). Plus a `summary`:
+  total outstanding, overdue count, awaiting-voucher count, by-method breakdown
+  (voucher rows grouped by scheme — "£120 owed via Edenred", the §Q matching aid).
+- **`POST /api/bookings/:ref/record-payment`** `{amount, method?, reference?,
+  date?}` — log money in. **Partial-aware**: accumulates `amountPaid`; pay →
+  `Paid` when covered, else the new `Partially paid` state. Writes a `payments`
+  record with the reference. Operators only.
+- New booking field `amountPaid`; new pay state `Partially paid` (helpers
+  styled). `ReconciliationApp` on the `reconciliation` slug (company/franchise/
+  freelancer): summary, outstanding list (overdue first, red), record-payment.
+
+Money section: Payments/Finance ✅ · **Reconciliation ✅** · (Payouts &
+royalties, Expenses, Subscriptions to come). TFC's auto-reconcile still waits
+on the HMRC EPP integration — this handles the manual matching meanwhile.

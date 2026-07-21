@@ -430,6 +430,63 @@ bookings.post("/:ref/actions", async (req, res) => {
 });
 
 // POST /api/bookings/bulk
+// POST /api/bookings/:ref/record-payment — reconciliation: log money
+// received against a booking (bank transfer, TFC, voucher, cash…). Partial-
+// aware: accumulates amountPaid, and the pay state follows the total —
+// Paid when covered, "Partially paid" when not. Writes a payment record so
+// the money trail is complete. Operators only.
+const recordPaymentSchema = z.object({
+  amount: z.number().positive(),
+  method: z.string().max(60).optional(),
+  reference: z.string().max(120).optional(),
+  date: z.string().max(25).optional(),
+});
+bookings.post("/:ref/record-payment", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) {
+    res.status(400).json({ error: "tenantId required for platform accounts" });
+    return;
+  }
+  const parsed = recordPaymentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues });
+    return;
+  }
+  const ref = col.doc(bookingDocId(tenantId, req.params.ref));
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      const paid = Math.round(((b.amountPaid ?? 0) + parsed.data.amount) * 100) / 100;
+      b.amountPaid = paid;
+      b.pay = paid >= (b.amount ?? 0) ? "Paid" : "Partially paid";
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    // Record the money for reconciliation/oversight.
+    void db.collection("payments").add({
+      tenantId,
+      refs: [updated.ref],
+      email: updated.email,
+      amount: parsed.data.amount,
+      currency: "gbp",
+      method: parsed.data.method ?? updated.method,
+      reference: parsed.data.reference ?? null,
+      offline: true,
+      status: "recorded",
+      recordedBy: req.user?.email ?? "operator",
+      createdAt: parsed.data.date ?? new Date().toISOString(),
+    });
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
 bookings.post("/bulk", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;

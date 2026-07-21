@@ -1,10 +1,28 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.18.0
+  version: 0.19.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.19.0 — Reconciliation (Money)
+
+    Matching incoming money to bookings — the admin job the doc calls the
+    one providers dread. Card settles via Stripe; TFC, vouchers, bank
+    transfer and cash land off-platform and are matched here.
+    - **`GET /api/reconciliation`** — outstanding bookings (Unpaid /
+      Invoice sent / Awaiting voucher / Partially paid, with money still
+      due), each with `amount` / `amountPaid` / `outstanding`, method,
+      voucher scheme, and an `overdue` flag (a voucher past its
+      `voucherReceiveBy`). Plus a `summary`: total outstanding, overdue
+      count, awaiting-voucher count, and a by-method breakdown.
+    - **`POST /api/bookings/:ref/record-payment`** `{amount, method?,
+      reference?, date?}` — log money received. **Partial-aware**:
+      accumulates `amountPaid`; pay becomes `Paid` when covered, else the
+      new state `Partially paid`. Writes a `payments` record (with the
+      reference) for the trail. Operators only.
+    - New booking field `amountPaid`; new pay state `Partially paid`.
 
     ## v0.18.0 — Moments (Pupils) — the photo feed, consent-gated
 
@@ -443,6 +461,8 @@ tags:
     description: A listing's bookable runs — capacity, sessions, waitlist
   - name: blocks-builder
     description: Reusable periods / passes / bundles library with server-side pricing
+  - name: reconciliation
+    description: Outstanding money matched to bookings (vouchers / TFC / bank / cash)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: ratios
@@ -1300,6 +1320,38 @@ paths:
                               name: { type: string }
                               age: { type: number }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/reconciliation:
+    get:
+      tags: [reconciliation]
+      summary: Outstanding money + a by-method summary
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{items[], summary}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/bookings/{ref}/record-payment:
+    post:
+      tags: [reconciliation]
+      summary: Log money received against a booking (partial-aware)
+      parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number }
+                method: { type: string }
+                reference: { type: string }
+                date: { type: string }
+      responses:
+        "200": { description: "The booking (pay → Paid or Partially paid)" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/payments/connect:
