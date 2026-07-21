@@ -2004,3 +2004,43 @@ service, so nothing was blocked after all.
 allergies ✅ · Moments ✅ — the whole section is done.** When you move to a
 real object store (R2 / Firebase Storage) only `uploads.ts` changes; every
 photo URL and consumer stays the same.
+
+---
+
+## R — Ratios: the age bands are legally out of date
+
+`server/src/lib/ratios.ts` `DEFAULT_BANDS` has **two-year-olds at 1:4**. Under
+the EYFS framework (revised September 2023) the statutory ratio for
+two-year-olds is **1:5**, not 1:4. It also has no representation of the
+**1:13** ratio available for three-to-fives when a person with QTS/EYPS works
+directly with them.
+
+These are compliance figures a provider will trust, so:
+
+1. **Two-year-olds → ratio 5** (was 4).
+2. Consider whether the 3–4 band should carry the qualified-teacher uplift, or
+   whether that stays a front-end calculator concern (the new ratio calculator
+   on the ratios screen states the law correctly regardless of the bands).
+
+The front-end **ratio calculator** hardcodes the correct statutory figures
+(1:3 / 1:5 / 1:8-or-1:13) independently, so the *planning* tool is right today.
+But the **live monitor's "required staff"** comes from your bands — so until
+`DEFAULT_BANDS` is corrected, a session of two-year-olds is told it needs
+fewer staff than the law requires. That's the one to fix.
+
+(Editable-per-provider bands with capacities + EYFS flags — the manual's
+"Cover & Capacity" settings — remain a separate, larger piece of work.)
+
+### §R — ratios: persist the "covered" acknowledgement (small)
+
+The monitor lets an operator acknowledge an understaffed session ("I've got
+this covered" — a helper who isn't in the system). Right now that's client-only
+and resets on reload, and other staff can't see it.
+
+To make it stick and be shared, add an `acknowledged` boolean to the
+`ratioGroups/{blockId}_{date}` doc: accept it in `putSchema` (ratios.ts:168),
+store it alongside `groups`, and return it from the GET. The front end already
+holds the state per session — it just needs somewhere to save it.
+
+Resetting daily is arguably correct for a safety check, so this is low
+priority — but without it the acknowledgement is invisible to a second person.

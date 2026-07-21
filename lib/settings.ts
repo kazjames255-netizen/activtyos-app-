@@ -219,6 +219,37 @@ export const DEFAULT_VOUCHERS: VoucherProvider[] = [
   return { id, name, details: [{ id: `${id}-acc`, label: "Account number/ID", value: "" }] };
 });
 
+/**
+ * A standing ratio group — a "room" on the Ratios & groups board.
+ *
+ * Children fall into a group by age (ageFrom–ageTo); the target ratio and max
+ * size drive the live cover check. Editing one flows to every card on the
+ * board. This is the manual's "ratio policy" table, made real.
+ */
+export interface RatioGroup {
+  id: string;
+  name: string;
+  colour: string;
+  ageFrom: number;
+  ageTo: number;
+  /** Children per adult — the "1 : N" target. */
+  targetRatio: number;
+  /** Most children the room holds. */
+  maxSize: number;
+}
+
+/** Sensible starting groups for a 5–17 activity camp — all editable. */
+export const DEFAULT_RATIO_GROUPS: RatioGroup[] = [
+  { id: "cubs", name: "Cubs", colour: "#e2225f", ageFrom: 5, ageTo: 7, targetRatio: 8, maxSize: 32 },
+  { id: "explorers", name: "Explorers", colour: "#2f6bd8", ageFrom: 8, ageTo: 10, targetRatio: 8, maxSize: 32 },
+  { id: "adventurers", name: "Adventurers", colour: "#16234b", ageFrom: 11, ageTo: 14, targetRatio: 10, maxSize: 30 },
+  { id: "trailblazers", name: "Trailblazers", colour: "#0e9f6e", ageFrom: 15, ageTo: 17, targetRatio: 12, maxSize: 24 },
+];
+
+/** The group an age falls into, or null if it's outside every range. */
+export const groupForAge = (groups: RatioGroup[], age: number): RatioGroup | null =>
+  groups.find((g) => age >= g.ageFrom && age <= g.ageTo) ?? null;
+
 export interface TenantSettings {
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
@@ -296,6 +327,13 @@ export interface TenantSettings {
   voucherDueByDays: number;
   /** What to do when a booking starts sooner than the money can arrive. */
   voucherWhenClose: WhenTooClose;
+  /**
+   * The provider's own ratio groups — the standing rooms/bands children are
+   * split into on the Ratios & groups board. Each has a colour, an age range,
+   * a target staff ratio and a max size, and the whole board flows from them.
+   * A tenant-level policy, not per session.
+   */
+  ratioGroups: RatioGroup[];
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -381,6 +419,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   voucherClearDays: 3,
   voucherDueByDays: 0,
   voucherWhenClose: "hide",
+  ratioGroups: DEFAULT_RATIO_GROUPS,
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
@@ -431,6 +470,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
         )
       : DEFAULT_SETTINGS.cancellationReasons,
     genderOptions: s.genderOptions?.length ? s.genderOptions : DEFAULT_SETTINGS.genderOptions,
+    ratioGroups: s.ratioGroups?.length ? s.ratioGroups : DEFAULT_SETTINGS.ratioGroups,
   };
 }
 
