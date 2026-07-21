@@ -1,10 +1,25 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.14.0
+  version: 0.15.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.15.0 — Incidents & Accidents (Pupils)
+
+    The safeguarding log every OFSTED-registered provider must keep.
+    `/api/incidents` — one collection, `kind: "accident" | "incident"`.
+    - `GET /api/incidents?kind=&childId=&from=&to=` — the tenant's log,
+      newest first. Staff and operators read; platform via `?tenantId=`.
+    - `POST /api/incidents` — record one (staff AND operators — staff log
+      these on the ground). Stamps who + when.
+    - `PUT /api/incidents/:id` — the provider, or the person who recorded
+      it, can edit.
+    - `DELETE /api/incidents/:id` — operators only (a safeguarding record
+      isn't something whoever's on shift removes).
+    Tenant-scoped, not parent-facing; `parentNotified` tracks that the
+    family was informed. Realtime collection `incidents`.
 
     ## v0.14.0 — Payment states, child questions, vouchers, refund rules (N–Q)
 
@@ -385,6 +400,8 @@ tags:
     description: Daily attendance per block-session — the staff role's one write
   - name: ratios
     description: Staff:child ratios and grouping children per session
+  - name: incidents
+    description: Incidents & Accidents — the safeguarding log (staff record, operators manage)
   - name: payments
     description: Stripe Connect — providers' own accounts take the money; the platform records it
   - name: customers
@@ -1368,6 +1385,68 @@ paths:
         - { name: y, in: path, required: true, schema: { type: string, description: "tile Y, .png suffix ok" } }
       responses:
         "200": { description: PNG tile (week-cached, immutable) }
+
+  /api/incidents:
+    get:
+      tags: [incidents]
+      summary: The safeguarding log (accidents + incidents)
+      parameters:
+        - { name: kind, in: query, required: false, schema: { type: string, enum: [accident, incident] } }
+        - { name: childId, in: query, required: false, schema: { type: string } }
+        - { name: from, in: query, required: false, schema: { type: string } }
+        - { name: to, in: query, required: false, schema: { type: string } }
+        - { name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }
+      responses:
+        "200": { description: Records, newest first }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [incidents]
+      summary: Record an accident or incident (staff + operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, date, childName, description]
+              properties:
+                kind: { type: string, enum: [accident, incident] }
+                date: { type: string }
+                time: { type: string }
+                childName: { type: string }
+                childId: { type: string }
+                location: { type: string }
+                description: { type: string }
+                injury: { type: string }
+                treatment: { type: string }
+                firstAider: { type: string }
+                incidentType: { type: string }
+                actionTaken: { type: string }
+                witnesses: { type: string }
+                severity: { type: string, enum: [minor, moderate, serious] }
+                parentNotified: { type: boolean }
+      responses:
+        "201": { description: The created record }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/incidents/{id}:
+    put:
+      tags: [incidents]
+      summary: Edit a record (provider or the recorder)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Updated }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [incidents]
+      summary: Delete a record (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/ratios:
     get:

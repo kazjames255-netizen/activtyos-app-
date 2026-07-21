@@ -4,6 +4,7 @@ import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { CustomersApp } from "@/features/customers/CustomersApp";
 import { PaymentsApp } from "@/features/payments/PaymentsApp";
+import { IncidentsApp } from "@/features/incidents/IncidentsApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
@@ -41,6 +42,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     "admin-registers": RegistersApp,
     ratios: RatiosApp,
+    incidents: () => <IncidentsApp kind="incident" />,
+    accidents: () => <IncidentsApp kind="accident" />,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -52,6 +55,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     registers: RegistersApp,
     ratios: RatiosApp,
+    incidents: () => <IncidentsApp kind="incident" />,
+    accidents: () => <IncidentsApp kind="accident" />,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
@@ -63,12 +68,16 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
+    incidents: () => <IncidentsApp kind="incident" />,
+    accidents: () => <IncidentsApp kind="accident" />,
     customers: CustomersApp,
     finance: PaymentsApp,
   },
   staff: {
     registers: RegistersApp,
     ratios: RatiosApp,
+    incidents: () => <IncidentsApp kind="incident" />,
+    accidents: () => <IncidentsApp kind="accident" />,
     customers: CustomersApp,
   },
   custdash: {

@@ -1910,3 +1910,25 @@ pure lib, lifted as-is, not reimplemented). The recommended refund + reason
 land on `cancel.amount` / `cancel.msg`, pending the provider's approval — which
 then refunds that figure via Stripe. Falls back to the default policy if a
 listing's policy was deleted.
+
+---
+
+# Incidents & Accidents — 21 July 2026 (Swagger v0.15.0)
+
+First of the "Pupils" safeguarding features. `/api/incidents` — one collection,
+`kind: "accident" | "incident"`. An accident carries injury/treatment/first
+aider; an incident carries type/action taken; both share date/time, child,
+location, severity, witnesses, and `parentNotified`.
+
+- **Staff can record** (it's their job on the ground, like registers) and read;
+  **operators edit/delete** — a safeguarding record isn't something whoever's on
+  shift can quietly change or remove. Parents can't see it (informed out of
+  band; the record tracks that they were). Tenant-scoped, realtime `incidents`.
+- A simple `IncidentsApp` (one component, `kind` prop) is registered on the
+  `incidents` and `accidents` slugs across company/franchise/freelancer/staff.
+  Restyle at will.
+- `photoUrl` is on the record but the upload UI is yours — when Firebase
+  Storage lands, incident photos get a proper access-controlled home (same as
+  the SEND-plan story).
+
+Next Pupils items when you want them: Medication, Meals & allergies, Moments.
