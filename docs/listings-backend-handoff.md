@@ -2069,3 +2069,42 @@ transfer and cash arrive off-platform, so they're matched here.
 Money section: Payments/Finance ✅ · **Reconciliation ✅** · (Payouts &
 royalties, Expenses, Subscriptions to come). TFC's auto-reconcile still waits
 on the HMRC EPP integration — this handles the manual matching meanwhile.
+
+---
+
+# Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
+
+The rest of the **Run the day** section. Three new tenant-scoped, realtime
+collections, plus two UI-only reads over data you already serve. Same role
+model as everything else: staff use them, operators own them (delete =
+operators). Parents 403 on all of it.
+
+- **`/api/tasks`** — the team's shared to-do list. `{title, notes?, assignee?,
+  dueDate?, priority: low|normal|high, done}`. GET sorts open-first, then
+  priority, then due date; `PUT {done:true}` stamps `completedAt`. Staff +
+  operators create and tick; **operators delete**. Realtime `tasks`.
+- **`/api/trips`** — the off-site trip record. `{destination, date,
+  departTime?, returnTime?, transport?, childNames[], staff[], headcount?,
+  riskAssessment?, consentObtained, notes?, status}`. `headcount` defaults to
+  `childNames.length`. Staff + operators create/edit; **operators delete**.
+  Realtime `trips`.
+- **`/api/shifts`** — the staff rota. `{staffName, staffId?, date, start, end,
+  role?, listingId?, notes?}`. `GET ?from=&to=` windows a week; sorted by date
+  then start. Staff **read** (they need their own hours); **operators** write
+  and delete. Realtime `shifts`.
+- **Calendar** and **Locations** are UI only — **no new endpoints**. Calendar
+  reads every block's `sessions` off `GET /api/listings?mine=1` and lays them
+  on a month grid (session times, programme, `spotsLeft`, open/closed).
+  Locations reads `venues` off `GET /api/library` and shows each with the
+  shared `VenueMap` (the OS-tile map) — a read view; editing stays under
+  Listings → Locations.
+
+Apps registered: `TasksApp` (tasks), `TripsApp` (trips), `ScheduleApp`
+(schedule — aliased `RotaApp` to avoid the parent one), `CalendarApp`
+(calendar), `LocationsApp` (locations), across company/franchise/freelancer
+(company nav has no `schedule` slug, so it's the other four there) and the
+staff-facing ones on the staff portal. Restyle at will — all use the shared
+UI primitives and CSS vars.
+
+**Run the day: Ratios ✅ · Activity timetable ✅ · Tasks ✅ · Trips & visits ✅
+· Schedule & rota ✅ · Calendar ✅ · Locations ✅ — the whole section is done.**

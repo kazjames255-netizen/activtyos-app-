@@ -11,6 +11,11 @@ import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
+import { TasksApp } from "@/features/tasks/TasksApp";
+import { TripsApp } from "@/features/trips/TripsApp";
+import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
+import { CalendarApp } from "@/features/calendar/CalendarApp";
+import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
@@ -55,6 +60,10 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
   },
   franchise: {
     setup: SetupApp,
@@ -72,6 +81,11 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
   },
   freelancer: {
     setup: SetupApp,
@@ -89,6 +103,11 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     finance: PaymentsApp,
     reconciliation: ReconciliationApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
+    calendar: CalendarApp,
+    locations: LocationsApp,
   },
   staff: {
     registers: RegistersApp,
@@ -99,6 +118,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
+    tasks: TasksApp,
+    trips: TripsApp,
+    schedule: RotaApp,
   },
   custdash: {
     browse: BrowseApp,

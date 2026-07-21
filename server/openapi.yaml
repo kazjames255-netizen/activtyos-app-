@@ -1,10 +1,33 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.19.0
+  version: 0.20.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.20.0 — Run the day: Tasks, Trips, Schedule (+ Calendar/Locations)
+
+    Finishes the **Run the day** section. Three new tenant-scoped, realtime
+    collections; staff use them, operators own them (delete = operators).
+    Calendar and Locations are UI-only reads over data you already serve
+    (blocks' sessions on `/api/listings`, venues on `/api/library`) — no new
+    endpoints.
+    - **`/api/tasks`** — the team's shared to-do list. `{title, notes?,
+      assignee?, dueDate?, priority: low|normal|high, done}`. GET sorts
+      open-first, then priority, then due date; ticking sets `completedAt`.
+      Staff + operators create/tick; **operators delete**.
+    - **`/api/trips`** — off-site trip record. `{destination, date,
+      departTime?, returnTime?, transport?, childNames[], staff[],
+      headcount?, riskAssessment?, consentObtained, notes?, status:
+      planned|completed|cancelled}`. `headcount` defaults to `childNames`
+      length. Staff + operators create/edit; **operators delete**.
+    - **`/api/shifts`** — the staff rota. `{staffName, staffId?, date,
+      start, end, role?, listingId?, notes?}`. `GET ?from=&to=` windows the
+      week; sorted by date then start. Staff **read** (they need to know
+      when they're on); **operators** write/delete.
+    - All three tenant-scoped (platform via the usual account scoping),
+      parents 403, realtime collections `tasks` / `trips` / `shifts`.
 
     ## v0.19.0 — Reconciliation (Money)
 
@@ -467,6 +490,12 @@ tags:
     description: Daily attendance per block-session — the staff role's one write
   - name: ratios
     description: Staff:child ratios and grouping children per session
+  - name: tasks
+    description: The team's shared to-do list (Run the day)
+  - name: trips
+    description: Off-site trips & visits — who's going, transport, risk assessment, consent
+  - name: shifts
+    description: The staff rota / schedule (staff read, operators write)
   - name: incidents
     description: Incidents & Accidents — the safeguarding log (staff record, operators manage)
   - name: medication
@@ -1351,6 +1380,184 @@ paths:
       responses:
         "200": { description: "The booking (pay → Paid or Partially paid)" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/tasks:
+    get:
+      tags: [tasks]
+      summary: The team's to-do list (open-first, then priority, then due date)
+      responses:
+        "200": { description: Array of tasks }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [tasks]
+      summary: Add a task (staff + operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                notes: { type: string }
+                assignee: { type: string }
+                dueDate: { type: string, description: "ISO date" }
+                priority: { type: string, enum: [low, normal, high], default: normal }
+      responses:
+        "201": { description: The created task }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/tasks/{id}:
+    put:
+      tags: [tasks]
+      summary: Edit / tick a task (setting done toggles completedAt)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                notes: { type: string }
+                assignee: { type: string }
+                dueDate: { type: string }
+                priority: { type: string, enum: [low, normal, high] }
+                done: { type: boolean }
+      responses:
+        "200": { description: The updated task }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [tasks]
+      summary: Delete a task (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/trips:
+    get:
+      tags: [trips]
+      summary: Trips & visits (newest first)
+      responses:
+        "200": { description: Array of trips }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [trips]
+      summary: Plan a trip (staff + operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [destination, date]
+              properties:
+                destination: { type: string }
+                date: { type: string, description: "ISO date" }
+                departTime: { type: string }
+                returnTime: { type: string }
+                listingId: { type: string }
+                transport: { type: string }
+                childNames: { type: array, items: { type: string } }
+                staff: { type: array, items: { type: string } }
+                headcount: { type: integer, description: "Defaults to childNames length" }
+                riskAssessment: { type: string }
+                consentObtained: { type: boolean, default: false }
+                notes: { type: string }
+                status: { type: string, enum: [planned, completed, cancelled], default: planned }
+      responses:
+        "201": { description: The created trip }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/trips/{id}:
+    put:
+      tags: [trips]
+      summary: Edit a trip (staff + operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: The updated trip }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [trips]
+      summary: Delete a trip (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/shifts:
+    get:
+      tags: [shifts]
+      summary: The rota (staff read too); window with from/to
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string }, description: "ISO date, inclusive" }
+        - { name: to, in: query, required: false, schema: { type: string }, description: "ISO date, inclusive" }
+      responses:
+        "200": { description: Array of shifts, sorted by date then start }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [shifts]
+      summary: Add a shift (operators only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffName, date, start, end]
+              properties:
+                staffName: { type: string }
+                staffId: { type: string }
+                date: { type: string, description: "ISO date" }
+                start: { type: string, description: "HH:MM" }
+                end: { type: string, description: "HH:MM" }
+                role: { type: string }
+                listingId: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: The created shift }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/shifts/{id}:
+    put:
+      tags: [shifts]
+      summary: Edit a shift (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: The updated shift }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [shifts]
+      summary: Delete a shift (operators only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
