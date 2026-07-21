@@ -359,6 +359,34 @@ export interface TenantSettings {
    */
   cancellationPolicies: NamedPolicy[];
 
+  // ── Amending booking dates ──
+  /** Can a parent move their own session dates, or must they request it? Off =
+   *  a request you approve, like a cancellation. */
+  amendSelfService: boolean;
+  /** How close to a session it can still be moved. Stored in hours; the UI
+   *  lets a provider enter it as hours or days. */
+  amendNoticeHours: number;
+  /** Most self-service moves allowed per booking (0 = endless) — stops one
+   *  place being juggled endlessly. */
+  amendLimit: number;
+  /** Admin fee charged per amend, in whole pounds (0 = free). */
+  amendFee: number;
+  /** Whether a parent may move to a CHEAPER pass/date at all. */
+  amendAllowCheaper: boolean;
+
+  // ── Money back (governs both cancellation refunds and cheaper amends) ──
+  /** Whether money can go back to the customer's card at all. Off means every
+   *  refund is store credit (their wallet) — money never leaves the business. */
+  allowCardRefund: boolean;
+  /** When a card refund is allowed, does the customer choose card vs credit at
+   *  the point of cancelling/moving, or does it always go back to card? */
+  refundLetCustomerChoose: boolean;
+  /** When the cancellation policy gives NO cash refund, still give the family a
+   *  credit note for the FULL amount they paid, to spend on a future booking.
+   *  On/off — they keep the value, you keep the cash. Off = a no-refund is
+   *  simply nothing back. */
+  noRefundCredit: boolean;
+
   // ── Listings ──
   defaultCapacity: number;
   defaultRunningDays: number[];
@@ -437,6 +465,14 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   askReasonOperator: true,
   askReasonParent: false,
   cancellationPolicies: DEFAULT_POLICIES,
+  amendSelfService: true,
+  amendNoticeHours: 48,
+  amendLimit: 2,
+  amendFee: 0,
+  amendAllowCheaper: true,
+  allowCardRefund: true,
+  refundLetCustomerChoose: true,
+  noRefundCredit: false,
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],

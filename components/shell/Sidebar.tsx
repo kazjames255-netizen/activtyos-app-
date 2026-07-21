@@ -78,7 +78,7 @@ function SignOutItem({ item }: { item: NavItem }) {
 function GroupItems({ items, portal, pathname }: { items: NavItem[]; portal: PortalKey; pathname: string }) {
   return (
     <>
-      {items.map((item) =>
+      {items.filter((item) => !item.hidden).map((item) =>
         item.view === "auth" ? (
           <SignOutItem key={item.view} item={item} />
         ) : (
@@ -116,6 +116,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       </div>
 
       {groups.map((group) => {
+        // A group whose every item is promoted elsewhere (hidden) shows no header.
+        if (group.items.every((i) => i.hidden)) return null;
         if (group.pinned || group.footer) {
           return (
             <div
