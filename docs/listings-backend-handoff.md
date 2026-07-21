@@ -2156,11 +2156,15 @@ the number of dedicated staff they have (Kaz: "cap the ticket, otherwise how
 can we do this?"). Set the "SEND 1:1" ticket's capacity to 2 → only two 1:1
 places bookable. Same mechanism serves any scarce ticket type.
 
-1. **Enforce at booking.** In the basket check, for each child taking ticket
-   `T` on a dated session: count existing bookings of `T` for that day (or for
-   the listing, if `capacityScope: "listing"`) and refuse if it would exceed
-   `ticketOverrides[T].capacity`. This is *on top of* the listing total and the
-   age caps — a booking must pass all three.
+1. **Enforce at booking — PER DAY.** The per-ticket cap is **per day**, not a
+   whole-run total (a room refills each day; the UI now says "Capacity / day").
+   In the basket check, for each child taking ticket `T` on a **dated session**,
+   count existing bookings of `T` **for that same date** and refuse if it would
+   exceed `ticketOverrides[T].capacity`. Evaluate each date independently — a
+   5-day pass is checked against the ticket's daily cap on each of its 5 days.
+   This is *on top of* the listing total and the age caps — a booking must pass
+   all three. (Unlike the listing total, this one ignores `capacityScope`: the
+   ticket cap is always daily.)
 2. **Surface it BEFORE checkout** — same rule as age caps (§S). `GET
    /api/listings/:id` should expose remaining per-ticket capacity so the
    storefront can show "**SEND 1:1 — full for this date**" and disable that
@@ -2171,6 +2175,11 @@ places bookable. Same mechanism serves any scarce ticket type.
    storefront (step 2's surfacing). Same semantics as age caps — blank ≠ 0.
    This lets a provider shut a single pass (e.g. "SEND 1:1") without touching
    the rest of the listing/block.
+   **Front end already enforces the `"0"` = closed case** (booking hook: a
+   closed pass is unselectable, struck-through "· Closed" in the picker, never
+   the default, and `canAdd` blocks it) because it's absolute and needs no
+   count. Your server check is defense-in-depth for `"0"` and the *only* place
+   the numeric per-ticket cap (e.g. `"2"`) can actually be enforced.
 
 ### Hiding a ticket on a listing (new)
 

@@ -57,12 +57,22 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
+  // A pass whose per-listing capacity is exactly "0" is CLOSED — not bookable
+  // at all, regardless of how many places are left (that's the operator saying
+  // "shut this pass", e.g. no 1:1 staff this camp). Absolute, so the front end
+  // enforces it directly rather than waiting on the booking backend. Blank/any
+  // other value is a normal cap and stays the backend's job (handoff §T).
+  const closedPassIds = new Set(passes.filter((p) => d.ticketOverrides?.[p.name]?.capacity === "0").map((p) => p.id));
+  const passClosed = (id: string | null) => id !== null && closedPassIds.has(id);
+  const firstOpen = passes.find((p) => !closedPassIds.has(p.id)) ?? passes[0] ?? null;
   // The block loads from the API after first render, so useState's initial
-  // value is always empty — fall back to the first entry instead of leaving
-  // nothing selected (which recorded a blank timing on the basket line).
+  // value is always empty — fall back to the first OPEN entry instead of
+  // leaving nothing selected (which recorded a blank timing on the basket
+  // line), and never default onto a closed pass.
   const [passPick, setPassId] = useState<string | null>(null);
   const [periodPick, setPeriodId] = useState<string | null>(null);
-  const passId = passPick ?? passes[0]?.id ?? null;
+  // A picked pass that's closed (or no longer exists) falls back to the first open one.
+  const passId = passPick && !closedPassIds.has(passPick) ? passPick : firstOpen?.id ?? null;
   const periodId = periodPick ?? periods[0]?.id ?? null;
   const [sel, setSel] = useState<string[]>([]);
   // Dates the parent wants but can't have — queued, not booked.
@@ -162,7 +172,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     return capacity === null ? null : perDay ? capacity : Math.max(0, capacity - basket.length);
   })();
 
-  const canAdd = !locked && hasSpace && !!pass && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
+  const canAdd = !locked && hasSpace && !!pass && !passClosed(passId) && (isSingle ? sel.length >= 1 : need > 0 && sel.length === need);
   // One booking may cover several children; the count drives multi-person rules.
   const rosterNames = roster.map((c) => c.name.trim()).filter(Boolean);
   /** Who's on a given basket line. A multi-day pass is a block: on it or not. */
@@ -336,7 +346,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     });
   const answers = (itemId: string, child: string, addonId: string) => addonAns[ansKey(itemId, child, addonId)] ?? {};
 
-  return { passes, periods, passId, setPassId, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  return { passes, periods, passId, setPassId, passClosed, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
