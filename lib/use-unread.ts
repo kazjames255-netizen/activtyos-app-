@@ -10,26 +10,53 @@ interface UnreadThread {
   parentUnread?: number;
 }
 
+// A process-wide shared loader so that the several places reading the unread
+// count (sidebar badge + top-bar Messages tab, and any future consumer) collapse
+// into ONE `/api/messages/threads` request instead of one each. On a Firestore
+// free-tier quota that difference is the gap between "fine" and "quota exceeded",
+// and it's just good hygiene regardless. In-flight requests are shared; a short
+// TTL absorbs the mount burst; realtime events force a fresh read.
+const TTL_MS = 4000;
+let cached: UnreadThread[] | null = null;
+let cachedAt = 0;
+let inflight: Promise<UnreadThread[]> | null = null;
+
+function loadThreadsShared(force: boolean): Promise<UnreadThread[]> {
+  if (!force && cached && Date.now() - cachedAt < TTL_MS) return Promise.resolve(cached);
+  if (inflight) return inflight;
+  inflight = apiGet<UnreadThread[]>("/api/messages/threads")
+    .then((ts) => {
+      cached = ts;
+      cachedAt = Date.now();
+      return ts;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
+
 /**
  * Live total of unread messages for the signed-in side. Grows as replies land
  * and drops back to 0 once the thread is opened (opening marks messages read →
  * realtime `threads`/`messages` → this refetches). Shared by the sidebar badge
- * and the top-bar Messages tab so both stay in lock-step.
+ * and the top-bar Messages tab so both stay in lock-step — and share one fetch.
  */
 export function useUnreadMessages(portal: PortalKey): number {
   const [count, setCount] = useState(0);
-  const mineUnread = (t: UnreadThread) => (portal === "custdash" ? t.parentUnread : t.operatorUnread) ?? 0;
 
-  const load = useCallback(() => {
-    apiGet<UnreadThread[]>("/api/messages/threads")
-      .then((ts) => setCount(ts.reduce((sum, t) => sum + ((portal === "custdash" ? t.parentUnread : t.operatorUnread) ?? 0), 0)))
-      .catch(() => {});
-    // mineUnread is a pure derivation of `portal`; the reducer inlines it to
-    // keep the dependency list to just `portal`.
-    void mineUnread;
-  }, [portal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const apply = useCallback(
+    (ts: UnreadThread[]) =>
+      setCount(ts.reduce((sum, t) => sum + ((portal === "custdash" ? t.parentUnread : t.operatorUnread) ?? 0), 0)),
+    [portal],
+  );
 
-  useEffect(load, [load]);
-  useRealtime(["threads", "messages"], load);
+  const load = useCallback((force: boolean) => {
+    loadThreadsShared(force).then(apply).catch(() => {});
+  }, [apply]);
+
+  useEffect(() => { load(false); }, [load]);
+  // Realtime updates must reflect a genuine change, so bypass the TTL cache.
+  useRealtime(["threads", "messages"], () => load(true));
   return count;
 }
