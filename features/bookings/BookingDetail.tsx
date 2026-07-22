@@ -642,19 +642,22 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               </Button>
             </>
           )}
-          {b.cancel?.refund === "pending" && (
-            <>
-              {(!!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher")) && (
-                <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
-                  Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card. If the family took <b>wallet credit</b> there&rsquo;s nothing to send — it&rsquo;s settled. Otherwise you&rsquo;ll need to reimburse the refund back through {b.voucherScheme ?? "the scheme"} the same way it came in.
-                </div>
-              )}
-              <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
-                Approve refund{b.paymentIntentId ? " (via Stripe)" : ""}
-              </Button>
-              <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
-            </>
-          )}
+          {b.cancel?.refund === "pending" && (() => {
+            const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+            return (
+              <>
+                {isVoucher && (
+                  <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
+                    Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card — ActivityOS can&rsquo;t send this for you. If the family took <b>wallet credit</b> there&rsquo;s nothing to do. Otherwise <b>reimburse them back through {b.voucherScheme ?? "the scheme"}</b>, then click below to confirm it&rsquo;s done — the family is told straight away.
+                  </div>
+                )}
+                <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
+                  {isVoucher ? "Mark refund reimbursed" : `Approve refund${b.paymentIntentId ? " (via Stripe)" : ""}`}
+                </Button>
+                <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
+              </>
+            );
+          })()}
           {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
             <>
               <Button onClick={() => act(b.ref, "paid")}>Mark paid</Button>
