@@ -40,8 +40,11 @@ function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: nu
   const applyChangeDay = useBookingsStore((s) => s.applyChangeDay);
 
   const initial = (kid.name || "?").slice(0, 1);
+  // The whole booking being cancelled cancels every day — so no per-day
+  // "Move"/"Cancel this day" (there's nothing left to move or cancel).
+  const bookingCancelled = booking.status === "Cancelled" || booking.status === "Declined";
 
-  if (kid.cancelled) {
+  if (kid.cancelled || bookingCancelled) {
     return (
       <div className="mb-2 flex items-center gap-2.5 rounded-[11px] border border-[var(--line-2)] px-3 py-2.5 opacity-60">
         <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[#eee] text-[12px] font-extrabold text-[#999]">
@@ -437,7 +440,11 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           <Badge tone={statusTone(b.status)}>{b.status}</Badge>
-          <Badge tone={payTone(b.pay)}>{b.pay === "Funded" ? "Funded £0" : b.pay}</Badge>
+          {/* Once cancelled/declined the payment state is moot — a cancelled
+              booking isn't "awaiting" anything. */}
+          {b.status !== "Cancelled" && b.status !== "Declined" && (
+            <Badge tone={payTone(b.pay)}>{b.pay === "Funded" ? "Funded £0" : b.pay}</Badge>
+          )}
         </div>
 
         {/* Tiles */}
