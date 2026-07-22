@@ -2262,6 +2262,124 @@ alongside cancellation requests when `amendSelfService` is off.
 
 ---
 
+## V — Per-child timing on the ratios feed (front end built, needs the data)
+
+The Ratios board now has a **"By time"** view — pick an arrival→departure window
+and the whole board (headcount, cover-by-group, staffing) recomputes for just the
+children on site then. Kids on different timings (full day vs mornings vs
+afternoons) aren't all present at once, so a whole-day headcount overstates the
+ratio; this splits it.
+
+**The gap:** `GET /api/ratios` currently returns one window per **block**
+(`session.start`/`end`) and puts every child of that block in it — so within a
+single camp there's one window and nothing to split. Each child's **own** booked
+timing isn't on the feed.
+
+**What's needed:** add **`start` and `end`** (HH:MM) to each `SessionChild` in the
+ratios response — the child's actual arrival→departure from the pass/period they
+booked (`booking.timing` → that period's `start`/`finish`). The front end already
+reads `SessionChild.start`/`end` and falls back to the block window when they're
+absent, so this lights up the split the moment the fields are populated — no
+front-end change needed. If a child truly has no timing, leave them off and they
+stay "on all day" via the fallback.
+
+## W — Provider display name (onboarding choice; mostly wired, a few surfaces left)
+
+Onboarding now asks operators **"What should parents see you as?"** — their own
+name or their business name. The resolved string + the mode are stored in
+`libraries/{tenantId}.settings` as **`providerName`** and **`providerNameMode`
+(`"person" | "business"`)**.
+
+Already done (on `main`):
+- `register-role` seeds `libraries/{tenantId}.settings.{providerName,
+  providerNameMode}` in the same transaction that creates the tenant (client
+  sends `providerName`/`providerNameMode` alongside `businessName`).
+- `providerName` added to `PUBLIC_SETTINGS_KEYS`, so the public library slice
+  carries it.
+- `GET /api/listings/:id` overrides `tenantName` with
+  `settings.providerName` (falls back to the stored business name). This fixes
+  the `/book/{id}` page **and** the operator-designed customer page brand.
+- Storefront `/store/{tenantId}` prefers `settings.providerName` client-side.
+
+**What's still on the business name (should prefer `providerName` when set):**
+- `GET /api/listings` **browse feed** — each listing's denormalised
+  `tenantName` isn't overridden there (only the `:id` read is). A parent
+  browsing the marketplace still sees the business name. Cheapest fix: resolve
+  `providerName` per tenant in the browse mapper too (batch the library reads).
+- `GET /api/my/providers` (`my.ts` ~L214) — powers **"Message {provider}"** in
+  the parent top bar. Uses `tenant.name`.
+- Booking/voucher **emails** (`bookings.ts` `tenantName`) and **Stripe**
+  `business_profile.name` (`payments.ts` L72) — customer-facing, still
+  `tenant.name`.
+
+None are blocking; they're just the remaining places the same chosen name
+should surface. When you do them, read `providerName` from the tenant's library
+and fall back to `tenant.name` — same rule as the `:id` read.
+
+## X — Customer Browse is single-provider (Phase 1); marketplace is a Phase-2 toggle
+
+Decided with Kaz: a parent's **Browse activities** (`custdash/browse`) shows
+**only their own provider's** listings — not a cross-provider marketplace. The
+front end (`features/parent/BrowseApp.tsx`) now scopes the `GET /api/listings`
+feed to the tenants from `GET /api/my/providers` and shows an empty/onboarding
+card when the parent has no linked provider yet.
+
+**The gap to close (backend):** `my/providers` currently derives providers
+**only from bookings** (`bookings.where(email==)`). So a parent who's been
+**invited** by a provider (`POST /api/customers/:id/invite`) but hasn't booked
+yet resolves to zero providers and sees the empty state — they can't browse to
+make their *first* booking from inside the dashboard. Fix: `my/providers` should
+**also** include any tenant whose `customers` collection holds this parent's
+email (invited-but-not-yet-booked). Then the link exists from invite time, and
+scoping works before the first booking. (The public storefront `/store/{id}` and
+`/book/{id}` links stay the discovery path for brand-new parents regardless.)
+
+**Phase 2 (not now) — marketplace opt-in.** A **per-provider toggle in the
+ActivityOS/settings area**: when a provider switches "list my activities on the
+marketplace" on, (a) their listings become visible to *other* providers'
+parents, and (b) their *own* parents start seeing the marketplace (other
+opted-in providers) in Browse, not just this one provider. So Browse's scope
+becomes: always your own provider, plus every marketplace-opted-in provider if
+your provider has opted in. Store the flag on the tenant/library; gate the feed
+and the front-end scope on it. Until this ships, Browse stays single-provider.
+
+## Y — Customer browse: filters, distance, city, postcode (front end built, a few data needs)
+
+The parent **Browse** page (`features/parent/BrowseApp.tsx`) now has: search, category,
+town/city, distance-from-me, child's age, max price, length (single day / full
+week), when (this week / month), places-left-only, and sort (nearest / price /
+soonest). Most run off data already on the feed. Open items for you:
+
+- **Browse feed enrichment (already added on `main`).** `GET /api/listings` now
+  batches one library read per tenant and returns, per listing: `categories`
+  (names — see §W denormalisation), `location` (venue name), `city`, `address`,
+  `lat`, `lng`, plus the existing `categoryNames`. Fine at current scale; if the
+  marketplace grows, cache these joins rather than reading every tenant library
+  on each call.
+- **Venue coordinates.** Venues store optional `lat`/`lng` but most aren't
+  geocoded, so distance search falls back to **client-side geocoding of the
+  venue's postcode** (pulled from the free-text address) via `/api/geo/search`.
+  Better: **geocode a venue at save time** (the operator's Locations editor, or
+  a server hook) and store `lat`/`lng` — then the feed carries coords and the
+  client does no per-venue lookups. New field on venues: **`city`** (Town/city),
+  set in Listings → Locations; it drives the browse Location filter.
+- **Parent postcode.** Captured at **signup** now (`register-role` stores
+  `postcode` on the parent's `users` doc; `GET /api/me` returns it) and the
+  browse auto-locates from it — no typing. **Gap:** `register-role` is one-shot,
+  so a parent who signed up before this can't set a postcode. Add a way to
+  **update it on the parent's profile/account** (a small `PUT /api/me` or a
+  settings field) so existing parents get distance search too.
+- **Age type.** `ageFrom`/`ageTo` come back as **strings** ("6"/"12") on the
+  feed; the front end coerces, but storing them as **numbers** would be cleaner
+  and avoids every consumer having to `Number()` them.
+- **Orphaned categories (see §W).** A listing whose `categoryIds` reference
+  categories since removed from the library shows no tags. The wizard now warns
+  and re-picking fixes it permanently (names are denormalised on save). Nothing
+  for you here unless you want a migration to backfill `categoryNames` for
+  listings whose ids still resolve.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime

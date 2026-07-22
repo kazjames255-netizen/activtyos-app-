@@ -106,6 +106,7 @@ library.put("/", async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────
 
 const PUBLIC_SETTINGS_KEYS = [
+  "providerName",
   "requireDob",
   "collectGender",
   "genderOptions",

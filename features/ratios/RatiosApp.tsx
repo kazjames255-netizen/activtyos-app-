@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
+import { HowItWorks } from "@/components/HowItWorks";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
+import type { ServerListing } from "@/features/listings/ListingWizard";
+
+// The account holder auto-seeded onto the team keeps a stable id, so the "· you"
+// marker survives edits and it's never seeded twice.
+const HOLDER_ID = "account-holder";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Ratios & groups — built to the manual.
@@ -28,7 +35,14 @@ interface SessionChild {
   age: number;
   send: boolean;
   allergies: boolean;
+  /** The child's own arrival→departure window (from their booked timing/period).
+   *  Backend still to populate (handoff §V); until then we fall back to the
+   *  camp session window, so every child looks like they're in for the day. */
+  start?: string;
+  end?: string;
 }
+// A child placed for the day, carrying the window they're actually on site for.
+type PlacedChild = SessionChild & { ws: string; we: string };
 interface RatioSession {
   blockId: string;
   date: string;
@@ -40,7 +54,24 @@ interface RatioSession {
   totalChildren: number;
   sendCount: number;
 }
-interface StaffMember { id: string; first: string; last: string }
+// Shift hours aren't kept for a freelancer (kept simple) — the Company build
+// will pull roles and hours from its Schedule area instead.
+interface StaffMember { id: string; first: string; last: string; role?: string; photo?: string }
+
+// Staff avatar — their photo if we have one, else initials in a soft circle.
+function StaffAvatar({ m, size = 30 }: { m: StaffMember; size?: number }) {
+  const initials = `${m.first?.[0] ?? ""}${m.last?.[0] ?? ""}`.toUpperCase() || "?";
+  if (m.photo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={m.photo} alt="" className="flex-none rounded-full object-cover" style={{ width: size, height: size }} />;
+  }
+  return (
+    <div className="flex flex-none items-center justify-center rounded-full font-extrabold text-[var(--brand-strong)]"
+      style={{ width: size, height: size, fontSize: size * 0.38, background: "var(--brand-soft,#eaf0fc)" }}>
+      {initials}
+    </div>
+  );
+}
 
 const todayIso = () => {
   const t = new Date();
@@ -56,10 +87,14 @@ const dayLabel = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const shortDay = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const compactDay = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 /** Staff for one line: ceil(children / ratio), matching the manual's board. */
 const staffForLine = (children: number, ratio: number) => (children > 0 ? Math.ceil(children / Math.max(1, ratio)) : 0);
+// Colours for the synthesized "by time" cards (age cards use their own colour).
+const TIME_CARD_COLOURS = ["#2f6bd8", "#0f9488", "#7a5af8", "#e0692a", "#d6336c", "#0ea5e9"];
 const ageRange = (g: RatioGroup) => `${g.ageFrom}-${g.ageTo} yrs`;
 /** "1:8" for a round ratio, "1:8.5" only when there's actually a fraction. */
 const fmtRatio = (n: number) => `1:${Number.isInteger(n) ? n : n.toFixed(1)}`;
@@ -145,43 +180,58 @@ function PolicyTable({ groups }: { groups: RatioGroup[] }) {
 // Your team — add/remove staff here, saved to the same library list the
 // listing builder's Step 9 uses. Gives freelancers (who have no standalone
 // team screen) a place to manage staff, and it flows everywhere.
-function TeamManager({ staff, onChange }: { staff: StaffMember[]; onChange: (s: StaffMember[]) => void }) {
+function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onChange: (s: StaffMember[]) => void; holderId?: string }) {
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const add = () => {
     const t = name.trim();
     if (!t) return;
     const [first, ...rest] = t.split(" ");
-    onChange([...staff, { id: uid(), first, last: rest.join(" ") }]);
-    setName("");
+    const entry = { first, last: rest.join(" "), ...(role.trim() ? { role: role.trim() } : {}) };
+    onChange(editId
+      ? staff.map((x) => (x.id === editId ? { ...x, ...entry } : x))
+      : [...staff, { id: uid(), ...entry }]);
+    setName(""); setRole(""); setEditId(null);
   };
+  const edit = (m: StaffMember) => { setEditId(m.id); setName(`${m.first} ${m.last}`.trim()); setRole(m.role ?? ""); };
   return (
-    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
       <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
         🧑‍🏫 Your team <span className="font-normal text-[var(--ink-3)]">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
       </summary>
       <div className="px-3.5 pb-3.5">
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="mb-2.5 flex flex-wrap gap-1.5">
           {staff.map((m) => (
-            <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 pl-3 pr-1.5 text-[12px] font-semibold">
-              {`${m.first} ${m.last}`.trim() || "Staff"}
+            <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1 pl-1.5 pr-1.5 text-[12px] font-semibold">
+              <StaffAvatar m={m} size={20} />
+              <span className="leading-tight">
+                {`${m.first} ${m.last}`.trim() || "Staff"}
+                <span className="ml-1 font-normal text-[var(--ink-3)]">{m.role ? `· ${m.role}` : ""}{m.id === holderId ? " · you" : ""}</span>
+              </span>
+              <button type="button" aria-label={`Edit ${m.first}`} onClick={() => edit(m)} className="px-1 text-[var(--ink-3)] hover:text-[var(--brand-ink,#1d3a8f)]" title="Edit">✎</button>
               <button type="button" aria-label={`Remove ${m.first}`} onClick={() => onChange(staff.filter((x) => x.id !== m.id))} className="px-1 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
             </span>
           ))}
           {staff.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No staff yet — add yourself and any helpers.</span>}
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap items-end gap-1.5">
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Name — e.g. Alex Rivera"
-            className="w-[240px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
-          <Button sm variant="primary" onClick={add}>＋ Add</Button>
+            className="w-[200px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+          <input value={role} onChange={(e) => setRole(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Role — e.g. Coach (optional)"
+            className="w-[180px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+          <Button sm variant="primary" onClick={add}>{editId ? "Save" : "＋ Add"}</Button>
+          {editId && <Button sm onClick={() => { setEditId(null); setName(""); setRole(""); }}>Cancel</Button>}
         </div>
       </div>
     </details>
   );
 }
 
-function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
-  date: string; isToday: boolean; dayChildren: SessionChild[]; groups: RatioGroup[]; staff: StaffMember[];
+function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover }: {
+  date: string; isToday: boolean; dayChildren: PlacedChild[]; groups: RatioGroup[]; staff: StaffMember[];
   onDay: (by: number) => void;
+  onCover?: (c: { onDuty: number; needed: number; within: boolean }) => void;
 }) {
   // Child → group. Default is by age; a manual drag overrides it (this view
   // only — persisting the board needs a backend store, §R).
@@ -189,9 +239,39 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   const [groupStaff, setGroupStaff] = useState<Record<string, string[]>>({});
   const [dragRef, setDragRef] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  // Flick between grouping by age band and grouping by the hours children are in.
+  const [mode, setMode] = useState<"age" | "time">("age");
 
-  const groupOf = (c: SessionChild) => override[c.childId ?? c.ref] ?? groupForAge(groups, c.age)?.id ?? "__unplaced";
+  // In time mode the cards are the distinct arrival→departure windows,
+  // synthesized as pseudo-groups so the card render is shared with age mode.
+  const timeGroups = useMemo<RatioGroup[]>(() => {
+    const wins = new Map<string, { ws: string; we: string }>();
+    for (const c of dayChildren) { const k = `${c.ws}|${c.we}`; if (!wins.has(k)) wins.set(k, { ws: c.ws, we: c.we }); }
+    return [...wins.values()]
+      .sort((a, b) => a.ws.localeCompare(b.ws) || a.we.localeCompare(b.we))
+      .map((w, i) => ({ id: `${w.ws}|${w.we}`, name: `${to12h(w.ws)}–${to12h(w.we)}`, colour: TIME_CARD_COLOURS[i % TIME_CARD_COLOURS.length], ageFrom: 0, ageTo: 99, targetRatio: 0, maxSize: 0 }));
+  }, [dayChildren]);
+  const displayGroups = mode === "age" ? groups : timeGroups;
+
+  const groupOf = (c: PlacedChild) => mode === "time"
+    ? `${c.ws}|${c.we}`
+    : override[c.childId ?? c.ref] ?? groupForAge(groups, c.age)?.id ?? "__unplaced";
   const inGroup = (gid: string) => dayChildren.filter((c) => groupOf(c) === gid);
+  // Staff needed for a mixed-age set on ONE timing (the by-time view).
+  //
+  // Unlike the age view — where each group is a separate room and so is floored
+  // to its own adult — a time window is just "who's on site now". One adult can
+  // watch across age bands here, so we add up each band's fractional load
+  // (children ÷ its target) and round up once, rather than rounding up per band.
+  // Two children in two bands is a load of ~0.2 → 1 adult, not 1 + 1 = 2.
+  const needFor = (kids: PlacedChild[]) => {
+    if (kids.length === 0) return 0;
+    const byGroup = new Map<string, number>();
+    for (const c of kids) { const gid = groupForAge(groups, c.age)?.id ?? "__u"; byGroup.set(gid, (byGroup.get(gid) ?? 0) + 1); }
+    let load = 0;
+    for (const [gid, count] of byGroup) load += count / Math.max(1, groups.find((x) => x.id === gid)?.targetRatio ?? 8);
+    return Math.max(1, Math.ceil(load));
+  };
   const setStaffFor = (gid: string, sid: string) =>
     setGroupStaff((m) => ({ ...m, [gid]: (m[gid] ?? []).includes(sid) ? (m[gid] ?? []).filter((x) => x !== sid) : [...(m[gid] ?? []), sid] }));
   const drop = (gid: string) => { if (dragRef) setOverride((o) => ({ ...o, [dragRef]: gid })); setDragRef(null); setDragOver(null); };
@@ -204,12 +284,17 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   // so a "met" that leans on a double-booked adult isn't really met.
   const staffGroupCount = Object.values(groupStaff).flat().reduce<Record<string, number>>((m, sid) => { m[sid] = (m[sid] ?? 0) + 1; return m; }, {});
   const doubleBooked = staff.filter((m) => (staffGroupCount[m.id] ?? 0) > 1);
-  // Children sitting in a group outside their age band — only ever happens by a
-  // manual drag. Allowed (you might have a reason) but flagged.
-  const misplaced = groups.flatMap((g) => inGroup(g.id).filter((c) => c.age < g.ageFrom || c.age > g.ageTo).map((c) => ({ name: c.name, age: c.age, group: g.name })));
-  const staffNeeded = groups.reduce((n, g) => n + staffForLine(inGroup(g.id).length, g.targetRatio), 0) + staffForLine(inGroup("__unplaced").length, 8);
+  // Children sitting in an AGE group outside their band — only by a manual drag,
+  // and only meaningful in age mode. Allowed but flagged.
+  const misplaced = mode === "age"
+    ? groups.flatMap((g) => inGroup(g.id).filter((c) => c.age < g.ageFrom || c.age > g.ageTo).map((c) => ({ name: c.name, age: c.age, group: g.name })))
+    : [];
+  // Staff needed across the board. Age mode uses each card's own ratio; time
+  // mode sums each window's mixed-age need.
+  const staffNeeded = mode === "time"
+    ? displayGroups.reduce((n, g) => n + needFor(inGroup(g.id)), 0)
+    : groups.reduce((n, g) => n + staffForLine(inGroup(g.id).length, g.targetRatio), 0) + staffForLine(inGroup("__unplaced").length, 8);
   const within = staffOnDuty >= staffNeeded;
-  const overall = staffOnDuty > 0 ? totalChildren / staffOnDuty : 0;
   const unplaced = inGroup("__unplaced");
   // Total room capacity across the groups (blank max = uncapped). Whether the
   // day's children fit the rooms — separate from staffing, and from the
@@ -218,18 +303,25 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   const totalCapacity = capped.reduce((n, g) => n + g.maxSize, 0);
   const overGroups = groups.filter((g) => g.maxSize > 0 && inGroup(g.id).length > g.maxSize);
 
-  const Chip = ({ c, colour, onRemove, misfit }: { c: SessionChild; colour?: string; onRemove?: () => void; misfit?: string }) => (
+  // Bubble live staffing up so the page's "Staff on duty" tile reflects the board.
+  useEffect(() => { onCover?.({ onDuty: staffOnDuty, needed: staffNeeded, within }); }, [staffOnDuty, staffNeeded, within, onCover]);
+
+  const Chip = ({ c, colour, onRemove, misfit }: { c: PlacedChild; colour?: string; onRemove?: () => void; misfit?: string }) => (
     <span
-      draggable
-      onDragStart={() => setDragRef(c.childId ?? c.ref)}
+      draggable={mode === "age"}
+      onDragStart={mode === "age" ? () => setDragRef(c.childId ?? c.ref) : undefined}
       title={misfit}
-      className="inline-flex cursor-grab items-center gap-1 rounded-full border py-[3px] pl-2.5 pr-1.5 text-[11.5px] font-bold active:cursor-grabbing"
+      className={`inline-flex items-center gap-1 rounded-full border py-[3px] pl-2.5 pr-1.5 text-[11.5px] font-bold ${mode === "age" ? "cursor-grab active:cursor-grabbing" : ""}`}
       style={misfit
         ? { borderColor: "#e21d27", boxShadow: "0 0 0 1.5px #e21d27", background: "#fdebec", color: "#c0392b" }
         : { borderColor: colour ? `${colour}66` : "var(--line)", background: colour ? `${colour}12` : "var(--surface)", color: colour ?? "var(--ink)" }}
     >
       {c.name}
-      {misfit && <span className="rounded px-1 text-[9px] font-extrabold" style={{ background: "#f6c9cc" }}>⚠ age {c.age}</span>}
+      {/* The child's hours on site — from their booked timing (block window until §V). */}
+      <span className="rounded px-1 text-[9px] font-bold" style={{ background: colour ? `${colour}1f` : "var(--panel)", color: colour ?? "var(--ink-3)" }}>{to12h(c.ws)}–{to12h(c.we)}</span>
+      {/* Age, so staff can sanity-check the grouping at a glance. */}
+      {!misfit && <span className="text-[9.5px] font-semibold opacity-70">aged {c.age}</span>}
+      {misfit && <span className="rounded px-1 text-[9px] font-extrabold" style={{ background: "#f6c9cc" }}>⚠ aged {c.age}</span>}
       {c.send && <span className="rounded px-1 text-[9px]" style={{ background: colour ? `${colour}22` : "var(--brand-soft)" }}>SEND</span>}
       {c.allergies && <span title="Allergy on file">⚠</span>}
       {onRemove && <button type="button" onClick={onRemove} aria-label={`Remove ${c.name}`} className="text-[13px] leading-none opacity-60">×</button>}
@@ -238,9 +330,22 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
 
   return (
     <div>
-      <div className="mb-0.5 text-[15px] font-extrabold" style={{ color: "var(--brand-ink,#1d3a8f)" }}>Cover by group</div>
-      <p className="mb-1 text-[12px] text-[var(--ink-3)]">Use ‹ › to move between days · edit a name or target above, drag a child, or add a group — all live.</p>
-      <p className="mb-2 text-[11px] text-[var(--ink-3)]"><b>Target</b> is the ratio you&rsquo;re aiming for; <b>Live</b> is the actual ratio right now (children &divide; staff you&rsquo;ve assigned) — it shows once staff are on.</p>
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[15px] font-extrabold" style={{ color: "var(--brand-ink,#1d3a8f)" }}>{mode === "age" ? "Cover by age group" : "Cover by time"}</div>
+        {/* Flick between grouping by age band and by the hours children are in. */}
+        <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5 text-[12px] font-bold">
+          {(["age", "time"] as const).map((mo) => (
+            <button key={mo} type="button" onClick={() => setMode(mo)}
+              className="rounded-full px-3.5 py-1 transition-colors"
+              style={mode === mo ? { background: "var(--brand-2,#2f6bd8)", color: "#fff" } : { color: "var(--ink-2)" }}>
+              {mo === "age" ? "By age group" : "By time"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-2 text-[11px] text-[var(--ink-3)]">{mode === "age"
+        ? <><b>Target</b> is the ratio you&rsquo;re aiming for; <b>Live</b> is children ÷ staff assigned. Drag a child to move them.</>
+        : <>Cards are the <b>hours children are in</b>. Assign staff to each window so every timing is covered.</>}</p>
 
       <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
         {/* Board header bar */}
@@ -253,17 +358,28 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
             </div>
             <button type="button" onClick={() => onDay(1)} aria-label="Next day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">›</button>
           </div>
-          <div className="flex items-center gap-3 text-[13px]" style={{ fontVariantNumeric: "tabular-nums" }}>
-            <span><b className="text-[15px]">{totalChildren}</b> children</span>
+          <div className="flex items-center gap-4" style={{ fontVariantNumeric: "tabular-nums" }}>
+            <div className="text-center leading-none">
+              <div className="text-[18px] font-extrabold">{totalChildren}</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">children</div>
+            </div>
             {totalCapacity > 0 && (
-              <span title={`Total room capacity across your groups (${capped.length} of ${groups.length} groups have a max size)`}>
-                <b className="text-[15px]" style={overGroups.length ? { color: "#ffd3d3" } : undefined}>{totalChildren}/{totalCapacity}</b> capacity
-              </span>
+              <div className="text-center leading-none" title={`Room capacity across your groups — ${capped.length} of ${groups.length} groups have a room size`}>
+                <div className="text-[18px] font-extrabold" style={overGroups.length ? { color: "#ffd3d3" } : undefined}>{totalChildren}<span className="text-[12px] opacity-70">/{totalCapacity}</span></div>
+                <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">room space</div>
+              </div>
             )}
-            <span><b className="text-[15px]">{staffOnDuty}</b> staff</span>
-            <span><b className="text-[15px]">{overall > 0 ? fmtRatio(overall) : `needs ${staffNeeded}`}</b></span>
-            <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" title={within ? undefined : `You've assigned ${staffOnDuty}, this needs ${staffNeeded} — one adult per occupied group.`} style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
-              {within ? "WITHIN TARGET" : `NEEDS ${staffNeeded - staffOnDuty} MORE STAFF`}
+            <div className="h-9 w-px bg-white/20" />
+            <div className="text-center leading-none">
+              <div className="text-[18px] font-extrabold">{staffNeeded}</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">staff needed</div>
+            </div>
+            <div className="text-center leading-none">
+              <div className="text-[18px] font-extrabold">{staffOnDuty}</div>
+              <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">on duty</div>
+            </div>
+            <span className="rounded-full px-3 py-1.5 text-[11px] font-extrabold" title={within ? undefined : `You've assigned ${staffOnDuty}, this session/day needs ${staffNeeded} — one adult per occupied group.`} style={within ? { background: "rgba(255,255,255,.22)" } : { background: "#fee2e2", color: "#c0392b" }}>
+              {within ? "✓ WITHIN TARGET" : `NEEDS ${staffNeeded - staffOnDuty} MORE STAFF ON THIS DAY`}
             </span>
           </div>
         </div>
@@ -292,42 +408,107 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
           </div>
         )}
 
-        {/* Group cards */}
-        <div className="grid gap-3 p-3 sm:grid-cols-2">
-          {groups.map((g) => {
+        {/* Staff roster down the side + group cards */}
+        <div className="flex flex-col gap-3 p-3 lg:flex-row">
+          <aside className="lg:w-[240px] lg:flex-none">
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your team</span>
+                <span className="text-[10px] text-[var(--ink-3)]">{staffOnDuty}/{staff.length} on duty</span>
+              </div>
+              {staff.length === 0 ? (
+                <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">No staff yet — add your team in <b>Your team</b> above.</div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {staff.map((m) => {
+                    const assignedTo = displayGroups.filter((g) => (groupStaff[g.id] ?? []).includes(m.id));
+                    const clash = assignedTo.length > 1;
+                    return (
+                      <div key={m.id} className="rounded-lg border p-2" style={{ borderColor: clash ? "#f0b8b8" : "var(--line)" }}>
+                        <div className="flex items-center gap-2">
+                          <StaffAvatar m={m} />
+                          <div className="min-w-0 flex-1 leading-tight">
+                            <div className="truncate text-[12px] font-extrabold">{`${m.first} ${m.last}`.trim() || "Staff"}</div>
+                            <div className="truncate text-[10px] text-[var(--ink-3)]">{m.role || "Team member"}{m.id === HOLDER_ID ? " · you" : ""}</div>
+                          </div>
+                        </div>
+                        <select value="" onChange={(e) => { if (e.target.value) setStaffFor(e.target.value, m.id); }}
+                          className="mt-1.5 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--ink-2)]">
+                          <option value="">＋ Assign to {mode === "time" ? "time" : "group"}…</option>
+                          {displayGroups.filter((g) => !(groupStaff[g.id] ?? []).includes(m.id)).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                        </select>
+                        {assignedTo.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                            {assignedTo.map((g) => (
+                              <span key={g.id}
+                                className="inline-flex items-center gap-1 rounded-full py-[2px] pl-2 pr-1 text-[10px] font-bold text-white" style={{ background: g.colour }}>
+                                {g.name}
+                                <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={`Unassign from ${g.name}`} className="text-[11px] leading-none opacity-80">×</button>
+                              </span>
+                            ))}
+                            {clash && <span title="One adult can't cover two rooms at once" className="text-[10px] font-bold text-[#c0392b]">⚠ 2 rooms</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </aside>
+          <div className="grid flex-1 gap-3 sm:grid-cols-2">
+          {displayGroups.map((g) => {
             const kids = inGroup(g.id);
-            const need = staffForLine(kids.length, g.targetRatio);
+            const need = mode === "time" ? needFor(kids) : staffForLine(kids.length, g.targetRatio);
             const have = (groupStaff[g.id] ?? []).length;
+            const assignedStaff = staff.filter((m) => (groupStaff[g.id] ?? []).includes(m.id));
             const met = have >= need;
             const over = g.maxSize > 0 && kids.length > g.maxSize;
             const live = have > 0 ? kids.length / have : 0;
             const isOver = dragOver === g.id;
+            const dragProps = mode === "age"
+              ? { onDragOver: (e: DragEvent) => { e.preventDefault(); setDragOver(g.id); }, onDragLeave: () => setDragOver((o) => (o === g.id ? null : o)), onDrop: () => drop(g.id) }
+              : {};
             return (
-              <div key={g.id} className="overflow-hidden rounded-xl border-2" style={{ borderColor: isOver ? g.colour : `${g.colour}33` }}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(g.id); }} onDragLeave={() => setDragOver((o) => (o === g.id ? null : o))} onDrop={() => drop(g.id)}>
+              <div key={g.id} className="overflow-hidden rounded-xl border-2" style={{ borderColor: isOver ? g.colour : `${g.colour}33` }} {...dragProps}>
                 {/* card header tinted to group colour */}
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" style={{ background: `${g.colour}14` }}>
                   <div>
-                    <div className="text-[15px] font-extrabold" style={{ color: g.colour }}>{g.name}</div>
-                    <div className="text-[11.5px] text-[var(--ink-3)]">{ageRange(g)}</div>
+                    <div className="text-[15px] font-extrabold" style={{ color: g.colour }}>{mode === "time" ? `🕘 ${g.name}` : g.name}</div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{mode === "time" ? `${kids.length} ${kids.length === 1 ? "child" : "children"} on this timing` : ageRange(g)}</div>
                   </div>
                   <div className="flex items-center gap-3 text-center">
+                    {mode === "age" && (
+                      <div>
+                        <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Target</div>
+                        <div className="text-[13px] font-extrabold">1:{g.targetRatio}</div>
+                      </div>
+                    )}
                     <div>
-                      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Target</div>
-                      <div className="text-[13px] font-extrabold">1:{g.targetRatio}</div>
-                    </div>
-                    <div>
-                      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Live</div>
-                      <div className="text-[13px] font-extrabold">{live > 0 ? fmtRatio(live) : "—"}</div>
+                      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{mode === "time" ? "Staff" : "Live"}</div>
+                      <div className="text-[13px] font-extrabold">{mode === "time" ? need : (live > 0 ? fmtRatio(live) : "—")}</div>
                     </div>
                   </div>
                 </div>
                 <div className="p-3">
+                  {kids.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-1 py-3 text-center">
+                      <div className="text-[15px] font-extrabold text-[#0f7a44]">✓ No staff required</div>
+                      <div className="text-[11px] text-[var(--ink-3)]">No children in this group today — drag one here to place them.</div>
+                    </div>
+                  ) : (
+                    <>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={met ? { background: "#e7f8ee", color: "#0f7a44" } : { background: "#fdebec", color: "#c0392b" }}>
-                      {have} of {need} staff{have >= need ? " ✓" : ` · ${need - have} short`}
+                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={met ? { background: "#e7f8ee", color: "#0f7a44" } : { background: "#fdebec", color: "#c0392b" }}>
+                      {met ? "🙂 In ratio" : `😟 ${need - have} staff short`}
                     </span>
-                    <span className="text-[11.5px] text-[var(--ink-3)]">needs {need} staff</span>
+                    {/* Needed vs got, read at a glance. */}
+                    <span className="inline-flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">
+                      <b className="text-[13px]" style={{ color: met ? "#0f7a44" : "#c0392b" }}>{have}</b>
+                      <span className="opacity-70">of</span>
+                      <b className="text-[13px] text-[var(--ink-2)]">{need}</b>
+                      <span>needed</span>
+                    </span>
                     {over && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">Over max ({kids.length}/{g.maxSize})</span>}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -335,40 +516,42 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
                       const misfit = c.age < g.ageFrom || c.age > g.ageTo
                         ? `Age ${c.age} is outside ${g.name} (${g.ageFrom}–${g.ageTo} yrs) — moved here manually`
                         : undefined;
-                      return <Chip key={c.ref} c={c} colour={g.colour} misfit={misfit} onRemove={() => setOverride((o) => ({ ...o, [c.childId ?? c.ref]: "__unplaced" }))} />;
+                      return <Chip key={c.ref} c={c} colour={g.colour} misfit={misfit} onRemove={mode === "age" ? () => setOverride((o) => ({ ...o, [c.childId ?? c.ref]: "__unplaced" })) : undefined} />;
                     })}
-                    {kids.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">No children this age. Drag one here.</span>}
                   </div>
-                  {/* staff on this group — tap a name to assign */}
-                  <div className="mt-2.5 border-t border-[var(--line)] pt-2">
-                    <div className="mb-1.5 flex items-baseline justify-between gap-2">
-                      <span className="text-[9.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Staff on this group</span>
-                      {staff.length > 0 && <span className="text-[10px] text-[var(--ink-3)]">tap a name to add / remove</span>}
+                    </>
+                  )}
+                  {/* Staff assigned here. Shown whenever anyone is assigned — even to a
+                      group that needs no cover — so an assignment is never invisible.
+                      A group that does need cover also gets the "none yet" nudge. */}
+                  {(assignedStaff.length > 0 || kids.length > 0) && (
+                    <div className="mt-2.5 border-t border-[var(--line)] pt-2">
+                      <div className="mb-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
+                        Staff on this group{kids.length === 0 && assignedStaff.length > 0 ? " · none needed today" : ""}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {assignedStaff.map((m) => {
+                          const clash = (staffGroupCount[m.id] ?? 0) > 1;
+                          return (
+                            <span key={m.id} title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : undefined}
+                              className="inline-flex items-center gap-1 rounded-full py-[3px] pl-1 pr-1 text-[11px] font-bold text-white"
+                              style={{ background: g.colour, boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined }}>
+                              <StaffAvatar m={m} size={18} />
+                              {`${m.first} ${m.last}`.trim() || "Staff"}
+                              {clash && <span aria-label="assigned to more than one group">⚠</span>}
+                              <button type="button" onClick={() => setStaffFor(g.id, m.id)} aria-label={`Unassign ${m.first}`} className="text-[12px] leading-none opacity-80">×</button>
+                            </span>
+                          );
+                        })}
+                        {assignedStaff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">None yet — assign from the team panel on the left.</span>}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {staff.map((m) => {
-                        const on = (groupStaff[g.id] ?? []).includes(m.id);
-                        const clash = on && (staffGroupCount[m.id] ?? 0) > 1;
-                        return (
-                          <button key={m.id} type="button" onClick={() => setStaffFor(g.id, m.id)}
-                            title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : on ? "Assigned — tap to remove" : "Tap to add to this group"}
-                            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
-                            style={on
-                              ? { borderColor: clash ? "#c0392b" : "transparent", background: g.colour, color: "#fff", boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined }
-                              : { borderStyle: "dashed", borderColor: "var(--ink-3)", color: "var(--ink-2)" }}>
-                            <span className="text-[10px] leading-none">{on ? "✓" : "＋"}</span>
-                            {`${m.first} ${m.last}`.trim() || "Staff"}
-                            {clash && <span aria-label="assigned to more than one group">⚠</span>}
-                          </button>
-                        );
-                      })}
-                      {staff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">No staff yet — add your team in <b>Your team</b> below, then tap them here to assign.</span>}
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
 
         {/* Unplaced */}
@@ -502,7 +685,9 @@ export function RatiosApp() {
   const [staffLib, setStaffLib] = useState<StaffMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [listing, setListing] = useState<string>("");
-  const { settings } = useSettings();
+  const [staffLoaded, setStaffLoaded] = useState(false);
+  const { settings, loading: settingsLoading } = useSettings();
+  const { user } = useAuth();
   const groups = settings.ratioGroups.length ? settings.ratioGroups : DEFAULT_RATIO_GROUPS;
 
   const refresh = useCallback(() => {
@@ -511,7 +696,26 @@ export function RatiosApp() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load ratios"));
   }, [date]);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { apiGet<{ staff?: StaffMember[] } | null>("/api/library").then((l) => setStaffLib(l?.staff ?? [])).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ staff?: StaffMember[] } | null>("/api/library").then((l) => setStaffLib(l?.staff ?? [])).catch(() => {}).finally(() => setStaffLoaded(true)); }, []);
+
+  // All the operator's LIVE listings for the picker — published, not archived,
+  // not hidden (unlisted), and not ended (every dated block already finished).
+  // The ratios feed is per-day, so this is the fuller set: you can switch to a
+  // live listing even on a day it isn't running (the board just reads empty).
+  const [liveListings, setLiveListings] = useState<string[]>([]);
+  useEffect(() => {
+    apiGet<(ServerListing & { status?: string; archived?: boolean; visibility?: string })[]>("/api/listings?mine=1")
+      .then((ls) => {
+        const today = todayIso();
+        const names = (ls ?? [])
+          .filter((l) => (l.status ?? "live") === "live" && !l.archived && (l.visibility ?? "public") !== "hidden")
+          .filter((l) => !(l.blocks?.length && l.blocks.every((b) => b.endDate < today)))
+          .map((l) => l.name)
+          .filter(Boolean);
+        setLiveListings([...new Set(names)].sort());
+      })
+      .catch(() => {});
+  }, []);
   useRealtime(["ratioGroups", "bookings", "blocks", "library"], refresh);
 
   // Add/remove staff writes to the tenant library's `staff` list — the same
@@ -525,44 +729,78 @@ export function RatiosApp() {
     );
   }, []);
 
+  // Auto-seed the account holder onto the team the first time they open a fresh
+  // roster — their public-facing name from onboarding (settings.providerName),
+  // falling back to their sign-in name for tenants that predate that setting.
+  // Editable and removable like anyone; seeded once so a deliberate removal
+  // sticks.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || !staffLoaded || settingsLoading) return;
+    seededRef.current = true;
+    if (staffLib.length > 0) return;
+    const nm = (settings.providerName || user?.displayName || "").trim();
+    if (!nm) return;
+    const [first, ...rest] = nm.split(" ");
+    saveStaff([{ id: HOLDER_ID, first, last: rest.join(" ") }]);
+  }, [staffLoaded, settingsLoading, staffLib, settings.providerName, user, saveStaff]);
+
   const ready = loadedDate === date && sessions;
-  const listings = useMemo(() => [...new Set((sessions ?? []).map((s) => s.listingName))].sort(), [sessions]);
+  // The picker lists every live listing. Fall back to whatever's running today
+  // if that fetch hasn't landed (or a tenant has none), so the board still works.
+  const sessionListings = useMemo(() => [...new Set((sessions ?? []).map((s) => s.listingName))].sort(), [sessions]);
+  const listings = liveListings.length ? liveListings : sessionListings;
+  // Children in each camp that day, for the tab badges.
+  const listingCounts = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const s of sessions ?? []) {
+      const set = m.get(s.listingName) ?? new Set<string>();
+      for (const c of s.children) set.add(c.childId ?? c.ref);
+      m.set(s.listingName, set);
+    }
+    return m;
+  }, [sessions]);
+  // Always sit on a real camp — a whole-site aggregate ratio is meaningless,
+  // since each camp has its own groups and staffing. Snap to the first
+  // available whenever the current pick isn't running (first load, day change).
+  useEffect(() => {
+    if (listings.length && !listings.includes(listing)) setListing(listings[0]);
+  }, [listings, listing]);
   const shown = useMemo(() => (sessions ?? []).filter((s) => !listing || s.listingName === listing), [sessions, listing]);
 
+  // The whole day's children (deduped), each tagged with the window they're on
+  // site for: the child's own timing if the feed carries it, else the camp
+  // session window as a fallback.
+  const allChildren = useMemo<PlacedChild[]>(() => {
+    const seen = new Set<string>(); const out: PlacedChild[] = [];
+    for (const s of shown) for (const c of s.children) {
+      const k = c.childId ?? c.ref;
+      if (!seen.has(k)) { seen.add(k); out.push({ ...c, ws: c.start ?? s.start, we: c.end ?? s.end }); }
+    }
+    return out;
+  }, [shown]);
+
   // Different timings (full day / mornings / afternoons) mean different children
-  // are on site at different times — and ratios must hold at each one. The
-  // distinct session windows become "by time" buttons; picking one shows only
-  // who overlaps it. "" = the whole day (everyone who's in at some point).
+  // are on site at different times — ratios must hold at each. The distinct
+  // arrival→departure windows become "by time" buttons; picking one shows only
+  // who overlaps it. "" = whole day (everyone in at some point).
   const [period, setPeriod] = useState<string>("");
+  // Live staffing reported up from the cover board, for the "Staff on duty" tile.
+  const [cover, setCover] = useState({ onDuty: 0, needed: 0, within: true });
   const periods = useMemo(() => {
     const map = new Map<string, { start: string; end: string; here: number }>();
-    for (const s of shown) {
-      const k = `${s.start}|${s.end}`;
-      if (!map.has(k)) map.set(k, { start: s.start, end: s.end, here: 0 });
-    }
-    // How many distinct children are on site during each window (overlap).
-    for (const p of map.values()) {
-      const ids = new Set<string>();
-      for (const s of shown) if (s.start < p.end && p.start < s.end) for (const c of s.children) ids.add(c.childId ?? c.ref);
-      p.here = ids.size;
-    }
+    for (const c of allChildren) { const k = `${c.ws}|${c.we}`; if (!map.has(k)) map.set(k, { start: c.ws, end: c.we, here: 0 }); }
+    for (const p of map.values()) p.here = allChildren.filter((c) => c.ws < p.end && p.start < c.we).length;
     return [...map.values()].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
-  }, [shown]);
-  const wholeDayCount = useMemo(() => new Set(shown.flatMap((s) => s.children.map((c) => c.childId ?? c.ref))).size, [shown]);
+  }, [allChildren]);
+  const wholeDayCount = allChildren.length;
   // Guard against a stale key when the day/listing changes.
   const activeKey = periods.some((p) => `${p.start}|${p.end}` === period) ? period : "";
-  const slice = useMemo(() => {
-    if (!activeKey) return shown;
-    const [ps, pe] = activeKey.split("|");
-    return shown.filter((s) => s.start < pe && ps < s.end);
-  }, [shown, activeKey]);
-
-  // The children on site for the chosen listing + time window, deduped across sessions.
   const children = useMemo(() => {
-    const seen = new Set<string>(); const out: SessionChild[] = [];
-    for (const s of slice) for (const c of s.children) { const k = c.childId ?? c.ref; if (!seen.has(k)) { seen.add(k); out.push(c); } }
-    return out;
-  }, [slice]);
+    if (!activeKey) return allChildren;
+    const [ps, pe] = activeKey.split("|");
+    return allChildren.filter((c) => c.ws < pe && ps < c.we);
+  }, [allChildren, activeKey]);
 
   const isToday = date === todayIso();
   const groupCount = groups.filter((g) => children.some((c) => c.age >= g.ageFrom && c.age <= g.ageTo)).length;
@@ -572,45 +810,94 @@ export function RatiosApp() {
     <OperatorPage
       title="Ratios & groups"
       lede="Set your groups and target ratios, and track live cover as you take registers"
-      actions={
-        listings.length > 0 ? (
-          <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
-            Listing
-            <select value={listing} onChange={(e) => setListing(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]">
-              <option value="">All listings (whole site)</option>
-              {listings.map((l) => <option key={l} value={l}>{l}</option>)}
-            </select>
-          </label>
-        ) : undefined
-      }
     >
-      {/* Guidance banner */}
-      <div className="mb-3 flex gap-2.5 rounded-xl border border-[var(--brand-line,#d5e0f5)] bg-[var(--brand-soft,#eef3fc)] px-3.5 py-2.5 text-[11.5px] leading-[1.55] text-[var(--ink-2)]">
-        <span aria-hidden className="text-[15px] leading-none">ℹ️</span>
-        <span>
+      {/* How ratios work — folded away, with a walkthrough video to come. */}
+      <HowItWorks video="How ratios work on this board: setting your own targets, placing children by age, the by-time view, and when EYFS applies." minutes="2 min">
+        <p className="mb-2.5">
           <b>These are your camp&rsquo;s own ratio targets.</b> Activity &amp; coaching camps aren&rsquo;t bound by
-          statutory childcare ratios — you set them, guided by Ofsted&rsquo;s voluntary-register guidance,
-          your insurer, activity / NGB rules and a risk assessment. <b>EYFS ratios apply only if you admit
-          children under 5.</b>
-        </span>
-      </div>
+          statutory childcare ratios — you set them, guided by Ofsted&rsquo;s voluntary-register guidance, your
+          insurer, activity / NGB rules and a risk assessment. <b>EYFS ratios apply only if you admit children under 5.</b>
+        </p>
+
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]">Setting your ratios</div>
+        <ol className="mb-3 ml-0 list-none space-y-1.5">
+          {[
+            <><b>Set your groups</b> in <b>Setup → Age groups &amp; rooms</b> — each group&rsquo;s age band, its <b>1&nbsp;:&nbsp;N</b> staff target, and room size. This is the one master record; every board and listing reads it.</>,
+            <><b>Take registers</b> and the day&rsquo;s children drop onto the board, sorted into groups by age.</>,
+            <><b>Add your team</b> in <b>Your team</b>, then assign each staff member to a group from the roster down the side.</>,
+            <><b>Watch live cover</b> — each card shows a 🙂 when it&rsquo;s in ratio, or how many more staff it needs. The header bar totals it for the day.</>,
+          ].map((step, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="mt-[1px] flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full bg-[var(--brand-2,#2f6bd8)] text-[10px] font-extrabold text-white">{i + 1}</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]">Two ways to view the day</div>
+        <ul className="ml-0 list-none space-y-1.5">
+          <li className="flex gap-2">
+            <span className="flex-none font-bold text-[var(--ink-2)]">By age group</span>
+            <span>Cards are your age bands. Each needs one adult per your target for that age. <b>Drag a child</b> between groups to regroup them just for the day — it warns if their age doesn&rsquo;t fit the band.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="flex-none font-bold text-[var(--ink-2)]">By time</span>
+            <span>Cards are the <b>hours children are in</b> (say 9am–3pm vs 8am–5:30pm). Cover is rechecked for each window, so an early drop-off or late pickup that leaves you short shows up on its own.</span>
+          </li>
+        </ul>
+      </HowItWorks>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{error}</div>}
 
-      {/* Showing … */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12.5px]">
-        <span className="text-[var(--ink-3)]">Showing</span>
-        <b className="text-[var(--brand-ink,#1d3a8f)]">{isToday ? "Today" : ""} · {dayLabel(date)}</b>
-        <span className="text-[var(--ink-3)]">· use the day arrows on the board below to change day</span>
-        <span className="ml-auto flex items-center gap-1.5">
-          <Button sm onClick={() => setDate((d) => shiftDay(d, -1))} aria-label="Previous day">←</Button>
-          <input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
-          <Button sm onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day">→</Button>
-          {!isToday && <Button sm onClick={() => setDate(todayIso())}>Today</Button>}
+      {/* Listing picker — the live listings running today. No "whole site":
+          each listing has its own groups and staffing, so a combined ratio is
+          meaningless. Ended and hidden listings never appear (they have no live
+          sessions in the feed). */}
+      {ready && listings.length > 0 && (
+        <label className="mb-3 flex items-center gap-2 text-[12.5px]">
+          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Listing</span>
+          <span className="relative inline-flex items-center">
+            <select value={listing} onChange={(e) => setListing(e.target.value)}
+              className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
+              {listings.map((l) => {
+                const n = listingCounts.get(l)?.size ?? 0;
+                return <option key={l} value={l}>{l} · {n} {n === 1 ? "child" : "kids"}</option>;
+              })}
+            </select>
+            <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
+          </span>
+        </label>
+      )}
+
+      {/* Showing … with a fancy day navigator */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12.5px]">
+        <span className="flex items-center gap-2 text-[var(--ink-3)]">
+          Showing
+          <b className="rounded-full bg-[var(--brand-soft,#eef3fc)] px-2.5 py-0.5 text-[var(--brand-ink,#1d3a8f)]">{isToday ? `Today · ${compactDay(date)}` : shortDay(date)}</b>
         </span>
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 shadow-[0_1px_2px_rgba(20,30,60,.06)]">
+          <button type="button" onClick={() => setDate((d) => shiftDay(d, -1))} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">‹</button>
+          <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]">
+            <span aria-hidden>📅</span>
+            <span className="tabular-nums">{compactDay(date)}</span>
+            <input type="date" value={date} onClick={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()} onChange={(e) => e.target.value && setDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Pick a date" />
+          </label>
+          <button type="button" onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day" className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-2)] transition-colors hover:bg-[var(--panel)]">›</button>
+          {!isToday && <button type="button" onClick={() => setDate(todayIso())} className="ml-0.5 rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-1 text-[11.5px] font-bold text-white">Today</button>}
+        </div>
       </div>
 
-      {/* By time — jump the whole board to who's on site in each timing window */}
+      {/* By time — who's on site in each arrival→departure window. Shown even
+          when there's a single timing, so it always states the day's hours. */}
+      {ready && periods.length === 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
+          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 font-bold text-[var(--ink-2)]">
+            🕘 You have {periods[0].here} {periods[0].here === 1 ? "child" : "children"} in, {to12h(periods[0].start)}–{to12h(periods[0].end)}
+          </span>
+          <span className="ml-auto text-[10.5px] text-[var(--ink-3)]">split buttons appear once children arrive or leave at different times</span>
+        </div>
+      )}
       {ready && periods.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
           <span className="mr-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
@@ -634,28 +921,28 @@ export function RatiosApp() {
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
-          <HeroTile icon="staff" tint="#e2225f" label="Staff on duty" value="—" sub="assign staff on the board below" />
+          <HeroTile icon="staff" tint="#e2225f" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
           <HeroTile icon="groups" tint="#0e9f6e" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
         </div>
       )}
 
-      {/* Ratio policy — editable, persists */}
+      {/* Ratio policy — read-only reference (edited in Setup) */}
       <PolicyTable groups={groups} />
 
-      {/* Calculator */}
-      <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />
-
       {/* Your team — add/manage staff, shared with the listing Staff step */}
-      <TeamManager staff={staffLib} onChange={saveStaff} />
+      <TeamManager staff={staffLib} onChange={saveStaff} holderId={HOLDER_ID} />
 
-      {/* Cover by group board */}
+      {/* Cover by group board — the day-to-day workspace */}
       {!ready ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       ) : shown.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing runs on {dayLabel(date)}{listing ? ` for ${listing}` : ""}.</Card>
       ) : (
-        <CoverBoard date={date} isToday={isToday} dayChildren={children} groups={groups} staff={staffLib} onDay={(by) => setDate((d) => shiftDay(d, by))} />
+        <CoverBoard date={date} isToday={isToday} dayChildren={children} groups={groups} staff={staffLib} onDay={(by) => setDate((d) => shiftDay(d, by))} onCover={setCover} />
       )}
+
+      {/* Staff ratio calculator — occasional planning tool, kept at the bottom. */}
+      <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />
     </OperatorPage>
   );
 }

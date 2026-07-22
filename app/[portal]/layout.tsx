@@ -30,9 +30,12 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
       <PortalGuard portal={portalKey}>
         <div className="flex h-screen">
           <Sidebar portal={portalKey} />
-          <div className="flex min-w-0 flex-1 flex-col">
+          {/* Light palette wraps the whole right column for custdash — the
+              header included — so the parent shell is one continuous light
+              surface rather than a dark header over a light body. */}
+          <div className="flex min-w-0 flex-1 flex-col" style={light ? LIGHT_PALETTE : undefined}>
             <Header portal={portalKey} />
-            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? LIGHT_PALETTE : undefined}>{props.children}</main>
+            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>
           </div>
         </div>
       </PortalGuard>

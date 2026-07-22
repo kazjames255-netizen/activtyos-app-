@@ -36,6 +36,9 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
+  /** Town / city — a clean, structured place name for the customer browse
+   *  Location filter (the free-text address is too varied to group by). */
+  city?: string;
   /** "online" venues run remotely — no address, map or travel details. */
   kind?: "place" | "online";
   /** What's there — shown to parents on the listing page. */
@@ -1078,7 +1081,7 @@ function LocationsTab({
   // no separate save button by design.
   const setPin = (id: string, patchV: Partial<Venue>) =>
     patch((s) => ({ ...s, venues: s.venues.map((v) => (v.id === id ? { ...v, ...patchV } : v)) }));
-  const updateVenue = (id: string, field: "name" | "address", value: string) =>
+  const updateVenue = (id: string, field: "name" | "address" | "city", value: string) =>
     patch((s) => ({ ...s, venues: s.venues.map((v) => (v.id === id ? { ...v, [field]: value } : v)) }));
   const removeVenue = (id: string, name: string) => {
     const n = usage.venues[id] ?? 0;
@@ -1209,6 +1212,12 @@ function LocationsTab({
                 <div>
                   <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— edit freely</span></FieldLabel>
                   <Input value={sel.address} onChange={(e) => updateVenue(sel.id, "address", e.target.value)} placeholder="Street, town, postcode" className="w-full" />
+                </div>
+              )}
+              {sel.kind !== "online" && (
+                <div>
+                  <FieldLabel>Town / city <span className="font-normal text-[var(--ink-3)]">— parents filter by this</span></FieldLabel>
+                  <Input value={sel.city ?? ""} onChange={(e) => updateVenue(sel.id, "city", e.target.value)} placeholder="e.g. Northampton" className="w-full max-w-[280px]" />
                 </div>
               )}
               {sel.lat !== undefined && (

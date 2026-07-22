@@ -1256,6 +1256,16 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
           </button>
         ))}
       </div>
+      {/* Orphaned tags: category ids saved earlier that no longer exist in the
+          library (its ids were regenerated). Their names are gone, so the only
+          fix is re-picking — say so plainly rather than dropping them silently. */}
+      {d.categoryIds.some((id) => !local.categories.some((c) => c.id === id)) && (
+        <div className="mb-3 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] p-3 text-[11.5px] leading-[1.5] text-[#7a5b06]">
+          <b>{d.categoryIds.filter((id) => !local.categories.some((c) => c.id === id)).length} earlier{" "}
+          {d.categoryIds.filter((id) => !local.categories.some((c) => c.id === id)).length === 1 ? "category is" : "categories are"} no longer in your library</b>{" "}
+          and won&rsquo;t show to parents — pick the ones you want above to fix it, then save.
+        </div>
+      )}
       {/* Every chosen type is listed on the page, but only one fits the hero
           image badge — let the operator say which. */}
       {d.categoryIds.length > 1 && (

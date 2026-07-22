@@ -251,6 +251,24 @@ export const groupForAge = (groups: RatioGroup[], age: number): RatioGroup | nul
   groups.find((g) => age >= g.ageFrom && age <= g.ageTo) ?? null;
 
 export interface TenantSettings {
+  // ── Public identity ──
+  /**
+   * What parents see this provider called — everywhere the business is named
+   * to a family: the storefront heading, booking pages, "Message {provider}".
+   *
+   * Chosen at onboarding as either the operator's own name or their business
+   * name (see providerNameMode), then freely editable here. It's also the
+   * default name of the account-holder on the Ratios board's team roster —
+   * seeded once, editable there without touching this.
+   *
+   * Empty falls back to the tenant's business name, so an older library that
+   * predates this setting still reads correctly.
+   */
+  providerName: string;
+  /** Which the operator picked at onboarding — kept so Setup can show it and
+   *  re-resolve from the live name if they later rename the business. */
+  providerNameMode: "person" | "business";
+
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
   requireDob: boolean;
@@ -432,6 +450,8 @@ export const SEEDED_QUESTIONS: ChildQuestion[] = [
 ];
 
 export const DEFAULT_SETTINGS: TenantSettings = {
+  providerName: "",
+  providerNameMode: "business",
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
