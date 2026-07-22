@@ -2468,3 +2468,45 @@ then pass `discountCode` in the `/api/my/bookings` body. Un-coded checkout is
 byte-for-byte unchanged (verified) — the field is purely additive.
 
 Marketing ✅ (discount codes). Referrals / promo surfaces can layer on later.
+
+---
+
+# Split fees — 22 July 2026 (Swagger v0.26.0)
+
+The franchisor royalty report. A franchise isn't a separate tenant — it's a
+`franchiseId`-scoped role **within** a company's tenant (its `franchiseId` is
+the franchise user's uid; franchise-taken bookings carry it). So this is
+purely the HQ's view. **Company accounts only.**
+
+- **`GET /api/splitfees`** — groups the company's bookings by `franchiseId`,
+  sums each franchise's `revenue` (counted bookings, not cancelled/declined/
+  waitlisted) and `collected` (`amountPaid`), and applies the royalty as `fee`.
+  `{settings, franchises[], direct, totals}`; `direct` is HQ's own
+  franchise-less bookings (no royalty); franchises with no bookings appear as
+  £0 rows so the list is the full roster.
+- **`PUT /api/splitfees/settings`** `{basis: revenue|perBooking, rate?,
+  perBookingFee?}` — stored on `tenant.splitFees`.
+- No new collection (reads bookings + tenant settings); realtime via the
+  existing `bookings` channel. `SplitFeesApp` on the company-only `splitfees`
+  slug: royalty-settings editor, three summary cards, a per-franchise table.
+
+Money section: Payments/Finance ✅ · Reconciliation ✅ · Expenses ✅ ·
+Purchasing ✅ · Subscription ✅ · **Split fees ✅** · (Payouts & royalties
+payout-execution — i.e. actually moving the money — still needs the Stripe
+Connect transfer wiring, a later milestone; this is the calc/report).
+
+---
+
+# Where the platform stands — 22 July 2026
+
+The operator portal is essentially fully real (no more legacy-iframe fallbacks
+for the core sections): **Sell & take bookings · Dashboard · the whole Pupils
+safeguarding section · all of Run the day · Communication (Newsfeed +
+Messages) · the whole Money section (Payments, Reconciliation, Expenses,
+Purchasing, Subscription, Split fees) · Documents & Compliance · Marketing.**
+
+Known remaining leftovers (all smaller / optional): **Email** (the out-of-app
+channel — Newsfeed + Messages cover in-app), the parent-portal "enter a
+discount code" box (yours — backend ready), royalty **payout execution** (needs
+Stripe Connect transfers), and any HQ-only extras (Learning Centre, franchise
+support framework).

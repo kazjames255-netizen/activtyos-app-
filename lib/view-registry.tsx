@@ -18,6 +18,7 @@ import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
 import { PurchasingApp } from "@/features/money/PurchasingApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
+import { SplitFeesApp } from "@/features/money/SplitFeesApp";
 import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
 import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
 import { MessagesApp } from "@/features/messages/MessagesApp";
@@ -83,6 +84,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     documents: DocumentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    splitfees: SplitFeesApp,
   },
   franchise: {
     dash: DashboardApp,

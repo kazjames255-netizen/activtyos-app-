@@ -1,10 +1,26 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.25.0
+  version: 0.26.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.26.0 — Split fees (franchisor royalties)
+
+    A franchise is a `franchiseId`-scoped role **within** a company's tenant,
+    so this is the HQ's royalty view. **Company accounts only.**
+    - **`GET /api/splitfees`** — groups the company's bookings by `franchiseId`,
+      sums each franchise's `revenue` (counted bookings — not cancelled/declined/
+      waitlisted) and `collected` (`amountPaid`), and applies the configured
+      royalty as a `fee`. Returns `{settings, franchises[], direct, totals}` —
+      `direct` is HQ's own franchise-less bookings (no royalty). Franchises with
+      no bookings still appear as £0 rows.
+    - **`PUT /api/splitfees/settings`** `{basis: revenue|perBooking, rate?,
+      perBookingFee?}` — the royalty basis (a % of revenue, or a flat fee per
+      booking), stored on `tenant.splitFees`.
+    No new collection — reads bookings + tenant settings (realtime via the
+    existing `bookings` channel).
 
     ## v0.25.0 — Marketing: discount codes
 
@@ -595,6 +611,8 @@ tags:
     description: Staff certifications with expiry tracking (operators write, staff read)
   - name: discounts
     description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
+  - name: splitfees
+    description: Franchisor royalty report — franchise revenue × royalty (company accounts only)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: dashboard
@@ -1510,6 +1528,36 @@ paths:
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/splitfees:
+    get:
+      tags: [splitfees]
+      summary: Franchisor royalty breakdown by franchise (company only)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{settings, franchises[] (each with count/revenue/collected/fee), direct, totals}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/splitfees/settings:
+    put:
+      tags: [splitfees]
+      summary: Set the royalty basis + rate (company only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [basis]
+              properties:
+                basis: { type: string, enum: [revenue, perBooking] }
+                rate: { type: number, description: "% of revenue (basis=revenue)" }
+                perBookingFee: { type: number, description: "£ per booking (basis=perBooking)" }
+      responses:
+        "200": { description: "{settings}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
