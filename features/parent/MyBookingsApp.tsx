@@ -106,6 +106,20 @@ const fmtIso = (iso: string) => {
 // from the public settings) and either changes the dates or sends a request,
 // depending on the provider's self-service setting. Enforcement is server-side
 // (handoff §U) — this collects the intent and posts it.
+// The slice of the listing the amend flow needs: which dates run with space,
+// and each pass's booking rule ("week" = all days in one Mon–Sun week,
+// "listing" = any week it runs, "blocks" = fixed block, moved as a whole).
+type AmendListing = {
+  blocks?: { sessions?: { date: string; spotsLeft: number }[] }[];
+  bookRules?: Record<string, string>;
+};
+// Monday of an ISO date's week — the key a "one week" pass rule groups by.
+const weekKey = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+
 function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: boolean) => void }) {
   const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
   const [moves, setMoves] = useState<Record<string, string>>({});
@@ -115,12 +129,23 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
   const [error, setError] = useState<string | null>(null);
   const days = booking.days ?? [];
 
+  const [listing, setListing] = useState<AmendListing | null>(null);
+
   useEffect(() => {
     if (!booking.tenantId) return;
     apiPublic<{ settings: Partial<AmendPolicy> }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => setPolicy({ ...AMEND_FALLBACK, ...r.settings }))
       .catch(() => {});
   }, [booking.tenantId]);
+
+  // The live schedule + pass rules, so a move can only land on a listed date
+  // and can't break the pass's day rule.
+  useEffect(() => {
+    if (!booking.listingId) return;
+    apiPublic<AmendListing>(`/api/listings/${encodeURIComponent(booking.listingId)}`)
+      .then(setListing)
+      .catch(() => {});
+  }, [booking.listingId]);
 
   const setMove = (oldIso: string, newIso: string) =>
     setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
@@ -153,6 +178,28 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
     }
   }
 
+  // Only listed dates with a space, in the future — the pool a move can go to.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const available = (() => {
+    const set = new Set<string>();
+    for (const bk of listing?.blocks ?? [])
+      for (const s of bk.sessions ?? []) if (s.spotsLeft > 0 && s.date > todayIso) set.add(s.date);
+    return [...set].sort();
+  })();
+  const rule = (listing?.bookRules ?? {})[booking.pass] ?? "listing";
+  const fixed = rule === "blocks";
+  const keptWeeks = new Set(days.filter((iso) => !moves[iso]).map(weekKey));
+  const resultDates = days.map((iso) => moves[iso] ?? iso);
+  const weekOk = rule !== "week" || new Set(resultDates.map(weekKey)).size <= 1;
+  const optionsFor = (iso: string) => {
+    const others = new Set(days.filter((d2) => d2 !== iso).map((d2) => moves[d2] ?? d2));
+    return available.filter((dt) => {
+      if (others.has(dt)) return false; // don't let two days land on the same date
+      if (rule === "week" && keptWeeks.size === 1 && weekKey(dt) !== [...keptWeeks][0]) return false;
+      return true;
+    });
+  };
+
   return (
     <div onClick={(e) => e.target === e.currentTarget && onDone(false)} className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8">
       <div className="w-full max-w-[460px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
@@ -177,17 +224,37 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
           {days.length > 0 ? (
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your dates</div>
-              <div className="flex flex-col gap-1.5">
-                {days.map((iso) => (
-                  <div key={iso} className="flex items-center gap-2 text-[12.5px]">
-                    <span className="w-[120px] font-semibold">{fmtIso(iso)}</span>
-                    <span className="text-[var(--ink-3)]">→</span>
-                    <input type="date" value={moves[iso] ?? ""} onChange={(e) => setMove(iso, e.target.value)}
-                      className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={`Move ${fmtIso(iso)} to`} />
+              {fixed ? (
+                <div className="rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[#7a5b06]">
+                  This pass is a <b>fixed block</b> — its dates move together, not one at a time. To change them, cancel and rebook, or message your provider.
+                </div>
+              ) : listing && available.length === 0 ? (
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">No other dates with a space to move to right now.</div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    {days.map((iso) => {
+                      const opts = optionsFor(iso);
+                      return (
+                        <div key={iso} className="flex items-center gap-2 text-[12.5px]">
+                          <span className="w-[120px] font-semibold">{fmtIso(iso)}</span>
+                          <span className="text-[var(--ink-3)]">→</span>
+                          <select value={moves[iso] ?? ""} onChange={(e) => setMove(iso, e.target.value)}
+                            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={`Move ${fmtIso(iso)} to`}>
+                            <option value="">Keep this date</option>
+                            {opts.map((dt) => <option key={dt} value={dt}>{fmtIso(dt)}</option>)}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Leave a row blank to keep that date. Pick a new date to move it.</div>
+                  <div className="mt-1 text-[11px] text-[var(--ink-3)]">
+                    Only dates this listing runs with a space are shown.{" "}
+                    {rule === "week" ? "All of this child’s days must stay within one week." : "Pick from any week it runs."}
+                  </div>
+                  {!weekOk && <div className="mt-1 text-[11px] font-bold text-[#c0392b]">Those dates span more than one week — this pass keeps every day inside a single week.</div>}
+                </>
+              )}
             </div>
           ) : (
             <div>
@@ -212,7 +279,7 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
           )}
 
           {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
-          <Button variant="primary" disabled={busy || !hasChanges} onClick={submit} className="w-full justify-center">
+          <Button variant="primary" disabled={busy || !hasChanges || !weekOk} onClick={submit} className="w-full justify-center">
             {busy ? "Sending…" : selfService ? "Confirm change" : "Send request"}
           </Button>
           <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">Applied once the backend is built (§U)</div>

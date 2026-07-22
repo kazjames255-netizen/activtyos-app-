@@ -588,7 +588,7 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
 export function CustomerPage({ listing }: { listing: ServerListing }) {
   const d = draftFromListing(listing);
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number } | null>(null);
+  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string } | null>(null);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
   useEffect(() => {
     // Signed out this 401s, which just means there's nothing saved to match.
@@ -671,7 +671,15 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
         refs.push(...res.bookings.map((x) => x.ref));
         total += res.total;
       }
-      setDone({ refs, total });
+      const allDates = lines.flatMap((l) => l.dates).sort();
+      setDone({
+        refs,
+        total,
+        children: [...new Set(lines.map((l) => l.child))],
+        passes: [...new Set(lines.map((l) => l.pass))],
+        firstDate: allDates[0],
+        lastDate: allDates[allDates.length - 1],
+      });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
       return;
@@ -679,17 +687,50 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
     setBookState({ busy: false, error: null });
   }
 
-  if (done)
+  if (done) {
+    const venue = lib?.venue;
+    const fmtDay = (iso?: string) =>
+      iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : null;
+    const when =
+      done.firstDate && done.lastDate && done.lastDate !== done.firstDate
+        ? `${fmtDay(done.firstDate)} – ${fmtDay(done.lastDate)}`
+        : fmtDay(done.firstDate);
+    const kids = done.children.join(", ");
+    const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
+    const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
+    const labCls = "w-[92px] flex-none text-[var(--ink-3)]";
     return (
-      <div className="mx-auto max-w-[520px] p-6 text-center">
-        <div className="text-[40px]">🎉</div>
-        <h2 className="mt-2 text-[22px] font-extrabold">You&rsquo;re booked in</h2>
-        <p className="mt-1.5 text-[13.5px] text-[var(--ink-3)]">
-          {done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")} · {money(done.total)} paid.
-          A confirmation email is on its way.
-        </p>
+      <div className="mx-auto max-w-[540px] p-6 text-center">
+        <div className="text-[44px]">🎉</div>
+        <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em]">
+          Congratulations{kids ? `, ${kids} is booked in!` : ", you’re booked in!"}
+        </h2>
+        <p className="mt-1.5 text-[13px] text-[var(--ink-3)]">A confirmation email is on its way with everything below.</p>
+
+        <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-left">
+          <div className="px-4 py-3" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
+            <div className="text-[15px] font-extrabold text-white">{listing.title || listing.name}</div>
+            <div className="text-[11.5px] text-[#cdddf7]">{listing.tenantName}</div>
+          </div>
+          <div className="p-4">
+            {kids && <div className={rowCls}><span className={labCls}>Who</span><span className="font-semibold">{kids}</span></div>}
+            {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>Pass</span><span className="font-semibold">{done.passes.join(", ")}</span></div>}
+            {when && <div className={rowCls}><span className={labCls}>📅 Starts</span><span className="font-semibold">{when}</span></div>}
+            {where && <div className={rowCls}><span className={labCls}>📍 Where</span><span className="font-semibold">{where}</span></div>}
+            <div className="mt-2 flex items-center justify-between border-t border-[var(--line)] pt-2.5 text-[13px]">
+              <span className="text-[var(--ink-3)]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
+              <b className="text-[15px]">{money(done.total)} paid</b>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>See my bookings</a>
+          <a href="/custdash/browse" className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-[13px] font-bold text-[var(--ink-2)]">← Browse more activities</a>
+        </div>
       </div>
     );
+  }
 
   return (
     <ParentPreview

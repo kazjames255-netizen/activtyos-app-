@@ -65,6 +65,9 @@ export interface Booking {
   franchiseId?: string;
   /** The block this booking holds places in (capacity/waitlist tracking). */
   blockId?: string;
+  /** The listing this booking is for — stamped server-side. Lets the amend flow
+   *  fetch the listing's live schedule + pass rules to constrain a date change. */
+  listingId?: string;
   /** Places held in the block (kids count; default 1). */
   seats?: number;
   /** The ISO session dates this booking occupies (absent = every session —
