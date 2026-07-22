@@ -13,6 +13,7 @@ import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
 import { MarketingApp } from "@/features/marketing/MarketingApp";
+import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
@@ -85,6 +86,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     compliance: ComplianceApp,
     marketing: MarketingApp,
     splitfees: SplitFeesApp,
+    email: EmailApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -115,6 +117,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    email: EmailApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -145,6 +148,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    email: EmailApp,
   },
   staff: {
     registers: RegistersApp,

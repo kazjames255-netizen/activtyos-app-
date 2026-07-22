@@ -1,10 +1,24 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.26.0
+  version: 0.27.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.27.0 — Email (the out-of-app channel)
+
+    Completes Communication. An operator emails their families through the
+    existing transactional mailer. **Operators only.**
+    - **`POST /api/emails/send`** `{subject, body, audience: all|one, to?,
+      dryRun?}` — `all` = every distinct booker email (booked, not cancelled/
+      declined); `one` = a single address. `dryRun:true` returns who WOULD
+      receive it (`{recipientCount, sample}`) and sends/records nothing — a
+      safe preview before a blast. A real send fires the mail (fire-and-forget)
+      and records the send in `emails`. Capped at 2000 recipients.
+    - **`GET /api/emails/recipients`** — the "all" audience size + a sample.
+    - **`GET /api/emails`** — the send history (subject, audience,
+      recipientCount, who, when).
 
     ## v0.26.0 — Split fees (franchisor royalties)
 
@@ -613,6 +627,8 @@ tags:
     description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
   - name: splitfees
     description: Franchisor royalty report — franchise revenue × royalty (company accounts only)
+  - name: emails
+    description: Out-of-app email to families — send/dry-run + history (operators)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: dashboard
@@ -1528,6 +1544,47 @@ paths:
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails:
+    get:
+      tags: [emails]
+      summary: The send history (operators)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: Array of sent emails (newest first) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/recipients:
+    get:
+      tags: [emails]
+      summary: The "all families" audience size + a sample (operators)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{count, sample[]}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/send:
+    post:
+      tags: [emails]
+      summary: Email families (or dry-run to preview recipients) — operators
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                subject: { type: string }
+                body: { type: string }
+                audience: { type: string, enum: [all, one], default: all }
+                to: { type: string, description: "recipient for audience=one" }
+                dryRun: { type: boolean, default: false, description: "preview recipients; no send, no record" }
+      responses:
+        "200": { description: "dry-run: {dryRun:true, recipientCount, sample}" }
+        "201": { description: "sent: the recorded email {recipientCount, …}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 

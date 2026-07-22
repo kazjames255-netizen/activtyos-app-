@@ -2505,8 +2505,30 @@ safeguarding section · all of Run the day · Communication (Newsfeed +
 Messages) · the whole Money section (Payments, Reconciliation, Expenses,
 Purchasing, Subscription, Split fees) · Documents & Compliance · Marketing.**
 
-Known remaining leftovers (all smaller / optional): **Email** (the out-of-app
-channel — Newsfeed + Messages cover in-app), the parent-portal "enter a
+Known remaining leftovers (all smaller / optional): the parent-portal "enter a
 discount code" box (yours — backend ready), royalty **payout execution** (needs
 Stripe Connect transfers), and any HQ-only extras (Learning Centre, franchise
 support framework).
+
+---
+
+# Email — 22 July 2026 (Swagger v0.27.0)
+
+Completes Communication — the **out-of-app** channel (Newsfeed + Messages are
+in-app). An operator emails their families through the existing transactional
+mailer (`lib/mailer` — real SMTP when configured, else an Ethereal dev inbox).
+**Operators only.**
+
+- **`POST /api/emails/send`** `{subject, body, audience: all|one, to?, dryRun?}`
+  — `all` = every distinct booker email (booked, not cancelled/declined);
+  `one` = a single address. **`dryRun:true`** returns who WOULD receive it and
+  sends/records nothing — a safe preview before a blast (the UI uses it to show
+  "Send to N families"). A real send fires fire-and-forget and records the send
+  in `emails`. Capped at 2000 recipients.
+- **`GET /api/emails/recipients`** — the "all" audience size + a sample.
+- **`GET /api/emails`** — the send history. Realtime collection `emails`.
+- `EmailApp` on the `email` slug (company/franchise/freelancer): audience
+  picker with a live recipient count, subject/body, a confirm-before-send, and
+  the history list.
+
+**Communication is complete: Newsfeed ✅ · Messages ✅ · Email ✅.**
