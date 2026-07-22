@@ -2451,6 +2451,26 @@ What to build:
   already previews `min(balance, total)`; the server is the source of truth.
 - **Realtime `wallet`** channel so the page and checkout refresh on change.
 
+## AA — Turn on Stripe test mode so Kaz can see the full money flow
+
+Card bookings sit on **Unpaid** in dev and can't be paid, because `stripe` is
+`null` without a key — `stripe.ts:13` (`key ? new Stripe(key) : null`), and
+`/api/payments/*` returns **503 "Payments aren't configured"**. The whole flow
+is coded (payment intent → success → `pay: "Paid"` at `payments.ts:291`); it
+just has no keys to run against.
+
+**Please add a Stripe TEST account so Kaz can test end to end** — card pay →
+Paid, then cancellations, **refunds**, and (once §Z lands) **wallet** credit/
+debit, which all hang off a real payment existing:
+- Set **`STRIPE_SECRET_KEY`** (test key) on the API server.
+- For charging without wiring each provider's Connect account, set
+  **`STRIPE_PLATFORM_FALLBACK=1`** so test payments land on the platform account
+  (`platformFallback` in `stripe.ts:20`) — otherwise a provider needs a
+  connected Stripe account first.
+- Test cards flip bookings to Paid; refund-approve then issues a real test
+  refund via Stripe. That unblocks Kaz testing refunds + wallet against actual
+  paid bookings instead of only voucher ones.
+
 ---
 
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
