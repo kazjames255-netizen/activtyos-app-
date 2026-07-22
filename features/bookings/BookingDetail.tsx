@@ -648,6 +648,11 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               <Button onClick={() => act(b.ref, "resend")}>Resend invoice</Button>
             </>
           )}
+          {/* Voucher bookings are paid through the scheme, not the app — the
+              provider confirms the money in once it arrives. */}
+          {b.pay === "Awaiting voucher payment" && (
+            <Button variant="primary" onClick={() => act(b.ref, "paid")}>Mark voucher received</Button>
+          )}
           {b.status !== "Cancelled" &&
             b.status !== "Declined" &&
             (b.past === true ? (

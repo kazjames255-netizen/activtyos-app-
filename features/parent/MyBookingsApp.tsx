@@ -337,9 +337,12 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
     setOfferBusy(false);
   };
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
-  // Same rule as the server: confirmed places and operator invoices.
+  // Same rule as the server: confirmed places and operator invoices. A voucher
+  // booking is paid OUTSIDE the app (through the scheme), then the provider
+  // marks the money in — so no in-app card "Pay" button for it.
   const payable =
-    b.pay !== "Paid" && b.pay !== "Refunded" && (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
+    b.pay !== "Paid" && b.pay !== "Refunded" && b.pay !== "Awaiting voucher payment" &&
+    (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
 
   return (
     <Card className="p-4">
@@ -428,7 +431,9 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           {vScheme && filledDetails(vScheme).length > 0 && (
             <div className="mt-2 rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] p-3">
               <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,#1d3a8f)]">Pay by {vScheme.name}</div>
-              <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Quote these to {vScheme.name} when you send your voucher payment:</div>
+              <div className="mt-0.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+                Send <b>{money(b.amount)}</b> through {vScheme.name} using the details below — there&rsquo;s no card payment here. Your place is confirmed; {vScheme.name} shows as <b>paid</b> once your provider receives the money.
+              </div>
               <div className="mt-1.5 flex flex-col gap-1">
                 {filledDetails(vScheme).map((d) => (
                   <div key={d.id} className="flex items-baseline justify-between gap-3 text-[12.5px]">
