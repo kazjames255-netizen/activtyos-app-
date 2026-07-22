@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
+import { useUnreadMessages } from "@/lib/use-unread";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -36,7 +37,21 @@ function Badge({ value }: { value: string | null }) {
 const itemCls =
   "mx-2 flex items-center gap-2 rounded-lg px-3 py-2 font-medium no-underline hover:bg-[var(--side-hover)]";
 
-function NavLink({ item, portal, active }: { item: NavItem; portal: PortalKey; active: boolean }) {
+// A parent with more than one child sees plural labels ("My children",
+// "My children's day") in place of the singular defaults in nav config.
+function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolean): string {
+  if (!label) return label ?? "";
+  if (portal !== "custdash" || !multiChild) return label;
+  if (label === "My child") return "My children";
+  if (label === "My child's day" || label === "My child’s day") return "My children’s day";
+  return label;
+}
+
+function NavLink({ item, portal, active, multiChild, unread }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number }) {
+  // The Messages badge is live: unread message count, not the config placeholder.
+  // It grows as replies arrive and clears to nothing once the thread is opened
+  // (the open marks messages read → realtime → this refetches).
+  const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null) : item.badge;
   return (
     <Link
       href={`/${portal}/${item.view}`}
@@ -48,8 +63,8 @@ function NavLink({ item, portal, active }: { item: NavItem; portal: PortalKey; a
       }
     >
       <Icon icon={item.icon} />
-      <span className="truncate">{item.label}</span>
-      <Badge value={item.badge} />
+      <span className="truncate">{pluralLabel(item.label, portal, multiChild)}</span>
+      <Badge value={badge} />
     </Link>
   );
 }
@@ -77,7 +92,7 @@ function SignOutItem({ item }: { item: NavItem }) {
   );
 }
 
-function GroupItems({ items, portal, pathname }: { items: NavItem[]; portal: PortalKey; pathname: string }) {
+function GroupItems({ items, portal, pathname, multiChild, unread }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number }) {
   return (
     <>
       {items.filter((item) => !item.hidden).map((item) =>
@@ -89,6 +104,8 @@ function GroupItems({ items, portal, pathname }: { items: NavItem[]; portal: Por
             item={item}
             portal={portal}
             active={pathname === `/${portal}/${item.view}`}
+            multiChild={multiChild}
+            unread={unread}
           />
         ),
       )}
@@ -125,6 +142,18 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   }, []);
   const brandName = brand || "ActivityOS";
 
+  // Live unread-message total for the Messages nav badge (see useUnreadMessages).
+  const unread = useUnreadMessages(portal);
+
+  // A parent with more than one child sees plural nav labels (see pluralLabel).
+  const [multiChild, setMultiChild] = useState(false);
+  useEffect(() => {
+    if (portal !== "custdash") return;
+    apiGet<{ id: string }[]>("/api/my/children")
+      .then((cs) => setMultiChild((cs?.length ?? 0) > 1))
+      .catch(() => {});
+  }, [portal]);
+
   return (
     <nav
       className="flex h-screen w-[248px] flex-none flex-col overflow-y-auto py-4 text-[13px]"
@@ -148,7 +177,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              <GroupItems items={group.items} portal={portal} pathname={pathname} />
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} />
             </div>
           );
         }
@@ -163,12 +192,12 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               className="flex w-full items-center justify-between px-4 py-2 text-left text-[11px] font-bold uppercase tracking-[0.08em]"
               style={{ color: "var(--side-muted)" }}
             >
-              <span>{label}</span>
+              <span>{pluralLabel(group.label, portal, multiChild)}</span>
               <span className={`transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
             </button>
             {open && (
               <div>
-                <GroupItems items={group.items} portal={portal} pathname={pathname} />
+                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} />
               </div>
             )}
           </div>

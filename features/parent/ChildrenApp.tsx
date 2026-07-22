@@ -359,18 +359,34 @@ export function ChildrenApp() {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Child | null>(null);
+  // Which children already have a booking on record — those can't be removed,
+  // so the register/booking history stays intact.
+  const [bookedIds, setBookedIds] = useState<Set<string>>(new Set());
+  const [bookedNames, setBookedNames] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(() => {
     apiGet<Child[]>("/api/my/children")
       .then(setChildren)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load children"));
+    apiGet<{ child?: string; childId?: string }[]>("/api/my/bookings")
+      .then((bs) => {
+        setBookedIds(new Set(bs.map((b) => b.childId).filter((x): x is string => !!x)));
+        setBookedNames(new Set(bs.map((b) => (b.child ?? "").trim().toLowerCase()).filter(Boolean)));
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(refresh, [refresh]);
-  useRealtime(["children"], refresh);
+  useRealtime(["children", "bookings"], refresh);
+
+  const hasBookings = useCallback(
+    (c: Child) => bookedIds.has(c.id) || bookedNames.has(c.name.trim().toLowerCase()),
+    [bookedIds, bookedNames],
+  );
 
   async function remove(c: Child) {
-    if (!confirm(`Remove ${c.name}? Existing bookings are unaffected.`)) return;
+    if (hasBookings(c)) return; // guarded at the UI too — belt and braces
+    if (!confirm(`Remove ${c.name}? This can’t be undone.`)) return;
     try {
       await api(`/api/my/children/${encodeURIComponent(c.id)}`, { method: "DELETE" });
       refresh();
@@ -454,7 +470,16 @@ export function ChildrenApp() {
                     </div>
                     <div className="flex flex-none items-center gap-3 text-[12px] font-bold">
                       <button type="button" onClick={() => setEditing(c)} className="rounded-full px-3 py-1 text-white" style={{ background: accent }}>Edit</button>
-                      <button type="button" onClick={() => remove(c)} className="text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button>
+                      {hasBookings(c) ? (
+                        <span
+                          title="This child has bookings on record, so their profile can’t be removed."
+                          className="flex cursor-not-allowed items-center gap-1 text-[var(--ink-3)] opacity-60"
+                        >
+                          🔒 Remove
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => remove(c)} className="text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button>
+                      )}
                     </div>
                   </div>
                   {/* Key info pulled to the front — allergies, medical, diet, SEND. */}

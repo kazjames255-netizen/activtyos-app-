@@ -2473,6 +2473,62 @@ debit, which all hang off a real payment existing:
 
 ---
 
+## BB — Messages: thread filters + an "ActivityOS" support channel
+
+`features/messages/MessagesApp.tsx` is the one shared component (operator +
+parent). Two parts here: a small front-end filter layer that's **already
+built**, and a **new support channel** that needs you.
+
+### BB.1 — Thread filters (front end DONE, data-dependent extras for you)
+
+The thread list now has a **search box** + **status chips** — built entirely
+from fields already on `Thread` (`operatorUnread`/`parentUnread`, `lastFrom`):
+- **All / Needs reply / Unread.** "Needs reply" = `lastFrom !== <me>` (the last
+  message was theirs). Operator label "Needs reply"; parent side "Awaiting you".
+- Search matches name + email (operator) / provider name (parent).
+
+Two more filters I **couldn't** build because the data isn't on the thread yet —
+please add them to `Thread` and I'll wire the chips:
+- **Activity / listing.** Add `listingId?` + `listingName?` to a thread so a
+  provider can filter "just the Summer Camp chatter". Set it when a thread is
+  started from a booking/listing context (null for general enquiries).
+- **Booking link.** Add a lightweight `bookingState?: "upcoming" | "waitlisted"
+  | "cancelled" | "none"` (or just expose the parent's latest booking status for
+  that tenant) so "has an upcoming booking" vs "general enquiry" is filterable.
+  If it's easier, I can compute this front-end by cross-referencing
+  `/api/customers` + bookings — say which you prefer.
+
+### BB.2 — "Contact ActivityOS" support channel (NEW — needs backend)
+
+Today a freelancer can only message **families**. They also need to message
+**ActivityOS itself** (support/billing), and this must NOT get mixed into the
+family inbox. Proposed shape — mirror the existing threads API so the front end
+is a near-copy:
+
+- A thread `kind: "family" | "support"` (default `"family"` for everything that
+  exists). Support threads are between a tenant and the **platform**, not a
+  parent — so `parentEmail` is empty and the counterparty is ActivityOS/HQ.
+- Support-thread metadata for ticket-style filtering:
+  - **`topic`**: `billing` | `bug` | `feature` | `onboarding` | `compliance`.
+  - **`status`**: `open` | `awaiting_activityos` | `awaiting_you` | `resolved`.
+  - **`priority`**: `normal` | `urgent`.
+- Endpoints: either extend `/api/messages*` with `kind`/`topic` or add
+  `/api/support/threads` (+ messages) with the same envelope. The **platform**
+  portal (`platform` role, `features/platform/*`) is the other end — HQ sees all
+  tenants' support threads; a tenant sees only their own.
+- Realtime: reuse `threads`/`messages` channels (or `support` if you split).
+
+Front end I'll build once the shape lands: a **segment switch — "Families |
+ActivityOS"** at the top of Messages; Families keeps today's picker + chips,
+ActivityOS gets a topic/status/priority chip row and a "New support request"
+composer with a topic dropdown. Platform side gets the HQ inbox.
+
+Open question for you: is support a **thread `kind`** on the existing messages
+collection, or a **separate collection**? I lean `kind` (least new surface), but
+your call — tell me and I'll match the front end to it.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime
