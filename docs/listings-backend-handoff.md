@@ -2577,6 +2577,31 @@ generic — it unblocks several "real file storage" TODOs at once.
 
 ---
 
+## DD — Firestore read load: quota exhaustion + a background sweep that won't back off
+
+On 22 Jul the dev project hit the **Firestore free-tier (Spark) daily read
+quota** — every read started failing with `8 RESOURCE_EXHAUSTED: Quota
+exceeded`, so authenticated endpoints that touch Firestore hung on retries until
+the client's 15s timeout (auth-only 401s stayed instant). Two takeaways:
+
+- **Front end (done my side):** the unread-count hook (`lib/use-unread.ts`,
+  drives the sidebar badge + top-bar Messages tab) now shares **one**
+  `/api/messages/threads` request across all consumers (in-flight sharing + 4s
+  TTL; realtime forces a fresh read) instead of firing 2–3 per page. Cuts read
+  amplification.
+- **Background sweep (your side, please):** `[waitlist] expiry sweep` keeps
+  running and **re-hitting Firestore every interval even while quota-exhausted**
+  — the log filled with `[waitlist] expiry sweep failed: RESOURCE_EXHAUSTED`.
+  Please add **exponential backoff / circuit-break on `RESOURCE_EXHAUSTED`** so a
+  quota-exhausted project stops hammering (and stops burning the next day's quota
+  the moment it resets). More broadly, a quick audit of per-request read counts
+  (N+1 `getAll` fan-outs) would help keep the free tier viable for dev.
+
+For dev testing, the practical fix is enabling **Blaze** on the Firebase project
+(reads ~$0.03/100k) — flagged to Kaz; it's a billing action on their side.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime
