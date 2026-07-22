@@ -33,6 +33,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [target, setTarget] = useState(""); // tenantId (parent) or customer email (operator)
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
   const endRef = useRef<HTMLDivElement>(null);
   const mine = mode === "operator" ? "operator" : "parent";
 
@@ -74,6 +76,29 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const active = threads?.find((t) => t.id === openId) ?? null;
   const other = (t: Thread) => (mode === "operator" ? t.parentName || t.parentEmail : t.tenantName || "Provider");
   const unread = (t: Thread) => (mode === "operator" ? t.operatorUnread : t.parentUnread) ?? 0;
+  // "Needs reply" = the last word was theirs, not yours — the ball's in your court.
+  const needsReply = (t: Thread) => !!t.lastFrom && t.lastFrom !== mine;
+
+  const allThreads = threads ?? [];
+  const counts = {
+    all: allThreads.length,
+    unread: allThreads.filter((t) => unread(t) > 0).length,
+    reply: allThreads.filter(needsReply).length,
+  };
+  const shownThreads = allThreads.filter((t) => {
+    if (statusFilter === "unread" && unread(t) === 0) return false;
+    if (statusFilter === "reply" && !needsReply(t)) return false;
+    if (q.trim()) {
+      const hay = `${other(t)} ${mode === "operator" ? t.parentEmail : t.tenantName ?? ""}`.toLowerCase();
+      if (!hay.includes(q.trim().toLowerCase())) return false;
+    }
+    return true;
+  });
+  const filterTabs: { key: "all" | "unread" | "reply"; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "reply", label: mode === "operator" ? "Needs reply" : "Awaiting you" },
+    { key: "unread", label: "Unread" },
+  ];
 
   return (
     <div className="text-[var(--ink)]">
@@ -89,7 +114,35 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           : threads.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">No conversations yet.</div>
           : (
             <div className="flex flex-col">
-              {threads.map((t) => (
+              <div className="px-1 pb-1.5">
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={mode === "operator" ? "Search families…" : "Search providers…"}
+                  className="w-full !py-1.5 text-[12.5px]"
+                />
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {filterTabs.map((f) => {
+                    const on = statusFilter === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => setStatusFilter(f.key)}
+                        className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
+                        style={on
+                          ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" }
+                          : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}
+                      >
+                        {f.label} <span className={on ? "opacity-80" : ""}>{counts[f.key]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {shownThreads.length === 0 ? (
+                <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">Nothing matches.</div>
+              ) : shownThreads.map((t) => (
                 <button key={t.id} type="button" onClick={() => open(t.id)} className={`flex flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition ${openId === t.id ? "bg-[var(--panel)]" : "hover:bg-[var(--panel)]"}`}>
                   <div className="flex items-center gap-1.5">
                     <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{other(t)}</span>

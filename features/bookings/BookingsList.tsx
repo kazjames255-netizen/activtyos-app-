@@ -390,9 +390,6 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="block truncate text-[12.5px] text-[var(--ink)]">{b.dates}</span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">
                     {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · Ref {b.ref}
-                    {b.cancel && b.cancel.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
-                      <span className="font-semibold text-[var(--red,#e21d27)]"> · Refund {money(b.cancel.amount)}{b.amount > 0 ? ` (${Math.round((b.cancel.amount / b.amount) * 100)}%)` : ""}</span>
-                    )}
                   </span>
                 </span>
 
@@ -426,6 +423,17 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   >
                     {isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}
                   </button>
+                )}
+
+                {/* Once issued there's no action button — show the amount clearly
+                    so it isn't lost in the truncated meta line. */}
+                {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
+                  <span
+                    title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
+                    className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]"
+                  >
+                    Refund {money(b.cancel.amount)}
+                  </span>
                 )}
 
                 <b className="flex-none text-right text-[16px] tabular-nums text-[var(--ink)]">

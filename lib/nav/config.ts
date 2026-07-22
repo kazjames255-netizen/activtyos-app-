@@ -151,7 +151,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "admin-auth", label: "Log out", icon: { type: "glyph", value: "⏏" }, badge: null },
+        { view: "auth", legacyView: "admin-auth", label: "Sign out", icon: { type: "glyph", value: "⏏" }, badge: null },
       ],
     },
     {
@@ -284,7 +284,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "franchise-auth", label: "Log out", icon: { type: "glyph", value: "⏏" }, badge: null },
+        { view: "auth", legacyView: "franchise-auth", label: "Sign out", icon: { type: "glyph", value: "⏏" }, badge: null },
       ],
     },
   ],
@@ -391,7 +391,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "freelancer-auth", label: "Log out", icon: { type: "glyph", value: "⏏" }, badge: null },
+        { view: "auth", legacyView: "freelancer-auth", label: "Sign out", icon: { type: "glyph", value: "⏏" }, badge: null },
       ],
     },
   ],
@@ -489,7 +489,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "staff-auth", label: "Log out", icon: { type: "glyph", value: "⏏" }, badge: null },
+        { view: "auth", legacyView: "staff-auth", label: "Sign out", icon: { type: "glyph", value: "⏏" }, badge: null },
       ],
     },
   ],
@@ -557,7 +557,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "custdash-auth", label: "Log out", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\"></path></svg>" }, badge: null },
+        { view: "auth", legacyView: "custdash-auth", label: "Sign out", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\"></path></svg>" }, badge: null },
       ],
     },
   ],
@@ -604,7 +604,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: true,
       items: [
-        { view: "auth", legacyView: "platform-auth", label: "Log out", icon: { type: "glyph", value: "⏏" }, badge: null },
+        { view: "auth", legacyView: "platform-auth", label: "Sign out", icon: { type: "glyph", value: "⏏" }, badge: null },
       ],
     },
   ],

@@ -14,6 +14,7 @@ import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: () => void }) {
   const [reason, setReason] = useState("");
+  const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
   const [refundPref, setRefundPref] = useState<"card" | "wallet">("card");
   const [cfg, setCfg] = useState<{
@@ -63,9 +64,10 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     setBusy(true);
     setError(null);
     try {
+      const effReason = reason === "__other__" ? otherReason.trim() : reason;
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
-        reason: reason || undefined,
-        msg: [reason, msg.trim()].filter(Boolean).join(" — ") || undefined,
+        reason: effReason || undefined,
+        msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
       });
       onDone();
@@ -102,11 +104,18 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
       )}
 
       {cfg?.askReason && cfg.reasons.length > 0 && (
-        <select value={reason} onChange={(e) => setReason(e.target.value)}
-          className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)]">
-          <option value="">Reason for cancelling…</option>
-          {cfg.reasons.map((r) => <option key={r.id} value={r.label}>{r.label}</option>)}
-        </select>
+        <>
+          <select value={reason} onChange={(e) => setReason(e.target.value)}
+            className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)]">
+            <option value="">Reason for cancelling…</option>
+            {cfg.reasons.map((r) => <option key={r.id} value={r.label}>{r.label}</option>)}
+            <option value="__other__">Other…</option>
+          </select>
+          {reason === "__other__" && (
+            <input value={otherReason} onChange={(e) => setOtherReason(e.target.value)} placeholder="Tell us your reason…"
+              className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+          )}
+        </>
       )}
 
       <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Anything to add? (optional)…" rows={2}
@@ -600,9 +609,12 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
   );
 }
 
+type BookingFilter = "all" | "upcoming" | "past" | "cancelled";
+
 export function MyBookingsApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<BookingFilter>("all");
 
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
@@ -644,6 +656,32 @@ export function MyBookingsApp() {
               <Link href="/custdash/browse" className="font-bold text-[var(--brand-2)]">browse activities</Link> to get started.
             </Card>
           );
+
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
+        const lastDay = (b: Booking) => [...(b.days ?? [])].sort().at(-1) ?? "";
+        const isPast = (b: Booking) => !isCancelled(b) && !!lastDay(b) && lastDay(b) < todayIso;
+        const isUpcoming = (b: Booking) => !isCancelled(b) && !isPast(b);
+        const match = (b: Booking) =>
+          filter === "all" ? true
+          : filter === "upcoming" ? isUpcoming(b)
+          : filter === "past" ? isPast(b)
+          : isCancelled(b);
+
+        const counts = {
+          all: rest.length,
+          upcoming: rest.filter(isUpcoming).length,
+          past: rest.filter(isPast).length,
+          cancelled: rest.filter(isCancelled).length,
+        };
+        const shown = rest.filter(match);
+        const tabs: { key: BookingFilter; label: string }[] = [
+          { key: "all", label: "All" },
+          { key: "upcoming", label: "Upcoming" },
+          { key: "past", label: "Past" },
+          { key: "cancelled", label: "Cancelled & refunded" },
+        ];
+
         return (
           <>
             {waiting.length > 0 && (
@@ -658,11 +696,34 @@ export function MyBookingsApp() {
             {rest.length > 0 && (
               <>
                 {waiting.length > 0 && <SectionHead>My bookings</SectionHead>}
-                <div className="flex flex-col gap-3">
-                  {rest.map((b) => (
-                    <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
-                  ))}
+                <div className="mb-3.5 flex flex-wrap gap-1.5">
+                  {tabs.filter((t) => t.key === "all" || counts[t.key] > 0).map((t) => {
+                    const active = filter === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setFilter(t.key)}
+                        className="cursor-pointer rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors"
+                        style={active
+                          ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" }
+                          : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}
+                      >
+                        {t.label}
+                        <span className={active ? "ml-1.5 opacity-80" : "ml-1.5 text-[var(--ink-3)]"}>{counts[t.key]}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+                {shown.length === 0 ? (
+                  <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing here right now.</Card>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {shown.map((b) => (
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </>
