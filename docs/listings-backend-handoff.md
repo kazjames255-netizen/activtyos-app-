@@ -2402,3 +2402,36 @@ Money section: Payments/Finance ✅ · Reconciliation ✅ · **Expenses ✅ ·
 Purchasing ✅ · Subscription ✅** · (Split fees, Payouts & royalties still to
 come). Split fees in particular is a franchise-royalty calc — its own
 milestone.
+
+---
+
+# Documents & Compliance — 22 July 2026 (Swagger v0.24.0)
+
+Ofsted/safeguarding readiness. Both tenant-scoped, realtime, and follow the
+same rule: **operators write, staff read** (staff need the policies to hand
+and want to see the certification board).
+
+- **Documents** `/api/documents` (collection `documents`) — the store:
+  policies, risk assessments, insurance, certificates. `POST` (operators)
+  `{title, category, url, fileType?, notes?}`; `DELETE/:id` (operators); `GET`
+  (operators + staff). Files reuse the existing `/api/uploads` store (the UI
+  reads the file to a data URL, uploads, keeps the returned url) — or you can
+  store an external link. `DocumentsApp` on the `documents` slug (company +
+  staff), with a file-picker-or-paste-a-link add form.
+- **Compliance** `/api/compliance` (collection `certifications`) — staff certs
+  with **expiry tracking**, the whole point of the feature. `{staffName, type,
+  reference?, issued?, expiry, documentUrl?, notes?}`. GET derives a `status`
+  per cert — `expired` / `expiring` (within 45 days) / `valid` — sorts
+  soonest-first, and leads with `summary:{total, expired, expiring, valid}`.
+  `ComplianceApp` on the `compliance` slug (company/franchise/freelancer) shows
+  the three count cards + the board with red/amber/green status badges.
+
+Note the `compliance` nav label differs per portal ("My certifications" for
+freelancer, "Learning Centre" for company/franchise) — I built it as a
+certification-expiry tracker, which fits the freelancer framing; if you want a
+training-courses "Learning Centre" for the company portals instead, that's a
+separate feature and this can move to a dedicated slug.
+
+**Documents & Compliance ✅** — with this the operator portal's staff &
+safeguarding side is complete (Pupils ✅ · Run the day ✅ · Documents &
+Compliance ✅).

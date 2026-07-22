@@ -12,6 +12,8 @@ import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { DocumentsApp } from "@/features/documents/DocumentsApp";
+import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
 import { PurchasingApp } from "@/features/money/PurchasingApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
@@ -77,6 +79,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
+    documents: DocumentsApp,
+    compliance: ComplianceApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -105,6 +109,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
+    compliance: ComplianceApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -133,6 +138,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
+    compliance: ComplianceApp,
   },
   staff: {
     registers: RegistersApp,
@@ -147,6 +153,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     trips: TripsApp,
     schedule: RotaApp,
     messages: () => <MessagesApp mode="operator" />,
+    documents: DocumentsApp,
+    compliance: ComplianceApp,
   },
   custdash: {
     browse: BrowseApp,

@@ -1,10 +1,26 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.23.0
+  version: 0.24.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.24.0 — Documents & Compliance
+
+    Ofsted/safeguarding readiness. Both tenant-scoped, realtime; **operators
+    write, staff read** (staff need the policies and their own board).
+    - **`/api/documents`** — the document store (policies, risk assessments,
+      insurance, certificates). `POST` (operators) `{title, category, url,
+      fileType?, notes?}` — files go through the existing `/api/uploads`, or
+      paste a link. `DELETE/:id` (operators). `GET` (operators + staff).
+    - **`/api/compliance`** — staff certifications with **expiry tracking**.
+      `{staffName, type, reference?, issued?, expiry, documentUrl?, notes?}`;
+      `POST`/`PUT/:id`/`DELETE/:id` (operators), `GET` (operators + staff).
+      GET derives a `status` per cert — `expired` (past `expiry`), `expiring`
+      (within 45 days) or `valid` — sorts soonest-first, and leads with a
+      `summary:{total, expired, expiring, valid}` so the board shows what
+      needs action.
 
     ## v0.23.0 — Money extras: Expenses, Purchasing, Subscription
 
@@ -554,6 +570,10 @@ tags:
     description: Purchase orders & supplier invoices (operators only)
   - name: subscription
     description: The tenant's plan (records intent — no billing integration yet)
+  - name: documents
+    description: The provider's document store (operators write, staff read)
+  - name: compliance
+    description: Staff certifications with expiry tracking (operators write, staff read)
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: dashboard
@@ -1466,6 +1486,98 @@ paths:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/documents:
+    get:
+      tags: [documents]
+      summary: The tenant's document store (operators + staff)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: Array of documents (newest first) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [documents]
+      summary: Add a document (operators) — file via /api/uploads or a link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, category, url]
+              properties:
+                title: { type: string }
+                category: { type: string }
+                url: { type: string }
+                fileType: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: The created document }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/documents/{id}:
+    delete:
+      tags: [documents]
+      summary: Delete a document (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/compliance:
+    get:
+      tags: [compliance]
+      summary: Staff certifications with derived status + summary (operators + staff)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{items[] (each with status: expired|expiring|valid), summary}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [compliance]
+      summary: Add a certificate (operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staffName, type, expiry]
+              properties:
+                staffName: { type: string }
+                type: { type: string }
+                reference: { type: string }
+                issued: { type: string }
+                expiry: { type: string, description: "ISO date" }
+                documentUrl: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: The created certificate }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/compliance/{id}:
+    put:
+      tags: [compliance]
+      summary: Edit / renew a certificate (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: The updated certificate }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [compliance]
+      summary: Delete a certificate (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/expenses:
     get:

@@ -108,6 +108,8 @@ events.get("/", async (req, res) => {
     listen(db.collection("messages").where("tenantId", "==", tenantId), "messages");
     listen(db.collection("expenses").where("tenantId", "==", tenantId), "expenses");
     listen(db.collection("purchaseOrders").where("tenantId", "==", tenantId), "purchaseOrders");
+    listen(db.collection("documents").where("tenantId", "==", tenantId), "documents");
+    listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications");
   }
 
   // Keep intermediaries from closing the idle connection.
