@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
+import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { checkCode, normaliseCode, type DiscountCodeDoc } from "../lib/discountCodes";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -90,6 +92,9 @@ const basketSchema = z.object({
   // Childcare voucher booking (§Q): the scheme id the family picked. The
   // server computes the pay-by dates from the tenant's voucher settings.
   voucherScheme: z.string().max(60).optional(),
+  // Marketing discount code (optional). Applied server-side to the pass
+  // subtotal; validated the same way the preview endpoint validates it.
+  discountCode: z.string().trim().max(40).optional(),
   // Operators only (§G-3/§H): book FOR a family — same pricing/capacity
   // path, the booking lands on their account (found or created by email).
   onBehalfOf: z
@@ -524,6 +529,36 @@ my.post("/bookings", async (req, res) => {
   const drift = round2(target - amounts.reduce((s, a) => round2(s + a), 0));
   if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + drift);
 
+  // Marketing discount code (optional): validate against the pass subtotal
+  // (after automatic discounts, before add-ons) and re-spread the reduction
+  // across the items' pass portions. Shares lib/discountCodes with the preview
+  // endpoint so what the parent saw is exactly what they're charged.
+  let discountCode: string | null = null;
+  if (input.discountCode) {
+    const today = new Date().toISOString().slice(0, 10);
+    const codeSnap = await db
+      .collection("discountCodes")
+      .where("tenantId", "==", listing.tenantId)
+      .where("code", "==", normaliseCode(input.discountCode))
+      .limit(1)
+      .get();
+    if (codeSnap.empty) { res.status(400).json({ error: "That discount code isn’t recognised" }); return; }
+    const check = checkCode(codeSnap.docs[0].data() as DiscountCodeDoc, discounted, today);
+    if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
+    const ratio = discounted > 0 ? (discounted - check.off) / discounted : 1;
+    for (let i = 0; i < amounts.length; i++) {
+      const passPortion = round2(amounts[i] - priced[i].addonsTotal);
+      amounts[i] = round2(passPortion * ratio + priced[i].addonsTotal);
+    }
+    const codeTarget = round2(discounted - check.off + priced.reduce((s, p) => s + p.addonsTotal, 0));
+    const codeDrift = round2(codeTarget - amounts.reduce((s, a) => round2(s + a), 0));
+    if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + codeDrift);
+    discountCode = normaliseCode(input.discountCode);
+    // Record the redemption (best-effort — a hair of over-use under a race is
+    // acceptable for a coupon; the hard cap is re-checked on the next attempt).
+    void codeSnap.docs[0].ref.update({ usedCount: FieldValue.increment(1) });
+  }
+
   const bookerName = familyName;
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
   const blockRef = db.collection("blocks").doc(input.blockId);
@@ -625,6 +660,7 @@ my.post("/bookings", async (req, res) => {
             nextBid + i,
           ),
           ...(rc.childId ? { childId: rc.childId } : {}),
+          ...(discountCode ? { discountCode } : {}),
           tenantId: listing.tenantId,
           blockId: blockSnap.id,
           seats: 1,

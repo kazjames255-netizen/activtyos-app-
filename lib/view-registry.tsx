@@ -12,6 +12,7 @@ import { MedicationApp } from "@/features/medication/MedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { MarketingApp } from "@/features/marketing/MarketingApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
@@ -81,6 +82,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     documents: DocumentsApp,
     compliance: ComplianceApp,
+    marketing: MarketingApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -110,6 +112,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
+    marketing: MarketingApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -139,6 +142,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
+    marketing: MarketingApp,
   },
   staff: {
     registers: RegistersApp,

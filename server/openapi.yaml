@@ -1,10 +1,29 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.24.0
+  version: 0.25.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.25.0 — Marketing: discount codes
+
+    Customer-entered promo codes, distinct from the automatic per-listing
+    discount RULES. Operators manage them; a parent applies one at checkout.
+    - **`/api/discounts`** — operator CRUD. `POST` `{code, type: percent|amount,
+      value, minSpend?, expiry?, usageLimit?, active}` (codes are upper-cased,
+      unique per tenant → 409 on dupe; a percentage over 100 → 400). `GET` /
+      `PUT/:id` / `DELETE/:id`.
+    - **`POST /api/discounts/validate`** `{tenantId, code, subtotal}` — a
+      signed-in parent previews a code before checkout → `{valid, off}` or
+      `{valid:false, reason}`. Read-only; no redemption.
+    - **Applied at checkout.** `POST /api/my/bookings` now takes an optional
+      `discountCode`. The server validates it (same `lib/discountCodes` the
+      preview uses, so preview == charge), applies the reduction to the pass
+      subtotal (after automatic discounts, before add-ons), spreads it across
+      the basket, records `discountCode` on each booking, and bumps the code's
+      `usedCount`. An invalid/expired/exhausted/min-spend-unmet code → 400 (the
+      basket is not booked). New booking field **`discountCode`**.
 
     ## v0.24.0 — Documents & Compliance
 
@@ -574,6 +593,8 @@ tags:
     description: The provider's document store (operators write, staff read)
   - name: compliance
     description: Staff certifications with expiry tracking (operators write, staff read)
+  - name: discounts
+    description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
   - name: registers
     description: Daily attendance per block-session — the staff role's one write
   - name: dashboard
@@ -891,6 +912,11 @@ paths:
         item's chosen days, then the listing's automatic discounts across
         the basket (multi-person → multi-session → early-bird; best rule of
         each kind wins). Clients send choices, never amounts.
+
+        Optional **`discountCode`** (Marketing): validated server-side and
+        applied to the pass subtotal after automatic discounts; an
+        invalid/expired/exhausted/min-spend-unmet code → 400 and nothing is
+        booked. Each resulting booking carries `discountCode`.
 
         `dates` picks which session days the item occupies (must belong to
         the block; at most the pass's day count; default = every session,
@@ -1486,6 +1512,77 @@ paths:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/discounts:
+    get:
+      tags: [discounts]
+      summary: The tenant's discount codes (operators)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: Array of codes (newest first) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [discounts]
+      summary: Create a discount code (operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, type, value]
+              properties:
+                code: { type: string, description: "stored upper-cased, unique per tenant" }
+                type: { type: string, enum: [percent, amount] }
+                value: { type: number, description: "percent 0–100, or pounds" }
+                minSpend: { type: number }
+                expiry: { type: string, description: "ISO date, inclusive" }
+                usageLimit: { type: integer }
+                active: { type: boolean, default: true }
+      responses:
+        "201": { description: The created code }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: A code with that name already exists }
+
+  /api/discounts/{id}:
+    put:
+      tags: [discounts]
+      summary: Edit / pause a code (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: The updated code }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [discounts]
+      summary: Delete a code (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/discounts/validate:
+    post:
+      tags: [discounts]
+      summary: Preview a code against a subtotal (signed-in parent) — read-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, code, subtotal]
+              properties:
+                tenantId: { type: string }
+                code: { type: string }
+                subtotal: { type: number }
+      responses:
+        "200": { description: "{valid:true, code, off} or {valid:false, reason}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
 
   /api/documents:
     get:

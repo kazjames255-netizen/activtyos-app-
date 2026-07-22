@@ -109,6 +109,8 @@ export interface Booking {
   /** How much has actually been received (reconciliation). Absent = 0 for
    *  Unpaid, treated as `amount` for Paid. Partial payments track it. */
   amountPaid?: number;
+  /** Marketing discount code redeemed on this booking, if any. */
+  discountCode?: string;
   addons: string[];
   answers: [string, string][];
   note: string;

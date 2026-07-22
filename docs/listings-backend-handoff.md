@@ -2435,3 +2435,36 @@ separate feature and this can move to a dedicated slug.
 **Documents & Compliance ✅** — with this the operator portal's staff &
 safeguarding side is complete (Pupils ✅ · Run the day ✅ · Documents &
 Compliance ✅).
+
+---
+
+# Marketing: discount codes — 22 July 2026 (Swagger v0.25.0)
+
+Customer-entered promo codes — **distinct** from the automatic per-listing
+discount RULES (`features/listings/discounts.ts`). Operators manage codes; a
+parent applies one at checkout.
+
+- **Operator CRUD** `/api/discounts` (collection `discountCodes`) — `{code,
+  type: percent|amount, value, minSpend?, expiry?, usageLimit?, active}`. Codes
+  are upper-cased and unique per tenant (409 on dupe); a percentage over 100 →
+  400. `MarketingApp` on the `marketing` slug (company/franchise/freelancer):
+  create form, code cards with live/paused/expired/used-up status and a
+  used/limit counter, pause & delete.
+- **Preview** `POST /api/discounts/validate` `{tenantId, code, subtotal}` — a
+  signed-in parent checks a code before checkout → `{valid, off}` or
+  `{valid:false, reason}`. Read-only.
+- **Applied at checkout** — `POST /api/my/bookings` takes an optional
+  `discountCode`. The server re-validates it (**sharing `lib/discountCodes`
+  with the preview, so what the parent saw is what they're charged**), takes it
+  off the pass subtotal (after automatic discounts, before add-ons), spreads it
+  across the basket, tags each booking with `discountCode`, and bumps the
+  code's `usedCount`. A bad/expired/exhausted/min-spend-unmet code → 400 and
+  nothing books. New Booking field **`discountCode`**.
+
+**Kaz — the parent "enter a code" box is yours.** I deliberately did **not**
+touch the parent checkout UI (`BrowseApp`) since you own it and it's moving
+fast. The backend is ready: call `POST /api/discounts/validate` to preview,
+then pass `discountCode` in the `/api/my/bookings` body. Un-coded checkout is
+byte-for-byte unchanged (verified) — the field is purely additive.
+
+Marketing ✅ (discount codes). Referrals / promo surfaces can layer on later.
