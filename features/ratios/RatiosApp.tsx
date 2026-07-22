@@ -63,6 +63,14 @@ const staffForLine = (children: number, ratio: number) => (children > 0 ? Math.c
 const ageRange = (g: RatioGroup) => `${g.ageFrom}-${g.ageTo} yrs`;
 /** "1:8" for a round ratio, "1:8.5" only when there's actually a fraction. */
 const fmtRatio = (n: number) => `1:${Number.isInteger(n) ? n : n.toFixed(1)}`;
+/** "09:00" -> "9am", "15:30" -> "3:30pm" for the time-period buttons. */
+const to12h = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h)) return hhmm;
+  const ap = h < 12 ? "am" : "pm";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${h12}:${String(m).padStart(2, "0")}${ap}` : `${h12}${ap}`;
+};
 
 // Simple line icons for the status tiles — cleaner than emoji, one colour,
 // inherit white on the coloured square.
@@ -520,12 +528,41 @@ export function RatiosApp() {
   const ready = loadedDate === date && sessions;
   const listings = useMemo(() => [...new Set((sessions ?? []).map((s) => s.listingName))].sort(), [sessions]);
   const shown = useMemo(() => (sessions ?? []).filter((s) => !listing || s.listingName === listing), [sessions, listing]);
-  // The day's children for the chosen listing, deduplicated across sessions.
+
+  // Different timings (full day / mornings / afternoons) mean different children
+  // are on site at different times — and ratios must hold at each one. The
+  // distinct session windows become "by time" buttons; picking one shows only
+  // who overlaps it. "" = the whole day (everyone who's in at some point).
+  const [period, setPeriod] = useState<string>("");
+  const periods = useMemo(() => {
+    const map = new Map<string, { start: string; end: string; here: number }>();
+    for (const s of shown) {
+      const k = `${s.start}|${s.end}`;
+      if (!map.has(k)) map.set(k, { start: s.start, end: s.end, here: 0 });
+    }
+    // How many distinct children are on site during each window (overlap).
+    for (const p of map.values()) {
+      const ids = new Set<string>();
+      for (const s of shown) if (s.start < p.end && p.start < s.end) for (const c of s.children) ids.add(c.childId ?? c.ref);
+      p.here = ids.size;
+    }
+    return [...map.values()].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+  }, [shown]);
+  const wholeDayCount = useMemo(() => new Set(shown.flatMap((s) => s.children.map((c) => c.childId ?? c.ref))).size, [shown]);
+  // Guard against a stale key when the day/listing changes.
+  const activeKey = periods.some((p) => `${p.start}|${p.end}` === period) ? period : "";
+  const slice = useMemo(() => {
+    if (!activeKey) return shown;
+    const [ps, pe] = activeKey.split("|");
+    return shown.filter((s) => s.start < pe && ps < s.end);
+  }, [shown, activeKey]);
+
+  // The children on site for the chosen listing + time window, deduped across sessions.
   const children = useMemo(() => {
     const seen = new Set<string>(); const out: SessionChild[] = [];
-    for (const s of shown) for (const c of s.children) { const k = c.childId ?? c.ref; if (!seen.has(k)) { seen.add(k); out.push(c); } }
+    for (const s of slice) for (const c of s.children) { const k = c.childId ?? c.ref; if (!seen.has(k)) { seen.add(k); out.push(c); } }
     return out;
-  }, [shown]);
+  }, [slice]);
 
   const isToday = date === todayIso();
   const groupCount = groups.filter((g) => children.some((c) => c.age >= g.ageFrom && c.age <= g.ageTo)).length;
@@ -573,10 +610,30 @@ export function RatiosApp() {
         </span>
       </div>
 
+      {/* By time — jump the whole board to who's on site in each timing window */}
+      {ready && periods.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-2 text-[12px]">
+          <span className="mr-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">By time</span>
+          {[{ start: "", end: "", here: wholeDayCount, whole: true }, ...periods.map((p) => ({ ...p, whole: false }))].map((p) => {
+            const k = p.whole ? "" : `${p.start}|${p.end}`;
+            const on = activeKey === k;
+            return (
+              <button key={k || "all"} type="button" onClick={() => setPeriod(k)}
+                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-bold"
+                style={on ? { borderColor: "transparent", background: "var(--brand-2,#2f6bd8)", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+                {p.whole ? "Whole day" : `${to12h(p.start)}–${to12h(p.end)}`}
+                <span className="rounded-full px-1.5 text-[10px] font-extrabold" style={{ background: on ? "rgba(255,255,255,.25)" : "var(--surface)", color: on ? "#fff" : "var(--ink-3)" }}>{p.here}</span>
+              </button>
+            );
+          })}
+          <span className="ml-auto text-[10.5px] text-[var(--ink-3)]">shows who&rsquo;s on site in that window — the board &amp; ratios recheck for it</span>
+        </div>
+      )}
+
       {/* Hero tiles */}
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <HeroTile icon="children" tint="#2f6bd8" label="Children on site" value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
+          <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
           <HeroTile icon="staff" tint="#e2225f" label="Staff on duty" value="—" sub="assign staff on the board below" />
           <HeroTile icon="groups" tint="#0e9f6e" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
         </div>
