@@ -28,11 +28,15 @@ me.get("/", async (req, res) => {
     const t = await db.collection("tenants").doc(auth.tenantId).get();
     tenantName = t.exists ? t.data()!.name : null;
   }
+  // The parent's postcode, captured at signup, so the browse can locate them.
+  const userSnap = await db.collection("users").doc(req.user!.uid).get();
+  const postcode = (userSnap.data()?.postcode as string | undefined) ?? null;
   res.json({
     email: req.user!.email ?? null,
     role: auth.role,
     tenantId: auth.tenantId,
     tenantName,
+    postcode,
     franchiseId: auth.franchiseId,
   });
 });

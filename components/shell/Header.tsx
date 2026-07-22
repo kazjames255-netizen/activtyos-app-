@@ -43,19 +43,18 @@ export function Header({ portal }: { portal: PortalKey }) {
       </h1>
 
       {portal === "custdash" && (
-        <nav className="flex min-w-0 items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1 shadow-[inset_0_1px_2px_rgba(20,30,60,.04)]">
+        <nav className="flex min-w-0 items-center gap-5">
           {custTabs.map((t) => {
             const active = view === t.view;
             return (
               <Link
                 key={t.view}
                 href={t.href}
-                className="inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-all"
-                style={
+                className={`inline-flex min-w-0 items-center gap-1.5 text-[12.5px] no-underline transition-colors ${
                   active
-                    ? { background: "linear-gradient(135deg,var(--brand-2,#2f6bd8),var(--brand,#1d3a8f))", color: "#fff", boxShadow: "0 3px 10px -4px rgba(29,58,143,.5)" }
-                    : { color: "var(--ink-2)" }
-                }
+                    ? "font-semibold text-[var(--brand-2,#2f6bd8)]"
+                    : "font-medium text-[var(--ink-3)] hover:text-[var(--ink)]"
+                }`}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 <span className={`truncate ${t.wide ? "max-w-[180px]" : ""}`}>{t.label}</span>

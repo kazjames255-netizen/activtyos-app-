@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { apiPublic } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
+import { useTenantSettings } from "@/lib/settings";
 import { CroppedImage, type ServerListing } from "@/features/listings/ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -21,6 +22,9 @@ const fmtDate = (iso?: string) =>
 export function StorePage({ tenantId }: { tenantId: string }) {
   const [listings, setListings] = useState<ServerListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The provider's chosen public name (own name vs business name, set at
+  // onboarding) — falls back to the tenant's business name on the listing.
+  const { settings } = useTenantSettings(tenantId);
   // Same embed contract as BookPage: chromeless + height reports.
   const embedded = useSearchParams().has("embed");
 
@@ -47,7 +51,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
   if (!listings)
     return <div className="flex min-h-[40vh] items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">Loading…</div>;
 
-  const provider = listings[0]?.tenantName ?? "Our activities";
+  const provider = settings.providerName.trim() || listings[0]?.tenantName || "Our activities";
 
   return (
     <div className="min-h-screen bg-[#f4f7ff] pb-16">

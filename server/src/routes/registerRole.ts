@@ -13,10 +13,17 @@ import { db } from "../firebase";
 export const registerRole = Router();
 
 const schema = z.discriminatedUnion("role", [
-  z.object({ role: z.literal("parent") }),
+  // Postcode is captured at signup so the customer browse can sort/filter by
+  // distance without asking again. Optional — a parent can skip it.
+  z.object({ role: z.literal("parent"), postcode: z.string().trim().max(12).optional() }),
   z.object({
     role: z.enum(["company", "freelancer"]),
     businessName: z.string().trim().min(2).max(80),
+    // What parents see the provider called. The client resolves it (their own
+    // name vs the business name) since the person's name lives only on the
+    // Firebase profile; we store the result and the mode they picked.
+    providerName: z.string().trim().min(1).max(80).optional(),
+    providerNameMode: z.enum(["person", "business"]).optional(),
   }),
 ]);
 
@@ -35,13 +42,19 @@ registerRole.post("/", async (req, res) => {
   }
 
   if (parsed.data.role === "parent") {
-    await userRef.set({ email: user.email ?? null, role: "parent", chosen: true });
+    await userRef.set({
+      email: user.email ?? null,
+      role: "parent",
+      chosen: true,
+      ...(parsed.data.postcode ? { postcode: parsed.data.postcode } : {}),
+    });
     res.json({ role: "parent", tenantId: null });
     return;
   }
 
-  const { role, businessName } = parsed.data;
+  const { role, businessName, providerName, providerNameMode } = parsed.data;
   const tenantRef = db.collection("tenants").doc();
+  const libRef = db.collection("libraries").doc(tenantRef.id);
   await db.runTransaction(async (tx) => {
     tx.set(tenantRef, {
       name: businessName,
@@ -55,6 +68,15 @@ registerRole.post("/", async (req, res) => {
       role,
       chosen: true,
       tenantId: tenantRef.id,
+    });
+    // Seed the library with the public-facing name chosen at onboarding, so
+    // the storefront and Ratios roster read it from the very first load.
+    tx.set(libRef, {
+      tenantId: tenantRef.id,
+      settings: {
+        providerName: providerName || businessName,
+        providerNameMode: providerNameMode ?? "business",
+      },
     });
   });
   res.status(201).json({ role, tenantId: tenantRef.id, tenantName: businessName });

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { get as apiGet } from "@/lib/api";
+import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
   if (!icon) return <span className="w-4 flex-none" />;
@@ -103,16 +105,38 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   const isOpen = (label: string) => openOverrides[label] ?? label === activeGroupLabel;
 
+  // The workspace is branded with the provider's own name, not "ActivityOS" —
+  // that moves to the footer. For an operator that's their tenant (business)
+  // name; for a parent (no tenant) it's the provider they're linked to.
+  const [brand, setBrand] = useState<string | null>(null);
+  useEffect(() => {
+    apiGet<Me>("/api/me")
+      .then((m) => {
+        if (m.tenantName) {
+          setBrand(m.tenantName);
+          return;
+        }
+        // Parent side: brand with their provider (Phase 1 is single-provider).
+        apiGet<{ name: string }[]>("/api/my/providers")
+          .then((ps) => ps?.[0]?.name && setBrand(ps[0].name))
+          .catch(() => {});
+      })
+      .catch(() => {});
+  }, []);
+  const brandName = brand || "ActivityOS";
+
   return (
     <nav
       className="flex h-screen w-[248px] flex-none flex-col overflow-y-auto py-4 text-[13px]"
       style={{ background: "var(--side-bg)", color: "var(--side-ink)" }}
     >
-      <div
-        className="px-4 pb-4 text-[15px] font-extrabold"
-        style={{ fontFamily: "var(--ff-display)" }}
-      >
-        ActivityOS
+      <div className="px-4 pb-4">
+        <span
+          className="block truncate text-[17px] font-extrabold"
+          style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
+        >
+          {brandName}
+        </span>
       </div>
 
       {groups.map((group) => {
@@ -150,6 +174,34 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           </div>
         );
       })}
+
+      {/* The ActivityOS wordmark lives at the foot now the provider's name owns
+          the top — "powered by". mt-auto pins it to the bottom whether or not a
+          portal has a footer nav group above it. */}
+      <div className="mt-auto px-4 pb-2 pt-3">
+        <div className="border-t border-white/10 pt-3">
+          <div className="text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: "var(--side-muted)" }}>
+            Powered by
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <svg viewBox="0 0 32 32" width="22" height="22" fill="none" aria-hidden="true">
+              <rect width="32" height="32" rx="9" fill="url(#aosPlane)" />
+              <path d="M26.5 6 L5.5 13.7 L13 16.2 L15.6 24 L18.7 17 Z" fill="#fff" />
+              <path d="M13 16.2 L26.5 6 L18.7 17 Z" fill="#fff" opacity=".5" />
+              <defs>
+                <linearGradient id="aosPlane" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#2f6bd8" />
+                  <stop offset="1" stopColor="#1d3a8f" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <span className="text-[15px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>
+              <span style={{ color: "var(--side-ink)" }}>Activity</span>
+              <span style={{ color: "#EE1F63" }}>OS</span>
+            </span>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }

@@ -229,7 +229,36 @@ listings.get("/", async (req, res) => {
     if (tenantFilter && l.tenantId !== tenantFilter) return false;
     return (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
   });
-  res.json(await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))));
+
+  // Resolve each listing's category ids to their names, and its venue id to a
+  // location — the browse page filters by both. Names live per tenant in the
+  // library, so batch a library read per distinct tenant and build the maps.
+  const tenantIds = [...new Set(visible.map((d) => d.data().tenantId).filter(Boolean))];
+  const libs = await Promise.all(tenantIds.map((id) => db.collection("libraries").doc(id).get()));
+  const catNames = new Map<string, Map<string, string>>();
+  const venueById = new Map<string, Map<string, { name: string; address?: string; city?: string; lat?: number; lng?: number }>>();
+  libs.forEach((snap, i) => {
+    const data = snap.data() ?? {};
+    const cats = (data.categories ?? []) as { id: string; name: string }[];
+    const venues = (data.venues ?? []) as { id: string; name: string; address?: string; city?: string; lat?: number; lng?: number }[];
+    catNames.set(tenantIds[i], new Map(cats.map((c) => [c.id, c.name])));
+    venueById.set(tenantIds[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
+  });
+
+  const list = await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() })));
+  res.json(
+    list.map((l) => {
+      const byCat = catNames.get(l.tenantId as string);
+      // Prefer the names denormalised onto the listing at save; fall back to a
+      // live id→name resolve for listings saved before that field existed.
+      const stored = l.categoryNames as string[] | undefined;
+      const categories = stored ?? ((l.categoryIds as string[]) ?? [])
+        .map((id) => byCat?.get(id))
+        .filter((n): n is string => !!n);
+      const venue = venueById.get(l.tenantId as string)?.get(l.venueId as string);
+      return { ...l, categories, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+    }),
+  );
 });
 
 // GET /api/listings/:id — the direct link (`/book/{id}` reads this). Returns
@@ -293,7 +322,8 @@ listings.get("/:id", async (req, res) => {
 
   // The slice of the tenant's library this listing references.
   const libSnap = await db.collection("libraries").doc(l.tenantId).get();
-  const lib = libSnap.exists ? (libSnap.data() as Record<string, { id: string }[]>) : {};
+  const libData = libSnap.exists ? (libSnap.data() as Record<string, unknown>) : {};
+  const lib = libData as Record<string, { id: string }[]>;
   const pick = (arr: { id: string }[] | undefined, ids: string[] | undefined) =>
     (arr ?? []).filter((x) => (ids ?? []).includes(x.id));
   const library = {
@@ -303,11 +333,29 @@ listings.get("/:id", async (req, res) => {
     categories: lib.categories ?? [],
   };
 
-  res.json({ ...joined, bundle, library });
+  // Parents see the provider's chosen public name (own name vs business name,
+  // set at onboarding) rather than the business name denormalised onto the
+  // listing at creation. Falls back to that stored name when unset.
+  const providerName = (libData.settings as { providerName?: string } | undefined)?.providerName?.trim();
+  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised
 // listing name, so editing/deleting a listing never corrupts past bookings.)
+
+// Resolve category ids to their current names from the tenant's library and
+// store them ON the listing. Category ids are volatile — the freelancer app
+// regenerates them whenever it re-seeds (e.g. localStorage cleared), which
+// orphans any listing referencing the old ids and makes their tags silently
+// vanish from Browse. Denormalising the names at save time means a listing
+// carries its own labels and never depends on that fragile join surviving.
+async function categoryNamesFor(tenantId: string, categoryIds: unknown): Promise<string[]> {
+  const ids = Array.isArray(categoryIds) ? (categoryIds as string[]) : [];
+  if (!ids.length) return [];
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() ?? {};
+  const byId = new Map(((lib.categories ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
+  return ids.map((id) => byId.get(id)).filter((n): n is string => !!n);
+}
 
 listings.post("/", async (req, res) => {
   const auth = req.auth!;
@@ -337,6 +385,7 @@ listings.post("/", async (req, res) => {
     passes: data.passes ?? [],
     status: data.status ?? "draft",
     visibility: data.visibility ?? "public",
+    categoryNames: await categoryNamesFor(auth.tenantId, data.categoryIds),
     tenantId: auth.tenantId,
     tenantName: tenant.exists ? tenant.data()!.name : "Unknown provider",
   };
@@ -380,6 +429,11 @@ listings.put("/:id", async (req, res) => {
   if (data.title ?? data.name) {
     patch.name = data.title ?? data.name;
     patch.title = data.title ?? data.name;
+  }
+  // Re-denormalise the category labels whenever the tags change, so the stored
+  // names stay in step with the picks.
+  if ("categoryIds" in data) {
+    patch.categoryNames = await categoryNamesFor(own.snap.data()!.tenantId as string, data.categoryIds);
   }
   await own.snap.ref.update(patch);
   const merged = { ...own.snap.data()!, ...patch };

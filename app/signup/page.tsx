@@ -57,6 +57,10 @@ function SignupForm() {
   const [accountType, setAccountType] = useState<AccountType>("parent");
   const [businessName, setBusinessName] = useState("");
   const [name, setName] = useState("");
+  // What parents see this provider called — their own name or the business name.
+  const [providerNameMode, setProviderNameMode] = useState<"person" | "business">("business");
+  // Parent's postcode — captured here so browse can sort by distance without asking.
+  const [postcode, setPostcode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +86,10 @@ function SignupForm() {
       setError("Enter your business name.");
       return;
     }
+    if (needsBusinessName && providerNameMode === "person" && name.trim().length < 2) {
+      setError("Enter your name, or choose to show your business name to parents.");
+      return;
+    }
     setBusy(true);
     try {
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
@@ -98,7 +106,15 @@ function SignupForm() {
 
       await apiPost("/api/register-role", {
         role: accountType,
-        ...(needsBusinessName ? { businessName: businessName.trim() } : {}),
+        ...(accountType === "parent" && postcode.trim() ? { postcode: postcode.trim() } : {}),
+        ...(needsBusinessName
+          ? {
+              businessName: businessName.trim(),
+              providerNameMode,
+              providerName:
+                (providerNameMode === "person" ? name.trim() : businessName.trim()) || businessName.trim(),
+            }
+          : {}),
       });
       router.replace(ACCOUNT_TYPES.find((t) => t.value === accountType)!.home);
     } catch (err) {
@@ -198,6 +214,57 @@ function SignupForm() {
             className="w-full"
           />
         </div>
+        {!inviteToken && accountType === "parent" && (
+          <div>
+            <FieldLabel>Postcode <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
+            <Input
+              autoComplete="postal-code"
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value.toUpperCase())}
+              placeholder="e.g. NN5 7EA"
+              className="w-full"
+            />
+            <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Lets us show you activities nearest to you. You can change it later.</p>
+          </div>
+        )}
+        {needsBusinessName && (
+          <div>
+            <FieldLabel>What should parents see you as?</FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["business", "My business name", businessName.trim() || "Your business name"],
+                  ["person", "My own name", name.trim() || "Your name"],
+                ] as const
+              ).map(([mode, heading, preview]) => {
+                const on = providerNameMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setProviderNameMode(mode)}
+                    className="rounded-xl border p-2.5 text-left transition-colors"
+                    style={
+                      on
+                        ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" }
+                        : { borderColor: "var(--line)", background: "var(--surface)" }
+                    }
+                  >
+                    <div className="text-[11px] font-bold" style={{ color: on ? "var(--brand-strong)" : "var(--ink-3)" }}>
+                      {heading}
+                    </div>
+                    <div className="truncate text-[13.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>
+                      {preview}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">
+              This is your name on booking pages and to families, and the default on your ratios team. You can change it later in Setup.
+            </p>
+          </div>
+        )}
         <div>
           <FieldLabel>Email</FieldLabel>
           <Input
