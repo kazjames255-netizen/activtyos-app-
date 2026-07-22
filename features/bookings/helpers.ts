@@ -296,7 +296,7 @@ export function payTone(pay: string): BadgeTone {
 export function payLabel(pay: string): string {
   if (pay === "Funded") return "Funded £0";
   // The full phrase is too long for a badge sitting in a row of them.
-  if (pay === "Awaiting voucher payment") return "Awaiting voucher";
+  if (pay === "Awaiting voucher payment") return "Voucher pending";
   return pay;
 }
 
