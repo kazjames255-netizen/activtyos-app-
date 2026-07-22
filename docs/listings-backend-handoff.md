@@ -2260,6 +2260,17 @@ Also wire the operator **"Change date"** button (`BookingDetail.tsx`, currently
 an `alert()` stub) to the same mechanic, and surface pending amend requests
 alongside cancellation requests when `amendSelfService` is off.
 
+**Move targets — validate server-side (the client only guides).** The amend
+modal now constrains the "move to" picker: it fetches the listing
+(`booking.listingId`, now exposed on the Booking wire type) and only offers
+**listed session dates with `spotsLeft > 0`** in the future, and it enforces the
+pass's **`bookRule`**: `"week"` = every one of that child's days must stay inside
+a single Mon–Sun week; `"listing"` = any week it runs; `"blocks"` = fixed block,
+no per-day moves (the modal tells them to cancel/rebook). **Re-check all of this
+on the endpoint** — a moved date must be a real running session with capacity,
+and the resulting day-set must still satisfy the pass's `bookRule`; reject
+otherwise. Don't trust the client's filtering.
+
 ---
 
 ## V — Per-child timing on the ratios feed (front end built, needs the data)
