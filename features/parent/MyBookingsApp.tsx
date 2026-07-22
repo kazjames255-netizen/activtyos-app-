@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
+import { filledDetails, type VoucherProvider } from "@/lib/settings";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
 function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => void }) {
@@ -110,8 +111,11 @@ const fmtIso = (iso: string) => {
 // and each pass's booking rule ("week" = all days in one Mon–Sun week,
 // "listing" = any week it runs, "blocks" = fixed block, moved as a whole).
 type AmendListing = {
-  blocks?: { sessions?: { date: string; spotsLeft: number }[] }[];
+  blocks?: { id: string; sessions?: { date: string; spotsLeft: number }[] }[];
   bookRules?: Record<string, string>;
+  location?: string | null;
+  address?: string | null;
+  city?: string | null;
 };
 // Monday of an ISO date's week — the key a "one week" pass rule groups by.
 const weekKey = (iso: string) => {
@@ -120,7 +124,7 @@ const weekKey = (iso: string) => {
   return d.toISOString().slice(0, 10);
 };
 
-function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: boolean) => void }) {
+function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: (changed: boolean) => void }) {
   const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
@@ -129,23 +133,12 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
   const [error, setError] = useState<string | null>(null);
   const days = booking.days ?? [];
 
-  const [listing, setListing] = useState<AmendListing | null>(null);
-
   useEffect(() => {
     if (!booking.tenantId) return;
     apiPublic<{ settings: Partial<AmendPolicy> }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => setPolicy({ ...AMEND_FALLBACK, ...r.settings }))
       .catch(() => {});
   }, [booking.tenantId]);
-
-  // The live schedule + pass rules, so a move can only land on a listed date
-  // and can't break the pass's day rule.
-  useEffect(() => {
-    if (!booking.listingId) return;
-    apiPublic<AmendListing>(`/api/listings/${encodeURIComponent(booking.listingId)}`)
-      .then(setListing)
-      .catch(() => {});
-  }, [booking.listingId]);
 
   const setMove = (oldIso: string, newIso: string) =>
     setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
@@ -173,7 +166,14 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
       });
       onDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn’t submit — try again");
+      const m = e instanceof Error ? e.message : "";
+      // The amend endpoint isn't live yet (§U) — 404s. Say so plainly rather
+      // than surfacing a raw "404 Not Found".
+      setError(
+        /404|not found/i.test(m)
+          ? "Date changes aren’t switched on for this provider yet — nothing was changed."
+          : m || "Couldn’t submit — try again",
+      );
       setBusy(false);
     }
   }
@@ -188,6 +188,10 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
   })();
   const rule = (listing?.bookRules ?? {})[booking.pass] ?? "listing";
   const fixed = rule === "blocks";
+  // A move within the same pass keeps the same day-count and price, so nothing
+  // comes back. Only a cheaper pass/day change (not offered in this modal yet)
+  // would set this true; until then the refund-destination question stays off.
+  const moneyBack = false;
   const keptWeeks = new Set(days.filter((iso) => !moves[iso]).map(weekKey));
   const resultDates = days.map((iso) => moves[iso] ?? iso);
   const weekOk = rule !== "week" || new Set(resultDates.map(weekKey)).size <= 1;
@@ -264,7 +268,10 @@ function AmendModal({ booking, onDone }: { booking: Booking; onDone: (changed: b
             </div>
           )}
 
-          {letChoose && (
+          {/* Only ask where money goes when a move actually returns some. A
+              same-pass date move keeps the price, so this only appears when the
+              new dates come out cheaper (the difference is refundable). */}
+          {letChoose && moneyBack && (
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">If money comes back, send it to</div>
               <div className="grid grid-cols-2 gap-2">
@@ -296,6 +303,29 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
+  // The listing this booking is on — matched by its block — for the venue in
+  // the detail and the live schedule + pass rules the amend modal needs.
+  const [info, setInfo] = useState<AmendListing | null>(null);
+  useEffect(() => {
+    if (!(expanded || amending) || info || !b.tenantId) return;
+    apiPublic<AmendListing[]>(`/api/listings?tenantId=${encodeURIComponent(b.tenantId)}`)
+      .then((ls) => setInfo((ls ?? []).find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null))
+      .catch(() => {});
+  }, [expanded, amending, info, b.tenantId, b.blockId]);
+
+  // For a voucher booking, the scheme's reference details (Edenred account
+  // number etc.) the provider entered — what the parent quotes to pay.
+  const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+  const [vScheme, setVScheme] = useState<VoucherProvider | null>(null);
+  useEffect(() => {
+    if (!expanded || vScheme || !b.tenantId || !isVoucher) return;
+    apiPublic<{ settings: { voucherProviders?: VoucherProvider[] } }>(`/api/public/library/${encodeURIComponent(b.tenantId)}`)
+      .then((r) => {
+        const schemes = r.settings?.voucherProviders ?? [];
+        setVScheme(schemes.find((v) => v.name === b.voucherScheme) ?? schemes.find((v) => (b.method ?? "").includes(v.name)) ?? null);
+      })
+      .catch(() => {});
+  }, [expanded, vScheme, isVoucher, b.tenantId, b.voucherScheme, b.method]);
   const answerOffer = async (action: "accept-offer" | "decline-offer") => {
     setOfferBusy(true);
     try {
@@ -351,7 +381,7 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
         )}
       </div>
 
-      {amending && <AmendModal booking={b} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
+      {amending && <AmendModal booking={b} listing={info} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
 
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
@@ -373,6 +403,19 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
 
       {expanded && (
         <div className="mt-2">
+          <SectionHead>Booking</SectionHead>
+          <DefRow label="Child" value={b.child} />
+          <DefRow label="Pass" value={b.pass} />
+          {b.timing && <DefRow label="Timing" value={b.timing} />}
+          {(info?.location || info?.address) && (
+            <>
+              <SectionHead>Where</SectionHead>
+              {info.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
+              {(info.address || info.city) && (
+                <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
+              )}
+            </>
+          )}
           <SectionHead>Sessions</SectionHead>
           {(b.sessions || []).map((s, i) => (
             <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
@@ -382,6 +425,20 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           <SectionHead>Payment</SectionHead>
           <DefRow label="Method" value={b.method} />
           <DefRow label="Total" value={money(b.amount)} />
+          {vScheme && filledDetails(vScheme).length > 0 && (
+            <div className="mt-2 rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] p-3">
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,#1d3a8f)]">Pay by {vScheme.name}</div>
+              <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Quote these to {vScheme.name} when you send your voucher payment:</div>
+              <div className="mt-1.5 flex flex-col gap-1">
+                {filledDetails(vScheme).map((d) => (
+                  <div key={d.id} className="flex items-baseline justify-between gap-3 text-[12.5px]">
+                    <span className="text-[var(--ink-3)]">{d.label}</span>
+                    <span className="font-extrabold tabular-nums">{d.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {b.cancel && (
             <>
               <SectionHead>Cancellation</SectionHead>
