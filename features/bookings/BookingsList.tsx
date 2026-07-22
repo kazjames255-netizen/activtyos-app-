@@ -11,6 +11,7 @@ import {
   matchesSearch,
   money,
   payLabel,
+  payLabelFor,
   payTone,
   bookedOn,
   byNewest,
@@ -59,6 +60,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const open = useBookingsStore((s) => s.open);
   const openRef = useBookingsStore((s) => s.openRef);
   const openCreate = useBookingsStore((s) => s.openCreate);
+  const act = useBookingsStore((s) => s.act);
 
   // Local, not in the store: a listing and a day are how you narrow the list
   // while working, not a view worth remembering between visits.
@@ -390,11 +392,23 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
 
                 <span className="hidden flex-none flex-wrap justify-end gap-1 md:flex">
                   <Badge tone={statusTone(b.status)}>{b.status}</Badge>
-                  <Badge tone={payTone(b.pay)}>{payLabel(b.pay)}</Badge>
+                  <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
                   {refundPending && (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
                   )}
                 </span>
+
+                {/* Voucher money arrives outside the app — reconcile it right
+                    here without opening the booking. */}
+                {b.pay === "Awaiting voucher payment" && !off && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }}
+                    title="Confirm the voucher money has arrived — marks it paid and tells the family"
+                    className="flex-none whitespace-nowrap rounded-full bg-[#0f7a44] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
+                  >
+                    Mark voucher received
+                  </button>
+                )}
 
                 <b className="flex-none text-right text-[16px] tabular-nums text-[var(--ink)]">
                   {money(b.amount)}

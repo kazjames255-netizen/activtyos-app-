@@ -7,6 +7,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { post as apiPost } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
 
 type AccountType = "parent" | "freelancer" | "company";
 
@@ -151,8 +152,12 @@ function SignupForm() {
   }
 
   return (
-    <Card className="w-full max-w-[440px] p-6">
-      <h1 className="mb-1 text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+    <Card className="w-full max-w-[440px] p-6" style={{ borderLeft: "4px solid #1d3a8f" }}>
+      <div className="mb-4 flex items-center gap-2.5">
+        <AosMark />
+        <AosWordmark className="text-[19px] font-extrabold" />
+      </div>
+      <h1 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
         {invite ? `Join ${invite.tenantName}` : "Create your account"}
       </h1>
       <p className="mb-4 text-[13px] text-[var(--ink-3)]">
@@ -304,7 +309,7 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+    <div className="flex min-h-screen items-center justify-center p-4" style={{ ...AUTH_LIGHT, background: "var(--bg)" }}>
       {/* useSearchParams requires a Suspense boundary during prerender */}
       <Suspense fallback={null}>
         <SignupForm />

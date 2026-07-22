@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money, payLabel, payTone, statusTone } from "@/features/bookings/helpers";
+import { money, payLabelFor, payTone, statusTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -50,6 +50,14 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   const firstDay = [...(booking.days ?? [])].sort()[0];
   const advice = policy ? refundFor(policy, firstDay, booking.amount, new Date().toISOString(), "parent") : null;
   const refundDue = !!advice && advice.amount > 0;
+  // A voucher was paid outside the app — a refund can't go "back to card"; it
+  // goes back through the scheme (slow) or into the wallet (instant).
+  const scheme = booking.voucherScheme;
+  const isVoucher = !!scheme || (booking.method ?? "").toLowerCase().includes("voucher");
+  // Nudge voucher refunds toward the wallet — reimbursing a voucher is slow.
+  useEffect(() => {
+    if (isVoucher) setRefundPref("wallet");
+  }, [isVoucher]);
 
   async function submit() {
     setBusy(true);
@@ -110,13 +118,21 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
         <div className="mt-2">
           <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(advice!.amount)} refund to</div>
           <div className="grid grid-cols-2 gap-2">
-            {([["card", "💳 Back to card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
+            {([
+              ["wallet", "👛 Wallet credit"],
+              ["card", isVoucher ? `↩︎ Back via ${scheme ?? "voucher"}` : "💳 Back to card"],
+            ] as const).map(([v, l]) => (
               <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
                 style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
                 {l}
               </button>
             ))}
           </div>
+          {isVoucher && (
+            <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+              💡 <b>Wallet credit is instant</b> and ready to spend on your next booking. A refund back through {scheme ?? "your voucher scheme"} has to be handled by your provider and can take a while.
+            </p>
+          )}
         </div>
       )}
 
@@ -406,10 +422,17 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           {b.cancel?.refund === "pending" && (
             <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
           )}
-          <Badge tone={payTone(b.pay)}>{payLabel(b.pay)}</Badge>
+          {!cancelled && <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>}
           <span className="ml-1 text-[14px] font-extrabold">{money(b.amount)}</span>
         </div>
       </div>
+
+      {cancelled && (
+        <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
+          <span aria-hidden className="text-[#c0392b]">✕</span>
+          <span><b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""} — nothing more to pay.</span>
+        </div>
+      )}
 
       <div className="mt-2 flex gap-2">
         {payable && (
@@ -476,11 +499,18 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           <SectionHead>Payment</SectionHead>
           <DefRow label="Method" value={b.method} />
           <DefRow label="Total" value={money(b.amount)} />
-          {vScheme && filledDetails(vScheme).length > 0 && (
+          {/* Voucher payment received — the provider reconciled the money. */}
+          {!cancelled && isVoucher && b.pay === "Paid" && (
+            <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[var(--green-soft,#e7f8ee)] px-3 py-2.5 text-[12.5px] font-semibold text-[#0f7a44]">
+              ✓ Voucher payment received{vScheme ? ` via ${vScheme.name}` : ""} — your booking is paid in full.
+            </div>
+          )}
+          {/* Still awaiting the voucher money — how to pay it. */}
+          {!cancelled && b.pay === "Awaiting voucher payment" && vScheme && filledDetails(vScheme).length > 0 && (
             <div className="mt-2 rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] p-3">
               <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,#1d3a8f)]">Pay by {vScheme.name}</div>
               <div className="mt-0.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-                Send <b>{money(b.amount)}</b> through {vScheme.name} using the details below — there&rsquo;s no card payment here. Your place is confirmed; {vScheme.name} shows as <b>paid</b> once your provider receives the money.
+                Send <b>{money(b.amount)}</b> through {vScheme.name} using the details below — there&rsquo;s no card payment here. Your place is confirmed; it shows as <b>paid</b> once your provider receives the money.
               </div>
               <div className="mt-1.5 flex flex-col gap-1">
                 {filledDetails(vScheme).map((d) => (
