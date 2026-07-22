@@ -401,6 +401,10 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
     setOfferBusy(false);
   };
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
+  // Refund state, so a cancelled booking tells the family what came back.
+  const refundAmt = b.cancel?.amount ?? 0;
+  const refundIssued = b.pay === "Refunded" || b.pay === "Partially refunded" || b.cancel?.refund === "approved";
+  const refundOwed = b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending";
   // Same rule as the server: confirmed places and operator invoices. A voucher
   // booking is paid OUTSIDE the app (through the scheme), then the provider
   // marks the money in — so no in-app card "Pay" button for it.
@@ -428,9 +432,18 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
       </div>
 
       {cancelled && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
           <span aria-hidden className="text-[#c0392b]">✕</span>
-          <span><b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""} — nothing more to pay.</span>
+          <span>
+            <b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""}
+            {refundIssued ? (
+              <> — <b className="text-[#0f7a44]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
+            ) : refundOwed && refundAmt > 0 ? (
+              <> — a <b>{money(refundAmt)} refund</b> is due; your provider is processing it{isVoucher ? " back through your voucher scheme" : ""}.</>
+            ) : (
+              <> — no refund was due.</>
+            )}
+          </span>
         </div>
       )}
 

@@ -642,7 +642,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               </Button>
             </>
           )}
-          {b.cancel?.refund === "pending" && (() => {
+          {/* A refund is owed and not yet actioned — the cancel sets full /
+              partial (or pending); approve/decline move it to approved/declined. */}
+          {(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (() => {
             const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
             return (
               <>
@@ -712,9 +714,17 @@ function RefundSummary({ booking }: { booking: Booking }) {
         <div className="mt-1.5">
           <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>{label}</Badge>
         </div>
+        {/* How much and why — the amount, its share of the total, and the
+            policy working the family was shown. */}
+        {c.refund !== "none" && c.amount != null && c.amount > 0 && b.amount > 0 && (
+          <div className="mt-1.5 text-[11.5px] text-[var(--ink-2)]">
+            <b>{money(c.amount)}</b> to refund — {Math.round((c.amount / b.amount) * 100)}% of {money(b.amount)}, under the cancellation policy.
+          </div>
+        )}
+        {c.msg && <div className="mt-1 text-[11px] italic text-[var(--ink-3)]">“{c.msg}”</div>}
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
-          {c.refund === "pending"
-            ? "The parent has asked to cancel — approve or decline the refund in the actions below."
+          {c.refund === "pending" || c.refund === "full" || c.refund === "partial"
+            ? "The parent asked to cancel — approve or issue the refund in the actions below."
             : b.paymentIntentId
               ? "Approved refunds go back to the parent's card automatically through your Stripe account."
               : "This booking wasn't paid by card in ActivityOS — settle any refund directly with the parent."}

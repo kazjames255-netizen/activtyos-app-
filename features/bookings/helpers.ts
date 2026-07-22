@@ -307,7 +307,10 @@ export function payLabel(pay: string): string {
  */
 export function payLabelFor(b: { pay: string; voucherScheme?: string; method?: string }): string {
   const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
-  if (b.pay === "Paid" && isVoucher) return "Voucher received";
+  if (!isVoucher) return payLabel(b.pay);
+  if (b.pay === "Paid") return "Voucher received";
+  // A voucher refund goes back through the scheme, not a card — say so.
+  if (b.pay === "Refunded" || b.pay === "Partially refunded") return `${payLabel(b.pay)} via voucher`;
   return payLabel(b.pay);
 }
 

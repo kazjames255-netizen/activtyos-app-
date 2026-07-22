@@ -335,7 +335,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             const kids = bookingKids(b);
             const lead = kids[0]?.name?.trim() || b.child?.trim() || b.booker;
             const att = attendeeCount(b);
-            const refundPending = b.cancel && b.cancel.refund === "pending";
+            // A refund is owed and not yet actioned (the cancel sets full /
+            // partial; approve/decline clear it). "pending" too, for safety.
+            const refundPending = !!b.cancel && ["full", "partial", "pending"].includes(b.cancel.refund ?? "");
+            const isVoucherBk = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
             const off = b.status === "Cancelled";
             return (
               <div
@@ -387,6 +390,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="block truncate text-[12.5px] text-[var(--ink)]">{b.dates}</span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">
                     {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · Ref {b.ref}
+                    {b.cancel && b.cancel.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
+                      <span className="font-semibold text-[var(--red,#e21d27)]"> · Refund {money(b.cancel.amount)}{b.amount > 0 ? ` (${Math.round((b.cancel.amount / b.amount) * 100)}%)` : ""}</span>
+                    )}
                   </span>
                 </span>
 
@@ -407,6 +413,18 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     className="flex-none whitespace-nowrap rounded-full bg-[#0f7a44] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
                   >
                     Mark voucher received
+                  </button>
+                )}
+
+                {/* Refund owed on a cancellation — action it from the row. For a
+                    voucher it's an out-of-app reimbursement the operator confirms. */}
+                {refundPending && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }}
+                    title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
+                    className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
+                  >
+                    {isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}
                   </button>
                 )}
 
