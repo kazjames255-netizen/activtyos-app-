@@ -2529,6 +2529,54 @@ your call — tell me and I'll match the front end to it.
 
 ---
 
+## CC — Messages: optional thread subject + document attachments
+
+Two message enhancements Kaz asked for. Both need you because they persist data;
+the front end is a small add once the fields/endpoint exist.
+
+### CC.1 — Optional per-thread subject/heading
+
+A sender can give a **new thread an optional subject** ("Trip consent", "Late
+pickup"), shown bold at the top of the thread and in the list row. Small change:
+- Add optional **`subject?: string`** to a thread. Set only from the *first*
+  message of a new thread (the compose payload) — replies don't change it.
+- Accept `subject` on `POST /api/messages` when it creates a new thread (ignore
+  it when posting into an existing thread). Return it on
+  `/api/messages/threads` + `/threads/:id`.
+- Notification email subject line uses it when present (falls back to sender
+  name, as today).
+Front end I'll add: an optional "Subject (optional)" input in the composer; bold
+`thread.subject` above the first message and as the list-row title.
+
+### CC.2 — Document attachments (popular formats)
+
+Attach files to a message — **PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, images
+(PNG/JPG/HEIC), TXT/CSV**. This needs the real **file-storage** milestone (same
+one the child-avatar inline data-URL is standing in for) — do NOT inline these
+as data URLs (a PDF/DOCX is far too big for a Firestore doc).
+
+Proposed shape:
+- Upload endpoint returning a stored ref: `POST /api/uploads` (multipart) →
+  `{ id, name, mime, size, url }`, stored in your file store (GCS/S3/Firebase
+  Storage), served via a signed/scoped URL. Scope reads to thread participants
+  (a parent must not read another family's attachment — same anonymous-read trap
+  as §"The rule that keeps biting").
+- Add optional **`attachments?: { id, name, mime, size, url }[]`** to a message;
+  accept it on `POST /api/messages`; return it on thread reads.
+- Enforce **type allow-list + a size cap** (suggest 10–15 MB) server-side;
+  don't trust the client's `mime`.
+- Email: link the attachment (or attach if small) rather than embedding.
+Front end I'll add: a 📎 attach button in the composer (accept-filtered file
+picker), selected-file chips with size + remove, and a download chip on received
+messages. I'll wire it to `/api/uploads` then include the returned refs in the
+send payload.
+
+Open question: do you want a **generic `/api/uploads`** (reusable for listing
+images, child photos, documents too) or a messages-specific one? I'd vote
+generic — it unblocks several "real file storage" TODOs at once.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime

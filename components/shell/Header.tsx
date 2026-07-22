@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { get as apiGet } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useUnreadMessages } from "@/lib/use-unread";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 
@@ -28,13 +29,23 @@ export function Header({ portal }: { portal: PortalKey }) {
   }, [portal]);
   const messageLabel = providers.length === 1 ? `Message ${providers[0].name}` : "Messages";
 
-  // The parent's three primary actions, promoted from the sidebar into a fancy
-  // top tab bar. Message is named after the provider when there's just one.
-  const custTabs = [
-    { view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true },
-    { view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false },
-    { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false },
-  ];
+  // Live unread total — drives the "new" bubble on the Messages tab so a reply
+  // is visible from any screen and clears once the thread is opened.
+  const unread = useUnreadMessages(portal);
+
+  // The parent gets three primary actions promoted into the top bar. Operators
+  // get a single Messages tab (same promotion) so replies are reachable from
+  // anywhere, not just the Communication group in the sidebar.
+  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number }[] =
+    portal === "custdash"
+      ? [
+          { view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread },
+          { view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 },
+          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
+        ]
+      : findNavItem(portal, "messages")
+        ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread }]
+        : [];
 
   return (
     <header className="flex h-14 flex-none items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-5">
@@ -42,21 +53,29 @@ export function Header({ portal }: { portal: PortalKey }) {
         {current?.label ?? view}
       </h1>
 
-      {portal === "custdash" && (
+      {tabs.length > 0 && (
         <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
-          {custTabs.map((t) => {
+          {tabs.map((t) => {
             const active = view === t.view;
             return (
               <Link
                 key={t.view}
                 href={t.href}
-                className="inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--surface)]"
+                className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--surface)]"
                 style={active
                   ? { background: "var(--brand-2, #2f6bd8)", color: "#fff", boxShadow: "0 1px 4px rgba(47,107,216,.35)" }
                   : { color: "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 <span className={`truncate ${t.wide ? "max-w-[180px]" : ""}`}>{t.label}</span>
+                {t.badge > 0 && (
+                  <span
+                    className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
+                    style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}
+                  >
+                    {t.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
