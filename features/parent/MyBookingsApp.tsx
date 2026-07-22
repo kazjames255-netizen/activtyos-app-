@@ -9,33 +9,55 @@ import { money, payLabel, payTone, statusTone } from "@/features/bookings/helper
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
+import { refundFor, policyById, policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
-function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => void }) {
+function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: () => void }) {
+  const [reason, setReason] = useState("");
   const [msg, setMsg] = useState("");
-  // A preference, not a demand: if the policy gives a refund, the family can
-  // take it as wallet credit instead of card. The amount still follows the
-  // cancellation policy — they can't insist on more.
   const [refundPref, setRefundPref] = useState<"card" | "wallet">("card");
-  const [noRefundCredit, setNoRefundCredit] = useState(false);
+  const [cfg, setCfg] = useState<{
+    policies: NamedPolicy[];
+    reasons: { id: string; label: string }[];
+    askReason: boolean;
+    letChoose: boolean;
+    noRefundCredit: boolean;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Does the provider still give a full-value credit note when the policy
-  // leaves no cash refund?
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { noRefundCredit?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
-      .then((r) => setNoRefundCredit(!!r.settings.noRefundCredit))
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+      .then((r) => {
+        const s = r.settings ?? {};
+        const allowCard = s.allowCardRefund ?? true;
+        setCfg({
+          policies: s.cancellationPolicies ?? [],
+          reasons: s.cancelReasons ?? [],
+          askReason: !!s.askReasonParent,
+          letChoose: allowCard && !!s.refundLetCustomerChoose,
+          noRefundCredit: !!s.noRefundCredit,
+        });
+      })
       .catch(() => {});
   }, [booking.tenantId]);
+
+  // What the provider's policy actually gives this booking, worked out from the
+  // notice to the first session — so the parent sees their entitlement, not a
+  // vague "if a refund is due".
+  const policy = cfg ? policyById(cfg.policies, listing?.cancellationPolicyId) ?? cfg.policies[0] ?? null : null;
+  const firstDay = [...(booking.days ?? [])].sort()[0];
+  const advice = policy ? refundFor(policy, firstDay, booking.amount, new Date().toISOString(), "parent") : null;
+  const refundDue = !!advice && advice.amount > 0;
 
   async function submit() {
     setBusy(true);
     setError(null);
     try {
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
-        msg: msg.trim() || undefined,
+        reason: reason || undefined,
+        msg: [reason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
       });
       onDone();
@@ -47,41 +69,65 @@ function CancelRequest({ booking, onDone }: { booking: Booking; onDone: () => vo
 
   return (
     <div className="mt-3 rounded-xl border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] p-3">
-      <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">
-        Request cancellation
-      </div>
-      <textarea
-        value={msg}
-        onChange={(e) => setMsg(e.target.value)}
-        placeholder="Tell the provider why (optional)…"
-        rows={2}
-        className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none"
-      />
-      <div className="mt-2">
-        <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">If a refund is due, I&rsquo;d prefer</div>
-        <div className="grid grid-cols-2 gap-2">
-          {([["card", "💳 Back to card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
-            <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
-              style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
-              {l}
-            </button>
-          ))}
+      <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">Request cancellation</div>
+
+      {/* Entitlement, stated plainly from the policy. */}
+      {advice && (
+        <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
+          {advice.percent >= 100 ? (
+            <div className="font-extrabold text-[#0f7a44]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
+          ) : advice.amount > 0 ? (
+            <div className="font-extrabold text-[#0f7a44]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
+          ) : (
+            <div className="font-extrabold text-[#c0392b]">✗ No refund is due — this is inside the provider&rsquo;s no-refund window.</div>
+          )}
+          <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">{advice.reason}</div>
+          {policy && (
+            <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+              <span className="font-semibold text-[var(--ink-2)]">{policy.name} policy:</span> {policyWording(policy)}
+            </div>
+          )}
+          {advice.amount === 0 && cfg?.noRefundCredit && (
+            <div className="mt-1 text-[11px] font-semibold text-[#0f7a44]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
+          )}
         </div>
-      </div>
+      )}
+
+      {cfg?.askReason && cfg.reasons.length > 0 && (
+        <select value={reason} onChange={(e) => setReason(e.target.value)}
+          className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)]">
+          <option value="">Reason for cancelling…</option>
+          {cfg.reasons.map((r) => <option key={r.id} value={r.label}>{r.label}</option>)}
+        </select>
+      )}
+
+      <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Anything to add? (optional)…" rows={2}
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+
+      {/* Card vs wallet only matters when there's a cash refund and the provider
+          lets the customer choose where it goes. */}
+      {refundDue && cfg?.letChoose && (
+        <div className="mt-2">
+          <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(advice!.amount)} refund to</div>
+          <div className="grid grid-cols-2 gap-2">
+            {([["card", "💳 Back to card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
+                style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
         <Button variant="danger" sm onClick={submit} disabled={busy}>
           {busy ? "Sending…" : "Send cancellation request"}
         </Button>
       </div>
-      {noRefundCredit && (
-        <div className="mt-1.5 rounded-lg bg-[var(--green-soft,#e7f8ee)] px-2.5 py-1.5 text-[11px] font-semibold text-[#0f7a44]">
-          👛 Even if the policy leaves no refund, this provider gives you a <b>credit note for the full amount</b> to use on a future booking.
-        </div>
-      )}
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
-        The provider reviews your request and decides the refund under their
-        cancellation policy — this is only your preference for how any refund reaches you.
+        Cancelling is a request your provider reviews. {advice ? "The refund above is what their policy gives — they confirm and issue it." : "They confirm the refund under their cancellation policy."}
       </div>
     </div>
   );
@@ -116,6 +162,8 @@ type AmendListing = {
   location?: string | null;
   address?: string | null;
   city?: string | null;
+  /** Which cancellation policy this listing uses — to state the refund due. */
+  cancellationPolicyId?: string;
 };
 // Monday of an ISO date's week — the key a "one week" pass rule groups by.
 const weekKey = (iso: string) => {
@@ -307,11 +355,11 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
   // the detail and the live schedule + pass rules the amend modal needs.
   const [info, setInfo] = useState<AmendListing | null>(null);
   useEffect(() => {
-    if (!(expanded || amending) || info || !b.tenantId) return;
+    if (!(expanded || amending || cancelling) || info || !b.tenantId) return;
     apiPublic<AmendListing[]>(`/api/listings?tenantId=${encodeURIComponent(b.tenantId)}`)
       .then((ls) => setInfo((ls ?? []).find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null))
       .catch(() => {});
-  }, [expanded, amending, info, b.tenantId, b.blockId]);
+  }, [expanded, amending, cancelling, info, b.tenantId, b.blockId]);
 
   // For a voucher booking, the scheme's reference details (Edenred account
   // number etc.) the provider entered — what the parent quotes to pay.
@@ -458,6 +506,7 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
       {cancelling && !cancelled && (
         <CancelRequest
           booking={b}
+          listing={info}
           onDone={() => {
             setCancelling(false);
             refresh();

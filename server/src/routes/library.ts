@@ -125,6 +125,10 @@ const PUBLIC_SETTINGS_KEYS = [
   "allowCardRefund",
   "refundLetCustomerChoose",
   "noRefundCredit",
+  // Cancellation refund terms (bands + prose) are customer-facing — a parent
+  // needs them to know what they're entitled to when cancelling.
+  "cancellationPolicies",
+  "askReasonParent",
   "voucherProviders",
   "voucherHoldDays",
   "voucherClearDays",
@@ -147,6 +151,12 @@ libraryPublic.get("/:tenantId", async (req, res) => {
 
   const settings: Record<string, unknown> = {};
   for (const k of PUBLIC_SETTINGS_KEYS) if (k in src) settings[k] = src[k];
+
+  // Only the reasons a parent may be offered — "both" and "parent" scoped. The
+  // full list carries provider-only wording ("Staffing") that isn't theirs to
+  // see, so it stays out; this exposes just the parent-facing slice.
+  const reasons = (src.cancellationReasons ?? []) as { id: string; label: string; who?: string }[];
+  settings.cancelReasons = reasons.filter((r) => r.who !== "provider").map((r) => ({ id: r.id, label: r.label }));
 
   res.json({ settings, childQuestions: data.childQuestions ?? null });
 });
