@@ -9,6 +9,7 @@ import {
   bookingKids,
   kidActiveDays,
   money,
+  payLabelFor,
   payTone,
   refundedTotal,
   sessionCount,
@@ -443,7 +444,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
-            <Badge tone={payTone(b.pay)}>{b.pay === "Funded" ? "Funded £0" : b.pay}</Badge>
+            <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
           )}
         </div>
 
@@ -643,6 +644,11 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           )}
           {b.cancel?.refund === "pending" && (
             <>
+              {(!!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher")) && (
+                <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
+                  Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card. If the family took <b>wallet credit</b> there&rsquo;s nothing to send — it&rsquo;s settled. Otherwise you&rsquo;ll need to reimburse the refund back through {b.voucherScheme ?? "the scheme"} the same way it came in.
+                </div>
+              )}
               <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
                 Approve refund{b.paymentIntentId ? " (via Stripe)" : ""}
               </Button>

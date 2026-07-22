@@ -1759,6 +1759,36 @@ the Bookings screen is plenty. No job that cancels anything.
    Store rather than recompute: they'd drift the moment a provider changes a
    setting, and the parent was shown a specific date.
 
+### Reconcile → notify the family (front end built, needs the notification)
+
+The operator can now **reconcile a voucher payment** without opening the
+booking — a **"Mark voucher received"** button sits on the booking row
+(`BookingsList`) and in the detail (`BookingDetail`) for any
+`"Awaiting voucher payment"` booking. It fires the existing `paid` row action,
+which sets `pay: "Paid"`. The front end then reflects it everywhere: the badge
+reads **"Voucher received"** (not a bare "Paid"), and the parent's booking swaps
+the "Pay by {scheme}" block for a green **"✓ Voucher payment received"** note.
+
+**What's missing:** the `paid` action, when the booking was a voucher booking
+(`voucherScheme` set / was `"Awaiting voucher payment"`), should **notify the
+family** — an **email** ("we've received your {scheme} payment, you're paid in
+full") and an **in-app message** on their thread. Other actions already email
+(`emailBookingConfirmed` etc. in `bookings.ts`), so it's the same shape; just
+add the voucher-received case to the `paid` branch.
+
+### Refunding a voucher booking — store the family's choice
+
+A voucher was paid outside the app, so a refund can't go "back to card". The
+parent's cancel form now offers **wallet credit (instant)** or **back via the
+scheme (slow)** — never card — and nudges toward wallet. But `CancelInfo`
+doesn't persist `refundPref`, so the operator's refund-approve screen can't yet
+show which the family chose (it shows a generic voucher note instead). **Store
+`refundPref` on the cancellation** so the operator sees either "credited to
+wallet — nothing to send" or "reimburse £X back through {scheme}". And
+`refund-approve` on a voucher booking must **not** try Stripe (there's no
+`paymentIntentId`) — it's a wallet credit or an out-of-app reimbursement the
+operator does manually.
+
 ### The deadline is not just the hold period
 
 Worth reading `lib/vouchers.ts` before touching this. A flat "held for 7 days"

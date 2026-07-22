@@ -698,35 +698,36 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
     const kids = done.children.join(", ");
     const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
     const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
-    const labCls = "w-[92px] flex-none text-[var(--ink-3)]";
+    const labCls = "w-[92px] flex-none text-[#8a86a3]";
+    const valCls = "font-semibold text-[#171534]";
     return (
       <div className="mx-auto max-w-[540px] p-6 text-center">
         <div className="text-[44px]">🎉</div>
-        <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em]">
+        <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]">
           Congratulations{kids ? `, ${kids} is booked in!` : ", you’re booked in!"}
         </h2>
-        <p className="mt-1.5 text-[13px] text-[var(--ink-3)]">A confirmation email is on its way with everything below.</p>
+        <p className="mt-1.5 text-[13px] text-[#6a6785]">A confirmation email is on its way with everything below.</p>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-left">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e9f2] bg-white text-left shadow-[0_10px_30px_-14px_rgba(20,30,80,.25)]">
           <div className="px-4 py-3" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
             <div className="text-[15px] font-extrabold text-white">{listing.title || listing.name}</div>
             <div className="text-[11.5px] text-[#cdddf7]">{listing.tenantName}</div>
           </div>
           <div className="p-4">
-            {kids && <div className={rowCls}><span className={labCls}>Who</span><span className="font-semibold">{kids}</span></div>}
-            {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>Pass</span><span className="font-semibold">{done.passes.join(", ")}</span></div>}
-            {when && <div className={rowCls}><span className={labCls}>📅 Starts</span><span className="font-semibold">{when}</span></div>}
-            {where && <div className={rowCls}><span className={labCls}>📍 Where</span><span className="font-semibold">{where}</span></div>}
-            <div className="mt-2 flex items-center justify-between border-t border-[var(--line)] pt-2.5 text-[13px]">
-              <span className="text-[var(--ink-3)]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
-              <b className="text-[15px]">{money(done.total)} paid</b>
+            {kids && <div className={rowCls}><span className={labCls}>Who</span><span className={valCls}>{kids}</span></div>}
+            {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>Pass</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
+            {when && <div className={rowCls}><span className={labCls}>📅 Starts</span><span className={valCls}>{when}</span></div>}
+            {where && <div className={rowCls}><span className={labCls}>📍 Where</span><span className={valCls}>{where}</span></div>}
+            <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
+              <span className="text-[#8a86a3]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
+              <b className="text-[15px] text-[#171534]">{money(done.total)} paid</b>
             </div>
           </div>
         </div>
 
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>See my bookings</a>
-          <a href="/custdash/browse" className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-[13px] font-bold text-[var(--ink-2)]">← Browse more activities</a>
+          <a href="/custdash/browse" className="rounded-lg border border-[#dbe0ec] bg-white px-5 py-2.5 text-[13px] font-bold text-[#4a4763]">← Browse more activities</a>
         </div>
       </div>
     );

@@ -300,6 +300,17 @@ export function payLabel(pay: string): string {
   return pay;
 }
 
+/**
+ * Pay label that keeps the voucher context after it's reconciled — a paid
+ * voucher booking reads "Voucher paid", not a bare "Paid", so an operator can
+ * still tell how the money came in.
+ */
+export function payLabelFor(b: { pay: string; voucherScheme?: string; method?: string }): string {
+  const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+  if (b.pay === "Paid" && isVoucher) return "Voucher received";
+  return payLabel(b.pay);
+}
+
 // Attendee helpers — a booking is either multi-kid (kids[]) or single child.
 export function bookingKids(b: Booking): Kid[] {
   if (b.kids && b.kids.length) return b.kids;
