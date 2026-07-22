@@ -268,13 +268,6 @@ export interface WizardDraft {
   /** Whether age caps are in use — separate from the values, so the section
    *  can be on with every band left blank (no limit). */
   ageCapsOn?: boolean;
-  /**
-   * Per-listing age-band overrides, keyed by group id: this camp runs that
-   * group over `{from,to}` instead of the master band in settings. Only used
-   * when the tenant setting `allowListingAgeRange` is on; the master group is
-   * never touched. Enforcement/grouping that respects these is backend (§S).
-   */
-  ageRanges?: Record<string, { from: number; to: number }>;
   showSpaces: boolean;
   /** Which category is featured on the hero image when several are chosen. */
   heroCategoryId?: string | null;
@@ -1316,34 +1309,14 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   // listing's per-day cap for each group. That keeps a listing from ever
   // contradicting the group config — you can go below the room size, never above.
   const { settings } = useSettings();
-  const allowRange = settings.allowListingAgeRange;
-  const ranges = d.ageRanges ?? {};
   const from = parseInt(d.ageFrom, 10);
   const to = parseInt(d.ageTo, 10);
-  // Effective bands: the master group age range, unless this listing overrides
-  // it AND the tenant allows per-listing ranges. name/colour/id/maxSize always
-  // stay master — only the age band can shift, and only for this camp.
-  const eff = settings.ratioGroups.map((g) => {
-    const r = allowRange ? ranges[g.id] : undefined;
-    return r ? { ...g, ageFrom: r.from, ageTo: r.to } : g;
-  });
-  // Only the groups that overlap this listing's age range are relevant.
-  const groups = eff.filter(
+  // Groups are the tenant master record (name, age band, ratio, room size) — a
+  // listing never changes them, it only caps places. Show the groups that
+  // overlap this listing's age range.
+  const groups = settings.ratioGroups.filter(
     (g) => (!Number.isFinite(to) || g.ageFrom <= to) && (!Number.isFinite(from) || g.ageTo >= from),
   );
-  const setRange = (id: string, key: "from" | "to", v: string) => {
-    const raw = parseInt(v, 10);
-    if (Number.isNaN(raw) || raw < 0) return;
-    const g = settings.ratioGroups.find((x) => x.id === id);
-    if (!g) return;
-    const cur = ranges[id] ?? { from: g.ageFrom, to: g.ageTo };
-    upd({ ageRanges: { ...ranges, [id]: { ...cur, [key]: raw } } });
-  };
-  const resetRange = (id: string) => {
-    const next = { ...ranges };
-    delete next[id];
-    upd({ ageRanges: next });
-  };
   // These caps ALLOCATE the day's places across ages — so they can never add
   // up to more than the total. Each one is clamped to whatever's left after
   // the others, which makes "37 out of 22" impossible rather than something to
@@ -1385,10 +1358,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
             Cap only the ages you want to limit — you can set a max on one group and leave the rest blank,
             and the day&rsquo;s {Number.isFinite(ceiling) ? `${ceiling} places` : "total"} still can&rsquo;t be exceeded
             (the uncapped ages share whatever&rsquo;s left). <b>Blank = no limit; 0 = closed</b>, so no child that age
-            can book. <b>Per day</b>, since a room refills each day. Group names and room sizes are set in <b>Setup → Age groups &amp; rooms</b>.{" "}
-            {allowRange
-              ? "Age ranges are editable here for this camp only — the master group and your other listings don't change."
-              : "Age ranges are fixed there too — here you only set this listing's caps."}
+            can book. <b>Per day</b>, since a room refills each day. Group names, ages and room sizes are set in <b>Setup → Age groups &amp; rooms</b> — here you only set this listing&rsquo;s caps.
           </div>
         </div>
         {!on && (
@@ -1410,23 +1380,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               {/* Name + age + room size are the shared group — read-only here,
                   defined in Setup → Age groups & rooms. */}
               <span className="w-[120px] text-[12px] font-semibold">{g.name}</span>
-              {allowRange ? (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-3)]">
-                  <input type="number" min={0} max={21} value={g.ageFrom} onChange={(e) => setRange(g.id, "from", e.target.value)}
-                    className="w-[46px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[12px]" aria-label={`${g.name} minimum age for this listing`} />
-                  –
-                  <input type="number" min={0} max={21} value={g.ageTo} onChange={(e) => setRange(g.id, "to", e.target.value)}
-                    className="w-[46px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[12px]" aria-label={`${g.name} maximum age for this listing`} />
-                  yrs
-                  {ranges[g.id] && (
-                    <button type="button" onClick={() => resetRange(g.id)} title="Back to the group's standard age range" className="ml-0.5 rounded-full bg-[#eef2ff] px-1.5 py-[1px] text-[9.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">
-                      this camp · reset
-                    </button>
-                  )}
-                </span>
-              ) : (
-                <span className="text-[11px] text-[var(--ink-3)]">{g.ageFrom}–{g.ageTo} yrs</span>
-              )}
+              <span className="text-[11px] text-[var(--ink-3)]">{g.ageFrom}–{g.ageTo} yrs</span>
               {g.maxSize > 0 && <span className="text-[10.5px] text-[var(--ink-3)]" title="Room capacity, set in Setup → Age groups & rooms">room holds {g.maxSize}</span>}
               <span className="ml-auto inline-flex items-center gap-1.5">
                 <input type="number" min={0} max={Number.isFinite(inputMax) ? inputMax : undefined} value={caps[g.id] ?? ""} placeholder="no limit"
