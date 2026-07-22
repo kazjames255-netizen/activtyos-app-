@@ -337,14 +337,6 @@ export interface TenantSettings {
    * A tenant-level policy, not per session.
    */
   ratioGroups: RatioGroup[];
-  /**
-   * Whether a listing may narrow or shift a group's age range for that camp
-   * only. Off (default): the group's age band from `ratioGroups` is the master
-   * everywhere and is read-only in a listing. On: a listing can override the
-   * band per-camp (stored on the listing, master untouched), so one camp can
-   * run Explorers as 8–12 while the group stays 8–10 elsewhere.
-   */
-  allowListingAgeRange: boolean;
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -460,7 +452,6 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   voucherDueByDays: 0,
   voucherWhenClose: "hide",
   ratioGroups: DEFAULT_RATIO_GROUPS,
-  allowListingAgeRange: false,
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,

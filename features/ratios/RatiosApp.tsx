@@ -89,15 +89,15 @@ const EYFS_3TO5_QT = 13;
 // ────────────────────────────────────────────────────────────────────────
 // Ratio policy table — editable, persists to settings.
 // ────────────────────────────────────────────────────────────────────────
-function PolicyTable({ groups, onChange }: { groups: RatioGroup[]; onChange: (g: RatioGroup[]) => void }) {
-  const patch = (i: number, fn: (g: RatioGroup) => RatioGroup) => onChange(groups.map((x, j) => (j === i ? fn(x) : x)));
-  const num = (v: string, min: number) => Math.max(min, parseInt(v, 10) || min);
-  const inp = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]";
+// Read-only view of the tenant's ratio groups. These are the ONE master record,
+// edited only in Setup → Age groups & rooms; the board here just reads them so
+// there's no second place that could contradict Setup.
+function PolicyTable({ groups }: { groups: RatioGroup[] }) {
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-        Your ratio policy <span className="font-normal text-[var(--ink-3)]">— colours, names, target ratios &amp; sizes; every edit flows to every card below</span>
+        Your ratio policy <span className="font-normal text-[var(--ink-3)]">— set in Setup → Age groups &amp; rooms; shown here for reference</span>
       </summary>
       <div className="overflow-x-auto px-3.5 pb-3.5">
         <table className="w-full border-collapse text-[12.5px]">
@@ -107,49 +107,24 @@ function PolicyTable({ groups, onChange }: { groups: RatioGroup[]; onChange: (g:
               <th className="px-2 py-1.5 text-left font-extrabold">Group</th>
               <th className="px-2 py-1.5 text-left font-extrabold">Age</th>
               <th className="px-2 py-1.5 text-left font-extrabold">Target ratio</th>
-              <th className="px-2 py-1.5 text-left font-extrabold">Max size</th>
-              <th className="px-2 py-1.5" />
+              <th className="px-2 py-1.5 text-left font-extrabold">Room size</th>
             </tr>
           </thead>
           <tbody>
-            {groups.map((g, i) => (
+            {groups.map((g) => (
               <tr key={g.id} className="border-t border-[var(--line)]">
-                <td className="px-2 py-1.5">
-                  <input type="color" value={g.colour} onChange={(e) => patch(i, (x) => ({ ...x, colour: e.target.value }))} className="h-7 w-10 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" aria-label={`${g.name} colour`} />
-                </td>
-                <td className="px-2 py-1.5">
-                  <input value={g.name} onChange={(e) => patch(i, (x) => ({ ...x, name: e.target.value }))} className={`${inp} w-[130px] font-bold`} placeholder="Group name" />
-                </td>
-                <td className="px-2 py-1.5">
-                  <span className="inline-flex items-center gap-1">
-                    <input type="number" min={0} max={21} value={g.ageFrom} onChange={(e) => patch(i, (x) => ({ ...x, ageFrom: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
-                    <span className="text-[var(--ink-3)]">to</span>
-                    <input type="number" min={0} max={21} value={g.ageTo} onChange={(e) => patch(i, (x) => ({ ...x, ageTo: num(e.target.value, 0) }))} className={`${inp} w-[52px]`} />
-                    <span className="text-[var(--ink-3)]">yrs</span>
-                  </span>
-                </td>
-                <td className="px-2 py-1.5">
-                  <span className="inline-flex items-center gap-1">1 :<input type="number" min={1} value={g.targetRatio} onChange={(e) => patch(i, (x) => ({ ...x, targetRatio: num(e.target.value, 1) }))} className={`${inp} w-[56px]`} /></span>
-                </td>
-                <td className="px-2 py-1.5">
-                  <input type="number" min={0} value={g.maxSize || ""} placeholder="none" onChange={(e) => patch(i, (x) => ({ ...x, maxSize: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className={`${inp} w-[64px]`} />
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  <button type="button" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label={`Remove ${g.name}`} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">×</button>
-                </td>
+                <td className="px-2 py-1.5"><span className="inline-block h-5 w-8 rounded" style={{ background: g.colour }} aria-label={`${g.name} colour`} /></td>
+                <td className="px-2 py-1.5 font-bold">{g.name}</td>
+                <td className="px-2 py-1.5 text-[var(--ink-2)]">{g.ageFrom}–{g.ageTo} yrs</td>
+                <td className="px-2 py-1.5 text-[var(--ink-2)]">1:{g.targetRatio}</td>
+                <td className="px-2 py-1.5 text-[var(--ink-2)]">{g.maxSize > 0 ? g.maxSize : <span className="text-[var(--ink-3)]">no cap</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => onChange([...groups, { id: uid(), name: `Group ${groups.length + 1}`, colour: "#2f6bd8", ageFrom: 0, ageTo: 18, targetRatio: 8, maxSize: 24 }])}
-            className="rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand-ink,#1d3a8f)]"
-          >
-            ＋ Add group
-          </button>
-          <span className="text-[11px] text-[var(--ink-3)]">Leave <b>max size</b> blank for no cap — you won&apos;t be warned when a group goes over.</span>
+        <div className="mt-2 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+          Colours, names, age bands, ratios and room sizes are your one master record — change them in
+          <b> Setup → Age groups &amp; rooms</b> and every board here and every listing updates at once.
         </div>
       </div>
     </details>
@@ -221,6 +196,9 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   // so a "met" that leans on a double-booked adult isn't really met.
   const staffGroupCount = Object.values(groupStaff).flat().reduce<Record<string, number>>((m, sid) => { m[sid] = (m[sid] ?? 0) + 1; return m; }, {});
   const doubleBooked = staff.filter((m) => (staffGroupCount[m.id] ?? 0) > 1);
+  // Children sitting in a group outside their age band — only ever happens by a
+  // manual drag. Allowed (you might have a reason) but flagged.
+  const misplaced = groups.flatMap((g) => inGroup(g.id).filter((c) => c.age < g.ageFrom || c.age > g.ageTo).map((c) => ({ name: c.name, age: c.age, group: g.name })));
   const staffNeeded = groups.reduce((n, g) => n + staffForLine(inGroup(g.id).length, g.targetRatio), 0) + staffForLine(inGroup("__unplaced").length, 8);
   const within = staffOnDuty >= staffNeeded;
   const overall = staffOnDuty > 0 ? totalChildren / staffOnDuty : 0;
@@ -232,14 +210,18 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
   const totalCapacity = capped.reduce((n, g) => n + g.maxSize, 0);
   const overGroups = groups.filter((g) => g.maxSize > 0 && inGroup(g.id).length > g.maxSize);
 
-  const Chip = ({ c, colour, onRemove }: { c: SessionChild; colour?: string; onRemove?: () => void }) => (
+  const Chip = ({ c, colour, onRemove, misfit }: { c: SessionChild; colour?: string; onRemove?: () => void; misfit?: string }) => (
     <span
       draggable
       onDragStart={() => setDragRef(c.childId ?? c.ref)}
+      title={misfit}
       className="inline-flex cursor-grab items-center gap-1 rounded-full border py-[3px] pl-2.5 pr-1.5 text-[11.5px] font-bold active:cursor-grabbing"
-      style={{ borderColor: colour ? `${colour}66` : "var(--line)", background: colour ? `${colour}12` : "var(--surface)", color: colour ?? "var(--ink)" }}
+      style={misfit
+        ? { borderColor: "#e21d27", boxShadow: "0 0 0 1.5px #e21d27", background: "#fdebec", color: "#c0392b" }
+        : { borderColor: colour ? `${colour}66` : "var(--line)", background: colour ? `${colour}12` : "var(--surface)", color: colour ?? "var(--ink)" }}
     >
       {c.name}
+      {misfit && <span className="rounded px-1 text-[9px] font-extrabold" style={{ background: "#f6c9cc" }}>⚠ age {c.age}</span>}
       {c.send && <span className="rounded px-1 text-[9px]" style={{ background: colour ? `${colour}22` : "var(--brand-soft)" }}>SEND</span>}
       {c.allergies && <span title="Allergy on file">⚠</span>}
       {onRemove && <button type="button" onClick={onRemove} aria-label={`Remove ${c.name}`} className="text-[13px] leading-none opacity-60">×</button>}
@@ -291,6 +273,17 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
           </div>
         )}
 
+        {/* Children moved outside their age group by hand — allowed, flagged. */}
+        {misplaced.length > 0 && (
+          <div className="flex items-start gap-2 border-b border-[#f6c9cc] bg-[#fdebec] px-4 py-2 text-[11.5px] leading-[1.45] text-[#c0392b]">
+            <span className="text-[13px]">⚠</span>
+            <span>
+              <b>{misplaced.map((m) => `${m.name} (age ${m.age}) in ${m.group}`).join(", ")}</b>{" "}
+              {misplaced.length === 1 ? "is" : "are"} outside their age group — moved by hand. Fine if it&rsquo;s deliberate; drag them back if not.
+            </span>
+          </div>
+        )}
+
         {/* Group cards */}
         <div className="grid gap-3 p-3 sm:grid-cols-2">
           {groups.map((g) => {
@@ -330,25 +323,39 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay }: {
                     {over && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">Over max ({kids.length}/{g.maxSize})</span>}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {kids.map((c) => <Chip key={c.ref} c={c} colour={g.colour} onRemove={() => setOverride((o) => ({ ...o, [c.childId ?? c.ref]: "__unplaced" }))} />)}
+                    {kids.map((c) => {
+                      const misfit = c.age < g.ageFrom || c.age > g.ageTo
+                        ? `Age ${c.age} is outside ${g.name} (${g.ageFrom}–${g.ageTo} yrs) — moved here manually`
+                        : undefined;
+                      return <Chip key={c.ref} c={c} colour={g.colour} misfit={misfit} onRemove={() => setOverride((o) => ({ ...o, [c.childId ?? c.ref]: "__unplaced" }))} />;
+                    })}
                     {kids.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">No children this age. Drag one here.</span>}
                   </div>
-                  {/* staff on this group */}
-                  <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-[var(--line)] pt-2">
-                    {staff.map((m) => {
-                      const on = (groupStaff[g.id] ?? []).includes(m.id);
-                      const clash = on && (staffGroupCount[m.id] ?? 0) > 1;
-                      return (
-                        <button key={m.id} type="button" onClick={() => setStaffFor(g.id, m.id)}
-                          title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : undefined}
-                          className="inline-flex items-center gap-1 rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
-                          style={on ? { borderColor: clash ? "#c0392b" : "transparent", background: g.colour, color: "#fff", boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                          {`${m.first} ${m.last}`.trim() || "Staff"}
-                          {clash && <span aria-label="assigned to more than one group">⚠</span>}
-                        </button>
-                      );
-                    })}
-                    {staff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">Add yourself and any helpers to your team to assign staff here.</span>}
+                  {/* staff on this group — tap a name to assign */}
+                  <div className="mt-2.5 border-t border-[var(--line)] pt-2">
+                    <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Staff on this group</span>
+                      {staff.length > 0 && <span className="text-[10px] text-[var(--ink-3)]">tap a name to add / remove</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {staff.map((m) => {
+                        const on = (groupStaff[g.id] ?? []).includes(m.id);
+                        const clash = on && (staffGroupCount[m.id] ?? 0) > 1;
+                        return (
+                          <button key={m.id} type="button" onClick={() => setStaffFor(g.id, m.id)}
+                            title={clash ? "Also assigned to another group — one adult can't cover two rooms at once" : on ? "Assigned — tap to remove" : "Tap to add to this group"}
+                            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-[3px] text-[11px] font-bold"
+                            style={on
+                              ? { borderColor: clash ? "#c0392b" : "transparent", background: g.colour, color: "#fff", boxShadow: clash ? "0 0 0 1.5px #c0392b" : undefined }
+                              : { borderStyle: "dashed", borderColor: "var(--ink-3)", color: "var(--ink-2)" }}>
+                            <span className="text-[10px] leading-none">{on ? "✓" : "＋"}</span>
+                            {`${m.first} ${m.last}`.trim() || "Staff"}
+                            {clash && <span aria-label="assigned to more than one group">⚠</span>}
+                          </button>
+                        );
+                      })}
+                      {staff.length === 0 && <span className="text-[11px] text-[var(--ink-3)]">No staff yet — add your team in <b>Your team</b> below, then tap them here to assign.</span>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -487,7 +494,7 @@ export function RatiosApp() {
   const [staffLib, setStaffLib] = useState<StaffMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [listing, setListing] = useState<string>("");
-  const { settings, save } = useSettings();
+  const { settings } = useSettings();
   const groups = settings.ratioGroups.length ? settings.ratioGroups : DEFAULT_RATIO_GROUPS;
 
   const refresh = useCallback(() => {
@@ -576,7 +583,7 @@ export function RatiosApp() {
       )}
 
       {/* Ratio policy — editable, persists */}
-      <PolicyTable groups={groups} onChange={(g) => void save({ settings: { ...settings, ratioGroups: g } })} />
+      <PolicyTable groups={groups} />
 
       {/* Calculator */}
       <RatioCalculator groups={groups} dayChildren={children} dateText={isToday ? "today" : dayLabel(date)} />

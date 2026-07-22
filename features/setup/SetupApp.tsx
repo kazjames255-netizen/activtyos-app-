@@ -1425,31 +1425,22 @@ export function SetupApp() {
         <>
           <Section
             title="Age groups & rooms"
-            lede="Set your age groups once, here. Each has a colour, an age band, a target staffing ratio and a room size — the most children that group can hold. These are used everywhere: the Ratios & groups board, the cover calculator, and the age limits on every listing."
+            lede="Set your groups once, here — colour, age band, staffing ratio, and room size (the most children the space holds). This is the single source; the Ratios board and every listing read from it."
           >
-            <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] px-3.5 py-3 text-[12px] leading-[1.6] text-[var(--ink-2)]">
-              <div className="mb-1 font-extrabold text-[var(--ink)]">Why this lives here, not in a listing</div>
-              These groups are your <b>one master record</b>. A listing can&rsquo;t change them —
-              when you set an age limit on a listing, you&rsquo;re only choosing how many of an
-              <em> existing</em> group to take that camp, and you can only go <b>below</b> the room
-              size, never above it. So a listing can never quietly contradict what you set here: the
-              room size is always the hard ceiling. Change a name, colour, ratio or room size here and
-              it updates the Ratios board and every listing at once.
-            </div>
             <GroupsEditor groups={settings.ratioGroups} onChange={(v) => set("ratioGroups", v)} />
-            <div className="mt-3 border-t border-dashed border-[var(--line)] pt-1">
-              <Row
-                label="Let a listing adjust a group's age range"
-                hint="Off: the age bands above are fixed everywhere and can't be touched from a listing. On: a listing can narrow or shift a band for that camp only — e.g. run Explorers as 8–12 for one holiday club while the group stays 8–10 everywhere else. It only ever changes that listing; the master here, the Ratios board and your other listings are untouched. Names, colours, ratios and room sizes stay fixed here regardless."
-              >
-                <Toggle on={settings.allowListingAgeRange} onChange={(v) => set("allowListingAgeRange", v)} />
-              </Row>
-            </div>
-            <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[11.5px] leading-[1.6] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">Room size vs listing cap.</b> Room size is the physical
-              limit of the space — what the group can ever hold. A <b>listing&rsquo;s</b> age cap is a
-              per-camp choice, e.g. &ldquo;only take 10 of the 20 this week&rdquo;. Statutory EYFS ratios for
-              the under-5s are applied automatically on the Ratios page and aren&rsquo;t set here.
+
+            {/* One scannable strip: where these groups get used. */}
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {[
+                { icon: "📋", head: "Here (Setup)", body: "The only place you edit a group — name, colour, age, ratio, room size." },
+                { icon: "🎫", head: "Listings", body: "Cap how many places each group takes per day (never above its room size). Nothing else." },
+                { icon: "⚖️", head: "Ratios board", body: "Shows the groups and runs the day's cover — drag a child to another group as needed. View only, never edits them." },
+              ].map((t) => (
+                <div key={t.head} className="rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] p-3">
+                  <div className="text-[12px] font-extrabold">{t.icon} {t.head}</div>
+                  <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]">{t.body}</div>
+                </div>
+              ))}
             </div>
           </Section>
         </>
