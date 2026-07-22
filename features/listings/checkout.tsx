@@ -731,6 +731,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   }, 0);
   const calculated = b.total + addonTotal;
   const grandTotal = b.totalOverride ?? calculated;
+
+  // Wallet credit the family holds with THIS provider. The server auto-applies
+  // it at booking time (authoritative); here we just preview the reduction so
+  // the parent sees what they'll actually owe. Zero until the backend lands.
+  const [walletBalance, setWalletBalance] = useState(0);
+  useEffect(() => {
+    if (!parentMode || !tenantId) {
+      setWalletBalance(0);
+      return;
+    }
+    apiGet<{ balances: { tenantId: string; balance: number }[] }>("/api/my/wallet")
+      .then((r) => setWalletBalance((r?.balances ?? []).find((x) => x.tenantId === tenantId)?.balance ?? 0))
+      .catch(() => {});
+  }, [tenantId]);
+  const walletApplied = Math.min(walletBalance, grandTotal);
+  const amountDue = Math.max(0, grandTotal - walletApplied);
   // What makes a pass valid depends on how it was sold.
   //
   //   fixed block / any-N-days-in-a-week — the days are the pass, so at least
@@ -1140,6 +1156,20 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
+        {/* Wallet credit — the family's own store credit with this provider,
+            applied automatically at checkout. */}
+        {parentMode && walletApplied > 0 && (
+          <>
+            <div className="mt-2 flex items-baseline justify-between text-[12px]">
+              <span style={{ color: tk.muted }}>👛 Wallet credit{walletBalance > walletApplied ? ` (${money(walletBalance)} available)` : ""}</span>
+              <b style={{ color: tk.accent }}>−{money(walletApplied)}</b>
+            </div>
+            <div className="mt-1.5 flex items-baseline justify-between border-t pt-1.5 text-[15px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink }}>
+              <span>Due now</span>
+              <b>{money(amountDue)}</b>
+            </div>
+          </>
+        )}
         {/* Final say on the price — for a one-off arrangement a rule can't express. Operators only. */}
         {!parentMode && <div className="mt-2 flex items-center gap-2">
           <span className="flex-1 text-[11.5px]" style={{ color: tk.muted }}>Override the total</span>

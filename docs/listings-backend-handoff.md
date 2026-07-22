@@ -1787,7 +1787,11 @@ show which the family chose (it shows a generic voucher note instead). **Store
 wallet — nothing to send" or "reimburse £X back through {scheme}". And
 `refund-approve` on a voucher booking must **not** try Stripe (there's no
 `paymentIntentId`) — it's a wallet credit or an out-of-app reimbursement the
-operator does manually.
+operator does manually. The operator UI relabels the button **"Mark refund
+reimbursed"** for voucher bookings: the operator sends the money back through
+the scheme, then clicks it to confirm. On that action, **notify the family**
+(email + in-app message) that their refund has been sent — same as the
+voucher-received notification above, just the refund direction.
 
 ### The deadline is not just the hold period
 
@@ -2418,6 +2422,34 @@ soonest). Most run off data already on the feed. Open items for you:
   and re-picking fixes it permanently (names are denormalised on save). Nothing
   for you here unless you want a migration to backfill `categoryNames` for
   listings whose ids still resolve.
+
+## Z — Customer wallet (front end built, needs the whole backend)
+
+Store credit a family holds **with a provider** — spend-only, never withdrawn to
+a card, and **scoped per tenant** (credit from one provider is only spendable
+with that provider). It's the destination for "wallet credit" refunds we already
+offer on cancel/amend. All of it is money-adjacent, so it must be
+**server-authoritative** — the front end only reads and previews.
+
+Front end built (on `main`): the **Wallet page** (`features/parent/WalletApp.tsx`,
+`custdash/wallet`) — balance per provider + a transaction ledger — and a
+**checkout preview** (`checkout.tsx`) showing the credit coming off the total
+("Due now"). Both read zero until you build the endpoints.
+
+What to build:
+- **Store the balance + ledger** per `(email/parent, tenantId)`. A transaction
+  is `{ id, at, delta (+credit/−spend, £), reason, ref? }`.
+- **`GET /api/my/wallet`** → `{ balances: [{ tenantId, provider, balance,
+  transactions[] }] }` — the exact shape `WalletApp` reads.
+- **Credit it** wherever we hand money back as wallet: a cancellation refund the
+  family took as credit, a `noRefundCredit` credit note, a cheaper-amend
+  difference, and (optional) an operator goodwill credit. This is where the
+  `refundPref: "wallet"` from §Q/§U lands.
+- **Debit it at checkout** — when a booking is created (`POST /api/my/bookings`)
+  for a provider the family has credit with, auto-apply up to the total, record
+  the spend as a transaction, and only charge the remainder. The front end
+  already previews `min(balance, total)`; the server is the source of truth.
+- **Realtime `wallet`** channel so the page and checkout refresh on change.
 
 ---
 
