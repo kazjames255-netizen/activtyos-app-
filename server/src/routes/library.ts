@@ -134,6 +134,9 @@ const PUBLIC_SETTINGS_KEYS = [
   "voucherClearDays",
   "voucherDueByDays",
   "voucherWhenClose",
+  // Which sections a family sees in their area — the parent app reads these to
+  // hide toggled-off features (Setup → Customer area). Booleans only, no secrets.
+  "customerArea",
 ] as const;
 
 export const libraryPublic = Router();
