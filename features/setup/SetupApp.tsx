@@ -135,22 +135,29 @@ function Row({
 function Toggle({ on, onChange, labels = ["On", "Off"], disabled }: { on: boolean; onChange: (v: boolean) => void; labels?: [string, string] | string[]; disabled?: boolean }) {
   return (
     <div
-      className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold"
-      style={disabled ? { opacity: 0.6 } : undefined}
-      title={disabled ? "Locked — see the note beside this setting" : undefined}
+      className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] p-[3px] text-[12px] font-extrabold shadow-[inset_0_1px_2px_rgba(15,23,42,.06)]"
+      style={disabled ? { opacity: 0.5 } : undefined}
+      title={disabled ? "Locked — turn Simple mode off to use this" : undefined}
     >
-      {[true, false].map((v, i) => (
-        <button
-          key={String(v)}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(v)}
-          className="px-3 py-1 transition-colors disabled:cursor-not-allowed"
-          style={on === v ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}
-        >
-          {labels[i]}
-        </button>
-      ))}
+      {[true, false].map((v, i) => {
+        const active = on === v;
+        // "On/Shown/Yes" active → confident green; "Off/Hidden/No" active → calm slate.
+        const activeStyle = v
+          ? { background: "linear-gradient(180deg,#34d67f,#16a34a)", color: "#fff", boxShadow: "0 2px 7px -1px rgba(16,163,74,.5)" }
+          : { background: "linear-gradient(180deg,#9aa0af,#6b7280)", color: "#fff", boxShadow: "0 2px 7px -1px rgba(71,85,105,.4)" };
+        return (
+          <button
+            key={String(v)}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(v)}
+            className="rounded-full px-3.5 py-1.5 leading-none transition-all duration-150 disabled:cursor-not-allowed"
+            style={active ? activeStyle : { background: "transparent", color: "var(--ink-3)" }}
+          >
+            {labels[i]}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1409,16 +1416,16 @@ export function SetupApp() {
       {tab === "customer" && (() => {
         const ca = settings.customerArea;
         const setCA = (key: keyof typeof ca, v: boolean) => set("customerArea", { ...ca, [key]: v });
-        const rows: { key: keyof typeof ca; label: string; hint: string }[] = [
-          { key: "codesBanner", label: "Discount-codes banner", hint: "The slim scrolling bar of usable codes across the top of a family's dashboard." },
-          { key: "coupons", label: "Coupons & discount codes page", hint: "The area listing every code a family can use with you." },
-          { key: "newsfeed", label: "Newsfeed", hint: "Your posts and updates to families." },
-          { key: "moments", label: "My child's day (photos)", hint: "Photo moments of a child's day." },
-          { key: "messaging", label: "Messaging", hint: "Whether families can start a message to you." },
-          { key: "wallet", label: "Wallet / credit", hint: "A family's store credit with you, spent at checkout." },
-          { key: "meals", label: "Meal ordering", hint: "Ordering meals alongside a booking." },
-          { key: "memberships", label: "Memberships", hint: "Membership plans in a family's area." },
-          { key: "browse", label: "Browse more activities", hint: "The in-app feed of other activities." },
+        const rows: { key: keyof typeof ca; icon: string; label: string; hint: string }[] = [
+          { key: "codesBanner", icon: "🏷️", label: "Discount-codes banner", hint: "The slim scrolling bar of usable codes across the top of a family's dashboard." },
+          { key: "coupons", icon: "🎟️", label: "Coupons & discount codes page", hint: "The area listing every code a family can use with you." },
+          { key: "newsfeed", icon: "📢", label: "Newsfeed", hint: "Your posts and updates to families." },
+          { key: "moments", icon: "📷", label: "My child's day (photos)", hint: "Photo moments of a child's day." },
+          { key: "messaging", icon: "💬", label: "Messaging", hint: "Whether families can start a message to you." },
+          { key: "wallet", icon: "👛", label: "Wallet / credit", hint: "A family's store credit with you, spent at checkout." },
+          { key: "meals", icon: "🍽️", label: "Meal ordering", hint: "Ordering meals alongside a booking." },
+          { key: "memberships", icon: "⭐", label: "Memberships", hint: "Membership plans in a family's area." },
+          { key: "browse", icon: "🔍", label: "Browse more activities", hint: "The in-app feed of other activities." },
         ];
         return (
           <>
@@ -1437,7 +1444,7 @@ export function SetupApp() {
                 : "Turn off anything you don't use and it disappears from every family's area. Bookings, payments, child profiles and “report a problem” are always on and aren't listed here."}
             >
               {rows.map((r) => (
-                <Row key={r.key} label={r.label} hint={r.hint}>
+                <Row key={r.key} label={`${r.icon}  ${r.label}`} hint={r.hint}>
                   <Toggle on={ca.simpleMode ? false : ca[r.key]} onChange={(v) => setCA(r.key, v)} disabled={ca.simpleMode} labels={["Shown", "Hidden"]} />
                 </Row>
               ))}
