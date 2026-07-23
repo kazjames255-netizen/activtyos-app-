@@ -3014,10 +3014,18 @@ still holds. All additive; existing codes are unaffected.
   parent can actually use — the **public** ("anyone can use it", i.e. no
   `assignedTo`) codes of every provider they've **booked with**, plus any code
   **reserved for their email**. Filtered to usable only (active, not expired,
-  not fully used) and enriched with `provider` + `listingName`. Powers the
-  custdash **"Coupons & discount codes"** nav item (`CouponsApp`) — read-only
-  discovery; the parent copies a code into the existing checkout box. Reference
-  impl in `server/src/routes/my.ts`.
+  not fully used, **and — for `perCustomerLimit` codes — not already redeemed by
+  this family**, via `discountRedemptions`) and enriched with `tenantId` +
+  `provider` + `listingName`. Powers the custdash **"Coupons & discount codes"**
+  page (`CouponsApp`), a dismissible **running-bar ticker** across the customer
+  dashboard, and a **nav badge count**. It's also read at **checkout** to offer
+  the family's own coupons for one-tap apply (filtered to the listing's
+  `tenantId`/scope). Reference impl in `server/src/routes/my.ts`.
+- **Checkout now sends the code:** the parent checkout (`CheckoutPanel` in
+  `features/listings/checkout.tsx`) has a discount-code box + "use my coupons"
+  picker; it previews via `/api/discounts/validate` and passes `discountCode` in
+  the `POST /api/my/bookings` body (on the **first** block only for a
+  multi-block basket — the server re-validates + redeems).
 - **No-expiry semantics (already correct, please keep):** a code with **no
   `expiry`** never expires — `checkCode` only rejects when `expiry` is set and
   in the past. The UI now tells operators this, and adds that a listing-scoped

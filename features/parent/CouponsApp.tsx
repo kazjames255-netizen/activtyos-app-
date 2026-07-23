@@ -86,7 +86,7 @@ export function CouponsApp() {
               <div className="min-w-[160px] flex-1">
                 <div className="text-[13px] font-bold">{c.provider}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">
-                  {c.listingName ? `${c.listingName} only` : "Any booking"}
+                  {c.listingName ? `${c.listingName} only` : "All listings"}
                   {c.minSpend ? ` · min ${money(c.minSpend)}` : ""}
                   {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no expiry"}
                 </div>
