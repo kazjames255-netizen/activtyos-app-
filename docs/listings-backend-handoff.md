@@ -3065,9 +3065,12 @@ still holds. All additive; existing codes are unaffected.
 # Customer-area visibility settings — 23 July 2026
 
 New **Setup → Customer area** tab: a provider toggles which sections families
-see. Stored in the existing library `settings` doc as **`customerArea`** (all
+see. Stored in the existing library `settings` doc as **`customerArea`** (feature
 keys default `true`): `codesBanner, coupons, newsfeed, moments, messaging,
-wallet, meals, memberships, browse`. No new endpoint — it rides on the same
+wallet, meals, memberships, browse`, plus **`simpleMode`** (default `false`).
+**Simple mode** overrides every individual toggle and keeps only the booking
+essentials (`SIMPLE_ALLOWED`: dash, browse, bookings, children, account, privacy,
+activityos). No new endpoint — it rides on the same
 `settings` bag (`withDefaults` merges it) and parents read it from the public
 library slice (`/api/public/library/:tenantId`) via `useCustomerArea()`.
 

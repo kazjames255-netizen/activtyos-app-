@@ -284,6 +284,12 @@ export interface TenantSettings {
    * here — those can't be hidden.
    */
   customerArea: {
+    /**
+     * Simple mode — strip the family area back to the booking essentials only
+     * (browse activities, bookings, child profiles, account, support). When on,
+     * it overrides every individual toggle below and hides everything else.
+     */
+    simpleMode: boolean;
     codesBanner: boolean; // the scrolling discount-codes ticker
     coupons: boolean;     // the Coupons & discount codes page
     newsfeed: boolean;    // your posts to families
@@ -479,7 +485,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerName: "",
   providerNameMode: "business",
   marketplaceListed: false,
-  customerArea: { codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true },
+  customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true },
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],

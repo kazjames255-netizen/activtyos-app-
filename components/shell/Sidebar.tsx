@@ -7,7 +7,7 @@ import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/na
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
-import { useCustomerArea, type CustomerArea } from "@/lib/use-customer-area";
+import { useCustomerArea, SIMPLE_ALLOWED, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -158,10 +158,16 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // Live count of usable discount codes for the Coupons nav badge (custdash).
   const coupons = useCouponCount(portal);
   // Sections the family's provider has switched off (Setup → Customer area).
+  // Simple mode overrides the individual toggles and keeps only the essentials.
   const customerArea = useCustomerArea(portal);
-  const caHidden = new Set(
+  const caHidden = new Set<string>(
     portal === "custdash"
-      ? Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view)
+      ? [
+          ...Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view),
+          ...(customerArea.simpleMode
+            ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
+            : []),
+        ]
       : [],
   );
 

@@ -36,8 +36,10 @@ export function CouponTicker() {
   const load = () => apiGet<Coupon[]>("/api/my/coupons").then((r) => setCoupons(r ?? [])).catch(() => setCoupons([]));
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
-  // The provider can switch this banner off (Setup → Customer area).
-  const bannerOn = useCustomerArea().codesBanner;
+  // The provider can switch this banner off (Setup → Customer area), and Simple
+  // mode hides it too.
+  const ca = useCustomerArea();
+  const bannerOn = ca.codesBanner && !ca.simpleMode;
 
   // Scroll the strip in JS (not CSS animation) so it moves reliably — CSS
   // marquees are silently killed by the OS "reduce motion" setting, and the

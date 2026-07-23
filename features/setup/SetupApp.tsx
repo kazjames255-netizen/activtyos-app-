@@ -1421,16 +1421,28 @@ export function SetupApp() {
           { key: "browse", label: "Browse more activities", hint: "The in-app feed of other activities." },
         ];
         return (
-          <Section
-            title="What families see"
-            lede="Turn off anything you don't use and it disappears from every family's area. Bookings, payments, child profiles and “report a problem” are always on and aren't listed here."
-          >
-            {rows.map((r) => (
-              <Row key={r.key} label={r.label} hint={r.hint}>
-                <Toggle on={ca[r.key]} onChange={(v) => setCA(r.key, v)} labels={["Shown", "Hidden"]} />
+          <>
+            <Section
+              title="Simple mode"
+              lede="Strip the family area right back to the booking essentials — browse & book activities, their bookings, child profiles, and account. Everything else is hidden while this is on."
+            >
+              <Row label="Keep it simple" hint="On: families see only booking, activities and account. Off: choose individually below.">
+                <Toggle on={ca.simpleMode} onChange={(v) => setCA("simpleMode", v)} labels={["On", "Off"]} />
               </Row>
-            ))}
-          </Section>
+            </Section>
+            <Section
+              title="What families see"
+              lede={ca.simpleMode
+                ? "Simple mode is on, so these are all hidden — turn it off to choose individually. Bookings, payments, child profiles and “report a problem” are always on."
+                : "Turn off anything you don't use and it disappears from every family's area. Bookings, payments, child profiles and “report a problem” are always on and aren't listed here."}
+            >
+              {rows.map((r) => (
+                <Row key={r.key} label={r.label} hint={r.hint}>
+                  <Toggle on={ca.simpleMode ? false : ca[r.key]} onChange={(v) => setCA(r.key, v)} disabled={ca.simpleMode} labels={["Shown", "Hidden"]} />
+                </Row>
+              ))}
+            </Section>
+          </>
         );
       })()}
 
