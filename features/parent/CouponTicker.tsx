@@ -36,13 +36,24 @@ export function CouponTicker() {
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
 
-  if (hidden || coupons.length === 0) return null;
+  if (coupons.length === 0) return null;
 
   const dismiss = () => { setHidden(true); try { localStorage.setItem(DISMISS_KEY, "1"); } catch {} };
+  const reveal = () => { setHidden(false); try { localStorage.setItem(DISMISS_KEY, "0"); } catch {} };
   const togglePause = () => setPaused((p) => { const n = !p; try { localStorage.setItem(PAUSE_KEY, n ? "1" : "0"); } catch {} return n; });
 
-  // Duplicate the list so the -50% slide loops seamlessly.
-  const items = [...coupons, ...coupons];
+  // Hidden → keep a slim, always-there way to bring it back (never lost).
+  if (hidden) return (
+    <div className="flex h-[26px] items-center justify-end border-b border-black/20 px-3" style={{ background: "linear-gradient(90deg,#172B6A,#1C3B8C)" }}>
+      <button type="button" onClick={reveal} className="text-[11px] font-bold text-[#c7d3f5] hover:text-white">🏷️ Show my codes ({coupons.length}) ›</button>
+    </div>
+  );
+
+  // Repeat the codes until one copy is wide enough to fill the bar, THEN
+  // duplicate that — so the -50% slide scrolls continuously with no dead gap,
+  // even when there are only one or two codes.
+  const oneCopy = Array.from({ length: Math.max(2, Math.ceil(10 / coupons.length)) }, () => coupons).flat();
+  const items = [...oneCopy, ...oneCopy];
 
   return (
     <div

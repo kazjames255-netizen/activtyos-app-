@@ -66,7 +66,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons }: { item: 
       }
     >
       <Icon icon={item.icon} />
-      <span className="truncate">{pluralLabel(item.label, portal, multiChild)}</span>
+      <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
       <Badge value={badge} />
     </Link>
   );
