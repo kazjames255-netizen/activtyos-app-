@@ -37,10 +37,15 @@ interface Thread {
 interface Folder { id: string; name: string }
 interface BroadcastRec { id: string; body: string; subject?: string; sentAt?: string; recipientCount?: number; recipients?: { email: string; name: string }[] }
 interface Template { id: string; name: string; subject?: string; body: string }
-// Client mirror of the server merge fields (see messages.ts mergeText).
-const mergeText = (text: string, v: { parentName?: string; providerName?: string }) =>
-  text.replace(/\{ParentName\}/gi, v.parentName ?? "").replace(/\{ProviderName\}/gi, v.providerName ?? "");
-const MERGE_FIELDS = ["{ParentName}", "{ProviderName}"];
+// Client merge for a 1:1 send — fills what we know about the chosen family.
+// (Broadcast fills {ParentName}/{ProviderName} server-side; per-booking fields
+// like {ListingName}/{SessionDate} need booking context — see handoff §II.)
+const mergeText = (text: string, v: { parentName?: string; providerName?: string; childName?: string }) =>
+  text
+    .replace(/\{ParentName\}/gi, v.parentName ?? "")
+    .replace(/\{ProviderName\}/gi, v.providerName ?? "")
+    .replace(/\{ChildName\}/gi, v.childName ?? "");
+const MERGE_FIELDS = ["{ParentName}", "{ChildName}", "{ProviderName}", "{ListingName}", "{SessionDate}", "{VenueName}"];
 interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
@@ -191,7 +196,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         }
         const email = familyTargets[0];
         const c1 = customers.find((c) => c.email === email);
-        const payload = { parentEmail: email, parentName: c1?.name, body: mergeText(draft, { parentName: c1?.name, providerName }), ...(subject.trim() ? { subject: subject.trim() } : {}) };
+        const childName = c1?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+        const payload = { parentEmail: email, parentName: c1?.name, body: mergeText(draft, { parentName: c1?.name, providerName, childName }), ...(subject.trim() ? { subject: subject.trim() } : {}) };
         const res = await apiPost<{ threadId: string }>("/api/messages", payload);
         setDraft(""); setSubject(""); setComposing(false); setFamilyTargets([]); loadThreads(); open(res.threadId);
         return;

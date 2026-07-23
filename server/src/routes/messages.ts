@@ -309,13 +309,32 @@ const templateSchema = z.object({
   subject: z.string().trim().max(80).optional(),
   body: z.string().trim().min(1).max(4_000),
 });
+// Built-in presets every provider gets for free (Head Office-owned). They're
+// returned by GET /templates with `preset:` ids and aren't stored per tenant —
+// so they can be inserted/duplicated but not edited/deleted in place. A provider
+// who wants their own wording duplicates one (creates a normal tenant template).
+const DEFAULT_TEMPLATES = [
+  { id: "preset:booking-confirmation", name: "Booking confirmation", subject: "Your booking is confirmed, {ChildName}!",
+    body: "Hi {ParentName},\n\n{ChildName}’s place on {ListingName} is confirmed for {SessionDate} at {VenueName}. Drop-off opens 15 minutes before the start.\n\nSee you there!" },
+  { id: "preset:session-reminder", name: "Session reminder", subject: "{ListingName} starts soon, {ChildName}!",
+    body: "Hi {ParentName},\n\nJust a reminder that {ChildName} is booked onto {ListingName} on {SessionDate} at {VenueName}. Please bring a packed lunch and a water bottle." },
+  { id: "preset:review-request", name: "Thank you / review request", subject: "How was {ChildName}’s time with us?",
+    body: "Hi {ParentName},\n\nThanks for booking {ListingName}. We’d love a quick review of how {ChildName} got on — it really helps other families." },
+  { id: "preset:waitlist-offer", name: "Waitlist offer", subject: "A space has opened on {ListingName}",
+    body: "Hi {ParentName},\n\nGood news — a space has opened for {ChildName} on {ListingName} ({SessionDate}). This offer is held for 24 hours — claim it from your dashboard." },
+  { id: "preset:payment-reminder", name: "Payment reminder", subject: "Balance due for {ListingName}",
+    body: "Hi {ParentName},\n\nA friendly reminder that a balance is outstanding for {ChildName}’s booking on {ListingName}. You can pay securely from your dashboard." },
+  { id: "preset:welcome", name: "Welcome / first booking", subject: "Welcome to {ProviderName}!",
+    body: "Hi {ParentName},\n\nWelcome! Your account is ready and {ChildName} is all set. Manage bookings, receipts and messages any time from your dashboard." },
+] as const;
 messages.get("/templates", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await templatesCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
-  list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
-  res.json(list);
+  const custom = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  custom.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
+  // Presets first, then the tenant's own.
+  res.json([...DEFAULT_TEMPLATES.map((t) => ({ ...t, preset: true })), ...custom]);
 });
 messages.post("/templates", async (req, res) => {
   const tenantId = operatorTenant(req, res);
