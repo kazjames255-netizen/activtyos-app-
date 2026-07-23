@@ -30,6 +30,14 @@ async function hasBooking(tenantId: string, email: string) {
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
   return !snap.empty;
 }
+// An operator may message anyone in their own customer list, booking or not —
+// the customer list is who they've chosen to work with. Case-insensitive so a
+// mixed-case stored email still matches the lowercased recipient.
+async function isMyCustomer(tenantId: string, email: string) {
+  const e = email.toLowerCase();
+  const snap = await db.collection("customers").where("tenantId", "==", tenantId).get();
+  return snap.docs.some((d) => ((d.data().email as string | undefined) ?? "").toLowerCase() === e);
+}
 
 // GET /api/messages/threads — the caller's conversations (newest activity first).
 messages.get("/threads", async (req, res) => {
@@ -85,7 +93,10 @@ messages.post("/", async (req, res) => {
     if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
     tenantId = auth.tenantId;
     parentEmail = parsed.data.parentEmail.toLowerCase();
-    if (!(await hasBooking(tenantId, parentEmail))) { res.status(400).json({ error: "No booking from that family — you can only message your customers" }); return; }
+    if (!(await isMyCustomer(tenantId, parentEmail)) && !(await hasBooking(tenantId, parentEmail))) {
+      res.status(400).json({ error: "You can only message your own customers or families who've booked" });
+      return;
+    }
     parentName = parsed.data.parentName ?? parsed.data.parentEmail;
     from = "operator";
   } else { res.status(403).json({ error: "Requires a parent or operator account" }); return; }
