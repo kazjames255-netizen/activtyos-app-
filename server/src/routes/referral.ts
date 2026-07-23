@@ -84,7 +84,7 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
   const reward = Math.max(0, Number(ref.referrerReward) || 0);
   // Cap the £ the reward can take off to what the friend actually spent — you
   // can never give away more than the referral brought in.
-  const cap = ref.capToFriendSpend ? Math.max(0, Math.round((Number(friendSpend) || 0) * 100) / 100) : undefined;
+  const cap = type === "percent" && ref.capToFriendSpend ? Math.max(0, Math.round((Number(friendSpend) || 0) * 100) / 100) : undefined;
   const rewardTxt = (type === "percent" ? `${reward}% off` : `£${reward} off`) + (cap != null ? ` (up to £${cap})` : "");
   const now = new Date().toISOString();
   await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, type, ...(cap != null ? { cap } : {}), at: now });
@@ -124,7 +124,7 @@ referral.get("/", async (req, res) => {
   const tenantId = bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean)[0];
   if (!tenantId) { res.json({ enabled: false, reason: "Book with a provider first to unlock referrals." }); return; }
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) { res.json({ enabled: false }); return; }
 
@@ -156,6 +156,7 @@ referral.get("/", async (req, res) => {
     code, type,
     link: `${webUrl}/store/${tenantId}?ref=${encodeURIComponent(code)}`,
     friendOff, referrerReward, minSpend,
+    capToFriendSpend: !!ref.capToFriendSpend,
     booked,
     earned: booked * referrerReward,
   });

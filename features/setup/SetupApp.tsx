@@ -1486,9 +1486,11 @@ export function SetupApp() {
             <Row label="Minimum spend (£)" hint="The friend's first basket must reach this for the reward to apply. 0 = no minimum.">
               <span className="inline-flex items-center gap-1"><span className="text-[12px] font-bold text-[var(--ink-3)]">£</span><Input type="number" min="0" step="1" value={String(r.minSpend)} onChange={(e) => setR({ minSpend: num(e.target.value) })} className="w-[84px]" /></span>
             </Row>
-            <Row label="Cap reward to the friend's spend" hint="Recommended. The reward can never take off more than the friend actually paid — so you can't give away 20% of a big booking off the back of a cheap one.">
-              <Toggle on={r.capToFriendSpend} onChange={(v) => setR({ capToFriendSpend: v })} labels={["On", "Off"]} />
-            </Row>
+            {pct && (
+              <Row label="Cap reward to the friend's spend" note="Recommended" hint="Keeps you safe: the reward can never take off more than the friend actually paid — so a cheap referral can't unlock a big % discount on the referrer's next large booking.">
+                <Toggle on={r.capToFriendSpend} onChange={(v) => setR({ capToFriendSpend: v })} labels={["On", "Off"]} />
+              </Row>
+            )}
           </Section>
         );
       })()}

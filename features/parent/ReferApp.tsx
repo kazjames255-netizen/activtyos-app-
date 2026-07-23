@@ -19,6 +19,7 @@ type Referral = {
   friendOff?: number;
   referrerReward?: number;
   minSpend?: number;
+  capToFriendSpend?: boolean;
   booked?: number;
   earned?: number;
   reason?: string;
@@ -114,7 +115,7 @@ export function ReferApp() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {fmt(r.referrerReward)} per friend who books.</p>
+        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {fmt(r.referrerReward)} per friend who books.{isPct && r.capToFriendSpend ? " Your reward is capped to what your friend spends on their first booking." : ""}</p>
       </Card>
     </div>
   );
