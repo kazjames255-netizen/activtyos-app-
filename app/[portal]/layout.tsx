@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
+import { CouponTicker } from "@/features/parent/CouponTicker";
 
 // The customer dashboard runs the same light palette the operator screens sit
 // on (see components/OperatorPage LIGHT_PALETTE), so the parent portal matches
@@ -39,6 +40,8 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             <div style={light ? undefined : LIGHT_PALETTE}>
               <Header portal={portalKey} />
             </div>
+            {/* Customer-only running bar of the family's usable discount codes. */}
+            {light && <CouponTicker />}
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>
           </div>
         </div>
