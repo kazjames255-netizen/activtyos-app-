@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
-import { useUnreadMessages } from "@/lib/use-unread";
+import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -47,11 +47,14 @@ function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolea
   return label;
 }
 
-function NavLink({ item, portal, active, multiChild, unread }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number }) {
+function NavLink({ item, portal, active, multiChild, unread, coupons }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number }) {
   // The Messages badge is live: unread message count, not the config placeholder.
   // It grows as replies arrive and clears to nothing once the thread is opened
-  // (the open marks messages read → realtime → this refetches).
-  const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null) : item.badge;
+  // (the open marks messages read → realtime → this refetches). The Coupons badge
+  // is live too — how many codes the family can use right now.
+  const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null)
+    : item.view === "coupons" ? (coupons > 0 ? String(coupons) : null)
+    : item.badge;
   return (
     <Link
       href={`/${portal}/${item.view}`}
@@ -92,7 +95,7 @@ function SignOutItem({ item }: { item: NavItem }) {
   );
 }
 
-function GroupItems({ items, portal, pathname, multiChild, unread }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number }) {
+function GroupItems({ items, portal, pathname, multiChild, unread, coupons }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number }) {
   return (
     <>
       {items.filter((item) => !item.hidden).map((item) =>
@@ -106,6 +109,7 @@ function GroupItems({ items, portal, pathname, multiChild, unread }: { items: Na
             active={pathname === `/${portal}/${item.view}`}
             multiChild={multiChild}
             unread={unread}
+            coupons={coupons}
           />
         ),
       )}
@@ -144,6 +148,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
 
   // Live unread-message total for the Messages nav badge (see useUnreadMessages).
   const unread = useUnreadMessages(portal);
+  // Live count of usable discount codes for the Coupons nav badge (custdash).
+  const coupons = useCouponCount(portal);
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).
   const [multiChild, setMultiChild] = useState(false);
@@ -177,7 +183,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} />
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} />
             </div>
           );
         }
@@ -197,7 +203,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             </button>
             {open && (
               <div>
-                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} />
+                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} />
               </div>
             )}
           </div>

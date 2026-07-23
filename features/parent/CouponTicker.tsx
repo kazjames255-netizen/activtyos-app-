@@ -14,7 +14,7 @@ import { money } from "@/features/bookings/helpers";
 
 type Coupon = {
   id: string; code: string; type: "percent" | "amount" | "perAttendee";
-  value: number; provider: string; reserved: boolean;
+  value: number; provider: string; reserved: boolean; listingName: string | null;
 };
 
 const DISMISS_KEY = "aos.couponTicker.hidden";
@@ -55,7 +55,7 @@ export function CouponTicker() {
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold text-[#eef2ff]">
               <span className="font-mono font-extrabold tracking-wider text-white">{c.code}</span>
-              <span className="text-[#c7d3f5]">{valueLabel(c)} · {c.provider}</span>
+              <span className="text-[#c7d3f5]">{valueLabel(c)} · {c.provider} · {c.listingName ? c.listingName : "all listings"}</span>
               {c.reserved && <span className="text-[#FACC15]">🎁</span>}
               <span className="px-1 text-[8px] text-[#FACC15] opacity-50">◆</span>
             </span>

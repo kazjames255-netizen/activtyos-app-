@@ -60,3 +60,31 @@ export function useUnreadMessages(portal: PortalKey): number {
   useRealtime(["threads", "messages"], () => load(true));
   return count;
 }
+
+// Shared count of usable discount codes for the signed-in parent — powers the
+// "Coupons & discount codes" nav badge. Same shape as the unread loader (shared
+// in-flight + short TTL) so several consumers collapse into one request.
+let couponCache: number | null = null;
+let couponAt = 0;
+let couponInflight: Promise<number> | null = null;
+
+function loadCouponCountShared(force: boolean): Promise<number> {
+  if (!force && couponCache !== null && Date.now() - couponAt < TTL_MS) return Promise.resolve(couponCache);
+  if (couponInflight) return couponInflight;
+  couponInflight = apiGet<unknown[]>("/api/my/coupons")
+    .then((r) => { couponCache = Array.isArray(r) ? r.length : 0; couponAt = Date.now(); return couponCache; })
+    .finally(() => { couponInflight = null; });
+  return couponInflight;
+}
+
+/** Live count of discount codes the family can use right now (custdash only). */
+export function useCouponCount(portal: PortalKey): number {
+  const [count, setCount] = useState(0);
+  const load = useCallback((force: boolean) => {
+    if (portal !== "custdash") { setCount(0); return; }
+    loadCouponCountShared(force).then(setCount).catch(() => {});
+  }, [portal]);
+  useEffect(() => { load(false); }, [load]);
+  useRealtime(["discountCodes", "bookings"], () => load(true));
+  return portal === "custdash" ? count : 0;
+}

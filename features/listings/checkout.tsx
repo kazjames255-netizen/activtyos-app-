@@ -630,7 +630,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; discountCode?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -745,8 +745,46 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       .then((r) => setWalletBalance((r?.balances ?? []).find((x) => x.tenantId === tenantId)?.balance ?? 0))
       .catch(() => {});
   }, [tenantId]);
-  const walletApplied = Math.min(walletBalance, grandTotal);
-  const amountDue = Math.max(0, grandTotal - walletApplied);
+  // ── Discount code (parent only) ─────────────────────────────────────────
+  // A parent can type a code or one-tap one of their own coupons. We validate it
+  // against the SAME engine the charge uses (/api/discounts/validate → shared
+  // lib/discountCodes) so the saving previewed here is exactly what's taken off.
+  const attendees = Math.max(1, new Set(b.basket.flatMap((x) => b.childrenOn(x.id))).size);
+  type MyCoupon = { code: string; type: "percent" | "amount" | "perAttendee"; value: number; tenantId: string; listingId: string | null };
+  const [myCoupons, setMyCoupons] = useState<MyCoupon[]>([]);
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<{ code: string; off: number } | null>(null);
+  const [codeErr, setCodeErr] = useState<string | null>(null);
+  const [codeBusy, setCodeBusy] = useState(false);
+  useEffect(() => {
+    if (!parentMode || !tenantId) { setMyCoupons([]); return; }
+    apiGet<MyCoupon[]>("/api/my/coupons")
+      .then((list) => setMyCoupons((list ?? []).filter((c) => c.tenantId === tenantId && (!c.listingId || c.listingId === d.id))))
+      .catch(() => {});
+  }, [parentMode, tenantId, d.id]);
+  // Any change to the basket total or head-count invalidates a checked code.
+  useEffect(() => { setAppliedCode(null); setCodeErr(null); }, [grandTotal, attendees]);
+  async function applyCode(raw: string) {
+    const code = raw.trim().toUpperCase();
+    if (!code || !tenantId) return;
+    setCodeInput(code); setCodeBusy(true); setCodeErr(null);
+    try {
+      const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number }>("/api/discounts/validate", {
+        method: "POST",
+        body: JSON.stringify({ tenantId, code, subtotal: grandTotal, attendees, ...(d.id ? { listingId: d.id } : {}) }),
+      });
+      if (r.valid && r.off && r.off > 0) setAppliedCode({ code: r.code ?? code, off: r.off });
+      else { setAppliedCode(null); setCodeErr(r.reason ?? "That code can’t be used on this booking"); }
+    } catch (e) { setAppliedCode(null); setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
+    finally { setCodeBusy(false); }
+  }
+  const codeOff = appliedCode ? Math.min(appliedCode.off, grandTotal) : 0;
+
+  // Order of deductions mirrors the server: automatic discounts (already in
+  // grandTotal) → discount code → wallet credit.
+  const afterCode = Math.max(0, grandTotal - codeOff);
+  const walletApplied = Math.min(walletBalance, afterCode);
+  const amountDue = Math.max(0, afterCode - walletApplied);
   // What makes a pass valid depends on how it was sold.
   //
   //   fixed block / any-N-days-in-a-week — the days are the pass, so at least
@@ -1156,14 +1194,57 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
-        {/* Wallet credit — the family's own store credit with this provider,
-            applied automatically at checkout. */}
-        {parentMode && walletApplied > 0 && (
+        {/* Discount code — type one, or one-tap one of the family's coupons. */}
+        {parentMode && (
+          <div className="mt-2.5">
+            {appliedCode ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[12px]" style={{ background: tk.inputBg, border: `1px solid ${tk.line}` }}>
+                <span style={{ color: tk.ink }}>🏷️ Code <b>{appliedCode.code}</b> applied</span>
+                <button type="button" onClick={() => { setAppliedCode(null); setCodeInput(""); setCodeErr(null); }} className="text-[11px] font-bold" style={{ color: tk.muted }}>Remove</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-1.5">
+                  <input
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(codeInput); } }}
+                    placeholder="Discount code"
+                    className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-[12.5px] uppercase outline-none"
+                    style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}
+                  />
+                  <button type="button" disabled={codeBusy || !codeInput.trim()} onClick={() => void applyCode(codeInput)} className="flex-none rounded-lg px-3 py-2 text-[12px] font-extrabold disabled:opacity-50" style={{ background: tk.accent, color: tk.accentInk }}>{codeBusy ? "…" : "Apply"}</button>
+                </div>
+                {codeErr && <div className="mt-1 text-[11px]" style={{ color: "#ef5350" }}>{codeErr}</div>}
+                {myCoupons.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px]" style={{ color: tk.muted }}>Use my coupons:</span>
+                    {myCoupons.map((c) => (
+                      <button key={c.code} type="button" onClick={() => void applyCode(c.code)} className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}>
+                        {c.code} · {c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)}/child` : `${money(c.value)} off`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {/* Deductions — discount code then wallet credit, and the final due-now. */}
+        {parentMode && (codeOff > 0 || walletApplied > 0) && (
           <>
-            <div className="mt-2 flex items-baseline justify-between text-[12px]">
-              <span style={{ color: tk.muted }}>👛 Wallet credit{walletBalance > walletApplied ? ` (${money(walletBalance)} available)` : ""}</span>
-              <b style={{ color: tk.accent }}>−{money(walletApplied)}</b>
-            </div>
+            {codeOff > 0 && (
+              <div className="mt-2 flex items-baseline justify-between text-[12px]">
+                <span style={{ color: tk.muted }}>🏷️ Code {appliedCode?.code}</span>
+                <b style={{ color: tk.accent }}>−{money(codeOff)}</b>
+              </div>
+            )}
+            {walletApplied > 0 && (
+              <div className="mt-2 flex items-baseline justify-between text-[12px]">
+                <span style={{ color: tk.muted }}>👛 Wallet credit{walletBalance > walletApplied ? ` (${money(walletBalance)} available)` : ""}</span>
+                <b style={{ color: tk.accent }}>−{money(walletApplied)}</b>
+              </div>
+            )}
             <div className="mt-1.5 flex items-baseline justify-between border-t pt-1.5 text-[15px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink }}>
               <span>Due now</span>
               <b>{money(amountDue)}</b>
@@ -1692,6 +1773,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // The scheme the parent picked — the backend keys the "Awaiting
             // voucher payment" state off this, not the method string.
             voucherScheme: method === "voucher" ? chosenVoucher?.name : undefined,
+            discountCode: appliedCode?.code,
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),

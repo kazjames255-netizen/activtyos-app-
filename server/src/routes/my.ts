@@ -244,11 +244,17 @@ my.get("/coupons", async (req, res) => {
   const reserved = await codesCol.where("assignedTo", "==", el).get();
   reserved.docs.forEach((d) => codeDocs.set(d.id, { id: d.id, ...(d.data() as Record<string, unknown>) }));
 
+  // Codes this family has already redeemed — so a one-per-customer code they've
+  // used drops off (doesn't pile up in the banner they can't use again).
+  const myRedemptions = await db.collection("discountRedemptions").where("email", "==", el).get();
+  const redeemedIds = new Set(myRedemptions.docs.map((d) => d.data().codeId as string));
+
   const usable = [...codeDocs.values()]
     .map((c) => c as DiscountCodeDoc & { id: string })
     .filter((c) => c.active !== false)
     .filter((c) => !c.expiry || c.expiry >= today)
     .filter((c) => c.usageLimit == null || (c.usedCount ?? 0) < c.usageLimit)
+    .filter((c) => !(c.perCustomerLimit && redeemedIds.has(c.id))) // already used their one go
     .filter((c) => !c.assignedTo || c.assignedTo.toLowerCase() === el); // public OR reserved for me
 
   // Resolve provider + listing names in one batch each.
@@ -267,6 +273,7 @@ my.get("/coupons", async (req, res) => {
       code: c.code,
       type: c.type,
       value: c.value,
+      tenantId: c.tenantId,
       minSpend: c.minSpend ?? null,
       expiry: c.expiry ?? null,
       listingId: c.listingId ?? null,
