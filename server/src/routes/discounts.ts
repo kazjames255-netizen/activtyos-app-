@@ -27,6 +27,10 @@ const codeBase = z.object({
   // creating it messages + emails them.
   assignedTo: z.string().trim().email().max(160).optional(),
   assignedName: z.string().trim().max(120).optional(),
+  // Reserve for a whole GROUP of families (e.g. "NHS parents"). The server
+  // resolves the group's members into assignedEmails + assignedGroupName and
+  // messages + emails each of them. "" clears the group.
+  assignedGroupId: z.string().trim().max(60).optional(),
   active: z.boolean().default(true),
 });
 
@@ -66,6 +70,75 @@ function opScope(req: Request, res: Response): string | null {
   return auth.tenantId;
 }
 
+// ── Parent groups ─────────────────────────────────────────────────────────
+// Named sets of families (e.g. "NHS parents") the operator can send a code to
+// all at once. Kept with discount codes because that's what they power. Routes
+// live BEFORE /:id so "groups" is never read as a code id.
+const groupsCol = db.collection("customerGroups");
+const groupSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  emails: z.array(z.string().trim().email().max(160)).max(5000).default([]),
+});
+const normEmails = (es: string[]) => [...new Set(es.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+
+// Message + email every member of a group about a code.
+async function notifyEach(tenantId: string, emails: string[], code: string, valueTxt: string, expiry?: string): Promise<void> {
+  for (const em of emails) {
+    try { await notifyAssigned(tenantId, em, undefined, code, valueTxt, expiry); } catch { /* one bad address never blocks the rest */ }
+  }
+}
+// Resolve a group id → {emails, name}, scoped to the tenant.
+async function resolveGroup(tenantId: string, groupId: string): Promise<{ emails: string[]; name: string } | null> {
+  const g = await groupsCol.doc(groupId).get();
+  if (!g.exists || g.data()!.tenantId !== tenantId) return null;
+  return { emails: normEmails((g.data()!.emails as string[]) ?? []), name: (g.data()!.name as string) ?? "Group" };
+}
+
+discounts.get("/groups", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const snap = await groupsCol.where("tenantId", "==", tenantId).get();
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  list.sort((a, b) => `${a.name ?? ""}`.localeCompare(`${b.name ?? ""}`));
+  res.json(list);
+});
+
+discounts.post("/groups", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  const parsed = groupSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const doc = { name: parsed.data.name, emails: normEmails(parsed.data.emails), tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const ref = await groupsCol.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+
+async function ownGroup(req: Request, id: string) {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
+  const snap = await groupsCol.doc(id).get();
+  if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  return { status: 200 as const, snap };
+}
+
+discounts.put("/groups/:id", async (req, res) => {
+  const o = await ownGroup(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Group not found" }); return; }
+  const parsed = groupSchema.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.emails ? { emails: normEmails(parsed.data.emails) } : {}) };
+  await o.snap.ref.set(patch, { merge: true });
+  const after = await o.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+discounts.delete("/groups/:id", async (req, res) => {
+  const o = await ownGroup(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Group not found" }); return; }
+  await o.snap.ref.delete();
+  res.json({ ok: true });
+});
+
 // GET /api/discounts — the tenant's codes (operators).
 discounts.get("/", async (req, res) => {
   const tenantId = opScope(req, res);
@@ -84,12 +157,14 @@ discounts.post("/", async (req, res) => {
   const code = normaliseCode(parsed.data.code);
   const dupe = await col.where("tenantId", "==", auth.tenantId).where("code", "==", code).limit(1).get();
   if (!dupe.empty) { res.status(409).json({ error: "You already have a code with that name" }); return; }
-  const doc = { ...parsed.data, code, tenantId: auth.tenantId, usedCount: 0, createdAt: new Date().toISOString() };
+  // Reserve for a group → snapshot its members onto the code.
+  const grp = parsed.data.assignedGroupId ? await resolveGroup(auth.tenantId, parsed.data.assignedGroupId) : null;
+  const doc = { ...parsed.data, code, tenantId: auth.tenantId, usedCount: 0, createdAt: new Date().toISOString(),
+    ...(grp ? { assignedEmails: grp.emails, assignedGroupName: grp.name } : {}) };
   const ref = await col.add(doc);
-  if (parsed.data.assignedTo) {
-    const valueTxt = valueTxtOf(parsed.data.type, parsed.data.value);
-    await notifyAssigned(auth.tenantId, parsed.data.assignedTo, parsed.data.assignedName, code, valueTxt, parsed.data.expiry);
-  }
+  const valueTxt = valueTxtOf(parsed.data.type, parsed.data.value);
+  if (parsed.data.assignedTo) await notifyAssigned(auth.tenantId, parsed.data.assignedTo, parsed.data.assignedName, code, valueTxt, parsed.data.expiry);
+  if (grp?.emails.length) await notifyEach(auth.tenantId, grp.emails, code, valueTxt, parsed.data.expiry);
   res.status(201).json({ id: ref.id, ...doc });
 });
 
@@ -106,16 +181,30 @@ discounts.put("/:id", async (req, res) => {
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Code not found" }); return; }
   const parsed = codeBase.partial().refine(pctCheck).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const patch = { ...parsed.data, ...(parsed.data.code ? { code: normaliseCode(parsed.data.code) } : {}) };
+  const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.code ? { code: normaliseCode(parsed.data.code) } : {}) };
   const prevAssigned = (o.snap.data()!.assignedTo as string | undefined)?.toLowerCase();
+  const prevGroupId = o.snap.data()!.assignedGroupId as string | undefined;
+  const tenantId = o.snap.data()!.tenantId as string;
+  // Reserve-for-group changed on edit → re-snapshot members (or clear).
+  let notifyGroupEmails: string[] = [];
+  if (parsed.data.assignedGroupId !== undefined && parsed.data.assignedGroupId !== prevGroupId) {
+    if (parsed.data.assignedGroupId) {
+      const grp = await resolveGroup(tenantId, parsed.data.assignedGroupId);
+      if (grp) { patch.assignedEmails = grp.emails; patch.assignedGroupName = grp.name; notifyGroupEmails = grp.emails; }
+    } else {
+      patch.assignedEmails = FieldValue.delete();
+      patch.assignedGroupName = FieldValue.delete();
+    }
+  }
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   const a = after.data()!;
-  // Newly assigned (or reassigned) via edit → tell the family.
+  const valueTxt = valueTxtOf(a.type as string, a.value as number);
+  // Newly assigned (or reassigned) via edit → tell the family / the group.
   if (parsed.data.assignedTo && parsed.data.assignedTo.toLowerCase() !== prevAssigned) {
-    const valueTxt = valueTxtOf(a.type as string, a.value as number);
     await notifyAssigned(a.tenantId as string, parsed.data.assignedTo, a.assignedName as string | undefined, a.code as string, valueTxt, a.expiry as string | undefined);
   }
+  if (notifyGroupEmails.length) await notifyEach(tenantId, notifyGroupEmails, a.code as string, valueTxt, a.expiry as string | undefined);
   res.json({ id: after.id, ...a });
 });
 

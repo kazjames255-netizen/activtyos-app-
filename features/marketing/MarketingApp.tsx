@@ -23,11 +23,15 @@ interface Code {
   active?: boolean;
   assignedTo?: string;
   assignedName?: string;
+  assignedGroupId?: string;
+  assignedGroupName?: string;
+  assignedEmails?: string[];
   listingId?: string;
   perCustomerLimit?: boolean;
 }
 interface Family { id: string; name?: string; email?: string }
 interface Listing { id: string; title?: string; name?: string }
+interface Group { id: string; name: string; emails: string[] }
 const rand = (n: number) => Math.random().toString(36).slice(2, 2 + n).toUpperCase();
 const randomCode = () => "SAVE" + rand(5);
 const surnameOf = (name: string) => (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase() || "FAMILY";
@@ -38,6 +42,80 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
 const isSpent = (c: Code) => c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit;
 
+// Parent groups — named sets of families (e.g. "NHS parents") to send a code to
+// all at once. Managed here in the discount-codes area; a code's "…or a group"
+// picker reads them.
+function GroupsManager({ families, groups, reload }: { families: Family[]; groups: Group[]; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const emailable = families.filter((x) => x.email);
+  const start = (g?: Group) => { setEditId(g?.id ?? null); setName(g?.name ?? ""); setEmails(g?.emails ?? []); setErr(null); setOpen(true); setPanelOpen(true); };
+  const toggle = (email: string) => setEmails((es) => (es.includes(email) ? es.filter((x) => x !== email) : [...es, email]));
+  async function save() {
+    if (!name.trim()) { setErr("Give the group a name."); return; }
+    try {
+      if (editId) await api(`/api/discounts/groups/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify({ name, emails }) });
+      else await apiPost("/api/discounts/groups", { name, emails });
+      setOpen(false); setEditId(null); reload();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save the group"); }
+  }
+  async function remove(g: Group) { if (!confirm(`Delete the group “${g.name}”? Codes already sent to them are unaffected.`)) return; try { await api(`/api/discounts/groups/${encodeURIComponent(g.id)}`, { method: "DELETE" }); reload(); } catch {} }
+
+  return (
+    <Card className="mb-3.5 p-4">
+      <button type="button" onClick={() => setPanelOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+        <span className="text-[14px] font-extrabold">👥 Parent groups <span className="ml-1 font-normal text-[var(--ink-3)]">— save families together (e.g. “NHS parents”) to code them in one go</span></span>
+        <span className="text-[var(--ink-3)]">{panelOpen ? "▲" : "▼"}</span>
+      </button>
+      {panelOpen && (
+        <div className="mt-3">
+          <div className="flex flex-wrap gap-2">
+            {groups.length === 0 && !open && <span className="text-[12.5px] text-[var(--ink-3)]">No groups yet.</span>}
+            {groups.map((g) => (
+              <span key={g.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px]">
+                <b>{g.name}</b><span className="text-[var(--ink-3)]">{g.emails.length} famil{g.emails.length === 1 ? "y" : "ies"}</span>
+                <button type="button" onClick={() => start(g)} className="font-bold text-[var(--brand-2)]">Edit</button>
+                <button type="button" onClick={() => remove(g)} className="font-bold text-[var(--red,#e21d27)]">✕</button>
+              </span>
+            ))}
+            {!open && <button type="button" onClick={() => start()} className="rounded-full bg-[var(--brand-2)] px-3 py-1.5 text-[12px] font-bold text-white">＋ New group</button>}
+          </div>
+
+          {open && (
+            <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+              <FieldLabel>Group name</FieldLabel>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. NHS parents" className="w-full" />
+              <div className="mt-2.5 flex items-baseline justify-between">
+                <FieldLabel>Members <span className="font-normal text-[var(--ink-3)]">— {emails.length} selected</span></FieldLabel>
+                <button type="button" onClick={() => setEmails(emails.length === emailable.length ? [] : emailable.map((x) => x.email!))} className="text-[11px] font-bold text-[var(--brand-2)]">{emails.length === emailable.length ? "Clear all" : "Select all"}</button>
+              </div>
+              <div className="mt-1 max-h-[220px] overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1">
+                {emailable.length === 0 && <div className="p-2 text-[12px] text-[var(--ink-3)]">No families with an email yet.</div>}
+                {emailable.map((x) => (
+                  <label key={x.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[12.5px] hover:bg-[var(--panel)]">
+                    <input type="checkbox" checked={emails.includes(x.email!)} onChange={() => toggle(x.email!)} className="h-4 w-4 accent-[var(--brand-2)]" />
+                    <span className="truncate">{x.name || x.email}</span>
+                    {x.name && <span className="truncate text-[11px] text-[var(--ink-3)]">{x.email}</span>}
+                  </label>
+                ))}
+              </div>
+              {err && <div className="mt-1.5 text-[11.5px] text-[var(--red,#e21d27)]">{err}</div>}
+              <div className="mt-2.5 flex gap-2">
+                <Button variant="primary" onClick={save}>{editId ? "Save group" : "Create group"}</Button>
+                <Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function MarketingApp() {
   const [codes, setCodes] = useState<Code[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +123,8 @@ export function MarketingApp() {
   const [editId, setEditId] = useState<string | null>(null);
   const [families, setFamilies] = useState<Family[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
-  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", listingId: "", perCustomerLimit: false };
+  const [groups, setGroups] = useState<Group[]>([]);
+  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", assignedGroupId: "", listingId: "", perCustomerLimit: false };
   const [f, setF] = useState(empty);
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
 
@@ -66,12 +145,14 @@ export function MarketingApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Family[]>("/api/customers").then((cs) => setFamilies(cs.filter((c) => c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)))).catch(() => {}); }, []);
   useEffect(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch(() => {}); }, []);
+  const loadGroups = useCallback(() => { apiGet<Group[]>("/api/discounts/groups").then(setGroups).catch(() => {}); }, []);
+  useEffect(() => { loadGroups(); }, [loadGroups]);
   useRealtime(["discountCodes"], refresh);
 
   function openCreate() { setEditId(null); setF(empty); setError(null); setOpen(true); }
   function openEdit(c: Code) {
     setEditId(c.id);
-    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "", listingId: c.listingId ?? "", perCustomerLimit: !!c.perCustomerLimit });
+    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "", assignedGroupId: c.assignedGroupId ?? "", listingId: c.listingId ?? "", perCustomerLimit: !!c.perCustomerLimit });
     setError(null); setOpen(true);
   }
 
@@ -86,6 +167,8 @@ export function MarketingApp() {
       usageLimit: f.usageLimit ? Number(f.usageLimit) : undefined,
       assignedTo: f.assignedTo || undefined,
       assignedName: f.assignedName || undefined,
+      // Sent as "" on edit so deselecting a group actually clears it.
+      assignedGroupId: editId ? f.assignedGroupId : (f.assignedGroupId || undefined),
       listingId: f.listingId || undefined,
       perCustomerLimit: f.perCustomerLimit || undefined,
     };
@@ -163,30 +246,50 @@ export function MarketingApp() {
             Limit to one use per customer
           </label>
 
-          {/* Assign to one family — only they can redeem it, and they get a message + email. */}
-          <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <FieldLabel>Reserve for one family <span className="font-normal text-[var(--ink-3)]">— optional; they get a message + email</span></FieldLabel>
-            <Select
-              value={f.assignedTo}
-              onChange={(e) => {
-                const fam = families.find((x) => x.email === e.target.value);
-                if (!fam) { set({ assignedTo: "", assignedName: "" }); return; }
-                const name = fam.name || fam.email || "";
-                set({ assignedTo: fam.email || "", assignedName: name, code: f.code.trim() ? f.code : codeFromFamily(name) });
-              }}
-              className="w-full"
-            >
-              <option value="">Anyone can use it</option>
-              {families.map((c) => <option key={c.id} value={c.email}>{c.name || c.email}</option>)}
-            </Select>
-            {f.assignedTo
-              ? <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving it sends them the code by message + email.</div>
-              : <div className="mt-1.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Anyone can use it.</b> Public codes <b>aren&apos;t</b> emailed to families — but you can <b>copy the code and send it to all parents</b> (Messages → broadcast), and it appears automatically in each family&apos;s <b>Coupons &amp; discount codes</b> area and the banner across their dashboard.</div>}
+          {/* Reserve for a single family OR a whole group — either way, only they
+              can redeem it and each one gets a message + email. */}
+          <div className="mt-3 grid gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 sm:grid-cols-2">
+            <div>
+              <FieldLabel>Reserve for one family</FieldLabel>
+              <Select
+                value={f.assignedTo}
+                onChange={(e) => {
+                  const fam = families.find((x) => x.email === e.target.value);
+                  if (!fam) { set({ assignedTo: "", assignedName: "" }); return; }
+                  const name = fam.name || fam.email || "";
+                  set({ assignedTo: fam.email || "", assignedName: name, assignedGroupId: "", code: f.code.trim() ? f.code : codeFromFamily(name) });
+                }}
+                className="w-full"
+              >
+                <option value="">Anyone can use it</option>
+                {families.map((c) => <option key={c.id} value={c.email}>{c.name || c.email}</option>)}
+              </Select>
+            </div>
+            <div>
+              <FieldLabel>…or a group</FieldLabel>
+              <Select
+                value={f.assignedGroupId}
+                onChange={(e) => set({ assignedGroupId: e.target.value, ...(e.target.value ? { assignedTo: "", assignedName: "" } : {}) })}
+                className="w-full"
+              >
+                <option value="">No group</option>
+                {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.emails.length})</option>)}
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              {f.assignedTo
+                ? <div className="text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving sends them the code by message + email.</div>
+                : f.assignedGroupId
+                ? <div className="text-[11.5px] text-[var(--ink-3)]">Reserved for <b className="text-[var(--ink-2)]">{groups.find((g) => g.id === f.assignedGroupId)?.name}</b> ({groups.find((g) => g.id === f.assignedGroupId)?.emails.length ?? 0} families) — saving messages + emails every one of them, and it lands in each family&apos;s Coupons area.</div>
+                : <div className="text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Anyone can use it.</b> Public codes <b>aren&apos;t</b> emailed to families — but you can <b>copy the code and send it to all parents</b> (Messages → broadcast), and it appears automatically in each family&apos;s <b>Coupons &amp; discount codes</b> area and the banner across their dashboard.</div>}
+            </div>
           </div>
 
           <div className="mt-3 flex gap-2"><Button variant="primary" onClick={save}>{editId ? "Save changes" : "Create code"}</Button><Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button></div>
         </Card>
       )}
+
+      <GroupsManager families={families} groups={groups} reload={loadGroups} />
 
       {!codes ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : codes.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No discount codes yet.</Card>
@@ -206,6 +309,7 @@ export function MarketingApp() {
                   <div className="min-w-[140px] flex-1">
                     <div className="text-[11.5px] text-[var(--ink-3)]">
                       {c.assignedTo ? `🔒 ${c.assignedName || c.assignedTo} only · ` : ""}
+                      {c.assignedGroupName ? `👥 ${c.assignedGroupName} (${c.assignedEmails?.length ?? 0}) · ` : ""}
                       {c.listingId && listingName(c.listingId) ? `${listingName(c.listingId)} only · ` : ""}
                       {c.perCustomerLimit ? "1 per customer · " : ""}
                       {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}

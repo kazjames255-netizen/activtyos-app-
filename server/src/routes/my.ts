@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
-import { checkCode, normaliseCode, type DiscountCodeDoc } from "../lib/discountCodes";
+import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -243,6 +243,9 @@ my.get("/coupons", async (req, res) => {
   }
   const reserved = await codesCol.where("assignedTo", "==", el).get();
   reserved.docs.forEach((d) => codeDocs.set(d.id, { id: d.id, ...(d.data() as Record<string, unknown>) }));
+  // Codes reserved for a GROUP this family belongs to (e.g. "NHS parents").
+  const inGroup = await codesCol.where("assignedEmails", "array-contains", el).get();
+  inGroup.docs.forEach((d) => codeDocs.set(d.id, { id: d.id, ...(d.data() as Record<string, unknown>) }));
 
   // Codes this family has already redeemed — so a one-per-customer code they've
   // used drops off (doesn't pile up in the banner they can't use again).
@@ -255,7 +258,7 @@ my.get("/coupons", async (req, res) => {
     .filter((c) => !c.expiry || c.expiry >= today)
     .filter((c) => c.usageLimit == null || (c.usedCount ?? 0) < c.usageLimit)
     .filter((c) => !(c.perCustomerLimit && redeemedIds.has(c.id))) // already used their one go
-    .filter((c) => !c.assignedTo || c.assignedTo.toLowerCase() === el); // public OR reserved for me
+    .filter((c) => { const r = reservedEmails(c); return r.length === 0 || r.includes(el); }); // public OR reserved for me/my group
 
   // Resolve provider + listing names in one batch each.
   const tIds = [...new Set(usable.map((c) => c.tenantId))];
@@ -279,7 +282,7 @@ my.get("/coupons", async (req, res) => {
       listingId: c.listingId ?? null,
       listingName: c.listingId ? (lName.get(c.listingId) ?? null) : null,
       provider: tName.get(c.tenantId) ?? "Your provider",
-      reserved: !!c.assignedTo,
+      reserved: reservedEmails(c).length > 0,
     }))
     .sort((a, b) => (a.provider === b.provider ? a.code.localeCompare(b.code) : a.provider.localeCompare(b.provider)));
   res.json(out);

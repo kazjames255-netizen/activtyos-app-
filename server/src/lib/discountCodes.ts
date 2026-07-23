@@ -15,8 +15,18 @@ export interface DiscountCodeDoc {
   usedCount?: number;
   active?: boolean;
   assignedTo?: string; // email — if set, ONLY this family can redeem it
+  assignedEmails?: string[]; // reserved for a GROUP of families (e.g. "NHS parents")
+  assignedGroupId?: string; // the group it was reserved for (for editing/display)
+  assignedGroupName?: string;
   listingId?: string; // if set, ONLY bookings for this listing qualify
   perCustomerLimit?: boolean; // one redemption per customer (enforced in the route)
+}
+
+/** The emails a reserved code is limited to (single family + group members). */
+export function reservedEmails(c: DiscountCodeDoc): string[] {
+  return [c.assignedTo, ...(c.assignedEmails ?? [])]
+    .filter(Boolean)
+    .map((e) => (e as string).trim().toLowerCase());
 }
 
 export type CodeCheck = { ok: true; off: number } | { ok: false; reason: string };
@@ -29,7 +39,8 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  *  The per-customer limit needs a DB read, so it's enforced in the route, not here. */
 export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string, ctx?: { email?: string; listingId?: string; attendees?: number }): CodeCheck {
   if (c.active === false) return { ok: false, reason: "This code is no longer active" };
-  if (c.assignedTo && (!ctx?.email || ctx.email.trim().toLowerCase() !== c.assignedTo.trim().toLowerCase()))
+  const reserved = reservedEmails(c);
+  if (reserved.length && (!ctx?.email || !reserved.includes(ctx.email.trim().toLowerCase())))
     return { ok: false, reason: "This code is reserved for another customer" };
   if (c.listingId && ctx?.listingId && c.listingId !== ctx.listingId)
     return { ok: false, reason: "This code doesn’t apply to this activity" };
