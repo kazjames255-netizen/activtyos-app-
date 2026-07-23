@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
@@ -36,6 +36,31 @@ export function CouponTicker() {
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
 
+  // Scroll the strip in JS (not CSS animation) so it moves reliably — CSS
+  // marquees are silently killed by the OS "reduce motion" setting, and the
+  // parent has an explicit pause control here anyway. Freezes on pause/hover.
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [hovered, setHovered] = useState(false);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || paused || hovered || hidden || coupons.length === 0) return;
+    let raf = 0, last = 0, offset = 0;
+    const m = /translateX\((-?\d+(?:\.\d+)?)px\)/.exec(el.style.transform);
+    if (m) offset = -parseFloat(m[1]); // resume from where it froze
+    const tick = (t: number) => {
+      if (last) {
+        offset += (t - last) * 0.045; // ≈ 45px/s
+        const half = el.scrollWidth / 2;
+        if (half > 0 && offset >= half) offset -= half; // seamless wrap
+        el.style.transform = `translateX(${-offset}px)`;
+      }
+      last = t;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [paused, hovered, hidden, coupons.length]);
+
   if (coupons.length === 0) return null;
 
   const dismiss = () => { setHidden(true); try { localStorage.setItem(DISMISS_KEY, "1"); } catch {} };
@@ -57,12 +82,14 @@ export function CouponTicker() {
 
   return (
     <div
-      className="aos-cpn-ticker relative flex h-[34px] items-center overflow-hidden border-b border-black/20"
+      className="relative flex h-[34px] items-center overflow-hidden border-b border-black/20"
       style={{ background: "linear-gradient(90deg,#172B6A,#1C3B8C)" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[#FACC15]">🏷️ Your codes</span>
       <div className="min-w-0 flex-1 overflow-hidden">
-        <div className={`aos-cpn-track inline-flex items-center whitespace-nowrap${paused ? " is-paused" : ""}`}>
+        <div ref={trackRef} className="inline-flex items-center whitespace-nowrap [will-change:transform]">
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold text-[#eef2ff]">
               <span className="font-mono font-extrabold tracking-wider text-white">{c.code}</span>

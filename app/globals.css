@@ -194,13 +194,3 @@ h4 {
   color: currentColor;
   opacity: 0.55;
 }
-
-/* Customer coupon ticker — a slow horizontal marquee of the codes a family can
- * use, matching the prototype's aos-ticker. The track holds the items twice and
- * slides to -50% so the loop is seamless; hover (or the pause control) freezes
- * it, and reduced-motion users get a static, non-scrolling strip. */
-@keyframes aosCpnTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.aos-cpn-track { animation: aosCpnTicker 34s linear infinite; will-change: transform; }
-.aos-cpn-ticker:hover .aos-cpn-track { animation-play-state: paused; }
-.aos-cpn-track.is-paused { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) { .aos-cpn-track { animation: none; } }
