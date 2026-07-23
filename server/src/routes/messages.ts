@@ -358,10 +358,32 @@ const broadcastSchema = z.object({
   // Not .email() here — a single malformed address must not reject the whole
   // send. Invalid ones are dropped below (and only known customers are kept).
   emails: z.array(z.string().trim().max(160)).max(500).default([]),
+  // Families to drop from a listing broadcast (the operator un-ticked them).
+  excludeEmails: z.array(z.string().trim().max(160)).max(2_000).default([]),
   body: z.string().trim().min(1).max(4_000),
   subject: z.string().trim().max(80).optional(),
 }).refine((d) => d.listings.length + d.emails.length > 0, { message: "Pick at least one listing or family" });
 const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+// POST /api/messages/listing-recipients — the families booked on the given
+// listings (deduped), so the operator can review + un-tick before broadcasting.
+messages.post("/listing-recipients", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const listings: string[] = Array.isArray(req.body?.listings) ? req.body.listings.map(String) : [];
+  if (!listings.length) { res.json([]); return; }
+  const wanted = new Set(listings);
+  const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const byEmail = new Map<string, { email: string; name: string; child?: string; listing?: string }>();
+  bk.docs.forEach((d) => {
+    const b = d.data() as { email?: string; booker?: string; listing?: string; child?: string };
+    if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) {
+      const el = b.email.toLowerCase();
+      if (!byEmail.has(el)) byEmail.set(el, { email: el, name: b.booker ?? b.email, child: b.child, listing: b.listing });
+    }
+  });
+  res.json([...byEmail.values()].sort((a, b) => (a.name < b.name ? -1 : 1)));
+});
 messages.post("/broadcast", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
@@ -403,6 +425,8 @@ messages.post("/broadcast", async (req, res) => {
       }
     }
   }
+  // Drop any families the operator un-ticked.
+  for (const e of parsed.data.excludeEmails) recipients.delete(e.toLowerCase());
   if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
