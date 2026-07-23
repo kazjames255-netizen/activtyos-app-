@@ -2669,6 +2669,56 @@ Open Q: should folders be visible/editable by staff too, or read-only for them?
 My default: staff can file/move within existing folders, only owners create/
 delete — tell me and I'll match.
 
+## II — Messages "Pro" spec, pulled from the build manual (roadmap + status)
+
+The manual's messaging section describes a **Simple ⇄ Pro** composer and a full
+Comms toolkit. Capturing it all here so nothing's lost; marked ✅ done / ◐
+partial / ⬜ to build. Most of the un-built items are backend-led or Phase 2.
+
+**Compose modes**
+- ⬜ **Simple ⇄ Pro toggle** — Simple = quick 1:1; Pro = the advanced composer
+  (type, audience, templates, merge fields, channels). Front-end framing; small.
+
+**Channels** (manual: "Email = suppliers/B2B/HAF/councils + ad-hoc · Messages =
+parent transactional + broadcast · one canonical template/merge source · inbound
+dedupe by Message-ID so a reply ingests into exactly one channel")
+- ✅ In-app Messages (1:1 + broadcast).
+- ⬜ **Email + "bell" (in-app notification) defaults** per tenant.
+- ⬜ **WhatsApp / push** — Phase 2 (click-to-chat now, API later).
+- ⬜ **Inbound dedupe by Message-ID** so a reply lands in exactly one channel.
+
+**Templates + merge fields**
+- ⬜ **Template library** — canned responses in the composer, *shared with
+  Campaigns* (one canonical template source). New/rename/set-default/delete.
+- ⬜ **Merge fields**: `{ParentName} {ProviderName} {ListingName} {ChildName}
+  {SessionDate} {VenueName} {StartTime} {FinishTime} {PassName} {BookingRef}`.
+
+**Audiences / broadcast**
+- ✅ **Broadcast to a listing's families** (`/api/messages/broadcast`, built).
+- ◐ **Audience scope** — manual wants all-customers / own-sessions scoping, and
+  **named saved segments** (e.g. "All Summer Camp families · 168 recipients").
+- ⬜ **Scheduled send** (manual shows a "Scheduled send" broadcast draft).
+
+**Permissions / settings** (see also §HH)
+- ⬜ Staff-can-message-session-parents ON/OFF; which HO recipients staff may
+  reach; staff-can-message-HO; **HO sees staff↔parent threads** toggle (off = HO
+  doesn't see them).
+- ✅ Customers can start threads (booking/customer-gated).
+- ⬜ **Auto-reply / office hours**; inbox + search settings; email+bell defaults.
+
+**AI (Pro)**
+- ⬜ **"Draft with AI · Pro"** — AI drafting in the Pro composer (Phase 2 / Pro
+  tier). Use the latest Claude model when built.
+
+**Already shipped this session (not in the manual's original P1 list):** folders,
+per-thread subject, the **ActivityOS support channel**, unread bell on the
+Messages tab, message-any-customer, colour-coded bubbles, "parent of <child>"
+labels, searchable family picker.
+
+Suggested next build (highest value, mostly front-end): **template library +
+merge fields**, then the **Simple/Pro toggle** to house it. Segments, scheduling,
+email/WhatsApp channels and AI are bigger / Phase-2 and need backend first.
+
 - Front end is ready: the composer lists all `/api/customers`, and search now
   surfaces un-messaged families under "Start a new conversation". Both currently
   hit the 400 for a customer with no booking — this change unblocks them.

@@ -211,7 +211,8 @@ messages.put("/threads/:id/folder", async (req, res) => {
 
 // ─── Broadcast: message every family booked on a listing ────────────────────
 const broadcastSchema = z.object({
-  listing: z.string().trim().min(1).max(200),
+  // One or many listings — a family booked on several only gets the message once.
+  listings: z.array(z.string().trim().min(1).max(200)).min(1).max(50),
   body: z.string().trim().min(1).max(4_000),
   subject: z.string().trim().max(80).optional(),
 });
@@ -220,13 +221,14 @@ messages.post("/broadcast", async (req, res) => {
   if (!tenantId) return;
   const parsed = broadcastSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const bk = await db.collection("bookings").where("tenantId", "==", tenantId).where("listing", "==", parsed.data.listing).get();
-  const recipients = new Map<string, string>(); // email → best-known name
+  const wanted = new Set(parsed.data.listings);
+  const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const recipients = new Map<string, string>(); // email → best-known name (deduped across listings)
   bk.docs.forEach((d) => {
-    const b = d.data() as { email?: string; booker?: string };
-    if (b.email) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
+    const b = d.data() as { email?: string; booker?: string; listing?: string };
+    if (b.email && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
   });
-  if (recipients.size === 0) { res.status(400).json({ error: "No families are booked on that listing" }); return; }
+  if (recipients.size === 0) { res.status(400).json({ error: "No families are booked on the chosen listing(s)" }); return; }
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
   const tName = await tenantName(tenantId);
@@ -242,7 +244,7 @@ messages.post("/broadcast", async (req, res) => {
       lastBody: parsed.data.body,
       lastFrom: "operator",
       lastAt: now,
-      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0 }),
+      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(parsed.data.subject ? { subject: parsed.data.subject } : {}) }),
       parentUnread: FieldValue.increment(1),
     }, { merge: true });
     await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body: parsed.data.body, createdAt: now });
