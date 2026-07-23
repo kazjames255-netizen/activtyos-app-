@@ -2602,6 +2602,48 @@ For dev testing, the practical fix is enabling **Blaze** on the Firebase project
 
 ---
 
+## EE — Operators can message ANY of their customers, not just booked ones — DONE (Amir, please review)
+
+**Kaz's call:** an operator should be able to start a conversation with **any
+family in their customer list**, whether or not that family currently has a
+booking.
+
+**⚠️ I (Kaz's front-end side) edited your server here** — normally I don't touch
+`server/`, but Kaz needed it working now. Please review and take ownership:
+- Added `isMyCustomer(tenantId, email)` in `server/src/routes/messages.ts`
+  (case-insensitive scan of this tenant's `customers` collection).
+- Relaxed the operator send-gate from `hasBooking(...)` to
+  `isMyCustomer(...) || hasBooking(...)`. Error copy updated.
+- **Parent-side gate unchanged** (`messages.ts` parent branch — a parent still
+  can only message providers they've booked with; no cold outreach the other way).
+- Perf note: `isMyCustomer` currently reads all of a tenant's customers to dodge
+  email-case mismatches. Fine at dev scale; if you store emails normalised you
+  can swap it for a single `where("email","==",…)` equality read.
+
+## FF — Message search over full conversation content (needs a backend search)
+
+The thread-list search now matches the person, subject, and the **latest**
+message (`lastBody`) — all the front end has per thread. Kaz wants to find a
+thread by **anything said in it**, not just the last line. That needs a
+server-side search over the `messages` collection:
+- Option A (simple): `GET /api/messages/search?q=…` — scoped to the caller
+  (operator's tenant / parent's email), returns matching `threadId`s (+ a
+  snippet). Front end filters the list to those ids. Firestore has no substring
+  search, so either keep a lowercased token/keywords array per message, or run a
+  prefix query, or push to a real text index if search gets heavy.
+- Option B (later): denormalise a per-thread `searchText` blob (concatenated
+  bodies, capped) so the existing thread list can match it without a new call.
+I'll wire whichever you pick.
+
+- Front end is ready: the composer lists all `/api/customers`, and search now
+  surfaces un-messaged families under "Start a new conversation". Both currently
+  hit the 400 for a customer with no booking — this change unblocks them.
+- Note: the compose/list now also shows **"Name (parent of <child>)"** — it
+  reads `children[].name` off the customer doc you already return. No change
+  needed there; just don't drop `children` from the `/api/customers` payload.
+
+---
+
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
 
 The rest of the **Run the day** section. Three new tenant-scoped, realtime

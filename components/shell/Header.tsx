@@ -63,7 +63,7 @@ export function Header({ portal }: { portal: PortalKey }) {
                 href={t.href}
                 className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--surface)]"
                 style={active
-                  ? { background: "var(--brand-2, #2f6bd8)", color: "#fff", boxShadow: "0 1px 4px rgba(47,107,216,.35)" }
+                  ? { background: "var(--cta, #15b364)", color: "var(--cta-ink, #fff)", boxShadow: "0 1px 4px rgba(21,179,100,.35)" }
                   : { color: "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
