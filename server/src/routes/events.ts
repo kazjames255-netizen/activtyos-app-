@@ -41,8 +41,18 @@ events.get("/", async (req, res) => {
 
   const send = (collection: string) => res.write(`data: ${JSON.stringify({ collection })}\n\n`);
 
+  // The client passes ?collections=a,b,c — the collections some mounted view
+  // actually watches. We attach listeners for ONLY those (each onSnapshot attach
+  // reads that whole collection, so watching all ~35 on every connect is what
+  // drains the Firestore read quota). Absent/empty → attach everything (a plain
+  // GET of /api/events still behaves as before).
+  const wanted = typeof req.query.collections === "string" && req.query.collections.trim()
+    ? new Set(req.query.collections.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+
   const unsubs: (() => void)[] = [];
   const listen = (q: FirebaseFirestore.Query, name: string) => {
+    if (wanted && !wanted.has(name)) return; // page doesn't watch this — skip its reads
     // onSnapshot fires once immediately with the current state — skip it,
     // clients already loaded their data over REST.
     let first = true;
