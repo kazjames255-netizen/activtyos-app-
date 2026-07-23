@@ -339,9 +339,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }}>
             ＋ {mode === "operator" ? "Message customers" : "New message"}
           </Button>
-          {mode === "operator" && portalSeg !== "staff" && (
+          {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
             <Link href={`/${portalSeg}/activityos`}>
-              <Button>✦ Message ActivityOS</Button>
+              <Button>{mode === "parent" ? "🛟 Message ActivityOS" : "✦ Message ActivityOS"}</Button>
             </Link>
           )}
         </div>
