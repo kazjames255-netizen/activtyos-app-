@@ -163,6 +163,23 @@ messages.post("/", async (req, res) => {
   res.status(201).json({ id: ref.id, ...msg });
 });
 
+// ─── Notification settings ──────────────────────────────────────────────────
+// GET/PUT the operator's "email me when I get a new message" preference (on the
+// tenant doc; read by the send handler above).
+messages.get("/settings", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const snap = await db.collection("tenants").doc(tenantId).get();
+  res.json({ emailOnNewMessage: snap.data()?.emailOnNewMessage !== false });
+});
+messages.put("/settings", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const on = req.body?.emailOnNewMessage !== false;
+  await db.collection("tenants").doc(tenantId).set({ emailOnNewMessage: on }, { merge: true });
+  res.json({ emailOnNewMessage: on });
+});
+
 // ─── Folders ──────────────────────────────────────────────────────────────
 // Operator-only, tenant-shared folders to file conversations (e.g. "Resolved").
 // A thread carries at most one `folderId`; unfiled threads are the Inbox.
@@ -352,11 +369,21 @@ const DEFAULT_TEMPLATES = [
 messages.get("/templates", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
+  // First visit: seed the provider's own editable copies of the presets, once.
+  // (Head-Office-owned defaults → each tenant gets their own to edit/delete.)
+  const tRef = db.collection("tenants").doc(tenantId);
+  const tSnap = await tRef.get();
+  if (!tSnap.data()?.templatesSeeded) {
+    const now = new Date().toISOString();
+    const batch = db.batch();
+    for (const t of DEFAULT_TEMPLATES) batch.set(templatesCol.doc(), { tenantId, name: t.name, subject: t.subject, body: t.body, createdAt: now });
+    batch.set(tRef, { templatesSeeded: true }, { merge: true });
+    await batch.commit();
+  }
   const snap = await templatesCol.where("tenantId", "==", tenantId).get();
-  const custom = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
-  custom.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
-  // Presets first, then the tenant's own.
-  res.json([...DEFAULT_TEMPLATES.map((t) => ({ ...t, preset: true })), ...custom]);
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
+  res.json(list);
 });
 messages.post("/templates", async (req, res) => {
   const tenantId = operatorTenant(req, res);
