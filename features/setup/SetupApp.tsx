@@ -44,7 +44,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers";
+type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -1056,6 +1056,7 @@ export function SetupApp() {
     ["defaults", "New listing defaults"],
     ["bookings", "Payments"],
     ["vouchers", "Childcare vouchers"],
+    ["marketplace", "Marketplace"],
   ];
 
   return (
@@ -1338,16 +1339,19 @@ export function SetupApp() {
         </>
       )}
 
+      {tab === "marketplace" && (
+        <Section
+          title="ActivityOS marketplace"
+          lede="Your own storefront link always shows your public activities. Switching this on also lists them in the shared ActivityOS marketplace, where families browsing the app can discover you — not just the ones who already have your link."
+        >
+          <Row label="List us in the marketplace" hint="Off: families reach you only through your storefront/booking link. On: your live, public listings also appear in every family's in-app Browse.">
+            <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={["Listed", "Off"]} />
+          </Row>
+        </Section>
+      )}
+
       {tab === "bookings" && (
         <>
-          <Section
-            title="Marketplace"
-            lede="Your own storefront link always shows your public activities. Switching this on also lists them in the shared ActivityOS marketplace, where families browsing the app can discover you — not just the ones who already have your link."
-          >
-            <Row label="List us in the marketplace" hint="Off: families reach you only through your storefront/booking link. On: your live, public listings also appear in every family's in-app Browse.">
-              <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={["Listed", "Off"]} />
-            </Row>
-          </Section>
           <Section
             title="How parents pay"
             lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
