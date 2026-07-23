@@ -78,6 +78,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      label: "Marketing",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "marketing", legacyView: "admin-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+      ],
+    },
+    {
       label: "Support",
       pinned: false,
       footer: false,
@@ -219,6 +227,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      label: "Marketing",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "marketing", legacyView: "franchise-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+      ],
+    },
+    {
       label: "Money & growth",
       pinned: false,
       footer: false,
@@ -310,6 +326,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "calendar", legacyView: "cal-freelancer", label: "Calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "freelancer-timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
         { view: "tasks", legacyView: "freelancer-tasks", label: "Tasks", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: "4" },
+      ],
+    },
+    {
+      label: "Marketing",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "marketing", legacyView: "freelancer-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
       ],
     },
     {
