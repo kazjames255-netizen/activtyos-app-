@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { Button, Card, Input } from "@/components/ui";
 
@@ -80,9 +82,9 @@ function TemplateModal({ initial, onDone }: { initial?: Template; onDone: (chang
           </div>
           {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-5 py-3.5">
-          <Button onClick={() => onDone(false)}>Cancel</Button>
-          <Button variant="primary" onClick={save} disabled={busy}>{busy ? "Saving…" : editing ? "Save changes" : "Create template"}</Button>
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-5 py-3.5">
+          <Button onClick={() => onDone(false)}>← Back</Button>
+          <Button variant="primary" onClick={save} disabled={busy}>{busy ? "Saving…" : editing ? "💾 Save changes" : "Create template"}</Button>
         </div>
       </div>
     </div>
@@ -94,6 +96,7 @@ export function TemplatesApp() {
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ initial?: Template } | null>(null);
+  const portalSeg = usePathname().split("/")[1] || "freelancer";
 
   const load = useCallback(() => {
     apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -114,8 +117,9 @@ export function TemplatesApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
+          <Link href={`/${portalSeg}/messages`} className="mb-1.5 inline-block text-[12px] font-bold text-[var(--brand-2)] no-underline">← Back to messages</Link>
           <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Message templates</h2>
-          <p className="max-w-[640px] text-[12.5px] text-[var(--ink-3)]">Preset emails — merge fields fill <b className="text-[var(--ink-2)]">per recipient</b> on send. Head Office-owned; franchises set their own.</p>
+          <p className="max-w-[640px] text-[12.5px] text-[var(--ink-3)]">Merge fields fill <b className="text-[var(--ink-2)]">per recipient</b> on send. Edit these to match your voice.</p>
         </div>
         <Button variant="primary" onClick={() => setModal({})}>＋ New template</Button>
       </div>

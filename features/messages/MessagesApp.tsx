@@ -88,6 +88,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [pro, setPro] = useState(false); // Simple ⇄ Pro composer
   const [templates, setTemplates] = useState<Template[]>([]);
   const [providerName, setProviderName] = useState("");
+  const [emailOn, setEmailOn] = useState<boolean | null>(null); // email-me-on-new-message
   const loadTemplates = () => apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch(() => {});
   const endRef = useRef<HTMLDivElement>(null);
   const mine = mode === "operator" ? "operator" : "parent";
@@ -114,6 +115,16 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useEffect(() => { loadThreads(); }, [loadThreads]);
   useEffect(() => { loadFolders(); }, [loadFolders]);
   useEffect(() => { loadBroadcasts(); }, [loadBroadcasts]);
+  useEffect(() => {
+    if (mode !== "operator") return;
+    apiGet<{ emailOnNewMessage: boolean }>("/api/messages/settings").then((s) => setEmailOn(s.emailOnNewMessage)).catch(() => {});
+  }, [mode]);
+  async function toggleEmail() {
+    const next = !emailOn;
+    setEmailOn(next);
+    try { await api("/api/messages/settings", { method: "PUT", body: JSON.stringify({ emailOnNewMessage: next }) }); }
+    catch { setEmailOn(!next); }
+  }
   useEffect(() => {
     if (mode === "parent") apiGet<Provider[]>("/api/my/providers").then(setProviders).catch(() => {});
     // Only families with a valid email — you can't message the others, and a bad
@@ -315,6 +326,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
         <div className="flex flex-wrap items-center gap-2">
+          {mode === "operator" && emailOn !== null && (
+            <button type="button" onClick={toggleEmail} title="Email me when a family sends a new message"
+              className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
+              style={emailOn ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-strong)" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+              🔔 Email me
+              <span className="rounded-full px-1.5 py-0.5 text-[10px]" style={emailOn ? { background: "var(--brand-2)", color: "#fff" } : { background: "var(--line)", color: "var(--ink-2)" }}>{emailOn ? "ON" : "OFF"}</span>
+            </button>
+          )}
           <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setFamilyTargets([]); setNotice(null); }}>
             ＋ {mode === "operator" ? "Message customers" : "New message"}
           </Button>
