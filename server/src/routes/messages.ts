@@ -38,6 +38,13 @@ async function isMyCustomer(tenantId: string, email: string) {
   const snap = await db.collection("customers").where("tenantId", "==", tenantId).get();
   return snap.docs.some((d) => ((d.data().email as string | undefined) ?? "").toLowerCase() === e);
 }
+// Pro-composer merge fields we can resolve for any recipient. (Per-booking ones
+// like {ChildName}/{BookingRef} need booking context — see handoff §II.)
+function mergeText(text: string, v: { parentName?: string; providerName?: string }): string {
+  return text
+    .replace(/\{ParentName\}/gi, v.parentName ?? "")
+    .replace(/\{ProviderName\}/gi, v.providerName ?? "");
+}
 
 // GET /api/messages/threads — the caller's conversations (newest activity first).
 messages.get("/threads", async (req, res) => {
@@ -50,7 +57,11 @@ messages.get("/threads", async (req, res) => {
   } else if (isOperator(auth.role) && auth.tenantId) {
     snap = await threadsCol.where("tenantId", "==", auth.tenantId).get();
   } else { res.status(403).json({ error: "Requires a parent or operator account" }); return; }
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { lastAt?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { lastAt?: string; operatorHidden?: boolean })[];
+  // A broadcast delivers into each family's thread so they receive + can reply,
+  // but those threads stay hidden from the OPERATOR inbox until a family actually
+  // replies (avoids N duplicate rows per bulk send). Parents always see theirs.
+  if (auth.role !== "parent") list = list.filter((t) => t.operatorHidden !== true);
   list.sort((a, b) => (`${b.lastAt ?? ""}` < `${a.lastAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -119,6 +130,9 @@ messages.post("/", async (req, res) => {
     lastBody: body,
     lastFrom: from,
     lastAt: now,
+    // A deliberate 1:1 (either side) always shows in the operator inbox — this
+    // is what surfaces a broadcast thread once a family replies.
+    operatorHidden: false,
     ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0 }),
     // Subject is set once, by whoever opens the thread.
     ...(!existing.exists && subject ? { subject } : {}),
@@ -210,25 +224,37 @@ messages.put("/threads/:id/folder", async (req, res) => {
 });
 
 // ─── Broadcast: message every family booked on a listing ────────────────────
+const broadcastsCol = db.collection("broadcasts");
 const broadcastSchema = z.object({
-  // One or many listings — a family booked on several only gets the message once.
-  listings: z.array(z.string().trim().min(1).max(200)).min(1).max(50),
+  // Target by listing (everyone booked on it) and/or specific families by email.
+  // A family reached more than once still only gets the message once.
+  listings: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  emails: z.array(z.string().trim().email().max(160)).max(500).default([]),
   body: z.string().trim().min(1).max(4_000),
   subject: z.string().trim().max(80).optional(),
-});
+}).refine((d) => d.listings.length + d.emails.length > 0, { message: "Pick at least one listing or family" });
 messages.post("/broadcast", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const parsed = broadcastSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const recipients = new Map<string, string>(); // email → best-known name (deduped)
   const wanted = new Set(parsed.data.listings);
-  const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
-  const recipients = new Map<string, string>(); // email → best-known name (deduped across listings)
-  bk.docs.forEach((d) => {
-    const b = d.data() as { email?: string; booker?: string; listing?: string };
-    if (b.email && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
-  });
-  if (recipients.size === 0) { res.status(400).json({ error: "No families are booked on the chosen listing(s)" }); return; }
+  if (wanted.size) {
+    const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+    bk.docs.forEach((d) => {
+      const b = d.data() as { email?: string; booker?: string; listing?: string };
+      if (b.email && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
+    });
+  }
+  if (parsed.data.emails.length) {
+    // Only the tenant's own customers — never arbitrary addresses.
+    const custSnap = await db.collection("customers").where("tenantId", "==", tenantId).get();
+    const byEmail = new Map<string, string>();
+    custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email) byEmail.set(c.email.toLowerCase(), c.name ?? c.email); });
+    for (const e of parsed.data.emails) { const el = e.toLowerCase(); if (byEmail.has(el)) recipients.set(el, byEmail.get(el)!); }
+  }
+  if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
   const tName = await tenantName(tenantId);
@@ -236,20 +262,97 @@ messages.post("/broadcast", async (req, res) => {
     const id = threadId(tenantId, email);
     const tRef = threadsCol.doc(id);
     const existing = await tRef.get();
+    const rbody = mergeText(parsed.data.body, { parentName: name, providerName: tName });
     await tRef.set({
       tenantId,
       tenantName: existing.exists ? (existing.data()!.tenantName as string) : tName,
       parentEmail: email,
       parentName: existing.exists ? (existing.data()!.parentName as string) : name,
-      lastBody: parsed.data.body,
+      lastBody: rbody,
       lastFrom: "operator",
       lastAt: now,
-      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(parsed.data.subject ? { subject: parsed.data.subject } : {}) }),
+      // New threads born from a broadcast stay hidden from the operator inbox
+      // until the family replies (a reply flips operatorHidden=false via the main
+      // send handler). Existing threads keep whatever visibility they had.
+      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, operatorHidden: true, ...(parsed.data.subject ? { subject: parsed.data.subject } : {}) }),
       parentUnread: FieldValue.increment(1),
     }, { merge: true });
-    await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body: parsed.data.body, createdAt: now });
+    await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body: rbody, createdAt: now, broadcast: true });
   }));
+  // One record per bulk send — the single row the operator sees instead of N threads.
+  await broadcastsCol.add({
+    tenantId,
+    body: parsed.data.body,
+    subject: parsed.data.subject ?? "",
+    sentAt: now,
+    senderName,
+    recipientCount: recipients.size,
+    recipients: [...recipients].slice(0, 500).map(([email, name]) => ({ email, name })),
+  });
   res.json({ ok: true, sent: recipients.size });
+});
+
+// GET /api/messages/broadcasts — the operator's bulk sends (one row each).
+messages.get("/broadcasts", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const snap = await broadcastsCol.where("tenantId", "==", tenantId).get();
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { sentAt?: string })[];
+  list.sort((a, b) => (`${b.sentAt ?? ""}` < `${a.sentAt ?? ""}` ? -1 : 1));
+  res.json(list);
+});
+
+// ─── Message templates (Pro composer — canned messages) ─────────────────────
+const templatesCol = db.collection("messageTemplates");
+const templateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  subject: z.string().trim().max(80).optional(),
+  body: z.string().trim().min(1).max(4_000),
+});
+// Built-in presets every provider gets for free (Head Office-owned). They're
+// returned by GET /templates with `preset:` ids and aren't stored per tenant —
+// so they can be inserted/duplicated but not edited/deleted in place. A provider
+// who wants their own wording duplicates one (creates a normal tenant template).
+const DEFAULT_TEMPLATES = [
+  { id: "preset:booking-confirmation", name: "Booking confirmation", subject: "Your booking is confirmed, {ChildName}!",
+    body: "Hi {ParentName},\n\n{ChildName}’s place on {ListingName} is confirmed for {SessionDate} at {VenueName}. Drop-off opens 15 minutes before the start.\n\nSee you there!" },
+  { id: "preset:session-reminder", name: "Session reminder", subject: "{ListingName} starts soon, {ChildName}!",
+    body: "Hi {ParentName},\n\nJust a reminder that {ChildName} is booked onto {ListingName} on {SessionDate} at {VenueName}. Please bring a packed lunch and a water bottle." },
+  { id: "preset:review-request", name: "Thank you / review request", subject: "How was {ChildName}’s time with us?",
+    body: "Hi {ParentName},\n\nThanks for booking {ListingName}. We’d love a quick review of how {ChildName} got on — it really helps other families." },
+  { id: "preset:waitlist-offer", name: "Waitlist offer", subject: "A space has opened on {ListingName}",
+    body: "Hi {ParentName},\n\nGood news — a space has opened for {ChildName} on {ListingName} ({SessionDate}). This offer is held for 24 hours — claim it from your dashboard." },
+  { id: "preset:payment-reminder", name: "Payment reminder", subject: "Balance due for {ListingName}",
+    body: "Hi {ParentName},\n\nA friendly reminder that a balance is outstanding for {ChildName}’s booking on {ListingName}. You can pay securely from your dashboard." },
+  { id: "preset:welcome", name: "Welcome / first booking", subject: "Welcome to {ProviderName}!",
+    body: "Hi {ParentName},\n\nWelcome! Your account is ready and {ChildName} is all set. Manage bookings, receipts and messages any time from your dashboard." },
+] as const;
+messages.get("/templates", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const snap = await templatesCol.where("tenantId", "==", tenantId).get();
+  const custom = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  custom.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
+  // Presets first, then the tenant's own.
+  res.json([...DEFAULT_TEMPLATES.map((t) => ({ ...t, preset: true })), ...custom]);
+});
+messages.post("/templates", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const parsed = templateSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const doc = { tenantId, name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body, createdAt: new Date().toISOString() };
+  const ref = await templatesCol.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+messages.delete("/templates/:id", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const ref = templatesCol.doc(req.params.id);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Template not found" }); return; }
+  await ref.delete();
+  res.json({ ok: true });
 });
 
 // ─── ActivityOS support channel (operator ↔ platform/HQ) ────────────────────

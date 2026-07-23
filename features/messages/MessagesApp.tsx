@@ -35,6 +35,17 @@ interface Thread {
   parentUnread?: number;
 }
 interface Folder { id: string; name: string }
+interface BroadcastRec { id: string; body: string; subject?: string; sentAt?: string; recipientCount?: number; recipients?: { email: string; name: string }[] }
+interface Template { id: string; name: string; subject?: string; body: string }
+// Client merge for a 1:1 send — fills what we know about the chosen family.
+// (Broadcast fills {ParentName}/{ProviderName} server-side; per-booking fields
+// like {ListingName}/{SessionDate} need booking context — see handoff §II.)
+const mergeText = (text: string, v: { parentName?: string; providerName?: string; childName?: string }) =>
+  text
+    .replace(/\{ParentName\}/gi, v.parentName ?? "")
+    .replace(/\{ProviderName\}/gi, v.providerName ?? "")
+    .replace(/\{ChildName\}/gi, v.childName ?? "");
+const MERGE_FIELDS = ["{ParentName}", "{ChildName}", "{ProviderName}", "{ListingName}", "{SessionDate}", "{VenueName}"];
 interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
@@ -61,6 +72,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [target, setTarget] = useState(""); // tenantId (parent) or customer email (operator)
   const [subject, setSubject] = useState(""); // optional heading for a NEW thread
   const [familyQuery, setFamilyQuery] = useState("");
+  const [familyTargets, setFamilyTargets] = useState<string[]>([]); // operator: 1+ family emails
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);
@@ -70,6 +82,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeFolder, setActiveFolder] = useState<string>("all"); // "all" | "unfiled" | folderId
+  const [broadcasts, setBroadcasts] = useState<BroadcastRec[]>([]);
+  const [openBroadcast, setOpenBroadcast] = useState<BroadcastRec | null>(null);
+  const [pro, setPro] = useState(false); // Simple ⇄ Pro composer
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [providerName, setProviderName] = useState("");
+  const loadTemplates = () => apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch(() => {});
   const endRef = useRef<HTMLDivElement>(null);
   const mine = mode === "operator" ? "operator" : "parent";
   const portalSeg = usePathname().split("/")[1] || "freelancer";
@@ -86,9 +104,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     if (mode !== "operator") return;
     apiGet<Folder[]>("/api/messages/folders").then(setFolders).catch(() => {});
   }, [mode]);
+  // The operator's bulk sends — shown as one "📣 Sent" row each, not N threads.
+  const loadBroadcasts = useCallback(() => {
+    if (mode !== "operator") return;
+    apiGet<BroadcastRec[]>("/api/messages/broadcasts").then(setBroadcasts).catch(() => {});
+  }, [mode]);
 
   useEffect(() => { loadThreads(); }, [loadThreads]);
   useEffect(() => { loadFolders(); }, [loadFolders]);
+  useEffect(() => { loadBroadcasts(); }, [loadBroadcasts]);
   useEffect(() => {
     if (mode === "parent") apiGet<Provider[]>("/api/my/providers").then(setProviders).catch(() => {});
     else apiGet<Customer[]>("/api/customers").then((c) => setCustomers(c.filter((x) => x.email))).catch(() => {});
@@ -96,20 +120,25 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // Operator listing names, for the "message a whole listing" broadcast.
   useEffect(() => {
     if (mode !== "operator") return;
-    apiGet<{ tenantId?: string }>("/api/me")
+    apiGet<{ tenantId?: string; tenantName?: string }>("/api/me")
       .then((me) => {
+        if (me.tenantName) setProviderName(me.tenantName);
         if (!me.tenantId) return;
         return apiGet<{ name?: string }[]>(`/api/listings?tenantId=${encodeURIComponent(me.tenantId)}`)
           .then((ls) => setListings([...new Set(ls.map((l) => l.name).filter((n): n is string => !!n))].sort()));
       })
       .catch(() => {});
-  }, [mode]);
+    loadTemplates();
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   useRealtime(["threads", "messages"], () => { loadThreads(); if (openId) loadThread(openId); });
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages]);
 
-  function open(id: string) { setComposing(false); setSubject(""); setOpenId(id); loadThread(id); }
+  function open(id: string) { setComposing(false); setSubject(""); setOpenBroadcast(null); setOpenId(id); loadThread(id); }
   // Open the composer pre-addressed to a family/provider found via search.
-  function startWith(value: string) { setComposing(true); setOpenId(null); setMessages([]); setSubject(""); setTarget(value); }
+  function startWith(value: string) {
+    setComposing(true); setOpenId(null); setMessages([]); setSubject(""); setComposeMode("family");
+    if (mode === "operator") setFamilyTargets([value]); else setTarget(value);
+  }
 
   async function createFolder() {
     const name = window.prompt("New folder name (e.g. Resolved)")?.trim();
@@ -131,6 +160,13 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       loadFolders(); loadThreads();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t delete folder"); }
   }
+  async function saveTemplate() {
+    if (!draft.trim()) { setError("Write a message first, then save it as a template."); return; }
+    const name = window.prompt("Template name (e.g. Welcome)")?.trim();
+    if (!name) return;
+    try { await apiPost("/api/messages/templates", { name, subject: subject.trim() || undefined, body: draft.trim() }); loadTemplates(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save template"); }
+  }
   async function moveThread(threadId: string, folderId: string | null) {
     try { await api(`/api/messages/threads/${encodeURIComponent(threadId)}/folder`, { method: "PUT", body: JSON.stringify({ folderId }) }); loadThreads(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t move conversation"); }
@@ -145,14 +181,31 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         const nL = listingTargets.length;
         setDraft(""); setSubject(""); setComposing(false); setListingTargets([]); setComposeMode("family");
         setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"} across ${nL} ${nL === 1 ? "listing" : "listings"}.`);
-        loadThreads();
+        loadThreads(); loadBroadcasts();
+        return;
+      }
+      if (composing && mode === "operator") {
+        // "Families" mode — one or many families at once.
+        if (familyTargets.length === 0) { setError("Choose at least one family."); return; }
+        if (familyTargets.length > 1) {
+          const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { emails: familyTargets, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
+          setDraft(""); setSubject(""); setComposing(false); setFamilyTargets([]);
+          setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"}.`);
+          loadThreads(); loadBroadcasts();
+          return;
+        }
+        const email = familyTargets[0];
+        const c1 = customers.find((c) => c.email === email);
+        const childName = c1?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+        const payload = { parentEmail: email, parentName: c1?.name, body: mergeText(draft, { parentName: c1?.name, providerName, childName }), ...(subject.trim() ? { subject: subject.trim() } : {}) };
+        const res = await apiPost<{ threadId: string }>("/api/messages", payload);
+        setDraft(""); setSubject(""); setComposing(false); setFamilyTargets([]); loadThreads(); open(res.threadId);
         return;
       }
       if (composing) {
+        // Parent side — message one provider.
         if (!target) { setError("Choose who to message."); return; }
-        const who = mode === "parent" ? { tenantId: target } : { parentEmail: target, parentName: customers.find((c) => c.email === target)?.name };
-        // subject only rides along on the FIRST message of a new thread (§CC).
-        const payload = { ...who, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) };
+        const payload = { tenantId: target, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) };
         const res = await apiPost<{ threadId: string }>("/api/messages", payload);
         setDraft(""); setComposing(false); setTarget(""); setSubject(""); loadThreads(); open(res.threadId);
       } else {
@@ -205,7 +258,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const filterTabs: { key: "all" | "unread" | "reply"; label: string }[] = [
     { key: "all", label: "All" },
     { key: "reply", label: mode === "operator" ? "Needs reply" : "Awaiting you" },
-    { key: "unread", label: "Unread" },
+    { key: "unread", label: "New" },
   ];
 
   // Search should also surface people you *haven't* messaged yet (the box says
@@ -225,6 +278,32 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           .filter((p) => !threadedKeys.has((p.tenantId ?? "").toLowerCase()) && p.name.toLowerCase().includes(qv))
           .map((p) => ({ key: p.tenantId, value: p.tenantId, label: p.name, sub: "" }));
 
+  // The Pro composer bar — Simple/Pro toggle, templates and merge fields — shown
+  // above the message box wherever the operator writes (new message or reply).
+  const proBar = mode !== "operator" ? null : (
+    <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] px-2.5 pt-2">
+      <div className="mr-1 flex gap-0.5 rounded-full border border-[var(--line)] p-0.5">
+        {([["simple", "Simple"], ["pro", "Pro ✦"]] as const).map(([m, label]) => {
+          const on = (m === "pro") === pro;
+          return <button key={m} type="button" onClick={() => setPro(m === "pro")} className="rounded-full px-2.5 py-0.5 text-[10.5px] font-bold" style={on ? { background: "var(--brand-2)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>;
+        })}
+      </div>
+      {pro && (
+        <>
+          <Select value="" onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) { setDraft(t.body); if (t.subject) setSubject(t.subject); } }} className="!py-1 text-[11px]">
+            <option value="">{templates.length ? "Insert template…" : "No templates yet"}</option>
+            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </Select>
+          {MERGE_FIELDS.map((f) => (
+            <button key={f} type="button" title="Insert merge field" onClick={() => setDraft((d) => (d ? `${d} ` : "") + f)}
+              className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f}</button>
+          ))}
+          <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Save as template</button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     // -m-5/p-5 bleeds the light surface to the edges of the (dark-shell) content
     // area so the whole Messages page reads light, like the customer dashboard.
@@ -232,7 +311,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setNotice(null); }}>
+          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setFamilyTargets([]); setNotice(null); }}>
             ＋ {mode === "operator" ? "Message customers" : "New message"}
           </Button>
           {mode === "operator" && portalSeg !== "staff" && (
@@ -301,18 +380,39 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   })}
                 </div>
               </div>
+              {mode === "operator" && activeFolder === "all" && !q.trim() && broadcasts.length > 0 && (
+                <>
+                  <div className="px-2.5 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">📣 Sent to groups</div>
+                  {broadcasts.slice(0, 20).map((b) => (
+                    <button key={b.id} type="button" onClick={() => { setOpenBroadcast(b); setOpenId(null); setComposing(false); }}
+                      className={`flex items-start gap-2.5 rounded-xl px-2 py-2 text-left transition ${openBroadcast?.id === b.id ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
+                      <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[14px]" style={{ background: "var(--brand-soft)" }}>📣</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">Sent to {b.recipientCount ?? b.recipients?.length ?? 0} families</span>
+                          <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(b.sentAt)}</span>
+                        </div>
+                        <div className="truncate text-[11.5px] text-[var(--ink-3)]">{b.subject ? `${b.subject} · ` : ""}{b.body}</div>
+                      </div>
+                    </button>
+                  ))}
+                  <div className="my-1 border-t border-[var(--line)]" />
+                </>
+              )}
               {shownThreads.map((t) => {
                 const initial = (t.parentName || t.parentEmail || t.tenantName || "?").trim()[0]?.toUpperCase() ?? "?";
+                const isNew = unread(t) > 0; // unread = "new" → bold; read = normal weight
                 return (
                   <button key={t.id} type="button" onClick={() => open(t.id)} className={`flex items-start gap-2.5 rounded-xl px-2 py-2 text-left transition ${openId === t.id ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
                     <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>{initial}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{t.subject || other(t)}</span>
+                        {isNew && <span className="h-2 w-2 flex-none rounded-full" style={{ background: "var(--brand-2)" }} aria-label="new" />}
+                        <span className={`min-w-0 flex-1 truncate text-[12.5px] ${isNew ? "font-extrabold text-[var(--ink)]" : "font-medium text-[var(--ink-2)]"}`}>{t.subject || other(t)}</span>
                         <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(t.lastAt)}</span>
-                        {unread(t) > 0 && <Badge tone={{ bg: "var(--brand)", fg: "#fff" }}>{unread(t)}</Badge>}
+                        {isNew && <Badge tone={{ bg: "var(--brand)", fg: "#fff" }}>{unread(t)}</Badge>}
                       </div>
-                      <div className="truncate text-[11.5px] text-[var(--ink-3)]">{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? "You: " : ""}{t.lastBody}</div>
+                      <div className={`truncate text-[11.5px] ${isNew ? "font-semibold text-[var(--ink-2)]" : "text-[var(--ink-3)]"}`}>{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? "You: " : ""}{t.lastBody}</div>
                     </div>
                   </button>
                 );
@@ -340,12 +440,35 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         </Card>
 
         <Card className="flex min-h-[420px] flex-col p-0">
-          {composing ? (
+          {openBroadcast ? (
+            <div className="flex flex-1 flex-col">
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-extrabold">📣 Broadcast · {openBroadcast.recipientCount ?? openBroadcast.recipients?.length ?? 0} families</div>
+                  <div className="text-[11px] text-[var(--ink-3)]">Sent {when(openBroadcast.sentAt)}{openBroadcast.subject ? ` · ${openBroadcast.subject}` : ""}</div>
+                </div>
+                <button type="button" onClick={() => setOpenBroadcast(null)} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">Close</button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="mb-3 max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] text-white" style={{ background: "var(--brand)" }}>{openBroadcast.body}</div>
+                <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Sent to</div>
+                <div className="flex flex-col gap-1">
+                  {(openBroadcast.recipients ?? []).map((r) => (
+                    <div key={r.email} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px]">
+                      <span className="truncate font-semibold">{r.name}</span>
+                      <span className="truncate text-[var(--ink-3)]">{r.email}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 text-[11px] text-[var(--ink-3)]">Any replies appear as individual conversations in your inbox.</div>
+              </div>
+            </div>
+          ) : composing ? (
             <div className="flex flex-1 flex-col">
               <div className="border-b border-[var(--line)] p-3">
                 {mode === "operator" && (
                   <div className="mb-2 flex gap-1">
-                    {([["family", "👤 One family"], ["group", "📋 Whole listing"]] as const).map(([m, label]) => {
+                    {([["family", "👤 Families"], ["group", "📋 Listings"]] as const).map(([m, label]) => {
                       const on = composeMode === m;
                       return (
                         <button key={m} type="button" onClick={() => setComposeMode(m)}
@@ -358,7 +481,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   </div>
                 )}
                 <div className="mb-1.5 text-[12px] font-bold text-[var(--ink-3)]">
-                  {mode === "parent" ? "Message a provider you’ve booked" : composeMode === "group" ? "Message everyone booked on a listing" : "Message a family"}
+                  {mode === "parent" ? "Message a provider you’ve booked" : composeMode === "group" ? "Message everyone booked on the chosen listings" : "Message one or more families"}
                 </div>
                 {mode === "operator" && composeMode === "group" ? (
                   <div className="rounded-lg border border-[var(--line)] p-2">
@@ -403,41 +526,43 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
                   </Select>
                 ) : (() => {
-                  // Searchable family picker — tidy rows instead of a long native <select>.
-                  const selected = customers.find((c) => c.email === target);
-                  if (selected) {
-                    return (
-                      <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-[13px] font-bold">{selected.name || selected.email}</div>
-                          <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(selected)}</div>
-                        </div>
-                        <button type="button" onClick={() => setTarget("")} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">Change</button>
-                      </div>
-                    );
-                  }
+                  // Searchable, multi-select family picker (tick one or many).
                   const fq = familyQuery.trim().toLowerCase();
                   const matches = customers.filter((c) => !fq || `${c.name ?? ""} ${c.email ?? ""} ${c.locationName ?? ""} ${(c.children ?? []).map((k) => k.name).join(" ")}`.toLowerCase().includes(fq));
                   return (
-                    <>
+                    <div className="rounded-lg border border-[var(--line)] p-2">
+                      <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
+                        <span><b className="text-[var(--ink-2)]">{familyTargets.length}</b> selected</span>
+                        {familyTargets.length > 0 && <button type="button" onClick={() => setFamilyTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
+                      </div>
                       <Input value={familyQuery} onChange={(e) => setFamilyQuery(e.target.value)} placeholder="Search families by name, place or email…" className="w-full !py-1.5 text-[12.5px]" />
-                      <div className="mt-1.5 max-h-[38vh] min-h-[120px] overflow-y-auto rounded-lg border border-[var(--line)]">
+                      <div className="mt-1.5 flex max-h-[38vh] min-h-[120px] flex-col gap-0.5 overflow-y-auto">
                         {matches.length === 0 ? (
                           <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">No families match.</div>
-                        ) : matches.slice(0, 80).map((c) => (
-                          <button key={c.id} type="button" onClick={() => { setTarget(c.email || ""); setFamilyQuery(""); }}
-                            className="flex w-full items-center gap-2.5 border-b border-[var(--line)] px-2.5 py-2 text-left last:border-0 hover:bg-[var(--panel)]">
-                            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
-                              {(c.name || c.email || "?").trim()[0]?.toUpperCase() ?? "?"}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-[12.5px] font-bold">{c.name || c.email}</div>
-                              <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(c)}</div>
-                            </div>
-                          </button>
-                        ))}
+                        ) : matches.slice(0, 120).map((c) => {
+                          const email = c.email || "";
+                          const on = familyTargets.includes(email);
+                          return (
+                            <button key={c.id} type="button"
+                              onClick={() => { if (!email) return; setFamilyTargets((cur) => (on ? cur.filter((x) => x !== email) : [...cur, email])); }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--panel)]"
+                              style={on ? { background: "var(--brand-soft)" } : undefined}>
+                              <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border text-[11px] font-extrabold text-white"
+                                style={on ? { background: "var(--brand-2)", borderColor: "var(--brand-2)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                                {on ? "✓" : ""}
+                              </span>
+                              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                                {(c.name || c.email || "?").trim()[0]?.toUpperCase() ?? "?"}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-[12.5px] font-bold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{c.name || c.email}</div>
+                                <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(c)}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </>
+                    </div>
                   );
                 })()}
                 <Input
@@ -452,6 +577,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 )}
               </div>
               <div className="flex-1" />
+              {proBar}
               <Composer draft={draft} setDraft={setDraft} onSend={send} />
             </div>
           ) : !active ? (
@@ -512,6 +638,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   <div ref={endRef} />
                 </div>
               </div>
+              {proBar}
               <Composer draft={draft} setDraft={setDraft} onSend={send} />
             </div>
           )}
