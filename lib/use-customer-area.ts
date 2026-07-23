@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { useTenantSettings, type TenantSettings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, withDefaults, type TenantSettings } from "@/lib/settings";
 import type { PortalKey } from "@/lib/nav/config";
 
 export type CustomerArea = TenantSettings["customerArea"];
@@ -13,16 +13,23 @@ export type CustomerArea = TenantSettings["customerArea"];
 export const SIMPLE_ALLOWED = new Set(["dash", "browse", "bookings", "children", "account", "privacy", "activityos"]);
 
 // What a family sees is set by THEIR provider (Setup → Customer area). A parent
-// reads it from their single provider's public library. Everything defaults to
-// shown until the settings load, so nothing flickers away and back.
+// reads it from their single provider's PUBLIC library slice.
+//
+// This deliberately does NOT touch /api/library or useTenantSettings: operators
+// (portal !== custdash) never read a provider's customer area, so the hook makes
+// zero network calls for them. For a family it makes exactly one providers read
+// and one public-library read. Everything defaults to shown until it loads.
 export function useCustomerArea(portal?: PortalKey): CustomerArea {
-  const [tenantId, setTenantId] = useState<string | undefined>();
+  const [ca, setCa] = useState<CustomerArea>(DEFAULT_SETTINGS.customerArea);
   useEffect(() => {
-    if (portal && portal !== "custdash") return; // only families have a provider to read
-    apiGet<{ tenantId: string }[]>("/api/my/providers")
-      .then((ps) => setTenantId(ps?.[0]?.tenantId))
+    if (portal && portal !== "custdash") return;
+    let live = true;
+    void apiGet<{ tenantId: string }[]>("/api/my/providers")
+      .then((ps) => ps?.[0]?.tenantId)
+      .then((tid) => (tid ? apiGet<{ settings?: Partial<TenantSettings> } | null>(`/api/public/library/${tid}`) : null))
+      .then((lib) => { if (live) setCa(withDefaults(lib?.settings ?? null).customerArea); })
       .catch(() => {});
+    return () => { live = false; };
   }, [portal]);
-  const { settings } = useTenantSettings(tenantId);
-  return settings.customerArea;
+  return ca;
 }
