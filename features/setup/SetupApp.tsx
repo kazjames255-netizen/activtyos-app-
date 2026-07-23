@@ -1488,7 +1488,7 @@ export function SetupApp() {
               <Row label="👛 Wallet / credit" hint="Store credit families can spend at checkout.">
                 <Toggle on={ca.simpleMode ? false : ca.wallet} disabled={ca.simpleMode} onChange={(v) => setCAkey("wallet", v)} labels={["Shown", "Hidden"]} />
               </Row>
-              <Row label="🔍 Browse more activities" hint="The in-app feed of other activities.">
+              <Row label="🔍 Browse your activities" hint="The page where families see and book your activities. (The cross-provider marketplace is separate — see the Marketplace tab.)">
                 <Toggle on={ca.simpleMode ? false : ca.browse} disabled={ca.simpleMode} onChange={(v) => setCAkey("browse", v)} labels={["Shown", "Hidden"]} />
               </Row>
             </Section>
