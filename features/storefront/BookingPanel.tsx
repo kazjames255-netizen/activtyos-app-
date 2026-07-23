@@ -60,6 +60,12 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
   const [done, setDone] = useState<{ refs: string[]; status: string; total: number } | null>(null);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
+  // Discount code the parent enters — validated against the live subtotal, then
+  // redeemed server-side at booking (preview == charge).
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<{ code: string; off: number } | null>(null);
+  const [codeErr, setCodeErr] = useState<string | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
 
   const block = blocks.find((b) => b.id === blockId) ?? null;
   const pass = passes.find((p) => p.id === passId) ?? null;
@@ -97,6 +103,26 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
     return { lines, total: Math.round((total + addonsPerChild * validKids.length) * 100) / 100 };
   })();
 
+  const finalTotal = preview ? Math.max(0, Math.round((preview.total - (appliedCode?.off ?? 0)) * 100) / 100) : 0;
+  // Changing the basket invalidates a previously-applied code (its value was
+  // worked out against the old subtotal).
+  useEffect(() => { setAppliedCode(null); setCodeErr(null); }, [preview?.total, validKids.length]);
+
+  async function applyCode() {
+    const code = codeInput.trim();
+    if (!code || !preview || !listing.tenantId) return;
+    setCodeChecking(true); setCodeErr(null);
+    try {
+      const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number }>("/api/discounts/validate", {
+        method: "POST",
+        body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.total }),
+      });
+      if (r.valid && r.off != null) { setAppliedCode({ code: r.code ?? code.toUpperCase(), off: r.off }); setCodeInput(""); }
+      else { setAppliedCode(null); setCodeErr(r.reason ?? "That code can’t be used"); }
+    } catch (e) { setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
+    setCodeChecking(false);
+  }
+
   const toggleDate = (d: string) =>
     setPicked({
       key: pickKey,
@@ -118,7 +144,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
       }));
       const res = await api<{ bookings: { ref: string; status: string }[]; total: number }>("/api/my/bookings", {
         method: "POST",
-        body: JSON.stringify({ listingId: listing.id, blockId: block.id, method, items }),
+        body: JSON.stringify({ listingId: listing.id, blockId: block.id, method, items, ...(appliedCode ? { discountCode: appliedCode.code } : {}) }),
       });
       setDone({ refs: res.bookings.map((b) => b.ref), status: res.bookings[0]?.status ?? "", total: res.total });
     } catch (e) {
@@ -305,6 +331,23 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         </div>
       </div>
 
+      {signedIn && preview && (
+        <div className="mt-3 border-t border-[#eef1f8] pt-3">
+          {appliedCode ? (
+            <div className="flex items-center justify-between text-[12.5px]">
+              <span className="font-bold text-[#0f7a44]">✓ Code {appliedCode.code} applied — you save {money(appliedCode.off)}</span>
+              <button type="button" onClick={() => { setAppliedCode(null); setCodeErr(null); }} className="font-bold text-[#2f6bd8]">Remove</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } }} placeholder="Discount code" className={S.input + " flex-1 uppercase"} />
+              <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="rounded-lg border border-[#e0e5f2] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#4a4763] disabled:opacity-50">{codeChecking ? "Checking…" : "Apply"}</button>
+            </div>
+          )}
+          {codeErr && <div className="mt-1 text-[11.5px] font-bold text-[#e21d27]">{codeErr}</div>}
+        </div>
+      )}
+
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#eef1f8] pt-3">
         <div className="text-[13px] text-[#4a4763]">
           {preview ? (
@@ -314,8 +357,11 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
                   −{money(l.amount)} {l.name}
                 </div>
               ))}
+              {appliedCode && (
+                <div className="text-[12px] text-[#0f7a44]">−{money(appliedCode.off)} code {appliedCode.code}</div>
+              )}
               <span>
-                Total <b className="text-[16px] text-[#171534]">{money(preview.total)}</b>
+                Total <b className="text-[16px] text-[#171534]">{money(finalTotal)}</b>
                 {validKids.length > 1 && ` for ${validKids.length} children`}
               </span>
             </>

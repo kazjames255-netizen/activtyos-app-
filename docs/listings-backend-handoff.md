@@ -6,6 +6,15 @@
 Companion to `docs/blocks-builder-backend-spec.md`, which you've already built.
 Thanks for that — the Blocks builder is fully wired to it and working.
 
+> ## ⚠️ Currently blocking Kaz's testing (please prioritise)
+> These two stop whole flows from being testable at all:
+> - **§AA — Stripe test key.** No `STRIPE_SECRET_KEY` → card bookings stay Unpaid;
+>   card refunds + wallet-against-real-payments can't be exercised.
+> - **§Z — Customer wallet backend.** Refunds sent as "wallet credit" credit
+>   nothing (front end only), so the refund→credit flow can't be tested.
+>
+> Everything else below is feature work; these two are the blockers.
+
 ---
 
 ## 0. Four decisions we need from you first
@@ -2423,7 +2432,10 @@ soonest). Most run off data already on the feed. Open items for you:
   for you here unless you want a migration to backfill `categoryNames` for
   listings whose ids still resolve.
 
-## Z — Customer wallet (front end built, needs the whole backend)
+## Z — Customer wallet (front end built, needs the whole backend) — ⚠️ BLOCKS TESTING
+
+> **⚠️ Blocking Kaz's testing:** refunds offered as "wallet credit" credit
+> nothing until this exists, so the refund→credit flow can't be exercised.
 
 Store credit a family holds **with a provider** — spend-only, never withdrawn to
 a card, and **scoped per tenant** (credit from one provider is only spendable
@@ -2451,7 +2463,10 @@ What to build:
   already previews `min(balance, total)`; the server is the source of truth.
 - **Realtime `wallet`** channel so the page and checkout refresh on change.
 
-## AA — Turn on Stripe test mode so Kaz can see the full money flow
+## AA — Turn on Stripe test mode so Kaz can see the full money flow — ⚠️ BLOCKS TESTING
+
+> **⚠️ Blocking Kaz's testing:** no `STRIPE_SECRET_KEY`, so card bookings stay
+> Unpaid and card refunds/wallet-against-real-payments can't be tested at all.
 
 Card bookings sit on **Unpaid** in dev and can't be paid, because `stripe` is
 `null` without a key — `stripe.ts:13` (`key ? new Stripe(key) : null`), and
