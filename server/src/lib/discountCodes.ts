@@ -21,6 +21,11 @@ export interface DiscountCodeDoc {
   listingId?: string; // if set, ONLY bookings for this listing qualify
   perCustomerLimit?: boolean; // one redemption per customer (enforced in the route)
   exclusive?: boolean; // can't be combined with any other code (codes stack by default)
+  // Refer-a-friend: a per-family code that only a NEW customer can use, and whose
+  // redemption rewards the referrer. Enforced in the route (needs a bookings read).
+  referral?: boolean;
+  referrerEmail?: string;
+  newCustomerOnly?: boolean;
 }
 
 /** The emails a reserved code is limited to (single family + group members). */

@@ -44,7 +44,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "notifications";
+type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "refer" | "notifications";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1119,6 +1119,7 @@ export function SetupApp() {
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
     ["customer", "Customer area"],
+    ["refer", "Refer a friend"],
     ["notifications", "Notifications"],
   ];
 
@@ -1450,6 +1451,37 @@ export function SetupApp() {
               ))}
             </Section>
           </>
+        );
+      })()}
+
+      {tab === "refer" && (() => {
+        const r = settings.referral;
+        const setR = (patch: Partial<typeof r>) => set("referral", { ...r, ...patch });
+        const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
+        const Pounds = ({ value, onChange }: { value: number; onChange: (n: number) => void }) => (
+          <span className="inline-flex items-center gap-1">
+            <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>
+            <Input type="number" min="0" step="1" value={String(value)} onChange={(e) => onChange(num(e.target.value))} className="w-[84px]" />
+          </span>
+        );
+        return (
+          <Section
+            title="Refer a friend"
+            lede="A give-X-get-X reward: a family shares their personal link, a friend gets money off their first booking, and the family earns a code once that booking goes through. You fund the rewards, so the amounts are yours."
+          >
+            <Row label="🎁 Refer a friend" hint="Off: no referral page for families. On: each family gets a shareable link and both sides earn.">
+              <Toggle on={r.enabled} onChange={(v) => setR({ enabled: v })} labels={["On", "Off"]} />
+            </Row>
+            <Row label="Friend gets — off their first booking" hint="The discount a brand-new family gets when they book with a friend's link.">
+              <Pounds value={r.friendOff} onChange={(n) => setR({ friendOff: n })} />
+            </Row>
+            <Row label="Referrer earns — as a code" hint="The reward the referring family gets in their Coupons area once the friend's first booking is made.">
+              <Pounds value={r.referrerReward} onChange={(n) => setR({ referrerReward: n })} />
+            </Row>
+            <Row label="Minimum spend" hint="The friend's first basket must reach this for the reward to apply. 0 = no minimum.">
+              <Pounds value={r.minSpend} onChange={(n) => setR({ minSpend: n })} />
+            </Row>
+          </Section>
         );
       })()}
 

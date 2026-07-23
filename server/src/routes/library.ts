@@ -137,6 +137,8 @@ const PUBLIC_SETTINGS_KEYS = [
   // Which sections a family sees in their area — the parent app reads these to
   // hide toggled-off features (Setup → Customer area). Booleans only, no secrets.
   "customerArea",
+  // Refer-a-friend amounts + on/off, shown on the family's referral page.
+  "referral",
 ] as const;
 
 export const libraryPublic = Router();

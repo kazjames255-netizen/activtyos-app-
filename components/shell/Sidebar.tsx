@@ -100,6 +100,7 @@ function SignOutItem({ item }: { item: NavItem }) {
 const CA_VIEW_KEY: Record<string, keyof CustomerArea> = {
   coupons: "coupons", wallet: "wallet", newsfeed: "newsfeed", moments: "moments",
   meals: "meals", memberships: "memberships", messages: "messaging", browse: "browse",
+  refer: "refer",
 };
 
 function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string> }) {

@@ -299,6 +299,20 @@ export interface TenantSettings {
     meals: boolean;       // meal ordering
     memberships: boolean; // memberships
     browse: boolean;      // browse more activities
+    refer: boolean;       // the "Refer a friend" page
+  };
+
+  /**
+   * Refer-a-friend — every family gets a personal link; a friend using it on
+   * their FIRST booking gets `friendOff` off, and once that booking goes through
+   * the referrer is issued a `referrerReward` code. The provider funds it, so
+   * it's off by default and the amounts are theirs to set.
+   */
+  referral: {
+    enabled: boolean;
+    friendOff: number;      // £ off the friend's first booking
+    referrerReward: number; // £ the referrer earns (as a code in their Coupons)
+    minSpend: number;       // 0 = none; friend's basket must reach this
   };
 
   // ── People & safeguarding ──
@@ -485,7 +499,8 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerName: "",
   providerNameMode: "business",
   marketplaceListed: false,
-  customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true },
+  customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true },
+  referral: { enabled: false, friendOff: 10, referrerReward: 10, minSpend: 0 },
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
@@ -539,6 +554,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     ...DEFAULT_SETTINGS,
     ...s,
     customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
+    referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled
