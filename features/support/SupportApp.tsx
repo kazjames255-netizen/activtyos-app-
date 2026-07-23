@@ -27,13 +27,14 @@ const OPERATOR_TOPICS: [string, string][] = [
   ["compliance", "Compliance"],
 ];
 const CUSTOMER_TOPICS: [string, string][] = [
-  ["general", "General question"],
-  ["booking", "Help with a booking"],
-  ["payment", "Payment or refund"],
+  // Customers use this ONLY for app problems — bookings/payments go to their
+  // provider, not ActivityOS.
   ["bug", "Something’s not working"],
-  ["feature", "Idea / suggestion"],
+  ["error", "A page or button broke"],
+  ["account", "Login / account issue"],
+  ["other", "Other app problem"],
 ];
-const topicLabel = (topics: [string, string][], t?: string) => topics.find(([v]) => v === t)?.[1] ?? "General question";
+const topicLabel = (topics: [string, string][], t?: string) => topics.find(([v]) => v === t)?.[1] ?? topics[0]?.[1] ?? "";
 
 interface SupportMsg { id: string; from: string; senderName?: string; topic?: string; subject?: string; body: string; createdAt?: string }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
@@ -50,6 +51,8 @@ export function SupportApp() {
   const portalSeg = usePathname().split("/")[1] || "freelancer";
   const isCustomer = portalSeg === "custdash";
   const TOPICS = isCustomer ? CUSTOMER_TOPICS : OPERATOR_TOPICS;
+  // Default the topic to the first one for this side (customers have no "general").
+  useEffect(() => { setTopic(TOPICS[0]?.[0] ?? "general"); }, [isCustomer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(() => {
     apiGet<SupportMsg[]>("/api/messages/support").then(setMsgs).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -72,8 +75,8 @@ export function SupportApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isCustomer ? "🛟 Help & support" : "✦ Message ActivityOS"}</h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">{isCustomer ? "A problem, a question or an idea — message the ActivityOS team. Separate from your messages to providers." : "Support, billing and anything about the platform — separate from your customer messages."}</p>
+          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isCustomer ? "Report a problem" : "✦ Message ActivityOS"}</h2>
+          <p className="text-[12.5px] text-[var(--ink-3)]">{isCustomer ? "Something not working in the app? Tell our support team. For anything about your bookings or payments, message your provider instead." : "Support, billing and anything about the platform — separate from your customer messages."}</p>
         </div>
         <Link href={`/${portalSeg}/messages`}><Button>← Back to messages</Button></Link>
       </div>
@@ -85,7 +88,7 @@ export function SupportApp() {
             <div className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
           ) : msgs.length === 0 ? (
             <div className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-              No messages yet — send ActivityOS a note below and we’ll get back to you.
+              {isCustomer ? "No reports yet — tell us about any problem with the app below and we’ll get back to you." : "No messages yet — send ActivityOS a note below and we’ll get back to you."}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -100,7 +103,7 @@ export function SupportApp() {
                     )}
                     <div className="whitespace-pre-wrap">{m.body}</div>
                     <div className={`mt-0.5 text-[10px] ${mine ? "text-white/70" : "text-[var(--ink-3)]"}`}>
-                      {mine ? "You" : "ActivityOS"} · {when(m.createdAt)}
+                      {mine ? "You" : (isCustomer ? "Support" : "ActivityOS")} · {when(m.createdAt)}
                     </div>
                   </div>
                 );
@@ -118,7 +121,7 @@ export function SupportApp() {
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={80} placeholder="Subject (optional)" className="min-w-[160px] flex-1 !py-1.5 text-[12.5px]" />
           </div>
           <div className="flex items-center gap-2">
-            <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Write your message to ActivityOS…" className="flex-1" />
+            <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={isCustomer ? "Describe the problem…" : "Write your message to ActivityOS…"} className="flex-1" />
             <Button variant="primary" onClick={send} disabled={busy || !draft.trim()}>{busy ? "Sending…" : "Send"}</Button>
           </div>
         </div>

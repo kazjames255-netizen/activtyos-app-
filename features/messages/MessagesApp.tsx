@@ -341,7 +341,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           </Button>
           {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
             <Link href={`/${portalSeg}/activityos`}>
-              <Button>{mode === "parent" ? "🛟 Message ActivityOS" : "✦ Message ActivityOS"}</Button>
+              <Button>{mode === "parent" ? "Report a problem" : "✦ Message ActivityOS"}</Button>
             </Link>
           )}
         </div>
