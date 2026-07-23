@@ -32,7 +32,17 @@ function MessageBookingModal({ booking, onClose }: { booking: Booking; onClose: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
   useEffect(() => { apiGet<MsgTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => {}); }, []);
+  // Live preview of the merged text — exactly what the family will receive.
+  useEffect(() => {
+    if (!body.trim()) { setPreview(null); return; }
+    const h = setTimeout(() => {
+      apiPost<{ subject: string; body: string }>("/api/messages/from-booking", { ref: booking.ref, body: body.trim(), subject: subject.trim() || undefined, preview: true })
+        .then(setPreview).catch(() => {});
+    }, 400);
+    return () => clearTimeout(h);
+  }, [body, subject, booking.ref]);
 
   async function send() {
     if (!body.trim()) { setError("Write a message first."); return; }
@@ -77,6 +87,13 @@ function MessageBookingModal({ booking, onClose }: { booking: Booking; onClose: 
               <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
                 Merge fields fill from <b className="text-[var(--ink-2)]">this booking</b> on send: <code>{"{ParentName}"}</code>, <code>{"{ChildName}"}</code>, <code>{"{ListingName}"}</code>, <code>{"{SessionDate}"}</code>, <code>{"{VenueName}"}</code>, <code>{"{BookingRef}"}</code>, <code>{"{ProviderName}"}</code>.
               </div>
+              {preview && (
+                <div className="rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft)] px-3 py-2.5">
+                  <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-strong)]">Preview — what {booking.booker} will get</div>
+                  {preview.subject && <div className="mb-1 text-[12.5px] text-[var(--ink)]"><b>Subject:</b> {preview.subject}</div>}
+                  <div className="whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink)]">{preview.body}</div>
+                </div>
+              )}
               {error && <div className="text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-5 py-3.5">

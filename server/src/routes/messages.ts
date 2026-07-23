@@ -176,6 +176,8 @@ const fromBookingSchema = z.object({
   ref: z.string().trim().min(1).max(60),
   body: z.string().trim().min(1).max(4_000),
   subject: z.string().trim().max(80).optional(),
+  // preview=true resolves the merge fields and returns the text WITHOUT sending.
+  preview: z.boolean().optional(),
 });
 messages.post("/from-booking", async (req, res) => {
   const tenantId = operatorTenant(req, res);
@@ -213,6 +215,9 @@ messages.post("/from-booking", async (req, res) => {
     bookingRef: b.ref,
   };
   const body = mergeText(parsed.data.body, vars);
+  const mergedSubject = parsed.data.subject ? mergeText(parsed.data.subject, vars) : "";
+  // Preview: return the resolved text (exactly what would send) without sending.
+  if (parsed.data.preview) { res.json({ subject: mergedSubject, body }); return; }
   const email = b.email.toLowerCase();
   const parentName = b.booker ?? email;
   const id = threadId(tenantId, email);
@@ -229,7 +234,7 @@ messages.post("/from-booking", async (req, res) => {
     lastFrom: "operator",
     lastAt: now,
     operatorHidden: false,
-    ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(parsed.data.subject ? { subject: mergeText(parsed.data.subject, vars) } : {}) }),
+    ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(mergedSubject ? { subject: mergedSubject } : {}) }),
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
   await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body, createdAt: now });
