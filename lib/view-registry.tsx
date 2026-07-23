@@ -41,6 +41,7 @@ import { TemplatesApp } from "@/features/templates/TemplatesApp";
 import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { WalletApp } from "@/features/parent/WalletApp";
+import { CouponsApp } from "@/features/parent/CouponsApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { ScheduleApp } from "@/features/parent/ScheduleApp";
@@ -191,6 +192,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   custdash: {
     browse: BrowseApp,
     wallet: WalletApp,
+    coupons: CouponsApp,
     bookings: MyBookingsApp,
     children: ChildrenApp,
     moments: ParentMomentsApp,
