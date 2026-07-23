@@ -47,7 +47,7 @@ const mergeText = (text: string, v: { parentName?: string; providerName?: string
     .replace(/\{ParentName\}/gi, v.parentName ?? "")
     .replace(/\{ProviderName\}/gi, v.providerName ?? "")
     .replace(/\{ChildName\}/gi, v.childName ?? "");
-interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
+interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string; coupon?: { code: string; valueTxt?: string; scope?: string; expiry?: string | null } }
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
 
@@ -60,6 +60,21 @@ const familySub = (c: Customer) => {
     .join("  ·  ");
 };
 const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+
+// A copyable discount-code chip shown under a code message — the code stands out
+// and one tap copies it, with the value / scope / expiry spelt out beneath.
+function CouponChip({ coupon }: { coupon: { code: string; valueTxt?: string; scope?: string; expiry?: string | null } }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => { try { await navigator.clipboard.writeText(coupon.code); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* still shown to type */ } };
+  const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? `until ${coupon.expiry}` : "no expiry"].filter(Boolean).join(" · ");
+  return (
+    <button type="button" onClick={copy} title="Copy code" className="mt-1.5 flex w-full items-center gap-2 rounded-xl bg-white/15 px-2.5 py-1.5 text-left backdrop-blur-sm transition-colors hover:bg-white/25">
+      <span className="font-mono text-[15px] font-extrabold tracking-wider text-white">{coupon.code}</span>
+      <span className="min-w-0 flex-1 truncate text-[10.5px] text-white/80">{meta}</span>
+      <span className="flex-none rounded-full bg-white/25 px-2 py-0.5 text-[10.5px] font-bold text-white">{copied ? "Copied ✓" : "Copy"}</span>
+    </button>
+  );
+}
 
 export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [threads, setThreads] = useState<Thread[] | null>(null);
@@ -728,6 +743,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     return (
                       <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "#ee1f63" }}>
                         <div className="whitespace-pre-wrap">{m.body}</div>
+                        {m.coupon && <CouponChip coupon={m.coupon} />}
                         <div className="mt-0.5 text-[10px] text-white/75">{label} · {when(m.createdAt)}</div>
                       </div>
                     );

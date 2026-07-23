@@ -34,10 +34,22 @@ const codeBase = z.object({
   active: z.boolean().default(true),
 });
 
-// Message + email the family a code was assigned to.
-async function notifyAssigned(tenantId: string, email: string, name: string | undefined, code: string, valueTxt: string, expiry?: string): Promise<void> {
+// Turn a code's listingId into a human scope line for the notification.
+async function listingScopeText(tenantId: string, listingId?: string): Promise<string> {
+  if (!listingId) return "all listings";
+  const l = await db.collection("listings").doc(listingId).get();
+  const title = l.exists && l.data()!.tenantId === tenantId ? (l.data()!.title as string | undefined) : undefined;
+  return title ? `${title} only` : "one listing only";
+}
+
+// Message + email the family a code was assigned to. The message carries the
+// code details as structured `coupon` metadata so the customer UI can show a
+// clear, copyable code chip (not just prose).
+async function notifyAssigned(tenantId: string, email: string, name: string | undefined, code: string, valueTxt: string, expiry?: string, scopeText = "all listings"): Promise<void> {
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
-  const body = `🎉 You've got a discount code from ${tName}: ${code} — ${valueTxt}. Enter it at checkout on your next booking${expiry ? ` (valid until ${expiry})` : ""}.`;
+  const validity = expiry ? `valid until ${expiry}` : "no expiry";
+  const body = `🎉 ${tName} sent you a discount code!\n\nCode: ${code}\n${valueTxt} · ${scopeText} · ${validity}\n\nEnter it at checkout on your next booking — or find it any time under Coupons & discount codes.`;
+  const coupon = { code, valueTxt, scope: scopeText, expiry: expiry ?? null };
   const el = email.toLowerCase();
   const id = `${tenantId}__${el}`;
   const now = new Date().toISOString();
@@ -52,7 +64,7 @@ async function notifyAssigned(tenantId: string, email: string, name: string | un
     ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0 }),
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
-  await db.collection("messages").add({ threadId: id, tenantId, parentEmail: el, from: "operator", senderName: tName, body, createdAt: now });
+  await db.collection("messages").add({ threadId: id, tenantId, parentEmail: el, from: "operator", senderName: tName, body, coupon, createdAt: now });
   try { emailNewMessage(el, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
 }
 const pctCheck = (c: { type?: string; value?: number }) => c.type !== "percent" || (c.value ?? 0) <= 100;
@@ -82,9 +94,9 @@ const groupSchema = z.object({
 const normEmails = (es: string[]) => [...new Set(es.map((e) => e.trim().toLowerCase()).filter(Boolean))];
 
 // Message + email every member of a group about a code.
-async function notifyEach(tenantId: string, emails: string[], code: string, valueTxt: string, expiry?: string): Promise<void> {
+async function notifyEach(tenantId: string, emails: string[], code: string, valueTxt: string, expiry?: string, scopeText = "all listings"): Promise<void> {
   for (const em of emails) {
-    try { await notifyAssigned(tenantId, em, undefined, code, valueTxt, expiry); } catch { /* one bad address never blocks the rest */ }
+    try { await notifyAssigned(tenantId, em, undefined, code, valueTxt, expiry, scopeText); } catch { /* one bad address never blocks the rest */ }
   }
 }
 // Resolve a group id → {emails, name}, scoped to the tenant.
@@ -163,8 +175,9 @@ discounts.post("/", async (req, res) => {
     ...(grp ? { assignedEmails: grp.emails, assignedGroupName: grp.name } : {}) };
   const ref = await col.add(doc);
   const valueTxt = valueTxtOf(parsed.data.type, parsed.data.value);
-  if (parsed.data.assignedTo) await notifyAssigned(auth.tenantId, parsed.data.assignedTo, parsed.data.assignedName, code, valueTxt, parsed.data.expiry);
-  if (grp?.emails.length) await notifyEach(auth.tenantId, grp.emails, code, valueTxt, parsed.data.expiry);
+  const scopeText = await listingScopeText(auth.tenantId, parsed.data.listingId);
+  if (parsed.data.assignedTo) await notifyAssigned(auth.tenantId, parsed.data.assignedTo, parsed.data.assignedName, code, valueTxt, parsed.data.expiry, scopeText);
+  if (grp?.emails.length) await notifyEach(auth.tenantId, grp.emails, code, valueTxt, parsed.data.expiry, scopeText);
   res.status(201).json({ id: ref.id, ...doc });
 });
 
@@ -200,11 +213,12 @@ discounts.put("/:id", async (req, res) => {
   const after = await o.snap.ref.get();
   const a = after.data()!;
   const valueTxt = valueTxtOf(a.type as string, a.value as number);
+  const scopeText = await listingScopeText(tenantId, a.listingId as string | undefined);
   // Newly assigned (or reassigned) via edit → tell the family / the group.
   if (parsed.data.assignedTo && parsed.data.assignedTo.toLowerCase() !== prevAssigned) {
-    await notifyAssigned(a.tenantId as string, parsed.data.assignedTo, a.assignedName as string | undefined, a.code as string, valueTxt, a.expiry as string | undefined);
+    await notifyAssigned(a.tenantId as string, parsed.data.assignedTo, a.assignedName as string | undefined, a.code as string, valueTxt, a.expiry as string | undefined, scopeText);
   }
-  if (notifyGroupEmails.length) await notifyEach(tenantId, notifyGroupEmails, a.code as string, valueTxt, a.expiry as string | undefined);
+  if (notifyGroupEmails.length) await notifyEach(tenantId, notifyGroupEmails, a.code as string, valueTxt, a.expiry as string | undefined, scopeText);
   res.json({ id: after.id, ...a });
 });
 
