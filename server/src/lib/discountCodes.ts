@@ -26,6 +26,7 @@ export interface DiscountCodeDoc {
   referral?: boolean;
   referrerEmail?: string;
   newCustomerOnly?: boolean;
+  maxOff?: number; // hard £ ceiling on the discount (e.g. a referral reward capped to what the friend spent)
 }
 
 /** The emails a reserved code is limited to (single family + group members). */
@@ -54,7 +55,8 @@ export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string, c
   if (c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit) return { ok: false, reason: "This code has reached its usage limit" };
   if (c.minSpend != null && subtotal < c.minSpend) return { ok: false, reason: `Spend at least £${c.minSpend.toFixed(2)} to use this code` };
   const raw = c.type === "percent" ? subtotal * (c.value / 100) : c.type === "perAttendee" ? c.value * Math.max(1, ctx?.attendees ?? 1) : c.value;
-  const off = round2(Math.min(Math.max(0, raw), subtotal));
+  const ceiling = c.maxOff != null && c.maxOff >= 0 ? Math.min(subtotal, c.maxOff) : subtotal;
+  const off = round2(Math.min(Math.max(0, raw), ceiling));
   if (off <= 0) return { ok: false, reason: "This code gives no discount on this order" };
   return { ok: true, off };
 }
