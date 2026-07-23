@@ -2635,6 +2635,40 @@ server-side search over the `messages` collection:
   bodies, capped) so the existing thread list can match it without a new call.
 I'll wire whichever you pick.
 
+## GG — Message folders + subject persistence — DONE (Amir, please review)
+
+**⚠️ I edited your server again** (`server/src/routes/messages.ts`) so Kaz could
+use it now. Please review/own:
+- **Folders** (operator-only, tenant-shared): new `messageFolders` collection
+  `{tenantId, name, createdAt}`, and a `folderId` on thread docs.
+  - `GET/POST /api/messages/folders`, `PUT/DELETE /api/messages/folders/:id`
+    (delete unfiles its threads via `folderId` FieldValue.delete()).
+  - `PUT /api/messages/threads/:id/folder {folderId}` — move a thread (null =
+    Inbox). Validates the folder + thread belong to the caller's tenant.
+- **Subject** now persists: `subject` (≤80) accepted on `POST /api/messages`,
+  stored on the thread **only when it's created** (not on later replies).
+- Front end: folder rail (All / Inbox / folders + rename/delete/＋), a "Move to"
+  picker on the open thread (with "＋ New folder…"), subject shown as the thread
+  heading.
+
+## HH — Company/franchise: staff access to Messages is a settings toggle (NOT built)
+
+Kaz's rule: **freelancer** has no staff message area — folders/messages are just
+the owner's, nothing to gate. **Company (and franchise)** are different: a
+**staff role should be able to see + reply to customer messages, but only when
+an operator turns it on in Settings.** Today `staff` is registered for the
+`messages` view (`lib/view-registry.tsx`) and the API treats any operator role
+(incl. `staff`) the same — so staff currently get messages unconditionally.
+
+Please add:
+- A tenant setting, e.g. `settings.staffCanMessage` (default **off**).
+- Server: gate the messages endpoints for `role === "staff"` on that setting
+  (403 when off). Owner roles (`company`/`franchise`/`freelancer`) always allowed.
+- I'll gate the sidebar/nav + top-tab so staff only see Messages when it's on.
+Open Q: should folders be visible/editable by staff too, or read-only for them?
+My default: staff can file/move within existing folders, only owners create/
+delete — tell me and I'll match.
+
 - Front end is ready: the composer lists all `/api/customers`, and search now
   surfaces un-messaged families under "Start a new conversation". Both currently
   hit the 400 for a customer with no booking — this change unblocks them.
