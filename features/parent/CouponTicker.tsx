@@ -69,8 +69,8 @@ export function CouponTicker() {
 
   // Hidden → keep a slim, always-there way to bring it back (never lost).
   if (hidden) return (
-    <div className="flex h-[26px] items-center justify-end border-b border-black/20 px-3" style={{ background: "linear-gradient(90deg,#3a4266,#454e77)" }}>
-      <button type="button" onClick={reveal} className="text-[11px] font-bold text-[#c7d3f5] hover:text-white">🏷️ Show my codes ({coupons.length}) ›</button>
+    <div className="flex h-[26px] items-center justify-end px-3" style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+      <button type="button" onClick={reveal} className="text-[11px] font-bold" style={{ color: "#2f6bd8" }}>🏷️ Show my codes ({coupons.length}) ›</button>
     </div>
   );
 
@@ -82,28 +82,28 @@ export function CouponTicker() {
 
   return (
     <div
-      className="relative flex h-[34px] items-center overflow-hidden border-b border-black/20"
-      style={{ background: "linear-gradient(90deg,#3a4266,#454e77)" }}
+      className="relative flex h-[34px] items-center overflow-hidden"
+      style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[#FACC15]">🏷️ Your codes</span>
+      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: "#2f6bd8" }}>🏷️ Your codes</span>
       <div className="min-w-0 flex-1 overflow-hidden">
         <div ref={trackRef} className="inline-flex items-center whitespace-nowrap [will-change:transform]">
           {items.map((c, i) => (
-            <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold text-[#eef2ff]">
-              <span className="font-mono font-extrabold tracking-wider text-white">{c.code}</span>
-              <span className="text-[#c7d3f5]">{valueLabel(c)} · {c.listingName ? c.listingName : "all listings"}</span>
-              {c.reserved && <span className="text-[#FACC15]">🎁</span>}
-              <span className="px-1 text-[8px] text-[#FACC15] opacity-50">◆</span>
+            <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold">
+              <span className="font-mono font-extrabold tracking-wider" style={{ color: "#16306e" }}>{c.code}</span>
+              <span style={{ color: "var(--ink-3)" }}>{valueLabel(c)} · {c.listingName ? c.listingName : "all listings"}</span>
+              {c.reserved && <span>🎁</span>}
+              <span className="px-1 text-[8px]" style={{ color: "#cdddf7" }}>◆</span>
             </span>
           ))}
         </div>
       </div>
       {/* Controls — stop it rolling, or hide the bar for good. */}
-      <div className="z-10 flex flex-none items-center gap-1 px-2">
-        <button type="button" onClick={togglePause} title={paused ? "Let it scroll" : "Stop scrolling"} className="rounded px-1.5 py-0.5 text-[13px] leading-none text-[#c7d3f5] hover:text-white">{paused ? "▶" : "⏸"}</button>
-        <button type="button" onClick={dismiss} title="Hide this bar" className="rounded px-1.5 py-0.5 text-[15px] leading-none text-[#c7d3f5] hover:text-white">×</button>
+      <div className="z-10 flex flex-none items-center gap-1 px-2" style={{ color: "var(--ink-3)" }}>
+        <button type="button" onClick={togglePause} title={paused ? "Let it scroll" : "Stop scrolling"} className="rounded px-1.5 py-0.5 text-[13px] leading-none hover:opacity-70">{paused ? "▶" : "⏸"}</button>
+        <button type="button" onClick={dismiss} title="Hide this bar" className="rounded px-1.5 py-0.5 text-[15px] leading-none hover:opacity-70">×</button>
       </div>
     </div>
   );
