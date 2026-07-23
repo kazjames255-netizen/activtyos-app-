@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+
+const LIGHT_PALETTE = {
+  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
+  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
+} as CSSProperties;
 
 interface Code {
   id: string;
@@ -60,13 +65,33 @@ export function MarketingApp() {
     return <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>active</Badge>;
   };
 
+  const activeCount = (codes ?? []).filter((c) => c.active !== false && !isExpired(c) && !isSpent(c)).length;
+  const totalRedemptions = (codes ?? []).reduce((s, c) => s + (c.usedCount ?? 0), 0);
+
   return (
-    <div className="text-[var(--ink)]">
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Discount codes</h2>
-        {!open && <Button variant="primary" onClick={() => setOpen(true)}>＋ New discount code</Button>}
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {/* Hero */}
+      <div className="mb-4 rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg, #1d3a8f 0%, #2f6bd8 55%, #6a4fd0 100%)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">％</span>
+              Discount codes
+            </div>
+            <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
+          </div>
+          {!open && (
+            <button type="button" onClick={() => setOpen(true)} className="flex-none rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm transition-transform hover:-translate-y-px">＋ New code</button>
+          )}
+        </div>
+        {codes && codes.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{activeCount}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Active</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{totalRedemptions}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Redemptions</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{codes.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Total codes</div></div>
+          </div>
+        )}
       </div>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Discount codes families enter at checkout — percentage or fixed amount, with optional limits.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
       {open && (
@@ -86,23 +111,38 @@ export function MarketingApp() {
       {!codes ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : codes.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No discount codes yet.</Card>
       : (
-        <div className="flex flex-col gap-1.5">
-          {codes.map((c) => (
-            <Card key={c.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
-              <span className="rounded-md border border-dashed border-[var(--line)] bg-[var(--panel)] px-2 py-0.5 font-mono text-[13px] font-bold tracking-wide">{c.code}</span>
-              <span className="text-[13px] font-bold">{valueLabel(c)}</span>
-              {statusBadge(c)}
-              <span className="text-[11.5px] text-[var(--ink-3)]">
-                {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
-                {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
-                {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}
-              </span>
-              <div className="ml-auto flex gap-2">
-                <Button sm onClick={() => toggle(c)}>{c.active === false ? "Resume" : "Pause"}</Button>
-                <Button sm variant="danger" onClick={() => remove(c)}>Delete</Button>
+        <div className="flex flex-col gap-2.5">
+          {codes.map((c) => {
+            const live = c.active !== false && !isExpired(c) && !isSpent(c);
+            const accent = live ? "#15b364" : c.active === false ? "#8a86a3" : "#e21d27";
+            const pct = c.usageLimit != null && c.usageLimit > 0 ? Math.min(100, Math.round(((c.usedCount ?? 0) / c.usageLimit) * 100)) : null;
+            return (
+              <div key={c.id} className="flex items-stretch overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)] transition-shadow hover:shadow-[0_8px_24px_-14px_rgba(20,30,60,.4)]">
+                <span className="w-1.5 flex-none" style={{ background: accent }} />
+                <div className="flex flex-1 flex-wrap items-center gap-3 px-4 py-3">
+                  <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-1 font-mono text-[14px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)]">{c.code}</span>
+                  <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[12.5px] font-extrabold text-[#0f7a44]">{valueLabel(c)}</span>
+                  {statusBadge(c)}
+                  <div className="min-w-[140px] flex-1">
+                    <div className="text-[11.5px] text-[var(--ink-3)]">
+                      {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
+                      {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
+                      {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}
+                    </div>
+                    {pct != null && (
+                      <div className="mt-1 h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--panel)]">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: accent }} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="ml-auto flex gap-2">
+                    <Button sm onClick={() => toggle(c)}>{c.active === false ? "Resume" : "Pause"}</Button>
+                    <Button sm variant="danger" onClick={() => remove(c)}>Delete</Button>
+                  </div>
+                </div>
               </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
