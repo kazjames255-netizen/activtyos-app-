@@ -28,12 +28,11 @@ interface Code {
 }
 interface Family { id: string; name?: string; email?: string }
 interface Listing { id: string; title?: string; name?: string }
-const randomCode = () => "SAVE" + Math.random().toString(36).slice(2, 7).toUpperCase();
+const rand = (n: number) => Math.random().toString(36).slice(2, 2 + n).toUpperCase();
+const randomCode = () => "SAVE" + rand(5);
+const surnameOf = (name: string) => (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase() || "FAMILY";
 // A friendly code from a family's surname + this year, e.g. "KHAN2026".
-const codeFromFamily = (name: string) => {
-  const surname = (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase();
-  return `${surname || "FAMILY"}${new Date().getFullYear()}`;
-};
+const codeFromFamily = (name: string) => `${surnameOf(name)}${new Date().getFullYear()}`;
 const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
@@ -49,6 +48,17 @@ export function MarketingApp() {
   const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", listingId: "", perCustomerLimit: false };
   const [f, setF] = useState(empty);
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
+
+  // Generate a genuinely NEW code every press: name-based (SURNAME+year+2) when
+  // a family is reserved, random otherwise — and never one that already exists
+  // or matches what's in the box, so a code is never silently reused.
+  function freshCode(): string {
+    const taken = new Set([...(codes ?? []).map((c) => c.code.toUpperCase()), f.code.toUpperCase()]);
+    const make = () => (f.assignedName ? `${surnameOf(f.assignedName)}${new Date().getFullYear()}${rand(2)}` : randomCode());
+    let code = make();
+    for (let i = 0; i < 40 && taken.has(code.toUpperCase()); i++) code = make();
+    return code;
+  }
 
   const refresh = useCallback(() => {
     apiGet<Code[]>("/api/discounts").then((c) => { setCodes(c); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -131,7 +141,7 @@ export function MarketingApp() {
           <div className="mb-3 text-[14px] font-extrabold">{editId ? "Edit discount code" : "New discount code"}</div>
           <div className="grid gap-2.5 sm:grid-cols-3">
             <div>
-              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: f.assignedName ? codeFromFamily(f.assignedName) : randomCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">{f.assignedName ? "Generate from name" : "Generate"}</button></div>
+              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: freshCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">{f.assignedName ? "Generate from name" : "Generate"}</button></div>
               <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="E.G. SUMMER25" className="w-full uppercase" />
             </div>
             <div><FieldLabel>Discount type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">By a percentage</option><option value="amount">A discount per booking</option><option value="perAttendee">A discount per attendee</option></Select></div>
@@ -169,7 +179,9 @@ export function MarketingApp() {
               <option value="">Anyone can use it</option>
               {families.map((c) => <option key={c.id} value={c.email}>{c.name || c.email}</option>)}
             </Select>
-            {f.assignedTo && <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving it sends them the code by message + email.</div>}
+            {f.assignedTo
+              ? <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving it sends them the code by message + email.</div>
+              : <div className="mt-1.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Anyone can use it.</b> Public codes <b>aren&apos;t</b> emailed to families — but you can <b>copy the code and send it to all parents</b> (Messages → broadcast), and it appears automatically in each family&apos;s <b>Coupons &amp; discount codes</b> area and the banner across their dashboard.</div>}
           </div>
 
           <div className="mt-3 flex gap-2"><Button variant="primary" onClick={save}>{editId ? "Save changes" : "Create code"}</Button><Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button></div>
