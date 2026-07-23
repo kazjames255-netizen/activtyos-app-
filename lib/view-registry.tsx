@@ -18,6 +18,7 @@ import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
 import { MarketingApp } from "@/features/marketing/MarketingApp";
+import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
@@ -97,6 +98,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     documents: DocumentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    referrals: ReferralsApp,
     splitfees: SplitFeesApp,
     email: EmailApp,
     account: AccountApp,
@@ -133,6 +135,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    referrals: ReferralsApp,
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
@@ -168,6 +171,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    referrals: ReferralsApp,
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,

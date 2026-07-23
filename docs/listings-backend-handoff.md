@@ -3104,9 +3104,12 @@ Provider-funded, so it's off by default with provider-set amounts.
   reserved to the referrer** (`assignedTo`) + messages/emails them. The reward
   lands in their Coupons area automatically (reserved-code path).
 - **New DiscountCodeDoc fields:** `referral`, `referrerEmail`, `newCustomerOnly`.
-- **Follow-up (front-end):** the `?ref=CODE` link param isn't auto-applied at
-  checkout yet — the friend types the code (it's in the share text). Auto-apply
-  is a small enhancement for later.
+- **Auto-apply:** the `?ref=CODE` link is auto-applied at checkout (stashed in
+  sessionStorage so it survives navigation into the wizard), so the friend's
+  link is one-tap.
+- **Operator dashboard:** `GET /api/referrals` (operator) → `{enabled, amounts,
+  friendsBooked, rewardsPaid, leaderboard[], recent[]}`, powering the **Referrals**
+  page in the Money area (`ReferralsApp`).
 
 ---
 

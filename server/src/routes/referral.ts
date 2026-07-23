@@ -13,6 +13,43 @@ import { webUrl } from "../lib/stripe";
 // only exists when the provider has switched it on with amounts.
 export const referral = Router();
 
+// Operator-facing referrals dashboard (Money area). Read-only overview of who's
+// referring whom and what it's paid out.
+export const referralsAdmin = Router();
+const canManage = (role?: string) => role === "company" || role === "freelancer" || role === "franchise";
+
+referralsAdmin.get("/", async (req, res) => {
+  const auth = req.auth!;
+  const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
+  if (auth.role !== "platform" && !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  if (!tenantId) { res.status(400).json({ error: "No tenant" }); return; }
+
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; friendOff?: number; referrerReward?: number } } } | undefined;
+  const ref = lib?.settings?.referral;
+
+  const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
+  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; at?: string; viaCode?: string });
+  const rewardsPaid = list.reduce((s, r) => s + (Number(r.reward) || 0), 0);
+
+  const counts = new Map<string, { count: number; reward: number }>();
+  for (const r of list) {
+    const cur = counts.get(r.referrerEmail) ?? { count: 0, reward: 0 };
+    counts.set(r.referrerEmail, { count: cur.count + 1, reward: cur.reward + (Number(r.reward) || 0) });
+  }
+  const leaderboard = [...counts.entries()].map(([email, v]) => ({ email, ...v })).sort((a, b) => b.count - a.count).slice(0, 20);
+
+  list.sort((a, b) => `${b.at ?? ""}`.localeCompare(`${a.at ?? ""}`));
+  res.json({
+    enabled: !!ref?.enabled,
+    friendOff: Number(ref?.friendOff) || 0,
+    referrerReward: Number(ref?.referrerReward) || 0,
+    friendsBooked: list.length,
+    rewardsPaid,
+    leaderboard,
+    recent: list.slice(0, 100),
+  });
+});
+
 const tokenEmail = (req: Request): string | null => (req.user?.email ? req.user.email.toLowerCase() : null);
 
 // A readable, stable code from the family's email — local-part + a short hash so
