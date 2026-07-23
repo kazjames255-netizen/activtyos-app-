@@ -47,7 +47,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "refer" | "notifications";
+type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1123,7 +1123,6 @@ export function SetupApp() {
     ["bookings", "Payments"],
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
-    ["customer", "Customer area"],
     ["refer", "Refer a friend"],
     ["notifications", "Notifications"],
   ];
@@ -1422,9 +1421,14 @@ export function SetupApp() {
       {tab === "features" && (() => {
         const fe = settings.features;
         const setFe = (view: string, v: boolean) => set("features", { ...fe, [view]: v });
-        // Things a family also sees — switching these off hides them customer-side too.
-        const customerFacing = new Set(["messages", "marketing", "moments", "meals", "newsfeed", "memberships", "referrals", "medication"]);
-        // Navigation-only views we don't surface as a "feature" row.
+        const ca = settings.customerArea;
+        const setCAkey = (key: keyof typeof ca, v: boolean) => set("customerArea", { ...ca, [key]: v });
+        const setCAkeys = (keys: (keyof typeof ca)[], v: boolean) => set("customerArea", { ...ca, ...Object.fromEntries(keys.map((k) => [k, v])) });
+        // A feature nav view → the customer-visibility toggle(s) it controls.
+        const custKeys: Record<string, (keyof typeof ca)[]> = {
+          messages: ["messaging"], marketing: ["coupons", "codesBanner"], newsfeed: ["newsfeed"],
+          moments: ["moments"], meals: ["meals"], memberships: ["memberships"], referrals: ["refer"],
+        };
         const skip = new Set(["dash", "dashboard", "auth"]);
         const seen = new Set<string>();
         const all = (NAV_GROUPS[portal] ?? [])
@@ -1445,55 +1449,48 @@ export function SetupApp() {
                 </Row>
               ))}
             </Section>
-            <Section
-              title="Optional features"
-              lede="Switch off anything you don't use — it disappears from your dashboard. Where families see it too, it turns off for them as well."
-            >
-              {optional.map((it) => (
-                <Row key={it.view} label={it.label ?? it.view} hint={customerFacing.has(it.view) ? "Families see this too — switching it off hides it for them." : undefined}>
-                  <Toggle on={fe[it.view] !== false} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
-                </Row>
-              ))}
-            </Section>
-          </>
-        );
-      })()}
 
-      {tab === "customer" && (() => {
-        const ca = settings.customerArea;
-        const setCA = (key: keyof typeof ca, v: boolean) => set("customerArea", { ...ca, [key]: v });
-        const rows: { key: keyof typeof ca; icon: string; label: string; hint: string }[] = [
-          { key: "codesBanner", icon: "🏷️", label: "Discount-codes banner", hint: "The slim scrolling bar of usable codes across the top of a family's dashboard." },
-          { key: "coupons", icon: "🎟️", label: "Coupons & discount codes page", hint: "The area listing every code a family can use with you." },
-          { key: "newsfeed", icon: "📢", label: "Newsfeed", hint: "Your posts and updates to families." },
-          { key: "moments", icon: "📷", label: "My child's day (photos)", hint: "Photo moments of a child's day." },
-          { key: "messaging", icon: "💬", label: "Messaging", hint: "Whether families can start a message to you." },
-          { key: "wallet", icon: "👛", label: "Wallet / credit", hint: "A family's store credit with you, spent at checkout." },
-          { key: "meals", icon: "🍽️", label: "Meal ordering", hint: "Ordering meals alongside a booking." },
-          { key: "memberships", icon: "⭐", label: "Memberships", hint: "Membership plans in a family's area." },
-          { key: "browse", icon: "🔍", label: "Browse more activities", hint: "The in-app feed of other activities." },
-        ];
-        return (
-          <>
             <Section
-              title="Simple mode"
-              lede="Strip the family area right back to the booking essentials — browse & book activities, their bookings, child profiles, and account. Everything else is hidden while this is on."
+              title="Your features"
+              lede="Switch off anything you don't use — it leaves your dashboard entirely. For anything families also see, flip the nested “Show to families” switch to keep it for yourself but hide it from them."
             >
-              <Row label="Keep it simple" hint="On: families see only booking, activities and account. Off: choose individually below.">
-                <Toggle on={ca.simpleMode} onChange={(v) => setCA("simpleMode", v)} labels={["On", "Off"]} />
-              </Row>
+              {optional.map((it) => {
+                const on = fe[it.view] !== false;
+                const keys = custKeys[it.view];
+                const shownToFamilies = keys ? keys.every((k) => ca[k] !== false) && !ca.simpleMode : false;
+                return (
+                  <div key={it.view} className="border-b border-dashed border-[var(--line)] py-2.5 last:border-b-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-[200px] flex-1">
+                        <div className="text-[13px] font-bold">{it.label ?? it.view}</div>
+                        {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">👪 Families see this too</div>}
+                      </div>
+                      <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
+                    </div>
+                    {keys && on && (
+                      <div className="mt-2 ml-3 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                        <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">👪 Show to families{ca.simpleMode ? " — off in Simple mode" : ""}</span>
+                        <Toggle on={shownToFamilies} disabled={ca.simpleMode} onChange={(v) => setCAkeys(keys, v)} labels={["Shown", "Hidden"]} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </Section>
+
             <Section
-              title="What families see"
-              lede={ca.simpleMode
-                ? "Simple mode is on, so these are all hidden — turn it off to choose individually. Bookings, payments, child profiles and “report a problem” are always on."
-                : "Turn off anything you don't use and it disappears from every family's area. Bookings, payments, child profiles and “report a problem” are always on and aren't listed here."}
+              title="Families also see"
+              lede="Extras in the family app. Simple mode strips their area right back to just booking, activities and account — overriding the switches above."
             >
-              {rows.map((r) => (
-                <Row key={r.key} label={`${r.icon}  ${r.label}`} hint={r.hint}>
-                  <Toggle on={ca.simpleMode ? false : ca[r.key]} onChange={(v) => setCA(r.key, v)} disabled={ca.simpleMode} labels={["Shown", "Hidden"]} />
-                </Row>
-              ))}
+              <Row label="✨ Simple mode" note="Overrides the rest" hint="On: families see only booking, activities and their account.">
+                <Toggle on={ca.simpleMode} onChange={(v) => setCAkey("simpleMode", v)} labels={["On", "Off"]} />
+              </Row>
+              <Row label="👛 Wallet / credit" hint="Store credit families can spend at checkout.">
+                <Toggle on={ca.simpleMode ? false : ca.wallet} disabled={ca.simpleMode} onChange={(v) => setCAkey("wallet", v)} labels={["Shown", "Hidden"]} />
+              </Row>
+              <Row label="🔍 Browse more activities" hint="The in-app feed of other activities.">
+                <Toggle on={ca.simpleMode ? false : ca.browse} disabled={ca.simpleMode} onChange={(v) => setCAkey("browse", v)} labels={["Shown", "Hidden"]} />
+              </Row>
             </Section>
           </>
         );
