@@ -1424,23 +1424,38 @@ export function SetupApp() {
         const setFe = (view: string, v: boolean) => set("features", { ...fe, [view]: v });
         // Things a family also sees — switching these off hides them customer-side too.
         const customerFacing = new Set(["messages", "marketing", "moments", "meals", "newsfeed", "memberships", "referrals", "medication"]);
-        // Every nav item for this portal, minus the core ones and any promoted/hidden.
+        // Navigation-only views we don't surface as a "feature" row.
+        const skip = new Set(["dash", "dashboard", "auth"]);
         const seen = new Set<string>();
-        const items = (NAV_GROUPS[portal] ?? [])
+        const all = (NAV_GROUPS[portal] ?? [])
           .flatMap((g) => g.items)
-          .filter((it) => !it.hidden && it.view !== "auth" && !CORE_VIEWS.has(it.view))
+          .filter((it) => !it.hidden && !skip.has(it.view))
           .filter((it) => (seen.has(it.view) ? false : (seen.add(it.view), true)));
+        const core = all.filter((it) => CORE_VIEWS.has(it.view));
+        const optional = all.filter((it) => !CORE_VIEWS.has(it.view));
         return (
-          <Section
-            title="Your features"
-            lede="Switch off anything you don't use — it disappears from your dashboard. Where families see it too, it turns off for them as well. The essentials (bookings, listings, customers, finances, setup) are always on and aren't listed."
-          >
-            {items.map((it) => (
-              <Row key={it.view} label={it.label ?? it.view} hint={customerFacing.has(it.view) ? "Families see this too — switching it off hides it for them." : undefined}>
-                <Toggle on={fe[it.view] !== false} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
-              </Row>
-            ))}
-          </Section>
+          <>
+            <Section
+              title="Always on"
+              lede="The essentials for running — including the pieces that go into setting up a listing (availability, locations). These can't be switched off."
+            >
+              {core.map((it) => (
+                <Row key={it.view} label={it.label ?? it.view}>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]">🔒 Always on</span>
+                </Row>
+              ))}
+            </Section>
+            <Section
+              title="Optional features"
+              lede="Switch off anything you don't use — it disappears from your dashboard. Where families see it too, it turns off for them as well."
+            >
+              {optional.map((it) => (
+                <Row key={it.view} label={it.label ?? it.view} hint={customerFacing.has(it.view) ? "Families see this too — switching it off hides it for them." : undefined}>
+                  <Toggle on={fe[it.view] !== false} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
+                </Row>
+              ))}
+            </Section>
+          </>
         );
       })()}
 
