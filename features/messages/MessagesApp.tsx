@@ -37,9 +37,16 @@ interface Thread {
 interface Folder { id: string; name: string }
 interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
 interface Provider { tenantId: string; name: string }
-interface Customer { id: string; name?: string; email?: string; children?: { name?: string }[] }
+interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+// Tidy one-line subtitle for a family: who they parent, where, and their email.
+const familySub = (c: Customer) => {
+  const kids = (c.children ?? []).map((k) => k.name).filter(Boolean);
+  return [kids.length ? `Parent of ${kids.join(", ")}` : null, c.locationName ? `📍 ${c.locationName}` : null, c.email || null]
+    .filter(Boolean)
+    .join("  ·  ");
+};
 const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 
 export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
@@ -53,6 +60,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [target, setTarget] = useState(""); // tenantId (parent) or customer email (operator)
   const [subject, setSubject] = useState(""); // optional heading for a NEW thread
+  const [familyQuery, setFamilyQuery] = useState("");
+  const [composeMode, setComposeMode] = useState<"family" | "group">("family");
+  const [listings, setListings] = useState<string[]>([]);
+  const [listingTargets, setListingTargets] = useState<string[]>([]);
+  const [listingQuery, setListingQuery] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -79,6 +92,17 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useEffect(() => {
     if (mode === "parent") apiGet<Provider[]>("/api/my/providers").then(setProviders).catch(() => {});
     else apiGet<Customer[]>("/api/customers").then((c) => setCustomers(c.filter((x) => x.email))).catch(() => {});
+  }, [mode]);
+  // Operator listing names, for the "message a whole listing" broadcast.
+  useEffect(() => {
+    if (mode !== "operator") return;
+    apiGet<{ tenantId?: string }>("/api/me")
+      .then((me) => {
+        if (!me.tenantId) return;
+        return apiGet<{ name?: string }[]>(`/api/listings?tenantId=${encodeURIComponent(me.tenantId)}`)
+          .then((ls) => setListings([...new Set(ls.map((l) => l.name).filter((n): n is string => !!n))].sort()));
+      })
+      .catch(() => {});
   }, [mode]);
   useRealtime(["threads", "messages"], () => { loadThreads(); if (openId) loadThread(openId); });
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages]);
@@ -115,6 +139,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   async function send() {
     if (!draft.trim()) return;
     try {
+      if (composing && composeMode === "group") {
+        if (listingTargets.length === 0) { setError("Choose at least one listing to message."); return; }
+        const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { listings: listingTargets, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
+        const nL = listingTargets.length;
+        setDraft(""); setSubject(""); setComposing(false); setListingTargets([]); setComposeMode("family");
+        setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"} across ${nL} ${nL === 1 ? "listing" : "listings"}.`);
+        loadThreads();
+        return;
+      }
       if (composing) {
         if (!target) { setError("Choose who to message."); return; }
         const who = mode === "parent" ? { tenantId: target } : { parentEmail: target, parentName: customers.find((c) => c.email === target)?.name };
@@ -199,7 +232,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setMessages([]); setTarget(""); setSubject(""); }}>
+          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setNotice(null); }}>
             ＋ {mode === "operator" ? "Message customers" : "New message"}
           </Button>
           {mode === "operator" && portalSeg !== "staff" && (
@@ -210,6 +243,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         </div>
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+      {notice && <div className="mb-3 rounded-lg border border-[var(--green-line,#bfe9d2)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">✓ {notice}</div>}
 
       <div className="grid gap-3 md:grid-cols-[320px_1fr]">
         <Card className="p-1.5">
@@ -222,13 +256,13 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   <div className="mb-1.5 flex flex-wrap items-center gap-1">
                     <button type="button" onClick={() => setActiveFolder("all")}
                       className="rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors"
-                      style={activeFolder === "all" ? { borderColor: "var(--cta)", background: "var(--cta)", color: "var(--cta-ink)" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+                      style={activeFolder === "all" ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
                       All {allThreads.length}
                     </button>
                     {folders.map((f) => {
                       const on = activeFolder === f.id;
                       return (
-                        <span key={f.id} className="inline-flex items-center rounded-full border" style={on ? { borderColor: "var(--cta)", background: "var(--cta)", color: "var(--cta-ink)" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+                        <span key={f.id} className="inline-flex items-center rounded-full border" style={on ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
                           <button type="button" onClick={() => setActiveFolder(f.id)} className="py-1 pl-2.5 text-[11px] font-bold">📁 {f.name} {folderCount(f.id)}</button>
                           {on ? (
                             <>
@@ -258,7 +292,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                         onClick={() => setStatusFilter(f.key)}
                         className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
                         style={on
-                          ? { borderColor: "var(--cta)", background: "var(--cta)", color: "var(--cta-ink)" }
+                          ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" }
                           : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}
                       >
                         {f.label} <span className={on ? "opacity-80" : ""}>{counts[f.key]}</span>
@@ -309,13 +343,103 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           {composing ? (
             <div className="flex flex-1 flex-col">
               <div className="border-b border-[var(--line)] p-3">
-                <div className="mb-1.5 text-[12px] font-bold text-[var(--ink-3)]">{mode === "parent" ? "Message a provider you’ve booked" : "Message a family"}</div>
-                <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
-                  <option value="">Choose…</option>
-                  {mode === "parent"
-                    ? providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)
-                    : customers.map((c) => <option key={c.id} value={c.email}>{withParent(c.name || c.email || "", c.email)} · {c.email}</option>)}
-                </Select>
+                {mode === "operator" && (
+                  <div className="mb-2 flex gap-1">
+                    {([["family", "👤 One family"], ["group", "📋 Whole listing"]] as const).map(([m, label]) => {
+                      const on = composeMode === m;
+                      return (
+                        <button key={m} type="button" onClick={() => setComposeMode(m)}
+                          className="flex-1 rounded-lg border px-2 py-1.5 text-[11.5px] font-bold transition-colors"
+                          style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="mb-1.5 text-[12px] font-bold text-[var(--ink-3)]">
+                  {mode === "parent" ? "Message a provider you’ve booked" : composeMode === "group" ? "Message everyone booked on a listing" : "Message a family"}
+                </div>
+                {mode === "operator" && composeMode === "group" ? (
+                  <div className="rounded-lg border border-[var(--line)] p-2">
+                    {listings.length === 0 ? (
+                      <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings found.</div>
+                    ) : (() => {
+                      const lq = listingQuery.trim().toLowerCase();
+                      const shown = listings.filter((l) => !lq || l.toLowerCase().includes(lq));
+                      return (
+                        <>
+                          <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
+                            <span><b className="text-[var(--ink-2)]">{listingTargets.length}</b> selected</span>
+                            {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
+                          </div>
+                          <Input value={listingQuery} onChange={(e) => setListingQuery(e.target.value)} placeholder="Search listings…" className="w-full !py-1.5 text-[12.5px]" />
+                          <div className="mt-1.5 flex max-h-[34vh] flex-col gap-0.5 overflow-y-auto">
+                            {shown.length === 0 ? (
+                              <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings match.</div>
+                            ) : shown.map((l) => {
+                              const on = listingTargets.includes(l);
+                              return (
+                                <button key={l} type="button"
+                                  onClick={() => setListingTargets((cur) => (on ? cur.filter((x) => x !== l) : [...cur, l]))}
+                                  className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--panel)]"
+                                  style={on ? { background: "var(--brand-soft)" } : undefined}>
+                                  <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border text-[11px] font-extrabold text-white"
+                                    style={on ? { background: "var(--brand-2)", borderColor: "var(--brand-2)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                                    {on ? "✓" : ""}
+                                  </span>
+                                  <span className="truncate text-[12.5px] font-semibold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{l}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : mode === "parent" ? (
+                  <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
+                    <option value="">Choose…</option>
+                    {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
+                  </Select>
+                ) : (() => {
+                  // Searchable family picker — tidy rows instead of a long native <select>.
+                  const selected = customers.find((c) => c.email === target);
+                  if (selected) {
+                    return (
+                      <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-bold">{selected.name || selected.email}</div>
+                          <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(selected)}</div>
+                        </div>
+                        <button type="button" onClick={() => setTarget("")} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">Change</button>
+                      </div>
+                    );
+                  }
+                  const fq = familyQuery.trim().toLowerCase();
+                  const matches = customers.filter((c) => !fq || `${c.name ?? ""} ${c.email ?? ""} ${c.locationName ?? ""} ${(c.children ?? []).map((k) => k.name).join(" ")}`.toLowerCase().includes(fq));
+                  return (
+                    <>
+                      <Input value={familyQuery} onChange={(e) => setFamilyQuery(e.target.value)} placeholder="Search families by name, place or email…" className="w-full !py-1.5 text-[12.5px]" />
+                      <div className="mt-1.5 max-h-[38vh] min-h-[120px] overflow-y-auto rounded-lg border border-[var(--line)]">
+                        {matches.length === 0 ? (
+                          <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">No families match.</div>
+                        ) : matches.slice(0, 80).map((c) => (
+                          <button key={c.id} type="button" onClick={() => { setTarget(c.email || ""); setFamilyQuery(""); }}
+                            className="flex w-full items-center gap-2.5 border-b border-[var(--line)] px-2.5 py-2 text-left last:border-0 hover:bg-[var(--panel)]">
+                            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                              {(c.name || c.email || "?").trim()[0]?.toUpperCase() ?? "?"}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[12.5px] font-bold">{c.name || c.email}</div>
+                              <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(c)}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -323,6 +447,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   maxLength={80}
                   className="mt-2 w-full !py-1.5 text-[12.5px]"
                 />
+                {composeMode === "group" && (
+                  <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">This sends one message to every family booked on that listing.</div>
+                )}
               </div>
               <div className="flex-1" />
               <Composer draft={draft} setDraft={setDraft} onSend={send} />
