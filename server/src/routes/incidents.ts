@@ -63,7 +63,16 @@ function tenantScope(req: Request): { role: Role; tenantId: string | null } | nu
 incidents.get("/", async (req, res) => {
   const auth = req.auth!;
   if (auth.role === "parent") {
-    res.status(403).json({ error: "Requires an operator or staff account" });
+    // A parent reads their OWN children's records (accidents/incidents),
+    // across every provider — scoped by the child's parentUid.
+    const kids = await db.collection("children").where("parentUid", "==", req.user!.uid).get();
+    const ids = kids.docs.map((d) => d.id).slice(0, 10);
+    if (!ids.length) { res.json([]); return; }
+    const snap = await col.where("childId", "in", ids).get();
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string })[];
+    if (req.query.kind === "accident" || req.query.kind === "incident") list = list.filter((x) => x.kind === req.query.kind);
+    list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
+    res.json(list);
     return;
   }
   let tenantId = auth.tenantId;

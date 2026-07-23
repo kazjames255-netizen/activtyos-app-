@@ -3060,3 +3060,33 @@ which satisfies the existing operator administer flow.
 
 Two custdash prototypes down (Meals, Medication) — both now real, both
 booking-gated, both leaving the operator flows they feed into untouched.
+
+---
+
+# Account · Data & privacy · parent Accidents — 23 July 2026 (Swagger v0.30.0)
+
+Clearing the shared mock pages that showed on every portal ("My account",
+"Data & privacy") plus the parent Accidents read.
+
+- **Account** `/api/account` (every role) — `GET` returns the profile
+  (`{email, name, phone, marketingConsent, role, tenantId}` — identity from the
+  Firebase token, editable extras from the users doc); `PUT` `{name?, phone?,
+  marketingConsent?}`. **Password change and sign-out are Firebase client
+  operations** — `AccountApp` does them directly via `firebase/auth` +
+  `useAuth()`, no backend. Registered on the `account` slug across custdash +
+  all operator/staff portals (one shared component).
+- **Data & privacy** `/api/privacy` (every role) — `GET` → `{summary}` of what
+  we hold; `GET /export` → a JSON download of the caller's own data (a parent's
+  children, bookings, meal orders, medications, moments); `POST /delete-request`
+  logs a deletion request (de-duped). **Deletion is a recorded request, not a
+  cascade wipe** — safeguarding records a provider must retain aren't destroyed;
+  the platform actions it lawfully. `PrivacyApp` on the `privacy` slug
+  everywhere.
+- **Accidents (parent)** — `GET /api/incidents?kind=accident` now returns a
+  **parent** their own children's records (was 403), scoped by `parentUid`;
+  read-only (they still can't log). `ParentAccidentsApp` on the custdash
+  `accidents` slug. Operator/staff incident flow unchanged.
+
+Parent safeguarding set is now complete: Registers (operator) · Medication ✅ ·
+Moments ✅ · Meals ✅ · **Accidents ✅**. And the cross-portal "My account" /
+"Data & privacy" mocks are real everywhere in one shared build each.

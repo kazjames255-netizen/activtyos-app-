@@ -11,6 +11,9 @@ import { MomentsApp } from "@/features/moments/MomentsApp";
 import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
 import { ParentMedicationApp } from "@/features/medication/ParentMedicationApp";
+import { AccountApp } from "@/features/account/AccountApp";
+import { PrivacyApp } from "@/features/privacy/PrivacyApp";
+import { ParentAccidentsApp } from "@/features/incidents/ParentAccidentsApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
@@ -92,6 +95,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     marketing: MarketingApp,
     splitfees: SplitFeesApp,
     email: EmailApp,
+    account: AccountApp,
+    privacy: PrivacyApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -124,6 +129,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     compliance: ComplianceApp,
     marketing: MarketingApp,
     email: EmailApp,
+    account: AccountApp,
+    privacy: PrivacyApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -156,6 +163,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     compliance: ComplianceApp,
     marketing: MarketingApp,
     email: EmailApp,
+    account: AccountApp,
+    privacy: PrivacyApp,
   },
   staff: {
     registers: RegistersApp,
@@ -172,6 +181,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     messages: () => <MessagesApp mode="operator" />,
     documents: DocumentsApp,
     compliance: ComplianceApp,
+    account: AccountApp,
+    privacy: PrivacyApp,
   },
   custdash: {
     browse: BrowseApp,
@@ -184,6 +195,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     messages: () => <MessagesApp mode="parent" />,
     meals: ParentMealsApp,
     medication: ParentMedicationApp,
+    accidents: ParentAccidentsApp,
+    account: AccountApp,
+    privacy: PrivacyApp,
   },
   platform: {
     dash: OverviewApp,

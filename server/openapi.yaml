@@ -1,10 +1,28 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.29.0
+  version: 0.30.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.30.0 — Account, Data & privacy, parent Accidents
+
+    Clearing the shared/parent mock pages.
+    - **`/api/account`** (every role) — the signed-in user's profile. `GET`
+      returns `{email, name, phone, marketingConsent, role, tenantId}` (identity
+      from the token, editable extras from the users doc); `PUT` `{name?, phone?,
+      marketingConsent?}`. Password change / sign-out are Firebase client ops.
+    - **`/api/privacy`** (every role) — GDPR surface. `GET` → `{summary}` of what
+      we hold; `GET /export` → the full JSON download of the caller's own data
+      (a parent's children, bookings, meal orders, medications, moments);
+      `POST /delete-request` records a deletion request (de-duped) — **it does
+      not hard-delete** (safeguarding records must be retained; the platform
+      actions it lawfully).
+    - **Accidents (parent read)** — `GET /api/incidents` (and
+      `?kind=accident`) now returns a **parent** their own children's records
+      (was 403), scoped by the child's `parentUid`. Parents still can't log
+      (read-only). Operator/staff behaviour unchanged.
 
     ## v0.29.0 — Parent medication (digital consent)
 
@@ -703,6 +721,10 @@ tags:
     description: Operator-only, tenant-scoped
   - name: invites
     description: How franchises and staff join a tenant
+  - name: account
+    description: The signed-in user's own profile (every role)
+  - name: privacy
+    description: GDPR — what we hold, export, deletion request (every role)
   - name: tenants
   - name: meta
 
@@ -1694,6 +1716,58 @@ paths:
         "200": { description: "{ok:true}" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: Paid order — the provider must cancel it }
+
+  /api/account:
+    get:
+      tags: [account]
+      summary: The signed-in user's profile
+      responses:
+        "200": { description: "{email, name, phone, marketingConsent, role, tenantId}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    put:
+      tags: [account]
+      summary: Update editable profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                marketingConsent: { type: boolean }
+      responses:
+        "200": { description: "{name, phone, marketingConsent}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/privacy:
+    get:
+      tags: [privacy]
+      summary: What we hold about the caller (a summary of counts)
+      responses:
+        "200": { description: "{role, summary}" }
+
+  /api/privacy/export:
+    get:
+      tags: [privacy]
+      summary: Download the caller's own data (JSON)
+      responses:
+        "200": { description: "{generatedAt, account, …parent data}" }
+
+  /api/privacy/delete-request:
+    post:
+      tags: [privacy]
+      summary: Request account/data deletion (recorded, not an immediate wipe)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, properties: { reason: { type: string } } }
+      responses:
+        "201": { description: Request logged }
+        "200": { description: "{ok:true, alreadyRequested:true} — already had one pending" }
+        "400": { $ref: "#/components/responses/BadRequest" }
 
   /api/emails:
     get:
@@ -2695,7 +2769,7 @@ paths:
   /api/incidents:
     get:
       tags: [incidents]
-      summary: The safeguarding log (accidents + incidents)
+      summary: The safeguarding log — operator/staff (tenant's) or parent (own children's, read-only)
       parameters:
         - { name: kind, in: query, required: false, schema: { type: string, enum: [accident, incident] } }
         - { name: childId, in: query, required: false, schema: { type: string } }
