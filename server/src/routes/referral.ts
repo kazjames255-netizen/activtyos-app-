@@ -28,17 +28,29 @@ referralsAdmin.get("/", async (req, res) => {
   const ref = lib?.settings?.referral;
 
   const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; at?: string; viaCode?: string });
+  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; friendOff?: number; friendSpend?: number; type?: "amount" | "percent"; cap?: number; at?: string; viaCode?: string });
   const rewardsPaid = list.reduce((s, r) => s + (Number(r.reward) || 0), 0);
+
+  // Resolve real family names from the customer list (fallback to the email).
+  const custSnap = await db.collection("customers").where("tenantId", "==", tenantId).get();
+  const nameByEmail = new Map<string, string>();
+  custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email && c.name) nameByEmail.set(c.email.toLowerCase(), c.name); });
+  const nm = (email: string) => nameByEmail.get(email.toLowerCase()) ?? null;
 
   const counts = new Map<string, { count: number; reward: number }>();
   for (const r of list) {
     const cur = counts.get(r.referrerEmail) ?? { count: 0, reward: 0 };
     counts.set(r.referrerEmail, { count: cur.count + 1, reward: cur.reward + (Number(r.reward) || 0) });
   }
-  const leaderboard = [...counts.entries()].map(([email, v]) => ({ email, ...v })).sort((a, b) => b.count - a.count).slice(0, 20);
+  const leaderboard = [...counts.entries()].map(([email, v]) => ({ email, name: nm(email), ...v })).sort((a, b) => b.count - a.count).slice(0, 20);
 
   list.sort((a, b) => `${b.at ?? ""}`.localeCompare(`${a.at ?? ""}`));
+  const recent = list.slice(0, 100).map((r) => ({
+    referrerEmail: r.referrerEmail, referrerName: nm(r.referrerEmail),
+    friendEmail: r.friendEmail, friendName: nm(r.friendEmail),
+    friendOff: Number(r.friendOff) || 0, friendSpend: Number(r.friendSpend) || 0,
+    reward: Number(r.reward) || 0, type: r.type ?? "amount", cap: r.cap ?? null, at: r.at ?? null, viaCode: r.viaCode ?? null,
+  }));
   res.json({
     enabled: !!ref?.enabled,
     type: ref?.type === "percent" ? "percent" : "amount",
@@ -47,7 +59,7 @@ referralsAdmin.get("/", async (req, res) => {
     friendsBooked: list.length,
     rewardsPaid,
     leaderboard,
-    recent: list.slice(0, 100),
+    recent,
   });
 });
 
@@ -77,17 +89,19 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
   const dupe = await db.collection("referrals").where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
   if (!dupe.empty) return; // already rewarded for this friend
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) return;
   const type = ref.type === "percent" ? "percent" : "amount";
   const reward = Math.max(0, Number(ref.referrerReward) || 0);
+  const friendOff = Math.max(0, Number(ref.friendOff) || 0);
+  const spend = Math.max(0, Math.round((Number(friendSpend) || 0) * 100) / 100);
   // Cap the £ the reward can take off to what the friend actually spent — you
   // can never give away more than the referral brought in.
-  const cap = type === "percent" && ref.capToFriendSpend ? Math.max(0, Math.round((Number(friendSpend) || 0) * 100) / 100) : undefined;
+  const cap = type === "percent" && ref.capToFriendSpend ? spend : undefined;
   const rewardTxt = (type === "percent" ? `${reward}% off` : `£${reward} off`) + (cap != null ? ` (up to £${cap})` : "");
   const now = new Date().toISOString();
-  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, type, ...(cap != null ? { cap } : {}), at: now });
+  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, friendOff, type, friendSpend: spend, ...(cap != null ? { cap } : {}), at: now });
   if (reward <= 0) return;
 
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
