@@ -115,7 +115,12 @@ export function ReferApp() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {fmt(r.referrerReward)} per friend who books.{isPct && r.capToFriendSpend ? " Your reward is capped to what your friend spends on their first booking." : ""}</p>
+        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {fmt(r.referrerReward)} per friend who books.</p>
+        {isPct && r.capToFriendSpend && (
+          <p className="mt-2 rounded-lg bg-[var(--brand-soft,#eaf0fc)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--brand-strong,#16306e)]">
+            💡 Your reward can’t be more than what your friend spends. So if they book £20, your {fmt(r.referrerReward)} reward gives up to £20 off — never more.
+          </p>
+        )}
       </Card>
     </div>
   );
