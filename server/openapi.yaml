@@ -1,10 +1,30 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.28.0
+  version: 0.29.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.29.0 — Parent medication (digital consent)
+
+    Replaces the legacy parent "Medication" prototype with a real flow. The
+    consent gate is the whole point of medication — and the most authentic
+    consent is the parent's own, so a parent now authorises digitally.
+    - **`POST /api/medications/authorise`** (parent) `{tenantId, childId,
+      childName, name, dose, route?, condition?, schedule?, asNeeded?, dates?,
+      notes?}` — creates the medication **already consented** (`consentGranted:
+      true`, `consentBy` = the parent, `source: "parent"`). Gated: the child
+      must be on the parent's account AND they must have booked that provider.
+      It flows straight into the operator's existing administer path (the
+      consent gate is satisfied), so staff can give it and record doses.
+    - **`POST /api/medications/:id/withdraw`** (parent) — withdraw consent:
+      archives the med and flips `consentGranted:false` (no more doses), but
+      **keeps the record** so the dose history survives.
+    - **Parent reads now work** (were 403): `GET /api/medications` and
+      `GET /api/medications/administrations` return the parent's OWN children's
+      medications + dose history (the MAR they're entitled to), across every
+      provider. Scoped by the child's `parentUid`.
 
     ## v0.28.0 — Meal ordering (parent meals shop)
 
@@ -2536,7 +2556,7 @@ paths:
   /api/medications:
     get:
       tags: [medication]
-      summary: Authorised medications (active; ?includeArchived=1 for all)
+      summary: Authorised medications — operator/staff (tenant's) or parent (own children's)
       parameters:
         - { name: childId, in: query, required: false, schema: { type: string } }
         - { name: includeArchived, in: query, required: false, schema: { type: string, enum: ["1"] } }
@@ -2572,10 +2592,55 @@ paths:
         "201": { description: The authorised medication }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/medications/authorise:
+    post:
+      tags: [medication]
+      summary: A parent authorises (consents to) a medication for their child
+      description: >
+        Creates the medication already consented (consentGranted:true, consentBy
+        = the parent, source:"parent"). Gated: the child must be on the parent's
+        account and they must have booked the provider. Flows into the operator's
+        administer path.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, childId, childName, name, dose]
+              properties:
+                tenantId: { type: string }
+                childId: { type: string }
+                childName: { type: string }
+                name: { type: string }
+                dose: { type: string }
+                route: { type: string }
+                condition: { type: string }
+                schedule: { type: string }
+                asNeeded: { type: boolean }
+                storage: { type: string }
+                startDate: { type: string }
+                endDate: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: The authorised (consented) medication }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/medications/{id}/withdraw:
+    post:
+      tags: [medication]
+      summary: A parent withdraws consent (archives; record kept, no more doses)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/medications/administrations:
     get:
       tags: [medication]
-      summary: The MAR — every dose given
+      summary: "The MAR — every dose given (operator sees the tenant's, a parent their own children's)"
       parameters:
         - { name: date, in: query, required: false, schema: { type: string } }
         - { name: childId, in: query, required: false, schema: { type: string } }

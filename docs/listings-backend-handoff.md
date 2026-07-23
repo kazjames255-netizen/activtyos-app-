@@ -3029,3 +3029,34 @@ UI: **operator** — a "Meal shop" tab inside the existing MealsApp (menu manage
 the custdash `meals` slug (was the legacy iframe): provider picker → menu with
 quantity steppers → basket → place order → your orders with pay status. So the
 thing you spotted — parent Meals doing nothing — is now a real, wired feature.
+
+---
+
+# Parent medication — digital consent — 23 July 2026 (Swagger v0.29.0)
+
+Same story as Meals: the custdash **Medication** page was a dead legacy
+prototype. Now real. The consent gate is the whole point of medication, and the
+most authentic consent is the parent's own — so a parent authorises digitally,
+which satisfies the existing operator administer flow.
+
+- **`POST /api/medications/authorise`** (parent) `{tenantId, childId, childName,
+  name, dose, route?, condition?, schedule?, asNeeded?, dates?, notes?}` —
+  creates the medication **already consented** (`consentGranted:true`,
+  `consentBy` = parent, `source:"parent"`). Gated: the child must be on the
+  parent's account (by `parentUid`) AND they must have booked that provider. It
+  lands in the tenant's `medications` and staff administer against it as normal.
+- **`POST /api/medications/:id/withdraw`** (parent) — withdraws consent:
+  archives + `consentGranted:false` (blocks further doses) but **keeps the
+  record** (dose history must survive).
+- **Parent reads now work** (were 403): `GET /api/medications` and
+  `GET /api/medications/administrations` return the parent's own children's meds
+  + dose history (the MAR), across every provider they use.
+- **No change to the operator side** — the existing MedicationApp, administer
+  flow and consent gate are untouched; parent-authored records just flow into
+  them (marked `source:"parent"` so staff can see who authorised).
+- `ParentMedicationApp` now serves the custdash `medication` slug (was the
+  legacy iframe): authorise form with an explicit consent checkbox, a list of
+  the child's meds with consent status + dose history, and withdraw.
+
+Two custdash prototypes down (Meals, Medication) — both now real, both
+booking-gated, both leaving the operator flows they feed into untouched.

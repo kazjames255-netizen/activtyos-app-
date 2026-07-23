@@ -10,6 +10,7 @@ import { ParentMealsApp } from "@/features/meals/ParentMealsApp";
 import { MomentsApp } from "@/features/moments/MomentsApp";
 import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
+import { ParentMedicationApp } from "@/features/medication/ParentMedicationApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
@@ -182,6 +183,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     newsfeed: ParentNewsfeedApp,
     messages: () => <MessagesApp mode="parent" />,
     meals: ParentMealsApp,
+    medication: ParentMedicationApp,
   },
   platform: {
     dash: OverviewApp,

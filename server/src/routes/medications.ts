@@ -53,13 +53,35 @@ const tenantOf = (req: Request) => {
   return auth.tenantId;
 };
 
+// A parent's own children (by uid) — the scope for everything a parent reads
+// or authorises. Firestore `in` caps at 10, which is plenty for one family.
+async function myChildIds(uid: string): Promise<string[]> {
+  const snap = await db.collection("children").where("parentUid", "==", uid).get();
+  return snap.docs.map((d) => d.id).slice(0, 10);
+}
+async function ownsChild(uid: string, childId: string): Promise<boolean> {
+  const d = await db.collection("children").doc(childId).get();
+  return d.exists && d.data()!.parentUid === uid;
+}
+async function hasBooking(tenantId: string, email: string): Promise<boolean> {
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
+  return !snap.empty;
+}
+
 // ——— Authorised medications ———
 
 // GET /api/medications?childId=&includeArchived=
 medications.get("/", async (req, res) => {
   const auth = req.auth!;
   if (auth.role === "parent") {
-    res.status(403).json({ error: "Requires an operator or staff account" });
+    // A parent sees their OWN children's medications, across every provider.
+    const ids = await myChildIds(req.user!.uid);
+    if (!ids.length) { res.json([]); return; }
+    const snap = await medsCol.where("childId", "in", ids).get();
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; childName?: string })[];
+    if (req.query.includeArchived !== "1") list = list.filter((m) => !m.archived);
+    list.sort((a, b) => (`${a.childName ?? ""}` < `${b.childName ?? ""}` ? -1 : 1));
+    res.json(list);
     return;
   }
   const tenantId = tenantOf(req);
@@ -208,7 +230,14 @@ medications.post("/:id/administer", async (req, res) => {
 medications.get("/administrations", async (req, res) => {
   const auth = req.auth!;
   if (auth.role === "parent") {
-    res.status(403).json({ error: "Requires an operator or staff account" });
+    // The parent's own children's dose history (the MAR they're entitled to).
+    const ids = await myChildIds(req.user!.uid);
+    if (!ids.length) { res.json([]); return; }
+    const snap = await adminCol.where("childId", "in", ids).get();
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string; medicationId?: string })[];
+    if (typeof req.query.medicationId === "string") list = list.filter((x) => x.medicationId === req.query.medicationId);
+    list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
+    res.json(list);
     return;
   }
   const tenantId = tenantOf(req);
@@ -224,4 +253,69 @@ medications.get("/administrations", async (req, res) => {
   if (typeof req.query.date === "string") list = list.filter((x) => x.date === req.query.date);
   list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
   res.json(list);
+});
+
+// ——— Parent-authorised medications (digital consent) ———
+//
+// The consent gate is the whole point of this feature — and the most authentic
+// consent is the parent's own. A parent authorises a medicine for THEIR child
+// at a provider they've booked; the record lands consented, so staff can
+// administer against it through the normal flow. The parent can withdraw it
+// (archive) at any time. They never touch other families' data.
+
+const authoriseSchema = z.object({
+  tenantId: z.string().min(1).max(60),
+  childId: z.string().min(1).max(60),
+  childName: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(120),
+  dose: z.string().trim().min(1).max(120),
+  route: z.string().trim().max(60).optional(),
+  condition: z.string().trim().max(160).optional(),
+  schedule: z.string().trim().max(200).optional(),
+  asNeeded: z.boolean().default(false),
+  storage: z.string().trim().max(200).optional(),
+  startDate: z.string().max(10).optional(),
+  endDate: z.string().max(10).optional(),
+  expiryDate: z.string().max(10).optional(),
+  notes: z.string().trim().max(1_000).optional(),
+});
+
+// POST /api/medications/authorise — a parent authorises (consents to) a med.
+medications.post("/authorise", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "parent") { res.status(403).json({ error: "Only a parent can authorise their child's medication" }); return; }
+  const parsed = authoriseSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const input = parsed.data;
+  if (!(await ownsChild(req.user!.uid, input.childId))) { res.status(403).json({ error: "That child isn't on your account" }); return; }
+  if (!(await hasBooking(input.tenantId, req.user!.email ?? ""))) { res.status(403).json({ error: "You can only authorise medication for a provider you've booked with" }); return; }
+  const parentName = req.user?.name ?? req.user?.email ?? "Parent";
+  const doc = {
+    ...input,
+    heldOnSite: false,
+    archived: false,
+    // The authorising artefact — granted by the parent, in their name, now.
+    consentGranted: true,
+    consentBy: parentName,
+    consentDate: new Date().toISOString(),
+    source: "parent" as const,
+    recordedBy: req.user?.email ?? req.user?.uid ?? "parent",
+    recordedByName: parentName,
+    createdAt: new Date().toISOString(),
+  };
+  const ref = await medsCol.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+
+// POST /api/medications/:id/withdraw — a parent withdraws consent (archives).
+// The record is kept (dose history must survive); it just can't be given again.
+medications.post("/:id/withdraw", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "parent") { res.status(403).json({ error: "Only a parent can withdraw their consent" }); return; }
+  const snap = await medsCol.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Medication not found" }); return; }
+  const childId = snap.data()!.childId as string | undefined;
+  if (!childId || !(await ownsChild(req.user!.uid, childId))) { res.status(404).json({ error: "Medication not found" }); return; }
+  await snap.ref.set({ archived: true, consentGranted: false, consentWithdrawnAt: new Date().toISOString() }, { merge: true });
+  res.json({ ok: true });
 });
