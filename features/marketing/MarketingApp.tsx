@@ -21,7 +21,16 @@ interface Code {
   usageLimit?: number;
   usedCount?: number;
   active?: boolean;
+  assignedTo?: string;
+  assignedName?: string;
 }
+interface Family { id: string; name?: string; email?: string }
+const randomCode = () => "SAVE" + Math.random().toString(36).slice(2, 7).toUpperCase();
+// A friendly code from a family's surname + this year, e.g. "KHAN2026".
+const codeFromFamily = (name: string) => {
+  const surname = (name.trim().split(/\s+/).pop() || "FAM").replace(/[^A-Za-z]/g, "").toUpperCase();
+  return `${surname || "FAMILY"}${new Date().getFullYear()}`;
+};
 const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const isExpired = (c: Code) => !!c.expiry && c.expiry < todayIso();
@@ -31,27 +40,42 @@ export function MarketingApp() {
   const [codes, setCodes] = useState<Code[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [families, setFamilies] = useState<Family[]>([]);
+  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "" };
+  const [f, setF] = useState(empty);
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
 
   const refresh = useCallback(() => {
     apiGet<Code[]>("/api/discounts").then((c) => { setCodes(c); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { apiGet<Family[]>("/api/customers").then((cs) => setFamilies(cs.filter((c) => c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)))).catch(() => {}); }, []);
   useRealtime(["discountCodes"], refresh);
 
-  async function add() {
+  function openCreate() { setEditId(null); setF(empty); setError(null); setOpen(true); }
+  function openEdit(c: Code) {
+    setEditId(c.id);
+    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "" });
+    setError(null); setOpen(true);
+  }
+
+  async function save() {
     const value = Number(f.value);
     if (!f.code.trim() || !value || value <= 0) { setError("A code and a positive value are required."); return; }
     if (f.type === "percent" && value > 100) { setError("A percentage can’t exceed 100."); return; }
+    const payload = {
+      code: f.code, type: f.type, value,
+      minSpend: f.minSpend ? Number(f.minSpend) : undefined,
+      expiry: f.expiry || undefined,
+      usageLimit: f.usageLimit ? Number(f.usageLimit) : undefined,
+      assignedTo: f.assignedTo || undefined,
+      assignedName: f.assignedName || undefined,
+    };
     try {
-      await apiPost("/api/discounts", {
-        code: f.code, type: f.type, value,
-        minSpend: f.minSpend ? Number(f.minSpend) : undefined,
-        expiry: f.expiry || undefined,
-        usageLimit: f.usageLimit ? Number(f.usageLimit) : undefined,
-      });
-      setF({ code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "" }); setOpen(false); refresh();
+      if (editId) await api(`/api/discounts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
+      else await apiPost("/api/discounts", payload);
+      setF(empty); setEditId(null); setOpen(false); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
   }
   async function toggle(c: Code) { try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "PUT", body: JSON.stringify({ active: !(c.active !== false) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
@@ -81,7 +105,7 @@ export function MarketingApp() {
             <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
           </div>
           {!open && (
-            <button type="button" onClick={() => setOpen(true)} className="flex-none rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm transition-transform hover:-translate-y-px">＋ New code</button>
+            <button type="button" onClick={openCreate} className="flex-none rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm transition-transform hover:-translate-y-px">＋ New code</button>
           )}
         </div>
         {codes && codes.length > 0 && (
@@ -96,15 +120,39 @@ export function MarketingApp() {
 
       {open && (
         <Card className="mb-3.5 p-4">
+          <div className="mb-3 text-[14px] font-extrabold">{editId ? "Edit discount code" : "New discount code"}</div>
           <div className="grid gap-2.5 sm:grid-cols-3">
-            <div><FieldLabel>Code</FieldLabel><Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="SUMMER25" className="w-full" /></div>
+            <div>
+              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: randomCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">Generate</button></div>
+              <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="E.G. SUMMER25" className="w-full uppercase" />
+            </div>
             <div><FieldLabel>Type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">Percentage</option><option value="amount">Fixed amount</option></Select></div>
             <div><FieldLabel>{f.type === "percent" ? "Percent off" : "Amount off (£)"}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
             <div><FieldLabel>Min spend (£)</FieldLabel><Input type="number" min="0" step="0.01" value={f.minSpend} onChange={(e) => set({ minSpend: e.target.value })} placeholder="optional" className="w-full" /></div>
             <div><FieldLabel>Expiry</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /></div>
             <div><FieldLabel>Usage limit</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder="unlimited" className="w-full" /></div>
           </div>
-          <div className="mt-3 flex gap-2"><Button variant="primary" onClick={add}>Create code</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
+
+          {/* Assign to one family — only they can redeem it, and they get a message + email. */}
+          <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <FieldLabel>Reserve for one family <span className="font-normal text-[var(--ink-3)]">— optional; they get a message + email</span></FieldLabel>
+            <Select
+              value={f.assignedTo}
+              onChange={(e) => {
+                const fam = families.find((x) => x.email === e.target.value);
+                if (!fam) { set({ assignedTo: "", assignedName: "" }); return; }
+                const name = fam.name || fam.email || "";
+                set({ assignedTo: fam.email || "", assignedName: name, code: f.code.trim() ? f.code : codeFromFamily(name) });
+              }}
+              className="w-full"
+            >
+              <option value="">Anyone can use it</option>
+              {families.map((c) => <option key={c.id} value={c.email}>{c.name || c.email}</option>)}
+            </Select>
+            {f.assignedTo && <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only <b className="text-[var(--ink-2)]">{f.assignedName || f.assignedTo}</b> can redeem this — saving it sends them the code by message + email.</div>}
+          </div>
+
+          <div className="mt-3 flex gap-2"><Button variant="primary" onClick={save}>{editId ? "Save changes" : "Create code"}</Button><Button onClick={() => { setOpen(false); setEditId(null); }}>Cancel</Button></div>
         </Card>
       )}
 
@@ -125,6 +173,7 @@ export function MarketingApp() {
                   {statusBadge(c)}
                   <div className="min-w-[140px] flex-1">
                     <div className="text-[11.5px] text-[var(--ink-3)]">
+                      {c.assignedTo ? `🔒 ${c.assignedName || c.assignedTo} only · ` : ""}
                       {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
                       {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
                       {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}
@@ -136,6 +185,7 @@ export function MarketingApp() {
                     )}
                   </div>
                   <div className="ml-auto flex gap-2">
+                    <Button sm onClick={() => openEdit(c)}>Edit</Button>
                     <Button sm onClick={() => toggle(c)}>{c.active === false ? "Resume" : "Pause"}</Button>
                     <Button sm variant="danger" onClick={() => remove(c)}>Delete</Button>
                   </div>

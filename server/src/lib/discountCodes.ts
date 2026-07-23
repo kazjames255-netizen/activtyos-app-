@@ -14,15 +14,19 @@ export interface DiscountCodeDoc {
   usageLimit?: number; // total redemptions allowed
   usedCount?: number;
   active?: boolean;
+  assignedTo?: string; // email — if set, ONLY this family can redeem it
 }
 
 export type CodeCheck = { ok: true; off: number } | { ok: false; reason: string };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Validate a code against an order subtotal and return the pounds it removes. */
-export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string): CodeCheck {
+/** Validate a code against an order subtotal and return the pounds it removes.
+ *  `ctx.email` is the person redeeming — needed to enforce a family-assigned code. */
+export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string, ctx?: { email?: string }): CodeCheck {
   if (c.active === false) return { ok: false, reason: "This code is no longer active" };
+  if (c.assignedTo && (!ctx?.email || ctx.email.trim().toLowerCase() !== c.assignedTo.trim().toLowerCase()))
+    return { ok: false, reason: "This code is reserved for another customer" };
   if (c.expiry && c.expiry < today) return { ok: false, reason: "This code has expired" };
   if (c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit) return { ok: false, reason: "This code has reached its usage limit" };
   if (c.minSpend != null && subtotal < c.minSpend) return { ok: false, reason: `Spend at least £${c.minSpend.toFixed(2)} to use this code` };
