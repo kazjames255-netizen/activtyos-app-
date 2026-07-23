@@ -534,12 +534,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
           )}
-          {b.email && (
-            <button type="button" onClick={() => setMessaging(true)}
-              className="ml-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]">
-              ✉️ Message family
-            </button>
-          )}
         </div>
         {messaging && <MessageBookingModal booking={b} onClose={() => setMessaging(false)} />}
 
@@ -780,7 +774,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>
             Change date
           </Button>
-          <Button onClick={() => alert("Opened a message to the booker.")}>Message</Button>
+          {b.email && <Button onClick={() => setMessaging(true)}>✉️ Message family</Button>}
         </div>
       </Card>
     </div>
