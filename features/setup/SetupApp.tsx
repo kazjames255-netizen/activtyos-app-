@@ -1341,6 +1341,14 @@ export function SetupApp() {
       {tab === "bookings" && (
         <>
           <Section
+            title="Marketplace"
+            lede="Your own storefront link always shows your public activities. Switching this on also lists them in the shared ActivityOS marketplace, where families browsing the app can discover you — not just the ones who already have your link."
+          >
+            <Row label="List us in the marketplace" hint="Off: families reach you only through your storefront/booking link. On: your live, public listings also appear in every family's in-app Browse.">
+              <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={["Listed", "Off"]} />
+            </Row>
+          </Section>
+          <Section
             title="How parents pay"
             lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
           >

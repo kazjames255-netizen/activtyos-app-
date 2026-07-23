@@ -146,12 +146,13 @@ export function BrowseApp() {
     return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading activities…</div>;
   }
 
-  // Scope to the parent's own providers — Phase 1 shows a single provider's
-  // activities, not everyone's. No linked provider yet means there's nothing to
-  // show here (they reach a provider through its booking link first).
-  const providerIds = new Set(providers.map((p) => p.tenantId));
-  const visible = listings.filter((l) => providerIds.has(l.tenantId));
-  const providerName = providers.length === 1 ? providers[0].name : null;
+  // The marketplace. The server already scopes this to the right set — every
+  // provider that's opted into the marketplace, plus this parent's own
+  // providers (anyone they've booked) — so we show it as-is. When it's exactly
+  // one provider (a family tied to a single camp), we still greet them by name.
+  const visible = listings;
+  const listedProviders = new Set(listings.map((l) => l.tenantId));
+  const providerName = listedProviders.size === 1 && providers.length === 1 ? providers[0].name : null;
 
   // Distance from the parent to a listing's venue, or null if either end has no
   // coordinates (venue not geocoded / no postcode, or no postcode entered).
@@ -227,15 +228,15 @@ export function BrowseApp() {
   );
   const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--ink-2)]";
 
-  if (!providers.length) {
+  if (!visible.length) {
     return (
       <div className="text-[var(--ink)]">
         <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           Browse activities
         </h2>
         <Card className="mt-3 p-6 text-center text-[13px] text-[var(--ink-3)]">
-          Your provider&rsquo;s activities will appear here once you&rsquo;re connected to them. Open the booking
-          link they shared with you to get started.
+          No activities to show right now. New providers appear here as they join the marketplace &mdash; or open a
+          booking link a provider shared with you to get started.
         </Card>
       </div>
     );

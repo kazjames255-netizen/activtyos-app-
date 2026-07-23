@@ -268,6 +268,14 @@ export interface TenantSettings {
   /** Which the operator picked at onboarding — kept so Setup can show it and
    *  re-resolve from the live name if they later rename the business. */
   providerNameMode: "person" | "business";
+  /**
+   * List this provider in the cross-provider marketplace — the parent Browse
+   * feed that shows every opted-in provider's live public activities, not just
+   * the ones a family has already booked. Off by default: a provider's public
+   * listings always show on their OWN storefront (/store/:tenantId) regardless,
+   * but appearing in the shared marketplace is an explicit, opt-in decision.
+   */
+  marketplaceListed: boolean;
 
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
@@ -452,6 +460,7 @@ export const SEEDED_QUESTIONS: ChildQuestion[] = [
 export const DEFAULT_SETTINGS: TenantSettings = {
   providerName: "",
   providerNameMode: "business",
+  marketplaceListed: false,
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],

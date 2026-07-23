@@ -224,11 +224,32 @@ listings.get("/", async (req, res) => {
   // page and embed widget use it ("all of this provider's activities").
   const tenantFilter = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
   const snap = await col.orderBy("name").get();
-  const visible = snap.docs.filter((d) => {
+  let visible = snap.docs.filter((d) => {
     const l = d.data();
     if (tenantFilter && l.tenantId !== tenantFilter) return false;
     return (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
   });
+
+  // Marketplace opt-in. The cross-provider feed (no ?tenantId) shows only
+  // providers who've switched on `settings.marketplaceListed` — plus, for a
+  // signed-in parent, their OWN providers (anyone they've booked) regardless.
+  // A provider's own storefront (?tenantId=) is unaffected: their public
+  // listings always show there.
+  if (!tenantFilter) {
+    const tids = [...new Set(visible.map((d) => d.data().tenantId).filter(Boolean) as string[])];
+    const libSnaps = await Promise.all(tids.map((id) => db.collection("libraries").doc(id).get()));
+    const allowed = new Set(
+      libSnaps
+        .filter((s) => ((s.data()?.settings as { marketplaceListed?: boolean } | undefined)?.marketplaceListed) === true)
+        .map((s) => s.id),
+    );
+    const email = req.user?.email?.toLowerCase();
+    if (email) {
+      const mine = await db.collection("bookings").where("email", "==", email).get();
+      for (const b of mine.docs) { const t = b.data().tenantId as string | undefined; if (t) allowed.add(t); }
+    }
+    visible = visible.filter((d) => allowed.has(d.data().tenantId as string));
+  }
 
   // Resolve each listing's category ids to their names, and its venue id to a
   // location — the browse page filters by both. Names live per tenant in the

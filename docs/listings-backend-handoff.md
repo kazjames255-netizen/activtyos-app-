@@ -3090,3 +3090,31 @@ Clearing the shared mock pages that showed on every portal ("My account",
 Parent safeguarding set is now complete: Registers (operator) · Medication ✅ ·
 Moments ✅ · Meals ✅ · **Accidents ✅**. And the cross-portal "My account" /
 "Data & privacy" mocks are real everywhere in one shared build each.
+
+---
+
+# Cross-provider marketplace (opt-in) — 23 July 2026 (Swagger v0.31.0)
+
+The parent Browse feed is now a real marketplace. Previously it was scoped
+**client-side** to providers a family had already booked (the "Phase 1"
+single-provider mode), so a brand-new provider's live listing never appeared
+to a parent who hadn't booked them — which is exactly the "my parent can't see
+my new listing" symptom.
+
+- **`GET /api/listings`** (no `?tenantId=`, no `?mine=1`) now returns live/
+  public/unarchived listings from every provider **that has opted in**
+  (`settings.marketplaceListed === true`), **plus** — for a signed-in parent —
+  their own providers (anyone they've booked) regardless of opt-in. So a family
+  always keeps seeing their own camp, and also discovers opted-in providers.
+- A provider's **own storefront** (`GET /api/listings?tenantId=`) is unchanged:
+  their public listings always show there, marketplace or not.
+- New tenant setting **`marketplaceListed`** (library `settings` bag), default
+  **false** — opt-in only, nobody's publicly listed without choosing it. The
+  operator flips it in **Setup → Bookings → Marketplace** ("List us in the
+  marketplace"). `BrowseApp` drops the old client scoping and renders the
+  server feed as-is (empty state reworded for the marketplace).
+
+**So the fix for what you hit:** publish the listing live+public, then flip the
+company's marketplace toggle on — it now shows in the parent's Browse. (A parent
+who books any provider also keeps seeing that provider whether or not it's
+listed.)

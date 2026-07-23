@@ -1,10 +1,28 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.30.0
+  version: 0.31.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.31.0 — Cross-provider marketplace (opt-in)
+
+    The parent Browse feed becomes a real marketplace instead of being scoped
+    (client-side) to providers a family had already booked.
+    - **`GET /api/listings`** (no `?tenantId=`, no `?mine=1`) now returns the
+      live/public/unarchived listings of every provider **that has opted in**
+      (`settings.marketplaceListed === true`) — **plus**, for a signed-in
+      parent, their own providers (anyone they've booked) regardless of opt-in.
+    - A provider's **own storefront** (`GET /api/listings?tenantId=`) is
+      unchanged — their public listings always show there whether or not
+      they're in the marketplace.
+    - New tenant setting **`marketplaceListed`** (in the library `settings`
+      bag), default **false** — a provider opts in from Setup → Bookings →
+      Marketplace. Opt-in is a deliberate choice; nobody is publicly listed
+      without it.
+    (Frontend: BrowseApp drops the old single-provider scoping and shows the
+    server feed as-is.)
 
     ## v0.30.0 — Account, Data & privacy, parent Accidents
 
@@ -1225,11 +1243,16 @@ paths:
       summary: Browse feed (public; or my tenant's listings with ?mine=1)
       security: []
       description: |
-        **No auth required** — the public storefront feed: only
-        `status: live`, `visibility: public`, unarchived listings, every
-        tenant, with `tenantId` / `tenantName` and joined `blocks`. Hidden
-        listings are *unlisted*: absent here, fully served by
+        **No auth required.** Only `status: live`, `visibility: public`,
+        unarchived listings, with `tenantId` / `tenantName` and joined
+        `blocks`. Hidden listings are *unlisted*: absent here, fully served by
         `GET /api/listings/{id}`.
+
+        **Marketplace opt-in (v0.31.0):** with no `?tenantId=`, this is the
+        cross-provider marketplace and returns only providers who've opted in
+        (`settings.marketplaceListed`), **plus** a signed-in parent's own
+        providers (anyone they've booked). With **`?tenantId=`** it's that one
+        provider's storefront — their public listings, opt-in irrelevant.
 
         With a token and `?mine=1`: ALL of the caller's own tenant's
         listings — drafts, hidden and archived included (the operator
@@ -1239,6 +1262,7 @@ paths:
           in: query
           required: false
           schema: { type: string, enum: ["1"] }
+        - { name: tenantId, in: query, required: false, description: "One provider's storefront (opt-in bypassed)", schema: { type: string } }
       responses:
         "200":
           description: Listings ordered by name
