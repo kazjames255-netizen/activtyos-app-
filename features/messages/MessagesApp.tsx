@@ -64,6 +64,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);
+  const [listingQuery, setListingQuery] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
@@ -363,27 +364,38 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   <div className="rounded-lg border border-[var(--line)] p-2">
                     {listings.length === 0 ? (
                       <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings found.</div>
-                    ) : (
-                      <>
-                        <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
-                          <span>Pick one or more listings ({listingTargets.length} selected)</span>
-                          {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
-                        </div>
-                        <div className="flex max-h-[30vh] flex-wrap gap-1.5 overflow-y-auto">
-                          {listings.map((l) => {
-                            const on = listingTargets.includes(l);
-                            return (
-                              <button key={l} type="button"
-                                onClick={() => setListingTargets((cur) => (on ? cur.filter((x) => x !== l) : [...cur, l]))}
-                                className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
-                                style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-2)" }}>
-                                {on ? "✓ " : ""}{l}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
+                    ) : (() => {
+                      const lq = listingQuery.trim().toLowerCase();
+                      const shown = listings.filter((l) => !lq || l.toLowerCase().includes(lq));
+                      return (
+                        <>
+                          <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
+                            <span><b className="text-[var(--ink-2)]">{listingTargets.length}</b> selected</span>
+                            {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
+                          </div>
+                          <Input value={listingQuery} onChange={(e) => setListingQuery(e.target.value)} placeholder="Search listings…" className="w-full !py-1.5 text-[12.5px]" />
+                          <div className="mt-1.5 flex max-h-[34vh] flex-col gap-0.5 overflow-y-auto">
+                            {shown.length === 0 ? (
+                              <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings match.</div>
+                            ) : shown.map((l) => {
+                              const on = listingTargets.includes(l);
+                              return (
+                                <button key={l} type="button"
+                                  onClick={() => setListingTargets((cur) => (on ? cur.filter((x) => x !== l) : [...cur, l]))}
+                                  className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--panel)]"
+                                  style={on ? { background: "var(--brand-soft)" } : undefined}>
+                                  <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border text-[11px] font-extrabold text-white"
+                                    style={on ? { background: "var(--brand-2)", borderColor: "var(--brand-2)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                                    {on ? "✓" : ""}
+                                  </span>
+                                  <span className="truncate text-[12.5px] font-semibold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{l}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : mode === "parent" ? (
                   <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
