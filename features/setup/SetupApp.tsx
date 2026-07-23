@@ -44,7 +44,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "notifications";
+type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "notifications";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1111,6 +1111,7 @@ export function SetupApp() {
     ["bookings", "Payments"],
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
+    ["customer", "Customer area"],
     ["notifications", "Notifications"],
   ];
 
@@ -1404,6 +1405,34 @@ export function SetupApp() {
           </Row>
         </Section>
       )}
+
+      {tab === "customer" && (() => {
+        const ca = settings.customerArea;
+        const setCA = (key: keyof typeof ca, v: boolean) => set("customerArea", { ...ca, [key]: v });
+        const rows: { key: keyof typeof ca; label: string; hint: string }[] = [
+          { key: "codesBanner", label: "Discount-codes banner", hint: "The slim scrolling bar of usable codes across the top of a family's dashboard." },
+          { key: "coupons", label: "Coupons & discount codes page", hint: "The area listing every code a family can use with you." },
+          { key: "newsfeed", label: "Newsfeed", hint: "Your posts and updates to families." },
+          { key: "moments", label: "My child's day (photos)", hint: "Photo moments of a child's day." },
+          { key: "messaging", label: "Messaging", hint: "Whether families can start a message to you." },
+          { key: "wallet", label: "Wallet / credit", hint: "A family's store credit with you, spent at checkout." },
+          { key: "meals", label: "Meal ordering", hint: "Ordering meals alongside a booking." },
+          { key: "memberships", label: "Memberships", hint: "Membership plans in a family's area." },
+          { key: "browse", label: "Browse more activities", hint: "The in-app feed of other activities." },
+        ];
+        return (
+          <Section
+            title="What families see"
+            lede="Turn off anything you don't use and it disappears from every family's area. Bookings, payments, child profiles and “report a problem” are always on and aren't listed here."
+          >
+            {rows.map((r) => (
+              <Row key={r.key} label={r.label} hint={r.hint}>
+                <Toggle on={ca[r.key]} onChange={(v) => setCA(r.key, v)} labels={["Shown", "Hidden"]} />
+              </Row>
+            ))}
+          </Section>
+        );
+      })()}
 
       {tab === "notifications" && <NotificationsTab />}
 

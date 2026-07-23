@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useCustomerArea } from "@/lib/use-customer-area";
 import { money } from "@/features/bookings/helpers";
 
 // custdash coupon ticker — a slow-scrolling bar of the discount codes a family
@@ -35,6 +36,8 @@ export function CouponTicker() {
   const load = () => apiGet<Coupon[]>("/api/my/coupons").then((r) => setCoupons(r ?? [])).catch(() => setCoupons([]));
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
+  // The provider can switch this banner off (Setup → Customer area).
+  const bannerOn = useCustomerArea().codesBanner;
 
   // Scroll the strip in JS (not CSS animation) so it moves reliably — CSS
   // marquees are silently killed by the OS "reduce motion" setting, and the
@@ -61,7 +64,7 @@ export function CouponTicker() {
     return () => cancelAnimationFrame(raf);
   }, [paused, hovered, hidden, coupons.length]);
 
-  if (coupons.length === 0) return null;
+  if (coupons.length === 0 || !bannerOn) return null;
 
   const dismiss = () => { setHidden(true); try { localStorage.setItem(DISMISS_KEY, "1"); } catch {} };
   const reveal = () => { setHidden(false); try { localStorage.setItem(DISMISS_KEY, "0"); } catch {} };

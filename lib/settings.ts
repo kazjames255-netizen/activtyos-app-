@@ -277,6 +277,24 @@ export interface TenantSettings {
    */
   marketplaceListed: boolean;
 
+  /**
+   * What families see in their customer area. Each is ON by default; turning one
+   * off hides that section from every family linked to this provider. The
+   * essentials (bookings, payments, child profiles, "report a problem") aren't
+   * here — those can't be hidden.
+   */
+  customerArea: {
+    codesBanner: boolean; // the scrolling discount-codes ticker
+    coupons: boolean;     // the Coupons & discount codes page
+    newsfeed: boolean;    // your posts to families
+    moments: boolean;     // "My child's day" photos
+    messaging: boolean;   // families can message you
+    wallet: boolean;      // store credit
+    meals: boolean;       // meal ordering
+    memberships: boolean; // memberships
+    browse: boolean;      // browse more activities
+  };
+
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
   requireDob: boolean;
@@ -461,6 +479,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerName: "",
   providerNameMode: "business",
   marketplaceListed: false,
+  customerArea: { codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true },
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
@@ -513,6 +532,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
   return {
     ...DEFAULT_SETTINGS,
     ...s,
+    customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled

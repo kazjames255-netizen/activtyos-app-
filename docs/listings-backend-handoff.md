@@ -3062,6 +3062,23 @@ still holds. All additive; existing codes are unaffected.
 
 ---
 
+# Customer-area visibility settings — 23 July 2026
+
+New **Setup → Customer area** tab: a provider toggles which sections families
+see. Stored in the existing library `settings` doc as **`customerArea`** (all
+keys default `true`): `codesBanner, coupons, newsfeed, moments, messaging,
+wallet, meals, memberships, browse`. No new endpoint — it rides on the same
+`settings` bag (`withDefaults` merges it) and parents read it from the public
+library slice (`/api/public/library/:tenantId`) via `useCustomerArea()`.
+
+Front-end honours it today: the custdash **sidebar** hides toggled-off nav
+items, the **top-bar** hides Messages/Browse, and the **coupon banner** hides on
+`codesBanner`. **Not yet enforced server-side** — a determined family could still
+deep-link to a hidden page or hit its API. If prod wants hard enforcement, gate
+the relevant routes (and a nav/redirect guard) on the tenant's `customerArea`.
+
+---
+
 # Split fees — 22 July 2026 (Swagger v0.26.0)
 
 The franchisor royalty report. A franchise isn't a separate tenant — it's a
