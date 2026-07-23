@@ -3,6 +3,8 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { emailNewMessage } from "../lib/emails";
+import { webUrl } from "../lib/stripe";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Messages (Communication) — 1:1 threads between a provider (tenant) and a
@@ -142,6 +144,22 @@ messages.post("/", async (req, res) => {
 
   const msg = { threadId: id, tenantId, parentEmail, from, senderName, body, createdAt: now };
   const ref = await msgsCol.add(msg);
+
+  // Outbound "you've got a new message" email to the RECIPIENT. Fire-and-forget;
+  // an email failure must never fail the send. (Reply-by-email ingest = §JJ.)
+  try {
+    const pName = await tenantName(tenantId);
+    if (from === "parent") {
+      const tSnap = await db.collection("tenants").doc(tenantId).get();
+      const tEmail = tSnap.data()?.email as string | undefined;
+      if (tEmail && tSnap.data()?.emailOnNewMessage !== false) {
+        emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl });
+      }
+    } else {
+      emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages` });
+    }
+  } catch { /* ignore — never block a message on email */ }
+
   res.status(201).json({ id: ref.id, ...msg });
 });
 
@@ -344,6 +362,18 @@ messages.post("/templates", async (req, res) => {
   const doc = { tenantId, name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body, createdAt: new Date().toISOString() };
   const ref = await templatesCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+});
+messages.put("/templates/:id", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  if (req.params.id.startsWith("preset:")) { res.status(400).json({ error: "Presets can’t be edited — duplicate one to make your own." }); return; }
+  const parsed = templateSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = templatesCol.doc(req.params.id);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Template not found" }); return; }
+  await ref.set({ name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body }, { merge: true });
+  res.json({ id: ref.id, ...snap.data(), name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body });
 });
 messages.delete("/templates/:id", async (req, res) => {
   const tenantId = operatorTenant(req, res);

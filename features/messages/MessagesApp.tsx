@@ -73,6 +73,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [subject, setSubject] = useState(""); // optional heading for a NEW thread
   const [familyQuery, setFamilyQuery] = useState("");
   const [familyTargets, setFamilyTargets] = useState<string[]>([]); // operator: 1+ family emails
+  const [pickerOpen, setPickerOpen] = useState(true); // recipient picker expanded?
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);
@@ -299,6 +300,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f}</button>
           ))}
           <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Save as template</button>
+          <Link href={`/${portalSeg}/templates`} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] no-underline hover:text-[var(--ink)]">⚙ Manage</Link>
         </>
       )}
     </div>
@@ -493,9 +495,18 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                       return (
                         <>
                           <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
-                            <span><b className="text-[var(--ink-2)]">{listingTargets.length}</b> selected</span>
+                            <button type="button" onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-1 font-bold text-[var(--ink-2)]">
+                              <span className={`inline-block transition-transform ${pickerOpen ? "" : "-rotate-90"}`}>▾</span>
+                              {listingTargets.length} selected · {pickerOpen ? "hide list" : "choose listings"}
+                            </button>
                             {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
                           </div>
+                          {!pickerOpen && listingTargets.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {listingTargets.map((l) => <span key={l} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-strong)]">{l}</span>)}
+                            </div>
+                          )}
+                          {pickerOpen && (<>
                           <Input value={listingQuery} onChange={(e) => setListingQuery(e.target.value)} placeholder="Search listings…" className="w-full !py-1.5 text-[12.5px]" />
                           <div className="mt-1.5 flex max-h-[34vh] flex-col gap-0.5 overflow-y-auto">
                             {shown.length === 0 ? (
@@ -516,6 +527,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                               );
                             })}
                           </div>
+                          </>)}
                         </>
                       );
                     })()}
@@ -532,9 +544,18 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   return (
                     <div className="rounded-lg border border-[var(--line)] p-2">
                       <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
-                        <span><b className="text-[var(--ink-2)]">{familyTargets.length}</b> selected</span>
+                        <button type="button" onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-1 font-bold text-[var(--ink-2)]">
+                          <span className={`inline-block transition-transform ${pickerOpen ? "" : "-rotate-90"}`}>▾</span>
+                          {familyTargets.length} selected · {pickerOpen ? "hide list" : "choose families"}
+                        </button>
                         {familyTargets.length > 0 && <button type="button" onClick={() => setFamilyTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
                       </div>
+                      {!pickerOpen && familyTargets.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {familyTargets.map((em) => { const c = customers.find((x) => x.email === em); return <span key={em} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-strong)]">{c?.name || em}</span>; })}
+                        </div>
+                      )}
+                      {pickerOpen && (<>
                       <Input value={familyQuery} onChange={(e) => setFamilyQuery(e.target.value)} placeholder="Search families by name, place or email…" className="w-full !py-1.5 text-[12.5px]" />
                       <div className="mt-1.5 flex max-h-[38vh] min-h-[120px] flex-col gap-0.5 overflow-y-auto">
                         {matches.length === 0 ? (
@@ -562,6 +583,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                           );
                         })}
                       </div>
+                      </>)}
                     </div>
                   );
                 })()}
@@ -649,9 +671,17 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
 }
 
 function Composer({ draft, setDraft, onSend }: { draft: string; setDraft: (v: string) => void; onSend: () => void }) {
+  const lines = draft.split("\n").length;
   return (
-    <div className="flex items-center gap-2 border-t border-[var(--line)] p-2.5">
-      <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }} placeholder="Write a message…" className="flex-1" />
+    <div className="flex items-end gap-2 border-t border-[var(--line)] p-2.5">
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+        placeholder="Write a message…  (Enter to send · Shift+Enter for a new line)"
+        rows={Math.min(10, Math.max(2, lines))}
+        className="max-h-[240px] min-h-[44px] flex-1 resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]"
+      />
       <Button variant="primary" onClick={onSend} disabled={!draft.trim()}>Send</Button>
     </div>
   );

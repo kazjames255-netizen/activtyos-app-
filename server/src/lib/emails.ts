@@ -239,3 +239,30 @@ export function emailVoucherInstructions(
     ),
   );
 }
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Notify a recipient (parent or operator) that they've got a new message. The
+ * body is quoted inline and a button deep-links to the thread. Reply-by-email
+ * ingest is not built yet (handoff §JJ), so we don't invite email replies. */
+export function emailNewMessage(
+  to: string,
+  opts: { providerName: string; senderName: string; body: string; deepLink: string },
+): void {
+  void sendMail(
+    to,
+    `New message from ${opts.senderName}`,
+    `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
+    <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
+      <strong style="font-size:18px">${escapeHtml(opts.providerName)}</strong>
+      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
+    </div>
+    <h2 style="font-size:19px;margin:18px 0 6px">New message from ${escapeHtml(opts.senderName)}</h2>
+    <blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap;font-size:14px">${escapeHtml(opts.body)}</blockquote>
+    <p><a href="${opts.deepLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Take me to the message</a></p>
+    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">You're receiving this because you have a conversation on ActivityOS.</p>
+  </div>`,
+  );
+}
