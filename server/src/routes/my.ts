@@ -260,7 +260,8 @@ my.get("/coupons", async (req, res) => {
     .filter((c) => !c.expiry || c.expiry >= today)
     .filter((c) => c.usageLimit == null || (c.usedCount ?? 0) < c.usageLimit)
     .filter((c) => !(c.perCustomerLimit && redeemedIds.has(c.id))) // already used their one go
-    .filter((c) => { const r = reservedEmails(c); return r.length === 0 || r.includes(el); }); // public OR reserved for me/my group
+    .filter((c) => { const r = reservedEmails(c); return r.length === 0 || r.includes(el); }) // public OR reserved for me/my group
+    .filter((c) => !c.referral); // friend-facing referral codes live on the Refer-a-friend page, not here
 
   // Resolve provider + listing names in one batch each.
   const tIds = [...new Set(usable.map((c) => c.tenantId))];

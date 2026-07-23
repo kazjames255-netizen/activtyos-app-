@@ -11,9 +11,10 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
-type Row = { referrerEmail: string; friendEmail: string; reward?: number; at?: string; viaCode?: string };
+type Row = { referrerEmail: string; friendEmail: string; reward?: number; type?: "amount" | "percent"; at?: string; viaCode?: string };
 type Data = {
   enabled: boolean;
+  type: "amount" | "percent";
   friendOff: number;
   referrerReward: number;
   friendsBooked: number;
@@ -24,6 +25,7 @@ type Data = {
 
 const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 const nameOf = (email: string) => email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const fmtAmt = (v?: number, type?: "amount" | "percent") => (type === "percent" ? `${Math.round(v ?? 0)}%` : money(v ?? 0));
 
 export function ReferralsApp() {
   const [d, setD] = useState<Data | null>(null);
@@ -41,12 +43,12 @@ export function ReferralsApp() {
           Referrals
         </div>
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">
-          Families who bring you new bookings. {d?.enabled ? <>Currently <b>{money(d.friendOff)}</b> off for the friend, <b>{money(d.referrerReward)}</b> back for the referrer — change the amounts in Setup → Refer a friend.</> : <>Referrals are <b>off</b> — switch them on in Setup → Refer a friend.</>}
+          Families who bring you new bookings. {d?.enabled ? <>Currently <b>{fmtAmt(d.friendOff, d.type)}</b> off for the friend, <b>{fmtAmt(d.referrerReward, d.type)}</b> back for the referrer — change the amounts in Setup → Refer a friend.</> : <>Referrals are <b>off</b> — switch them on in Setup → Refer a friend.</>}
         </p>
         {d && (
           <div className="mt-4 flex flex-wrap gap-2.5">
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.friendsBooked}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Friends booked</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(d.rewardsPaid)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Rewards issued</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.type === "percent" ? d.friendsBooked : money(d.rewardsPaid)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{d.type === "percent" ? "Reward codes" : "Rewards issued"}</div></div>
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.leaderboard.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Referrers</div></div>
           </div>
         )}
@@ -70,7 +72,7 @@ export function ReferralsApp() {
                 <div key={l.email} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                   <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
                   <div className="min-w-0 flex-1"><div className="truncate font-bold">{nameOf(l.email)}</div><div className="truncate text-[11px] text-[var(--ink-3)]">{l.email}</div></div>
-                  <div className="flex-none text-right"><div className="font-extrabold">{l.count}</div><div className="text-[10.5px] text-[var(--ink-3)]">{money(l.reward)} back</div></div>
+                  <div className="flex-none text-right"><div className="font-extrabold">{l.count}</div><div className="text-[10.5px] text-[var(--ink-3)]">{d.type === "percent" ? `${l.count} code${l.count === 1 ? "" : "s"}` : `${money(l.reward)} back`}</div></div>
                 </div>
               ))}
             </div>
@@ -86,7 +88,7 @@ export function ReferralsApp() {
                     <div className="truncate"><b>{nameOf(r.referrerEmail)}</b> <span className="text-[var(--ink-3)]">referred</span> <b>{nameOf(r.friendEmail)}</b></div>
                     <div className="text-[11px] text-[var(--ink-3)]">{fmt(r.at)}{r.viaCode ? ` · ${r.viaCode}` : ""}</div>
                   </div>
-                  <span className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{money(r.reward ?? 0)}</span>
+                  <span className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}</span>
                 </div>
               ))}
             </div>

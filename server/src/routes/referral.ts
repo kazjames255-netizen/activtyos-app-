@@ -24,7 +24,7 @@ referralsAdmin.get("/", async (req, res) => {
   if (auth.role !== "platform" && !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   if (!tenantId) { res.status(400).json({ error: "No tenant" }); return; }
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; friendOff?: number; referrerReward?: number } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number } } } | undefined;
   const ref = lib?.settings?.referral;
 
   const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
@@ -41,6 +41,7 @@ referralsAdmin.get("/", async (req, res) => {
   list.sort((a, b) => `${b.at ?? ""}`.localeCompare(`${a.at ?? ""}`));
   res.json({
     enabled: !!ref?.enabled,
+    type: ref?.type === "percent" ? "percent" : "amount",
     friendOff: Number(ref?.friendOff) || 0,
     referrerReward: Number(ref?.referrerReward) || 0,
     friendsBooked: list.length,
@@ -76,24 +77,26 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
   const dupe = await db.collection("referrals").where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
   if (!dupe.empty) return; // already rewarded for this friend
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; referrerReward?: number } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; referrerReward?: number } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) return;
+  const type = ref.type === "percent" ? "percent" : "amount";
   const reward = Math.max(0, Number(ref.referrerReward) || 0);
+  const rewardTxt = type === "percent" ? `${reward}% off` : `£${reward} off`;
   const now = new Date().toISOString();
-  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, at: now });
+  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, type, at: now });
   if (reward <= 0) return;
 
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
   const rewardCode = normaliseCode(`THANKS${hash(rel + now).toString(36).toUpperCase().slice(0, 5)}`);
   await db.collection("discountCodes").add({
-    tenantId, code: rewardCode, type: "amount", value: reward, assignedTo: rel,
+    tenantId, code: rewardCode, type, value: reward, assignedTo: rel,
     active: true, usedCount: 0, referralReward: true, createdAt: now,
   });
 
   // Message + email the referrer (mirrors notifyAssigned; carries a copyable chip).
   const id = `${tenantId}__${rel}`;
-  const body = `🎉 Thanks for referring a friend to ${tName}! Here's your reward — code ${rewardCode} for £${reward} off your next booking. It's ready and waiting at checkout.`;
+  const body = `🎉 Thanks for referring a friend to ${tName}! Here's your reward — code ${rewardCode} for ${rewardTxt} on your next booking. It's ready and waiting at checkout.`;
   const tRef = db.collection("threads").doc(id);
   const existing = await tRef.get();
   await tRef.set({
@@ -103,7 +106,7 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
     ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0 }),
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
-  await db.collection("messages").add({ threadId: id, tenantId, parentEmail: rel, from: "operator", senderName: tName, body, coupon: { code: rewardCode, valueTxt: `£${reward} off`, scope: "all listings", expiry: null }, createdAt: now });
+  await db.collection("messages").add({ threadId: id, tenantId, parentEmail: rel, from: "operator", senderName: tName, body, coupon: { code: rewardCode, valueTxt: rewardTxt, scope: "all listings", expiry: null }, createdAt: now });
   try { emailNewMessage(rel, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
 }
 
@@ -117,21 +120,22 @@ referral.get("/", async (req, res) => {
   const tenantId = bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean)[0];
   if (!tenantId) { res.json({ enabled: false, reason: "Book with a provider first to unlock referrals." }); return; }
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; friendOff?: number; referrerReward?: number; minSpend?: number } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) { res.json({ enabled: false }); return; }
 
+  const type = ref.type === "percent" ? "percent" : "amount";
   const friendOff = Math.max(0, Number(ref.friendOff) || 0);
   const referrerReward = Math.max(0, Number(ref.referrerReward) || 0);
   const minSpend = Math.max(0, Number(ref.minSpend) || 0);
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "your provider";
   const code = referralCodeFor(email);
 
-  // Ensure the friend-facing discount code exists and reflects the current amount.
+  // Ensure the friend-facing discount code exists and reflects the current amount/type.
   const codesCol = db.collection("discountCodes");
   const existing = await codesCol.where("tenantId", "==", tenantId).where("code", "==", code).limit(1).get();
   const codeDoc = {
-    tenantId, code, type: "amount" as const, value: friendOff,
+    tenantId, code, type, value: friendOff,
     ...(minSpend ? { minSpend } : {}),
     referral: true, referrerEmail: email, newCustomerOnly: true, active: true,
   };
@@ -145,7 +149,7 @@ referral.get("/", async (req, res) => {
   res.json({
     enabled: true,
     provider: tName,
-    code,
+    code, type,
     link: `${webUrl}/store/${tenantId}?ref=${encodeURIComponent(code)}`,
     friendOff, referrerReward, minSpend,
     booked,
