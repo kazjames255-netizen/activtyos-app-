@@ -7,7 +7,7 @@ import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { get as apiGet } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUnreadMessages } from "@/lib/use-unread";
-import { useCustomerArea } from "@/lib/use-customer-area";
+import { useCustomerArea, useOperatorFeatures } from "@/lib/use-customer-area";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 
@@ -37,8 +37,10 @@ export function Header({ portal }: { portal: PortalKey }) {
   // The parent gets three primary actions promoted into the top bar. Operators
   // get a single Messages tab (same promotion) so replies are reachable from
   // anywhere, not just the Communication group in the sidebar.
-  // The provider can switch Messaging / Browse off (Setup → Customer area).
+  // The provider can switch Messaging / Browse off (Setup → Customer area /
+  // Features). Operators lose the Messages tab when they turn Messages off.
   const customerArea = useCustomerArea(portal);
+  const features = useOperatorFeatures(portal);
   const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number }[] =
     portal === "custdash"
       ? [
@@ -46,7 +48,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 }] : []),
           { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
         ]
-      : findNavItem(portal, "messages")
+      : findNavItem(portal, "messages") && features.messaging
         ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread }]
         : [];
 

@@ -3062,6 +3062,23 @@ still holds. All additive; existing codes are unaffected.
 
 ---
 
+# Operator feature switches — 24 July 2026
+
+New **Setup → Features** tab: the operator switches optional modules on/off for
+their own account. Stored in the library `settings` doc as **`features`** (all
+default `true`): `messaging, discountCodes, referrals, newsfeed, moments, meals,
+memberships, trips, medication, documents, ai`. Exposed in the public slice.
+
+Turning a feature off hides its nav item in the **operator** sidebar
+(`FEATURE_VIEW_KEY` map + `useOperatorFeatures`, which reads `/api/library`), and
+— for anything a family also sees — **cascades to the customer**: `useCustomerArea`
+ANDs the customer visibility with the matching feature (e.g. `meals`, `coupons`,
+`refer`). Same front-end-only enforcement caveat as the customer-area toggles —
+deep-link/API hardening is a later step. Core modules (bookings, listings,
+customers, finance, setup) aren't switchable.
+
+---
+
 # Customer-area visibility settings — 23 July 2026
 
 New **Setup → Customer area** tab: a provider toggles which sections families

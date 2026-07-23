@@ -7,7 +7,7 @@ import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/na
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
-import { useCustomerArea, SIMPLE_ALLOWED, type CustomerArea } from "@/lib/use-customer-area";
+import { useCustomerArea, useOperatorFeatures, SIMPLE_ALLOWED, FEATURE_VIEW_KEY, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -158,9 +158,11 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const unread = useUnreadMessages(portal);
   // Live count of usable discount codes for the Coupons nav badge (custdash).
   const coupons = useCouponCount(portal);
-  // Sections the family's provider has switched off (Setup → Customer area).
-  // Simple mode overrides the individual toggles and keeps only the essentials.
+  // What to hide from this nav:
+  //  • custdash — sections the provider switched off (Customer area) + Simple mode.
+  //  • operator — modules the operator switched off (Setup → Features).
   const customerArea = useCustomerArea(portal);
+  const features = useOperatorFeatures(portal);
   const caHidden = new Set<string>(
     portal === "custdash"
       ? [
@@ -169,7 +171,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
             : []),
         ]
-      : [],
+      : Object.entries(FEATURE_VIEW_KEY).filter(([, key]) => features[key] === false).map(([view]) => view),
   );
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).
