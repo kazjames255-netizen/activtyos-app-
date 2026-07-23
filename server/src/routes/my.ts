@@ -653,8 +653,9 @@ my.post("/bookings", async (req, res) => {
     for (const l of loaded) {
       void l.doc.ref.update({ usedCount: FieldValue.increment(1) });
       if (l.data.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: l.doc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
-      // Refer-a-friend: the friend just booked → reward the referrer.
-      if (l.data.referral && l.data.referrerEmail && familyEmail) void rewardReferrer(listing.tenantId, l.data.referrerEmail, familyEmail, l.code);
+      // Refer-a-friend: the friend just booked → reward the referrer, capped to
+      // what the friend actually paid (final total after their own discount).
+      if (l.data.referral && l.data.referrerEmail && familyEmail) void rewardReferrer(listing.tenantId, l.data.referrerEmail, familyEmail, l.code, amounts.reduce((s, a) => round2(s + a), 0));
     }
   }
 

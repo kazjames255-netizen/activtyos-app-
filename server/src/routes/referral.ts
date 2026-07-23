@@ -70,27 +70,31 @@ const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = 
  *  code reserved to them + a "thanks" message/email. Called from the booking
  *  redemption. Idempotent per (referrer, friend) and a no-op if referrals are
  *  off or the reward is £0. Best-effort — never blocks the friend's booking. */
-export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string): Promise<void> {
+export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string, friendSpend = 0): Promise<void> {
   const rel = referrerEmail.trim().toLowerCase();
   const fel = friendEmail.trim().toLowerCase();
   if (!rel || rel === fel) return;
   const dupe = await db.collection("referrals").where("referrerEmail", "==", rel).where("friendEmail", "==", fel).limit(1).get();
   if (!dupe.empty) return; // already rewarded for this friend
 
-  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; referrerReward?: number } } } | undefined;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; referrerReward?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
   if (!ref?.enabled) return;
   const type = ref.type === "percent" ? "percent" : "amount";
   const reward = Math.max(0, Number(ref.referrerReward) || 0);
-  const rewardTxt = type === "percent" ? `${reward}% off` : `£${reward} off`;
+  // Cap the £ the reward can take off to what the friend actually spent — you
+  // can never give away more than the referral brought in.
+  const cap = ref.capToFriendSpend ? Math.max(0, Math.round((Number(friendSpend) || 0) * 100) / 100) : undefined;
+  const rewardTxt = (type === "percent" ? `${reward}% off` : `£${reward} off`) + (cap != null ? ` (up to £${cap})` : "");
   const now = new Date().toISOString();
-  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, type, at: now });
+  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, type, ...(cap != null ? { cap } : {}), at: now });
   if (reward <= 0) return;
 
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
   const rewardCode = normaliseCode(`THANKS${hash(rel + now).toString(36).toUpperCase().slice(0, 5)}`);
   await db.collection("discountCodes").add({
     tenantId, code: rewardCode, type, value: reward, assignedTo: rel,
+    ...(cap != null ? { maxOff: cap } : {}),
     active: true, usedCount: 0, referralReward: true, createdAt: now,
   });
 
