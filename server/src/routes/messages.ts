@@ -247,10 +247,13 @@ const broadcastSchema = z.object({
   // Target by listing (everyone booked on it) and/or specific families by email.
   // A family reached more than once still only gets the message once.
   listings: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
-  emails: z.array(z.string().trim().email().max(160)).max(500).default([]),
+  // Not .email() here — a single malformed address must not reject the whole
+  // send. Invalid ones are dropped below (and only known customers are kept).
+  emails: z.array(z.string().trim().max(160)).max(500).default([]),
   body: z.string().trim().min(1).max(4_000),
   subject: z.string().trim().max(80).optional(),
 }).refine((d) => d.listings.length + d.emails.length > 0, { message: "Pick at least one listing or family" });
+const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 messages.post("/broadcast", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
@@ -262,15 +265,16 @@ messages.post("/broadcast", async (req, res) => {
     const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
     bk.docs.forEach((d) => {
       const b = d.data() as { email?: string; booker?: string; listing?: string };
-      if (b.email && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
+      if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
     });
   }
   if (parsed.data.emails.length) {
-    // Only the tenant's own customers — never arbitrary addresses.
+    // Only the tenant's own customers, and only valid addresses — never
+    // arbitrary or malformed ones.
     const custSnap = await db.collection("customers").where("tenantId", "==", tenantId).get();
     const byEmail = new Map<string, string>();
-    custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email) byEmail.set(c.email.toLowerCase(), c.name ?? c.email); });
-    for (const e of parsed.data.emails) { const el = e.toLowerCase(); if (byEmail.has(el)) recipients.set(el, byEmail.get(el)!); }
+    custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email && isEmail(c.email)) byEmail.set(c.email.toLowerCase(), c.name ?? c.email); });
+    for (const e of parsed.data.emails) { const el = e.toLowerCase(); if (isEmail(el) && byEmail.has(el)) recipients.set(el, byEmail.get(el)!); }
   }
   if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }
   const now = new Date().toISOString();
