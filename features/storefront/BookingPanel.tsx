@@ -115,7 +115,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
     try {
       const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number }>("/api/discounts/validate", {
         method: "POST",
-        body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.total }),
+        body: JSON.stringify({ tenantId: listing.tenantId, code, subtotal: preview.total, listingId: listing.id, attendees: validKids.length }),
       });
       if (r.valid && r.off != null) { setAppliedCode({ code: r.code ?? code.toUpperCase(), off: r.off }); setCodeInput(""); }
       else { setAppliedCode(null); setCodeErr(r.reason ?? "That code can’t be used"); }

@@ -2981,6 +2981,36 @@ byte-for-byte unchanged (verified) — the field is purely additive.
 
 Marketing ✅ (discount codes). Referrals / promo surfaces can layer on later.
 
+## Discount codes — Kaz extensions (23 July 2026)
+
+I've extended the code system in this repo (front-end + the reference server
+under `server/`). Mirror these in the production backend so preview == charge
+still holds. All additive; existing codes are unaffected.
+
+- **New `type` value `perAttendee`** — `£value off × attendee count`. Engine:
+  `lib/discountCodes.ts` `checkCode` now takes a 4th arg
+  `ctx?: { email?, listingId?, attendees? }` and computes
+  `value * max(1, attendees)` for `perAttendee`. Type enum is now
+  `percent | amount | perAttendee`.
+- **`assignedTo` / `assignedName`** — reserve a code for one family (email).
+  Only that email may redeem (`checkCode` rejects others). Creating **or**
+  reassigning via PUT messages **and** emails the family (`notifyAssigned` in
+  `routes/discounts.ts` — writes a `threads`/`messages` row + `emailNewMessage`).
+- **`listingId`** — scope a code to one listing; `checkCode` rejects a basket
+  for any other listing. `/validate` and `/my/bookings` pass the listing being
+  booked.
+- **`perCustomerLimit: boolean`** — one redemption per customer. Enforced in the
+  **route** (not the pure engine, since it needs a read): on `/validate` and at
+  checkout, query new collection **`discountRedemptions`** by `codeId` + `email`;
+  reject if a doc exists. On successful checkout, write a
+  `discountRedemptions` doc `{codeId, tenantId, email, at}`.
+- **`/validate` body** now also accepts `listingId?` and `attendees?`.
+- **UI** moved from a standalone "Marketing" nav group into **Money**
+  (relabelled "Discount codes") across freelancer/company/franchise. Cards now
+  have **Edit**, a **Generate** random code, auto-code-from-family-name
+  (`SURNAME+year`), the family-reserve picker, listing scope, and the
+  one-per-customer toggle.
+
 ---
 
 # Split fees — 22 July 2026 (Swagger v0.26.0)

@@ -543,7 +543,13 @@ my.post("/bookings", async (req, res) => {
       .limit(1)
       .get();
     if (codeSnap.empty) { res.status(400).json({ error: "That discount code isn’t recognised" }); return; }
-    const check = checkCode(codeSnap.docs[0].data() as DiscountCodeDoc, discounted, today, { email: familyEmail });
+    const codeDoc = codeSnap.docs[0];
+    const codeData = codeDoc.data() as DiscountCodeDoc;
+    if (codeData.perCustomerLimit && familyEmail) {
+      const prior = await db.collection("discountRedemptions").where("codeId", "==", codeDoc.id).where("email", "==", familyEmail.toLowerCase()).limit(1).get();
+      if (!prior.empty) { res.status(400).json({ error: "You’ve already used this code" }); return; }
+    }
+    const check = checkCode(codeData, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
     if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
     const ratio = discounted > 0 ? (discounted - check.off) / discounted : 1;
     for (let i = 0; i < amounts.length; i++) {
@@ -556,7 +562,8 @@ my.post("/bookings", async (req, res) => {
     discountCode = normaliseCode(input.discountCode);
     // Record the redemption (best-effort — a hair of over-use under a race is
     // acceptable for a coupon; the hard cap is re-checked on the next attempt).
-    void codeSnap.docs[0].ref.update({ usedCount: FieldValue.increment(1) });
+    void codeDoc.ref.update({ usedCount: FieldValue.increment(1) });
+    if (codeData.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: codeDoc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
   }
 
   const bookerName = familyName;

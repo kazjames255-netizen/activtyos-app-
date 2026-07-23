@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 interface Code {
   id: string;
   code: string;
-  type: "percent" | "amount";
+  type: "percent" | "amount" | "perAttendee";
   value: number;
   minSpend?: number;
   expiry?: string;
@@ -23,8 +23,11 @@ interface Code {
   active?: boolean;
   assignedTo?: string;
   assignedName?: string;
+  listingId?: string;
+  perCustomerLimit?: boolean;
 }
 interface Family { id: string; name?: string; email?: string }
+interface Listing { id: string; title?: string; name?: string }
 const randomCode = () => "SAVE" + Math.random().toString(36).slice(2, 7).toUpperCase();
 // A friendly code from a family's surname + this year, e.g. "KHAN2026".
 const codeFromFamily = (name: string) => {
@@ -42,7 +45,8 @@ export function MarketingApp() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [families, setFamilies] = useState<Family[]>([]);
-  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "" };
+  const [listings, setListings] = useState<Listing[]>([]);
+  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", listingId: "", perCustomerLimit: false };
   const [f, setF] = useState(empty);
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
 
@@ -51,12 +55,13 @@ export function MarketingApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Family[]>("/api/customers").then((cs) => setFamilies(cs.filter((c) => c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch(() => {}); }, []);
   useRealtime(["discountCodes"], refresh);
 
   function openCreate() { setEditId(null); setF(empty); setError(null); setOpen(true); }
   function openEdit(c: Code) {
     setEditId(c.id);
-    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "" });
+    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "", listingId: c.listingId ?? "", perCustomerLimit: !!c.perCustomerLimit });
     setError(null); setOpen(true);
   }
 
@@ -71,6 +76,8 @@ export function MarketingApp() {
       usageLimit: f.usageLimit ? Number(f.usageLimit) : undefined,
       assignedTo: f.assignedTo || undefined,
       assignedName: f.assignedName || undefined,
+      listingId: f.listingId || undefined,
+      perCustomerLimit: f.perCustomerLimit || undefined,
     };
     try {
       if (editId) await api(`/api/discounts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
@@ -81,7 +88,8 @@ export function MarketingApp() {
   async function toggle(c: Code) { try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "PUT", body: JSON.stringify({ active: !(c.active !== false) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function remove(c: Code) { if (!confirm(`Delete code ${c.code}?`)) return; try { await api(`/api/discounts/${encodeURIComponent(c.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
-  const valueLabel = (c: Code) => (c.type === "percent" ? `${c.value}% off` : `${money(c.value)} off`);
+  const valueLabel = (c: Code) => (c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off / child` : `${money(c.value)} off`);
+  const listingName = (id?: string) => { const l = listings.find((x) => x.id === id); return l ? (l.title || l.name || "a listing") : null; };
   const statusBadge = (c: Code) => {
     if (c.active === false) return <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>paused</Badge>;
     if (isExpired(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>expired</Badge>;
@@ -126,12 +134,24 @@ export function MarketingApp() {
               <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: randomCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">Generate</button></div>
               <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="E.G. SUMMER25" className="w-full uppercase" />
             </div>
-            <div><FieldLabel>Type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">Percentage</option><option value="amount">Fixed amount</option></Select></div>
-            <div><FieldLabel>{f.type === "percent" ? "Percent off" : "Amount off (£)"}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>Discount type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">By a percentage</option><option value="amount">A discount per booking</option><option value="perAttendee">A discount per attendee</option></Select></div>
+            <div><FieldLabel>{f.type === "percent" ? "Percent off" : f.type === "perAttendee" ? "£ off per child" : "Amount off (£)"}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
             <div><FieldLabel>Min spend (£)</FieldLabel><Input type="number" min="0" step="0.01" value={f.minSpend} onChange={(e) => set({ minSpend: e.target.value })} placeholder="optional" className="w-full" /></div>
             <div><FieldLabel>Expiry</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /></div>
             <div><FieldLabel>Usage limit</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder="unlimited" className="w-full" /></div>
+            <div>
+              <FieldLabel>Applies to</FieldLabel>
+              <Select value={f.listingId} onChange={(e) => set({ listingId: e.target.value })} className="w-full">
+                <option value="">All listings</option>
+                {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled listing"}</option>)}
+              </Select>
+            </div>
           </div>
+
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
+            <input type="checkbox" checked={f.perCustomerLimit} onChange={(e) => set({ perCustomerLimit: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
+            Limit to one use per customer
+          </label>
 
           {/* Assign to one family — only they can redeem it, and they get a message + email. */}
           <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -174,6 +194,8 @@ export function MarketingApp() {
                   <div className="min-w-[140px] flex-1">
                     <div className="text-[11.5px] text-[var(--ink-3)]">
                       {c.assignedTo ? `🔒 ${c.assignedName || c.assignedTo} only · ` : ""}
+                      {c.listingId && listingName(c.listingId) ? `${listingName(c.listingId)} only · ` : ""}
+                      {c.perCustomerLimit ? "1 per customer · " : ""}
                       {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
                       {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
                       {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}
