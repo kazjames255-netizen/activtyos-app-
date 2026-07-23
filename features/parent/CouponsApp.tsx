@@ -72,7 +72,7 @@ export function CouponsApp() {
                 <div className="text-[11.5px] text-[var(--ink-3)]">
                   {c.listingName ? `${c.listingName} only` : "All listings"}
                   {c.minSpend ? ` · min ${money(c.minSpend)}` : ""}
-                  {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no expiry"}
+                  {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no end date"}
                 </div>
               </div>
               <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,#16306e)]">✓ Applied at checkout</span>

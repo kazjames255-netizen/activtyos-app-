@@ -48,7 +48,7 @@ async function listingScopeText(tenantId: string, listingId?: string): Promise<s
 // clear, copyable code chip (not just prose).
 async function notifyAssigned(tenantId: string, email: string, name: string | undefined, code: string, valueTxt: string, expiry?: string, scopeText = "all listings"): Promise<void> {
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
-  const validity = expiry ? `valid until ${expiry}` : "no expiry";
+  const validity = expiry ? `valid until ${expiry}` : "no end date";
   const body = `🎉 ${tName} sent you a discount code!\n\nCode: ${code}\n${valueTxt} · ${scopeText} · ${validity}\n\nEnter it at checkout on your next booking — or find it any time under Coupons & discount codes.`;
   const coupon = { code, valueTxt, scope: scopeText, expiry: expiry ?? null };
   const el = email.toLowerCase();
