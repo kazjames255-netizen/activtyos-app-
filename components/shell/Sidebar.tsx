@@ -7,6 +7,7 @@ import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/na
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
+import { useCustomerArea, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -95,10 +96,16 @@ function SignOutItem({ item }: { item: NavItem }) {
   );
 }
 
-function GroupItems({ items, portal, pathname, multiChild, unread, coupons }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number }) {
+// custdash nav views a provider can hide via Setup → Customer area.
+const CA_VIEW_KEY: Record<string, keyof CustomerArea> = {
+  coupons: "coupons", wallet: "wallet", newsfeed: "newsfeed", moments: "moments",
+  meals: "meals", memberships: "memberships", messages: "messaging", browse: "browse",
+};
+
+function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string> }) {
   return (
     <>
-      {items.filter((item) => !item.hidden).map((item) =>
+      {items.filter((item) => !item.hidden && !caHidden.has(item.view)).map((item) =>
         item.view === "auth" ? (
           <SignOutItem key={item.view} item={item} />
         ) : (
@@ -150,6 +157,13 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const unread = useUnreadMessages(portal);
   // Live count of usable discount codes for the Coupons nav badge (custdash).
   const coupons = useCouponCount(portal);
+  // Sections the family's provider has switched off (Setup → Customer area).
+  const customerArea = useCustomerArea(portal);
+  const caHidden = new Set(
+    portal === "custdash"
+      ? Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view)
+      : [],
+  );
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).
   const [multiChild, setMultiChild] = useState(false);
@@ -175,15 +189,16 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       </div>
 
       {groups.map((group) => {
-        // A group whose every item is promoted elsewhere (hidden) shows no header.
-        if (group.items.every((i) => i.hidden)) return null;
+        // A group whose every item is promoted elsewhere (hidden) or switched
+        // off by the provider shows no header.
+        if (group.items.every((i) => i.hidden || caHidden.has(i.view))) return null;
         if (group.pinned || group.footer) {
           return (
             <div
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} />
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} />
             </div>
           );
         }
@@ -203,7 +218,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             </button>
             {open && (
               <div>
-                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} />
+                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} />
               </div>
             )}
           </div>
