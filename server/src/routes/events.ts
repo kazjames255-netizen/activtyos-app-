@@ -82,6 +82,14 @@ events.get("/", async (req, res) => {
       listen(db.collection("threads").where("parentEmail", "==", em), "threads");
       listen(db.collection("messages").where("parentEmail", "==", em), "messages");
       listen(db.collection("mealOrders").where("parentEmail", "==", em), "mealOrders");
+      // The family's provider library — so Setup → Features/Customer area toggles
+      // show up live in their app (only attached if the client is watching it).
+      if (wanted === null || wanted.has("library")) {
+        const bk = await db.collection("bookings").where("email", "==", em).get();
+        [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])]
+          .slice(0, 5)
+          .forEach((tid) => listen(db.collection("libraries").where("tenantId", "==", tid), "library"));
+      }
     }
     listen(db.collection("mealOptions"), "mealOptions"); // a booked provider's menu
   } else if (role === "platform") {
