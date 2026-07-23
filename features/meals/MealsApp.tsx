@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input } from "@/components/ui";
+import { MealShopApp } from "./MealShopApp";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Meals & allergies — the day's menu (with UK-allergen tags) and the dietary
@@ -84,6 +85,7 @@ export function MealsApp() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [canManage, setCanManage] = useState(false);
+  const [tab, setTab] = useState<"board" | "shop">("board");
 
   const refresh = useCallback(() => {
     apiGet<Board>(`/api/meals?date=${date}`).then((b) => { setLoaded({ date, board: b }); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -92,11 +94,14 @@ export function MealsApp() {
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useRealtime(["menus", "bookings", "blocks"], refresh);
 
+  if (tab === "shop") return <MealShopApp canManage={canManage} onBoard={() => setTab("board")} />;
+
   return (
     <div className="text-[var(--ink)]">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Meals &amp; allergies</h2>
         <div className="flex items-center gap-1.5">
+          <Button sm onClick={() => setTab("shop")}>Meal shop →</Button>
           <Button sm onClick={() => setDate((d) => shiftDay(d, -1))} aria-label="Previous day">←</Button>
           <input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
           <Button sm onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day">→</Button>

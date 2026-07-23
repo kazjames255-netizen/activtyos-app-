@@ -1,10 +1,30 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.27.0
+  version: 0.28.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.28.0 — Meal ordering (parent meals shop)
+
+    Replaces the legacy parent "Meals" prototype with a real order flow. An
+    operator publishes a menu of orderable meals; a parent who's booked with
+    that provider builds a basket and places an order for a child on a date.
+    **Prices are always server-computed** (a client-sent price is ignored).
+    - **`/api/meal-options`** — the orderable menu. Operator CRUD `{name, price,
+      description?, allergens?, active}`. `GET` is role-aware: operator sees the
+      whole menu; a **parent passes `?tenantId=`** (must have booked them) and
+      gets only ACTIVE items.
+    - **`/api/meal-orders`** — `POST` (parent) `{tenantId, date, childName,
+      childId?, items:[{optionId, qty}]}` → each option re-priced from the
+      server, order created `placed`/`Unpaid`; `GET` is role-aware (parent:
+      their orders; operator: the tenant's, `?date=`); `POST /:id/pay`
+      (operator records payment → `Paid`); `POST /:id/cancel` (the parent while
+      unpaid, or the operator any time).
+    - Order is placed **Unpaid** — the provider collects and marks it paid.
+      Online card capture is the same deferred-Stripe piece as the booking
+      checkout; not wired here yet. Realtime `mealOptions` / `mealOrders`.
 
     ## v0.27.0 — Email (the out-of-app channel)
 
@@ -651,6 +671,10 @@ tags:
     description: Authorised medicines (parental consent) + the MAR (every dose given)
   - name: meals
     description: The day's menu + the dietary board (allergies matched against the menu)
+  - name: meal-options
+    description: The orderable meals menu (operator CRUD; parent reads a booked provider's)
+  - name: meal-orders
+    description: Parent meal orders — basket, place, pay, cancel (server-priced)
   - name: moments
     description: The photo feed — consent-gated; parents see their own child's moments
   - name: payments
@@ -1546,6 +1570,110 @@ paths:
         "200": { description: "{today, next, upcoming[], bookings, occupancy, money, counts}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/meal-options:
+    get:
+      tags: [meal-options]
+      summary: The orderable menu — operator (own) or parent (?tenantId=, booked, active only)
+      parameters: [{ name: tenantId, in: query, required: false, schema: { type: string } }]
+      responses:
+        "200": { description: Array of meal options }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [meal-options]
+      summary: Add a meal to the menu (operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price]
+              properties:
+                name: { type: string }
+                price: { type: number }
+                description: { type: string }
+                allergens: { type: array, items: { type: string } }
+                active: { type: boolean, default: true }
+      responses:
+        "201": { description: The created option }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/meal-options/{id}:
+    put:
+      tags: [meal-options]
+      summary: Edit / hide a meal (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: The updated option }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [meal-options]
+      summary: Remove a meal (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/meal-orders:
+    get:
+      tags: [meal-orders]
+      summary: Orders — parent (own) or operator (the tenant's, ?date=)
+      parameters: [{ name: date, in: query, required: false, schema: { type: string } }]
+      responses:
+        "200": { description: Array of orders (newest first) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [meal-orders]
+      summary: Place an order (parent) — prices computed server-side
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, date, childName, items]
+              properties:
+                tenantId: { type: string }
+                date: { type: string }
+                childName: { type: string }
+                childId: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [optionId, qty]
+                    properties: { optionId: { type: string }, qty: { type: integer } }
+      responses:
+        "201": { description: "The created order (placed/Unpaid, server total)" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/meal-orders/{id}/pay:
+    post:
+      tags: [meal-orders]
+      summary: Record payment on an order (operators) → Paid
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The order (pay → Paid) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: The order was cancelled }
+
+  /api/meal-orders/{id}/cancel:
+    post:
+      tags: [meal-orders]
+      summary: Cancel an order (the parent while unpaid, or the operator)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Paid order — the provider must cancel it }
 
   /api/emails:
     get:

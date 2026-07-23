@@ -71,7 +71,9 @@ events.get("/", async (req, res) => {
       const em = decoded.email.toLowerCase();
       listen(db.collection("threads").where("parentEmail", "==", em), "threads");
       listen(db.collection("messages").where("parentEmail", "==", em), "messages");
+      listen(db.collection("mealOrders").where("parentEmail", "==", em), "mealOrders");
     }
+    listen(db.collection("mealOptions"), "mealOptions"); // a booked provider's menu
   } else if (role === "platform") {
     listen(db.collection("tenants"), "tenants");
     listen(db.collection("bookings"), "bookings");
@@ -112,6 +114,8 @@ events.get("/", async (req, res) => {
     listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications");
     listen(db.collection("discountCodes").where("tenantId", "==", tenantId), "discountCodes");
     listen(db.collection("emails").where("tenantId", "==", tenantId), "emails");
+    listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions");
+    listen(db.collection("mealOrders").where("tenantId", "==", tenantId), "mealOrders");
   }
 
   // Keep intermediaries from closing the idle connection.

@@ -2948,3 +2948,34 @@ mailer (`lib/mailer` — real SMTP when configured, else an Ethereal dev inbox).
   the history list.
 
 **Communication is complete: Newsfeed ✅ · Messages ✅ · Email ✅.**
+
+---
+
+# Meal ordering — 23 July 2026 (Swagger v0.28.0)
+
+Replaces the legacy parent **Meals** prototype (the dead "add to basket" mock)
+with a real order flow. An operator publishes a menu of orderable meals; a
+parent who's booked with that provider builds a basket and orders for a child
+on a date. **Prices are always server-computed** — a client-sent price is
+ignored (tested).
+
+- **Menu** `/api/meal-options` (collection `mealOptions`) — operator CRUD
+  `{name, price, description?, allergens?, active}`. `GET` role-aware: operator
+  sees the whole menu; a **parent passes `?tenantId=`** (must have booked them)
+  and gets ACTIVE items only.
+- **Orders** `/api/meal-orders` (collection `mealOrders`) — `POST` (parent)
+  `{tenantId, date, childName, childId?, items:[{optionId, qty}]}`; each option
+  re-priced server-side; order created `placed`/`Unpaid`. `GET` role-aware
+  (parent: their orders; operator: the tenant's, `?date=`). `POST /:id/pay`
+  (operator → `Paid`); `POST /:id/cancel` (parent while unpaid, or operator).
+- **Payment:** order placed **Unpaid** — the provider collects and marks it
+  paid (real "order lunch, pay at drop-off" flow). Online **card capture is the
+  one deferred piece** — same Stripe-Connect pattern as the booking checkout;
+  the order model is ready for it (pay/amountPaid fields). Realtime
+  `mealOptions` / `mealOrders`.
+
+UI: **operator** — a "Meal shop" tab inside the existing MealsApp (menu manager
++ incoming orders with mark-paid/cancel). **Parent** — `ParentMealsApp` now on
+the custdash `meals` slug (was the legacy iframe): provider picker → menu with
+quantity steppers → basket → place order → your orders with pay status. So the
+thing you spotted — parent Meals doing nothing — is now a real, wired feature.

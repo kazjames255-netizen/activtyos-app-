@@ -6,6 +6,7 @@ import { CustomersApp } from "@/features/customers/CustomersApp";
 import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { IncidentsApp } from "@/features/incidents/IncidentsApp";
 import { MealsApp } from "@/features/meals/MealsApp";
+import { ParentMealsApp } from "@/features/meals/ParentMealsApp";
 import { MomentsApp } from "@/features/moments/MomentsApp";
 import { ParentMomentsApp } from "@/features/moments/ParentMomentsApp";
 import { MedicationApp } from "@/features/medication/MedicationApp";
@@ -180,6 +181,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     schedule: ScheduleApp,
     newsfeed: ParentNewsfeedApp,
     messages: () => <MessagesApp mode="parent" />,
+    meals: ParentMealsApp,
   },
   platform: {
     dash: OverviewApp,
