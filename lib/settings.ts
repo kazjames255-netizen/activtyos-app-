@@ -278,25 +278,14 @@ export interface TenantSettings {
   marketplaceListed: boolean;
 
   /**
-   * Which optional modules this operator uses. Turning one OFF hides it from
-   * their own dashboard nav — and, for anything a family also sees, hides the
-   * customer side too (that cascade is applied in useCustomerArea). The core of
-   * running (bookings, listings, customers, finance, setup) isn't here — it
-   * can't be switched off.
+   * Which dashboard modules this operator uses, keyed by nav view. A view is
+   * hidden only when explicitly set `false` (absent = shown), so switching one
+   * off hides it from the operator's own nav — and, for anything a family also
+   * sees, cascades to the customer side (see useCustomerArea). The core of
+   * running (bookings, listings, customers, finance, setup) is never listed and
+   * can't be switched off (see CORE_VIEWS).
    */
-  features: {
-    messaging: boolean;    // Messages (both sides)
-    discountCodes: boolean; // Discount codes + the customer coupons/banner
-    referrals: boolean;    // Refer a friend (both sides)
-    newsfeed: boolean;     // Newsfeed (both sides)
-    moments: boolean;      // Photos / "my child's day" (both sides)
-    meals: boolean;        // Meals (both sides)
-    memberships: boolean;  // Memberships (both sides)
-    trips: boolean;        // Trips & visits (operator)
-    medication: boolean;   // Medication (both sides)
-    documents: boolean;    // Documents (operator)
-    ai: boolean;           // AI assistant (operator)
-  };
+  features: Record<string, boolean>;
 
   /**
    * What families see in their customer area. Each is ON by default; turning one
@@ -525,7 +514,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerName: "",
   providerNameMode: "business",
   marketplaceListed: false,
-  features: { messaging: true, discountCodes: true, referrals: true, newsfeed: true, moments: true, meals: true, memberships: true, trips: true, medication: true, documents: true, ai: true },
+  features: {},
   customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true },
   referral: { enabled: false, type: "amount", friendOff: 10, referrerReward: 10, minSpend: 0, capToFriendSpend: true },
   requireDob: true,
@@ -580,7 +569,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
   return {
     ...DEFAULT_SETTINGS,
     ...s,
-    features: { ...DEFAULT_SETTINGS.features, ...(s.features ?? {}) },
+    features: { ...(s.features ?? {}) },
     customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },

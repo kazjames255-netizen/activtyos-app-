@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
+import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
+import { CORE_VIEWS } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -1076,6 +1079,7 @@ function QuestionsEditor({
 
 export function SetupApp() {
   const { settings, questions, loading, save, error } = useSettings();
+  const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   const [tab, setTab] = useState<Tab>("people");
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1417,28 +1421,23 @@ export function SetupApp() {
 
       {tab === "features" && (() => {
         const fe = settings.features;
-        const setFe = (key: keyof typeof fe, v: boolean) => set("features", { ...fe, [key]: v });
-        const rows: { key: keyof typeof fe; icon: string; label: string; hint: string }[] = [
-          { key: "messaging", icon: "💬", label: "Messages", hint: "Message families and take theirs. Off hides it for you and them." },
-          { key: "discountCodes", icon: "🏷️", label: "Discount codes", hint: "Promo codes at checkout, plus the customer coupons page & banner." },
-          { key: "referrals", icon: "🎁", label: "Refer a friend", hint: "The give-X-get-X referral programme (both sides)." },
-          { key: "newsfeed", icon: "📢", label: "Newsfeed", hint: "Post updates families see in their area." },
-          { key: "moments", icon: "📷", label: "Photos / moments", hint: "Share photos of a child's day with families." },
-          { key: "meals", icon: "🍽️", label: "Meals", hint: "Meal menus and ordering alongside bookings." },
-          { key: "memberships", icon: "⭐", label: "Memberships", hint: "Membership plans for families." },
-          { key: "trips", icon: "🚌", label: "Trips & visits", hint: "Plan and record off-site trips." },
-          { key: "medication", icon: "💊", label: "Medication", hint: "Record and administer medication." },
-          { key: "documents", icon: "📄", label: "Documents", hint: "Your document library." },
-          { key: "ai", icon: "✦", label: "AI assistant", hint: "The in-app AI helper." },
-        ];
+        const setFe = (view: string, v: boolean) => set("features", { ...fe, [view]: v });
+        // Things a family also sees — switching these off hides them customer-side too.
+        const customerFacing = new Set(["messages", "marketing", "moments", "meals", "newsfeed", "memberships", "referrals", "medication"]);
+        // Every nav item for this portal, minus the core ones and any promoted/hidden.
+        const seen = new Set<string>();
+        const items = (NAV_GROUPS[portal] ?? [])
+          .flatMap((g) => g.items)
+          .filter((it) => !it.hidden && it.view !== "auth" && !CORE_VIEWS.has(it.view))
+          .filter((it) => (seen.has(it.view) ? false : (seen.add(it.view), true)));
         return (
           <Section
             title="Your features"
-            lede="Switch off anything you don't use — it disappears from your dashboard, and where families see it too (messages, coupons, referrals, photos…) it turns off for them as well. Bookings, listings, customers, finance and setup are always on."
+            lede="Switch off anything you don't use — it disappears from your dashboard. Where families see it too, it turns off for them as well. The essentials (bookings, listings, customers, finances, setup) are always on and aren't listed."
           >
-            {rows.map((r) => (
-              <Row key={r.key} label={`${r.icon}  ${r.label}`} hint={r.hint}>
-                <Toggle on={fe[r.key]} onChange={(v) => setFe(r.key, v)} labels={["On", "Off"]} />
+            {items.map((it) => (
+              <Row key={it.view} label={it.label ?? it.view} hint={customerFacing.has(it.view) ? "Families see this too — switching it off hides it for them." : undefined}>
+                <Toggle on={fe[it.view] !== false} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />
               </Row>
             ))}
           </Section>

@@ -7,7 +7,7 @@ import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { get as apiGet } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUnreadMessages } from "@/lib/use-unread";
-import { useCustomerArea, useOperatorFeatures } from "@/lib/use-customer-area";
+import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 
@@ -48,7 +48,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 }] : []),
           { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
         ]
-      : findNavItem(portal, "messages") && features.messaging
+      : findNavItem(portal, "messages") && !featureOff(features, "messages")
         ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread }]
         : [];
 

@@ -3064,18 +3064,19 @@ still holds. All additive; existing codes are unaffected.
 
 # Operator feature switches — 24 July 2026
 
-New **Setup → Features** tab: the operator switches optional modules on/off for
-their own account. Stored in the library `settings` doc as **`features`** (all
-default `true`): `messaging, discountCodes, referrals, newsfeed, moments, meals,
-memberships, trips, medication, documents, ai`. Exposed in the public slice.
+New **Setup → Features** tab: the operator switches dashboard modules on/off for
+their own account — **everything except the core**. Stored in the library
+`settings` doc as **`features`**, a `Record<navView, boolean>` (absent/`true` =
+shown, `false` = hidden). Exposed in the public slice. The tab is generated from
+`NAV_GROUPS[portal]` minus `CORE_VIEWS` (`dash, bookings, listings, customers,
+finance, setup`) — so any nav item added later is automatically switchable.
 
-Turning a feature off hides its nav item in the **operator** sidebar
-(`FEATURE_VIEW_KEY` map + `useOperatorFeatures`, which reads `/api/library`), and
-— for anything a family also sees — **cascades to the customer**: `useCustomerArea`
-ANDs the customer visibility with the matching feature (e.g. `meals`, `coupons`,
-`refer`). Same front-end-only enforcement caveat as the customer-area toggles —
-deep-link/API hardening is a later step. Core modules (bookings, listings,
-customers, finance, setup) aren't switchable.
+Turning a view off hides it in the **operator** sidebar/top-bar
+(`useOperatorFeatures` reads `/api/library`; Sidebar hides views where
+`featureOff`), and — for anything a family also sees — **cascades to the customer**:
+`useCustomerArea` maps the operator view (`messages, marketing, moments, meals,
+newsfeed, memberships, referrals`) onto the customer's `customerArea`/`refer`
+visibility. Front-end-only enforcement (deep-link/API hardening is a later step).
 
 ---
 

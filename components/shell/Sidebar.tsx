@@ -7,7 +7,7 @@ import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/na
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
-import { useCustomerArea, useOperatorFeatures, SIMPLE_ALLOWED, FEATURE_VIEW_KEY, type CustomerArea } from "@/lib/use-customer-area";
+import { useCustomerArea, useOperatorFeatures, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -171,7 +171,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
             : []),
         ]
-      : Object.entries(FEATURE_VIEW_KEY).filter(([, key]) => features[key] === false).map(([view]) => view),
+      : groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v)),
   );
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).

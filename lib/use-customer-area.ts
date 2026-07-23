@@ -6,15 +6,14 @@ import { DEFAULT_SETTINGS, withDefaults, type TenantSettings } from "@/lib/setti
 import type { PortalKey } from "@/lib/nav/config";
 
 export type CustomerArea = TenantSettings["customerArea"];
-export type Features = TenantSettings["features"];
+export type Features = TenantSettings["features"]; // { [navView]: boolean } — absent/true = shown
 
-// Operator nav view → the feature switch that hides it (Setup → Features).
-export const FEATURE_VIEW_KEY: Record<string, keyof Features> = {
-  messages: "messaging", marketing: "discountCodes", referrals: "referrals",
-  newsfeed: "newsfeed", moments: "moments", meals: "meals", menus: "meals",
-  memberships: "memberships", trips: "trips", medication: "medication",
-  documents: "documents", ai: "ai",
-};
+// The dashboard views that can NEVER be switched off (Setup → Features lists
+// everything else). Auth (sign out) is always kept too.
+export const CORE_VIEWS = new Set(["dash", "bookings", "listings", "customers", "finance", "setup", "auth"]);
+
+// A view is hidden only when explicitly false.
+export const featureOff = (features: Features | undefined, view: string) => features?.[view] === false;
 
 // The only custdash views kept when the provider turns on Simple mode — the
 // booking essentials: home, view/book activities, bookings, child profiles,
@@ -41,16 +40,16 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
         const full = withDefaults(lib?.settings ?? null);
         const ca = { ...full.customerArea };
         const fe = full.features;
-        // A module the operator switched off (Setup → Features) is hidden for
-        // families too. Refer also needs the referral programme actually on.
-        ca.messaging = ca.messaging && fe.messaging;
-        ca.coupons = ca.coupons && fe.discountCodes;
-        ca.codesBanner = ca.codesBanner && fe.discountCodes;
-        ca.newsfeed = ca.newsfeed && fe.newsfeed;
-        ca.moments = ca.moments && fe.moments;
-        ca.meals = ca.meals && fe.meals;
-        ca.memberships = ca.memberships && fe.memberships;
-        ca.refer = ca.refer && full.referral.enabled && fe.referrals;
+        // A module the operator switched off (Setup → Features, keyed by their
+        // nav view) is hidden for families too. Refer also needs the referral
+        // programme actually on.
+        if (featureOff(fe, "messages")) ca.messaging = false;
+        if (featureOff(fe, "marketing")) { ca.coupons = false; ca.codesBanner = false; }
+        if (featureOff(fe, "newsfeed")) ca.newsfeed = false;
+        if (featureOff(fe, "moments")) ca.moments = false;
+        if (featureOff(fe, "meals")) ca.meals = false;
+        if (featureOff(fe, "memberships")) ca.memberships = false;
+        ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
         setCa(ca);
       })
       .catch(() => {});
