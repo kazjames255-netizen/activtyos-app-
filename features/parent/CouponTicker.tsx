@@ -69,7 +69,7 @@ export function CouponTicker() {
 
   // Hidden → keep a slim, always-there way to bring it back (never lost).
   if (hidden) return (
-    <div className="flex h-[26px] items-center justify-end border-b border-black/20 px-3" style={{ background: "linear-gradient(90deg,#172B6A,#1C3B8C)" }}>
+    <div className="flex h-[26px] items-center justify-end border-b border-black/20 px-3" style={{ background: "linear-gradient(90deg,#3a4266,#454e77)" }}>
       <button type="button" onClick={reveal} className="text-[11px] font-bold text-[#c7d3f5] hover:text-white">🏷️ Show my codes ({coupons.length}) ›</button>
     </div>
   );
@@ -83,7 +83,7 @@ export function CouponTicker() {
   return (
     <div
       className="relative flex h-[34px] items-center overflow-hidden border-b border-black/20"
-      style={{ background: "linear-gradient(90deg,#172B6A,#1C3B8C)" }}
+      style={{ background: "linear-gradient(90deg,#3a4266,#454e77)" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
