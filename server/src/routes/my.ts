@@ -543,7 +543,7 @@ my.post("/bookings", async (req, res) => {
       .limit(1)
       .get();
     if (codeSnap.empty) { res.status(400).json({ error: "That discount code isn’t recognised" }); return; }
-    const check = checkCode(codeSnap.docs[0].data() as DiscountCodeDoc, discounted, today);
+    const check = checkCode(codeSnap.docs[0].data() as DiscountCodeDoc, discounted, today, { email: familyEmail });
     if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
     const ratio = discounted > 0 ? (discounted - check.off) / discounted : 1;
     for (let i = 0; i < amounts.length; i++) {
