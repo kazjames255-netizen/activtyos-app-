@@ -3026,6 +3026,19 @@ still holds. All additive; existing codes are unaffected.
   picker; it previews via `/api/discounts/validate` and passes `discountCode` in
   the `POST /api/my/bookings` body (on the **first** block only for a
   multi-block basket — the server re-validates + redeems).
+- **Parent groups (new):** named sets of families (e.g. "NHS parents") an
+  operator saves to send a code to all at once. CRUD under **`/api/discounts/groups`**
+  (collection `customerGroups`: `{tenantId, name, emails[]}`). A discount code can
+  be **reserved for a group**: the create/edit form sends `assignedGroupId`; the
+  server resolves the group → snapshots `assignedEmails[]` + `assignedGroupName`
+  onto the code and **messages + emails every member** (loops `notifyAssigned`).
+  `checkCode` treats a code as reserved if the redeemer's email is in
+  `assignedTo` **or** `assignedEmails` (see `reservedEmails()`), and
+  `/api/my/coupons` surfaces group codes to members via an
+  `assignedEmails array-contains <email>` query. Emails are a **snapshot** at
+  assign time — changing a group later doesn't retro-update already-sent codes
+  (re-assign to re-send). Managed in `MarketingApp` (👥 Parent groups panel +
+  the code form's "…or a group" picker).
 - **No-expiry semantics (already correct, please keep):** a code with **no
   `expiry`** never expires — `checkCode` only rejects when `expiry` is set and
   in the past. The UI now tells operators this, and adds that a listing-scoped
