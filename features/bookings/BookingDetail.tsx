@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useBookingsStore } from "./store";
 import type { Booking, Kid } from "./types";
 import {
@@ -16,9 +16,79 @@ import {
   sessionIsoDates,
   statusTone,
 } from "./helpers";
-import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
+import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, policyById } from "@/lib/cancellation";
+import { post as apiPost, get as apiGet } from "@/lib/api";
+
+interface MsgTemplate { id: string; name: string; subject?: string; body: string }
+
+/** Message the family in the context of THIS booking — every merge field
+ *  ({ChildName}, {SessionDate}, {VenueName}, {BookingRef}…) fills from it on send. */
+function MessageBookingModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
+  const [templates, setTemplates] = useState<MsgTemplate[]>([]);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { apiGet<MsgTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => {}); }, []);
+
+  async function send() {
+    if (!body.trim()) { setError("Write a message first."); return; }
+    setBusy(true); setError(null);
+    try {
+      await apiPost("/api/messages/from-booking", { ref: booking.ref, subject: subject.trim() || undefined, body: body.trim() });
+      setSent(true);
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); setBusy(false); }
+  }
+
+  return (
+    <div onClick={(e) => e.target === e.currentTarget && onClose()} className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8">
+      <div className="w-full max-w-[520px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.4)]">
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
+          <h3 className="m-0 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Message {booking.booker}</h3>
+          <button type="button" onClick={onClose} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]">×</button>
+        </div>
+        {sent ? (
+          <div className="px-5 py-8 text-center">
+            <div className="text-[14px] font-bold text-[#0f7a44]">✓ Message sent to {booking.booker}.</div>
+            <div className="mt-3"><Button variant="primary" onClick={onClose}>Done</Button></div>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 px-5 py-4">
+              <div>
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Start from a template</div>
+                <Select value="" onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) { setBody(t.body); if (t.subject) setSubject(t.subject); } }} className="w-full">
+                  <option value="">Blank message…</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </Select>
+              </div>
+              <div>
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Subject</div>
+                <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject (optional)" className="w-full" />
+              </div>
+              <div>
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Message</div>
+                <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} placeholder="Write your message…"
+                  className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]" />
+              </div>
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
+                Merge fields fill from <b className="text-[var(--ink-2)]">this booking</b> on send: <code>{"{ParentName}"}</code>, <code>{"{ChildName}"}</code>, <code>{"{ListingName}"}</code>, <code>{"{SessionDate}"}</code>, <code>{"{VenueName}"}</code>, <code>{"{BookingRef}"}</code>, <code>{"{ProviderName}"}</code>.
+              </div>
+              {error && <div className="text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-5 py-3.5">
+              <Button onClick={onClose}>Cancel</Button>
+              <Button variant="primary" onClick={send} disabled={busy}>{busy ? "Sending…" : "Send message"}</Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Tile({ big, small }: { big: string; small: string }) {
   return (
@@ -387,6 +457,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const cancelOpen = useBookingsStore((s) => s.cancelOpen);
   const saveNote = useBookingsStore((s) => s.saveNote);
   const [note, setNote] = useState(booking.note || "");
+  const [messaging, setMessaging] = useState(false);
 
   const b = booking;
   const kids = bookingKids(b);
@@ -439,14 +510,21 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </div>
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <Badge tone={statusTone(b.status)}>{b.status}</Badge>
           {/* Once cancelled/declined the payment state is moot — a cancelled
               booking isn't "awaiting" anything. */}
           {b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
           )}
+          {b.email && (
+            <button type="button" onClick={() => setMessaging(true)}
+              className="ml-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]">
+              ✉️ Message family
+            </button>
+          )}
         </div>
+        {messaging && <MessageBookingModal booking={b} onClose={() => setMessaging(false)} />}
 
         {/* Tiles */}
         <div className="my-3.5 mb-0.5 flex flex-wrap gap-2">

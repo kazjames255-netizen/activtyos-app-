@@ -42,12 +42,16 @@ async function isMyCustomer(tenantId: string, email: string) {
 }
 // Pro-composer merge fields we can resolve for any recipient. (Per-booking ones
 // like {ChildName}/{BookingRef} need booking context — see handoff §II.)
-function mergeText(text: string, v: { parentName?: string; providerName?: string; childName?: string; listingName?: string }): string {
+interface MergeVars { parentName?: string; providerName?: string; childName?: string; listingName?: string; sessionDate?: string; venueName?: string; bookingRef?: string }
+function mergeText(text: string, v: MergeVars): string {
   return text
     .replace(/\{ParentName\}/gi, v.parentName ?? "")
     .replace(/\{ProviderName\}/gi, v.providerName ?? "")
     .replace(/\{ChildName\}/gi, v.childName ?? "")
-    .replace(/\{ListingName\}/gi, v.listingName ?? "");
+    .replace(/\{ListingName\}/gi, v.listingName ?? "")
+    .replace(/\{SessionDate\}/gi, v.sessionDate ?? "")
+    .replace(/\{VenueName\}/gi, v.venueName ?? "")
+    .replace(/\{BookingRef\}/gi, v.bookingRef ?? "");
 }
 
 // GET /api/messages/threads — the caller's conversations (newest activity first).
@@ -163,6 +167,68 @@ messages.post("/", async (req, res) => {
   } catch { /* ignore — never block a message on email */ }
 
   res.status(201).json({ id: ref.id, ...msg });
+});
+
+// POST /api/messages/from-booking — message a family in the context of a booking,
+// so EVERY merge field resolves ({SessionDate}, {VenueName}, {BookingRef}, …).
+const fromBookingSchema = z.object({
+  ref: z.string().trim().min(1).max(60),
+  body: z.string().trim().min(1).max(4_000),
+  subject: z.string().trim().max(80).optional(),
+});
+messages.post("/from-booking", async (req, res) => {
+  const tenantId = operatorTenant(req, res);
+  if (!tenantId) return;
+  const parsed = fromBookingSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", parsed.data.ref).limit(1).get();
+  if (bkSnap.empty) { res.status(404).json({ error: "Booking not found" }); return; }
+  const b = bkSnap.docs[0].data() as { booker?: string; email?: string; child?: string; kids?: { name?: string }[]; listing?: string; dates?: string; ref?: string; listingId?: string };
+  if (!b.email || !isEmail(b.email)) { res.status(400).json({ error: "That booking has no valid email to message." }); return; }
+
+  const pName = await tenantName(tenantId);
+  // Venue lives on the tenant's venues[], reached via the listing's venueId.
+  let venueName = "";
+  if (b.listingId) {
+    const lSnap = await db.collection("listings").doc(b.listingId).get();
+    const venueId = lSnap.data()?.venueId as string | undefined;
+    if (venueId) {
+      const venues = (await db.collection("tenants").doc(tenantId).get()).data()?.venues as { id: string; name: string }[] | undefined;
+      venueName = venues?.find((v) => v.id === venueId)?.name ?? "";
+    }
+  }
+  const vars: MergeVars = {
+    parentName: b.booker,
+    providerName: pName,
+    childName: b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean).join(" & ") : b.child,
+    listingName: b.listing,
+    sessionDate: b.dates,
+    venueName,
+    bookingRef: b.ref,
+  };
+  const body = mergeText(parsed.data.body, vars);
+  const email = b.email.toLowerCase();
+  const parentName = b.booker ?? email;
+  const id = threadId(tenantId, email);
+  const now = new Date().toISOString();
+  const tRef = threadsCol.doc(id);
+  const existing = await tRef.get();
+  const senderName = req.user?.name ?? "Provider";
+  await tRef.set({
+    tenantId,
+    tenantName: existing.exists ? (existing.data()!.tenantName as string) : pName,
+    parentEmail: email,
+    parentName: existing.exists ? (existing.data()!.parentName as string) : parentName,
+    lastBody: body,
+    lastFrom: "operator",
+    lastAt: now,
+    operatorHidden: false,
+    ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(parsed.data.subject ? { subject: mergeText(parsed.data.subject, vars) } : {}) }),
+    parentUnread: FieldValue.increment(1),
+  }, { merge: true });
+  await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body, createdAt: now });
+  try { emailNewMessage(email, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
+  res.status(201).json({ ok: true, threadId: id });
 });
 
 // ─── Notification settings ──────────────────────────────────────────────────
