@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
-import { mergeFieldsFor } from "@/lib/merge-fields";
+import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 
@@ -78,6 +78,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);
   const [listingQuery, setListingQuery] = useState("");
+  const [listingRecipients, setListingRecipients] = useState<{ email: string; name: string; child?: string }[]>([]);
+  const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
@@ -133,6 +135,13 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       .catch(() => {});
     loadTemplates();
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Who's booked on the chosen listings — so the operator can review + un-tick.
+  useEffect(() => {
+    if (mode !== "operator" || listingTargets.length === 0) { setListingRecipients([]); return; }
+    apiPost<{ email: string; name: string; child?: string }[]>("/api/messages/listing-recipients", { listings: listingTargets })
+      .then((rs) => { setListingRecipients(rs); setExcludedEmails((ex) => ex.filter((e) => rs.some((r) => r.email === e))); })
+      .catch(() => {});
+  }, [mode, listingTargets]);
   useRealtime(["threads", "messages"], () => { loadThreads(); if (openId) loadThread(openId); });
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages]);
 
@@ -180,9 +189,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     try {
       if (composing && composeMode === "group") {
         if (listingTargets.length === 0) { setError("Choose at least one listing to message."); return; }
-        const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { listings: listingTargets, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
+        const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { listings: listingTargets, excludeEmails: excludedEmails, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
         const nL = listingTargets.length;
-        setDraft(""); setSubject(""); setComposing(false); setListingTargets([]); setComposeMode("family");
+        setDraft(""); setSubject(""); setComposing(false); setListingTargets([]); setExcludedEmails([]); setComposeMode("family");
         setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"} across ${nL} ${nL === 1 ? "listing" : "listings"}.`);
         loadThreads(); loadBroadcasts();
         return;
@@ -283,6 +292,16 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
 
   // The Pro composer bar — Simple/Pro toggle, templates and merge fields — shown
   // above the message box wherever the operator writes (new message or reply).
+  // Which merge fields can resolve in the current compose context, and whether a
+  // template is safe to use here (a template that needs a booking field won't
+  // work in family/broadcast messaging, so it's disabled in the picker).
+  const composeCtx = composeMode === "group" ? "listing" : "family";
+  const allowedTokens = new Set(mergeFieldsFor(composeCtx).map((f) => f.token.toLowerCase()));
+  const knownTokens = new Set(MERGE_FIELDS.map((f) => f.token.toLowerCase()));
+  const templateUsable = (t: Template) => {
+    const used = (`${t.subject ?? ""} ${t.body}`.match(/\{[A-Za-z]+\}/g) ?? []).map((x) => x.toLowerCase());
+    return used.every((tok) => !knownTokens.has(tok) || allowedTokens.has(tok));
+  };
   const proBar = mode !== "operator" ? null : (
     <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] px-2.5 pt-2">
       <div className="mr-1 flex gap-0.5 rounded-full border border-[var(--line)] p-0.5">
@@ -295,9 +314,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         <>
           <Select value="" onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) { setDraft(t.body); if (t.subject) setSubject(t.subject); } }} className="!py-1 text-[11px]">
             <option value="">{templates.length ? "Insert template…" : "No templates yet"}</option>
-            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {templates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · send from a booking"}</option>; })}
           </Select>
-          {mergeFieldsFor(composeMode === "group" ? "listing" : "family").map((f) => (
+          {mergeFieldsFor(composeCtx).map((f) => (
             <button key={f.token} type="button" title={`${f.token} — ${f.desc}`} onClick={() => setDraft((d) => (d ? `${d} ` : "") + f.token)}
               className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>
           ))}
@@ -315,7 +334,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setFamilyTargets([]); setNotice(null); }}>
+          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }}>
             ＋ {mode === "operator" ? "Message customers" : "New message"}
           </Button>
           {mode === "operator" && portalSeg !== "staff" && (
@@ -589,6 +608,31 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     </div>
                   );
                 })()}
+                {composeMode === "group" && listingTargets.length > 0 && listingRecipients.length > 0 && (() => {
+                  const included = listingRecipients.filter((r) => !excludedEmails.includes(r.email));
+                  return (
+                    <details className="mt-2 rounded-lg border border-[var(--line)] p-2" open>
+                      <summary className="cursor-pointer text-[11.5px] font-bold text-[var(--ink-2)]">
+                        Going to <b className="text-[var(--brand-strong)]">{included.length}</b> of {listingRecipients.length} families — click to review / un-tick
+                      </summary>
+                      <div className="mt-1.5 flex max-h-[30vh] flex-col gap-0.5 overflow-y-auto">
+                        {listingRecipients.map((r) => {
+                          const on = !excludedEmails.includes(r.email);
+                          return (
+                            <button key={r.email} type="button"
+                              onClick={() => setExcludedEmails((ex) => (on ? [...ex, r.email] : ex.filter((e) => e !== r.email)))}
+                              className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--panel)]"
+                              style={on ? undefined : { opacity: 0.5 }}>
+                              <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border text-[11px] font-extrabold text-white"
+                                style={on ? { background: "var(--brand-2)", borderColor: "var(--brand-2)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>{on ? "✓" : ""}</span>
+                              <span className="min-w-0 flex-1 truncate text-[12px]"><b>{r.name}</b>{r.child ? ` · ${r.child}` : ""} <span className="text-[var(--ink-3)]">· {r.email}</span></span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  );
+                })()}
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -597,7 +641,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   className="mt-2 w-full !py-1.5 text-[12.5px]"
                 />
                 {composeMode === "group" && (
-                  <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">This sends one message to every family booked on that listing.</div>
+                  <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Sends one message to each ticked family booked on the chosen listings.</div>
                 )}
               </div>
               <div className="flex-1" />
