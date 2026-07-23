@@ -1458,10 +1458,12 @@ export function SetupApp() {
         const r = settings.referral;
         const setR = (patch: Partial<typeof r>) => set("referral", { ...r, ...patch });
         const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
-        const Pounds = ({ value, onChange }: { value: number; onChange: (n: number) => void }) => (
+        const pct = r.type === "percent";
+        const Amount = ({ value, onChange }: { value: number; onChange: (n: number) => void }) => (
           <span className="inline-flex items-center gap-1">
-            <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>
-            <Input type="number" min="0" step="1" value={String(value)} onChange={(e) => onChange(num(e.target.value))} className="w-[84px]" />
+            {!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}
+            <Input type="number" min="0" step="1" max={pct ? "100" : undefined} value={String(value)} onChange={(e) => onChange(Math.min(pct ? 100 : 1e6, num(e.target.value)))} className="w-[84px]" />
+            {pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}
           </span>
         );
         return (
@@ -1472,14 +1474,17 @@ export function SetupApp() {
             <Row label="🎁 Refer a friend" hint="Off: no referral page for families. On: each family gets a shareable link and both sides earn.">
               <Toggle on={r.enabled} onChange={(v) => setR({ enabled: v })} labels={["On", "Off"]} />
             </Row>
-            <Row label="Friend gets — off their first booking" hint="The discount a brand-new family gets when they book with a friend's link.">
-              <Pounds value={r.friendOff} onChange={(n) => setR({ friendOff: n })} />
+            <Row label="Reward type" hint="Money off a fixed amount, or a percentage off.">
+              <Toggle on={r.type === "amount"} onChange={(v) => setR({ type: v ? "amount" : "percent" })} labels={["£ off", "% off"]} />
             </Row>
-            <Row label="Referrer earns — as a code" hint="The reward the referring family gets in their Coupons area once the friend's first booking is made.">
-              <Pounds value={r.referrerReward} onChange={(n) => setR({ referrerReward: n })} />
+            <Row label={`Friend gets — ${pct ? "% " : ""}off their first booking`} hint="The discount a brand-new family gets when they book with a friend's link.">
+              <Amount value={r.friendOff} onChange={(n) => setR({ friendOff: n })} />
             </Row>
-            <Row label="Minimum spend" hint="The friend's first basket must reach this for the reward to apply. 0 = no minimum.">
-              <Pounds value={r.minSpend} onChange={(n) => setR({ minSpend: n })} />
+            <Row label={`Referrer earns — as a ${pct ? "% " : ""}code`} hint="The reward the referring family gets in their Coupons area once the friend's first booking is made.">
+              <Amount value={r.referrerReward} onChange={(n) => setR({ referrerReward: n })} />
+            </Row>
+            <Row label="Minimum spend (£)" hint="The friend's first basket must reach this for the reward to apply. 0 = no minimum.">
+              <span className="inline-flex items-center gap-1"><span className="text-[12px] font-bold text-[var(--ink-3)]">£</span><Input type="number" min="0" step="1" value={String(r.minSpend)} onChange={(e) => setR({ minSpend: num(e.target.value) })} className="w-[84px]" /></span>
             </Row>
           </Section>
         );

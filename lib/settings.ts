@@ -310,8 +310,10 @@ export interface TenantSettings {
    */
   referral: {
     enabled: boolean;
-    friendOff: number;      // £ off the friend's first booking
-    referrerReward: number; // £ the referrer earns (as a code in their Coupons)
+    /** Whether the amounts below are pounds off or a percentage off. */
+    type: "amount" | "percent";
+    friendOff: number;      // £ (or %) off the friend's first booking
+    referrerReward: number; // £ (or %) the referrer earns (as a code in their Coupons)
     minSpend: number;       // 0 = none; friend's basket must reach this
   };
 
@@ -500,7 +502,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerNameMode: "business",
   marketplaceListed: false,
   customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true },
-  referral: { enabled: false, friendOff: 10, referrerReward: 10, minSpend: 0 },
+  referral: { enabled: false, type: "amount", friendOff: 10, referrerReward: 10, minSpend: 0 },
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],

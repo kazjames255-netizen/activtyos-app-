@@ -15,6 +15,7 @@ type Referral = {
   code?: string;
   link?: string;
   provider?: string;
+  type?: "amount" | "percent";
   friendOff?: number;
   referrerReward?: number;
   minSpend?: number;
@@ -38,10 +39,14 @@ export function ReferApp() {
   };
   const share = async () => {
     if (!r?.link) return;
-    const text = `Come to ${r.provider} and get ${money(r.friendOff)} off your first booking! Use code ${r.code} at checkout: ${r.link}`;
+    const off = r.type === "percent" ? `${Math.round(r.friendOff ?? 0)}% off` : `${money(r.friendOff)} off`;
+    const text = `Come to ${r.provider} and get ${off} your first booking! Use code ${r.code} at checkout: ${r.link}`;
     if (typeof navigator !== "undefined" && navigator.share) { try { await navigator.share({ title: "Refer a friend", text, url: r.link }); return; } catch { /* cancelled → fall through to copy */ } }
     void copy("link", r.link);
   };
+
+  const isPct = r?.type === "percent";
+  const fmt = (v?: number) => (isPct ? `${Math.round(v ?? 0)}%` : money(v));
 
   if (!r) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
 
@@ -65,10 +70,10 @@ export function ReferApp() {
 
       {/* Hero */}
       <div className="overflow-hidden rounded-2xl p-6 text-white shadow-[0_12px_34px_-14px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#2f6bd8 55%,#7c4dd6 100%)" }}>
-        <div className="text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>Give {money(r.friendOff)}, get {money(r.referrerReward)}</div>
+        <div className="text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>Give {fmt(r.friendOff)}, get {fmt(r.referrerReward)}</div>
         <p className="mt-1.5 max-w-[520px] text-[13px] leading-[1.5] text-white/85">
-          Share your link. Your friend gets <b>{money(r.friendOff)} off</b> their first booking with {r.provider}
-          {r.minSpend ? ` (on ${money(r.minSpend)}+)` : ""}, and you get <b>{money(r.referrerReward)}</b> in your Coupons the moment they book.
+          Share your link. Your friend gets <b>{fmt(r.friendOff)} off</b> their first booking with {r.provider}
+          {r.minSpend ? ` (on ${money(r.minSpend)}+)` : ""}, and you get <b>{fmt(r.referrerReward)}</b> in your Coupons the moment they book.
         </p>
 
         {/* Code + actions */}
@@ -90,7 +95,7 @@ export function ReferApp() {
         </Card>
         <Card className="flex items-center gap-3 p-4">
           <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#e7f8ee] text-[20px]">🎉</div>
-          <div><div className="text-[22px] font-extrabold leading-none text-[#0f7a44]">{money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">earned in rewards so far</div></div>
+          <div><div className="text-[22px] font-extrabold leading-none text-[#0f7a44]">{isPct ? (r.booked ?? 0) : money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">{isPct ? "reward codes earned" : "earned in rewards so far"}</div></div>
         </Card>
       </div>
 
@@ -100,8 +105,8 @@ export function ReferApp() {
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { n: "1", t: "Share your link", d: "Send it to friends by WhatsApp, text or email." },
-            { n: "2", t: "They book", d: `Your friend gets ${money(r.friendOff)} off their first booking.` },
-            { n: "3", t: "You’re rewarded", d: `${money(r.referrerReward)} lands in your Coupons, ready at checkout.` },
+            { n: "2", t: "They book", d: `Your friend gets ${fmt(r.friendOff)} off their first booking.` },
+            { n: "3", t: "You’re rewarded", d: `${fmt(r.referrerReward)} lands in your Coupons, ready at checkout.` },
           ].map((s) => (
             <div key={s.n} className="flex gap-2.5">
               <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-2,#2f6bd8)] text-[12px] font-extrabold text-white">{s.n}</div>
@@ -109,7 +114,7 @@ export function ReferApp() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {money(r.referrerReward)} per friend who books.</p>
+        <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Rewards are for brand-new families only, and you can’t use your own link. {fmt(r.referrerReward)} per friend who books.</p>
       </Card>
     </div>
   );
