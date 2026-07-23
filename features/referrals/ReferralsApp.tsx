@@ -11,7 +11,7 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
-type Row = { referrerEmail: string; friendEmail: string; reward?: number; type?: "amount" | "percent"; at?: string; viaCode?: string };
+type Row = { referrerEmail: string; referrerName?: string | null; friendEmail: string; friendName?: string | null; reward?: number; friendOff?: number; friendSpend?: number; type?: "amount" | "percent"; cap?: number | null; at?: string; viaCode?: string };
 type Data = {
   enabled: boolean;
   type: "amount" | "percent";
@@ -19,7 +19,7 @@ type Data = {
   referrerReward: number;
   friendsBooked: number;
   rewardsPaid: number;
-  leaderboard: { email: string; count: number; reward: number }[];
+  leaderboard: { email: string; name?: string | null; count: number; reward: number }[];
   recent: Row[];
 };
 
@@ -71,7 +71,7 @@ export function ReferralsApp() {
               {d.leaderboard.map((l, i) => (
                 <div key={l.email} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                   <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
-                  <div className="min-w-0 flex-1"><div className="truncate font-bold">{nameOf(l.email)}</div><div className="truncate text-[11px] text-[var(--ink-3)]">{l.email}</div></div>
+                  <div className="min-w-0 flex-1"><div className="truncate font-bold">{l.name || nameOf(l.email)}</div><div className="truncate text-[11px] text-[var(--ink-3)]">{l.email}</div></div>
                   <div className="flex-none text-right"><div className="font-extrabold">{l.count}</div><div className="text-[10.5px] text-[var(--ink-3)]">{d.type === "percent" ? `${l.count} code${l.count === 1 ? "" : "s"}` : `${money(l.reward)} back`}</div></div>
                 </div>
               ))}
@@ -83,12 +83,15 @@ export function ReferralsApp() {
             <div className="mb-2.5 text-[13.5px] font-extrabold">Recent referrals</div>
             <div className="flex flex-col">
               {d.recent.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
+                <div key={i} className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-2.5 text-[12.5px] last:border-b-0">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate"><b>{nameOf(r.referrerEmail)}</b> <span className="text-[var(--ink-3)]">referred</span> <b>{nameOf(r.friendEmail)}</b></div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmt(r.at)}{r.viaCode ? ` · ${r.viaCode}` : ""}</div>
+                    <div className="truncate"><b>{r.referrerName || nameOf(r.referrerEmail)}</b> <span className="text-[var(--ink-3)]">referred</span> <b>{r.friendName || nameOf(r.friendEmail)}</b></div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmt(r.at)} · friend spent {money(r.friendSpend ?? 0)} · got {fmtAmt(r.friendOff, r.type ?? d.type)} off</div>
                   </div>
-                  <span className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}</span>
+                  <div className="flex-none text-right">
+                    <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}{r.cap ? ` ≤${money(r.cap)}` : ""}</span>
+                    <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">referrer reward</div>
+                  </div>
                 </div>
               ))}
             </div>
