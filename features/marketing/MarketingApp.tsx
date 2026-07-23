@@ -28,6 +28,7 @@ interface Code {
   assignedEmails?: string[];
   listingId?: string;
   perCustomerLimit?: boolean;
+  exclusive?: boolean;
 }
 interface Family { id: string; name?: string; email?: string }
 interface Listing { id: string; title?: string; name?: string }
@@ -124,7 +125,7 @@ export function MarketingApp() {
   const [families, setFamilies] = useState<Family[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", assignedGroupId: "", listingId: "", perCustomerLimit: false };
+  const empty = { code: "", type: "percent", value: "", minSpend: "", expiry: "", usageLimit: "", assignedTo: "", assignedName: "", assignedGroupId: "", listingId: "", perCustomerLimit: false, exclusive: false };
   const [f, setF] = useState(empty);
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
 
@@ -152,7 +153,7 @@ export function MarketingApp() {
   function openCreate() { setEditId(null); setF(empty); setError(null); setOpen(true); }
   function openEdit(c: Code) {
     setEditId(c.id);
-    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "", assignedGroupId: c.assignedGroupId ?? "", listingId: c.listingId ?? "", perCustomerLimit: !!c.perCustomerLimit });
+    setF({ code: c.code, type: c.type, value: String(c.value), minSpend: c.minSpend != null ? String(c.minSpend) : "", expiry: c.expiry ?? "", usageLimit: c.usageLimit != null ? String(c.usageLimit) : "", assignedTo: c.assignedTo ?? "", assignedName: c.assignedName ?? "", assignedGroupId: c.assignedGroupId ?? "", listingId: c.listingId ?? "", perCustomerLimit: !!c.perCustomerLimit, exclusive: !!c.exclusive });
     setError(null); setOpen(true);
   }
 
@@ -171,6 +172,7 @@ export function MarketingApp() {
       assignedGroupId: editId ? f.assignedGroupId : (f.assignedGroupId || undefined),
       listingId: f.listingId || undefined,
       perCustomerLimit: f.perCustomerLimit || undefined,
+      exclusive: f.exclusive || undefined,
     };
     try {
       if (editId) await api(`/api/discounts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
@@ -241,10 +243,16 @@ export function MarketingApp() {
             </div>
           </div>
 
-          <label className="mt-3 flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
-            <input type="checkbox" checked={f.perCustomerLimit} onChange={(e) => set({ perCustomerLimit: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
-            Limit to one use per customer
-          </label>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
+              <input type="checkbox" checked={f.perCustomerLimit} onChange={(e) => set({ perCustomerLimit: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
+              Limit to one use per customer
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
+              <input type="checkbox" checked={f.exclusive} onChange={(e) => set({ exclusive: e.target.checked })} className="h-4 w-4 accent-[var(--brand-2)]" />
+              Can’t be used with any other code
+            </label>
+          </div>
 
           {/* Reserve for a single family OR a whole group — either way, only they
               can redeem it and each one gets a message + email. */}
@@ -312,6 +320,7 @@ export function MarketingApp() {
                       {c.assignedGroupName ? `👥 ${c.assignedGroupName} (${c.assignedEmails?.length ?? 0}) · ` : ""}
                       {c.listingId && listingName(c.listingId) ? `${listingName(c.listingId)} only · ` : ""}
                       {c.perCustomerLimit ? "1 per customer · " : ""}
+                      {c.exclusive ? "no combining · " : ""}
                       {c.minSpend ? `min ${money(c.minSpend)} · ` : ""}
                       {c.usageLimit != null ? `${c.usedCount ?? 0}/${c.usageLimit} used` : `${c.usedCount ?? 0} used`}
                       {c.expiry ? ` · expires ${fmt(c.expiry)}` : ""}

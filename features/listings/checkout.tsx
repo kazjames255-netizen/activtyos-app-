@@ -630,7 +630,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; discountCode?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -751,9 +751,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // lib/discountCodes) so the saving previewed here is exactly what's taken off.
   const attendees = Math.max(1, new Set(b.basket.flatMap((x) => b.childrenOn(x.id))).size);
   type MyCoupon = { code: string; type: "percent" | "amount" | "perAttendee"; value: number; tenantId: string; listingId: string | null };
+  type Applied = { code: string; off: number; exclusive: boolean };
   const [myCoupons, setMyCoupons] = useState<MyCoupon[]>([]);
   const [codeInput, setCodeInput] = useState("");
-  const [appliedCode, setAppliedCode] = useState<{ code: string; off: number } | null>(null);
+  // Codes STACK by default; a code flagged `exclusive` can't sit alongside others.
+  const [appliedCodes, setAppliedCodes] = useState<Applied[]>([]);
   const [codeErr, setCodeErr] = useState<string | null>(null);
   const [codeBusy, setCodeBusy] = useState(false);
   useEffect(() => {
@@ -762,23 +764,32 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       .then((list) => setMyCoupons((list ?? []).filter((c) => c.tenantId === tenantId && (!c.listingId || c.listingId === d.id))))
       .catch(() => {});
   }, [parentMode, tenantId, d.id]);
-  // Any change to the basket total or head-count invalidates a checked code.
-  useEffect(() => { setAppliedCode(null); setCodeErr(null); }, [grandTotal, attendees]);
+  // Any change to the basket total or head-count invalidates checked codes.
+  useEffect(() => { setAppliedCodes([]); setCodeErr(null); }, [grandTotal, attendees]);
+  const isApplied = (code: string) => appliedCodes.some((a) => a.code === code.toUpperCase());
+  function removeCode(code: string) { setAppliedCodes((a) => a.filter((x) => x.code !== code.toUpperCase())); setCodeErr(null); }
   async function applyCode(raw: string) {
     const code = raw.trim().toUpperCase();
     if (!code || !tenantId) return;
-    setCodeInput(code); setCodeBusy(true); setCodeErr(null);
+    if (isApplied(code)) { removeCode(code); return; } // tapping an applied code removes it
+    setCodeBusy(true); setCodeErr(null);
     try {
-      const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number }>("/api/discounts/validate", {
+      const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number; exclusive?: boolean }>("/api/discounts/validate", {
         method: "POST",
         body: JSON.stringify({ tenantId, code, subtotal: grandTotal, attendees, ...(d.id ? { listingId: d.id } : {}) }),
       });
-      if (r.valid && r.off && r.off > 0) setAppliedCode({ code: r.code ?? code, off: r.off });
-      else { setAppliedCode(null); setCodeErr(r.reason ?? "That code can’t be used on this booking"); }
-    } catch (e) { setAppliedCode(null); setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
+      if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ?? "That code can’t be used on this booking"); return; }
+      // Exclusivity: an exclusive code can't join others, and can't be added when others are already on.
+      if (appliedCodes.length && (r.exclusive || appliedCodes.some((a) => a.exclusive))) {
+        setCodeErr(`${r.exclusive ? (r.code ?? code) : appliedCodes.find((a) => a.exclusive)!.code} can’t be combined with other codes`);
+        return;
+      }
+      setAppliedCodes((a) => [...a, { code: r.code ?? code, off: r.off!, exclusive: !!r.exclusive }]);
+      setCodeInput("");
+    } catch (e) { setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
     finally { setCodeBusy(false); }
   }
-  const codeOff = appliedCode ? Math.min(appliedCode.off, grandTotal) : 0;
+  const codeOff = Math.min(appliedCodes.reduce((s, a) => s + a.off, 0), grandTotal);
 
   // Order of deductions mirrors the server: automatic discounts (already in
   // grandTotal) → discount code → wallet credit.
@@ -1194,51 +1205,50 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
-        {/* Discount code — type one, or one-tap one of the family's coupons. */}
+        {/* Discount codes — clearly labelled. Codes STACK: tap as many as apply
+            (an exclusive one stands alone); tap again to remove. */}
         {parentMode && (
-          <div className="mt-2.5">
-            {appliedCode ? (
-              <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[12px]" style={{ background: tk.inputBg, border: `1px solid ${tk.line}` }}>
-                <span style={{ color: tk.ink }}>🏷️ Code <b>{appliedCode.code}</b> applied</span>
-                <button type="button" onClick={() => { setAppliedCode(null); setCodeInput(""); setCodeErr(null); }} className="text-[11px] font-bold" style={{ color: tk.muted }}>Remove</button>
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-1.5">
-                  <input
-                    value={codeInput}
-                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(codeInput); } }}
-                    placeholder="Discount code"
-                    className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-[12.5px] uppercase outline-none"
-                    style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}
-                  />
-                  <button type="button" disabled={codeBusy || !codeInput.trim()} onClick={() => void applyCode(codeInput)} className="flex-none rounded-lg px-3 py-2 text-[12px] font-extrabold disabled:opacity-50" style={{ background: tk.accent, color: tk.accentInk }}>{codeBusy ? "…" : "Apply"}</button>
-                </div>
-                {codeErr && <div className="mt-1 text-[11px]" style={{ color: "#ef5350" }}>{codeErr}</div>}
-                {myCoupons.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px]" style={{ color: tk.muted }}>Use my coupons:</span>
-                    {myCoupons.map((c) => (
-                      <button key={c.code} type="button" onClick={() => void applyCode(c.code)} className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}>
+          <div className="mt-3 border-t pt-2.5" style={{ borderColor: tk.line }}>
+            <div className="mb-1.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🏷️ Have discount codes?</div>
+            <div className="flex gap-1.5">
+              <input
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(codeInput); } }}
+                placeholder="Type a code…"
+                className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-[12.5px] uppercase outline-none"
+                style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}
+              />
+              <button type="button" disabled={codeBusy || !codeInput.trim()} onClick={() => void applyCode(codeInput)} className="flex-none rounded-lg px-4 py-2 text-[12px] font-extrabold disabled:opacity-50" style={{ background: tk.accent, color: tk.accentInk }}>{codeBusy ? "…" : "Apply"}</button>
+            </div>
+            {codeErr && <div className="mt-1 text-[11px]" style={{ color: "#ef5350" }}>{codeErr}</div>}
+            {myCoupons.length > 0 && (
+              <div className="mt-2">
+                <div className="mb-1 text-[11px]" style={{ color: tk.muted }}>Tap your codes to apply — they stack:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {myCoupons.map((c) => {
+                    const active = isApplied(c.code);
+                    return (
+                      <button key={c.code} type="button" onClick={() => void applyCode(c.code)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-bold transition-transform hover:-translate-y-px" style={active ? { background: tk.accent, color: tk.accentInk, border: `1.5px solid ${tk.accent}` } : { background: "transparent", color: tk.ink, border: `1.5px solid ${tk.accent}` }}>
+                        <span style={{ color: active ? tk.accentInk : tk.accent }}>{active ? "✓" : "＋"}</span>
                         {c.code} · {c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)}/child` : `${money(c.value)} off`}
                       </button>
-                    ))}
-                  </div>
-                )}
-              </>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
-        {/* Deductions — discount code then wallet credit, and the final due-now. */}
+        {/* Deductions — each discount code, then wallet credit, and the final due-now. */}
         {parentMode && (codeOff > 0 || walletApplied > 0) && (
           <>
-            {codeOff > 0 && (
-              <div className="mt-2 flex items-baseline justify-between text-[12px]">
-                <span style={{ color: tk.muted }}>🏷️ Code {appliedCode?.code}</span>
-                <b style={{ color: tk.accent }}>−{money(codeOff)}</b>
+            {appliedCodes.map((a) => (
+              <div key={a.code} className="mt-2 flex items-baseline justify-between text-[12px]">
+                <span style={{ color: tk.muted }}>🏷️ Code {a.code}{a.exclusive ? " (exclusive)" : ""}</span>
+                <b style={{ color: tk.accent }}>−{money(Math.min(a.off, grandTotal))}</b>
               </div>
-            )}
+            ))}
             {walletApplied > 0 && (
               <div className="mt-2 flex items-baseline justify-between text-[12px]">
                 <span style={{ color: tk.muted }}>👛 Wallet credit{walletBalance > walletApplied ? ` (${money(walletBalance)} available)` : ""}</span>
@@ -1773,7 +1783,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // The scheme the parent picked — the backend keys the "Awaiting
             // voucher payment" state off this, not the method string.
             voucherScheme: method === "voucher" ? chosenVoucher?.name : undefined,
-            discountCode: appliedCode?.code,
+            discountCodes: appliedCodes.map((a) => a.code),
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),

@@ -93,7 +93,7 @@ export function CouponTicker() {
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold text-[#eef2ff]">
               <span className="font-mono font-extrabold tracking-wider text-white">{c.code}</span>
-              <span className="text-[#c7d3f5]">{valueLabel(c)} · {c.provider} · {c.listingName ? c.listingName : "all listings"}</span>
+              <span className="text-[#c7d3f5]">{valueLabel(c)} · {c.listingName ? c.listingName : "all listings"}</span>
               {c.reserved && <span className="text-[#FACC15]">🎁</span>}
               <span className="px-1 text-[8px] text-[#FACC15] opacity-50">◆</span>
             </span>

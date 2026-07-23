@@ -37,20 +37,10 @@ const valueLabel = (c: Coupon) =>
 
 export function CouponsApp() {
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
-
   const load = () =>
     apiGet<Coupon[]>("/api/my/coupons").then((r) => setCoupons(r ?? [])).catch(() => setCoupons([]));
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
-
-  async function copy(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(code);
-      setTimeout(() => setCopied((c) => (c === code ? null : c)), 1800);
-    } catch { /* clipboard blocked — the code is still shown to type manually */ }
-  }
 
   if (!coupons) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your coupons…</div>;
 
@@ -58,7 +48,7 @@ export function CouponsApp() {
     <div className="text-[var(--ink)]">
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Coupons &amp; discount codes</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">
-        Codes from your providers — copy one and enter it at checkout to save on your next booking.
+        Codes you can use — they&apos;re ready and waiting at checkout, so there&apos;s nothing to copy. Just book and tap the code to apply.
       </p>
 
       {coupons.length === 0 ? (
@@ -73,31 +63,19 @@ export function CouponsApp() {
         <div className="flex flex-col gap-2.5">
           {coupons.map((c) => (
             <Card key={c.id} className="flex flex-wrap items-center gap-3 p-4">
-              <button
-                type="button"
-                onClick={() => copy(c.code)}
-                title="Copy code"
-                className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)] transition-colors hover:bg-[var(--brand-soft2,#dbe6fb)]"
-              >
+              <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)]">
                 {c.code}
-              </button>
+              </span>
               <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[12.5px] font-extrabold text-[#0f7a44]">{valueLabel(c)}</span>
               {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">🎁 Just for you</span>}
               <div className="min-w-[160px] flex-1">
-                <div className="text-[13px] font-bold">{c.provider}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">
                   {c.listingName ? `${c.listingName} only` : "All listings"}
                   {c.minSpend ? ` · min ${money(c.minSpend)}` : ""}
                   {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no expiry"}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => copy(c.code)}
-                className="flex-none rounded-full bg-[var(--brand-2,#2f6bd8)] px-3.5 py-1.5 text-[12.5px] font-bold text-white transition-transform hover:-translate-y-px"
-              >
-                {copied === c.code ? "Copied ✓" : "Copy code"}
-              </button>
+              <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,#16306e)]">✓ Applied at checkout</span>
             </Card>
           ))}
         </div>

@@ -94,7 +94,8 @@ const basketSchema = z.object({
   voucherScheme: z.string().max(60).optional(),
   // Marketing discount code (optional). Applied server-side to the pass
   // subtotal; validated the same way the preview endpoint validates it.
-  discountCode: z.string().trim().max(40).optional(),
+  discountCode: z.string().trim().max(40).optional(), // legacy single code
+  discountCodes: z.array(z.string().trim().max(40)).max(20).optional(), // stackable codes
   // Operators only (§G-3/§H): book FOR a family — same pricing/capacity
   // path, the booking lands on their account (found or created by email).
   onBehalfOf: z
@@ -602,37 +603,47 @@ my.post("/bookings", async (req, res) => {
   // (after automatic discounts, before add-ons) and re-spread the reduction
   // across the items' pass portions. Shares lib/discountCodes with the preview
   // endpoint so what the parent saw is exactly what they're charged.
-  let discountCode: string | null = null;
-  if (input.discountCode) {
+  let discountCodes: string[] = [];
+  const rawCodes = [...(input.discountCode ? [input.discountCode] : []), ...(input.discountCodes ?? [])];
+  const wantedCodes = [...new Set(rawCodes.map((c) => normaliseCode(c)).filter(Boolean))];
+  if (wantedCodes.length) {
     const today = new Date().toISOString().slice(0, 10);
-    const codeSnap = await db
-      .collection("discountCodes")
-      .where("tenantId", "==", listing.tenantId)
-      .where("code", "==", normaliseCode(input.discountCode))
-      .limit(1)
-      .get();
-    if (codeSnap.empty) { res.status(400).json({ error: "That discount code isn’t recognised" }); return; }
-    const codeDoc = codeSnap.docs[0];
-    const codeData = codeDoc.data() as DiscountCodeDoc;
-    if (codeData.perCustomerLimit && familyEmail) {
-      const prior = await db.collection("discountRedemptions").where("codeId", "==", codeDoc.id).where("email", "==", familyEmail.toLowerCase()).limit(1).get();
-      if (!prior.empty) { res.status(400).json({ error: "You’ve already used this code" }); return; }
+    // Load every requested code.
+    const loaded: { doc: FirebaseFirestore.QueryDocumentSnapshot; data: DiscountCodeDoc; code: string }[] = [];
+    for (const code of wantedCodes) {
+      const snap = await db.collection("discountCodes").where("tenantId", "==", listing.tenantId).where("code", "==", code).limit(1).get();
+      if (snap.empty) { res.status(400).json({ error: `Code ${code} isn’t recognised` }); return; }
+      loaded.push({ doc: snap.docs[0], data: snap.docs[0].data() as DiscountCodeDoc, code });
     }
-    const check = checkCode(codeData, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
-    if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
-    const ratio = discounted > 0 ? (discounted - check.off) / discounted : 1;
+    // Codes stack by default — but a code flagged `exclusive` can't be combined.
+    const excl = loaded.find((l) => l.data.exclusive);
+    if (excl && loaded.length > 1) { res.status(400).json({ error: `Code ${excl.code} can’t be combined with other codes` }); return; }
+    // Validate each (per-customer limit, validity, scope) and sum the reductions.
+    let totalOff = 0;
+    for (const l of loaded) {
+      if (l.data.perCustomerLimit && familyEmail) {
+        const prior = await db.collection("discountRedemptions").where("codeId", "==", l.doc.id).where("email", "==", familyEmail.toLowerCase()).limit(1).get();
+        if (!prior.empty) { res.status(400).json({ error: `You’ve already used code ${l.code}` }); return; }
+      }
+      const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
+      if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
+      totalOff = round2(totalOff + check.off);
+    }
+    totalOff = Math.min(totalOff, discounted); // never below zero on the pass subtotal
+    const ratio = discounted > 0 ? (discounted - totalOff) / discounted : 1;
     for (let i = 0; i < amounts.length; i++) {
       const passPortion = round2(amounts[i] - priced[i].addonsTotal);
       amounts[i] = round2(passPortion * ratio + priced[i].addonsTotal);
     }
-    const codeTarget = round2(discounted - check.off + priced.reduce((s, p) => s + p.addonsTotal, 0));
+    const codeTarget = round2(discounted - totalOff + priced.reduce((s, p) => s + p.addonsTotal, 0));
     const codeDrift = round2(codeTarget - amounts.reduce((s, a) => round2(s + a), 0));
     if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + codeDrift);
-    discountCode = normaliseCode(input.discountCode);
-    // Record the redemption (best-effort — a hair of over-use under a race is
-    // acceptable for a coupon; the hard cap is re-checked on the next attempt).
-    void codeDoc.ref.update({ usedCount: FieldValue.increment(1) });
-    if (codeData.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: codeDoc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
+    discountCodes = loaded.map((l) => l.code);
+    // Record each redemption (best-effort — the hard cap is re-checked next time).
+    for (const l of loaded) {
+      void l.doc.ref.update({ usedCount: FieldValue.increment(1) });
+      if (l.data.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: l.doc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
+    }
   }
 
   const bookerName = familyName;
@@ -736,7 +747,7 @@ my.post("/bookings", async (req, res) => {
             nextBid + i,
           ),
           ...(rc.childId ? { childId: rc.childId } : {}),
-          ...(discountCode ? { discountCode } : {}),
+          ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
           tenantId: listing.tenantId,
           blockId: blockSnap.id,
           seats: 1,
