@@ -23,6 +23,19 @@ const listeners = new Set<Listener>();
 let es: EventSource | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;
 let connecting = false;
+// Collections the current EventSource was opened watching. The server only
+// attaches Firestore listeners for these (each attach costs a full-collection
+// read), so we pass the union of what mounted views need. The set only ever
+// GROWS across a session — that keeps navigation from tearing the socket down
+// and re-paying the read on every unmount; it converges to the handful of
+// collections actually visited rather than all ~35.
+let attachedCols = new Set<string>();
+
+function neededCols(): Set<string> {
+  const s = new Set<string>();
+  for (const l of listeners) for (const c of l.collections) s.add(c);
+  return s;
+}
 
 function scheduleRetry() {
   if (retry || listeners.size === 0) return;
@@ -46,7 +59,9 @@ async function connect() {
     }
     // Everyone may have unsubscribed while we awaited the token.
     if (listeners.size === 0 || es) return;
-    es = new EventSource(`${BASE}/api/events?token=${encodeURIComponent(token)}`);
+    attachedCols = neededCols();
+    const cols = [...attachedCols].sort().join(",");
+    es = new EventSource(`${BASE}/api/events?token=${encodeURIComponent(token)}${cols ? `&collections=${encodeURIComponent(cols)}` : ""}`);
     es.onmessage = (e) => {
       try {
         const { collection } = JSON.parse(e.data) as { collection: string };
@@ -78,6 +93,13 @@ function closeIfIdle() {
 export function subscribeRealtime(collections: string[], onChange: () => void): () => void {
   const listener: Listener = { collections, onChange };
   listeners.add(listener);
+  // If this view needs a collection the open socket isn't watching, reopen it
+  // once with the widened set. (Only reopens on growth, so this happens at most
+  // a few times per session, not on every mount.)
+  if (es && collections.some((c) => !attachedCols.has(c))) {
+    es.close();
+    es = null;
+  }
   void connect();
   return () => {
     listeners.delete(listener);
