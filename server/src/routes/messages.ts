@@ -156,9 +156,10 @@ messages.post("/", async (req, res) => {
   try {
     const pName = await tenantName(tenantId);
     if (from === "parent") {
-      const tSnap = await db.collection("tenants").doc(tenantId).get();
-      const tEmail = tSnap.data()?.email as string | undefined;
-      if (tEmail && tSnap.data()?.emailOnNewMessage !== false) {
+      const t = (await db.collection("tenants").doc(tenantId).get()).data();
+      // Prefer the custom notification address; fall back to the account email.
+      const tEmail = (t?.notifyEmail as string) || (t?.email as string | undefined);
+      if (tEmail && t?.emailOnNewMessage !== false) {
         emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl });
       }
     } else {
@@ -234,18 +235,30 @@ messages.post("/from-booking", async (req, res) => {
 // ─── Notification settings ──────────────────────────────────────────────────
 // GET/PUT the operator's "email me when I get a new message" preference (on the
 // tenant doc; read by the send handler above).
+const readSettings = (d?: FirebaseFirestore.DocumentData) => ({
+  emailOnNewMessage: d?.emailOnNewMessage !== false,
+  notifyEmail: (d?.notifyEmail as string) ?? "",
+  accountEmail: (d?.email as string) ?? "", // shown as the fallback/placeholder
+});
 messages.get("/settings", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await db.collection("tenants").doc(tenantId).get();
-  res.json({ emailOnNewMessage: snap.data()?.emailOnNewMessage !== false });
+  res.json(readSettings(snap.data()));
 });
 messages.put("/settings", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
-  const on = req.body?.emailOnNewMessage !== false;
-  await db.collection("tenants").doc(tenantId).set({ emailOnNewMessage: on }, { merge: true });
-  res.json({ emailOnNewMessage: on });
+  const patch: { emailOnNewMessage?: boolean; notifyEmail?: string } = {};
+  if (req.body && "emailOnNewMessage" in req.body) patch.emailOnNewMessage = req.body.emailOnNewMessage !== false;
+  if (req.body && "notifyEmail" in req.body) {
+    const ne = String(req.body.notifyEmail ?? "").trim();
+    if (ne && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ne)) { res.status(400).json({ error: "That doesn’t look like a valid email." }); return; }
+    patch.notifyEmail = ne; // "" clears it → falls back to the account email
+  }
+  const ref = db.collection("tenants").doc(tenantId);
+  await ref.set(patch, { merge: true });
+  res.json(readSettings((await ref.get()).data()));
 });
 
 // ─── Folders ──────────────────────────────────────────────────────────────
