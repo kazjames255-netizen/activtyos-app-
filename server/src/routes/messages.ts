@@ -42,10 +42,12 @@ async function isMyCustomer(tenantId: string, email: string) {
 }
 // Pro-composer merge fields we can resolve for any recipient. (Per-booking ones
 // like {ChildName}/{BookingRef} need booking context — see handoff §II.)
-function mergeText(text: string, v: { parentName?: string; providerName?: string }): string {
+function mergeText(text: string, v: { parentName?: string; providerName?: string; childName?: string; listingName?: string }): string {
   return text
     .replace(/\{ParentName\}/gi, v.parentName ?? "")
-    .replace(/\{ProviderName\}/gi, v.providerName ?? "");
+    .replace(/\{ProviderName\}/gi, v.providerName ?? "")
+    .replace(/\{ChildName\}/gi, v.childName ?? "")
+    .replace(/\{ListingName\}/gi, v.listingName ?? "");
 }
 
 // GET /api/messages/threads — the caller's conversations (newest activity first).
@@ -277,12 +279,17 @@ messages.post("/broadcast", async (req, res) => {
   const parsed = broadcastSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const recipients = new Map<string, string>(); // email → best-known name (deduped)
+  const childByEmail = new Map<string, string>(); // email → child name(s), for {ChildName}
   const wanted = new Set(parsed.data.listings);
   if (wanted.size) {
     const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
     bk.docs.forEach((d) => {
-      const b = d.data() as { email?: string; booker?: string; listing?: string };
-      if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) recipients.set(b.email.toLowerCase(), b.booker ?? b.email);
+      const b = d.data() as { email?: string; booker?: string; listing?: string; child?: string };
+      if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) {
+        const el = b.email.toLowerCase();
+        recipients.set(el, b.booker ?? b.email);
+        if (b.child) childByEmail.set(el, b.child);
+      }
     });
   }
   if (parsed.data.emails.length) {
@@ -290,18 +297,34 @@ messages.post("/broadcast", async (req, res) => {
     // arbitrary or malformed ones.
     const custSnap = await db.collection("customers").where("tenantId", "==", tenantId).get();
     const byEmail = new Map<string, string>();
-    custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email && isEmail(c.email)) byEmail.set(c.email.toLowerCase(), c.name ?? c.email); });
-    for (const e of parsed.data.emails) { const el = e.toLowerCase(); if (isEmail(el) && byEmail.has(el)) recipients.set(el, byEmail.get(el)!); }
+    const kidsByEmail = new Map<string, string>();
+    custSnap.docs.forEach((d) => {
+      const c = d.data() as { email?: string; name?: string; children?: { name?: string }[] };
+      if (c.email && isEmail(c.email)) {
+        byEmail.set(c.email.toLowerCase(), c.name ?? c.email);
+        const kids = (c.children ?? []).map((k) => k.name).filter(Boolean).join(" & ");
+        if (kids) kidsByEmail.set(c.email.toLowerCase(), kids);
+      }
+    });
+    for (const e of parsed.data.emails) {
+      const el = e.toLowerCase();
+      if (isEmail(el) && byEmail.has(el)) {
+        recipients.set(el, byEmail.get(el)!);
+        if (!childByEmail.has(el) && kidsByEmail.has(el)) childByEmail.set(el, kidsByEmail.get(el)!);
+      }
+    }
   }
   if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
   const tName = await tenantName(tenantId);
+  // {ListingName} is only unambiguous when exactly one listing was targeted.
+  const listingName = parsed.data.listings.length === 1 ? parsed.data.listings[0] : "";
   await Promise.all([...recipients].map(async ([email, name]) => {
     const id = threadId(tenantId, email);
     const tRef = threadsCol.doc(id);
     const existing = await tRef.get();
-    const rbody = mergeText(parsed.data.body, { parentName: name, providerName: tName });
+    const rbody = mergeText(parsed.data.body, { parentName: name, providerName: tName, childName: childByEmail.get(email), listingName });
     await tRef.set({
       tenantId,
       tenantName: existing.exists ? (existing.data()!.tenantName as string) : tName,

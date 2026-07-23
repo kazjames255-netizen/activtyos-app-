@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { api, get as apiGet } from "@/lib/api";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -44,7 +44,37 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace";
+type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "notifications";
+
+// A self-contained toggle for the "email me on a new message" preference. It
+// lives on the tenant doc (via /api/messages/settings), not the library-settings
+// store the rest of this page uses — so it manages its own load/save.
+function NotificationsTab() {
+  const [on, setOn] = useState<boolean | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    apiGet<{ emailOnNewMessage: boolean }>("/api/messages/settings").then((s) => setOn(s.emailOnNewMessage)).catch(() => setOn(true));
+  }, []);
+  async function change(v: boolean) {
+    setOn(v); setErr(null);
+    try { await api("/api/messages/settings", { method: "PUT", body: JSON.stringify({ emailOnNewMessage: v }) }); }
+    catch (e) { setOn(!v); setErr(e instanceof Error ? e.message : "Couldn’t save"); }
+  }
+  return (
+    <Card className="p-5">
+      <h3 className="text-[15px] font-extrabold">Message notifications</h3>
+      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Stay on top of what families send you.</p>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-4 py-3">
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-bold">Email me when I get a new message</div>
+          <div className="text-[12px] text-[var(--ink-3)]">We’ll email you the message with a link straight to the conversation.</div>
+        </div>
+        {on !== null && <Toggle on={on} onChange={change} />}
+      </div>
+      {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
+    </Card>
+  );
+}
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -1057,6 +1087,7 @@ export function SetupApp() {
     ["bookings", "Payments"],
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
+    ["notifications", "Notifications"],
   ];
 
   return (
@@ -1349,6 +1380,8 @@ export function SetupApp() {
           </Row>
         </Section>
       )}
+
+      {tab === "notifications" && <NotificationsTab />}
 
       {tab === "bookings" && (
         <>
