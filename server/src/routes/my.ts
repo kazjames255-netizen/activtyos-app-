@@ -3,6 +3,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
+import { rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -625,6 +626,14 @@ my.post("/bookings", async (req, res) => {
         const prior = await db.collection("discountRedemptions").where("codeId", "==", l.doc.id).where("email", "==", familyEmail.toLowerCase()).limit(1).get();
         if (!prior.empty) { res.status(400).json({ error: `You’ve already used code ${l.code}` }); return; }
       }
+      // Referral codes: new customers only, and never your own link.
+      if (l.data.referral && l.data.referrerEmail && familyEmail && l.data.referrerEmail.toLowerCase() === familyEmail.toLowerCase()) {
+        res.status(400).json({ error: "You can’t use your own referral link" }); return;
+      }
+      if (l.data.newCustomerOnly && familyEmail) {
+        const prior = await bookingsCol.where("email", "==", familyEmail).where("tenantId", "==", listing.tenantId).limit(1).get();
+        if (!prior.empty) { res.status(400).json({ error: `Code ${l.code} is for new customers only` }); return; }
+      }
       const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
       if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
       totalOff = round2(totalOff + check.off);
@@ -643,6 +652,8 @@ my.post("/bookings", async (req, res) => {
     for (const l of loaded) {
       void l.doc.ref.update({ usedCount: FieldValue.increment(1) });
       if (l.data.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: l.doc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
+      // Refer-a-friend: the friend just booked → reward the referrer.
+      if (l.data.referral && l.data.referrerEmail && familyEmail) void rewardReferrer(listing.tenantId, l.data.referrerEmail, familyEmail, l.code);
     }
   }
 

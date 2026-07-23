@@ -3082,6 +3082,34 @@ the relevant routes (and a nav/redirect guard) on the tenant's `customerArea`.
 
 ---
 
+# Refer-a-friend — 23 July 2026
+
+Give-X-get-Y referrals, built entirely on the discount engine (no wallet needed).
+Provider-funded, so it's off by default with provider-set amounts.
+
+- **Settings:** `settings.referral = { enabled, friendOff, referrerReward, minSpend }`
+  (in the library doc, exposed in the public slice). Operator sets them in
+  **Setup → Refer a friend**.
+- **Family code:** `GET /api/my/referral` (parent) returns their personal `code`,
+  `link` (`/store/:tenantId?ref=CODE`), the amounts and stats (`booked`,
+  `earned`). It **ensures a friend-facing discount code exists** — an ordinary
+  `discountCodes` doc flagged `referral: true`, `referrerEmail`,
+  `newCustomerOnly: true`, `type: amount`, `value: friendOff`. Powers the
+  custdash **Refer a friend** page (`ReferApp`), gated on `referral.enabled`.
+- **Friend redemption:** the friend enters the code at checkout like any other.
+  `POST /api/my/bookings` enforces **new-customer-only** (no prior booking with
+  the tenant) and **no self-referral**, then on success calls **`rewardReferrer`**
+  (`routes/referral.ts`): records a `referrals` doc `{referrerEmail, friendEmail,
+  viaCode, reward}` (idempotent per pair) and **mints a `referrerReward` code
+  reserved to the referrer** (`assignedTo`) + messages/emails them. The reward
+  lands in their Coupons area automatically (reserved-code path).
+- **New DiscountCodeDoc fields:** `referral`, `referrerEmail`, `newCustomerOnly`.
+- **Follow-up (front-end):** the `?ref=CODE` link param isn't auto-applied at
+  checkout yet — the friend types the code (it's in the share text). Auto-apply
+  is a small enhancement for later.
+
+---
+
 # Split fees — 22 July 2026 (Swagger v0.26.0)
 
 The franchisor royalty report. A franchise isn't a separate tenant — it's a

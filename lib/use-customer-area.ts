@@ -27,7 +27,12 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
     void apiGet<{ tenantId: string }[]>("/api/my/providers")
       .then((ps) => ps?.[0]?.tenantId)
       .then((tid) => (tid ? apiGet<{ settings?: Partial<TenantSettings> } | null>(`/api/public/library/${tid}`) : null))
-      .then((lib) => { if (live) setCa(withDefaults(lib?.settings ?? null).customerArea); })
+      .then((lib) => {
+        if (!live) return;
+        const full = withDefaults(lib?.settings ?? null);
+        // "Refer a friend" only shows when the provider actually runs referrals.
+        setCa({ ...full.customerArea, refer: full.customerArea.refer && full.referral.enabled });
+      })
       .catch(() => {});
     return () => { live = false; };
   }, [portal]);

@@ -42,6 +42,7 @@ import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { WalletApp } from "@/features/parent/WalletApp";
 import { CouponsApp } from "@/features/parent/CouponsApp";
+import { ReferApp } from "@/features/parent/ReferApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { ScheduleApp } from "@/features/parent/ScheduleApp";
@@ -193,6 +194,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     browse: BrowseApp,
     wallet: WalletApp,
     coupons: CouponsApp,
+    refer: ReferApp,
     bookings: MyBookingsApp,
     children: ChildrenApp,
     moments: ParentMomentsApp,
