@@ -791,6 +791,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   }
   const codeOff = Math.min(appliedCodes.reduce((s, a) => s + a.off, 0), grandTotal);
 
+  // A friend arriving via a referral link (/store/:id?ref=CODE) gets the code
+  // applied automatically — stashed in sessionStorage so it survives navigation
+  // into the wizard. Tried once, when the total is known.
+  const triedRef = useRef(false);
+  useEffect(() => {
+    if (!parentMode || triedRef.current || grandTotal <= 0 || appliedCodes.length) return;
+    let code: string | null = null;
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get("ref");
+      if (fromUrl) { code = fromUrl; sessionStorage.setItem("aos.ref", fromUrl); }
+      else code = sessionStorage.getItem("aos.ref");
+    } catch { /* no storage → nothing to auto-apply */ }
+    if (code) { triedRef.current = true; void applyCode(code); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentMode, grandTotal]);
+
   // Order of deductions mirrors the server: automatic discounts (already in
   // grandTotal) → discount code → wallet credit.
   const afterCode = Math.max(0, grandTotal - codeOff);
