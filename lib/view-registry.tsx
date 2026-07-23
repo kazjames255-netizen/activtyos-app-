@@ -31,6 +31,7 @@ import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { ListingsApp } from "@/features/listings/ListingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
+import { SupportApp } from "@/features/support/SupportApp";
 import { FreelancerListingsApp } from "@/features/listings/FreelancerListingsApp";
 import { BrowseApp } from "@/features/parent/BrowseApp";
 import { WalletApp } from "@/features/parent/WalletApp";
@@ -80,6 +81,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    activityos: SupportApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
@@ -113,6 +115,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    activityos: SupportApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,
@@ -144,6 +147,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
+    activityos: SupportApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
     subscription: SubscriptionApp,

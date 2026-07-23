@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 
@@ -25,17 +27,20 @@ interface Thread {
   parentEmail: string;
   parentName?: string;
   subject?: string;
+  folderId?: string;
   lastBody?: string;
   lastFrom?: "operator" | "parent";
   lastAt?: string;
   operatorUnread?: number;
   parentUnread?: number;
 }
+interface Folder { id: string; name: string }
 interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; children?: { name?: string }[] }
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 
 export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [threads, setThreads] = useState<Thread[] | null>(null);
@@ -50,8 +55,11 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [subject, setSubject] = useState(""); // optional heading for a NEW thread
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "reply">("all");
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [activeFolder, setActiveFolder] = useState<string>("all"); // "all" | "unfiled" | folderId
   const endRef = useRef<HTMLDivElement>(null);
   const mine = mode === "operator" ? "operator" : "parent";
+  const portalSeg = usePathname().split("/")[1] || "freelancer";
 
   const loadThreads = useCallback(() => {
     apiGet<Thread[]>("/api/messages/threads").then((t) => { setThreads(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -60,7 +68,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     apiGet<{ thread: Thread; messages: Message[] }>(`/api/messages/threads/${encodeURIComponent(id)}`).then((r) => { setMessages(r.messages); loadThreads(); }).catch((e) => setError(e instanceof Error ? e.message : "Failed"));
   }, [loadThreads]);
 
+  // Folders are an operator-only way to file conversations (Resolved, etc.).
+  const loadFolders = useCallback(() => {
+    if (mode !== "operator") return;
+    apiGet<Folder[]>("/api/messages/folders").then(setFolders).catch(() => {});
+  }, [mode]);
+
   useEffect(() => { loadThreads(); }, [loadThreads]);
+  useEffect(() => { loadFolders(); }, [loadFolders]);
   useEffect(() => {
     if (mode === "parent") apiGet<Provider[]>("/api/my/providers").then(setProviders).catch(() => {});
     else apiGet<Customer[]>("/api/customers").then((c) => setCustomers(c.filter((x) => x.email))).catch(() => {});
@@ -71,6 +86,31 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   function open(id: string) { setComposing(false); setSubject(""); setOpenId(id); loadThread(id); }
   // Open the composer pre-addressed to a family/provider found via search.
   function startWith(value: string) { setComposing(true); setOpenId(null); setMessages([]); setSubject(""); setTarget(value); }
+
+  async function createFolder() {
+    const name = window.prompt("New folder name (e.g. Resolved)")?.trim();
+    if (!name) return;
+    try { await apiPost("/api/messages/folders", { name }); loadFolders(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create folder"); }
+  }
+  async function renameFolder(f: Folder) {
+    const name = window.prompt("Rename folder", f.name)?.trim();
+    if (!name || name === f.name) return;
+    try { await api(`/api/messages/folders/${encodeURIComponent(f.id)}`, { method: "PUT", body: JSON.stringify({ name }) }); loadFolders(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t rename folder"); }
+  }
+  async function deleteFolder(f: Folder) {
+    if (!window.confirm(`Delete “${f.name}”? Its conversations move back to the Inbox.`)) return;
+    try {
+      await api(`/api/messages/folders/${encodeURIComponent(f.id)}`, { method: "DELETE" });
+      if (activeFolder === f.id) setActiveFolder("all");
+      loadFolders(); loadThreads();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t delete folder"); }
+  }
+  async function moveThread(threadId: string, folderId: string | null) {
+    try { await api(`/api/messages/threads/${encodeURIComponent(threadId)}/folder`, { method: "PUT", body: JSON.stringify({ folderId }) }); loadThreads(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t move conversation"); }
+  }
 
   async function send() {
     if (!draft.trim()) return;
@@ -115,7 +155,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     unread: allThreads.filter((t) => unread(t) > 0).length,
     reply: allThreads.filter(needsReply).length,
   };
+  const inFolder = (t: Thread) => (activeFolder === "all" ? true : t.folderId === activeFolder);
+  const folderCount = (id: string) => allThreads.filter((t) => t.folderId === id).length;
   const shownThreads = allThreads.filter((t) => {
+    if (!inFolder(t)) return false;
     if (statusFilter === "unread" && unread(t) === 0) return false;
     if (statusFilter === "reply" && !needsReply(t)) return false;
     if (q.trim()) {
@@ -153,19 +196,52 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     // -m-5/p-5 bleeds the light surface to the edges of the (dark-shell) content
     // area so the whole Messages page reads light, like the customer dashboard.
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
-        <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setMessages([]); setTarget(""); setSubject(""); }}>＋ New message</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setMessages([]); setTarget(""); setSubject(""); }}>
+            ＋ {mode === "operator" ? "Message customers" : "New message"}
+          </Button>
+          {mode === "operator" && portalSeg !== "staff" && (
+            <Link href={`/${portalSeg}/activityos`}>
+              <Button>✦ Message ActivityOS</Button>
+            </Link>
+          )}
+        </div>
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
-      <div className="grid gap-3 md:grid-cols-[280px_1fr]">
+      <div className="grid gap-3 md:grid-cols-[320px_1fr]">
         <Card className="p-1.5">
           {!threads ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
           : threads.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">No conversations yet.</div>
           : (
             <div className="flex flex-col">
               <div className="px-1 pb-1.5">
+                {mode === "operator" && (
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1">
+                    <button type="button" onClick={() => setActiveFolder("all")}
+                      className="rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors"
+                      style={activeFolder === "all" ? { borderColor: "var(--cta)", background: "var(--cta)", color: "var(--cta-ink)" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+                      All {allThreads.length}
+                    </button>
+                    {folders.map((f) => {
+                      const on = activeFolder === f.id;
+                      return (
+                        <span key={f.id} className="inline-flex items-center rounded-full border" style={on ? { borderColor: "var(--cta)", background: "var(--cta)", color: "var(--cta-ink)" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
+                          <button type="button" onClick={() => setActiveFolder(f.id)} className="py-1 pl-2.5 text-[11px] font-bold">📁 {f.name} {folderCount(f.id)}</button>
+                          {on ? (
+                            <>
+                              <button type="button" onClick={() => renameFolder(f)} title="Rename" className="px-1 text-[11px] leading-none">✎</button>
+                              <button type="button" onClick={() => deleteFolder(f)} title="Delete" className="pr-2 text-[13px] leading-none">×</button>
+                            </>
+                          ) : <span className="pr-2.5" />}
+                        </span>
+                      );
+                    })}
+                    <button type="button" onClick={createFolder} className="rounded-full border border-dashed border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Folder</button>
+                  </div>
+                )}
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -191,15 +267,22 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   })}
                 </div>
               </div>
-              {shownThreads.map((t) => (
-                <button key={t.id} type="button" onClick={() => open(t.id)} className={`flex flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition ${openId === t.id ? "bg-[var(--panel)]" : "hover:bg-[var(--panel)]"}`}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{t.subject || other(t)}</span>
-                    {unread(t) > 0 && <Badge tone={{ bg: "var(--brand)", fg: "#fff" }}>{unread(t)}</Badge>}
-                  </div>
-                  <div className="truncate text-[11.5px] text-[var(--ink-3)]">{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? "You: " : ""}{t.lastBody}</div>
-                </button>
-              ))}
+              {shownThreads.map((t) => {
+                const initial = (t.parentName || t.parentEmail || t.tenantName || "?").trim()[0]?.toUpperCase() ?? "?";
+                return (
+                  <button key={t.id} type="button" onClick={() => open(t.id)} className={`flex items-start gap-2.5 rounded-xl px-2 py-2 text-left transition ${openId === t.id ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
+                    <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>{initial}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{t.subject || other(t)}</span>
+                        <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(t.lastAt)}</span>
+                        {unread(t) > 0 && <Badge tone={{ bg: "var(--brand)", fg: "#fff" }}>{unread(t)}</Badge>}
+                      </div>
+                      <div className="truncate text-[11.5px] text-[var(--ink-3)]">{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? "You: " : ""}{t.lastBody}</div>
+                    </div>
+                  </button>
+                );
+              })}
               {startable.length > 0 && (
                 <>
                   <div className="px-2.5 pb-1 pt-2.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">
@@ -248,9 +331,39 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <div className="flex flex-1 items-center justify-center text-[12.5px] text-[var(--ink-3)]">Pick a conversation, or start a new one.</div>
           ) : (
             <div className="flex flex-1 flex-col">
-              <div className="border-b border-[var(--line)] px-3.5 py-2.5">
-                <div className="text-[13px] font-extrabold">{active.subject || other(active)}</div>
-                {active.subject && <div className="text-[11px] text-[var(--ink-3)]">{other(active)}</div>}
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-extrabold">{active.subject || other(active)}</div>
+                  {active.subject && <div className="truncate text-[11px] text-[var(--ink-3)]">{other(active)}</div>}
+                </div>
+                {mode === "operator" && (
+                  <label className="flex flex-none items-center gap-1 text-[11px] font-bold text-[var(--ink-3)]">
+                    Move to
+                    <Select
+                      value={active.folderId ?? ""}
+                      onChange={async (e) => {
+                        const v = e.target.value;
+                        if (v === "__new") {
+                          const name = window.prompt("New folder name (e.g. Resolved)")?.trim();
+                          if (!name) return;
+                          try {
+                            const f = await apiPost<{ id: string }>("/api/messages/folders", { name });
+                            loadFolders();
+                            moveThread(active.id, f.id);
+                          } catch (err) { setError(err instanceof Error ? err.message : "Couldn’t create folder"); }
+                          return;
+                        }
+                        moveThread(active.id, v || null);
+                      }}
+                      className="!py-1 text-[11.5px]"
+                    >
+                      <option value="">🗂 No folder</option>
+                      {folders.map((f) => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
+                      <option disabled>──────────</option>
+                      <option value="__new">＋ New folder…</option>
+                    </Select>
+                  </label>
+                )}
               </div>
               {/* Legend — blue is you, pink is the other side, at a glance. */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-3.5 py-1.5 text-[10px] font-bold text-[var(--ink-3)]">
