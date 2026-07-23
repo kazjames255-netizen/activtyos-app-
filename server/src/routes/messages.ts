@@ -189,14 +189,19 @@ messages.post("/from-booking", async (req, res) => {
 
   const pName = await tenantName(tenantId);
   // Venue lives on the tenant's venues[], reached via the listing's venueId.
+  // Bookings don't always store listingId, so fall back to matching the listing
+  // by name within the tenant.
   let venueName = "";
-  if (b.listingId) {
-    const lSnap = await db.collection("listings").doc(b.listingId).get();
-    const venueId = lSnap.data()?.venueId as string | undefined;
-    if (venueId) {
-      const venues = (await db.collection("tenants").doc(tenantId).get()).data()?.venues as { id: string; name: string }[] | undefined;
-      venueName = venues?.find((v) => v.id === venueId)?.name ?? "";
-    }
+  let venueId: string | undefined;
+  if (b.listingId) venueId = (await db.collection("listings").doc(b.listingId).get()).data()?.venueId as string | undefined;
+  if (!venueId && b.listing) {
+    const ls = await db.collection("listings").where("tenantId", "==", tenantId).get();
+    const match = ls.docs.find((d) => { const x = d.data() as { name?: string; title?: string }; return x.name === b.listing || x.title === b.listing; });
+    venueId = match?.data()?.venueId as string | undefined;
+  }
+  if (venueId) {
+    const venues = (await db.collection("tenants").doc(tenantId).get()).data()?.venues as { id: string; name: string }[] | undefined;
+    venueName = venues?.find((v) => v.id === venueId)?.name ?? "";
   }
   const vars: MergeVars = {
     parentName: b.booker,
