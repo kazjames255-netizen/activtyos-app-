@@ -49,16 +49,27 @@ type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers"
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
 // store the rest of this page uses — so it manages its own load/save.
+interface MsgSettings { emailOnNewMessage: boolean; notifyEmail: string; accountEmail: string }
 function NotificationsTab() {
-  const [on, setOn] = useState<boolean | null>(null);
+  const [s, setS] = useState<MsgSettings | null>(null);
+  const [draft, setDraft] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [savedEmail, setSavedEmail] = useState(false);
   useEffect(() => {
-    apiGet<{ emailOnNewMessage: boolean }>("/api/messages/settings").then((s) => setOn(s.emailOnNewMessage)).catch(() => setOn(true));
+    apiGet<MsgSettings>("/api/messages/settings").then((d) => { setS(d); setDraft(d.notifyEmail); }).catch(() => setS({ emailOnNewMessage: true, notifyEmail: "", accountEmail: "" }));
   }, []);
-  async function change(v: boolean) {
-    setOn(v); setErr(null);
-    try { await api("/api/messages/settings", { method: "PUT", body: JSON.stringify({ emailOnNewMessage: v }) }); }
-    catch (e) { setOn(!v); setErr(e instanceof Error ? e.message : "Couldn’t save"); }
+  async function put(patch: Partial<MsgSettings>) {
+    setErr(null);
+    try {
+      const next = await api<MsgSettings>("/api/messages/settings", { method: "PUT", body: JSON.stringify(patch) });
+      setS(next); setDraft(next.notifyEmail);
+      return true;
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); return false; }
+  }
+  async function change(v: boolean) { if (s) setS({ ...s, emailOnNewMessage: v }); await put({ emailOnNewMessage: v }); }
+  async function saveEmail() {
+    if (draft.trim() === (s?.notifyEmail ?? "")) return;
+    if (await put({ notifyEmail: draft.trim() })) { setSavedEmail(true); setTimeout(() => setSavedEmail(false), 1800); }
   }
   return (
     <Card className="p-5">
@@ -69,8 +80,21 @@ function NotificationsTab() {
           <div className="text-[13.5px] font-bold">Email me when I get a new message</div>
           <div className="text-[12px] text-[var(--ink-3)]">We’ll email you the message with a link straight to the conversation.</div>
         </div>
-        {on !== null && <Toggle on={on} onChange={change} />}
+        {s && <Toggle on={s.emailOnNewMessage} onChange={change} />}
       </div>
+      {s?.emailOnNewMessage && (
+        <div className="mt-3 rounded-xl border border-[var(--line)] px-4 py-3">
+          <div className="text-[13.5px] font-bold">Send alerts to</div>
+          <div className="mb-2 text-[12px] text-[var(--ink-3)]">Leave blank to use your account email{s.accountEmail ? ` (${s.accountEmail})` : ""}.</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input type="email" value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={saveEmail}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              placeholder={s.accountEmail || "you@example.com"} className="min-w-[240px] flex-1" />
+            <Button onClick={saveEmail}>Save</Button>
+            {savedEmail && <span className="text-[12px] font-bold text-[#0f7a44]">✓ Saved</span>}
+          </div>
+        </div>
+      )}
       {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
     </Card>
   );
