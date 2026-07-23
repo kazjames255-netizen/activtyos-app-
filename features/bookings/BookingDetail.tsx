@@ -699,7 +699,18 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         </div>
 
         {/* Actions */}
-        <div className="mt-3.5 flex flex-wrap gap-[7px] border-t border-[var(--line-2)] pt-3.5">
+        <div className="mt-3.5 flex flex-wrap items-center gap-[7px] border-t border-[var(--line-2)] pt-3.5">
+          {b.email && (
+            <button
+              type="button"
+              onClick={() => setMessaging(true)}
+              className="mr-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_-4px_rgba(29,58,143,.6)] transition-transform hover:-translate-y-px active:translate-y-0"
+              style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)" }}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
+              Message family
+            </button>
+          )}
           {b.past === true && (
             <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>Activity completed</Badge>
           )}
@@ -774,7 +785,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>
             Change date
           </Button>
-          {b.email && <Button onClick={() => setMessaging(true)}>✉️ Message family</Button>}
         </div>
       </Card>
     </div>
