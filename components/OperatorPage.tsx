@@ -73,11 +73,11 @@ export function TabStrip<T extends string>({
             key={key}
             type="button"
             onClick={() => onChange(key)}
-            className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+            className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={
               on
-                ? { borderColor: "transparent", background: "var(--brand-soft)", color: "var(--brand-ink)" }
-                : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }
+                ? { borderColor: "transparent", background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.55)" }
+                : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }
             }
           >
             {label}
