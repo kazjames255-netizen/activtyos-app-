@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { MERGE_FIELDS } from "@/lib/merge-fields";
 import { Button, Card, Input } from "@/components/ui";
 
 const LIGHT_PALETTE = {
@@ -11,7 +12,6 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
-const MERGE_FIELDS = ["{ParentName}", "{ChildName}", "{ProviderName}", "{ListingName}", "{SessionDate}", "{VenueName}", "{BookingRef}"];
 
 interface Template { id: string; name: string; subject?: string; body: string; preset?: boolean }
 
@@ -73,10 +73,13 @@ function TemplateModal({ initial, onDone }: { initial?: Template; onDone: (chang
               placeholder="Write the message…" className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]" />
           </div>
           <div>
-            <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Insert a merge field (fills per recipient)</div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Insert a merge field — click to add; each fills per recipient on send</div>
+            <div className="flex flex-col gap-1">
               {MERGE_FIELDS.map((f) => (
-                <button key={f} type="button" onClick={() => insert(f)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--brand-strong)] hover:bg-[var(--panel)]">{f}</button>
+                <button key={f.token} type="button" onClick={() => insert(f.token)} className="flex items-baseline gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-left hover:bg-[var(--panel)]">
+                  <span className="w-[112px] flex-none text-[11.5px] font-bold text-[var(--brand-strong)]">{f.token}</span>
+                  <span className="text-[11.5px] text-[var(--ink-3)]">{f.desc}{f.bookingScoped ? " · needs a booking" : ""}</span>
+                </button>
               ))}
             </div>
           </div>

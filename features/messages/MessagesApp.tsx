@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { mergeFieldsFor } from "@/lib/merge-fields";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 
@@ -45,7 +46,6 @@ const mergeText = (text: string, v: { parentName?: string; providerName?: string
     .replace(/\{ParentName\}/gi, v.parentName ?? "")
     .replace(/\{ProviderName\}/gi, v.providerName ?? "")
     .replace(/\{ChildName\}/gi, v.childName ?? "");
-const MERGE_FIELDS = ["{ParentName}", "{ChildName}", "{ProviderName}", "{ListingName}", "{SessionDate}", "{VenueName}"];
 interface Message { id: string; from: "operator" | "parent"; senderName?: string; body: string; createdAt?: string }
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
@@ -297,9 +297,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <option value="">{templates.length ? "Insert template…" : "No templates yet"}</option>
             {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
-          {MERGE_FIELDS.map((f) => (
-            <button key={f} type="button" title="Insert merge field" onClick={() => setDraft((d) => (d ? `${d} ` : "") + f)}
-              className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f}</button>
+          {mergeFieldsFor(composeMode === "group" ? "listing" : "family").map((f) => (
+            <button key={f.token} type="button" title={`${f.token} — ${f.desc}`} onClick={() => setDraft((d) => (d ? `${d} ` : "") + f.token)}
+              className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>
           ))}
           <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Save as template</button>
           <Link href={`/${portalSeg}/templates`} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] no-underline hover:text-[var(--ink)]">⚙ Manage</Link>
