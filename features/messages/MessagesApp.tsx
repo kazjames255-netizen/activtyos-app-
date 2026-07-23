@@ -116,7 +116,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useEffect(() => { loadBroadcasts(); }, [loadBroadcasts]);
   useEffect(() => {
     if (mode === "parent") apiGet<Provider[]>("/api/my/providers").then(setProviders).catch(() => {});
-    else apiGet<Customer[]>("/api/customers").then((c) => setCustomers(c.filter((x) => x.email))).catch(() => {});
+    // Only families with a valid email — you can't message the others, and a bad
+    // address would otherwise break a broadcast.
+    else apiGet<Customer[]>("/api/customers").then((c) => setCustomers(c.filter((x) => x.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.email)))).catch(() => {});
   }, [mode]);
   // Operator listing names, for the "message a whole listing" broadcast.
   useEffect(() => {

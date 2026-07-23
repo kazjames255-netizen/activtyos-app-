@@ -2726,6 +2726,37 @@ email/WhatsApp channels and AI are bigger / Phase-2 and need backend first.
   reads `children[].name` off the customer doc you already return. No change
   needed there; just don't drop `children` from the `/api/customers` payload.
 
+## JJ — Email on new message: outbound DONE, reply-by-email needs you
+
+Kaz's ask: "email me when I get a new message; the email shows the message + a
+link, and I can reply to the email and it stores back in the thread."
+
+**Outbound — done my side** (`server/src/lib/emails.ts` `emailNewMessage`, called
+from `POST /api/messages`): the recipient gets an email with the quoted message
++ a "Take me to the message" deep link. Operator-side gated by tenant
+`emailOnNewMessage` (default on). Dev uses Ethereal (preview URLs in the log).
+Two things for you:
+- **Settings toggle** — persist `emailOnNewMessage` per tenant so the on/off
+  control has a home. I'll add the toggle UI to Setup once the key's storable.
+- **Per-provider from-address** (white-label) — currently one `MAIL_FROM`.
+
+**Reply-by-email — needs you (inbound infra).** Letting a reply to that email
+land back in the thread needs an inbound mail pipeline:
+- **Reply-to routing** — send with a `Reply-To` that encodes the thread, e.g.
+  `reply+<threadId>@inbound.yourdomain` (plus-addressing) or a per-thread alias.
+- **Provider inbound parse** — SendGrid Inbound Parse / Postmark inbound /
+  Mailgun routes → **`POST /api/messages/inbound`** (new). Verify the provider's
+  signature; reject anything unsigned.
+- **Ingest** — parse the sender + body (strip quoted history/signatures), resolve
+  the thread from the reply-to token (fallback: `In-Reply-To`/`References`
+  Message-IDs), confirm the sender is that thread's participant, then append a
+  message from the correct side (`from: "parent"` or `"operator"`) exactly like
+  the in-app POST (bump unread, flip `operatorHidden:false`).
+- **Dedupe by Message-ID** — store the `Message-ID` of every outbound + inbound
+  mail; drop a re-delivered duplicate (the manual calls this out explicitly).
+- Once it's live I'll add "you can also reply to this email" to the template and
+  wire nothing else — the inbound just appears as a normal reply in the thread.
+
 ---
 
 # Run the day: Tasks, Trips, Schedule (+ Calendar/Locations) — 21 July 2026 (Swagger v0.20.0)
