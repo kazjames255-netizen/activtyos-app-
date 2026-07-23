@@ -219,6 +219,65 @@ my.get("/providers", async (req, res) => {
   res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
 });
 
+// GET /api/my/coupons — discount codes a parent can actually use: the PUBLIC
+// codes ("anyone can use it") of every provider they've booked with, plus any
+// code reserved specifically for their email. Only usable ones (active, not
+// expired, not fully used). Powers the custdash "Coupons & discount codes" area
+// so a public code an operator creates is discoverable, not just knowable.
+my.get("/coupons", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const el = email.toLowerCase();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Providers the parent has booked with.
+  const bk = await bookingsCol.where("email", "==", email).get();
+  const tenantIds = [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 30);
+
+  // Public codes for those providers + any code reserved for this parent.
+  const codeDocs = new Map<string, FirebaseFirestore.DocumentData & { id: string }>();
+  const codesCol = db.collection("discountCodes");
+  for (const tid of tenantIds) {
+    const snap = await codesCol.where("tenantId", "==", tid).get();
+    snap.docs.forEach((d) => codeDocs.set(d.id, { id: d.id, ...(d.data() as Record<string, unknown>) }));
+  }
+  const reserved = await codesCol.where("assignedTo", "==", el).get();
+  reserved.docs.forEach((d) => codeDocs.set(d.id, { id: d.id, ...(d.data() as Record<string, unknown>) }));
+
+  const usable = [...codeDocs.values()]
+    .map((c) => c as DiscountCodeDoc & { id: string })
+    .filter((c) => c.active !== false)
+    .filter((c) => !c.expiry || c.expiry >= today)
+    .filter((c) => c.usageLimit == null || (c.usedCount ?? 0) < c.usageLimit)
+    .filter((c) => !c.assignedTo || c.assignedTo.toLowerCase() === el); // public OR reserved for me
+
+  // Resolve provider + listing names in one batch each.
+  const tIds = [...new Set(usable.map((c) => c.tenantId))];
+  const lIds = [...new Set(usable.map((c) => c.listingId).filter(Boolean) as string[])];
+  const [tenants, listings] = await Promise.all([
+    tIds.length ? db.getAll(...tIds.map((id) => db.collection("tenants").doc(id))) : Promise.resolve([]),
+    lIds.length ? db.getAll(...lIds.map((id) => db.collection("listings").doc(id))) : Promise.resolve([]),
+  ]);
+  const tName = new Map(tenants.filter((t) => t.exists).map((t) => [t.id, (t.data()!.name as string) ?? "Your provider"]));
+  const lName = new Map(listings.filter((l) => l.exists).map((l) => [l.id, (l.data()!.title as string) ?? "a listing"]));
+
+  const out = usable
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      type: c.type,
+      value: c.value,
+      minSpend: c.minSpend ?? null,
+      expiry: c.expiry ?? null,
+      listingId: c.listingId ?? null,
+      listingName: c.listingId ? (lName.get(c.listingId) ?? null) : null,
+      provider: tName.get(c.tenantId) ?? "Your provider",
+      reserved: !!c.assignedTo,
+    }))
+    .sort((a, b) => (a.provider === b.provider ? a.code.localeCompare(b.code) : a.provider.localeCompare(b.provider)));
+  res.json(out);
+});
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // POST /api/my/bookings — parent checkout. Takes a BASKET (or the legacy

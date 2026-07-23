@@ -3010,6 +3010,14 @@ still holds. All additive; existing codes are unaffected.
   **Edit**, a **Generate** code (name-based when a family is reserved, else
   random), auto-code-from-family-name (`SURNAME+year`), the family-reserve
   picker, listing scope, and the one-per-customer toggle.
+- **Customer coupons area (new):** `GET /api/my/coupons` returns the codes a
+  parent can actually use — the **public** ("anyone can use it", i.e. no
+  `assignedTo`) codes of every provider they've **booked with**, plus any code
+  **reserved for their email**. Filtered to usable only (active, not expired,
+  not fully used) and enriched with `provider` + `listingName`. Powers the
+  custdash **"Coupons & discount codes"** nav item (`CouponsApp`) — read-only
+  discovery; the parent copies a code into the existing checkout box. Reference
+  impl in `server/src/routes/my.ts`.
 - **No-expiry semantics (already correct, please keep):** a code with **no
   `expiry`** never expires — `checkCode` only rejects when `expiry` is set and
   in the past. The UI now tells operators this, and adds that a listing-scoped
