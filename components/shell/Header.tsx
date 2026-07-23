@@ -42,7 +42,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number }[] =
     portal === "custdash"
       ? [
-          ...(customerArea.messaging ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread }] : []),
+          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread }] : []),
           ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 }] : []),
           { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
         ]

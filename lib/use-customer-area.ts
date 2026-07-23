@@ -7,6 +7,11 @@ import type { PortalKey } from "@/lib/nav/config";
 
 export type CustomerArea = TenantSettings["customerArea"];
 
+// The only custdash views kept when the provider turns on Simple mode — the
+// booking essentials: home, view/book activities, bookings, child profiles,
+// account/privacy, and "report a problem". Everything else is hidden.
+export const SIMPLE_ALLOWED = new Set(["dash", "browse", "bookings", "children", "account", "privacy", "activityos"]);
+
 // What a family sees is set by THEIR provider (Setup → Customer area). A parent
 // reads it from their single provider's public library. Everything defaults to
 // shown until the settings load, so nothing flickers away and back.
