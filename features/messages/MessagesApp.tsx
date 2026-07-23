@@ -61,18 +61,19 @@ const familySub = (c: Customer) => {
 };
 const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 
-// A copyable discount-code chip shown under a code message — the code stands out
-// and one tap copies it, with the value / scope / expiry spelt out beneath.
+// The discount-code details shown under a code message. No copy button — the
+// code is already waiting at checkout (tap-to-apply), so this just shows what it
+// is and where it works.
 function CouponChip({ coupon }: { coupon: { code: string; valueTxt?: string; scope?: string; expiry?: string | null } }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => { try { await navigator.clipboard.writeText(coupon.code); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* still shown to type */ } };
   const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? `until ${coupon.expiry}` : "no expiry"].filter(Boolean).join(" · ");
   return (
-    <button type="button" onClick={copy} title="Copy code" className="mt-1.5 flex w-full items-center gap-2 rounded-xl bg-white/15 px-2.5 py-1.5 text-left backdrop-blur-sm transition-colors hover:bg-white/25">
-      <span className="font-mono text-[15px] font-extrabold tracking-wider text-white">{coupon.code}</span>
-      <span className="min-w-0 flex-1 truncate text-[10.5px] text-white/80">{meta}</span>
-      <span className="flex-none rounded-full bg-white/25 px-2 py-0.5 text-[10.5px] font-bold text-white">{copied ? "Copied ✓" : "Copy"}</span>
-    </button>
+    <div className="mt-1.5 rounded-xl bg-white/15 px-2.5 py-1.5 backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[15px] font-extrabold tracking-wider text-white">{coupon.code}</span>
+        <span className="min-w-0 flex-1 truncate text-[10.5px] text-white/80">{meta}</span>
+      </div>
+      <div className="mt-0.5 text-[10.5px] text-white/70">✓ Ready at checkout — just tap it to apply.</div>
+    </div>
   );
 }
 

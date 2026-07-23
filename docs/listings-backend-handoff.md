@@ -3039,6 +3039,18 @@ still holds. All additive; existing codes are unaffected.
   assign time — changing a group later doesn't retro-update already-sent codes
   (re-assign to re-send). Managed in `MarketingApp` (👥 Parent groups panel +
   the code form's "…or a group" picker).
+- **Stacking + exclusive (new):** discount codes **stack by default** — a parent
+  can apply several on one booking and the reductions sum. A code flagged
+  **`exclusive`** (`codeBase.exclusive`, UI "Can't be used with any other code")
+  must be the only code on the order. Checkout sends **`discountCodes: string[]`**
+  to `POST /api/my/bookings` (legacy `discountCode` still accepted); the server
+  loads each, rejects the batch if any exclusive code is combined, validates each
+  (`checkCode` against the pass subtotal + per-customer via `discountRedemptions`),
+  **sums the offs capped at the subtotal**, spreads across the basket, records a
+  redemption + `usedCount++` per code, and writes `discountCodes[]` (+ joined
+  `discountCode`) on the booking. `/api/discounts/validate` returns `exclusive`
+  so the client can enforce the rule live. Each code is priced against the pass
+  subtotal independently (additive percentages, not compounding).
 - **No-expiry semantics (already correct, please keep):** a code with **no
   `expiry`** never expires — `checkCode` only rejects when `expiry` is set and
   in the past. The UI now tells operators this, and adds that a listing-scoped

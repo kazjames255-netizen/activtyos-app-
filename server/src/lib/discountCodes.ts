@@ -20,6 +20,7 @@ export interface DiscountCodeDoc {
   assignedGroupName?: string;
   listingId?: string; // if set, ONLY bookings for this listing qualify
   perCustomerLimit?: boolean; // one redemption per customer (enforced in the route)
+  exclusive?: boolean; // can't be combined with any other code (codes stack by default)
 }
 
 /** The emails a reserved code is limited to (single family + group members). */

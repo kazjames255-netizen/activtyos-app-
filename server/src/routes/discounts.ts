@@ -23,6 +23,7 @@ const codeBase = z.object({
   usageLimit: z.number().int().positive().max(1_000_000).optional(),
   listingId: z.string().trim().max(60).optional(), // scope to one listing
   perCustomerLimit: z.boolean().optional(), // one use per customer
+  exclusive: z.boolean().optional(), // can't be combined with any other code
   // Reserve a code for one family (by email) — only they can redeem it, and
   // creating it messages + emails them.
   assignedTo: z.string().trim().email().max(160).optional(),
@@ -254,5 +255,5 @@ discounts.post("/validate", async (req, res) => {
   }
   const check = checkCode(data, parsed.data.subtotal, new Date().toISOString().slice(0, 10), { email, listingId: parsed.data.listingId, attendees: parsed.data.attendees });
   if (!check.ok) { res.json({ valid: false, reason: check.reason }); return; }
-  res.json({ valid: true, code: normaliseCode(parsed.data.code), off: check.off });
+  res.json({ valid: true, code: normaliseCode(parsed.data.code), off: check.off, exclusive: !!data.exclusive });
 });
