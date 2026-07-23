@@ -44,7 +44,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "refer" | "notifications";
+type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "customer" | "refer" | "notifications";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1111,6 +1111,7 @@ export function SetupApp() {
     );
 
   const TABS: [Tab, string][] = [
+    ["features", "Features"],
     ["people", "Child questions"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
@@ -1413,6 +1414,36 @@ export function SetupApp() {
           </Row>
         </Section>
       )}
+
+      {tab === "features" && (() => {
+        const fe = settings.features;
+        const setFe = (key: keyof typeof fe, v: boolean) => set("features", { ...fe, [key]: v });
+        const rows: { key: keyof typeof fe; icon: string; label: string; hint: string }[] = [
+          { key: "messaging", icon: "💬", label: "Messages", hint: "Message families and take theirs. Off hides it for you and them." },
+          { key: "discountCodes", icon: "🏷️", label: "Discount codes", hint: "Promo codes at checkout, plus the customer coupons page & banner." },
+          { key: "referrals", icon: "🎁", label: "Refer a friend", hint: "The give-X-get-X referral programme (both sides)." },
+          { key: "newsfeed", icon: "📢", label: "Newsfeed", hint: "Post updates families see in their area." },
+          { key: "moments", icon: "📷", label: "Photos / moments", hint: "Share photos of a child's day with families." },
+          { key: "meals", icon: "🍽️", label: "Meals", hint: "Meal menus and ordering alongside bookings." },
+          { key: "memberships", icon: "⭐", label: "Memberships", hint: "Membership plans for families." },
+          { key: "trips", icon: "🚌", label: "Trips & visits", hint: "Plan and record off-site trips." },
+          { key: "medication", icon: "💊", label: "Medication", hint: "Record and administer medication." },
+          { key: "documents", icon: "📄", label: "Documents", hint: "Your document library." },
+          { key: "ai", icon: "✦", label: "AI assistant", hint: "The in-app AI helper." },
+        ];
+        return (
+          <Section
+            title="Your features"
+            lede="Switch off anything you don't use — it disappears from your dashboard, and where families see it too (messages, coupons, referrals, photos…) it turns off for them as well. Bookings, listings, customers, finance and setup are always on."
+          >
+            {rows.map((r) => (
+              <Row key={r.key} label={`${r.icon}  ${r.label}`} hint={r.hint}>
+                <Toggle on={fe[r.key]} onChange={(v) => setFe(r.key, v)} labels={["On", "Off"]} />
+              </Row>
+            ))}
+          </Section>
+        );
+      })()}
 
       {tab === "customer" && (() => {
         const ca = settings.customerArea;

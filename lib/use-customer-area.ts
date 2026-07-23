@@ -6,6 +6,15 @@ import { DEFAULT_SETTINGS, withDefaults, type TenantSettings } from "@/lib/setti
 import type { PortalKey } from "@/lib/nav/config";
 
 export type CustomerArea = TenantSettings["customerArea"];
+export type Features = TenantSettings["features"];
+
+// Operator nav view → the feature switch that hides it (Setup → Features).
+export const FEATURE_VIEW_KEY: Record<string, keyof Features> = {
+  messages: "messaging", marketing: "discountCodes", referrals: "referrals",
+  newsfeed: "newsfeed", moments: "moments", meals: "meals", menus: "meals",
+  memberships: "memberships", trips: "trips", medication: "medication",
+  documents: "documents", ai: "ai",
+};
 
 // The only custdash views kept when the provider turns on Simple mode — the
 // booking essentials: home, view/book activities, bookings, child profiles,
@@ -30,11 +39,37 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
       .then((lib) => {
         if (!live) return;
         const full = withDefaults(lib?.settings ?? null);
-        // "Refer a friend" only shows when the provider actually runs referrals.
-        setCa({ ...full.customerArea, refer: full.customerArea.refer && full.referral.enabled });
+        const ca = { ...full.customerArea };
+        const fe = full.features;
+        // A module the operator switched off (Setup → Features) is hidden for
+        // families too. Refer also needs the referral programme actually on.
+        ca.messaging = ca.messaging && fe.messaging;
+        ca.coupons = ca.coupons && fe.discountCodes;
+        ca.codesBanner = ca.codesBanner && fe.discountCodes;
+        ca.newsfeed = ca.newsfeed && fe.newsfeed;
+        ca.moments = ca.moments && fe.moments;
+        ca.meals = ca.meals && fe.meals;
+        ca.memberships = ca.memberships && fe.memberships;
+        ca.refer = ca.refer && full.referral.enabled && fe.referrals;
+        setCa(ca);
       })
       .catch(() => {});
     return () => { live = false; };
   }, [portal]);
   return ca;
+}
+
+// The operator's own module switches (Setup → Features), for hiding their nav.
+// Reads their library once; a no-op for families/staff/platform.
+export function useOperatorFeatures(portal?: PortalKey): Features {
+  const [fe, setFe] = useState<Features>(DEFAULT_SETTINGS.features);
+  useEffect(() => {
+    if (!portal || portal === "custdash" || portal === "platform" || portal === "staff") return;
+    let live = true;
+    void apiGet<{ settings?: Partial<TenantSettings> } | null>("/api/library")
+      .then((lib) => { if (live) setFe(withDefaults(lib?.settings ?? null).features); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [portal]);
+  return fe;
 }
