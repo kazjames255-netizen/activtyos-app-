@@ -525,6 +525,19 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               )}
             </div>
           </div>
+          {b.email && (
+            <button
+              type="button"
+              onClick={() => setMessaging(true)}
+              className="group inline-flex flex-none items-center gap-2 self-start rounded-full px-5 py-2.5 text-[13.5px] font-extrabold uppercase tracking-[0.04em] text-white ring-2 ring-white/60 shadow-[0_8px_22px_-6px_rgba(238,31,99,.55)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-6px_rgba(238,31,99,.7)] active:translate-y-0"
+              style={{ background: "linear-gradient(120deg, #2254b3 0%, #6a2fce 55%, #ee1f63 100%)" }}
+            >
+              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/25">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
+              </span>
+              Message family
+            </button>
+          )}
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -700,17 +713,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
         {/* Actions */}
         <div className="mt-3.5 flex flex-wrap items-center gap-[7px] border-t border-[var(--line-2)] pt-3.5">
-          {b.email && (
-            <button
-              type="button"
-              onClick={() => setMessaging(true)}
-              className="mr-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_4px_14px_-4px_rgba(29,58,143,.6)] transition-transform hover:-translate-y-px active:translate-y-0"
-              style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)" }}
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
-              Message family
-            </button>
-          )}
           {b.past === true && (
             <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>Activity completed</Badge>
           )}
