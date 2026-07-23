@@ -63,7 +63,7 @@ export function MarketingApp() {
   return (
     <div className="text-[var(--ink)]">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Marketing</h2>
+        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Discount codes</h2>
         {!open && <Button variant="primary" onClick={() => setOpen(true)}>＋ New discount code</Button>}
       </div>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Discount codes families enter at checkout — percentage or fixed amount, with optional limits.</p>
