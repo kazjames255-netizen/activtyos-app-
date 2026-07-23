@@ -65,7 +65,7 @@ const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-
 // code is already waiting at checkout (tap-to-apply), so this just shows what it
 // is and where it works.
 function CouponChip({ coupon }: { coupon: { code: string; valueTxt?: string; scope?: string; expiry?: string | null } }) {
-  const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? `until ${coupon.expiry}` : "no expiry"].filter(Boolean).join(" · ");
+  const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? `until ${coupon.expiry}` : "no end date"].filter(Boolean).join(" · ");
   return (
     <div className="mt-1.5 rounded-xl bg-white/15 px-2.5 py-1.5 backdrop-blur-sm">
       <div className="flex items-center gap-2">
