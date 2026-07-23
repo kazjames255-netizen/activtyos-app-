@@ -216,9 +216,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         return;
       }
       if (composing) {
-        // Parent side — message one provider.
-        if (!target) { setError("Choose who to message."); return; }
-        const payload = { tenantId: target, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) };
+        // Parent side — message one provider (auto-picked when there's only one).
+        const tid = target || (providers.length === 1 ? providers[0]?.tenantId ?? "" : "");
+        if (!tid) { setError("Choose who to message."); return; }
+        const payload = { tenantId: tid, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) };
         const res = await apiPost<{ threadId: string }>("/api/messages", payload);
         setDraft(""); setComposing(false); setTarget(""); setSubject(""); loadThreads(); open(res.threadId);
       } else {
@@ -577,10 +578,16 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     })()}
                   </div>
                 ) : mode === "parent" ? (
-                  <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
-                    <option value="">Choose…</option>
-                    {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
-                  </Select>
+                  providers.length <= 1 ? (
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] font-bold">
+                      {providers[0]?.name ?? "Your provider"}
+                    </div>
+                  ) : (
+                    <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
+                      <option value="">Choose…</option>
+                      {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
+                    </Select>
+                  )
                 ) : (() => {
                   // Searchable, multi-select family picker (tick one or many).
                   const fq = familyQuery.trim().toLowerCase();
@@ -667,9 +674,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Sends one message to each ticked family booked on the chosen listings.</div>
                 )}
               </div>
-              <div className="flex-1" />
               {proBar}
-              <Composer draft={draft} setDraft={setDraft} onSend={send} />
+              <Composer draft={draft} setDraft={setDraft} onSend={send} big />
             </div>
           ) : !active ? (
             <div className="flex flex-1 items-center justify-center text-[12.5px] text-[var(--ink-3)]">Pick a conversation, or start a new one.</div>
@@ -739,7 +745,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   );
 }
 
-function Composer({ draft, setDraft, onSend }: { draft: string; setDraft: (v: string) => void; onSend: () => void }) {
+function Composer({ draft, setDraft, onSend, big }: { draft: string; setDraft: (v: string) => void; onSend: () => void; big?: boolean }) {
   const lines = draft.split("\n").length;
   return (
     <div className="flex items-end gap-2 border-t border-[var(--line)] p-2.5">
@@ -748,8 +754,8 @@ function Composer({ draft, setDraft, onSend }: { draft: string; setDraft: (v: st
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
         placeholder="Write a message…  (Enter to send · Shift+Enter for a new line)"
-        rows={Math.min(10, Math.max(2, lines))}
-        className="max-h-[240px] min-h-[44px] flex-1 resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]"
+        rows={big ? Math.min(16, Math.max(7, lines)) : Math.min(10, Math.max(2, lines))}
+        className={`flex-1 resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)] ${big ? "max-h-[440px] min-h-[200px]" : "max-h-[240px] min-h-[44px]"}`}
       />
       <Button variant="primary" onClick={onSend} disabled={!draft.trim()}>Send</Button>
     </div>
