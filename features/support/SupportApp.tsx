@@ -18,7 +18,7 @@ const LIGHT_PALETTE = {
   "--line": "#ece6f1",
 } as CSSProperties;
 
-const TOPICS: [string, string][] = [
+const OPERATOR_TOPICS: [string, string][] = [
   ["general", "General question"],
   ["billing", "Billing & payouts"],
   ["bug", "Something’s broken"],
@@ -26,9 +26,16 @@ const TOPICS: [string, string][] = [
   ["onboarding", "Account & onboarding"],
   ["compliance", "Compliance"],
 ];
-const topicLabel = (t?: string) => TOPICS.find(([v]) => v === t)?.[1] ?? "General question";
+const CUSTOMER_TOPICS: [string, string][] = [
+  ["general", "General question"],
+  ["booking", "Help with a booking"],
+  ["payment", "Payment or refund"],
+  ["bug", "Something’s not working"],
+  ["feature", "Idea / suggestion"],
+];
+const topicLabel = (topics: [string, string][], t?: string) => topics.find(([v]) => v === t)?.[1] ?? "General question";
 
-interface SupportMsg { id: string; from: "tenant" | "activityos"; senderName?: string; topic?: string; subject?: string; body: string; createdAt?: string }
+interface SupportMsg { id: string; from: string; senderName?: string; topic?: string; subject?: string; body: string; createdAt?: string }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 /** A separate support channel between the provider and ActivityOS/HQ. */
@@ -41,6 +48,8 @@ export function SupportApp() {
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const portalSeg = usePathname().split("/")[1] || "freelancer";
+  const isCustomer = portalSeg === "custdash";
+  const TOPICS = isCustomer ? CUSTOMER_TOPICS : OPERATOR_TOPICS;
 
   const load = useCallback(() => {
     apiGet<SupportMsg[]>("/api/messages/support").then(setMsgs).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -63,8 +72,8 @@ export function SupportApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>✦ Message ActivityOS</h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">Support, billing and anything about the platform — separate from your customer messages.</p>
+          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isCustomer ? "🛟 Help & support" : "✦ Message ActivityOS"}</h2>
+          <p className="text-[12.5px] text-[var(--ink-3)]">{isCustomer ? "A problem, a question or an idea — message the ActivityOS team. Separate from your messages to providers." : "Support, billing and anything about the platform — separate from your customer messages."}</p>
         </div>
         <Link href={`/${portalSeg}/messages`}><Button>← Back to messages</Button></Link>
       </div>
@@ -81,12 +90,12 @@ export function SupportApp() {
           ) : (
             <div className="flex flex-col gap-2">
               {msgs.map((m) => {
-                const mine = m.from === "tenant";
+                const mine = m.from !== "activityos";
                 return (
                   <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] ${mine ? "self-end bg-[var(--brand)] text-white" : "self-start bg-[var(--panel)] text-[var(--ink)]"}`}>
                     {(m.subject || m.topic) && (
                       <div className={`mb-0.5 text-[10px] font-bold uppercase tracking-[0.04em] ${mine ? "text-white/75" : "text-[var(--ink-3)]"}`}>
-                        {topicLabel(m.topic)}{m.subject ? ` · ${m.subject}` : ""}
+                        {topicLabel(TOPICS, m.topic)}{m.subject ? ` · ${m.subject}` : ""}
                       </div>
                     )}
                     <div className="whitespace-pre-wrap">{m.body}</div>

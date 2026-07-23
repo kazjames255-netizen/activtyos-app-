@@ -34,7 +34,11 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
               header included — so the parent shell is one continuous light
               surface rather than a dark header over a light body. */}
           <div className="flex min-w-0 flex-1 flex-col" style={light ? LIGHT_PALETTE : undefined}>
-            <Header portal={portalKey} />
+            {/* The top bar sits on the light surface in every portal — matching
+                the customer app — instead of the near-black operator surface. */}
+            <div style={light ? undefined : LIGHT_PALETTE}>
+              <Header portal={portalKey} />
+            </div>
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>
           </div>
         </div>

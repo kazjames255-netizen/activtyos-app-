@@ -562,24 +562,31 @@ const supportSchema = z.object({
   topic: z.enum(supportTopics).optional(),
   subject: z.string().trim().max(80).optional(),
 });
+// Support works for operators (scoped by tenant) AND parents (scoped by email).
+function supportScope(req: import("express").Request): { field: "tenantId" | "parentEmail"; value: string } | null {
+  const auth = req.auth!;
+  if (isOperator(auth.role) && auth.tenantId) return { field: "tenantId", value: auth.tenantId };
+  if (auth.role === "parent" && req.user?.email) return { field: "parentEmail", value: req.user.email.toLowerCase() };
+  return null;
+}
 messages.get("/support", async (req, res) => {
-  const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
-  const snap = await supportCol.where("tenantId", "==", tenantId).get();
+  const scope = supportScope(req);
+  if (!scope) { res.status(403).json({ error: "Requires an account" }); return; }
+  const snap = await supportCol.where(scope.field, "==", scope.value).get();
   const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
   list.sort((a, b) => (`${a.createdAt ?? ""}` < `${b.createdAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
 messages.post("/support", async (req, res) => {
-  const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
+  const scope = supportScope(req);
+  if (!scope) { res.status(403).json({ error: "Requires an account" }); return; }
   const parsed = supportSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const doc = {
-    tenantId,
-    tenantName: await tenantName(tenantId),
-    from: "tenant" as const,
-    senderName: req.user?.name ?? "Operator",
+    [scope.field]: scope.value,
+    ...(scope.field === "tenantId" ? { tenantName: await tenantName(scope.value) } : {}),
+    from: "user" as const, // the account holder (operator or parent); HQ replies are "activityos"
+    senderName: req.user?.name ?? (req.auth!.role === "parent" ? "Customer" : "Operator"),
     topic: parsed.data.topic ?? "general",
     subject: parsed.data.subject ?? "",
     body: parsed.data.body,

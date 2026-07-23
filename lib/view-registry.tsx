@@ -197,6 +197,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     schedule: ScheduleApp,
     newsfeed: ParentNewsfeedApp,
     messages: () => <MessagesApp mode="parent" />,
+    activityos: SupportApp,
     meals: ParentMealsApp,
     medication: ParentMedicationApp,
     accidents: ParentAccidentsApp,
