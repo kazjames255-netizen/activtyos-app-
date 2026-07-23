@@ -131,14 +131,14 @@ export function MarketingApp() {
           <div className="mb-3 text-[14px] font-extrabold">{editId ? "Edit discount code" : "New discount code"}</div>
           <div className="grid gap-2.5 sm:grid-cols-3">
             <div>
-              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: randomCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">Generate</button></div>
+              <div className="flex items-baseline justify-between"><FieldLabel>Code</FieldLabel><button type="button" onClick={() => set({ code: f.assignedName ? codeFromFamily(f.assignedName) : randomCode() })} className="text-[11px] font-bold text-[var(--brand-2)]">{f.assignedName ? "Generate from name" : "Generate"}</button></div>
               <Input value={f.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="E.G. SUMMER25" className="w-full uppercase" />
             </div>
             <div><FieldLabel>Discount type</FieldLabel><Select value={f.type} onChange={(e) => set({ type: e.target.value })} className="w-full"><option value="percent">By a percentage</option><option value="amount">A discount per booking</option><option value="perAttendee">A discount per attendee</option></Select></div>
             <div><FieldLabel>{f.type === "percent" ? "Percent off" : f.type === "perAttendee" ? "£ off per child" : "Amount off (£)"}</FieldLabel><Input type="number" min="0" step={f.type === "percent" ? "1" : "0.01"} value={f.value} onChange={(e) => set({ value: e.target.value })} className="w-full" /></div>
             <div><FieldLabel>Min spend (£)</FieldLabel><Input type="number" min="0" step="0.01" value={f.minSpend} onChange={(e) => set({ minSpend: e.target.value })} placeholder="optional" className="w-full" /></div>
-            <div><FieldLabel>Expiry</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /></div>
-            <div><FieldLabel>Usage limit</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder="unlimited" className="w-full" /></div>
+            <div><FieldLabel>Expiry</FieldLabel><Input type="date" value={f.expiry} onChange={(e) => set({ expiry: e.target.value })} className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">Leave blank and it never expires — it just stops when the listing it applies to closes.</p></div>
+            <div><FieldLabel>Usage limit</FieldLabel><Input type="number" min="1" step="1" value={f.usageLimit} onChange={(e) => set({ usageLimit: e.target.value })} placeholder="unlimited" className="w-full" /><p className="mt-1 text-[11px] leading-[1.35] text-[var(--ink-3)]">Total times this code can be redeemed across all families. Blank = unlimited.</p></div>
             <div>
               <FieldLabel>Applies to</FieldLabel>
               <Select value={f.listingId} onChange={(e) => set({ listingId: e.target.value })} className="w-full">

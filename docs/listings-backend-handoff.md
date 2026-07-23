@@ -3005,11 +3005,19 @@ still holds. All additive; existing codes are unaffected.
   reject if a doc exists. On successful checkout, write a
   `discountRedemptions` doc `{codeId, tenantId, email, at}`.
 - **`/validate` body** now also accepts `listingId?` and `attendees?`.
-- **UI** moved from a standalone "Marketing" nav group into **Money**
-  (relabelled "Discount codes") across freelancer/company/franchise. Cards now
-  have **Edit**, a **Generate** random code, auto-code-from-family-name
-  (`SURNAME+year`), the family-reserve picker, listing scope, and the
-  one-per-customer toggle.
+- **UI** — codes live in the **Money** nav group ("Discount codes"); the
+  **Marketing** group is kept as a placeholder for a future feature. Cards have
+  **Edit**, a **Generate** code (name-based when a family is reserved, else
+  random), auto-code-from-family-name (`SURNAME+year`), the family-reserve
+  picker, listing scope, and the one-per-customer toggle.
+- **No-expiry semantics (already correct, please keep):** a code with **no
+  `expiry`** never expires — `checkCode` only rejects when `expiry` is set and
+  in the past. The UI now tells operators this, and adds that a listing-scoped
+  code "stops when the listing closes." That last part is enforced *naturally*
+  (you can't check out a closed listing, so its scoped code can't redeem) — no
+  explicit listing-status check in `checkCode`. **If prod wants belt-and-braces,
+  have `/validate` + redemption reject a `listingId`-scoped code when that
+  listing is archived/closed.**
 
 ---
 
