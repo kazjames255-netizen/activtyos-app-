@@ -479,6 +479,62 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const b = booking;
   const kids = bookingKids(b);
 
+  // The booking's actions — rendered in one row at the top (under the status).
+  const ACTION_BUTTONS = (
+    <>
+      {b.past === true && <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>Activity completed</Badge>}
+      {b.status === "Approval needed" && (
+        <>
+          <Button variant="primary" onClick={() => act(b.ref, "approve")}>Approve</Button>
+          <Button onClick={() => act(b.ref, "decline")}>Decline</Button>
+        </>
+      )}
+      {b.status === "Waitlisted" && (
+        <>
+          <Button variant="primary" onClick={() => act(b.ref, "offer")}>Offer place (2h hold)</Button>
+          <Button onClick={() => act(b.ref, "promote")} title="Seat immediately — may overbook">Promote now</Button>
+        </>
+      )}
+      {b.status === "Offered" && (
+        <>
+          <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "…"}</Badge>
+          <Button onClick={() => act(b.ref, "promote")} title="Confirm without waiting for the family">Confirm now</Button>
+        </>
+      )}
+      {(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (() => {
+        const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+        return (
+          <>
+            {isVoucher && (
+              <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
+                Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card — ActivityOS can&rsquo;t send this for you. If the family took <b>wallet credit</b> there&rsquo;s nothing to do. Otherwise <b>reimburse them back through {b.voucherScheme ?? "the scheme"}</b>, then click below to confirm it&rsquo;s done — the family is told straight away.
+              </div>
+            )}
+            <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
+              {isVoucher ? "Mark refund reimbursed" : `Approve refund${b.paymentIntentId ? " (via Stripe)" : ""}`}
+            </Button>
+            <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
+          </>
+        );
+      })()}
+      {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
+        <>
+          <Button onClick={() => act(b.ref, "paid")}>Mark paid</Button>
+          <Button onClick={() => act(b.ref, "resend")}>Resend invoice</Button>
+        </>
+      )}
+      {b.pay === "Awaiting voucher payment" && (
+        <Button variant="primary" onClick={() => act(b.ref, "paid")}>Mark voucher received</Button>
+      )}
+      {b.status !== "Cancelled" && b.status !== "Declined" && (
+        b.past === true
+          ? <Button variant="cta" onClick={() => cancelOpen(b.ref)}>Refund</Button>
+          : <Button variant="danger" onClick={() => cancelOpen(b.ref)}>Cancel booking</Button>
+      )}
+      <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>Change date</Button>
+    </>
+  );
+
   return (
     <div>
       <div className="mb-3">
@@ -525,19 +581,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               )}
             </div>
           </div>
-          {b.email && (
-            <button
-              type="button"
-              onClick={() => setMessaging(true)}
-              className="group inline-flex flex-none items-center gap-2 self-start rounded-full px-5 py-2.5 text-[13.5px] font-extrabold uppercase tracking-[0.04em] text-white ring-2 ring-white/60 shadow-[0_8px_22px_-6px_rgba(238,31,99,.55)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-6px_rgba(238,31,99,.7)] active:translate-y-0"
-              style={{ background: "linear-gradient(120deg, #2254b3 0%, #6a2fce 55%, #ee1f63 100%)" }}
-            >
-              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/25">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
-              </span>
-              Message family
-            </button>
-          )}
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -547,6 +590,22 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
           )}
+        </div>
+
+        {/* All actions live up here, right under the status. */}
+        <div className="mt-3 flex flex-wrap items-center gap-[7px]">
+          {b.email && (
+            <button
+              type="button"
+              onClick={() => setMessaging(true)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-bold text-white shadow-sm transition-transform hover:-translate-y-px"
+              style={{ background: "var(--brand-2)" }}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></svg>
+              Message family
+            </button>
+          )}
+          {ACTION_BUTTONS}
         </div>
         {messaging && <MessageBookingModal booking={b} onClose={() => setMessaging(false)} />}
 
@@ -711,83 +770,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           </a>
         </div>
 
-        {/* Actions */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-[7px] border-t border-[var(--line-2)] pt-3.5">
-          {b.past === true && (
-            <Badge tone={{ bg: "#eef0f6", fg: "#5b6478" }}>Activity completed</Badge>
-          )}
-          {b.status === "Approval needed" && (
-            <>
-              <Button variant="primary" onClick={() => act(b.ref, "approve")}>
-                Approve
-              </Button>
-              <Button onClick={() => act(b.ref, "decline")}>Decline</Button>
-            </>
-          )}
-          {b.status === "Waitlisted" && (
-            <>
-              <Button variant="primary" onClick={() => act(b.ref, "offer")}>
-                Offer place (2h hold)
-              </Button>
-              <Button onClick={() => act(b.ref, "promote")} title="Seat immediately — may overbook">
-                Promote now
-              </Button>
-            </>
-          )}
-          {b.status === "Offered" && (
-            <>
-              <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>
-                Held until {b.offerExpiresAt ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "…"}
-              </Badge>
-              <Button onClick={() => act(b.ref, "promote")} title="Confirm without waiting for the family">
-                Confirm now
-              </Button>
-            </>
-          )}
-          {/* A refund is owed and not yet actioned — the cancel sets full /
-              partial (or pending); approve/decline move it to approved/declined. */}
-          {(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (() => {
-            const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
-            return (
-              <>
-                {isVoucher && (
-                  <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
-                    Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card — ActivityOS can&rsquo;t send this for you. If the family took <b>wallet credit</b> there&rsquo;s nothing to do. Otherwise <b>reimburse them back through {b.voucherScheme ?? "the scheme"}</b>, then click below to confirm it&rsquo;s done — the family is told straight away.
-                  </div>
-                )}
-                <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
-                  {isVoucher ? "Mark refund reimbursed" : `Approve refund${b.paymentIntentId ? " (via Stripe)" : ""}`}
-                </Button>
-                <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
-              </>
-            );
-          })()}
-          {(b.pay === "Invoice sent" || b.pay === "Unpaid") && (
-            <>
-              <Button onClick={() => act(b.ref, "paid")}>Mark paid</Button>
-              <Button onClick={() => act(b.ref, "resend")}>Resend invoice</Button>
-            </>
-          )}
-          {/* Voucher bookings are paid through the scheme, not the app — the
-              provider confirms the money in once it arrives. */}
-          {b.pay === "Awaiting voucher payment" && (
-            <Button variant="primary" onClick={() => act(b.ref, "paid")}>Mark voucher received</Button>
-          )}
-          {b.status !== "Cancelled" &&
-            b.status !== "Declined" &&
-            (b.past === true ? (
-              <Button variant="cta" onClick={() => cancelOpen(b.ref)}>
-                Refund
-              </Button>
-            ) : (
-              <Button variant="danger" onClick={() => cancelOpen(b.ref)}>
-                Cancel booking
-              </Button>
-            ))}
-          <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>
-            Change date
-          </Button>
-        </div>
       </Card>
     </div>
   );
