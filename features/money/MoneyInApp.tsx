@@ -24,7 +24,7 @@ export function MoneyInApp() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [tab, setTab] = useState<"invoices" | "income">("invoices");
+  const [tab, setTab] = useState<"invoices" | "income">("income");
 
   const refresh = useCallback(() => {
     apiGet<{ items: Invoice[] }>("/api/invoices").then((p) => setInvoices(p.items ?? [])).catch(() => {});
@@ -74,7 +74,7 @@ export function MoneyInApp() {
 
       {/* Sub-area tabs */}
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-        {([["invoices", "📄 Invoices"], ["income", "💰 Income"]] as const).map(([k, label]) => (
+        {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
         ))}
       </div>

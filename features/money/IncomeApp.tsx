@@ -336,24 +336,57 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
 
           {(() => {
             const max = Math.max(1, ...trend.map((m) => m.total));
-            const dense = trend.length > 7;
+            const isDaily = trendMode === "7d" || trendMode === "month";
             const title = trendMode === "7d" ? "Last 7 days" : trendMode === "month" ? "Last 30 days" : trendMode === "6m" ? "Last 6 months" : trendMode === "9m" ? "Last 9 months" : "Last 12 months";
+            const header = (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[13.5px] font-extrabold">{title}</div>
+                <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
+                  {([["7d", "7 days"], ["month", "Month"], ["6m", "6 months"], ["9m", "9 months"], ["year", "Year"]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setTrendMode(k)} className="px-2.5 py-1 transition-colors" style={trendMode === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            );
+            if (isDaily) {
+              const W = 600, H = 132, PAD = 16, n = trend.length;
+              const px = (i: number) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
+              const py = (t: number) => H - PAD - (t / max) * (H - PAD * 2);
+              const pts = trend.map((m, i) => ({ x: px(i), y: py(m.total), m, i }));
+              const line = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+              const area = `${line} L${W},${H} L0,${H} Z`;
+              const peak = pts.reduce((a, b) => (b.m.total > a.m.total ? b : a), pts[0]);
+              const labelIdx = trend.map((_, i) => i).filter((i) => i === 0 || i === n - 1 || i % Math.max(1, Math.round(n / 6)) === 0);
+              return (
+                <Card className="p-4">
+                  {header}
+                  <div className="relative pt-4">
+                    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 132, display: "block", overflow: "visible" }}>
+                      <defs><linearGradient id="incArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3f78d8" stopOpacity="0.26" /><stop offset="1" stopColor="#3f78d8" stopOpacity="0" /></linearGradient></defs>
+                      {[0.25, 0.5, 0.75].map((f) => { const y = PAD + f * (H - 2 * PAD); return <line key={f} x1="0" x2={W} y1={y} y2={y} stroke="var(--line)" strokeWidth="1" vectorEffect="non-scaling-stroke" />; })}
+                      <path d={area} fill="url(#incArea)" />
+                      <path d={line} fill="none" stroke="#1d3a8f" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    {peak.m.total > 0 && <>
+                      <div className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm" style={{ left: `${(peak.x / W) * 100}%`, top: `calc(${(peak.y / H) * 100}% - 4px)` }}>{money(peak.m.total)}</div>
+                      <span className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#1d3a8f] shadow-sm" style={{ left: `${(peak.x / W) * 100}%`, top: `${(peak.y / H) * 100}%` }} />
+                    </>}
+                  </div>
+                  <div className="relative mt-2 h-3.5 text-[10px] font-bold text-[var(--ink-3)]">
+                    {labelIdx.map((i) => <span key={i} className="absolute -translate-x-1/2 tabular-nums" style={{ left: `${Math.min(97, Math.max(3, (pts[i].x / W) * 100))}%` }}>{trend[i].label}</span>)}
+                  </div>
+                </Card>
+              );
+            }
             return (
               <Card className="p-4">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[13.5px] font-extrabold">{title}</div>
-                  <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
-                    {([["7d", "7 days"], ["month", "Month"], ["6m", "6 months"], ["9m", "9 months"], ["year", "Year"]] as const).map(([k, label]) => (
-                      <button key={k} onClick={() => setTrendMode(k)} className="px-2.5 py-1 transition-colors" style={trendMode === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className={`flex items-end ${dense ? "gap-0.5" : "gap-3"}`}>
-                  {trend.map((m, i) => (
+                {header}
+                <div className="flex items-end gap-3">
+                  {trend.map((m) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} entr${m.count === 1 ? "y" : "ies"}`}>
-                      {!dense && <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>}
-                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.current ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
-                      <div className="mt-1.5 text-[10px] font-bold text-[var(--ink-3)]">{!dense || i % 5 === 0 || i === trend.length - 1 ? m.label : ""}</div>
+                      <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
+                      <div className="w-full max-w-[42px] rounded-t-[3px]" style={{ height: `${6 + (m.total / max) * 98}px`, background: m.current ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#6f9beb,#3f78d8)" }} />
+                      <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
                     </div>
                   ))}
                 </div>
