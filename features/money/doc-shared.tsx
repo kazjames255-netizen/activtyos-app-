@@ -73,7 +73,7 @@ export function LineItemsEditor({ items, onChange }: { items: LineItem[]; onChan
 
 // Full-screen document preview with Print/Save-PDF, Email and (invoices) pay-link.
 export type DocAction = { key: string; label: string; onClick: () => void; disabled?: boolean };
-export function PrintableDoc({ kind, doc, billing, payUrl, actions, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; onClose: () => void }) {
+export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; note?: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const html = docHtml(kind, doc, billing, payUrl);
   const print = () => {
@@ -92,6 +92,7 @@ export function PrintableDoc({ kind, doc, billing, payUrl, actions, onClose }: {
           {payUrl && <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">{copied ? "✓ Link copied" : "🔗 Copy pay-link"}</button>}
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">✕ Close</button>
         </div>
+        {note && <div className="mb-2 rounded-lg bg-[#e7f8ee] px-3 py-1.5 text-center text-[12px] font-bold text-[#0f7a44]">{note}</div>}
         <div className="rounded-xl bg-white p-6 shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </div>
