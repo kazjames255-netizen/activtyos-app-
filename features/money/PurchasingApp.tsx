@@ -21,7 +21,7 @@ interface Payload { items: PO[]; summary: { count: number; outstanding: number; 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
 const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
   draft: { label: "Draft", bg: "var(--panel)", fg: "var(--ink-3)" },
-  sent: { label: "Sent", bg: "#eaf0fc", fg: "#1d3a8f" },
+  sent: { label: "Ordered", bg: "#eaf0fc", fg: "#1d3a8f" },
   received: { label: "Received", bg: "#fff4e0", fg: "#a86400" },
   paid: { label: "Paid", bg: "#e7f8ee", fg: "#0f7a44" },
   cancelled: { label: "Cancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
@@ -186,14 +186,6 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
     if (!to) return;
     setEmailing(true);
     try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
-  }
-  async function createInvoiceFromPO(p: PO) {
-    const customerName = (window.prompt("Create an invoice from this PO — who is it billed to?", "") || "").trim();
-    if (!customerName) return;
-    try {
-      await apiPost("/api/invoices", { customerName, date: todayIso(), status: "draft", notes: `From PO ${p.reference ?? ""}`.trim(), lineItems: p.lineItems?.length ? p.lineItems : [{ description: p.notes || "Item", qty: 1, unitPrice: p.amount }] });
-      setError(null); window.alert("Draft invoice created — switch to “Money in” to review and send it.");
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create invoice"); }
   }
 
   async function save() {
@@ -421,7 +413,6 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
                   <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to supplier" aria-label="Email">✉</button>
-                  <button type="button" onClick={() => createInvoiceFromPO(p)} className="flex-none text-[10.5px] font-bold text-[#1d3a8f] hover:underline" title="Create an invoice from this">→ Invoice</button>
                   <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                   <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                 </Card>
