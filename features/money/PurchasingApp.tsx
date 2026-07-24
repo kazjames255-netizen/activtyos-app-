@@ -46,6 +46,13 @@ const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[v
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]";
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
+const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
+const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
+const svgProps = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const IcView = () => <svg {...svgProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>;
+const IcSend = () => <svg {...svgProps}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
+const IcEdit = () => <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
+const IcTrash = () => <svg {...svgProps}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>;
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(file); });
@@ -93,6 +100,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const [iTo, setITo] = useState("");
   const [viewing, setViewing] = useState<PO | null>(null);
   const [emailing, setEmailing] = useState(false);
+  const [sendFor, setSendFor] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/purchasing").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -186,10 +194,15 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const openAdd = () => setEditor({ kind, supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
   const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
-    const to = (p.supplierEmail || window.prompt("Email this purchase order to:", "") || "").trim();
+    const to = (p.supplierEmail || window.prompt(`Email this ${p.kind === "po" ? "purchase order" : "bill query"} to:`, "") || "").trim();
     if (!to) return;
     setEmailing(true);
     try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
+  function whatsApp(p: PO) {
+    const biz = settings.billing?.businessName || "us";
+    const msg = p.kind === "po" ? `Hi, here's purchase order${p.reference ? ` ${p.reference}` : ""} for ${money(p.amount)} from ${biz}.` : `Hi, re ${p.reference ? `invoice ${p.reference}` : "your invoice"} for ${money(p.amount)} — from ${biz}.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
   async function save() {
@@ -427,10 +440,23 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
-                  <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
-                  <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to supplier" aria-label="Email">✉</button>
-                  <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
-                  <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
+                  <div className="flex flex-none items-center gap-1">
+                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
+                    <div className="relative">
+                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
+                      {sendFor === p.id && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
+                          <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>✉️ Email to supplier</button>
+                            <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit"><IcEdit /></button>
+                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete"><IcTrash /></button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -541,7 +567,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
           <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-hidden p-0" style={LIGHT_PALETTE}>
             <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] overflow-y-auto">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-4 text-white" style={{ background: editor.kind === "po" ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 70%,#5b95e8 100%)" : "linear-gradient(120deg,#8a5a12 0%,#c2831a 70%,#e0a63a 100%)" }}>
+              <div className="flex flex-wrap items-center justify-between gap-2 p-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 70%,#5b95e8 100%)" }}>
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-[18px]">{editor.kind === "po" ? "📦" : "🧾"}</span>
                   <div>
@@ -588,7 +614,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
               )}
 
               <div className="mt-2.5">
-                <span className={labelCls}>Invoice document <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span>
+                <span className={labelCls}>{editor.kind === "po" ? "Attach a document" : "Receipt / supplier invoice"} <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span>
                 <div className="flex flex-wrap items-center gap-2">
                   <label className={`${btnGhost} cursor-pointer !py-1.5`}>
                     {uploading ? "Uploading…" : "⬆ Upload photo"}
