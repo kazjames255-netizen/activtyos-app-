@@ -35,7 +35,7 @@ const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || to
 const DUE_PRESETS = [3, 5, 7, 10];
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-type Tab = "overview" | "ledger" | "invoices" | "suppliers";
+type Tab = "overview" | "ledger" | "paid" | "invoices" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | "duesoon" | Status;
 type Sort = "date" | "due" | "amount";
@@ -118,6 +118,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
 
   // ── Analytics ──
   const outstanding = useMemo(() => items.filter((p) => OUTSTANDING.has(p.status)).reduce((s, p) => s + p.amount, 0), [items]);
+  const paidItems = useMemo(() => items.filter((p) => p.status === "paid").sort((a, b) => (a.date < b.date ? 1 : -1)), [items]);
   const overdueItems = useMemo(() => items.filter(isOverdue), [items, today]);
   const overdueTotal = overdueItems.reduce((s, p) => s + p.amount, 0);
   const dueSoon = useMemo(() => items.filter(isDueSoon).sort((a, b) => (a.dueDate! < b.dueDate! ? -1 : 1)), [items, today, in14]);
@@ -266,7 +267,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", "All orders"], ["invoices", `Documents${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", "Suppliers"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", usePO ? "All POs & bills" : "All bills"], ["paid", `Paid${paidItems.length ? ` · ${paidItems.length}` : ""}`], ["invoices", `Invoices${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", "Suppliers"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -401,6 +402,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                 <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: usePO ? "#eef2fb" : "#f0f1f6", color: usePO ? "#1d3a8f" : "var(--ink-3)" }}>{usePO ? "PO" : "Bill"}</span>
                       <span className="truncate text-[13px] font-bold">{p.supplier}</span>
                       {p.reference && <span className="text-[11px] text-[var(--ink-3)]">{p.reference}</span>}
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
@@ -408,8 +410,11 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                     </div>
                     <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
-                  {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">🧾 invoice</a>}
+                  {p.attachmentUrl
+                    ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 supplier invoice</a>
+                    : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Attach the supplier's invoice">＋ attach invoice</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                  {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
                   <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to supplier" aria-label="Email">✉</button>
@@ -420,6 +425,20 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
             </div>
           )}
         </div>
+      ) : tab === "paid" ? (
+        paidItems.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing marked paid yet — attach the supplier invoice and hit “Mark paid”.</Card> : (
+          <div className="flex flex-col gap-1.5">
+            {paidItems.map((p) => (
+              <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
+                <span className="flex-none rounded-full bg-[#e7f8ee] px-2 py-0.5 text-[10.5px] font-bold text-[#0f7a44]">✓ Paid</span>
+                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
+                {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 invoice</a>}
+                <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
+              </Card>
+            ))}
+          </div>
+        )
       ) : tab === "invoices" ? (
         <div className="flex flex-col gap-3.5">
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
