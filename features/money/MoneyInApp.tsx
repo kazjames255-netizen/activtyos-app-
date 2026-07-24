@@ -58,9 +58,17 @@ export function MoneyInApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Money-in hero — Invoices + Income folded into one headline */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}>
-        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
-          Money in
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
+            Money in
+          </div>
+          {/* In/out sub-view switch, on the hero */}
+          <div className="inline-flex flex-none gap-1 rounded-2xl bg-white/15 p-1 backdrop-blur-sm">
+            {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#fff", color: "#1d3a8f" } : { color: "#fff" }}>{label}</button>
+            ))}
+          </div>
         </div>
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business takes in — <b>bookings</b>, customer <b>invoices</b> and other <b>income</b>. Paid bookings &amp; invoices fold into your income totals below.</p>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
@@ -70,13 +78,6 @@ export function MoneyInApp() {
         </div>
         <div className="mt-2 text-[11px] text-white/75">This month received: <b className="text-white">{money(bkMonth)}</b> bookings + <b className="text-white">{money(invMonth)}</b> invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
         <div className="mt-0.5 text-[10.5px] text-white/60">Awaiting payment = <b className="text-white/80">sent customer invoices not yet paid</b> (excludes unpaid bookings) — not counted in the totals above until paid.</div>
-      </div>
-
-      {/* Sub-area tabs */}
-      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-        {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
-        ))}
       </div>
 
       {tab === "invoices" ? <InvoicesApp embedded /> : <IncomeApp embedded />}
