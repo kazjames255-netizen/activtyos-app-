@@ -97,7 +97,8 @@ export function useMoneyShow(portal?: PortalKey): "outgoing" | "incoming" | "bot
   return show;
 }
 
-// The Money views on each side — used to hide a side when the operator picks
-// outgoing-only or incoming-only in Setup → Money.
-export const MONEY_OUTGOING_VIEWS = ["expenses", "purchasing"];
-export const MONEY_INCOMING_VIEWS = ["invoices"];
+// Bills & Invoices is one combined page that adapts to the chosen side, so it's
+// never hidden. Only the standalone outgoing view (Expenses) is hidden when the
+// operator picks incoming-only; there's no standalone incoming view to hide.
+export const MONEY_OUTGOING_VIEWS = ["expenses"];
+export const MONEY_INCOMING_VIEWS: string[] = [];
