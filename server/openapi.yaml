@@ -1036,10 +1036,17 @@ paths:
         invalid/expired/exhausted/min-spend-unmet code → 400 and nothing is
         booked. Each resulting booking carries `discountCode`.
 
-        `dates` picks which session days the item occupies (must belong to
-        the block; at most the pass's day count; default = every session,
-        capped to the pass length). Bookings store these as `days`, which
-        registers use.
+        `dates` picks which session days the item occupies (at most the
+        pass's day count; default = the sent block's sessions, capped to
+        the pass length). Bookings store these as `days`, which registers
+        use. **Dates may span the listing's blocks** (a free-choice pass
+        crossing a week boundary): each date resolves to the block that
+        runs it and the item is written as **one booking per block**, the
+        line's price split across them by day count — so `bookings` in the
+        response can hold more entries than `items` in the basket. A date
+        no block runs → 400. Capacity is judged per block: a spanning line
+        can seat one week and waitlist another, exactly as booking the
+        weeks separately would.
 
         Status: `bookingType: "auto"` listings seat parents immediately
         (`Confirmed`); `"manual"` creates `Approval needed`. Always
@@ -1059,7 +1066,11 @@ paths:
                 listingId: { type: string, example: lst-1 }
                 blockId:
                   type: string
-                  description: One of the listing's blocks. Full/closed block → whole basket Waitlisted.
+                  description: >-
+                    One of the listing's blocks — the default for dateless
+                    items; dated items may reach into other blocks (see
+                    above). Full/closed block → that block's places
+                    Waitlisted.
                 method: { type: string, enum: [Card, Tax-Free Childcare] }
                 items:
                   type: array

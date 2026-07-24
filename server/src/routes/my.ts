@@ -410,13 +410,25 @@ my.post("/bookings", async (req, res) => {
   }
 
   // Pricing context: the bundle's resolved passes/timings (server-priced),
-  // the block's real session dates, and the library's add-ons.
-  const blockPre = await db.collection("blocks").doc(input.blockId).get();
-  if (!blockPre.exists || blockPre.data()!.listingId !== input.listingId) {
+  // the listing's real session dates, and the library's add-ons. ALL of the
+  // listing's blocks are loaded, not just the sent one — a basket line's
+  // days may span blocks (a free-choice pass crossing a week boundary), so
+  // each day resolves to its own block and the bookings written below stay
+  // strictly per-block.
+  const blocksSnap = await db.collection("blocks").where("listingId", "==", input.listingId).get();
+  const blockPre = blocksSnap.docs.find((d) => d.id === input.blockId);
+  if (!blockPre) {
     res.status(400).json({ error: "Unknown block" });
     return;
   }
   const sessionDates = (blockPre.data() as BlockDoc).sessions.map((s) => s.date);
+  // date → owning block. The SENT block claims its dates first, so a date
+  // two blocks both run stays on the block the client actually chose.
+  const blockOfDate = new Map<string, string>();
+  for (const d of sessionDates) blockOfDate.set(d, blockPre.id);
+  for (const d of blocksSnap.docs)
+    for (const s of (d.data() as BlockDoc).sessions)
+      if (!blockOfDate.has(s.date)) blockOfDate.set(s.date, d.id);
 
   let resolved: ResolvedPricing | null = null;
   let periodTitle = new Map<string, string>();
@@ -520,8 +532,8 @@ my.post("/bookings", async (req, res) => {
       const passDays = resolvedPass?.days ?? listedPass?.days;
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
       days = [...new Set(days)].sort();
-      if (days.some((d) => !sessionDates.includes(d)))
-        throw new HttpError(400, `This block doesn't run on ${days.find((d) => !sessionDates.includes(d))}`);
+      const missing = days.find((d) => !blockOfDate.has(d));
+      if (missing) throw new HttpError(400, `This activity doesn't run on ${missing}`);
       if (passDays && days.length > passDays)
         throw new HttpError(400, `"${item.pass}" covers ${passDays} day${passDays === 1 ? "" : "s"} — ${days.length} picked`);
       const addons = (item.addons ?? []).map((a) => {
@@ -550,10 +562,26 @@ my.post("/bookings", async (req, res) => {
           name: def.name,
           price,
           label: (def.type === "perday" ? `${def.name} × ${onDays.length}` : def.name) + suffix,
+          // Kept for the per-block split below — a line spanning blocks
+          // becomes one booking per block, and its add-ons ride along.
+          perDay: def.type === "perday",
+          unit: def.price,
+          onDays,
+          suffix,
           ...(answers.length ? { answers } : {}),
         };
       });
-      return { item, base, timing, days, addons, addonsTotal: round2(addons.reduce((s, a) => s + a.price, 0)) };
+      // The days grouped by owning block. One booking doc per block keeps
+      // capacity, registers, waitlists and cancellations — all keyed on a
+      // single blockId — exact when a line spans blocks.
+      const segMap = new Map<string, string[]>();
+      for (const d of days) {
+        const bid = blockOfDate.get(d)!;
+        segMap.set(bid, [...(segMap.get(bid) ?? []), d]);
+      }
+      if (!segMap.size) segMap.set(blockPre.id, []); // dateless legacy body → the sent block
+      const segments = [...segMap].map(([blockId, ds]) => ({ blockId, days: ds }));
+      return { item, base, timing, days, segments, addons, addonsTotal: round2(addons.reduce((s, a) => s + a.price, 0)) };
     });
   } catch (e) {
     if (e instanceof HttpError) {
@@ -662,7 +690,9 @@ my.post("/bookings", async (req, res) => {
 
   const bookerName = familyName;
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
-  const blockRef = db.collection("blocks").doc(input.blockId);
+  // Every block the basket touches — a line spanning blocks needs each one
+  // read, capacity-checked and updated inside the same transaction.
+  const blockIds = [...new Set(priced.flatMap((p) => p.segments.map((s) => s.blockId)))];
   // Auto-confirm listings seat parents immediately; manual ones hold the
   // place pending the operator's approval. Operator-taken bookings are the
   // approval — Confirmed straight away, invoiced. Unpaid until paid.
@@ -670,12 +700,19 @@ my.post("/bookings", async (req, res) => {
 
   try {
     const bookings = await db.runTransaction(async (tx) => {
-      const [tenantSnap, blockSnap] = await Promise.all([tx.get(tenantRef), tx.get(blockRef)]);
+      const [tenantSnap, ...blockSnaps] = await Promise.all([
+        tx.get(tenantRef),
+        ...blockIds.map((id) => tx.get(db.collection("blocks").doc(id))),
+      ]);
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
-      if (!blockSnap.exists) throw new HttpError(400, "Unknown block");
-      const block = blockSnap.data() as BlockDoc;
-      if (block.listingId !== input.listingId || block.tenantId !== listing.tenantId)
-        throw new HttpError(400, "Block does not belong to this listing");
+      const blockById = new Map<string, BlockDoc>();
+      for (const snap of blockSnaps) {
+        if (!snap.exists) throw new HttpError(400, "Unknown block");
+        const block = snap.data() as BlockDoc;
+        if (block.listingId !== input.listingId || block.tenantId !== listing.tenantId)
+          throw new HttpError(400, "Block does not belong to this listing");
+        blockById.set(snap.id, block);
+      }
 
       // Split the basket by DATE-GROUP, never by child (§E): items sharing
       // the same days book or queue together (siblings stay together on a
@@ -686,114 +723,165 @@ my.post("/bookings", async (req, res) => {
         groups.set(key, [...(groups.get(key) ?? []), i]);
       });
 
-      // Existing queue depth per date (waitlist positions + the size cap).
-      const waitingSnap = await tx.get(
-        bookingsCol.where("blockId", "==", blockSnap.id).where("status", "==", "Waitlisted"),
-      );
-      const queueDepth: Record<string, number> = {};
-      for (const d of waitingSnap.docs) {
-        const wb = fromDoc(d.data() as BookingDoc);
-        for (const day of wb.days ?? block.sessions.map((s) => s.date))
-          queueDepth[day] = (queueDepth[day] ?? 0) + 1;
+      // Existing queue depth per block per date (waitlist positions + cap).
+      const queueDepth = new Map<string, Record<string, number>>();
+      for (const [id, block] of blockById) {
+        const waitingSnap = await tx.get(
+          bookingsCol.where("blockId", "==", id).where("status", "==", "Waitlisted"),
+        );
+        const depth: Record<string, number> = {};
+        for (const d of waitingSnap.docs) {
+          const wb = fromDoc(d.data() as BookingDoc);
+          for (const day of wb.days ?? block.sessions.map((s) => s.date))
+            depth[day] = (depth[day] ?? 0) + 1;
+        }
+        queueDepth.set(id, depth);
       }
       const queueCap = Math.floor(Number(listing.waitlistSize)) > 0 ? Math.floor(Number(listing.waitlistSize)) : null;
 
-      const scope = block.capacityScope ?? "listing";
-      // Working copy — earlier groups' seats count against later groups.
-      let working = block;
-      const booked = new Set<number>();
+      // Working copies — earlier groups' seats count against later groups.
+      const working = new Map(blockById);
+      const changed = new Set<string>();
+      // A group books or queues PER BLOCK: a line spanning two weeks can
+      // seat week one and queue for a full week two — exactly what booking
+      // the weeks separately always did.
+      const bookedSeg = new Set<string>(); // "pricedIndex|blockId"
       for (const [, idxs] of groups) {
-        const wanted: Record<string, number> = {};
-        for (const i of idxs) for (const d of priced[i].days) wanted[d] = (wanted[d] ?? 0) + 1;
-        const fits =
-          working.open &&
-          (scope === "day"
-            ? daysHaveSpace(working, wanted).fits
-            : working.bookedCount + idxs.length <= working.capacity);
-        if (fits) {
-          for (const i of idxs) booked.add(i);
-          // Groups share identical days, so adding the group's seat count to
-          // each of those days (and the total) is exact.
-          working = { ...working, ...countsUpdate(working, idxs.length, Object.keys(wanted)) };
-        } else {
-          if (listing.waitlist === false) {
-            const fullDay = scope === "day" ? ("fullDay" in daysHaveSpace(working, wanted) ? daysHaveSpace(working, wanted).fullDay : undefined) : undefined;
-            throw new HttpError(409, fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off");
+        // The group's wanted seats per block per date. Groups share days,
+        // so every item in the group touches the same blocks.
+        const wantedBy = new Map<string, Record<string, number>>();
+        for (const i of idxs)
+          for (const s of priced[i].segments) {
+            const w = wantedBy.get(s.blockId) ?? {};
+            for (const d of s.days) w[d] = (w[d] ?? 0) + 1;
+            wantedBy.set(s.blockId, w);
           }
-          if (queueCap !== null) {
-            for (const d of Object.keys(wanted)) {
-              if ((queueDepth[d] ?? 0) + wanted[d] > queueCap)
-                throw new HttpError(409, `The waiting list for ${prettyDay(d)} is full`);
+        for (const [blockId, wanted] of wantedBy) {
+          const blk = working.get(blockId)!;
+          const scope = blk.capacityScope ?? "listing";
+          const fits =
+            blk.open &&
+            (scope === "day"
+              ? daysHaveSpace(blk, wanted).fits
+              : blk.bookedCount + idxs.length <= blk.capacity);
+          if (fits) {
+            for (const i of idxs) bookedSeg.add(`${i}|${blockId}`);
+            // Groups share identical days, so adding the group's seat count to
+            // each of those days (and the total) is exact.
+            working.set(blockId, { ...blk, ...countsUpdate(blk, idxs.length, Object.keys(wanted)) });
+            changed.add(blockId);
+          } else {
+            if (listing.waitlist === false) {
+              const fullDay = scope === "day" ? ("fullDay" in daysHaveSpace(blk, wanted) ? daysHaveSpace(blk, wanted).fullDay : undefined) : undefined;
+              throw new HttpError(409, fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off");
+            }
+            if (queueCap !== null) {
+              const depth = queueDepth.get(blockId) ?? {};
+              for (const d of Object.keys(wanted)) {
+                if ((depth[d] ?? 0) + wanted[d] > queueCap)
+                  throw new HttpError(409, `The waiting list for ${prettyDay(d)} is full`);
+              }
             }
           }
         }
       }
 
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
-      const queuePos: Record<string, number> = { ...queueDepth };
-      const created: Booking[] = priced.map((p, i) => {
-        const placed = booked.has(i);
-        let note = "";
-        if (!placed) {
-          note =
-            "Waiting list — " +
-            p.days
-              .map((d) => {
-                queuePos[d] = (queuePos[d] ?? 0) + 1;
-                return `position ${queuePos[d]} for ${prettyDay(d)}`;
-              })
-              .join(", ");
-        }
+      // Queue positions count per block per date.
+      const queuePos = new Map<string, Record<string, number>>();
+      for (const [id, depth] of queueDepth) queuePos.set(id, { ...depth });
+      const created: Booking[] = [];
+      priced.forEach((p, i) => {
         const rc = resolveChild(p.item);
-        return {
-          ...buildBooking(
-            {
-              booker: bookerName,
-              email: familyEmail,
-              child: rc.name,
-              age: rc.age,
-              listing: listing.name,
-              pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
-              dates: block.name,
-              amount: amounts[i],
-              method: input.method,
-            },
-            nextBid + i,
-          ),
-          ...(rc.childId ? { childId: rc.childId } : {}),
-          ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
-          tenantId: listing.tenantId,
-          blockId: blockSnap.id,
-          seats: 1,
-          days: p.days,
-          ...(p.timing ? { timing: p.timing } : {}),
-          addons: p.addons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
-          sessions: block.sessions.filter((s) => p.days.includes(s.date)).map(sessionLabel),
-          status: placed ? placedStatus : "Waitlisted",
-          // Judged on the total, not the method: a HAF/free £0 place is Funded,
-          // never Unpaid. A voucher booking waits on the scheme's money, not
-          // the parent — a distinct state so the two chase lists don't mix.
-          pay:
-            amounts[i] <= 0
-              ? "Funded"
-              : placed && voucher
-                ? "Awaiting voucher payment"
-                : placed && onBehalf
-                  ? "Invoice sent"
-                  : "Unpaid",
-          ...(placed && voucher && amounts[i] > 0
-            ? {
-                voucherScheme: voucher.name,
-                ...(voucherWin?.sendBy ? { voucherSendBy: voucherWin.sendBy } : {}),
-                ...(voucherWin?.receiveBy ? { voucherReceiveBy: voucherWin.receiveBy } : {}),
-              }
-            : {}),
-          note,
-        };
+        // The line's money, spread over its blocks by day count. The LAST
+        // segment absorbs the remainder, so the family pays exactly the
+        // previewed amount whatever the rounding.
+        const passPortion = round2(amounts[i] - p.addonsTotal);
+        let paidSoFar = 0;
+        p.segments.forEach((seg, si) => {
+          const block = blockById.get(seg.blockId)!;
+          const placed = bookedSeg.has(`${i}|${seg.blockId}`);
+          // This segment's add-ons: per-day ones ride with their days,
+          // whole-line ones ride with the segment holding their first day.
+          const segAddons = p.addons.flatMap((a) => {
+            if (a.perDay) {
+              const on = a.onDays.filter((d) => seg.days.includes(d));
+              if (!on.length) return [];
+              return [{ ...a, price: round2(a.unit * on.length), label: `${a.name} × ${on.length}${a.suffix}` }];
+            }
+            const home = p.segments.find((s2) => s2.days.includes(a.onDays[0]))?.blockId ?? p.segments[0].blockId;
+            return home === seg.blockId ? [a] : [];
+          });
+          const segAddonsTotal = round2(segAddons.reduce((s, a) => s + a.price, 0));
+          const amount =
+            si === p.segments.length - 1
+              ? round2(amounts[i] - paidSoFar)
+              : round2((p.days.length ? passPortion * (seg.days.length / p.days.length) : 0) + segAddonsTotal);
+          paidSoFar = round2(paidSoFar + amount);
+          let note = "";
+          if (!placed) {
+            const pos = queuePos.get(seg.blockId)!;
+            note =
+              "Waiting list — " +
+              seg.days
+                .map((d) => {
+                  pos[d] = (pos[d] ?? 0) + 1;
+                  return `position ${pos[d]} for ${prettyDay(d)}`;
+                })
+                .join(", ");
+          }
+          created.push({
+            ...buildBooking(
+              {
+                booker: bookerName,
+                email: familyEmail,
+                child: rc.name,
+                age: rc.age,
+                listing: listing.name,
+                pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
+                dates: block.name,
+                amount,
+                method: input.method,
+              },
+              nextBid + created.length,
+            ),
+            ...(rc.childId ? { childId: rc.childId } : {}),
+            ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
+            tenantId: listing.tenantId,
+            blockId: seg.blockId,
+            seats: 1,
+            days: seg.days,
+            ...(p.timing ? { timing: p.timing } : {}),
+            addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
+            sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
+            status: placed ? placedStatus : "Waitlisted",
+            // Judged on the total, not the method: a HAF/free £0 place is Funded,
+            // never Unpaid. A voucher booking waits on the scheme's money, not
+            // the parent — a distinct state so the two chase lists don't mix.
+            pay:
+              amount <= 0
+                ? "Funded"
+                : placed && voucher
+                  ? "Awaiting voucher payment"
+                  : placed && onBehalf
+                    ? "Invoice sent"
+                    : "Unpaid",
+            ...(placed && voucher && amount > 0
+              ? {
+                  voucherScheme: voucher.name,
+                  ...(voucherWin?.sendBy ? { voucherSendBy: voucherWin.sendBy } : {}),
+                  ...(voucherWin?.receiveBy ? { voucherReceiveBy: voucherWin.receiveBy } : {}),
+                }
+              : {}),
+            note,
+          });
+        });
       });
       tx.update(tenantRef, { nextBid: nextBid + created.length });
-      if (booked.size)
-        tx.update(blockRef, { bookedCount: working.bookedCount, dayCounts: working.dayCounts ?? {} });
+      for (const id of changed) {
+        const blk = working.get(id)!;
+        tx.update(db.collection("blocks").doc(id), { bookedCount: blk.bookedCount, dayCounts: blk.dayCounts ?? {} });
+      }
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
@@ -849,9 +937,15 @@ my.post("/bookings", async (req, res) => {
       if (v && v.email.includes("@"))
         emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher);
     }
-    // "2nd in line for 12 Aug" — per-date queue positions for anything queued.
-    const queuedRefs = bookings.filter((b) => b.status === "Waitlisted").map((b) => b.ref);
-    const waitlist = queuedRefs.length ? await queuePositions(input.blockId, queuedRefs) : [];
+    // "2nd in line for 12 Aug" — per-date queue positions for anything queued,
+    // asked block by block (a basket can now touch several).
+    const queuedByBlock = new Map<string, string[]>();
+    for (const b of bookings)
+      if (b.status === "Waitlisted" && b.blockId)
+        queuedByBlock.set(b.blockId, [...(queuedByBlock.get(b.blockId) ?? []), b.ref]);
+    const waitlist = (
+      await Promise.all([...queuedByBlock].map(([id, refs]) => queuePositions(id, refs)))
+    ).flat();
     res
       .status(201)
       .json(legacy.success ? bookings[0] : { bookings, total: target, ...(waitlist.length ? { waitlist } : {}) });
