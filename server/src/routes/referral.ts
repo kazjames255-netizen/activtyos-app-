@@ -46,7 +46,11 @@ referralsAdmin.get("/", async (req, res) => {
   // Totals: revenue the referrals brought in, and the discounts they cost.
   const referredRevenue = Math.round(list.reduce((s, r) => s + (Number(r.friendSpend) || 0), 0) * 100) / 100;
   const friendDiscountTotal = Math.round(list.reduce((s, r) => s + (Number(r.friendDiscount) || 0), 0) * 100) / 100;
+  const rewardsIssued = list.filter((r) => r.rewardCode).length;
   const rewardsRedeemed = list.filter((r) => redeemed(r.rewardCode)).length;
+  const outstandingCount = list.filter((r) => r.rewardCode && !redeemed(r.rewardCode)).length;
+  // £ still owed — only computable for fixed-£ rewards (a % reward's £ isn't known until redeemed).
+  const outstandingLiability = Math.round(list.filter((r) => r.rewardCode && !redeemed(r.rewardCode) && r.type !== "percent").reduce((s, r) => s + (Number(r.reward) || 0), 0) * 100) / 100;
 
   const counts = new Map<string, { count: number; reward: number }>();
   for (const r of list) {
@@ -73,7 +77,10 @@ referralsAdmin.get("/", async (req, res) => {
     rewardsPaid,
     referredRevenue,
     friendDiscountTotal,
+    rewardsIssued,
     rewardsRedeemed,
+    outstandingCount,
+    outstandingLiability,
     leaderboard,
     recent,
   });

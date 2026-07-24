@@ -23,7 +23,10 @@ type Data = {
   rewardsPaid: number;
   referredRevenue: number;
   friendDiscountTotal: number;
+  rewardsIssued: number;
   rewardsRedeemed: number;
+  outstandingCount: number;
+  outstandingLiability: number;
   leaderboard: { email: string; name?: string | null; count: number; reward: number }[];
   recent: Row[];
 };
@@ -45,7 +48,8 @@ export function ReferralsApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero */}
-      <div className="mb-4 rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#2f6bd8 55%,#7c4dd6 100%)" }}>
+      <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <Link href={`/${portal}/setup?tab=refer`} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">⚙️ Change settings</Link>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🎁</span>
           Referrals
@@ -68,7 +72,7 @@ export function ReferralsApp() {
         <Card className="mb-3.5 grid gap-3 p-4 sm:grid-cols-3">
           <div><div className="text-[20px] font-extrabold leading-none text-[#0f7a44]">{money(d.referredRevenue)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">bookings from referrals</div></div>
           <div><div className="text-[20px] font-extrabold leading-none text-[var(--red,#e21d27)]">−{money(d.friendDiscountTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">discounts given · <b>{costPct}%</b> of revenue</div></div>
-          <div><div className="text-[20px] font-extrabold leading-none">{d.rewardsRedeemed}<span className="text-[14px] font-bold text-[var(--ink-3)]"> / {d.friendsBooked}</span></div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">referrer rewards redeemed</div></div>
+          <div><div className="text-[20px] font-extrabold leading-none">{d.rewardsRedeemed}<span className="text-[14px] font-bold text-[var(--ink-3)]"> / {d.rewardsIssued}</span></div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">rewards redeemed · {d.outstandingCount} still out{d.outstandingLiability > 0 ? ` (${money(d.outstandingLiability)} owed)` : ""}</div></div>
         </Card>
       )}
 
