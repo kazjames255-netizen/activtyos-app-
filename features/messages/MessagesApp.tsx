@@ -349,17 +349,26 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     // -m-5/p-5 bleeds the light surface to the edges of the (dark-shell) content
     // area so the whole Messages page reads light, like the customer dashboard.
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Messages</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }}>
-            ＋ {mode === "operator" ? "Message customers" : "New message"}
-          </Button>
-          {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
-            <Link href={`/${portalSeg}/activityos`}>
-              <Button>{mode === "parent" ? "Report a problem" : "✦ Message ActivityOS"}</Button>
-            </Link>
-          )}
+      {/* Money-in style hero */}
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">✉️</span>
+              Messages
+            </div>
+            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{mode === "operator" ? "Message one family or a whole listing at once — replies come back as normal 1:1 conversations. Switch on Pro for templates & merge fields." : "Message your activity provider — questions, changes or anything about your bookings."}</p>
+          </div>
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
+              ＋ {mode === "operator" ? "Message customers" : "New message"}
+            </button>
+            {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
+              <Link href={`/${portalSeg}/activityos`}>
+                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{mode === "parent" ? "Report a problem" : "✦ Message ActivityOS"}</button>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -385,7 +394,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         </HowItWorks>
       )}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {notice && <div className="mb-3 rounded-lg border border-[var(--green-line,#bfe9d2)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">✓ {notice}</div>}
+      {notice && <div className="mb-3 rounded-lg border border-[#cdddf7] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">✓ {notice}</div>}
 
       <div className="grid gap-3 md:grid-cols-[320px_1fr]">
         <Card className="p-1.5">
