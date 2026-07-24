@@ -161,17 +161,18 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([source, v]) => ({ source, ...v })).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
-  // Money in split by TYPE OF PAYMENT — card, vouchers, cash, TFC, invoice… so
-  // you can see how customers actually pay. Manually-logged income with no
-  // method falls under its own category label.
+  // BOOKING income split by TYPE OF PAYMENT — card, vouchers, cash, TFC, HAF… so
+  // you can see how customers actually paid for their bookings. Only booking
+  // rows carry a real method; invoices/manual income are excluded here.
+  const bookingsTotal = useMemo(() => bookingRows.reduce((s, x) => s + x.amount, 0), [bookingRows]);
   const byMethod = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};
-    for (const x of allItems) {
-      const m = x.method || (x.category === INVOICE_CAT ? "Invoice" : x.category || "Other");
+    for (const x of bookingRows) {
+      const m = x.method || "Other";
       (by[m] ||= { total: 0, count: 0 }); by[m].total += x.amount; by[m].count++;
     }
     return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
-  }, [allItems]);
+  }, [bookingRows]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -330,11 +331,12 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             </Card>
           </div>
 
-          {/* By payment type — how the money in was actually paid */}
+          {/* By payment type — how bookings were actually paid for */}
+          {byMethod.length > 0 && (
           <Card className="p-4">
             <div className="mb-3 flex items-baseline justify-between">
-              <div className="text-[13.5px] font-extrabold">By payment type</div>
-              <div className="text-[11px] text-[var(--ink-3)]">how your customers paid</div>
+              <div className="text-[13.5px] font-extrabold">Bookings by payment type</div>
+              <div className="text-[11px] text-[var(--ink-3)]">how your bookings were paid · {money(bookingsTotal)}</div>
             </div>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {byMethod.map((m, i) => {
@@ -345,7 +347,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2 text-[12px]">
                         <span className="truncate font-bold">{m.method}</span>
-                        <span className="flex-none tabular-nums"><b>{money(m.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((m.total / grandTotal) * 100)}%</span></span>
+                        <span className="flex-none tabular-nums"><b>{money(m.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((m.total / (bookingsTotal || 1)) * 100)}%</span></span>
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (m.total / byMethod[0].total) * 100)}%`, background: hue.bar }} /></div>
@@ -357,6 +359,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               })}
             </div>
           </Card>
+          )}
 
           <Card className="p-4">
             <div className="mb-2.5 flex items-center justify-between">
