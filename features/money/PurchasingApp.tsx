@@ -103,6 +103,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   // just track supplier bills. Setup → Money toggles the PO stage on/off.
   const usePO = settings.money?.usePurchaseOrders ?? false;
   const visibleStatuses = useMemo(() => (usePO ? STATUSES : STATUSES.filter((s) => s !== "draft")), [usePO]);
+  const newLabel = usePO ? "＋ Raise a PO" : "＋ New bill";
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const today = todayIso();
@@ -250,7 +251,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New order</button>
+        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{newLabel}</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🧾</span>
           Purchasing &amp; invoices
@@ -275,16 +276,16 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
-        {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>＋ New order</button>}
+        {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>{newLabel}</button>}
       </div>
 
       {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : items.length === 0 ? (
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">🧾</div>
-          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">No orders yet</div>
-          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">Raise a purchase order or log a supplier invoice — track it from draft to paid, flag what’s overdue, and keep the invoice document attached.</p>
-          <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>＋ New order</button>
+          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{usePO ? "No POs or bills yet" : "No bills yet"}</div>
+          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">{usePO ? "Raise a purchase order to a supplier, or log a bill you’ve received" : "Log a supplier bill you need to pay"} — with line items, track it from {usePO ? "draft PO " : ""}to paid, flag what’s overdue, and keep the invoice document attached.</p>
+          <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>{newLabel}</button>
         </Card>
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-3.5">
@@ -375,7 +376,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
-                <button type="button" onClick={openAdd} className={btnPrimary}>＋ New order</button>
+                <button type="button" onClick={openAdd} className={btnPrimary}>{newLabel}</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -517,7 +518,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
           <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
             <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit order" : "New order / invoice"}</div>
+              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (usePO ? "Edit purchase order" : "Edit bill") : usePO ? "Raise a purchase order" : "New bill"}</div>
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="PO-1234" className={fieldCls} /></label>
