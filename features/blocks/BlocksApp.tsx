@@ -243,7 +243,7 @@ export function BlocksApp() {
         } as React.CSSProperties
       }
     >
-      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🧩" />
+      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🎟️" />
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
@@ -948,7 +948,7 @@ function LibraryCard({
         const [kind, id] = e.dataTransfer.getData("text/plain").split(":");
         if (kind === "block" && id) onDropBlock(id);
       }}
-      className="rounded-xl border p-3.5"
+      className="overflow-hidden rounded-xl border p-3.5"
       style={{
         borderColor: dragOver ? color : "var(--line)",
         borderLeftWidth: "6px",
@@ -957,6 +957,8 @@ function LibraryCard({
         boxShadow: dragOver ? `0 0 0 2px ${color}` : undefined,
       }}
     >
+      {/* Featured gradient header — matches the Money "at a glance" card. */}
+      <div className="-mx-3.5 -mt-3.5 mb-3 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
       <div className="flex items-start justify-between gap-2">
         {renaming ? (
           <div className="flex flex-1 items-center gap-1.5">
@@ -977,7 +979,7 @@ function LibraryCard({
               draggable
               onDragStart={(e) => e.dataTransfer.setData("text/plain", `block:${block.id}`)}
               title="Drag to reorder"
-              className="flex-none cursor-grab text-[14px] leading-none text-[var(--ink-3)] active:cursor-grabbing"
+              className="flex-none cursor-grab text-[14px] leading-none text-white/60 active:cursor-grabbing"
             >
               ⠿
             </span>
@@ -985,7 +987,7 @@ function LibraryCard({
             <button
               type="button"
               onClick={onToggle}
-              className="truncate text-left text-[14px] font-extrabold"
+              className="truncate text-left text-[14px] font-extrabold text-white"
             >
               {block.name}
             </button>
@@ -996,7 +998,7 @@ function LibraryCard({
                 setRenaming(true);
               }}
               aria-label="Rename block"
-              className="flex-none text-[12px] text-[var(--ink-3)] hover:text-[var(--brand)]"
+              className="flex-none text-[12px] text-white/70 hover:text-white"
             >
               ✎
             </button>
@@ -1006,8 +1008,8 @@ function LibraryCard({
           <span
             className={`rounded-full px-2 py-[2px] text-[10px] font-bold ${
               block.priced
-                ? "bg-[#eaf0fc] text-[#1d3a8f]"
-                : "bg-[#eef0f6] text-[#5b6478]"
+                ? "bg-white text-[#1d3a8f]"
+                : "bg-white/20 text-white"
             }`}
           >
             {block.priced ? "Priced" : "Unpriced"}
@@ -1016,15 +1018,16 @@ function LibraryCard({
             type="button"
             onClick={onToggle}
             aria-label={expanded ? "Collapse" : "Expand"}
-            className="text-[11px] text-[var(--ink-3)] hover:text-[var(--brand)]"
+            className="text-[11px] text-white/70 hover:text-white"
           >
             {expanded ? "▲" : "▼"}
           </button>
         </div>
       </div>
-      <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
+      <div className="mt-0.5 text-[11.5px] text-white/80">
         {blockPeriods.length} period{blockPeriods.length === 1 ? "" : "s"} · {blockPasses.length} pass
         {blockPasses.length === 1 ? "" : "es"}
+      </div>
       </div>
 
       {expanded && (
