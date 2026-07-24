@@ -441,19 +441,24 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                   {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
-                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
-                    <div className="relative">
-                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
-                      {sendFor === p.id && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
-                          <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
-                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>✉️ Email to supplier</button>
-                            <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    {/* A PO is a document you raise and send to a supplier; a bill is one they sent you — so view/send are PO-only. */}
+                    {isPo && (
+                      <>
+                        <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
+                        <div className="relative">
+                          <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
+                          {sendFor === p.id && (
+                            <>
+                              <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
+                              <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                                <button type="button" onClick={() => { setSendFor(null); void emailDoc(p); }} className={menuItem}>✉️ Email to supplier</button>
+                                <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
                     <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit"><IcEdit /></button>
                     <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete"><IcTrash /></button>
                   </div>
