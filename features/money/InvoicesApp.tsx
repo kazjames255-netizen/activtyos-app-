@@ -402,9 +402,10 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <div className="mt-2.5 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[11.5px] text-[#1d3a8f]">🔗 Pay-link ready. Close and use <b>“pay-link”</b> on the row to copy it for this customer.</div>
               )}
 
+              {error && <div className="mt-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
-                <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "View draft →"}</button>
+                <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "Save & view →"}</button>
               </div>
             </div>
           </Card>
@@ -415,7 +416,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
         { key: "link", label: emailing ? "Sending…" : "✉️ Email + pay-link", onClick: () => emailDoc(viewing, "link"), disabled: emailing },
         { key: "bank", label: "🏦 Email (bank details only)", onClick: () => emailDoc(viewing, "bank"), disabled: emailing },
         { key: "wa", label: "💬 WhatsApp", onClick: () => whatsApp(viewing) },
-      ]} onClose={() => setViewing(null)} />}
+      ]} note="✓ Saved as a draft — send it below, or download the PDF. No need to save again." onClose={() => setViewing(null)} />}
     </div>
   );
 }
