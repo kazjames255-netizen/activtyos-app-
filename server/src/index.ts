@@ -18,6 +18,7 @@ import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
 import { images, uploads } from "./routes/uploads";
+import { invoices, invoicePublic } from "./routes/invoices";
 import { incidents } from "./routes/incidents";
 import { meals } from "./routes/meals";
 import { moments } from "./routes/moments";
@@ -100,6 +101,9 @@ app.use("/api/listings", optionalAuth, attachRoleOptional, listings);
 // Parent-facing settings for the signed-out booking page (see library.ts).
 app.use("/api/public/library", optionalAuth, libraryPublic);
 
+// Public invoice pay page — found by unguessable payToken, no account needed.
+app.use("/api/public/invoice", invoicePublic);
+
 app.use("/api", requireAuth, attachRole);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
@@ -133,6 +137,7 @@ app.use("/api/documents", documents);
 app.use("/api/compliance", compliance);
 app.use("/api/expenses", expenses);
 app.use("/api/purchasing", purchasing);
+app.use("/api/invoices", invoices);
 app.use("/api/subscription", subscription);
 app.use("/api/posts", posts);
 app.use("/api/messages", messages);

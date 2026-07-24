@@ -286,6 +286,14 @@ export interface TenantSettings {
   expenses?: { includeSubscription?: boolean; categories?: string[] };
 
   /**
+   * Money section shape. `show` picks which sides of the ledger appear
+   * (outgoing = Expenses + Bills/POs; incoming = customer Invoices);
+   * `usePurchaseOrders` turns the PO stage on the Bills page on/off (many
+   * providers just track supplier bills, no formal PO).
+   */
+  money?: { show?: "outgoing" | "incoming" | "both"; usePurchaseOrders?: boolean };
+
+  /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
    * off hides it from the operator's own nav — and, for anything a family also

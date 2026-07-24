@@ -122,6 +122,9 @@ export function ExpensesApp() {
   // (one per month since they subscribed) when the toggle is on. Never written
   // to the ledger — they always reflect the live plan and can't go stale.
   const subPrice = sub?.current.details.price ?? 0;
+  // Months where the subscription is ALREADY a logged expense — never add a
+  // virtual row for those, or the plan fee is counted twice.
+  const loggedSubMonths = useMemo(() => new Set(items.filter((x) => /activityos/i.test(x.supplier ?? "") || /subscription/i.test(x.notes ?? "")).map((x) => (x.date || "").slice(0, 7))), [items]);
   const subRows = useMemo<Expense[]>(() => {
     if (!includeSub || subPrice <= 0 || !sub) return [];
     const start = sub.current.since ? sub.current.since.slice(0, 7) : monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 11, 1));
@@ -130,11 +133,11 @@ export function ExpensesApp() {
     for (let i = 0; i < 36; i++) {
       const key = `${y}-${String(m).padStart(2, "0")}`;
       if (key > thisMonthKey) break;
-      rows.push({ id: `sub-${key}`, date: `${key}-01`, category: "Software", supplier: "ActivityOS", amount: subPrice, notes: `${sub.current.details.name} plan subscription`, virtual: true });
+      if (!loggedSubMonths.has(key)) rows.push({ id: `sub-${key}`, date: `${key}-01`, category: "Software", supplier: "ActivityOS", amount: subPrice, notes: `${sub.current.details.name} plan subscription`, virtual: true });
       m++; if (m > 12) { m = 1; y++; }
     }
     return rows;
-  }, [includeSub, subPrice, sub, now, thisMonthKey]);
+  }, [includeSub, subPrice, sub, now, thisMonthKey, loggedSubMonths]);
 
   const allItems = useMemo(() => (subRows.length ? [...subRows, ...items] : items), [subRows, items]);
 

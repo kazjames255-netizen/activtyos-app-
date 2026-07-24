@@ -7,7 +7,7 @@ import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/na
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
-import { useCustomerArea, useOperatorFeatures, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
+import { useCustomerArea, useOperatorFeatures, useMoneyShow, MONEY_OUTGOING_VIEWS, MONEY_INCOMING_VIEWS, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
@@ -163,6 +163,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   //  • operator — modules the operator switched off (Setup → Features).
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
+  const moneyShow = useMoneyShow(portal);
+  const moneyHidden = moneyShow === "outgoing" ? MONEY_INCOMING_VIEWS : moneyShow === "incoming" ? MONEY_OUTGOING_VIEWS : [];
   const caHidden = new Set<string>(
     portal === "custdash"
       ? [
@@ -171,7 +173,10 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
             : []),
         ]
-      : groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v)),
+      : [
+          ...groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v)),
+          ...moneyHidden,
+        ],
   );
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).

@@ -24,6 +24,7 @@ import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
 import { PurchasingApp } from "@/features/money/PurchasingApp";
+import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
 import { SplitFeesApp } from "@/features/money/SplitFeesApp";
 import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
@@ -93,6 +94,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
+    invoices: InvoicesApp,
     subscription: SubscriptionApp,
     documents: DocumentsApp,
     compliance: ComplianceApp,
@@ -131,6 +133,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
+    invoices: InvoicesApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
@@ -167,6 +170,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: PurchasingApp,
+    invoices: InvoicesApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
