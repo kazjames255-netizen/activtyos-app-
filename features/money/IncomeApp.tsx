@@ -97,6 +97,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [newCat, setNewCat] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
+  const [trendMode, setTrendMode] = useState<"7d" | "month" | "6m" | "9m" | "year">("6m");
   // Overview breakdowns can be scoped to a period (independent of the ledger).
   const [ovRange, setOvRange] = useState<Range>("all");
   const [ovFrom, setOvFrom] = useState("");
@@ -143,16 +144,27 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const allItems = useMemo(() => [...bookingRows, ...invoiceRows, ...logged], [bookingRows, invoiceRows, logged]);
 
   // ── Analytics ──
-  const monthly = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) };
+  // Trend chart — daily buckets for the short windows, monthly for the long ones.
+  const trend = useMemo(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    if (trendMode === "7d" || trendMode === "month") {
+      const days = trendMode === "7d" ? 7 : 30;
+      const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      return Array.from({ length: days }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1 - i));
+        const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const rows = allItems.filter((x) => (x.date || "") === key);
+        return { key, label: trendMode === "7d" ? d.toLocaleDateString("en-GB", { weekday: "short" }) : String(d.getDate()), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === todayKey };
+      });
+    }
+    const months = trendMode === "6m" ? 6 : trendMode === "9m" ? 9 : 12;
+    return Array.from({ length: months }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
+      const key = monthKeyOf(d);
+      const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === key);
+      return { key, label: d.toLocaleDateString("en-GB", { month: "short" }), total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length, current: key === thisMonthKey };
     });
-    return months.map((m) => {
-      const rows = allItems.filter((x) => (x.date || "").slice(0, 7) === m.key);
-      return { ...m, total: rows.reduce((s, x) => s + x.amount, 0), count: rows.length };
-    });
-  }, [allItems, now]);
+  }, [allItems, trendMode, now, thisMonthKey]);
 
   const sumWhere = (pred: (x: Income) => boolean) => allItems.filter(pred).reduce((s, x) => s + x.amount, 0);
   const thisMonthTotal = useMemo(() => sumWhere((x) => (x.date || "").slice(0, 7) === thisMonthKey), [allItems, thisMonthKey]);
@@ -323,16 +335,25 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           </Card>
 
           {(() => {
-            const max = Math.max(1, ...monthly.map((m) => m.total));
+            const max = Math.max(1, ...trend.map((m) => m.total));
+            const dense = trend.length > 7;
+            const title = trendMode === "7d" ? "Last 7 days" : trendMode === "month" ? "Last 30 days" : trendMode === "6m" ? "Last 6 months" : trendMode === "9m" ? "Last 9 months" : "Last 12 months";
             return (
               <Card className="p-4">
-                <div className="mb-3 flex items-baseline justify-between"><div className="text-[13.5px] font-extrabold">Last 6 months</div><div className="text-[11px] text-[var(--ink-3)]">money in per month</div></div>
-                <div className="flex items-end gap-3">
-                  {monthly.map((m) => (
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[13.5px] font-extrabold">{title}</div>
+                  <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
+                    {([["7d", "7 days"], ["month", "Month"], ["6m", "6 months"], ["9m", "9 months"], ["year", "Year"]] as const).map(([k, label]) => (
+                      <button key={k} onClick={() => setTrendMode(k)} className="px-2.5 py-1 transition-colors" style={trendMode === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className={`flex items-end ${dense ? "gap-0.5" : "gap-3"}`}>
+                  {trend.map((m, i) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} entr${m.count === 1 ? "y" : "ies"}`}>
-                      <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
-                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.key === thisMonthKey ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
-                      <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
+                      {!dense && <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>}
+                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.current ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
+                      <div className="mt-1.5 text-[10px] font-bold text-[var(--ink-3)]">{!dense || i % 5 === 0 || i === trend.length - 1 ? m.label : ""}</div>
                     </div>
                   ))}
                 </div>
