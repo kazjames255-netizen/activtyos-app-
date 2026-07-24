@@ -165,6 +165,51 @@ ratios.get("/", async (req, res) => {
   res.json({ date, bands: DEFAULT_BANDS, sessions });
 });
 
+// ── The day BOARD (handoff §R): the operator's drag overrides (child →
+// group) and which adults cover each group, per tenant per day — the state
+// the Ratios cover board renders. Distinct from the per-session ratioGroups
+// docs above: the board spans every session running that day. Staff can
+// save too — they run the day.
+const boardCanUse = (role: Role) => role === "staff" || canWriteRole(role);
+const boardSchema = z.object({
+  overrides: z.record(z.string().max(80), z.string().max(80)).default({}),
+  groupStaff: z.record(z.string().max(80), z.array(z.string().max(80)).max(50)).default({}),
+});
+const boardId = (tenantId: string, date: string) => `${tenantId}_${date}`;
+const validDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+ratios.get("/board/:date", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !boardCanUse(auth.role)) {
+    res.status(403).json({ error: "Requires an operator or staff account" });
+    return;
+  }
+  if (!validDate(req.params.date)) { res.status(400).json({ error: "Bad date" }); return; }
+  const snap = await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get();
+  const d = snap.data() ?? {};
+  res.json({ overrides: d.overrides ?? {}, groupStaff: d.groupStaff ?? {} });
+});
+
+ratios.put("/board/:date", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !boardCanUse(auth.role)) {
+    res.status(403).json({ error: "Requires an operator or staff account" });
+    return;
+  }
+  if (!validDate(req.params.date)) { res.status(400).json({ error: "Bad date" }); return; }
+  const parsed = boardSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).set({
+    tenantId: auth.tenantId,
+    date: req.params.date,
+    overrides: parsed.data.overrides,
+    groupStaff: parsed.data.groupStaff,
+    updatedAt: new Date().toISOString(),
+    updatedBy: req.user?.email ?? "unknown",
+  });
+  res.json({ ok: true });
+});
+
 const putSchema = z.object({
   groups: z
     .array(

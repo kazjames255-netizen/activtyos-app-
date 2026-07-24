@@ -6,6 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { statusTone } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
+import { PublishedDayGrid, type PublishedWeek } from "@/features/timetable/PublishedTimetable";
 import { Badge, Button, Card } from "@/components/ui";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -126,8 +127,17 @@ function SessionRow({ s }: { s: Session }) {
   );
 }
 
-function DayGroup({ date, sessions, today }: { date: string; sessions: Session[]; today: string }) {
+/** The provider's published plan for one date, shown under that day's sessions. */
+interface DayPlan {
+  provider: string;
+  rows: PublishedWeek["plan"][number];
+  groups: string[];
+  dayLabel: string;
+}
+
+function DayGroup({ date, sessions, today, plan }: { date: string; sessions: Session[]; today: string; plan?: DayPlan }) {
   const rel = date === today ? "Today" : date === addDaysISO(today, 1) ? "Tomorrow" : null;
+  const [showPlan, setShowPlan] = useState(false);
   return (
     <Card className="p-4">
       <div className="mb-1.5 flex items-baseline gap-2">
@@ -142,10 +152,29 @@ function DayGroup({ date, sessions, today }: { date: string; sessions: Session[]
         <span className="text-[12px] text-[var(--ink-3)]">
           {sessions.length} session{sessions.length === 1 ? "" : "s"}
         </span>
+        {plan && (
+          <button
+            type="button"
+            onClick={() => setShowPlan((v) => !v)}
+            className="ml-auto rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]"
+          >
+            {showPlan ? "Hide day plan" : "Day plan ▾"}
+          </button>
+        )}
       </div>
       {[...sessions].sort(sortSessions).map((s) => (
         <SessionRow key={s.key} s={s} />
       ))}
+      {plan && showPlan && (
+        <div className="mt-3">
+          <div className="mb-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">
+            What {plan.provider} has planned for the day
+          </div>
+          <div className="overflow-x-auto">
+            <PublishedDayGrid rows={plan.rows} groups={plan.groups} dayLabel={plan.dayLabel} />
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -153,6 +182,7 @@ function DayGroup({ date, sessions, today }: { date: string; sessions: Session[]
 /** custdash/schedule — the signed-in parent's booked sessions, by date. */
 export function ScheduleApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [plans, setPlans] = useState<PublishedWeek[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
 
@@ -160,10 +190,27 @@ export function ScheduleApp() {
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load your schedule"));
+    // Day plans providers have published for this family — optional garnish,
+    // so a failure never blocks the schedule itself.
+    apiGet<PublishedWeek[]>("/api/timetables/published")
+      .then(setPlans)
+      .catch(() => {});
   }, []);
 
   useEffect(refresh, [refresh]);
-  useRealtime(["bookings"], refresh);
+  useRealtime(["bookings", "timetables"], refresh);
+
+  // iso date → that day's published plan (first provider wins on a clash).
+  const planByDate = useMemo(() => {
+    const m = new Map<string, DayPlan>();
+    for (const w of plans) {
+      w.dayList.forEach((d, i) => {
+        if (d.iso && w.plan[i] && !m.has(d.iso))
+          m.set(d.iso, { provider: w.tenantName ?? "Your provider", rows: w.plan[i], groups: w.config.groups, dayLabel: d.n });
+      });
+    }
+    return m;
+  }, [plans]);
 
   const today = todayISO();
   const { upcoming, past, undated } = useMemo(() => {
@@ -246,7 +293,7 @@ export function ScheduleApp() {
           )}
 
           {upcoming.map((g) => (
-            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} />
+            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} />
           ))}
 
           {past.length > 0 && (

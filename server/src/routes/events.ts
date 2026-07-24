@@ -84,11 +84,14 @@ events.get("/", async (req, res) => {
       listen(db.collection("mealOrders").where("parentEmail", "==", em), "mealOrders");
       // The family's provider library — so Setup → Features/Customer area toggles
       // show up live in their app (only attached if the client is watching it).
-      if (wanted === null || wanted.has("library")) {
+      if (wanted === null || wanted.has("library") || wanted.has("timetables")) {
         const bk = await db.collection("bookings").where("email", "==", em).get();
-        [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])]
-          .slice(0, 5)
-          .forEach((tid) => listen(db.collection("libraries").where("tenantId", "==", tid), "library"));
+        const tids = [...new Set(bk.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 5);
+        for (const tid of tids) {
+          listen(db.collection("libraries").where("tenantId", "==", tid), "library");
+          // Published day plans from the family's providers.
+          listen(db.collection("timetables").where("tenantId", "==", tid), "timetables");
+        }
       }
     }
     listen(db.collection("mealOptions"), "mealOptions"); // a booked provider's menu
@@ -115,6 +118,7 @@ events.get("/", async (req, res) => {
     listen(db.collection("registers").where("tenantId", "==", tenantId), "registers");
     listen(db.collection("payments").where("tenantId", "==", tenantId), "payments");
     listen(db.collection("ratioGroups").where("tenantId", "==", tenantId), "ratioGroups");
+    listen(db.collection("ratioBoards").where("tenantId", "==", tenantId), "ratioBoards");
     listen(db.collection("incidents").where("tenantId", "==", tenantId), "incidents");
     listen(db.collection("medications").where("tenantId", "==", tenantId), "medications");
     listen(db.collection("medicationAdmin").where("tenantId", "==", tenantId), "medicationAdmin");
@@ -123,6 +127,7 @@ events.get("/", async (req, res) => {
     listen(db.collection("tasks").where("tenantId", "==", tenantId), "tasks");
     listen(db.collection("trips").where("tenantId", "==", tenantId), "trips");
     listen(db.collection("shifts").where("tenantId", "==", tenantId), "shifts");
+    listen(db.collection("timetables").where("tenantId", "==", tenantId), "timetables");
     listen(db.collection("posts").where("tenantId", "==", tenantId), "posts");
     listen(db.collection("threads").where("tenantId", "==", tenantId), "threads");
     listen(db.collection("messages").where("tenantId", "==", tenantId), "messages");

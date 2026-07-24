@@ -2,10 +2,12 @@ import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { emailTeamInvite } from "../lib/emails";
+import { webUrl } from "../lib/stripe";
 
-// Invite links — how franchises and staff join a tenant (the product spec's
-// invite flows, minus email delivery for now: the operator copies the link
-// and sends it themselves).
+// Invite links — how franchises and staff join a tenant. With an `email`
+// the invite is delivered directly; without one the operator copies the
+// link and sends it themselves.
 //
 //   POST /api/invites                    (operator) create → {token, url}
 //   GET  /api/invites/:token             (public)   preview before signup
@@ -19,6 +21,9 @@ const col = db.collection("invites");
 
 const createSchema = z.object({
   role: z.enum(["franchise", "staff"]),
+  // Optional — when given, the invite is emailed to this address as well as
+  // returned as a link.
+  email: z.string().trim().email().max(160).optional(),
 });
 
 invites.post("/", async (req, res) => {
@@ -39,14 +44,26 @@ invites.post("/", async (req, res) => {
   }
 
   const token = randomBytes(16).toString("hex");
+  const sentTo = parsed.data.email ?? null;
   await col.doc(token).set({
     tenantId: auth.tenantId,
     role: invitedRole,
     createdBy: req.user!.uid,
     createdAt: new Date().toISOString(),
     usedBy: null,
+    sentTo,
   });
-  res.status(201).json({ token, url: `/signup?invite=${token}` });
+  if (sentTo) {
+    const tenant = await db.collection("tenants").doc(auth.tenantId).get();
+    emailTeamInvite({
+      to: sentTo,
+      tenantName: (tenant.data()?.name as string | undefined) ?? "Your provider",
+      role: invitedRole,
+      link: `${webUrl}/signup?invite=${token}`,
+      inviterName: req.user?.name ?? req.user?.email ?? undefined,
+    });
+  }
+  res.status(201).json({ token, url: `/signup?invite=${token}`, sentTo });
 });
 
 // List this tenant's invites (same permission as creating them).

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { Badge, Button, Card, SectionHead } from "@/components/ui";
+import { Badge, Button, Card, Input, SectionHead } from "@/components/ui";
 
 interface Invite {
   token: string;
   role: "franchise" | "staff";
   createdAt: string;
   usedBy: string | null;
+  sentTo?: string | null;
 }
 
 interface Me {
@@ -18,10 +19,10 @@ interface Me {
 }
 
 /**
- * Minimal team management: create and track invite links (franchises and
- * staff join a tenant through these — email delivery comes later, for now
- * the operator copies the link). Registered as the "Staff" view for company
- * and franchise portals.
+ * Minimal team management: create and track invites (franchises and staff
+ * join a tenant through these). With an email typed, the invite is emailed
+ * directly; either way the link can be copied and shared by hand.
+ * Registered as the "Staff" view for company and franchise portals.
  */
 export function TeamApp() {
   const [me, setMe] = useState<Me | null>(null);
@@ -29,6 +30,8 @@ export function TeamApp() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [sentNote, setSentNote] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     apiGet<Invite[]>("/api/invites").then(setInvites).catch((e) =>
@@ -45,8 +48,17 @@ export function TeamApp() {
   async function createInvite(role: "franchise" | "staff") {
     setBusy(true);
     setError(null);
+    setSentNote(null);
     try {
-      await apiPost<{ token: string }>("/api/invites", { role });
+      const to = email.trim();
+      const r = await apiPost<{ token: string; sentTo: string | null }>("/api/invites", {
+        role,
+        ...(to ? { email: to } : {}),
+      });
+      if (r.sentTo) {
+        setSentNote(`Invite emailed to ${r.sentTo}`);
+        setEmail("");
+      }
       refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create invite");
@@ -70,8 +82,8 @@ export function TeamApp() {
         Team &amp; invites
       </h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">
-        {me?.tenantName ? `${me.tenantName} — ` : ""}invite people by sharing a link (email
-        invitations come later).
+        {me?.tenantName ? `${me.tenantName} — ` : ""}type an email to send the invite directly, or
+        create it blank and share the link yourself.
       </p>
 
       {error && (
@@ -80,7 +92,14 @@ export function TeamApp() {
         </div>
       )}
 
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="their@email.com (optional)"
+          className="w-[240px]"
+        />
         {canInviteFranchise && (
           <Button variant="primary" disabled={busy} onClick={() => createInvite("franchise")}>
             + Invite a franchise
@@ -89,6 +108,7 @@ export function TeamApp() {
         <Button variant={canInviteFranchise ? "default" : "primary"} disabled={busy} onClick={() => createInvite("staff")}>
           + Invite staff
         </Button>
+        {sentNote && <span className="text-[12px] font-bold text-[var(--green,#0e9f6e)]">{sentNote}</span>}
       </div>
 
       <SectionHead>Invite links</SectionHead>
@@ -116,6 +136,7 @@ export function TeamApp() {
                   …{inv.token.slice(-8)}
                 </span>
                 <span className="text-[11.5px] text-[var(--ink-3)]">{inv.createdAt.slice(0, 10)}</span>
+                {inv.sentTo && <span className="text-[11.5px] text-[var(--ink-3)]">→ {inv.sentTo}</span>}
               </div>
               <div className="flex items-center gap-2">
                 {inv.usedBy ? (

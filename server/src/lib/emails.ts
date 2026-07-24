@@ -161,6 +161,38 @@ export function emailSignUpInvite(p: {
   );
 }
 
+/** Team/franchise invite — the join link, who sent it and what it grants.
+ * The link is the secret; it can only be used once. */
+export function emailTeamInvite(p: {
+  to: string;
+  tenantName: string;
+  role: "franchise" | "staff";
+  link: string;
+  inviterName?: string;
+}): void {
+  const what =
+    p.role === "franchise"
+      ? `run your own franchise area inside ${p.tenantName}`
+      : `join the ${p.tenantName} team as staff`;
+  void sendMail(
+    p.to,
+    `${p.tenantName} — you're invited`,
+    `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
+      <h2 style="font-size:19px;margin:0 0 10px">Join ${p.tenantName} on ActivityOS</h2>
+      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
+        ${p.inviterName ? `${p.inviterName} has invited you` : "You've been invited"} to ${what}.
+        The button below creates your account and links it to theirs — nothing to configure.
+      </p>
+      <p style="margin:0 0 16px">
+        <a href="${p.link}" style="display:inline-block;background:#2f6bd8;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Accept the invite</a>
+      </p>
+      <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
+        The link works once. Not expecting this? Ignore it and nothing happens.
+      </p>
+    </div>`,
+  );
+}
+
 /** §H — the ONE email when an operator books for a family: confirmation +
  * set-your-password (new accounts) + pay link. Deliberately NO child data:
  * a mistyped address must never leak a child's details. */

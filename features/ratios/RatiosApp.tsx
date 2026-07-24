@@ -24,8 +24,8 @@ const HOLDER_ID = "account-holder";
 // a group by age. The operator assigns staff and can drag a child across.
 //
 // The group CONFIG persists (settings). Staff assignment and drag overrides
-// are per-view for now — a persisted per-day board needs a backend store
-// (handoff §R). The counts are always real.
+// persist per day via /api/ratios/board/:date (handoff §R), shared across
+// the team. The counts are always real.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface SessionChild {
@@ -233,14 +233,46 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover 
   onDay: (by: number) => void;
   onCover?: (c: { onDuty: number; needed: number; within: boolean }) => void;
 }) {
-  // Child → group. Default is by age; a manual drag overrides it (this view
-  // only — persisting the board needs a backend store, §R).
+  // Child → group. Default is by age; a manual drag overrides it. Both the
+  // overrides and each group's staffing persist per (tenant, day) via
+  // /api/ratios/board/:date, so the board survives a refresh and is shared
+  // with the rest of the team.
   const [override, setOverride] = useState<Record<string, string>>({});
   const [groupStaff, setGroupStaff] = useState<Record<string, string[]>>({});
+  const boardLoaded = useRef(false);
   const [dragRef, setDragRef] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   // Flick between grouping by age band and grouping by the hours children are in.
   const [mode, setMode] = useState<"age" | "time">("age");
+
+  useEffect(() => {
+    boardLoaded.current = false;
+    apiGet<{ overrides: Record<string, string>; groupStaff: Record<string, string[]> }>(`/api/ratios/board/${date}`)
+      .then((b) => {
+        setOverride(b.overrides ?? {});
+        setGroupStaff(b.groupStaff ?? {});
+        boardLoaded.current = true;
+      })
+      .catch(() => {
+        // Read-only fallback: the board still works, it just won't have
+        // loaded any saved state (e.g. transient network error).
+        setOverride({});
+        setGroupStaff({});
+        boardLoaded.current = true;
+      });
+  }, [date]);
+  // Debounced save — never before the day's board has loaded, or a slow
+  // fetch would overwrite the saved board with an empty one.
+  useEffect(() => {
+    if (!boardLoaded.current) return;
+    const t = setTimeout(() => {
+      void api(`/api/ratios/board/${date}`, {
+        method: "PUT",
+        body: JSON.stringify({ overrides: override, groupStaff }),
+      }).catch(() => {});
+    }, 700);
+    return () => clearTimeout(t);
+  }, [override, groupStaff, date]);
 
   // In time mode the cards are the distinct arrival→departure windows,
   // synthesized as pseudo-groups so the card render is shared with age mode.
@@ -563,7 +595,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover 
         )}
       </div>
 
-      <p className="mt-2 text-[10.5px] text-[var(--ink-3)]">Staff assignment and drag are per-view for now — the group colours, names, ages, targets and sizes above are saved.</p>
+      <p className="mt-2 text-[10.5px] text-[var(--ink-3)]">Everything here saves as you go — group setup to your settings, today&rsquo;s staffing and drags to the day&rsquo;s board.</p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
 import {
   blockCountDelta,
   bookingDays,
+  countsTowardCapacity,
   countsUpdate,
   daysHaveSpace,
   bookingSeats,
@@ -29,7 +30,6 @@ import {
   applyCancel,
   applyCancelChild,
   applyCancelDay,
-  applyChangeDayMutation,
   applyNote,
   applyRowAction,
   buildBooking,
@@ -332,6 +332,51 @@ bookings.post("/:ref/actions", async (req, res) => {
         }
       }
 
+      // Moving a day is calendar- and capacity-aware: the target must be a
+      // real session on the booking's block with space left (day scope), and
+      // the block's per-day counts move with the child. Handles both shapes:
+      // modern bookings (ISO `days` + `sessions` labels) and legacy
+      // multi-child ones (label dates inside `kids`).
+      let moveUpdate: {
+        ref: FirebaseFirestore.DocumentReference;
+        counts: ReturnType<typeof countsUpdate>;
+      } | null = null;
+      if (action.type === "change-day") {
+        if (!b.blockId) throw new Conflict("This booking has no dated block to move within");
+        const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
+        if (!blockSnap.exists) throw new Conflict("This booking's block no longer exists");
+        const block = blockSnap.data() as BlockDoc;
+        const labelOf = (s: BlockDoc["sessions"][number]) => sessionLabel(s).split(" · ")[0];
+        const isIso = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+        const toIso = (v: string) => (isIso(v) ? v : block.sessions.find((s) => labelOf(s) === v)?.date ?? v);
+        const oldIso = toIso(action.oldDate);
+        const newSess = block.sessions.find((s) => s.date === toIso(action.newDate));
+        if (!newSess) throw new Conflict(`This block doesn't run on ${action.newDate}`);
+        const days = bookingDays(b, block);
+        if (!days.includes(oldIso)) throw new Conflict(`${action.oldDate} isn't on this booking`);
+        if (days.includes(newSess.date)) throw new Conflict(`${action.newDate} is already on this booking`);
+        // One child moves one seat — never the whole booking's seat count.
+        if (countsTowardCapacity(b.status)) {
+          if ((block.capacityScope ?? "listing") === "day" && !daysHaveSpace(block, { [newSess.date]: 1 }).fits)
+            throw new Conflict(`${labelOf(newSess)} is full — free a place first`);
+          const dec = countsUpdate(block, -1, [oldIso]);
+          moveUpdate = { ref: blockSnap.ref, counts: countsUpdate({ ...block, ...dec }, 1, [newSess.date]) };
+        }
+        // Modern shape: `days` + `sessions` are what registers read.
+        if (b.days?.length) {
+          b.days = [...b.days.filter((d) => d !== oldIso), newSess.date].sort();
+          const have = new Set(b.days);
+          b.sessions = block.sessions.filter((s) => have.has(s.date)).map(sessionLabel);
+        }
+        // Legacy/multi-child shape: swap inside that child's own list, in
+        // whichever format the list already uses.
+        if (b.kids?.length) {
+          const k = b.kids[action.ki];
+          const ix = k?.dates ? k.dates.findIndex((d) => d === action.oldDate || toIso(d) === oldIso) : -1;
+          if (k?.dates && ix > -1) k.dates[ix] = isIso(k.dates[ix]) ? newSess.date : labelOf(newSess);
+        }
+      }
+
       switch (action.type) {
         case "cancel":
           applyCancel(b, action.refund, action.amount, action.reason);
@@ -343,8 +388,7 @@ bookings.post("/:ref/actions", async (req, res) => {
           applyCancelDay(b, action.ki, action.date);
           break;
         case "change-day":
-          applyChangeDayMutation(b, action.ki, action.oldDate, action.newDate);
-          break;
+          break; // fully handled above, block-aware
         case "note":
           applyNote(b, action.text);
           break;
@@ -374,6 +418,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 
       tx.set(ref, toDoc(b));
       if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });
+      if (moveUpdate) tx.update(moveUpdate.ref, { ...moveUpdate.counts });
       return b;
     });
 

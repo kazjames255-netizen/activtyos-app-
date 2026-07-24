@@ -17,6 +17,8 @@ import { ParentAccidentsApp } from "@/features/incidents/ParentAccidentsApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { StaffDashApp } from "@/features/dashboard/StaffDashApp";
+import { PaymentsApp as ParentPaymentsApp } from "@/features/parent/PaymentsApp";
 import { MarketingApp } from "@/features/marketing/MarketingApp";
 import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
@@ -50,12 +52,13 @@ import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
+import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
 
 /**
- * Views that have a true React implementation. Everything else in
- * lib/nav/config.ts falls back to the legacy iframe bridge
- * (components/shell/LegacyViewFrame) until it's migrated — at which point it
- * moves from nav config into this registry, with no routing changes needed.
+ * Views that have a true React implementation — which is now ALL of them:
+ * every slug in lib/nav/config.ts must be registered here (an unregistered
+ * slug 404s; the legacy prototype iframe fallback is gone). A new view
+ * ships by adding its component here and its nav item there.
  *
  * Bookings is ONE component for all operator portals — the API scopes the
  * data to the signed-in account's tenant (see server/src/middleware/role.ts).
@@ -71,6 +74,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
+    blocks: BlocksApp,
     timetable: TimetableApp,
     staff: TeamApp,
     "admin-registers": RegistersApp,
@@ -90,6 +94,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
     activityos: SupportApp,
+    support: SupportApp,
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: MoneyApp,
@@ -109,6 +114,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
+    blocks: BlocksApp,
     timetable: TimetableApp,
     staff: TeamApp,
     registers: RegistersApp,
@@ -129,6 +135,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
     activityos: SupportApp,
+    support: SupportApp,
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: MoneyApp,
@@ -166,6 +173,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
     activityos: SupportApp,
+    support: SupportApp,
     templates: TemplatesApp,
     expenses: ExpensesApp,
     purchasing: MoneyApp,
@@ -179,9 +187,13 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
   },
   staff: {
+    dash: StaffDashApp,
+    timetable: StaffTimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
-    incidents: () => <IncidentsApp kind="incident" />,
+    // Staff nav uses the singular slug — keyed to match, or the real
+    // component is unreachable and the legacy iframe shows instead.
+    incident: () => <IncidentsApp kind="incident" />,
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
@@ -198,6 +210,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   },
   custdash: {
     browse: BrowseApp,
+    payments: ParentPaymentsApp,
     wallet: WalletApp,
     coupons: CouponsApp,
     refer: ReferApp,

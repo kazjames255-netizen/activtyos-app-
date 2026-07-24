@@ -20,6 +20,7 @@ export function PublishPanel() {
   const share = useTimetableStore((s) => s.share);
   const audience = useTimetableStore((s) => s.audience);
   const pubStatus = useTimetableStore((s) => s.pubStatus);
+  const publishing = useTimetableStore((s) => s.publishing);
   const toggleShare = useTimetableStore((s) => s.toggleShare);
   const setAudience = useTimetableStore((s) => s.setAudience);
   const publish = useTimetableStore((s) => s.publish);
@@ -48,8 +49,8 @@ export function PublishPanel() {
           Publish the finished week so staff see the sessions they’re running and parents see the day plan for the days
           their child is booked.
         </div>
-        <Row k="staff" title="Publish to the Staff portal" desc="Each staff member sees their assigned sessions in their own Timetable." />
-        <Row k="parents" title="Share with Parents" desc="Shows on the customer portal timetable for their booked days." />
+        <Row k="staff" title="Publish to the Staff portal" desc="The team sees the published day plans in their own Timetable." />
+        <Row k="parents" title="Share with Parents" desc="Shows on the family's Schedule for the days their child is booked." />
 
         <div className="mb-1 mt-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
           Parent audience
@@ -65,10 +66,11 @@ export function PublishPanel() {
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
-            onClick={publish}
-            className="rounded-full bg-[var(--cta,#e22295)] px-4 py-2 text-[12.5px] font-bold text-white"
+            onClick={() => void publish()}
+            disabled={publishing}
+            className="rounded-full bg-[var(--cta,#e22295)] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
           >
-            Publish timetable
+            {publishing ? "Publishing…" : "Publish timetable"}
           </button>
           {pubStatus && <span className="text-[12px] text-[var(--ink-3)]">{pubStatus}</span>}
         </div>

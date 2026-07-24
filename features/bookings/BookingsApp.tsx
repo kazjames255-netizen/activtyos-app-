@@ -7,6 +7,7 @@ import { useBookingsStore } from "./store";
 import { BookingsList } from "./BookingsList";
 import { BookingDetail } from "./BookingDetail";
 import { TakeBookingModal } from "./TakeBookingModal";
+import { BulkEmailModal } from "./BulkEmailModal";
 
 /**
  * Root of the migrated Bookings view (registered in lib/view-registry.tsx
@@ -82,6 +83,7 @@ export function BookingsApp() {
         </div>
       )}
       <TakeBookingModal />
+      <BulkEmailModal />
     </div>
   );
 }

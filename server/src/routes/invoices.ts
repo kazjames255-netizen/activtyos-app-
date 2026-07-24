@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
 import { renderMoneyDoc } from "../lib/moneyDoc";
+import { platformFallback, stripe, toPence } from "../lib/stripe";
 import type { Role } from "../middleware/role";
 
 const WEB_URL = process.env.PUBLIC_WEB_URL || process.env.APP_URL || "http://localhost:3000";
@@ -13,8 +14,9 @@ const WEB_URL = process.env.PUBLIC_WEB_URL || process.env.APP_URL || "http://loc
 // Each carries an unguessable payToken so the parent can open a public pay
 // page. Operators only for management; the pay page is public by token.
 //
-// Online card payment isn't wired yet (no Stripe) — the pay page shows the
-// amount + the provider's manual pay methods, and the provider marks it paid.
+// The public pay page takes card payments through Stripe (direct charge on
+// the provider's connected account — see /:token/checkout below); manual
+// methods stay listed and the provider can still mark those paid by hand.
 export const invoices = Router();
 export const invoicePublic = Router();
 const col = db.collection("invoices");
@@ -151,7 +153,101 @@ invoicePublic.get("/:token", async (req, res) => {
   res.json({
     provider, amount: inv.amount ?? 0, description: inv.description ?? null, reference: inv.bookingRef ?? null,
     status: inv.status ?? "sent", dueDate: inv.dueDate ?? null, customerName: inv.customerName ?? null,
-    // Manual methods the parent can pay by today; card is pending Stripe.
-    payMethods, cardEnabled: false,
+    payMethods,
+    // Card is on when Stripe is configured and the provider has a connected
+    // account (or the dev platform fallback). The checkout call re-checks
+    // the account can actually charge before any intent is created.
+    cardEnabled: !!stripe && (!!tenant.data()?.stripeAccountId || platformFallback),
   });
+});
+
+// POST /api/public/invoice/:token/checkout — start a card payment. Public:
+// the unguessable token IS the authorisation, exactly like the GET. Same
+// rules as booking checkout — a DIRECT CHARGE on the provider's connected
+// account; the amount only ever comes from the invoice doc.
+invoicePublic.post("/:token/checkout", async (req, res) => {
+  if (!stripe) { res.status(503).json({ error: "Card payments aren't configured" }); return; }
+  const snap = await col.where("payToken", "==", req.params.token).limit(1).get();
+  if (snap.empty) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
+  const doc = snap.docs[0];
+  const inv = doc.data() as Record<string, unknown>;
+  if (inv.status === "paid") { res.status(409).json({ error: "This invoice is already paid" }); return; }
+  if (inv.status === "cancelled") { res.status(409).json({ error: "This invoice was cancelled" }); return; }
+  const amount = Math.round(Number(inv.amount ?? 0) * 100) / 100;
+  if (!(amount > 0)) { res.status(409).json({ error: "Nothing to pay" }); return; }
+
+  const tenant = await db.collection("tenants").doc(inv.tenantId as string).get();
+  const accountId = tenant.data()?.stripeAccountId as string | undefined;
+  let stripeAccount: string | null = null;
+  if (accountId) {
+    const account = await stripe.accounts.retrieve(accountId);
+    if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId;
+  }
+  if (!stripeAccount && !platformFallback) {
+    res.status(409).json({ error: "This provider can't take card payments yet — pay by one of the listed methods instead" });
+    return;
+  }
+  try {
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount: toPence(amount),
+        currency: "gbp",
+        automatic_payment_methods: { enabled: true },
+        description: `${(tenant.data()?.name as string) ?? "ActivityOS"} — invoice ${(inv.reference as string) || doc.id}`,
+        metadata: { tenantId: inv.tenantId as string, invoiceId: doc.id, kind: "invoice" },
+        ...(typeof inv.customerEmail === "string" && inv.customerEmail.includes("@") ? { receipt_email: inv.customerEmail } : {}),
+      },
+      stripeAccount ? { stripeAccount } : undefined,
+    );
+    const rec = await db.collection("payments").add({
+      kind: "invoice",
+      tenantId: inv.tenantId,
+      invoiceId: doc.id,
+      email: inv.customerEmail ?? null,
+      amount,
+      currency: "gbp",
+      paymentIntentId: intent.id,
+      stripeAccount,
+      platformFallback: !stripeAccount,
+      status: "created",
+      createdAt: new Date().toISOString(),
+    });
+    res.status(201).json({ paymentId: rec.id, clientSecret: intent.client_secret, stripeAccount, amount });
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Stripe error" });
+  }
+});
+
+// POST /api/public/invoice/:token/confirm/:paymentId — verify with Stripe,
+// mark the invoice paid. Idempotent; the payment must belong to this invoice.
+invoicePublic.post("/:token/confirm/:paymentId", async (req, res) => {
+  if (!stripe) { res.status(503).json({ error: "Card payments aren't configured" }); return; }
+  const snap = await col.where("payToken", "==", req.params.token).limit(1).get();
+  if (snap.empty) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
+  const invDoc = snap.docs[0];
+  const paySnap = await db.collection("payments").doc(req.params.paymentId).get();
+  if (!paySnap.exists || paySnap.data()!.invoiceId !== invDoc.id) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
+  }
+  const rec = paySnap.data() as { paymentIntentId: string; stripeAccount: string | null; status: string };
+  const intent = await stripe.paymentIntents.retrieve(
+    rec.paymentIntentId,
+    {},
+    rec.stripeAccount ? { stripeAccount: rec.stripeAccount } : undefined,
+  );
+  if (intent.status !== "succeeded") {
+    res.json({ status: intent.status, paid: false });
+    return;
+  }
+  if (rec.status !== "succeeded") {
+    const paidAt = new Date().toISOString();
+    const batch = db.batch();
+    // "link" — paid through the pay-link (card), matching the operator-side
+    // paidVia vocabulary ("link" | "manual").
+    batch.set(invDoc.ref, { status: "paid", paidAt, paidVia: "link", paymentIntentId: rec.paymentIntentId }, { merge: true });
+    batch.update(paySnap.ref, { status: "succeeded", paidAt });
+    await batch.commit();
+  }
+  res.json({ status: "succeeded", paid: true });
 });

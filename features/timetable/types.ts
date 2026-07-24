@@ -16,6 +16,8 @@ export interface Category {
 }
 
 export interface Listing {
+  /** The real listing's id — timetable drafts key on it. */
+  id: string;
   name: string;
   venue: string;
   dates: string;
@@ -25,6 +27,9 @@ export interface Listing {
   end: string;
   signin: string[];
   signout: string[];
+  /** Every ISO date the listing's blocks actually run — days in the range
+   * with no session start excluded in the builder. */
+  sessionDates?: string[];
 }
 
 export interface Group {

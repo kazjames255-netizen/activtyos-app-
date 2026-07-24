@@ -15,6 +15,7 @@ import {
   sessionCount,
   sessionIsoDates,
   statusTone,
+  type BlockAvail,
 } from "./helpers";
 import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/components/ui";
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
@@ -120,7 +121,7 @@ function Tile({ big, small }: { big: string; small: string }) {
   );
 }
 
-function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: number }) {
+function AttendeeCard({ booking, kid, ki, blockAvail }: { booking: Booking; kid: Kid; ki: number; blockAvail: BlockAvail | null }) {
   const cancelChild = useBookingsStore((s) => s.cancelChild);
   const cancelDay = useBookingsStore((s) => s.cancelDay);
   const changeDay = useBookingsStore((s) => s.changeDay);
@@ -222,18 +223,23 @@ function AttendeeCard({ booking, kid, ki }: { booking: Booking; kid: Kid; ki: nu
                   {changing && (
                     <div className="my-0.5 mb-[7px] rounded-[9px] bg-[var(--brand-soft)] px-2.5 py-2">
                       <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.03em] text-[var(--ink-3)]">
-                        Move to another date
+                        Move to another date this block runs
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {altDates(kid).map((nd) => (
+                        {altDates(kid, blockAvail).map((nd) => (
                           <button
-                            key={nd}
-                            onClick={() => applyChangeDay(booking.ref, ki, dt, nd)}
+                            key={nd.iso}
+                            onClick={() => applyChangeDay(booking.ref, ki, dt, nd.iso)}
                             className="cursor-pointer rounded-full border-[1.5px] border-[var(--brand-line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--brand)]"
                           >
-                            {nd}
+                            {nd.label}
                           </button>
                         ))}
+                        {altDates(kid, blockAvail).length === 0 && (
+                          <span className="text-[11px] text-[var(--ink-3)]">
+                            {blockAvail ? "No other dates with space on this block." : "Checking the block's dates…"}
+                          </span>
+                        )}
                         <button
                           onClick={() => cancelChange(booking.ref)}
                           className="cursor-pointer self-center text-[11px] text-[var(--ink-3)]"
@@ -475,6 +481,16 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const saveNote = useBookingsStore((s) => s.saveNote);
   const [note, setNote] = useState(booking.note || "");
   const [messaging, setMessaging] = useState(false);
+  // The block's live availability — feeds the per-day "Move" chips with the
+  // dates this block really runs and has space on.
+  const [blockAvail, setBlockAvail] = useState<BlockAvail | null>(null);
+  useEffect(() => {
+    setBlockAvail(null);
+    if (!booking.blockId) return;
+    apiGet<BlockAvail[]>("/api/blocks")
+      .then((list) => setBlockAvail(list.find((x) => x.id === booking.blockId) ?? null))
+      .catch(() => {});
+  }, [booking.blockId]);
 
   const b = booking;
   const kids = bookingKids(b);
@@ -531,7 +547,6 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           ? <Button variant="cta" onClick={() => cancelOpen(b.ref)}>Refund</Button>
           : <Button variant="danger" onClick={() => cancelOpen(b.ref)}>Cancel booking</Button>
       )}
-      <Button onClick={() => alert("Opened change-date / transfer (same-camp dates).")}>Change date</Button>
     </>
   );
 
@@ -624,7 +639,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         {/* Attendees */}
         <SectionHead>Attendees</SectionHead>
         {kids.map((k, ki) => (
-          <AttendeeCard key={ki} booking={b} kid={k} ki={ki} />
+          <AttendeeCard key={ki} booking={b} kid={k} ki={ki} blockAvail={blockAvail} />
         ))}
 
         {/* Activity */}

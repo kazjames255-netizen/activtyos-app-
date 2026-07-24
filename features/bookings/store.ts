@@ -31,6 +31,9 @@ interface BookingsState {
   selected: Record<string, boolean>;
   openRef: string | null;
   showCreate: boolean;
+  /** Bulk-email compose: the selected bookers (deduped, valid emails only). */
+  emailCompose: { emails: string[]; names: string[] } | null;
+  emailSending: boolean;
 
   refresh: () => Promise<void>;
 
@@ -39,6 +42,8 @@ interface BookingsState {
   toggleSel: (ref: string) => void;
   clearSel: () => void;
   bulk: (action: UiBulkAction) => void;
+  emailClose: () => void;
+  sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
   open: (ref: string) => void;
   close: () => void;
   act: (ref: string, action: UiRowAction) => void;
@@ -102,6 +107,8 @@ export const useBookingsStore = create<BookingsState>()(
       selected: {},
       openRef: null,
       showCreate: false,
+      emailCompose: null,
+      emailSending: false,
 
       refresh: async () => {
         set((s) => void (s.loading = true));
@@ -130,7 +137,17 @@ export const useBookingsStore = create<BookingsState>()(
         const n = refs.length;
         if (!n) return;
         if (action === "email") {
-          setTimeout(() => alert(`Opened a message to ${n} booker(s).`), 40);
+          // Compose to the selected bookings' families — sent through the
+          // same broadcast endpoint Messages uses, so replies land in
+          // each family's thread.
+          const picked = get().bookings.filter((b) => refs.includes(b.ref));
+          const byEmail = new Map<string, string>();
+          for (const b of picked) if (b.email?.includes("@")) byEmail.set(b.email.toLowerCase(), b.booker || b.email);
+          if (!byEmail.size) {
+            set((s) => void (s.error = "None of the selected bookings has an email address"));
+            return;
+          }
+          set((s) => void (s.emailCompose = { emails: [...byEmail.keys()], names: [...byEmail.values()] }));
           return;
         }
         if (action === "export") {
@@ -145,6 +162,35 @@ export const useBookingsStore = create<BookingsState>()(
           updated.forEach(applyServer);
           set((s) => void (s.selected = {}));
         });
+      },
+
+      emailClose: () => set((s) => void (s.emailCompose = null)),
+      sendBulkEmail: async (subject, body) => {
+        const compose = get().emailCompose;
+        if (!compose || !body.trim()) return false;
+        set((s) => {
+          s.emailSending = true;
+          s.error = null;
+        });
+        try {
+          await apiPost<{ sent: number }>("/api/messages/broadcast", {
+            emails: compose.emails,
+            body: body.trim(),
+            ...(subject.trim() ? { subject: subject.trim() } : {}),
+          });
+          set((s) => {
+            s.emailSending = false;
+            s.emailCompose = null;
+            s.selected = {};
+          });
+          return true;
+        } catch (e) {
+          set((s) => {
+            s.emailSending = false;
+            s.error = e instanceof Error ? e.message : "Couldn’t send the message";
+          });
+          return false;
+        }
       },
 
       open: (ref) => {

@@ -16,11 +16,9 @@ import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, Croppe
 // screen. PHASE A: the 3-tab shell (Listings / Categories / Locations), the
 // services & tickets table, and the Categories + Locations managers.
 //
-// Wired to the real API where the backend supports it (listing name + tickets
-// = listing.passes via /api/listings). Categories & venues have no backend yet,
-// so they persist to localStorage per account (see the Listings backend spec
-// for what the developer needs to build). The 10-step listing builder wizard +
-// live parent preview is PHASE B.
+// Fully wired: listings + tickets via /api/listings, and the library
+// (categories/venues/staff/add-ons) via /api/library — localStorage is only
+// an offline fallback cache; the server copy always wins on load.
 // ─────────────────────────────────────────────────────────────────────────
 
 // A listing from the API now carries the whole wizard draft (the server

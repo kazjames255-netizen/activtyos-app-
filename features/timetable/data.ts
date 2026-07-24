@@ -1,6 +1,8 @@
-// AUTO-EXTRACTED verbatim from the legacy TTB module (categories, activities,
-// listings, facilities, swatch palette). Kept identical so the engine output matches.
-import type { Category, Listing } from "./types";
+// STARTER catalog (categories/activities, facilities, swatch palette) —
+// seeds a tenant's timetable library on first use; their edited copy lives
+// on the tenant library doc (`timetable` key) after that. Listings are the
+// tenant's real ones, loaded by the store from GET /api/listings?mine=1.
+import type { Category } from "./types";
 
 export const SWATCHES: string[] = ["#1D3A8F","#E91E63","#F97316","#0EA5A0","#7A5AF8","#15B364","#F59E0B","#2AACE2","#64748B","#111827"];
 
@@ -363,72 +365,6 @@ export const CATEGORIES: Category[] = [
     "exclude": [],
     "place": "Playground"
    }
-  ]
- }
-];
-
-export const LISTINGS: Listing[] = [
- {
-  "name": "Loughton Multi-Activity Camp",
-  "venue": "Loughton Manor First School",
-  "dates": "28 Jul – 22 Aug",
-  "from": "2025-07-28",
-  "to": "2025-08-22",
-  "start": "09:00",
-  "end": "15:30",
-  "signin": [
-   "08:00",
-   "09:00"
-  ],
-  "signout": [
-   "15:30",
-   "17:30"
-  ]
- },
- {
-  "name": "Gulliver’s Land Holiday Camp",
-  "venue": "Gulliver’s Land, Milton Keynes",
-  "dates": "11 – 15 Aug",
-  "from": "2025-08-11",
-  "to": "2025-08-15",
-  "start": "09:00",
-  "end": "17:30",
-  "signin": [
-   "09:00"
-  ],
-  "signout": [
-   "17:30"
-  ]
- },
- {
-  "name": "Newport Pagnell Football Camp",
-  "venue": "Newport Pagnell Town FC",
-  "dates": "26 – 29 Aug",
-  "from": "2025-08-26",
-  "to": "2025-08-29",
-  "start": "09:00",
-  "end": "15:00",
-  "signin": [
-   "09:00"
-  ],
-  "signout": [
-   "15:00",
-   "17:00"
-  ]
- },
- {
-  "name": "St Oswald’s HAF Camp",
-  "venue": "St Oswald’s Church, Sutton",
-  "dates": "22 – 24 Dec",
-  "from": "2025-12-22",
-  "to": "2025-12-24",
-  "start": "10:00",
-  "end": "14:00",
-  "signin": [
-   "10:00"
-  ],
-  "signout": [
-   "14:00"
   ]
  }
 ];

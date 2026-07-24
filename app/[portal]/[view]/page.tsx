@@ -1,8 +1,7 @@
 import { createElement } from "react";
 import { notFound } from "next/navigation";
-import { LEGACY_PORTAL_ID, PORTALS, findNavItem, type PortalKey } from "@/lib/nav/config";
+import { PORTALS, findNavItem, type PortalKey } from "@/lib/nav/config";
 import { getRegisteredView } from "@/lib/view-registry";
-import { LegacyViewFrame } from "@/components/shell/LegacyViewFrame";
 
 export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   const { portal, view } = await props.params;
@@ -15,10 +14,9 @@ export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   // real Firebase sign-out in the sidebar — never render them.
   if (view === "auth") notFound();
 
+  // Every nav slug maps to a real component — the legacy prototype iframe
+  // fallback is gone (a slug with no component doesn't go in the nav).
   const registeredView = getRegisteredView(portalKey, view);
-  if (registeredView) {
-    return <div className="p-5">{createElement(registeredView)}</div>;
-  }
-
-  return <LegacyViewFrame portal={LEGACY_PORTAL_ID[portalKey]} legacyView={navItem.legacyView} />;
+  if (!registeredView) notFound();
+  return <div className="p-5">{createElement(registeredView)}</div>;
 }

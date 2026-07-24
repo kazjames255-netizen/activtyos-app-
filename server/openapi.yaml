@@ -717,6 +717,8 @@ tags:
     description: Staff:child ratios and grouping children per session
   - name: tasks
     description: The team's shared to-do list (Run the day)
+  - name: timetables
+    description: Activity timetable builder — per-run day plans, published to the Staff portal and parents' booked days
   - name: trips
     description: Off-site trips & visits — who's going, transport, risk assessment, consent
   - name: shifts
@@ -2251,6 +2253,87 @@ paths:
         "200": { description: "Array of {tenantId, name}" }
         "400": { $ref: "#/components/responses/BadRequest" }
 
+  /api/timetables:
+    get:
+      tags: [timetables]
+      summary: The tenant's timetables (drafts + published state; staff and operators)
+      responses:
+        "200": { description: Array of timetable docs, newest updated first }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [timetables]
+      summary: Save a new timetable draft (operators)
+      description: >-
+        Body carries the whole built state: `{listingId?, name, dateFrom,
+        dateTo, excluded[], config{start,end,perDay,breaks,lunch,signin[],
+        signout[],wholeTimes[],groups[]}, dayList[{n,d,iso}], plan (rows per
+        day), mode}`. The activity catalog itself lives on the tenant
+        library (`PUT /api/library` key `timetable`).
+      responses:
+        "201": { description: The created timetable }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/timetables/{id}:
+    put:
+      tags: [timetables]
+      summary: Update a draft (same body as create; leaves `published` untouched)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The updated timetable }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [timetables]
+      summary: Delete a timetable (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/timetables/{id}/publish:
+    post:
+      tags: [timetables]
+      summary: Publish the current draft to audiences (or unpublish)
+      description: >-
+        `{staff, parents, audience}` — freezes a copy of the draft that
+        audiences read, so later edits stay invisible until re-published.
+        `audience: "booked"` shows parents only the days their family has
+        booked; `"everyone"` shows the whole run. Both flags false =
+        unpublish.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [staff, parents]
+              properties:
+                staff: { type: boolean }
+                parents: { type: boolean }
+                audience: { type: string, enum: [booked, everyone], default: booked }
+      responses:
+        "200": { description: The timetable with its new published snapshot }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/timetables/published:
+    get:
+      tags: [timetables]
+      summary: Published day plans the caller may see
+      description: >-
+        Staff → their tenant's weeks published to the Staff portal.
+        Operators → everything their tenant has published. Parents → weeks
+        published to Parents by providers they've booked with; with
+        `audience: "booked"` each week is trimmed to that family's booked
+        days (empty weeks dropped) and rows carry `tenantName`.
+      responses:
+        "200": { description: Array of published snapshots }
+
   /api/tasks:
     get:
       tags: [tasks]
@@ -2883,6 +2966,47 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/ratios/board/{date}:
+    get:
+      tags: [ratios]
+      summary: The day's cover board (drag overrides + per-group staffing)
+      description: One board per tenant per day — the state the Ratios cover board renders. Staff and operators.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema: { type: string, example: "2026-08-03" }
+      responses:
+        "200": { description: "{overrides: {childKey: groupId}, groupStaff: {groupId: staffIds[]}}" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [ratios]
+      summary: Save the day's cover board (staff + operators)
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                overrides:
+                  type: object
+                  description: childKey → groupId (a manual drag out of the age-derived group)
+                groupStaff:
+                  type: object
+                  description: groupId → array of staff ids covering it
+      responses:
+        "200": { description: Saved }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/ratios/{blockId}/{date}:
     put:
       tags: [ratios]
@@ -3364,11 +3488,13 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [invites]
-      summary: Create an invite link
+      summary: Create an invite (link, optionally emailed)
       description: |
         Who may invite whom: **company** → franchise or staff;
-        **franchise / freelancer** → staff only. Share the returned URL —
-        the recipient signs up through it and joins the tenant.
+        **franchise / freelancer** → staff only. With `email` the invite is
+        emailed straight to the recipient (and recorded as `sentTo`);
+        without it, share the returned URL yourself. Either way the
+        recipient signs up through it and joins the tenant.
       requestBody:
         required: true
         content:
@@ -3378,6 +3504,7 @@ paths:
               required: [role]
               properties:
                 role: { type: string, enum: [franchise, staff] }
+                email: { type: string, description: Send the invite to this address as well as returning the link }
       responses:
         "201":
           description: The invite

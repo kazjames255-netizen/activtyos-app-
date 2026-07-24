@@ -32,6 +32,9 @@ const KEYS = [
   // because it is the largest and the one most likely to grow.
   "settings",
   "childQuestions",
+  // The Activity timetable's per-tenant catalog (categories/activities +
+  // facilities) — edited inside the Timetable builder, shared by the team.
+  "timetable",
 ] as const;
 
 const MAX_BYTES = 400_000; // well under Firestore's 1MB doc limit

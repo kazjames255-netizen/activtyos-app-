@@ -344,9 +344,28 @@ export function nowStr(): string {
   );
 }
 
-// Alternate dates offered when moving a child's day (mirrors legacy pool).
-export function altDates(k: Kid): string[] {
-  const pool = ["Mon 4 Aug", "Tue 5 Aug", "Wed 6 Aug", "Thu 7 Aug", "Fri 8 Aug"];
-  const have = k.dates || [];
-  return pool.filter((d) => have.indexOf(d) < 0).slice(0, 4);
+/** The block's availability as GET /api/blocks returns it — feeds altDates. */
+export interface BlockAvail {
+  id: string;
+  capacityScope?: "day" | "listing";
+  sessions: { date: string; spotsLeft: number }[];
+}
+
+/** "2026-08-04" → "Tue 04 Aug 2026" — matches the server's session label
+ * prefix, so it can be compared against legacy label-format kid dates. */
+export const sessionDayLabel = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`)
+    .toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+    .replace(/,/g, "");
+
+/** Real alternate dates for moving a child's day: the block's OTHER sessions,
+ * skipping full days when capacity is per-day. Kid dates may be ISO (modern)
+ * or label text (legacy) — both are matched. */
+export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; label: string }[] {
+  if (!block) return [];
+  const have = new Set([...(k.dates || []), ...(k.cancelledDays || [])]);
+  return block.sessions
+    .filter((s) => !have.has(s.date) && !have.has(sessionDayLabel(s.date)))
+    .filter((s) => (block.capacityScope ?? "listing") !== "day" || s.spotsLeft > 0)
+    .map((s) => ({ iso: s.date, label: sessionDayLabel(s.date) }));
 }
