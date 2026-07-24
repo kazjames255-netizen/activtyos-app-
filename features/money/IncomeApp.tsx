@@ -156,9 +156,12 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   }, [allItems]);
 
   const sources = useMemo(() => {
-    const by: Record<string, { total: number; count: number }> = {};
-    for (const x of allItems) { if (!x.source) continue; (by[x.source] ||= { total: 0, count: 0 }); by[x.source].total += x.amount; by[x.source].count++; }
-    return Object.entries(by).map(([source, v]) => ({ source, ...v })).sort((a, b) => b.total - a.total);
+    const by: Record<string, { total: number; count: number; byType: Record<string, number> }> = {};
+    for (const x of allItems) { if (!x.source) continue; const e = (by[x.source] ||= { total: 0, count: 0, byType: {} }); e.total += x.amount; e.count++; const t = x.category || "Other"; e.byType[t] = (e.byType[t] ?? 0) + x.amount; }
+    return Object.entries(by).map(([source, v]) => {
+      const types = Object.entries(v.byType).sort((a, b) => b[1] - a[1]);
+      return { source, total: v.total, count: v.count, topType: types[0]?.[0] ?? "Other", typeCount: types.length };
+    }).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
   // BOOKING income split by TYPE OF PAYMENT — card, vouchers, cash, TFC, HAF… so
@@ -322,7 +325,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                   {sources.slice(0, 6).map((s, i) => (
                     <div key={s.source} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                       <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold text-[#16306e]">{i + 1}</span>
-                      <div className="min-w-0 flex-1 truncate font-bold">{s.source}</div>
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="truncate font-bold">{s.source}</span>
+                        <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]" title="Type of income">{icon(s.topType)} {s.topType}{s.typeCount > 1 ? ` +${s.typeCount - 1}` : ""}</span>
+                      </div>
                       <div className="flex-none text-right"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count}×</div></div>
                     </div>
                   ))}
