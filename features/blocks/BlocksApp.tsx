@@ -951,8 +951,6 @@ function LibraryCard({
       className="overflow-hidden rounded-xl border p-3.5"
       style={{
         borderColor: dragOver ? color : "var(--line)",
-        borderLeftWidth: "6px",
-        borderLeftColor: color,
         background: "#ffffff",
         boxShadow: dragOver ? `0 0 0 2px ${color}` : undefined,
       }}
