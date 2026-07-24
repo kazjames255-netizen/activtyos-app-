@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; bookingRef?: string; reference?: string; description?: string; amount: number; lineItems?: LineItem[]; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
+interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -37,7 +37,19 @@ type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "due" | "amount";
 type Cust = { id: string; name: string; email?: string; children?: { name?: string }[] };
-type Editor = { id?: string; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+type Editor = { id?: string; customerName: string; customerEmail: string; customerAddress: string; reference: string; poNumber: string; accountRef: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; taxRate: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+// Next consecutive invoice number from what's already been used (editable).
+function nextInvoiceNo(items: { reference?: string }[]): string {
+  let best: { prefix: string; num: number; width: number } | null = null;
+  for (const it of items) {
+    const m = /^(.*?)(\d+)\s*$/.exec(it.reference ?? "");
+    if (!m) continue;
+    const num = parseInt(m[2], 10);
+    if (!best || num > best.num) best = { prefix: m[1], num, width: m[2].length };
+  }
+  if (!best) return "1";
+  return best.prefix + String(best.num + 1).padStart(best.width, "0");
+}
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -62,6 +74,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [viewing, setViewing] = useState<Invoice | null>(null);
   const [emailing, setEmailing] = useState(false);
   const { settings } = useSettings();
+  const tf = settings.billing?.fields ?? {}; // which optional invoice fields to show
   // Look up an existing parent/customer on the system (by name, email or child).
   const [finder, setFinder] = useState(false);
   const [custs, setCusts] = useState<Cust[] | null>(null);
@@ -130,8 +143,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await navigator.clipboard.writeText(link); setCopied(p.id); setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800); } catch { setError("Couldn’t copy — link: " + link); }
   }
 
-  const openAdd = () => setEditor({ customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
-  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  const openAdd = () => setEditor({ customerName: "", customerEmail: "", customerAddress: "", reference: nextInvoiceNo(items), poNumber: "", accountRef: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], taxRate: String(settings.billing?.defaultTaxRate ?? ""), date: todayIso(), dueDate: "", status: "draft", notes: "" });
+  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", customerAddress: p.customerAddress ?? "", reference: p.reference ?? "", poNumber: p.poNumber ?? "", accountRef: p.accountRef ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], taxRate: p.taxRate != null ? String(p.taxRate) : "", date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
   // mode "link" = email the PDF with the online pay-link; "bank" = bank details only.
   async function emailDoc(p: Invoice, mode: "link" | "bank" = "link") {
     const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
@@ -152,7 +165,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     if (!editor.customerName.trim()) { setError("Customer name is required."); return; }
     if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
+    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, customerAddress: editor.customerAddress.trim() || undefined, reference: editor.reference.trim() || undefined, poNumber: editor.poNumber.trim() || undefined, accountRef: editor.accountRef.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, taxRate: editor.taxRate.trim() ? Number(editor.taxRate) : undefined, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
       if (editor.id) { await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body); setEditor(null); }
       else { const created = await apiPost<Invoice>("/api/invoices", body); setEditor(null); setViewing(created); } // straight to the draft, ready to send
@@ -357,12 +370,19 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
       {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
-          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
-                <button type="button" onClick={openFinder} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">🔎 Find a parent</button>
+          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-hidden p-0" style={LIGHT_PALETTE}>
+            <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] overflow-y-auto">
+              <div className="relative flex flex-wrap items-center justify-between gap-2 overflow-hidden p-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 70%,#5b95e8 100%)" }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-[18px]">🧾</span>
+                  <div>
+                    <div className="text-[17px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-white/80">Total {money(lineTotal(editor.lineItems) * (1 + (Number(editor.taxRate) || 0) / 100))}</div>
+                  </div>
+                </div>
+                <button type="button" onClick={openFinder} className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] shadow-sm hover:brightness-105">🔎 Find a parent</button>
               </div>
+              <div className="p-5">
               {finder && (
                 <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
                   <input autoFocus value={cq} onChange={(e) => setCq(e.target.value)} placeholder="Search by parent name, email or child’s name…" className={fieldCls} />
@@ -381,9 +401,11 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Customer or business name" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="customer@email.com" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Invoice no.</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
+                <label className="block"><span className={labelCls}>Invoice no. <span className="font-normal normal-case text-[var(--ink-3)]">(auto)</span></span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
+                {tf.poNumber && <label className="block"><span className={labelCls}>Customer PO no.</span><input value={editor.poNumber} onChange={(e) => setEditor({ ...editor, poNumber: e.target.value })} placeholder="4200075991" className={fieldCls} /></label>}
+                {tf.accountRef && <label className="block"><span className={labelCls}>Account ref</span><input value={editor.accountRef} onChange={(e) => setEditor({ ...editor, accountRef: e.target.value })} placeholder="LOND001" className={fieldCls} /></label>}
+                {tf.vat && <label className="block"><span className={labelCls}>VAT %</span><input type="number" min="0" step="0.5" value={editor.taxRate} onChange={(e) => setEditor({ ...editor, taxRate: e.target.value })} placeholder="20" className={fieldCls} /></label>}
                 <label className="block"><span className={labelCls}>Due date</span>
                   <input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} />
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -393,6 +415,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   </div>
                 </label>
               </div>
+              {tf.address && <label className="mt-2.5 block"><span className={labelCls}>Bill-to address</span><textarea value={editor.customerAddress} onChange={(e) => setEditor({ ...editor, customerAddress: e.target.value })} rows={2} placeholder="Street, town, postcode" className={`${fieldCls} w-full resize-none`} /></label>}
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Description <span className="font-normal normal-case text-[var(--ink-3)]">(short summary, optional)</span></span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
 
@@ -406,6 +429,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
                 <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "Save & view →"}</button>
+              </div>
               </div>
             </div>
           </Card>

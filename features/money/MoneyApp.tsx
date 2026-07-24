@@ -33,7 +33,7 @@ export function MoneyApp() {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💷</span>
           Bills &amp; Invoices
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything moving through your business — <b>money out</b> (supplier bills &amp; POs) and <b>money in</b> (invoices you send parents). Pick a side below.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything moving through your business — <b>money out</b> (supplier bills &amp; POs) and <b>money in</b> (invoices you send customers). Pick a side below.</p>
 
         {canSwitch ? (
           <div className="mt-4 inline-flex gap-1 rounded-2xl bg-white/15 p-1 backdrop-blur-sm">
@@ -54,7 +54,7 @@ export function MoneyApp() {
       {/* A colour-coded strip so the current side is unmistakable */}
       <div className="mb-3 flex items-center gap-2 text-[12px] font-bold" style={{ color: side === "out" ? "#c2410c" : "#0f7a44" }}>
         <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] text-white" style={{ background: side === "out" ? "#e2643b" : "#22a06b" }}>{side === "out" ? "↑" : "↓"}</span>
-        {side === "out" ? "OUTGOING — money you pay out to suppliers" : "INCOMING — money you collect from parents"}
+        {side === "out" ? "OUTGOING — money you pay out to suppliers" : "INCOMING — money you collect from customers"}
       </div>
 
       {side === "out" ? <PurchasingApp embedded /> : <InvoicesApp embedded />}

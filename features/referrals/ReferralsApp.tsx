@@ -82,7 +82,7 @@ export function ReferralsApp() {
             )}
           </div>
           {d && d.leaderboard.length > 0 && (
-            <div className="relative z-10 w-full max-w-[300px] self-stretch rounded-lg bg-white/12 px-2.5 py-1.5 backdrop-blur-sm">
+            <div className="relative z-10 w-full max-w-[300px] self-stretch rounded-lg bg-[#16306e]/70 px-2.5 py-1.5 shadow-md backdrop-blur-sm">
               <div className="mb-0.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/80">🏆 Top 5 referrers</div>
               <div className="flex flex-col">
                 {d.leaderboard.slice(0, 5).map((l, i) => (

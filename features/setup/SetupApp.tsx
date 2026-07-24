@@ -1459,6 +1459,31 @@ export function SetupApp() {
             </div>
             <div className="mt-2.5"><FieldLabel>Invoice/PO footer note</FieldLabel><Input value={settings.billing?.footer ?? ""} placeholder="Thank you for your business" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), footer: e.target.value } } })} className="w-full" /></div>
           </div>
+
+          <div className="mt-4 border-t border-[var(--line)] pt-4">
+            <div className="text-[14px] font-extrabold text-[var(--ink)]">Invoice template — what to show</div>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Add your logo and pick which optional fields appear when you raise an invoice.</p>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Logo</FieldLabel>
+                <div className="flex items-center gap-2">
+                  {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
+                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(f); }); try { const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl }) }); void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch { /* too large or not an image */ } e.target.value = ""; }} /></label>
+                  {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+                </div>
+              </div>
+              <div><FieldLabel>Company registration no.</FieldLabel><Input value={settings.billing?.companyReg ?? ""} placeholder="133950" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), companyReg: e.target.value } } })} className="w-full" /></div>
+            </div>
+            <div className="mt-3">
+              <FieldLabel>Optional invoice fields — tick what you use</FieldLabel>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]">
+                {([["poNumber", "Customer PO number"], ["accountRef", "Account ref"], ["address", "Bill-to address"], ["vat", "VAT / tax"]] as const).map(([k, label]) => (
+                  <label key={k} className="flex items-center gap-1.5 font-bold"><input type="checkbox" checked={!!settings.billing?.fields?.[k]} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), fields: { ...(settings.billing?.fields ?? {}), [k]: e.target.checked } } } })} /> {label}</label>
+                ))}
+              </div>
+            </div>
+            {settings.billing?.fields?.vat && <div className="mt-2.5 max-w-[200px]"><FieldLabel>Default VAT %</FieldLabel><Input type="number" value={settings.billing?.defaultTaxRate ?? ""} placeholder="20" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), defaultTaxRate: e.target.value === "" ? undefined : Number(e.target.value) } } })} className="w-full" /></div>}
+          </div>
         </Section>
       )}
 
