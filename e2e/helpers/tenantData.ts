@@ -43,7 +43,13 @@ export async function ensureVenue(operator: TestAccount, marketplaceListed = tru
 
 export async function provisionLiveListing(
   operator: TestAccount,
-  opts: { title: string; price?: number; marketplaceListed?: boolean },
+  opts: {
+    title: string;
+    price?: number;
+    marketplaceListed?: boolean;
+    maxAttendees?: number;
+    waitlist?: boolean;
+  },
 ): Promise<ProvisionedListing> {
   const s = await fbSignIn(operator.email);
   const venueId = await ensureVenue(operator, opts.marketplaceListed ?? true);
@@ -79,13 +85,15 @@ export async function provisionLiveListing(
     runTo: iso(end),
     blockMode: "weekly",
     days: [1, 2, 3, 4, 5],
-    maxAttendees: "16",
+    maxAttendees: String(opts.maxAttendees ?? 16),
     capacityScope: "day",
+    ...(opts.waitlist ? { waitlist: true, waitlistMode: "manual" as const } : {}),
     showSpaces: true,
     ageFrom: "5",
     ageTo: "12",
     blockId: bundle.id,
     passes: [{ name: "Day pass", price: opts.price ?? 0, days: 1 }],
+    bookingType: "auto", // the wizard's default — omitting it books as "Approval needed"
     status: "live",
     visibility: "public",
   });
@@ -96,4 +104,26 @@ export async function provisionLiveListing(
     body: JSON.stringify({ listingIds: [listing.id] }),
   });
   return { id: listing.id, title: opts.title, tenantId: listing.tenantId, runFrom: iso(start), runTo: iso(end) };
+}
+
+/**
+ * Book a child onto a provisioned listing through the parent checkout API —
+ * the arrange step for lifecycle tests (cancel, waitlist, registers) so they
+ * don't re-walk the UI booking journey the booking spec already covers.
+ */
+export async function bookViaApi(
+  parent: TestAccount,
+  listing: ProvisionedListing,
+  opts: { child: string; dates?: string[] },
+): Promise<{ ref: string; status: string }> {
+  const s = await fbSignIn(parent.email);
+  const doc = await apiFetch<{ blocks: { id: string }[] }>(`/api/listings/${listing.id}`, s.idToken);
+  if (!doc.blocks?.length) throw new Error(`listing ${listing.id} has no dated blocks`);
+  const res = await apiPost<{ bookings: { ref: string; status: string }[] }>("/api/my/bookings", s.idToken, {
+    listingId: listing.id,
+    blockId: doc.blocks[0].id,
+    method: "card",
+    items: [{ pass: "Day pass", child: opts.child, age: 8, dates: opts.dates ?? [listing.runFrom] }],
+  });
+  return res.bookings[0];
 }

@@ -32,10 +32,14 @@ new fakes the moment they're spotted.
   charge on the provider's connected account, same rules as booking
   checkout; invoice flips to paid on confirmation).
 
-- [x] **Playwright UI e2e suite** (`npm run e2e`, July 2026) — 20 tests: auth,
+- [x] **Playwright UI e2e suite** (`npm run e2e`, July 2026) — 29 tests: auth,
   signup, portal guard, every nav view in all 6 portals, blocks→wizard→publish,
-  browse→book→live operator row, staff invite join, operator↔parent messaging,
-  invoice drafting. Found & fixed: parents got a 403 replying to a provider
+  browse→book→live operator row, parent cancellation, the full waitlist loop
+  (full day → queued → operator offers → parent accepts), a REAL Stripe
+  test-card payment through the public pay-link, discount codes end to end,
+  child profiles, registers check-in, newsfeed to booked families, tasks,
+  staff invite join, operator↔parent messaging, invoice drafting.
+  Found & fixed: parents got a 403 replying to a provider
   message unless they had a booking (`server/src/routes/messages.ts`); the API
   allowed publishing a listing with no block bundle → dead booking widget
   (`server/src/routes/listings.ts` publishProblems); form labels were `<div>`s
