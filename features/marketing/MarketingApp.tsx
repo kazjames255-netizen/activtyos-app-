@@ -189,7 +189,7 @@ export function MarketingApp() {
     if (c.active === false) return <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>paused</Badge>;
     if (isExpired(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>expired</Badge>;
     if (isSpent(c)) return <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>used up</Badge>;
-    return <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>active</Badge>;
+    return <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>active</Badge>;
   };
 
   const activeCount = (codes ?? []).filter((c) => c.active !== false && !isExpired(c) && !isSpent(c)).length;
@@ -305,14 +305,15 @@ export function MarketingApp() {
         <div className="flex flex-col gap-2.5">
           {codes.map((c) => {
             const live = c.active !== false && !isExpired(c) && !isSpent(c);
-            const accent = live ? "#15b364" : c.active === false ? "#8a86a3" : "#e21d27";
+            const accent = live ? "#3f78d8" : c.active === false ? "#8a86a3" : "#e21d27";
+            const railBg = live ? "linear-gradient(180deg,#4f8bf5,#1d3a8f)" : accent;
             const pct = c.usageLimit != null && c.usageLimit > 0 ? Math.min(100, Math.round(((c.usedCount ?? 0) / c.usageLimit) * 100)) : null;
             return (
               <div key={c.id} className="flex items-stretch overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)] transition-shadow hover:shadow-[0_8px_24px_-14px_rgba(20,30,60,.4)]">
-                <span className="w-1.5 flex-none" style={{ background: accent }} />
+                <span className="w-1.5 flex-none" style={{ background: railBg }} />
                 <div className="flex flex-1 flex-wrap items-center gap-3 px-4 py-3">
                   <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-1 font-mono text-[14px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)]">{c.code}</span>
-                  <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[12.5px] font-extrabold text-[#0f7a44]">{valueLabel(c)}</span>
+                  <span className="rounded-full bg-[#e8ecfb] px-2.5 py-1 text-[12.5px] font-extrabold text-[#2f3fa8]">{valueLabel(c)}</span>
                   {statusBadge(c)}
                   <div className="min-w-[140px] flex-1">
                     <div className="text-[11.5px] text-[var(--ink-3)]">
