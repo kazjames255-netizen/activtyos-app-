@@ -278,6 +278,14 @@ export interface TenantSettings {
   marketplaceListed: boolean;
 
   /**
+   * Money → Expenses preferences. `includeSubscription` folds the operator's
+   * own ActivityOS plan fee into their expense totals; `categories` is the
+   * persistent custom-category registry (so a category can exist — and be
+   * renamed or deleted — independently of whether any expense uses it yet).
+   */
+  expenses?: { includeSubscription?: boolean; categories?: string[] };
+
+  /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
    * off hides it from the operator's own nav — and, for anything a family also

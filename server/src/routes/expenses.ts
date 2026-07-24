@@ -17,8 +17,21 @@ const expenseSchema = z.object({
   supplier: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(),
   receiptUrl: z.string().trim().max(600).optional(),
+  // A recurring cost (e.g. weekly venue hire): the client sends the cadence +
+  // an end date, and POST materialises one row per occurrence sharing a
+  // seriesId so the whole run can be badged and deleted together.
+  repeat: z.enum(["weekly", "fortnightly", "monthly"]).optional(),
+  repeatUntil: z.string().max(10).optional(),
+  seriesId: z.string().trim().max(60).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
+const MAX_OCCURRENCES = 104; // 2 years of weekly — a runaway guard, not a limit users hit
+function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly"): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (repeat === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
+  else d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
+  return d.toISOString().slice(0, 10);
+}
 
 function scope(req: Request, res: import("express").Response): string | null {
   const auth = req.auth!;
@@ -47,9 +60,41 @@ expenses.post("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = expenseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, amount: round2(parsed.data.amount), tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: new Date().toISOString() };
-  const ref = await col.add(doc);
-  res.status(201).json({ id: ref.id, ...doc });
+  const { repeat, repeatUntil, seriesId: _ignore, ...rest } = parsed.data;
+  const meta = { tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: new Date().toISOString() };
+  const base = { ...rest, amount: round2(rest.amount), ...meta };
+
+  // Recurring: fan out one row per occurrence, all sharing a fresh seriesId.
+  if (repeat && repeatUntil && repeatUntil > rest.date) {
+    const sid = col.doc().id;
+    const dates: string[] = [];
+    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat), i++) dates.push(d);
+    const batch = db.batch();
+    const items = dates.map((date) => {
+      const ref = col.doc();
+      const doc = { ...base, date, repeat, repeatUntil, seriesId: sid };
+      batch.set(ref, doc);
+      return { id: ref.id, ...doc };
+    });
+    await batch.commit();
+    res.status(201).json({ created: items.length, seriesId: sid, items });
+    return;
+  }
+
+  const ref = await col.add(base);
+  res.status(201).json({ id: ref.id, ...base });
+});
+
+// Delete a whole recurring series in one go.
+expenses.delete("/series/:seriesId", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  const snap = await col.where("tenantId", "==", auth.tenantId).where("seriesId", "==", req.params.seriesId).get();
+  if (snap.empty) { res.status(404).json({ error: "Series not found" }); return; }
+  const batch = db.batch();
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  res.json({ ok: true, deleted: snap.size });
 });
 
 async function own(req: Request, id: string) {
