@@ -490,28 +490,31 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               )}
             </Card>
 
-            {/* This year at a glance — classy stat tiles */}
+            {/* This year at a glance — featured hero + supporting trio */}
             <Card className="p-4">
               <div className="mb-3 flex items-baseline justify-between">
                 <div className="text-[13.5px] font-extrabold">{thisYear} at a glance</div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-3)]">Year to date</div>
               </div>
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]">
-                {([
-                  { Ic: IcCoins, big: money(yearStats.collected), lab: "Collected so far", sub: `${yearStats.activeMonths || 0} month${yearStats.activeMonths === 1 ? "" : "s"} active` },
-                  { Ic: IcTrend, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: "Best month", sub: yearStats.best ? monthLabel(yearStats.best[0]) : "—" },
-                  { Ic: IcBars, big: money(yearStats.avg), lab: "Avg / month", sub: "across active months" },
-                  { Ic: IcAward, big: yearStats.largest ? money(yearStats.largest) : "—", lab: "Biggest payment", sub: "single receipt" },
-                ]).map((t) => (
-                  <div key={t.lab} className="bg-[var(--surface)] p-3.5">
-                    <div className="mb-2.5 flex items-center gap-1.5 text-[var(--ink-3)]">
-                      <t.Ic />
-                      <span className="text-[9.5px] font-semibold uppercase tracking-[0.09em]">{t.lab}</span>
+              <div className="flex flex-col gap-2.5">
+                <div className="rounded-xl px-4 py-3.5 text-white shadow-[0_10px_26px_-14px_rgba(29,58,143,.7)]" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
+                  <div className="flex items-center gap-1.5 text-white/75"><IcCoins /><span className="text-[9.5px] font-semibold uppercase tracking-[0.09em]">Collected so far</span></div>
+                  <div className="mt-1.5 text-[28px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(yearStats.collected)}</div>
+                  <div className="mt-1.5 text-[11px] text-white/70">{yearStats.activeMonths || 0} month{yearStats.activeMonths === 1 ? "" : "s"} active</div>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {([
+                    { Ic: IcTrend, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: "Best month", sub: yearStats.best ? monthLabel(yearStats.best[0]) : "—" },
+                    { Ic: IcBars, big: money(yearStats.avg), lab: "Avg / month", sub: `${yearStats.activeMonths || 0} mo` },
+                    { Ic: IcAward, big: yearStats.largest ? money(yearStats.largest) : "—", lab: "Biggest", sub: "single receipt" },
+                  ]).map((t) => (
+                    <div key={t.lab} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <div className="mb-1.5 flex items-center gap-1 text-[var(--ink-3)]"><t.Ic /><span className="text-[8.5px] font-semibold uppercase tracking-[0.07em]">{t.lab}</span></div>
+                      <div className="text-[16px] font-extrabold leading-none tabular-nums text-[var(--ink)]">{t.big}</div>
+                      <div className="mt-1 truncate text-[10px] text-[var(--ink-3)]">{t.sub}</div>
                     </div>
-                    <div className="text-[21px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
-                    <div className="mt-1.5 truncate text-[10.5px] text-[var(--ink-3)]">{t.sub}</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </Card>
           </div>
