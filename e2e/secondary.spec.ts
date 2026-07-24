@@ -104,9 +104,10 @@ test.describe("invoices", () => {
     const customer = `E2E Invoice Family ${stamp}`;
 
     await page.goto("/company/purchasing");
-    await expect(page.getByRole("heading", { name: "Bills, Invoices & POs" })).toBeVisible();
-    // The money-out side is the default — switch to invoices (money in).
-    await page.getByRole("button", { name: /Money in/ }).click();
+    await expect(page.getByRole("heading", { name: "Money in", level: 1 })).toBeVisible();
+    // Make the Invoices side active explicitly (it's the default today, but
+    // the side toggle survives redesigns better than assuming the default).
+    await page.getByRole("button", { name: "📄 Invoices" }).click();
 
     await page.getByRole("button", { name: /New invoice/ }).first().click();
     await expect(page.getByText("New invoice", { exact: true })).toBeVisible();
