@@ -3390,3 +3390,36 @@ over that supplier's orders — no route change. No subscription toggle here
 **TODO for you:** regenerate Swagger/OpenAPI for the two `/api/purchasing`
 changes. No migration — new fields are optional/back-compatible. (Sample orders
 seeded onto the freelancer demo tenant `VOiiaTnDNd03MLbZaVcM` for the UI.)
+
+---
+
+# Money: incoming Invoices (AR) + Money settings — 24 July 2026
+
+Split Money into **outgoing** (Expenses + Bills/POs) and **incoming**
+(customer Invoices). New this pass:
+
+- **`/api/invoices`** (new collection `invoices`; operators only, realtime
+  `invoices`) — customer/sales invoices (money IN). `{customerName,
+  customerEmail?, bookingRef?, description?, amount, date, dueDate?,
+  status: draft|sent|paid|cancelled, notes?}`; each gets a server-generated
+  `payToken`. `GET` → `{items, summary:{count, outstanding, collected, overdue}}`.
+  Standard PUT/:id, DELETE/:id.
+- **`GET /api/public/invoice/:token`** — PUBLIC (mounted before the auth line,
+  like `/api/images`). Returns `{provider, amount, description, reference,
+  status, dueDate, payMethods, cardEnabled:false}` for the pay page. Provider
+  name + payMethods come from tenant settings.
+- **Public pay page** `app/pay/[token]/page.tsx` — the link operators send
+  parents. Shows amount + provider + manual pay methods; **card button is inert**
+  (`cardEnabled:false`) because online payments (Stripe) aren't wired — §AA.
+  **When you connect Stripe:** add a create-checkout endpoint keyed by payToken
+  and flip `cardEnabled`; the page already has the button + token.
+- New tenant setting **`settings.money`** = `{ show: outgoing|incoming|both,
+  usePurchaseOrders: boolean }`. `show` drives sidebar nav visibility of the two
+  sides; `usePurchaseOrders` toggles the PO/draft stage on the Bills page. Setup →
+  **Money** tab. Written via existing `PUT /api/library` (operator-only; not in
+  PUBLIC_SETTINGS_KEYS). The old "Purchasing & invoices" nav is relabelled
+  **"Bills & POs"** (outgoing); new **"Invoices"** entry is incoming.
+
+**TODO for you:** Swagger for `/api/invoices` (+ the public pay endpoint), and
+the Stripe checkout wiring above when payments land. No migration (all new/optional).
+(3 demo invoices seeded onto `VOiiaTnDNd03MLbZaVcM`.)

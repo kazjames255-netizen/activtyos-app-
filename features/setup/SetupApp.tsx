@@ -47,7 +47,7 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications";
+type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1082,7 +1082,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications"];
+  const VALID_TABS: Tab[] = ["features", "people", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1124,6 +1124,7 @@ export function SetupApp() {
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
     ["bookings", "Payments"],
+    ["money", "Money"],
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
     ["refer", "Refer a friend"],
@@ -1417,6 +1418,24 @@ export function SetupApp() {
         >
           <Row label="List us in the marketplace" hint="Off: families reach you only through your storefront/booking link. On: your live, public listings also appear in every family's in-app Browse.">
             <Toggle on={!!settings.marketplaceListed} onChange={(v) => set("marketplaceListed", v)} labels={["Listed", "Off"]} />
+          </Row>
+        </Section>
+      )}
+
+      {tab === "money" && (
+        <Section
+          title="Money — what you track"
+          lede="Your Money section splits into money going OUT (Expenses + supplier Bills/POs) and money coming IN (customer Invoices with pay-links). Show one side or both, and choose whether you raise formal purchase orders."
+        >
+          <Row label="Show in your Money menu" hint="Outgoing = Expenses + Bills/POs. Incoming = customer Invoices. Both shows everything.">
+            <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold">
+              {(["outgoing", "incoming", "both"] as const).map((k) => (
+                <button key={k} type="button" onClick={() => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), show: k } } })} className="px-3.5 py-1.5 capitalize transition-colors" style={(settings.money?.show ?? "both") === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{k}</button>
+              ))}
+            </div>
+          </Row>
+          <Row label="We raise purchase orders" hint="On: the Bills page keeps a draft (PO) stage before a bill is received and paid. Off (common for smaller providers): you just track supplier bills — received, then paid.">
+            <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={["Yes", "No"]} />
           </Row>
         </Section>
       )}

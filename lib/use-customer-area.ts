@@ -80,3 +80,24 @@ export function useOperatorFeatures(portal?: PortalKey): Features {
   useRealtime(["library"], load);
   return fe;
 }
+
+// Which Money sides the operator wants shown (Setup → Money). Drives nav
+// hiding of the incoming (Invoices) vs outgoing (Expenses, Bills/POs) views.
+export function useMoneyShow(portal?: PortalKey): "outgoing" | "incoming" | "both" {
+  const [show, setShow] = useState<"outgoing" | "incoming" | "both">("both");
+  const active = !!portal && portal !== "custdash" && portal !== "platform" && portal !== "staff";
+  const load = useCallback(() => {
+    if (!active) return;
+    void apiGet<{ settings?: Partial<TenantSettings> } | null>("/api/library")
+      .then((lib) => setShow(withDefaults(lib?.settings ?? null).money?.show ?? "both"))
+      .catch(() => {});
+  }, [active]);
+  useEffect(() => { load(); }, [load]);
+  useRealtime(["library"], load);
+  return show;
+}
+
+// The Money views on each side — used to hide a side when the operator picks
+// outgoing-only or incoming-only in Setup → Money.
+export const MONEY_OUTGOING_VIEWS = ["expenses", "purchasing"];
+export const MONEY_INCOMING_VIEWS = ["invoices"];

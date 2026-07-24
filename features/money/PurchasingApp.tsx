@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 
@@ -94,6 +95,12 @@ export function PurchasingApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["purchaseOrders"], refresh);
 
+  const { settings } = useSettings();
+  // Some providers raise formal purchase orders (draft = the PO stage); many
+  // just track supplier bills. Setup → Money toggles the PO stage on/off.
+  const usePO = settings.money?.usePurchaseOrders ?? false;
+  const visibleStatuses = useMemo(() => (usePO ? STATUSES : STATUSES.filter((s) => s !== "draft")), [usePO]);
+
   const items = useMemo(() => data?.items ?? [], [data]);
   const today = todayIso();
   const in14 = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10); }, []);
@@ -123,7 +130,7 @@ export function PurchasingApp() {
     });
   }, [active, now]);
 
-  const byStatus = useMemo(() => STATUSES.map((s) => { const rows = items.filter((p) => p.status === s); return { status: s, count: rows.length, total: rows.reduce((a, p) => a + p.amount, 0) }; }), [items]);
+  const byStatus = useMemo(() => visibleStatuses.map((s) => { const rows = items.filter((p) => p.status === s); return { status: s, count: rows.length, total: rows.reduce((a, p) => a + p.amount, 0) }; }), [items, visibleStatuses]);
 
   const suppliers = useMemo(() => {
     const by: Record<string, { total: number; count: number; outstanding: number }> = {};
@@ -166,7 +173,7 @@ export function PurchasingApp() {
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ supplier: "", reference: "", date: todayIso(), dueDate: "", amount: "", status: "draft", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
+  const openAdd = () => setEditor({ supplier: "", reference: "", date: todayIso(), dueDate: "", amount: "", status: usePO ? "draft" : "sent", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
   const openEdit = (p: PO) => setEditor({ id: p.id, supplier: p.supplier, reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", amount: String(p.amount), status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
 
   async function save() {
@@ -343,7 +350,7 @@ export function PurchasingApp() {
                 <option value="outstanding">Outstanding</option>
                 <option value="overdue">Overdue</option>
                 <option value="duesoon">Due soon (14d)</option>
-                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                {visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
@@ -387,7 +394,7 @@ export function PurchasingApp() {
                   </div>
                   {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">🧾 invoice</a>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
+                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                   <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                 </Card>
@@ -493,7 +500,7 @@ export function PurchasingApp() {
                 <label className="block"><span className={labelCls}>Amount (£)</span><input type="number" min="0" step="0.01" value={editor.amount} onChange={(e) => setEditor({ ...editor, amount: e.target.value })} placeholder="0.00" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Due date</span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
+                <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
               </div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What it’s for" className={fieldCls} /></label>
 
