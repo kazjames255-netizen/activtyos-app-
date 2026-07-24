@@ -71,6 +71,8 @@ const HUES = [
   { soft: "#eceff4", bar: "linear-gradient(90deg,#8aa0c0,#48566e)" },
   { soft: "#e8ecfb", bar: "linear-gradient(90deg,#6d84e8,#2f3fa8)" },
 ];
+// Stable hue per label so a category always gets the same colour.
+const hueFor = (label: string) => HUES[[...label].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#cdddf7]";
@@ -87,6 +89,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [newCat, setNewCat] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
+  // Overview breakdowns can be scoped to a period (independent of the ledger).
+  const [ovRange, setOvRange] = useState<Range>("all");
+  const [ovFrom, setOvFrom] = useState("");
+  const [ovTo, setOvTo] = useState("");
 
   const [q, setQ] = useState("");
   const [catFilter, setCatFilter] = useState("all");
@@ -156,18 +162,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
-  // BOOKING income split by TYPE OF PAYMENT — card, vouchers, cash, TFC, HAF… so
-  // you can see how customers actually paid for their bookings. Only booking
-  // rows carry a real method; invoices/manual income are excluded here.
-  const bookingsTotal = useMemo(() => bookingRows.reduce((s, x) => s + x.amount, 0), [bookingRows]);
-  const byMethod = useMemo(() => {
-    const by: Record<string, { total: number; count: number }> = {};
-    for (const x of bookingRows) {
-      const m = x.method || "Other";
-      (by[m] ||= { total: 0, count: 0 }); by[m].total += x.amount; by[m].count++;
-    }
-    return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
-  }, [bookingRows]);
+  // (Booking payment-type split is computed per selected period below — see ovByMethod.)
 
   // Money still owed you — unpaid invoices, largest first.
   const awaiting = useMemo(() => invoices
@@ -186,6 +181,31 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     return { collected, best: months[0] as [string, number] | undefined, activeMonths: months.length, avg: months.length ? collected / months.length : 0, largest: rows.reduce((m, x) => Math.max(m, x.amount), 0) };
   }, [allItems, thisYear]);
   const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
+
+  // Period-scoped set that drives the two overview breakdown cards.
+  const ovItems = useMemo(() => allItems.filter((x) => {
+    const d = x.date || "";
+    if (ovRange === "month" && d.slice(0, 7) !== thisMonthKey) return false;
+    if (ovRange === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
+    if (ovRange === "year" && d.slice(0, 4) !== thisYear) return false;
+    if (ovFrom && d < ovFrom) return false;
+    if (ovTo && d > ovTo) return false;
+    return true;
+  }), [allItems, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
+  const ovTotal = useMemo(() => ovItems.reduce((s, x) => s + x.amount, 0), [ovItems]);
+  const ovCats = useMemo(() => {
+    const by: Record<string, { total: number; count: number }> = {};
+    for (const x of ovItems) { const c = x.category || "Other"; (by[c] ||= { total: 0, count: 0 }); by[c].total += x.amount; by[c].count++; }
+    return Object.entries(by).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total);
+  }, [ovItems]);
+  const ovBookingsTotal = useMemo(() => ovItems.filter((x) => x.category === BOOKINGS_CAT).reduce((s, x) => s + x.amount, 0), [ovItems]);
+  const ovByMethod = useMemo(() => {
+    const by: Record<string, { total: number; count: number }> = {};
+    for (const x of ovItems) { if (x.category !== BOOKINGS_CAT) continue; const m = x.method || "Other"; (by[m] ||= { total: 0, count: 0 }); by[m].total += x.amount; by[m].count++; }
+    return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
+  }, [ovItems]);
+  const ovActive = ovRange !== "all" || !!ovFrom || !!ovTo;
+  const ovRangeLabel = ovRange === "month" ? "this month" : ovRange === "lastmonth" ? "last month" : ovRange === "year" ? thisYear : ovFrom || ovTo ? "custom range" : "all time";
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -312,22 +332,68 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             );
           })()}
 
-          <div className="grid gap-3.5 lg:grid-cols-2">
-            <Card className="p-4">
-              <div className="mb-2.5 text-[13.5px] font-extrabold">Where it comes from</div>
+          {/* Where it comes from — scoped to a period (presets + custom range) */}
+          <Card className="p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[13.5px] font-extrabold">Where it comes from</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
+                  {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setOvRange(k)} className="px-2.5 py-1 transition-colors" style={ovRange === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">From <input type="date" value={ovFrom} onChange={(e) => setOvFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
+                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">to <input type="date" value={ovTo} onChange={(e) => setOvTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
+                {ovActive && <button type="button" onClick={() => { setOvRange("all"); setOvFrom(""); setOvTo(""); }} className="text-[11px] font-bold text-[#16306e] hover:underline">Clear ✕</button>}
+              </div>
+            </div>
+            <div className="mb-2 text-[11px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{money(ovTotal)}</b> in · {ovRangeLabel}</div>
+            {ovCats.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No income in this period.</div> : (
               <div className="flex flex-col gap-2">
-                {cats.slice(0, 8).map((c) => (
+                {ovCats.slice(0, 8).map((c) => (
                   <div key={c.category}>
                     <div className="mb-0.5 flex items-baseline justify-between text-[12px]">
                       <span className="truncate font-bold">{icon(c.category)} {c.category}</span>
-                      <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / grandTotal) * 100)}%</span></span>
+                      <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / (ovTotal || 1)) * 100)}%</span></span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / cats[0].total) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / ovCats[0].total) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>
                   </div>
                 ))}
               </div>
-            </Card>
+            )}
+          </Card>
 
+          {/* Bookings by payment type — same scoped period */}
+          {ovByMethod.length > 0 && (
+          <Card className="p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <div className="text-[13.5px] font-extrabold">Bookings by payment type</div>
+              <div className="text-[11px] text-[var(--ink-3)]">{ovRangeLabel} · {money(ovBookingsTotal)}</div>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {ovByMethod.map((m, i) => {
+                const hue = HUES[i % HUES.length];
+                return (
+                  <div key={m.method} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[16px]" style={{ background: hue.soft }}>{methodIcon(m.method)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2 text-[12px]">
+                        <span className="truncate font-bold">{m.method}</span>
+                        <span className="flex-none tabular-nums"><b>{money(m.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((m.total / (ovBookingsTotal || 1)) * 100)}%</span></span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (m.total / ovByMethod[0].total) * 100)}%`, background: hue.bar }} /></div>
+                        <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{m.count}×</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+          )}
+
+          <div className="grid gap-3.5 lg:grid-cols-2">
             {/* Awaiting payment — money you're still owed (unpaid invoices) */}
             <Card className="p-4">
               <div className="mb-0.5 flex items-baseline justify-between">
@@ -355,64 +421,45 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 </div>
               )}
             </Card>
+
+            {/* This year at a glance */}
+            <Card className="p-4">
+              <div className="mb-3 text-[13.5px] font-extrabold">{thisYear} at a glance</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.collected)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">collected so far</div></div>
+                <div><div className="text-[19px] font-extrabold leading-none">{yearStats.best ? money(yearStats.best[1]) : "—"}</div><div className="mt-1 truncate text-[11px] text-[var(--ink-3)]">best month{yearStats.best ? ` · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : ""}</div></div>
+                <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.avg)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">avg / month{yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}</div></div>
+                <div><div className="text-[19px] font-extrabold leading-none">{yearStats.largest ? money(yearStats.largest) : "—"}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">biggest payment</div></div>
+              </div>
+            </Card>
           </div>
-
-          {/* This year at a glance */}
-          <Card className="p-4">
-            <div className="mb-3 text-[13.5px] font-extrabold">{thisYear} at a glance</div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.collected)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">collected so far</div></div>
-              <div><div className="text-[19px] font-extrabold leading-none">{yearStats.best ? money(yearStats.best[1]) : "—"}</div><div className="mt-1 truncate text-[11px] text-[var(--ink-3)]">best month{yearStats.best ? ` · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : ""}</div></div>
-              <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.avg)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">avg / month{yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}</div></div>
-              <div><div className="text-[19px] font-extrabold leading-none">{yearStats.largest ? money(yearStats.largest) : "—"}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">biggest payment</div></div>
-            </div>
-          </Card>
-
-          {/* By payment type — how bookings were actually paid for */}
-          {byMethod.length > 0 && (
-          <Card className="p-4">
-            <div className="mb-3 flex items-baseline justify-between">
-              <div className="text-[13.5px] font-extrabold">Bookings by payment type</div>
-              <div className="text-[11px] text-[var(--ink-3)]">how your bookings were paid · {money(bookingsTotal)}</div>
-            </div>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {byMethod.map((m, i) => {
-                const hue = HUES[i % HUES.length];
-                return (
-                  <div key={m.method} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
-                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[16px]" style={{ background: hue.soft }}>{methodIcon(m.method)}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2 text-[12px]">
-                        <span className="truncate font-bold">{m.method}</span>
-                        <span className="flex-none tabular-nums"><b>{money(m.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((m.total / (bookingsTotal || 1)) * 100)}%</span></span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (m.total / byMethod[0].total) * 100)}%`, background: hue.bar }} /></div>
-                        <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{m.count}×</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-          )}
 
           <Card className="p-4">
             <div className="mb-2.5 flex items-center justify-between">
               <div className="text-[13.5px] font-extrabold">Recent</div>
               <button type="button" onClick={() => setTab("ledger")} className="text-[12px] font-bold text-[#16306e] hover:underline">View all →</button>
             </div>
-            <div className="flex flex-col">
-              {recent.map((x) => (
-                <div key={x.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                  <span className="w-[92px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
-                  <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.category === BOOKINGS_CAT ? <span className="flex-none text-[11px]" title={`Booking · ${x.method ?? "paid"}`}>🎟️</span> : x.virtual ? <span className="flex-none text-[11px]" title="Paid invoice">📄</span> : x.seriesId ? <span className="flex-none text-[11px]" title={`Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""}`}>🔁</span> : null}
-                  <span className="min-w-0 flex-1 truncate text-[var(--ink-3)]">{x.source || "—"}{x.notes ? ` · ${x.notes}` : ""}</span>
-                  <span className="flex-none font-extrabold tabular-nums">{money(x.amount)}</span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1.5">
+              {recent.map((x) => {
+                const hue = hueFor(x.category || "Other");
+                return (
+                  <div key={x.id} className="group flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition-all hover:-translate-y-px hover:border-[#cdddf7] hover:shadow-[0_6px_18px_-10px_rgba(29,58,143,.45)]">
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[18px] shadow-sm" style={{ background: hue.soft }}>{icon(x.category)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-extrabold">{x.source || x.category}</span>
+                        <span className="flex-none rounded-md px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em]" style={{ background: hue.soft, color: ACCENT_DK }}>{x.category}</span>
+                        {x.seriesId && !x.virtual && <span className="flex-none text-[10px]" title="Repeating">🔁</span>}
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{fmtDay(x.date)}{x.method ? ` · ${x.method}` : ""}{x.notes ? ` · ${x.notes}` : ""}</div>
+                    </div>
+                    <div className="flex flex-none items-baseline gap-0.5">
+                      <span className="text-[11px] font-bold text-[#3f78d8]">+</span>
+                      <span className="text-[15px] font-extrabold tabular-nums">{money(x.amount)}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
