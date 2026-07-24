@@ -40,7 +40,7 @@ const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surfac
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
 
-export function InvoicesApp() {
+export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -145,7 +145,8 @@ export function InvoicesApp() {
   const StatusPill = ({ s }: { s: Status }) => <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[s].bg, color: STATUS_META[s].fg }}>{STATUS_META[s].label}</span>;
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
+      {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
         <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New invoice</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
@@ -162,15 +163,19 @@ export function InvoicesApp() {
           </div>
         )}
       </div>
+      )}
 
       <div className="mb-3 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[12px] text-[#1d3a8f]">🔗 Pay-links are live pages on your system. <b>Online card payment is being connected</b> — until then the pay page shows your amount + your pay methods, and you mark an invoice paid when the money lands.</div>
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
-      <div className="mb-3.5 inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-        {([["overview", "Overview"], ["ledger", "All invoices"], ["customers", "Customers"]] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
-        ))}
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
+          {([["overview", "Overview"], ["ledger", "All invoices"], ["customers", "Customers"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+          ))}
+        </div>
+        {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>＋ New invoice</button>}
       </div>
 
       {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
