@@ -33,9 +33,9 @@ const DUE_PRESETS = [3, 5, 7, 10];
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 type Tab = "overview" | "ledger" | "customers";
-type Range = "all" | "month" | "lastmonth" | "year";
+type Range = "all" | "today" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
-type Sort = "date" | "due" | "amount";
+type Sort = "date" | "oldest" | "due" | "amount";
 type Cust = { id: string; name: string; email?: string; children?: { name?: string }[] };
 type Editor = { id?: string; customerName: string; customerEmail: string; customerAddress: string; reference: string; poNumber: string; accountRef: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; taxRate: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
 // Next consecutive invoice number from what's already been used (editable).
@@ -56,6 +56,8 @@ const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[v
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]";
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
+const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
+const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
 
 export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
@@ -73,6 +75,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [sort, setSort] = useState<Sort>("date");
   const [viewing, setViewing] = useState<Invoice | null>(null);
   const [emailing, setEmailing] = useState(false);
+  const [sendFor, setSendFor] = useState<string | null>(null);
   const { settings } = useSettings();
   const tf = settings.billing?.fields ?? {}; // which optional invoice fields to show
   // Look up an existing parent/customer on the system (by name, email or child).
@@ -122,6 +125,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (flt === "outstanding" && !OWED.has(p.status)) return false;
       if (flt === "overdue" && !isOverdue(p)) return false;
       if (STATUSES.includes(flt as Status) && p.status !== flt) return false;
+      if (range === "today" && d !== today) return false;
       if (range === "month" && d.slice(0, 7) !== thisMonthKey) return false;
       if (range === "lastmonth" && d.slice(0, 7) !== monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1))) return false;
       if (range === "year" && d.slice(0, 4) !== thisYear) return false;
@@ -130,7 +134,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (needle && !`${p.customerName} ${p.bookingRef ?? ""} ${p.description ?? ""} ${p.notes ?? ""}`.toLowerCase().includes(needle)) return false;
       return true;
     });
-    const cmp: Record<Sort, (a: Invoice, b: Invoice) => number> = { date: (a, b) => (a.date < b.date ? 1 : -1), due: (a, b) => ((a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1), amount: (a, b) => b.amount - a.amount };
+    const cmp: Record<Sort, (a: Invoice, b: Invoice) => number> = { date: (a, b) => (a.date < b.date ? 1 : -1), oldest: (a, b) => (a.date > b.date ? 1 : -1), due: (a, b) => ((a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1), amount: (a, b) => b.amount - a.amount };
     return [...rows].sort(cmp[sort]);
   }, [items, q, flt, range, from, to, sort, thisMonthKey, thisYear, now, today]);
   const filteredTotal = filtered.reduce((s, p) => s + p.amount, 0);
@@ -308,14 +312,14 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
+                {([["all", "All time"], ["today", "Today"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["date", "Newest"], ["due", "Due date"], ["amount", "Largest"]] as const).map(([k, label]) => (
+                {([["date", "Newest"], ["oldest", "Oldest"], ["due", "Due date"], ["amount", "Largest"]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
@@ -340,13 +344,27 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     </div>
                     <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
-                  {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
-                  <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
-                  <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
-                  <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to customer" aria-label="Email">✉</button>
-                  <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
-                  <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
+                  <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11.5px] font-bold outline-none" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUSES.map((s) => <option key={s} value={s} style={{ background: "#fff", color: "var(--ink)" }}>{STATUS_META[s].label}</option>)}</select>
+                  <div className="flex flex-none items-center gap-1">
+                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                    <div className="relative">
+                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send">✉️</button>
+                      {sendFor === p.id && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
+                          <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "link"); }} className={menuItem}>✉️ Email + pay-link</button>
+                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "bank"); }} className={menuItem}>🏦 Email (bank details only)</button>
+                            <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                            {p.payToken && p.status !== "paid" && <button type="button" onClick={() => { setSendFor(null); copyLink(p); }} className={menuItem}>{copied === p.id ? "✓ Copied" : "🔗 Copy pay-link"}</button>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit">✏️</button>
+                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete">🗑️</button>
+                  </div>
                 </Card>
               ))}
             </div>

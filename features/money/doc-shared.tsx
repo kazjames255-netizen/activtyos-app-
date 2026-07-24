@@ -91,10 +91,12 @@ export type DocAction = { key: string; label: string; onClick: () => void; disab
 export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; note?: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const html = docHtml(kind, doc, billing, payUrl);
+  const fileName = `${kind === "po" ? "Purchase-order" : "Invoice"}${doc.reference ? `-${esc(doc.reference)}` : ""}`;
   const print = () => {
     const w = window.open("", "_blank", "width=820,height=1040");
     if (!w) return;
-    w.document.write(`<html><head><title>${kind === "po" ? "Purchase order" : "Invoice"}${doc.reference ? ` ${esc(doc.reference)}` : ""}</title></head><body style="margin:28px">${html}</body></html>`);
+    // @page margin:0 + our own padding removes the browser's date/URL headers.
+    w.document.write(`<html><head><title>${fileName}</title><style>@page{size:A4;margin:0}@media print{body{margin:0}}</style></head><body style="margin:0;padding:32px">${html}</body></html>`);
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   };
   const copy = async () => { if (!payUrl) return; try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* noop */ } };
@@ -102,12 +104,13 @@ export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClos
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
       <div className="my-6 w-[min(720px,96vw)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-          <button type="button" onClick={print} className="rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110">⬇️ Download PDF</button>
+          <button type="button" onClick={print} className="rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110" title="In the print dialog, choose ‘Save as PDF’ as the destination">🖨️ Print / Save PDF</button>
           {actions?.map((a) => <button key={a.key} type="button" onClick={a.onClick} disabled={a.disabled} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)] disabled:opacity-50">{a.label}</button>)}
           {payUrl && <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">{copied ? "✓ Link copied" : "🔗 Copy pay-link"}</button>}
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">✕ Close</button>
         </div>
         {note && <div className="mb-2 rounded-lg bg-[#e7f8ee] px-3 py-1.5 text-center text-[12px] font-bold text-[#0f7a44]">{note}</div>}
+        <div className="mb-2 text-right text-[10.5px] text-white/85">💡 To save a PDF: click Print, then choose <b>“Save as PDF”</b> as the destination.</div>
         <div className="rounded-xl bg-white p-6 shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
     </div>
