@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 type Repeat = "weekly" | "fortnightly" | "monthly";
 interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean }
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
-interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; status: string; paidAt?: string; paidVia?: "link" | "manual" }
+interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean }
 interface InvPayload { items: Invoice[] }
 interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string }
 
@@ -155,15 +155,6 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
-  const sources = useMemo(() => {
-    const by: Record<string, { total: number; count: number; byType: Record<string, number> }> = {};
-    for (const x of allItems) { if (!x.source) continue; const e = (by[x.source] ||= { total: 0, count: 0, byType: {} }); e.total += x.amount; e.count++; const t = x.category || "Other"; e.byType[t] = (e.byType[t] ?? 0) + x.amount; }
-    return Object.entries(by).map(([source, v]) => {
-      const types = Object.entries(v.byType).sort((a, b) => b[1] - a[1]);
-      return { source, total: v.total, count: v.count, topType: types[0]?.[0] ?? "Other", typeCount: types.length };
-    }).sort((a, b) => b.total - a.total);
-  }, [allItems]);
-
   // BOOKING income split by TYPE OF PAYMENT — card, vouchers, cash, TFC, HAF… so
   // you can see how customers actually paid for their bookings. Only booking
   // rows carry a real method; invoices/manual income are excluded here.
@@ -176,6 +167,24 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     }
     return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
   }, [bookingRows]);
+
+  // Money still owed you — unpaid invoices, overdue first.
+  const awaiting = useMemo(() => invoices
+    .filter((v) => v.status === "sent")
+    .sort((a, b) => (a.overdue === b.overdue ? (a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1 : a.overdue ? -1 : 1)), [invoices]);
+  const awaitingTotal = useMemo(() => awaiting.reduce((s, v) => s + v.amount, 0), [awaiting]);
+  const overdueCount = useMemo(() => awaiting.filter((v) => v.overdue).length, [awaiting]);
+
+  // This year at a glance — best month, run-rate, biggest single payment.
+  const yearStats = useMemo(() => {
+    const rows = allItems.filter((x) => (x.date || "").slice(0, 4) === thisYear);
+    const byMonth: Record<string, number> = {};
+    for (const x of rows) { const k = (x.date || "").slice(0, 7); if (k) byMonth[k] = (byMonth[k] ?? 0) + x.amount; }
+    const months = Object.entries(byMonth).sort((a, b) => b[1] - a[1]);
+    const collected = rows.reduce((s, x) => s + x.amount, 0);
+    return { collected, best: months[0] as [string, number] | undefined, activeMonths: months.length, avg: months.length ? collected / months.length : 0, largest: rows.reduce((m, x) => Math.max(m, x.amount), 0) };
+  }, [allItems, thisYear]);
+  const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -318,24 +327,40 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               </div>
             </Card>
 
+            {/* Awaiting payment — money you're still owed (unpaid invoices) */}
             <Card className="p-4">
-              <div className="mb-2.5 text-[13.5px] font-extrabold">Top sources</div>
-              {sources.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Add a source when logging to see this.</div> : (
+              <div className="mb-2.5 flex items-baseline justify-between">
+                <div className="text-[13.5px] font-extrabold">Awaiting payment</div>
+                <div className="text-[12px] font-extrabold tabular-nums">{money(awaitingTotal)}{overdueCount > 0 && <span className="ml-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{overdueCount} overdue</span>}</div>
+              </div>
+              {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">You’re all paid up — no invoices outstanding. 🎉</div> : (
                 <div className="flex flex-col">
-                  {sources.slice(0, 6).map((s, i) => (
-                    <div key={s.source} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold text-[#16306e]">{i + 1}</span>
-                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <span className="truncate font-bold">{s.source}</span>
-                        <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]" title="Type of income">{icon(s.topType)} {s.topType}{s.typeCount > 1 ? ` +${s.typeCount - 1}` : ""}</span>
+                  {awaiting.slice(0, 6).map((v) => (
+                    <div key={v.id} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[12px]" style={{ background: v.overdue ? "#fdebec" : "#eaf0fc" }}>{v.overdue ? "⚠️" : "📄"}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bold">{v.customerName}</div>
+                        <div className="text-[10.5px] text-[var(--ink-3)]">{v.reference ? `${v.reference} · ` : ""}{v.dueDate ? (v.overdue ? <span className="font-bold text-[#c02532]">overdue {fmtDay(v.dueDate)}</span> : `due ${fmtDay(v.dueDate)}`) : "no due date"}</div>
                       </div>
-                      <div className="flex-none text-right"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count}×</div></div>
+                      <div className="flex-none font-extrabold tabular-nums">{money(v.amount)}</div>
                     </div>
                   ))}
+                  {awaiting.length > 6 && <div className="pt-2 text-center text-[11.5px] text-[var(--ink-3)]">+ {awaiting.length - 6} more — see the Invoices tab</div>}
                 </div>
               )}
             </Card>
           </div>
+
+          {/* This year at a glance */}
+          <Card className="p-4">
+            <div className="mb-3 text-[13.5px] font-extrabold">{thisYear} at a glance</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.collected)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">collected so far</div></div>
+              <div><div className="text-[19px] font-extrabold leading-none">{yearStats.best ? money(yearStats.best[1]) : "—"}</div><div className="mt-1 truncate text-[11px] text-[var(--ink-3)]">best month{yearStats.best ? ` · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : ""}</div></div>
+              <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.avg)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">avg / month{yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}</div></div>
+              <div><div className="text-[19px] font-extrabold leading-none">{yearStats.largest ? money(yearStats.largest) : "—"}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">biggest payment</div></div>
+            </div>
+          </Card>
 
           {/* By payment type — how bookings were actually paid for */}
           {byMethod.length > 0 && (
