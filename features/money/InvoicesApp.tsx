@@ -25,6 +25,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
   cancelled: { label: "Cancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
 };
 const OWED = new Set<Status>(["sent"]);
+const STATUS_ACCENT: Record<Status, string> = { draft: "#b7b3c9", sent: "#3f78d8", paid: "#22a06b", cancelled: "#d0cdda" };
 
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -292,8 +293,25 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     <div className="min-w-0 flex-1 truncate font-bold">{p.customerName}{p.description ? <span className="font-normal text-[var(--ink-3)]"> · {p.description}</span> : ""}</div>
                     <span className="flex-none text-[11px] text-[var(--ink-3)]">{p.dueDate ? `due ${fmtDay(p.dueDate)}` : ""}</span>
                     <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
-                    <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>
-                    <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44]">Mark paid</button>
+                    <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>
+                    <div className="flex flex-none items-center gap-1">
+                      <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                      <div className="relative">
+                        <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send">✉️</button>
+                        {sendFor === p.id && (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
+                            <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                              <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "link"); }} className={menuItem}>✉️ Email + pay-link</button>
+                              <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "bank"); }} className={menuItem}>🏦 Email (bank details only)</button>
+                              <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                              {p.payToken && <button type="button" onClick={() => { setSendFor(null); copyLink(p); }} className={menuItem}>{copied === p.id ? "✓ Copied" : "🔗 Copy pay-link"}</button>}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit">✏️</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -343,10 +361,11 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing matches those filters.</Card> : (
             <div className="flex flex-col gap-1.5">
               {filtered.map((p) => (
-                <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
+                <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5 transition-shadow hover:shadow-[0_10px_24px_-12px_rgba(29,58,143,.45)]" style={{ borderLeftColor: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status], borderLeftWidth: "4px" }}>
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white shadow-sm" style={{ background: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status] }}>{p.customerName.trim()[0]?.toUpperCase() || "?"}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-[13px] font-bold">{p.customerName}</span>
+                      <span className="truncate text-[13.5px] font-extrabold">{p.customerName}</span>
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>

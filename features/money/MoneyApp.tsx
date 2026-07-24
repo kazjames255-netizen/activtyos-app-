@@ -31,7 +31,7 @@ export function MoneyApp() {
       <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💷</span>
-          Bills &amp; Invoices
+          Invoices &amp; POs
         </div>
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything moving through your business — <b>money out</b> (supplier bills &amp; POs) and <b>money in</b> (invoices you send customers). Pick a side below.</p>
 
