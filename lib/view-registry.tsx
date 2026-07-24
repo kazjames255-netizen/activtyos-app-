@@ -24,8 +24,8 @@ import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
-import { ExpensesApp } from "@/features/money/ExpensesApp";
-import { MoneyApp } from "@/features/money/MoneyApp";
+import { MoneyOutApp } from "@/features/money/MoneyOutApp";
+import { MoneyInApp } from "@/features/money/MoneyInApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
 import { SplitFeesApp } from "@/features/money/SplitFeesApp";
 import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
@@ -116,9 +116,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     activityos: SupportApp,
     support: SupportApp,
     templates: TemplatesApp,
-    expenses: ExpensesApp,
-    purchasing: MoneyApp,
-    invoices: MoneyApp,
+    expenses: MoneyOutApp,
+    purchasing: MoneyInApp,
+    invoices: MoneyInApp,
     subscription: SubscriptionApp,
     documents: DocumentsApp,
     compliance: ComplianceApp,
@@ -170,9 +170,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     activityos: SupportApp,
     support: SupportApp,
     templates: TemplatesApp,
-    expenses: ExpensesApp,
-    purchasing: MoneyApp,
-    invoices: MoneyApp,
+    expenses: MoneyOutApp,
+    purchasing: MoneyInApp,
+    invoices: MoneyInApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
@@ -211,9 +211,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     activityos: SupportApp,
     support: SupportApp,
     templates: TemplatesApp,
-    expenses: ExpensesApp,
-    purchasing: MoneyApp,
-    invoices: MoneyApp,
+    expenses: MoneyOutApp,
+    purchasing: MoneyInApp,
+    invoices: MoneyInApp,
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,

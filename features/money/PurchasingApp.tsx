@@ -15,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; kind?: "bill" | "po"; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -28,6 +28,9 @@ const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
 };
 const OUTSTANDING = new Set<Status>(["sent", "received"]);
 const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
+// Same list Expenses uses, so a paid bill folds into the money-out picture under
+// a matching category.
+const CATEGORIES = ["Equipment", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Supplies", "Training", "Software", "Utilities", "Other"];
 
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -39,7 +42,7 @@ type Tab = "overview" | "ledger" | "paid" | "invoices" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | "duesoon" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; kind: "bill" | "po"; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+type Editor = { id?: string; kind: "bill" | "po"; category: string; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -80,7 +83,7 @@ function DocThumb({ url, className = "" }: { url: string; className?: string }) 
   return <img src={url} alt="invoice" onError={() => setOk(false)} className={`object-cover ${className}`} />;
 }
 
-export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {}) {
+export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: boolean; fixedKind?: "bill" | "po" } = {}) {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -113,7 +116,9 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   // just track supplier bills. Setup → Money toggles the PO stage on/off.
   const usePO = settings.money?.usePurchaseOrders ?? false;
   const [docKind, setDocKind] = useState<"bill" | "po">("bill");
-  const kind = usePO ? docKind : "bill"; // no PO switch unless enabled in Setup
+  // When hosted inside the Money-out hub each kind gets its own tab, so the
+  // kind is fixed by the parent and the internal Bills/POs switch is hidden.
+  const kind = fixedKind ?? (usePO ? docKind : "bill");
   const isPo = kind === "po";
   const visibleStatuses = useMemo(() => (isPo ? STATUSES : STATUSES.filter((s) => s !== "draft")), [isPo]);
   const newLabel = isPo ? "＋ Raise a PO" : "＋ New bill";
@@ -191,8 +196,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ kind, supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
-  const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
+  const openAdd = () => setEditor({ kind, category: "Supplies", supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
+  const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", category: p.category ?? "Supplies", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
     const to = (p.supplierEmail || window.prompt(`Email this ${p.kind === "po" ? "purchase order" : "bill query"} to:`, "") || "").trim();
     if (!to) return;
@@ -213,7 +218,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { kind: editor.kind, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
+    const body: Record<string, unknown> = { kind: editor.kind, category: editor.category || undefined, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
@@ -279,7 +284,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
       </div>
       )}
 
-      {usePO && (
+      {usePO && !fixedKind && (
         <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
           {([["bill", "🧾 Bills"], ["po", "📦 Purchase orders"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setDocKind(k)} className="rounded-full px-4 py-1.5 transition-colors" style={docKind === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
@@ -428,6 +433,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: (p.kind ?? "bill") === "po" ? "#eef2fb" : "#f0f1f6", color: (p.kind ?? "bill") === "po" ? "#1d3a8f" : "var(--ink-3)" }}>{(p.kind ?? "bill") === "po" ? "PO" : "Bill"}</span>
                       <span className="truncate text-[13px] font-bold">{p.supplier}</span>
+                      {!isPo && p.category && <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">{p.category}</span>}
                       {p.reference && <span className="text-[11px] text-[var(--ink-3)]">{p.reference}</span>}
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
@@ -584,6 +590,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
               <div className="p-5">
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
+                <label className="block sm:col-span-2"><span className={labelCls}>Category <span className="font-normal normal-case text-[var(--ink-3)]">— so it counts in your money-out picture</span></span><select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
                 <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Supplier invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : "e.g. their INV-5567"} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>

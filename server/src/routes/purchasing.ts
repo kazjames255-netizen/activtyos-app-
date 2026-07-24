@@ -22,6 +22,9 @@ const lineItemSchema = z.object({
 const poSchema = z.object({
   kind: z.enum(["bill", "po"]).default("bill"),   // a supplier bill you owe, or a PO you raise
   supplier: z.string().trim().min(1).max(160),
+  // A bill is a categorised outgoing (like an expense) so it can be folded into
+  // the money-out/Expenses picture. POs carry it too for when they become a bill.
+  category: z.string().trim().max(60).optional(),
   supplierEmail: z.string().trim().max(160).optional(),
   reference: z.string().trim().max(80).optional(),
   date: z.string().max(10),

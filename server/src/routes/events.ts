@@ -132,6 +132,7 @@ events.get("/", async (req, res) => {
     listen(db.collection("threads").where("tenantId", "==", tenantId), "threads");
     listen(db.collection("messages").where("tenantId", "==", tenantId), "messages");
     listen(db.collection("expenses").where("tenantId", "==", tenantId), "expenses");
+    listen(db.collection("income").where("tenantId", "==", tenantId), "income");
     listen(db.collection("purchaseOrders").where("tenantId", "==", tenantId), "purchaseOrders");
     listen(db.collection("invoices").where("tenantId", "==", tenantId), "invoices");
     listen(db.collection("documents").where("tenantId", "==", tenantId), "documents");

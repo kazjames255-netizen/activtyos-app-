@@ -291,7 +291,16 @@ export interface TenantSettings {
    * `usePurchaseOrders` turns the PO stage on the Bills page on/off (many
    * providers just track supplier bills, no formal PO).
    */
-  money?: { show?: "outgoing" | "incoming" | "both"; usePurchaseOrders?: boolean };
+  money?: {
+    show?: "outgoing" | "incoming" | "both";
+    usePurchaseOrders?: boolean;
+    /**
+     * Accounting basis for when a bill counts as money-out spend:
+     * `cash` (default) = only once it's marked paid; `accrual` = on the bill's
+     * own date, paid or not. Drives the fold-in of bills on the money-out hub.
+     */
+    basis?: "cash" | "accrual";
+  };
 
   /**
    * Business & bank details printed on POs and invoices (and their PDFs/emails).
