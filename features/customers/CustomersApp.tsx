@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { PageHero } from "@/components/OperatorPage";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
@@ -114,7 +115,7 @@ type Stage = "lead" | "invited" | "customer" | "repeat";
 const STAGES: { key: Stage; label: string; hint: string; colour: string }[] = [
   { key: "lead", label: "Lead", hint: "Enquired, never booked, not invited yet", colour: "#e22295" },
   { key: "invited", label: "Invited", hint: "Sent a sign-up link, hasn't booked yet", colour: "#2f6bd8" },
-  { key: "customer", label: "Customer", hint: "Booked with you once", colour: "#15b364" },
+  { key: "customer", label: "Customer", hint: "Booked with you once", colour: "#3f78d8" },
   { key: "repeat", label: "Repeat", hint: "Booked more than once — they came back", colour: "#6a4fd0" },
 ];
 
@@ -537,24 +538,26 @@ export function CustomersApp() {
         } as React.CSSProperties
       }
     >
-      <div ref={topRef} className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          Leads &amp; customers
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            disabled={!customers || customers.length === 0}
-            title={customers?.length ? "Choose families, columns and a format" : "Nobody to export yet"}
-            onClick={() => setExporting(true)}
-          >
-            ⬇ Export
-          </Button>
-          {canWrite && !draft && (
-            <Button variant="primary" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
-              ＋ Add family
+      <div ref={topRef}>
+        <PageHero
+          title="Leads & customers"
+          lede="Everyone who's enquired or booked with you."
+          icon="👪"
+          actions={<>
+            <Button
+              disabled={!customers || customers.length === 0}
+              title={customers?.length ? "Choose families, columns and a format" : "Nobody to export yet"}
+              onClick={() => setExporting(true)}
+            >
+              ⬇ Export
             </Button>
-          )}
-        </div>
+            {canWrite && !draft && (
+              <Button variant="primary" className="!bg-white !border-white !text-[#1d3a8f]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
+                ＋ Add family
+              </Button>
+            )}
+          </>}
+        />
       </div>
       <HowItWorks
         video="Adding a family from a phone call, sending the sign-up link, and what each pipeline stage means."
@@ -1316,7 +1319,7 @@ export function CustomersApp() {
                         </span>
                       )}
                       {c.marketingOptIn && (
-                        <span className="rounded-full bg-[#e7f8ee] px-2 py-[2px] text-[10px] font-extrabold text-[#0f7a44]">
+                        <span className="rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-extrabold text-[#1d3a8f]">
                           ✉ Marketing
                         </span>
                       )}

@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks as HowItWorksPanel } from "@/components/HowItWorks";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
@@ -397,13 +398,8 @@ export function FreelancerListingsApp() {
         } as React.CSSProperties
       }
     >
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            Listings, services &amp; tickets
-          </h2>
-          <p className="text-[13px] text-[var(--ink-3)]">Your own programmes</p>
-        </div>
+      <PageHero title="Listings, services & tickets" lede="Your own programmes" icon="🎫" />
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2.5">
         <div className="flex items-center gap-2.5">
           {tab === "listings" && (
             <>
@@ -423,7 +419,7 @@ export function FreelancerListingsApp() {
               >
                 {"</>"} Embed
               </Button>
-              <Button variant="primary" onClick={() => startNew()}>
+              <Button variant="primary" onClick={() => startNew()} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
                 ＋ New listing
               </Button>
             </>
@@ -841,7 +837,7 @@ function ListingsTab({
                     {isDraft ? (
                       <span title="Not published — parents can't see or book this" className="rounded-full px-2 py-[2px] text-[10px] font-semibold" style={{ background: "#fff7ed", color: "#9a3412" }}>Unpublished</span>
                     ) : isLive ? (
-                      <span title="Published and still to run — parents can find and book it" className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft,#e7f8ee)] px-2 py-[2px] text-[10px] font-semibold text-[#0f7a44]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#16a34a]" />Published</span>
+                      <span title="Published and still to run — parents can find and book it" className="inline-flex items-center gap-1 rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-semibold text-[#1d3a8f]"><span className="inline-block h-1.5 w-1.5 rounded-full bg-[#3f78d8]" />Published</span>
                     ) : (
                       <span title="Published, but the last date has passed" className="rounded-full bg-[var(--surface)] px-2 py-[2px] text-[10px] font-semibold text-[var(--ink-3)]">Ended</span>
                     )}
@@ -871,7 +867,7 @@ function ListingsTab({
                     const left = Math.max(0, spaces ?? cap);
                     const booked = Math.max(0, cap - left);
                     const pct = cap > 0 ? Math.round((booked / cap) * 100) : 0;
-                    const tone = left <= 0 ? "#dc2626" : left <= cap * 0.15 ? "#d97706" : "#16a34a";
+                    const tone = left <= 0 ? "#dc2626" : left <= cap * 0.15 ? "#d97706" : "#3f78d8";
                     return (
                       <div className="mt-3">
                         <div className="h-[7px] overflow-hidden rounded-full bg-[var(--line)]">

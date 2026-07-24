@@ -5,6 +5,7 @@ import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
+import { PageHero } from "@/components/OperatorPage";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
 
@@ -242,15 +243,7 @@ export function BlocksApp() {
         } as React.CSSProperties
       }
     >
-      {/* .phead */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            Blocks
-          </h2>
-          <p className="text-[13px] text-[var(--ink-3)]">Reusable scheduling patterns</p>
-        </div>
-      </div>
+      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🧩" />
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
@@ -1013,7 +1006,7 @@ function LibraryCard({
           <span
             className={`rounded-full px-2 py-[2px] text-[10px] font-bold ${
               block.priced
-                ? "bg-[var(--green-soft,#e7f8ee)] text-[#0f7a44]"
+                ? "bg-[#eaf0fc] text-[#1d3a8f]"
                 : "bg-[#eef0f6] text-[#5b6478]"
             }`}
           >
