@@ -32,7 +32,7 @@ const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || to
 const DUE_PRESETS = [3, 5, 7, 10];
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-type Tab = "overview" | "ledger" | "customers";
+type Tab = "overview" | "ledger" | "sent" | "customers";
 type Range = "all" | "today" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "oldest" | "due" | "amount";
@@ -118,6 +118,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([customer, v]) => ({ customer, ...v })).sort((a, b) => b.total - a.total);
   }, [items]);
 
+  const sentLog = useMemo(() => items.filter((p) => p.emailedAt).sort((a, b) => ((a.emailedAt || "") < (b.emailedAt || "") ? 1 : -1)), [items]);
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const rows = items.filter((p) => {
@@ -224,7 +225,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", "All invoices"], ["customers", "Customers"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", "All invoices"], ["sent", `Sent${sentLog.length ? ` · ${sentLog.length}` : ""}`], ["customers", "Customers"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -374,6 +375,21 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
             </div>
           )}
         </div>
+      ) : tab === "sent" ? (
+        sentLog.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">No invoices sent yet — email one from a row and it logs here.</Card> : (
+          <div className="flex flex-col gap-1.5">
+            {sentLog.map((p) => (
+              <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
+                <span className="w-[110px] flex-none text-[11.5px] font-bold text-[#0f7a44]">✉ {fmtDay((p.emailedAt || "").slice(0, 10))}</span>
+                <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.customerName}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}{p.customerEmail ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">→ {p.customerEmail}</span> : ""}</div>
+                <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUS_META[p.status].label}</span>
+                <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                <button type="button" onClick={() => emailDoc(p, "link")} disabled={emailing} className={iconBtn} title="Resend email" aria-label="Resend">✉️</button>
+              </Card>
+            ))}
+          </div>
+        )
       ) : (
         <div className="flex flex-col gap-1.5">
           {customers.map((c) => (
