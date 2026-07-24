@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS } from "@/lib/use-customer-area";
@@ -1080,7 +1080,10 @@ function QuestionsEditor({
 export function SetupApp() {
   const { settings, questions, loading, save, error } = useSettings();
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
-  const [tab, setTab] = useState<Tab>("people");
+  // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
+  const initialTab = useSearchParams().get("tab");
+  const VALID_TABS: Tab[] = ["features", "people", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications"];
+  const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
