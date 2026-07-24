@@ -65,6 +65,13 @@ const IcView = () => <svg {...svgProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 
 const IcSend = () => <svg {...svgProps}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
 const IcEdit = () => <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
 const IcTrash = () => <svg {...svgProps}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>;
+const readImg = (file: File): Promise<string> => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(file); });
+// Downscale/compress an image under the /api/uploads 900KB cap before sending.
+const compressImg = (dataUrl: string): Promise<string> => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => { const max = 1400; const s = Math.min(1, max / Math.max(img.width, img.height)); const w = Math.round(img.width * s), h = Math.round(img.height * s); const c = document.createElement("canvas"); c.width = w; c.height = h; const ctx = c.getContext("2d"); if (!ctx) { resolve(dataUrl); return; } ctx.drawImage(img, 0, 0, w, h); let q = 0.8, out = c.toDataURL("image/jpeg", q); while (out.length > 1_100_000 && q > 0.35) { q -= 0.12; out = c.toDataURL("image/jpeg", q); } resolve(out); };
+  img.onerror = () => resolve(dataUrl); img.src = dataUrl;
+});
 
 export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
@@ -87,7 +94,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   async function onPickPO(file: File) {
     setUploading(true);
     try {
-      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(file); });
+      const raw = await readImg(file);
+      const dataUrl = raw.startsWith("data:image/") ? await compressImg(raw) : raw;
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
       setEditor((ed) => (ed ? { ...ed, poAttachmentUrl: url } : ed));
     } catch (e) { setError(e instanceof Error ? e.message : "Upload failed — a photo/image of the PO for now."); } finally { setUploading(false); }

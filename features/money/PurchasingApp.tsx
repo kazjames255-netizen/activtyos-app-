@@ -15,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; kind?: "bill" | "po"; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -39,7 +39,7 @@ type Tab = "overview" | "ledger" | "paid" | "invoices" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | "duesoon" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+type Editor = { id?: string; kind: "bill" | "po"; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -104,10 +104,13 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   // Some providers raise formal purchase orders (draft = the PO stage); many
   // just track supplier bills. Setup → Money toggles the PO stage on/off.
   const usePO = settings.money?.usePurchaseOrders ?? false;
-  const visibleStatuses = useMemo(() => (usePO ? STATUSES : STATUSES.filter((s) => s !== "draft")), [usePO]);
-  const newLabel = usePO ? "＋ Raise a PO" : "＋ New bill";
+  const [docKind, setDocKind] = useState<"bill" | "po">("bill");
+  const kind = usePO ? docKind : "bill"; // no PO switch unless enabled in Setup
+  const isPo = kind === "po";
+  const visibleStatuses = useMemo(() => (isPo ? STATUSES : STATUSES.filter((s) => s !== "draft")), [isPo]);
+  const newLabel = isPo ? "＋ Raise a PO" : "＋ New bill";
 
-  const items = useMemo(() => data?.items ?? [], [data]);
+  const items = useMemo(() => (data?.items ?? []).filter((p) => (p.kind ?? "bill") === kind), [data, kind]);
   const today = todayIso();
   const in14 = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10); }, []);
   const now = useMemo(() => new Date(), []);
@@ -180,8 +183,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: usePO ? "draft" : "sent", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
-  const openEdit = (p: PO) => setEditor({ id: p.id, supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
+  const openAdd = () => setEditor({ kind, supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
+  const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
     const to = (p.supplierEmail || window.prompt("Email this purchase order to:", "") || "").trim();
     if (!to) return;
@@ -197,7 +200,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
+    const body: Record<string, unknown> = { kind: editor.kind, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
@@ -263,11 +266,19 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
       </div>
       )}
 
+      {usePO && (
+        <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
+          {([["bill", "🧾 Bills"], ["po", "📦 Purchase orders"]] as const).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setDocKind(k)} className="rounded-full px-4 py-1.5 transition-colors" style={docKind === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+          ))}
+        </div>
+      )}
+
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", usePO ? "All POs & bills" : "All bills"], ["paid", `Paid${paidItems.length ? ` · ${paidItems.length}` : ""}`], ["invoices", `Invoices${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", "Suppliers"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", isPo ? "All POs" : "All bills"], ["paid", `Paid${paidItems.length ? ` · ${paidItems.length}` : ""}`], ["invoices", `Invoices${withDoc.length ? ` · ${withDoc.length}` : ""}`], ["suppliers", "Suppliers"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -402,7 +413,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                 <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: usePO ? "#eef2fb" : "#f0f1f6", color: usePO ? "#1d3a8f" : "var(--ink-3)" }}>{usePO ? "PO" : "Bill"}</span>
+                      <span className="flex-none rounded-md px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide" style={{ background: (p.kind ?? "bill") === "po" ? "#eef2fb" : "#f0f1f6", color: (p.kind ?? "bill") === "po" ? "#1d3a8f" : "var(--ink-3)" }}>{(p.kind ?? "bill") === "po" ? "PO" : "Bill"}</span>
                       <span className="truncate text-[13px] font-bold">{p.supplier}</span>
                       {p.reference && <span className="text-[11px] text-[var(--ink-3)]">{p.reference}</span>}
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
@@ -528,12 +539,21 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
       {/* Add / edit modal */}
       {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
-          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (usePO ? "Edit purchase order" : "Edit bill") : usePO ? "Raise a purchase order" : "New bill"}</div>
+          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-hidden p-0" style={LIGHT_PALETTE}>
+            <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] overflow-y-auto">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-4 text-white" style={{ background: editor.kind === "po" ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 70%,#5b95e8 100%)" : "linear-gradient(120deg,#8a5a12 0%,#c2831a 70%,#e0a63a 100%)" }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-[18px]">{editor.kind === "po" ? "📦" : "🧾"}</span>
+                  <div>
+                    <div className="text-[17px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (editor.kind === "po" ? "Edit purchase order" : "Edit bill") : editor.kind === "po" ? "Raise a purchase order" : "New supplier bill"}</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-white/80">{editor.kind === "po" ? "Purchase order" : "Supplier bill"} · Total {money(lineTotal(editor.lineItems))}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5">
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="PO-1234" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Supplier invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : "e.g. their INV-5567"} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Due date</span>
@@ -588,14 +608,15 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
 
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
-                <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : "Save order"}</button>
+                <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : editor.kind === "po" ? "Save PO" : "Save bill"}</button>
+              </div>
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      {viewing && <PrintableDoc kind="po" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} actions={[{ key: "email", label: emailing ? "Sending…" : "✉️ Email to supplier", onClick: () => emailDoc(viewing), disabled: emailing }]} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind={viewing.kind === "po" ? "po" : "bill"} doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} actions={[{ key: "email", label: emailing ? "Sending…" : "✉️ Email to supplier", onClick: () => emailDoc(viewing), disabled: emailing }]} onClose={() => setViewing(null)} />}
     </div>
   );
 }

@@ -21,7 +21,7 @@ export function MoneyApp() {
   const canSwitch = show === "both";
 
   const SIDES = [
-    { key: "out" as const, arrow: "↑", label: "Money out", sub: "Bills & POs", dot: "#e2643b" },
+    { key: "out" as const, arrow: "↑", label: "Money out", sub: "Bills & POs", dot: "#7c5cff" },
     { key: "in" as const, arrow: "↓", label: "Money in", sub: "Invoices", dot: "#22a06b" },
   ];
 
@@ -52,8 +52,8 @@ export function MoneyApp() {
       </div>
 
       {/* A colour-coded strip so the current side is unmistakable */}
-      <div className="mb-3 flex items-center gap-2 text-[12px] font-bold" style={{ color: side === "out" ? "#c2410c" : "#0f7a44" }}>
-        <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] text-white" style={{ background: side === "out" ? "#e2643b" : "#22a06b" }}>{side === "out" ? "↑" : "↓"}</span>
+      <div className="mb-3 flex items-center gap-2 text-[12px] font-bold" style={{ color: side === "out" ? "#5b45c9" : "#0f7a44" }}>
+        <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] text-white" style={{ background: side === "out" ? "#7c5cff" : "#22a06b" }}>{side === "out" ? "↑" : "↓"}</span>
         {side === "out" ? "OUTGOING — money you pay out to suppliers" : "INCOMING — money you collect from customers"}
       </div>
 

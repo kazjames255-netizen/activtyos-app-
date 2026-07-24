@@ -20,6 +20,7 @@ const lineItemSchema = z.object({
   unitPrice: z.number().nonnegative().default(0),
 });
 const poSchema = z.object({
+  kind: z.enum(["bill", "po"]).default("bill"),   // a supplier bill you owe, or a PO you raise
   supplier: z.string().trim().min(1).max(160),
   supplierEmail: z.string().trim().max(160).optional(),
   reference: z.string().trim().max(80).optional(),

@@ -17,7 +17,7 @@ const fieldCls = "min-w-0 rounded-lg border border-[var(--line)] bg-[var(--surfa
 
 // The document body as standalone HTML — used for the on-screen preview and the
 // print/PDF window. Mirrors the server email renderer (server/lib/moneyDoc.ts).
-export function docHtml(kind: "po" | "invoice", doc: Record<string, unknown>, billing?: Billing, payUrl?: string): string {
+export function docHtml(kind: "po" | "invoice" | "bill", doc: Record<string, unknown>, billing?: Billing, payUrl?: string): string {
   const b = billing ?? {};
   const business = esc(b.businessName || "Your business");
   const addr = esc(b.address || "").replace(/\n/g, "<br>");
@@ -25,12 +25,13 @@ export function docHtml(kind: "po" | "invoice", doc: Record<string, unknown>, bi
   const vat = b.vatNumber ? `VAT ${esc(b.vatNumber)}` : "";
   const logo = b.logoUrl ? `<img src="${esc(b.logoUrl)}" alt="" style="max-height:56px;max-width:200px;margin-bottom:6px"/>` : "";
   const companyReg = b.companyReg ? `Company reg. ${esc(b.companyReg)}` : "";
-  const title = kind === "po" ? "PURCHASE ORDER" : "INVOICE";
-  const partyName = kind === "po" ? doc.supplier : doc.customerName;
-  const partyEmail = kind === "po" ? doc.supplierEmail : doc.customerEmail;
-  const party = `<b>${kind === "po" ? "To" : "Bill to"}</b><br>${esc(partyName)}${doc.customerAddress ? `<br>${esc(doc.customerAddress).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
+  const isInv = kind === "invoice";
+  const title = kind === "po" ? "PURCHASE ORDER" : kind === "bill" ? "BILL" : "INVOICE";
+  const partyName = isInv ? doc.customerName : doc.supplier;
+  const partyEmail = isInv ? doc.customerEmail : doc.supplierEmail;
+  const party = `<b>${isInv ? "Bill to" : kind === "bill" ? "From" : "To"}</b><br>${esc(partyName)}${doc.customerAddress ? `<br>${esc(doc.customerAddress).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
   const meta = [
-    doc.reference ? `${kind === "po" ? "PO" : "Invoice"} No: ${esc(doc.reference)}` : "",
+    doc.reference ? `${kind === "po" ? "PO" : kind === "bill" ? "Bill" : "Invoice"} No: ${esc(doc.reference)}` : "",
     doc.date ? `Date: ${fmtDay(doc.date as string)}` : "",
     doc.dueDate ? `Due: ${fmtDay(doc.dueDate as string)}` : "",
     doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
@@ -88,7 +89,7 @@ export function LineItemsEditor({ items, onChange }: { items: LineItem[]; onChan
 
 // Full-screen document preview with Print/Save-PDF, Email and (invoices) pay-link.
 export type DocAction = { key: string; label: string; onClick: () => void; disabled?: boolean };
-export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; note?: string; onClose: () => void }) {
+export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClose }: { kind: "po" | "invoice" | "bill"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; note?: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const html = docHtml(kind, doc, billing, payUrl);
   const fileName = `${kind === "po" ? "Purchase-order" : "Invoice"}${doc.reference ? `-${esc(doc.reference)}` : ""}`;
