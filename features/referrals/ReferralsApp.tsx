@@ -27,6 +27,7 @@ type Data = {
   rewardsRedeemed: number;
   outstandingCount: number;
   outstandingLiability: number;
+  monthly: { label: string; count: number; revenue: number }[];
   leaderboard: { email: string; name?: string | null; count: number; reward: number }[];
   recent: Row[];
 };
@@ -75,6 +76,29 @@ export function ReferralsApp() {
           <div><div className="text-[20px] font-extrabold leading-none">{d.rewardsRedeemed}<span className="text-[14px] font-bold text-[var(--ink-3)]"> / {d.rewardsIssued}</span></div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">rewards redeemed · {d.outstandingCount} still out{d.outstandingLiability > 0 ? ` (${money(d.outstandingLiability)} owed)` : ""}</div></div>
         </Card>
       )}
+
+      {/* Last 3 months — friends booked per month (single series, direct labels). */}
+      {d && d.friendsBooked > 0 && (() => {
+        const max = Math.max(1, ...d.monthly.map((m) => m.count));
+        return (
+          <Card className="mb-3.5 p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <div className="text-[13.5px] font-extrabold">Last 3 months</div>
+              <div className="text-[11px] text-[var(--ink-3)]">friends booked · revenue</div>
+            </div>
+            <div className="flex items-end gap-4">
+              {d.monthly.map((m) => (
+                <div key={m.label} className="flex flex-1 flex-col items-center">
+                  <div className="mb-1 text-[12px] font-extrabold">{m.count}</div>
+                  <div className="w-full max-w-[72px] rounded-md" style={{ height: `${8 + (m.count / max) * 96}px`, background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} title={`${m.label}: ${m.count} friend${m.count === 1 ? "" : "s"} · ${money(m.revenue)}`} />
+                  <div className="mt-2 text-[11.5px] font-bold text-[var(--ink-2)]">{m.label}</div>
+                  <div className="text-[10.5px] text-[var(--ink-3)]">{money(m.revenue)}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })()}
 
       {!d ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : d.friendsBooked === 0 ? (
