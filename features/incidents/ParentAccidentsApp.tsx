@@ -47,7 +47,7 @@ export function ParentAccidentsApp() {
                 <span className="text-[13px] font-extrabold">{r.childName}</span>
                 <span className="text-[11.5px] text-[var(--ink-3)]">{fmt(r.date, r.time)}</span>
                 {r.severity && <Badge tone={r.severity === "serious" ? { bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>{r.severity}</Badge>}
-                {r.parentNotified && <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>you were notified</Badge>}
+                {r.parentNotified && <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>you were notified</Badge>}
               </div>
               {r.description && <div className="mt-1.5 text-[13px] text-[var(--ink-2)]">{r.description}</div>}
               <div className="mt-1 flex flex-col gap-0.5 text-[12px] text-[var(--ink-3)]">

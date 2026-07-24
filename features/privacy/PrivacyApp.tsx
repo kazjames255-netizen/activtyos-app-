@@ -44,7 +44,7 @@ export function PrivacyApp() {
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Data &amp; privacy</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">See what we hold about you, download it, or ask us to delete it.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">{ok}</div>}
+      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
       <Card className="mb-3 p-4">
         <div className="mb-2 text-[13.5px] font-extrabold">What we hold</div>

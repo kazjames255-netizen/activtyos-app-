@@ -110,7 +110,7 @@ export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClos
           {payUrl && <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">{copied ? "✓ Link copied" : "🔗 Copy pay-link"}</button>}
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">✕ Close</button>
         </div>
-        {note && <div className="mb-2 rounded-lg bg-[#e7f8ee] px-3 py-1.5 text-center text-[12px] font-bold text-[#0f7a44]">{note}</div>}
+        {note && <div className="mb-2 rounded-lg bg-[#eaf0fc] px-3 py-1.5 text-center text-[12px] font-bold text-[#1d3a8f]">{note}</div>}
         <div className="mb-2 text-right text-[10.5px] text-white/85">💡 To save a PDF: click Print, then choose <b>“Save as PDF”</b> as the destination.</div>
         <div className="rounded-xl bg-white p-6 shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]" dangerouslySetInnerHTML={{ __html: html }} />
       </div>

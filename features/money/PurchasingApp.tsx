@@ -23,7 +23,7 @@ const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
   draft: { label: "Draft", bg: "var(--panel)", fg: "var(--ink-3)" },
   sent: { label: "Ordered", bg: "#eaf0fc", fg: "#1d3a8f" },
   received: { label: "Received", bg: "#fff4e0", fg: "#a86400" },
-  paid: { label: "Paid", bg: "#e7f8ee", fg: "#0f7a44" },
+  paid: { label: "Paid", bg: "#eaf0fc", fg: "#1d3a8f" },
   cancelled: { label: "Cancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
 };
 const OUTSTANDING = new Set<Status>(["sent", "received"]);
@@ -438,13 +438,13 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
                   {p.attachmentUrl
                     ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "supplier invoice" : "receipt"}</a>
                     : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title={isPo ? "Attach the supplier's invoice" : "Attach the receipt"}>＋ attach {isPo ? "invoice" : "receipt"}</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                  {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>}
+                  {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
                     {/* A PO is a document you raise and send to a supplier; a bill is one they sent you — so view/send are PO-only. */}
@@ -478,7 +478,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
           <div className="flex flex-col gap-1.5">
             {paidItems.map((p) => (
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
-                <span className="flex-none rounded-full bg-[#e7f8ee] px-2 py-0.5 text-[10.5px] font-bold text-[#0f7a44]">✓ Paid</span>
+                <span className="flex-none rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">✓ Paid</span>
                 <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
                 {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "invoice" : "receipt"}</a>}
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>

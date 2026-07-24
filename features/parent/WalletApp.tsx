@@ -100,7 +100,7 @@ export function WalletApp() {
                 <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
                   <div className="text-[14px] font-extrabold">{b.provider}</div>
                   <div className="text-right">
-                    <div className="text-[16px] font-extrabold text-[#0f7a44]">{money(b.balance)}</div>
+                    <div className="text-[16px] font-extrabold text-[#1d3a8f]">{money(b.balance)}</div>
                     <div className="text-[10.5px] text-[var(--ink-3)]">to spend</div>
                   </div>
                 </div>
@@ -114,7 +114,7 @@ export function WalletApp() {
                           <div className="truncate font-semibold">{t.reason}</div>
                           <div className="text-[11px] text-[var(--ink-3)]">{fmtWhen(t.at)}{t.ref ? ` · Ref ${t.ref}` : ""}</div>
                         </div>
-                        <div className={`flex-none font-extrabold tabular-nums ${t.delta >= 0 ? "text-[#0f7a44]" : "text-[var(--ink-2)]"}`}>
+                        <div className={`flex-none font-extrabold tabular-nums ${t.delta >= 0 ? "text-[#1d3a8f]" : "text-[var(--ink-2)]"}`}>
                           {t.delta >= 0 ? "+" : "−"}{money(Math.abs(t.delta))}
                         </div>
                       </div>

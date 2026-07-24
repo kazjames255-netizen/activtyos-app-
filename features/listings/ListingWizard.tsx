@@ -822,7 +822,7 @@ async function fileToImage(file: File): Promise<string> {
 // 1st, 2nd, 3rd, 4th…
 
 // Portal-blue-led palette for the colour-coded week calendar.
-const WEEK_PAL = ["#1d3a8f", "#2f6bd8", "#15b364", "#f5b81f", "#e22295", "#6a4fd0", "#0ea5e9", "#f97316"];
+const WEEK_PAL = ["#1d3a8f", "#2f6bd8", "#3f78d8", "#f5b81f", "#e22295", "#6a4fd0", "#0ea5e9", "#f97316"];
 
 /** The 10-step listing builder. */
 export function ListingWizard({
@@ -940,7 +940,7 @@ export function ListingWizard({
           {(() => {
             const label = { idle: "", dirty: "Unsaved changes", saving: "Saving…", saved: "Saved", error: "Couldn't save" }[saveState];
             if (!label) return null;
-            const col = saveState === "error" ? "var(--red)" : saveState === "saved" ? "#0f7a44" : "var(--ink-3)";
+            const col = saveState === "error" ? "var(--red)" : saveState === "saved" ? "#1d3a8f" : "var(--ink-3)";
             return <span className="mr-1 text-[11.5px] font-semibold" style={{ color: col }}>{saveState === "saved" ? "✓ " : ""}{label}</span>;
           })()}
           <Button sm disabled={busy} onClick={saveDraftAction}>Save draft</Button>
@@ -984,7 +984,7 @@ export function ListingWizard({
             </div>
           </div>
         ) : (
-          <div className="ml-auto rounded-xl px-3 py-2 text-[11.5px] font-bold" style={{ background: "var(--green-soft,#e7f8ee)", color: "#0f7a44" }}>
+          <div className="ml-auto rounded-xl px-3 py-2 text-[11.5px] font-bold" style={{ background: "#eaf0fc", color: "#1d3a8f" }}>
             ✓ Everything&rsquo;s ready to publish
           </div>
         )}
@@ -1462,7 +1462,7 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
             const diff = ceiling - capSum;
             let tone: [string, string] = ["var(--surface)", "var(--ink-2)"];
             let msg: React.ReactNode;
-            if (diff === 0) { tone = ["#e7f8ee", "#0f7a44"]; msg = <>✓ All <b>{ceiling}</b> places allocated by age.</>; }
+            if (diff === 0) { tone = ["#eaf0fc", "#1d3a8f"]; msg = <>✓ All <b>{ceiling}</b> places allocated by age.</>; }
             else if (allCapped) { tone = ["#fff8ec", "#8a5300"]; msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — and every age is capped, so the last {diff} can never fill. Raise a limit or leave an age uncapped for the rest.</>; }
             else { msg = <><b>{capSum}</b> of <b>{ceiling}</b> allocated — the other {diff} stay open to the uncapped ages.</>; }
             return <div className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold leading-[1.5]" style={{ background: tone[0], color: tone[1] }}>{msg}</div>;
@@ -1762,7 +1762,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
 // ── Step: Automatic discounts ──────────────────────────────────────────────
 const DISCOUNT_KINDS: { kind: DiscountKind; title: string; eg: string; icon: string; colour: string }[] = [
   { kind: "person", title: "Multi-person", eg: "Siblings pay £3.50 each, bring a friend pay £10.00 each", icon: "👨‍👩‍👧", colour: "#2f6bd8" },
-  { kind: "session", title: "Multi-session", eg: "Book more than 3 sessions to get 10% off", icon: "📅", colour: "#0e9f6e" },
+  { kind: "session", title: "Multi-session", eg: "Book more than 3 sessions to get 10% off", icon: "📅", colour: "#3f78d8" },
   { kind: "early", title: "Early bird", eg: "£10 off when they book before 1 June", icon: "🐦", colour: "#d97706" },
 ];
 
@@ -2508,7 +2508,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
                 const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
-                const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#16a34a";
+                const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#3f78d8";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dOff || (full && !queueable)}
@@ -2526,7 +2526,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
           {b.hasCounts && (
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold" style={{ color: MUTp }}>
-              {([["#16a34a", "Space"], ["#f59e0b", "Almost full"], ["#dc2626", "Full"]] as const).map(([c, l]) => (
+              {([["#3f78d8", "Space"], ["#f59e0b", "Almost full"], ["#dc2626", "Full"]] as const).map(([c, l]) => (
                 <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: c }} />{l}</span>
               ))}
             </div>
@@ -2536,7 +2536,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             if (!note) return null;
             // Same traffic light as the calendar — a different green here made
             // the key look like it belonged to something else.
-            const col = note.tone === "gone" ? "#dc2626" : note.tone === "low" ? "#f59e0b" : "#16a34a";
+            const col = note.tone === "gone" ? "#dc2626" : note.tone === "low" ? "#f59e0b" : "#3f78d8";
             return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: col }} />{note.text}</div>;
           })()}
@@ -3017,7 +3017,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           <div className="mt-3 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee", border: "1.5px solid #b6e6c8" }}>
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: "#fff" }}>📞</span>
             <div className="min-w-0">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#0f7a44" }}>Camp is on now — reach staff</div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#1d3a8f" }}>Camp is on now — reach staff</div>
               <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className="text-[16px] font-black tracking-[-0.01em]" style={{ color: "#0b6b3a" }}>{d.sitePhone}</a>
             </div>
           </div>
@@ -3070,7 +3070,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                       </a>
                     )}
                     {venue.transport && (
-                      <span className="rounded-2xl px-3 py-2 font-bold" style={{ background: "#e4f8ee", color: "#0f7a44" }}>🚌 {venue.transport}</span>
+                      <span className="rounded-2xl px-3 py-2 font-bold" style={{ background: "#e4f8ee", color: "#1d3a8f" }}>🚌 {venue.transport}</span>
                     )}
                   </div>
                 )}

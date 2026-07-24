@@ -69,7 +69,7 @@ export function ParentMedicationApp() {
       </div>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Authorise medicines for your child, and see every dose the staff record.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">{ok}</div>}
+      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
       {children.length === 0 || providers.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Add a child and book an activity first — then you can authorise medication.</Card>
@@ -107,7 +107,7 @@ export function ParentMedicationApp() {
                   <span className="text-[13.5px] font-extrabold">{m.name}</span>
                   <span className="text-[12px] text-[var(--ink-2)]">{m.dose}{m.route ? ` · ${m.route}` : ""}</span>
                   {m.asNeeded && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>as needed</Badge>}
-                  {m.consentGranted ? <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>consent given</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>consent withdrawn</Badge>}
+                  {m.consentGranted ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent given</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>consent withdrawn</Badge>}
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{m.childName}{m.tenantId ? ` · ${providerName(m.tenantId)}` : ""}{m.condition ? ` · ${m.condition}` : ""}</span>
                 </div>
                 <div className="mt-1.5 flex gap-2">

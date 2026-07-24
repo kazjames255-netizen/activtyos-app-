@@ -61,7 +61,7 @@ export function ParentMealsApp() {
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Meals</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Order meals from your provider’s menu.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">{ok}</div>}
+      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
       {providers.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Book an activity first — then you can order meals from that provider.</Card>
@@ -111,7 +111,7 @@ export function ParentMealsApp() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-bold">{o.childName}</span>
                 <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDay(o.date)} · {providerName(o.tenantId)}</span>
-                {o.pay === "Paid" ? <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>paid</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>to pay at drop-off</Badge>}
+                {o.pay === "Paid" ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>paid</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>to pay at drop-off</Badge>}
                 <span className="ml-auto text-[13px] font-extrabold tabular-nums">{money(o.total)}</span>
               </div>
               <div className="mt-1 text-[11.5px] text-[var(--ink-2)]">{o.items.map((it) => `${it.qty}× ${it.name}`).join(", ")}</div>

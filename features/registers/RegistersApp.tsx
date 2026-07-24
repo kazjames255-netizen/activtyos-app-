@@ -80,7 +80,7 @@ function AttendeeRow({
   const st = a.attendance?.status ?? "expected";
   const tone =
     st === "in"
-      ? { background: "var(--green-soft,#e7f8ee)", color: "#0f7a44" }
+      ? { background: "#eaf0fc", color: "#1d3a8f" }
       : st === "out"
         ? { background: "var(--panel)", color: "var(--ink-3)" }
         : st === "absent"
@@ -260,7 +260,7 @@ export function RegistersApp() {
                 </div>
                 <div className="flex items-center gap-2 text-[11.5px] font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>
                   <span className="text-[var(--ink-2)]">{s.counts.expected} expected</span>
-                  <span style={{ color: "#0f7a44" }}>{s.counts.in} in</span>
+                  <span style={{ color: "#1d3a8f" }}>{s.counts.in} in</span>
                   <span className="text-[var(--ink-3)]">{s.counts.out} out</span>
                   <span style={{ color: "var(--red,#e21d27)" }}>{s.counts.absent} absent</span>
                 </div>

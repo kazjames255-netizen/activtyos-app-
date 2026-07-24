@@ -95,7 +95,7 @@ export function MealShopApp({ canManage, onBoard }: { canManage: boolean; onBoar
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-bold">{o.childName}</span>
                 <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDay(o.date)} · {o.parentName || o.parentEmail}</span>
-                {o.pay === "Paid" ? <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>paid</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>unpaid</Badge>}
+                {o.pay === "Paid" ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>paid</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>unpaid</Badge>}
                 <span className="ml-auto text-[13px] font-extrabold tabular-nums">{money(o.total)}</span>
               </div>
               <div className="mt-1 text-[11.5px] text-[var(--ink-2)]">{o.items.map((it) => `${it.qty}× ${it.name}`).join(", ")}</div>

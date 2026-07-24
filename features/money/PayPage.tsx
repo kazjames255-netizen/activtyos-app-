@@ -108,7 +108,7 @@ export function PayPage({ token }: { token: string }) {
             </div>
             <div className="p-5">
               {inv.status === "paid" || justPaid ? (
-                <div className="rounded-xl bg-[#e7f8ee] p-4 text-center"><div className="text-[22px]">✓</div><div className="text-[15px] font-extrabold text-[#0f7a44]">Paid — thank you!</div></div>
+                <div className="rounded-xl bg-[#eaf0fc] p-4 text-center"><div className="text-[22px]">✓</div><div className="text-[15px] font-extrabold text-[#1d3a8f]">Paid — thank you!</div></div>
               ) : (
                 <>
                   <div className="text-[12px] text-[#8a86a3]">Amount due</div>

@@ -488,7 +488,7 @@ export function ChildrenApp() {
                     {c.medical && <Flag bg="rgba(239,68,68,.14)" fg="#c0392b">{c.medical}</Flag>}
                     {c.dietary && <Flag bg="rgba(20,184,166,.14)" fg="#0f766e">{c.dietary}</Flag>}
                     {c.send && <Flag bg="rgba(122,90,248,.14)" fg="#6a4fd0">SEND: {c.send}</Flag>}
-                    <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "#0f7a44" : "var(--ink-3)"}>
+                    <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "#1d3a8f" : "var(--ink-3)"}>
                       {c.photoConsent ? "📷 Photos OK" : "🚫 No photos"}
                     </Flag>
                     {clean && <Flag bg="rgba(120,126,142,.1)" fg="var(--ink-3)">No medical or dietary flags</Flag>}

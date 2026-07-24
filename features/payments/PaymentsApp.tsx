@@ -131,7 +131,7 @@ export function PaymentsApp() {
               <Badge
                 tone={
                   p.status === "succeeded"
-                    ? { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }
+                    ? { bg: "#eaf0fc", fg: "#1d3a8f" }
                     : p.status === "failed"
                       ? { bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }
                       : { bg: "var(--panel)", fg: "var(--ink-3)" }

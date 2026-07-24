@@ -115,7 +115,7 @@ export function PaymentsApp() {
                 <div className="truncate text-[12.5px] font-bold">{r.label}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · Ref {r.ref} · {r.on}</div>
               </div>
-              <span className="text-[13px] font-extrabold text-[var(--green,#0e9f6e)]">+{money(r.amount || 0)}</span>
+              <span className="text-[13px] font-extrabold text-[#3f78d8]">+{money(r.amount || 0)}</span>
             </div>
           ))}
         </Card>

@@ -137,7 +137,7 @@ export function OverviewApp() {
                   tone={
                     t.type === "company"
                       ? { bg: "var(--brand-soft)", fg: "var(--brand-strong)" }
-                      : { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }
+                      : { bg: "#eaf0fc", fg: "#1d3a8f" }
                   }
                 >
                   {t.type}

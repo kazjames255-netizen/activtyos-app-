@@ -117,7 +117,7 @@ export function StaffDashApp() {
               <span className="ml-auto flex items-center gap-1.5 text-[11.5px]">
                 <Badge tone={{ bg: "var(--brand-soft)", fg: "var(--brand-strong)" }}>{s.totalChildren} children</Badge>
                 {s.sendCount > 0 && <Badge tone={{ bg: "#f3e8ff", fg: "#7c3aed" }}>{s.sendCount} SEND</Badge>}
-                <Badge tone={s.met ? { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>
+                <Badge tone={s.met ? { bg: "#eaf0fc", fg: "#1d3a8f" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>
                   {s.staffAssigned}/{s.requiredStaff} staff
                 </Badge>
               </span>

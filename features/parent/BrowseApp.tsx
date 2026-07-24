@@ -365,7 +365,7 @@ export function BrowseApp() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      {dist != null && <span className="flex items-center gap-1.5 font-semibold text-[#0f7a44]"><span aria-hidden>🧭</span>{dist < 10 ? dist.toFixed(1) : Math.round(dist)} mi away</span>}
+                      {dist != null && <span className="flex items-center gap-1.5 font-semibold text-[#1d3a8f]"><span aria-hidden>🧭</span>{dist < 10 ? dist.toFixed(1) : Math.round(dist)} mi away</span>}
                       {agesLabel(l) && <span className="flex items-center gap-1.5"><span aria-hidden>🎂</span>{agesLabel(l)}</span>}
                       {dateRange(l) && <span className="flex items-center gap-1.5"><span aria-hidden>📅</span>{dateRange(l)}</span>}
                     </div>

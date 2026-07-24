@@ -159,7 +159,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
     input: "w-full rounded-lg border border-[#e0e5f2] bg-white px-2.5 py-2 text-[13px] text-[#171534]",
     chip: (on: boolean) =>
       `rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors ${on ? "border-transparent bg-[#2f6bd8] text-white" : "border-[#e0e5f2] bg-white text-[#4a4763]"}`,
-    cta: "rounded-xl bg-[#15b364] px-5 py-2.5 text-[14px] font-extrabold text-white disabled:opacity-50",
+    cta: "rounded-xl bg-[#3f78d8] px-5 py-2.5 text-[14px] font-extrabold text-white disabled:opacity-50",
   };
 
   if (done)
@@ -180,7 +180,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           {done.status === "Waitlisted" && " — you'll be offered a place if one frees up."}
         </p>
         {paid ? (
-          <p className="mt-1 text-[13px] font-bold text-[#0f7a44]">✅ Paid — see you there!</p>
+          <p className="mt-1 text-[13px] font-bold text-[#1d3a8f]">✅ Paid — see you there!</p>
         ) : done.status === "Confirmed" && done.total > 0 ? (
           <button
             type="button"
@@ -335,7 +335,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
         <div className="mt-3 border-t border-[#eef1f8] pt-3">
           {appliedCode ? (
             <div className="flex items-center justify-between text-[12.5px]">
-              <span className="font-bold text-[#0f7a44]">✓ Code {appliedCode.code} applied — you save {money(appliedCode.off)}</span>
+              <span className="font-bold text-[#1d3a8f]">✓ Code {appliedCode.code} applied — you save {money(appliedCode.off)}</span>
               <button type="button" onClick={() => { setAppliedCode(null); setCodeErr(null); }} className="font-bold text-[#2f6bd8]">Remove</button>
             </div>
           ) : (
@@ -353,12 +353,12 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           {preview ? (
             <>
               {preview.lines.map((l) => (
-                <div key={l.name} className="text-[12px] text-[#0f7a44]">
+                <div key={l.name} className="text-[12px] text-[#1d3a8f]">
                   −{money(l.amount)} {l.name}
                 </div>
               ))}
               {appliedCode && (
-                <div className="text-[12px] text-[#0f7a44]">−{money(appliedCode.off)} code {appliedCode.code}</div>
+                <div className="text-[12px] text-[#1d3a8f]">−{money(appliedCode.off)} code {appliedCode.code}</div>
               )}
               <span>
                 Total <b className="text-[16px] text-[#171534]">{money(finalTotal)}</b>

@@ -198,7 +198,7 @@ export function MedicationApp() {
                   <span className="text-[13px]">— {m.name} <span className="text-[var(--ink-3)]">({m.dose})</span></span>
                   {m.condition && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge>}
                   {m.consentGranted ? (
-                    <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>consent on file</Badge>
+                    <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent on file</Badge>
                   ) : (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                   )}

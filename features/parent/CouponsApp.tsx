@@ -66,7 +66,7 @@ export function CouponsApp() {
               <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)]">
                 {c.code}
               </span>
-              <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[12.5px] font-extrabold text-[#0f7a44]">{valueLabel(c)}</span>
+              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[#1d3a8f]">{valueLabel(c)}</span>
               {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">🎁 Just for you</span>}
               <div className="min-w-[160px] flex-1">
                 <div className="text-[11.5px] text-[var(--ink-3)]">

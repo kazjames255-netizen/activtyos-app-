@@ -21,11 +21,11 @@ const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
 const STATUS_META: Record<Status, { label: string; bg: string; fg: string }> = {
   draft: { label: "Draft", bg: "var(--panel)", fg: "var(--ink-3)" },
   sent: { label: "Sent", bg: "#eaf0fc", fg: "#1d3a8f" },
-  paid: { label: "Paid", bg: "#e7f8ee", fg: "#0f7a44" },
+  paid: { label: "Paid", bg: "#eaf0fc", fg: "#1d3a8f" },
   cancelled: { label: "Cancelled", bg: "var(--panel)", fg: "var(--ink-3)" },
 };
 const OWED = new Set<Status>(["sent"]);
-const STATUS_ACCENT: Record<Status, string> = { draft: "#b7b3c9", sent: "#3f78d8", paid: "#22a06b", cancelled: "#d0cdda" };
+const STATUS_ACCENT: Record<Status, string> = { draft: "#b7b3c9", sent: "#3f78d8", paid: "#3f78d8", cancelled: "#d0cdda" };
 
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -316,7 +316,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     <div className="min-w-0 flex-1 truncate font-bold">{p.customerName}{p.description ? <span className="font-normal text-[var(--ink-3)]"> · {p.description}</span> : ""}</div>
                     <span className="flex-none text-[11px] text-[var(--ink-3)]">{p.dueDate ? `due ${fmtDay(p.dueDate)}` : ""}</span>
                     <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
-                    <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>
+                    <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>
                     <div className="flex flex-none items-center gap-1">
                       <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
                       <div className="relative">
@@ -392,7 +392,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#0f7a44]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#1d3a8f]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
                   </div>
                   {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#dbe7fb]" title="Copy the customer's pay-link">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
                   <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
@@ -426,7 +426,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           <div className="flex flex-col gap-1.5">
             {sentLog.map((p) => (
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
-                <span className="w-[110px] flex-none text-[11.5px] font-bold text-[#0f7a44]">✉ {fmtDay((p.emailedAt || "").slice(0, 10))}</span>
+                <span className="w-[110px] flex-none text-[11.5px] font-bold text-[#1d3a8f]">✉ {fmtDay((p.emailedAt || "").slice(0, 10))}</span>
                 <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.customerName}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}{p.customerEmail ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">→ {p.customerEmail}</span> : ""}</div>
                 <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUS_META[p.status].label}</span>
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>

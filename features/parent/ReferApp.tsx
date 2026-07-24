@@ -95,8 +95,8 @@ export function ReferApp() {
           <div><div className="text-[22px] font-extrabold leading-none">{r.booked ?? 0}</div><div className="text-[11.5px] text-[var(--ink-3)]">friend{(r.booked ?? 0) === 1 ? "" : "s"} booked with your link</div></div>
         </Card>
         <Card className="flex items-center gap-3 p-4">
-          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#e7f8ee] text-[20px]">🎉</div>
-          <div><div className="text-[22px] font-extrabold leading-none text-[#0f7a44]">{isPct ? (r.booked ?? 0) : money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">{isPct ? "reward codes earned" : "earned in rewards so far"}</div></div>
+          <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[20px]">🎉</div>
+          <div><div className="text-[22px] font-extrabold leading-none text-[#1d3a8f]">{isPct ? (r.booked ?? 0) : money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">{isPct ? "reward codes earned" : "earned in rewards so far"}</div></div>
         </Card>
       </div>
 

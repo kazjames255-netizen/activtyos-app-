@@ -88,13 +88,13 @@ export function StorePage({ tenantId }: { tenantId: string }) {
                     <div className="truncate text-[14.5px] font-extrabold text-[#171534]">{l.title || l.name}</div>
                     <div className="mt-0.5 text-[11.5px] text-[#8a86a3]">
                       {runFrom && runTo ? `${runFrom} – ${runTo}` : "Dates TBC"}
-                      {spotsLeft > 0 && <span className="text-[#0f7a44]"> · places available</span>}
+                      {spotsLeft > 0 && <span className="text-[#1d3a8f]"> · places available</span>}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[13px] font-extrabold text-[#171534]">
                         {from !== null ? `from ${money(from)}` : ""}
                       </span>
-                      <span className="rounded-full bg-[#15b364] px-3 py-1 text-[11.5px] font-bold text-white">
+                      <span className="rounded-full bg-[#3f78d8] px-3 py-1 text-[11.5px] font-bold text-white">
                         Book →
                       </span>
                     </div>

@@ -12,7 +12,7 @@ const PILLS: [number, string, string][] = [
   [3, "Arrivals", "#F97316"],
   [4, "Spaces", "#E91E63"],
   [5, "Groups", "#7A5AF8"],
-  [6, "Activities", "#15b364"],
+  [6, "Activities", "#3f78d8"],
   [7, "Build", "#9333EA"],
 ];
 

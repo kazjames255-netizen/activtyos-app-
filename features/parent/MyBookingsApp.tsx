@@ -85,9 +85,9 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
       {advice && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
           {advice.percent >= 100 ? (
-            <div className="font-extrabold text-[#0f7a44]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[#1d3a8f]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
           ) : advice.amount > 0 ? (
-            <div className="font-extrabold text-[#0f7a44]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[#1d3a8f]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
           ) : (
             <div className="font-extrabold text-[#c0392b]">✗ No refund is due — this is inside the provider&rsquo;s no-refund window.</div>
           )}
@@ -98,7 +98,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
             </div>
           )}
           {advice.amount === 0 && cfg?.noRefundCredit && (
-            <div className="mt-1 text-[11px] font-semibold text-[#0f7a44]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
+            <div className="mt-1 text-[11px] font-semibold text-[#1d3a8f]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
           )}
         </div>
       )}
@@ -446,7 +446,7 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           <span>
             <b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""}
             {refundIssued ? (
-              <> — <b className="text-[#0f7a44]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
+              <> — <b className="text-[#1d3a8f]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
             ) : refundOwed && refundAmt > 0 ? (
               <> — a <b>{money(refundAmt)} refund</b> is due; your provider is processing it{isVoucher ? " back through your voucher scheme" : ""}.</>
             ) : (
@@ -523,7 +523,7 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
           <DefRow label="Total" value={money(b.amount)} />
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (
-            <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[var(--green-soft,#e7f8ee)] px-3 py-2.5 text-[12.5px] font-semibold text-[#0f7a44]">
+            <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[#1d3a8f]">
               ✓ Voucher payment received{vScheme ? ` via ${vScheme.name}` : ""} — your booking is paid in full.
             </div>
           )}

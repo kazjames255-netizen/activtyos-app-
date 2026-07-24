@@ -95,7 +95,7 @@ function NotificationsTab() {
               onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
               placeholder={s.accountEmail || "you@example.com"} className="min-w-[240px] flex-1" />
             <Button onClick={saveEmail}>Save</Button>
-            {savedEmail && <span className="text-[12px] font-bold text-[#0f7a44]">✓ Saved</span>}
+            {savedEmail && <span className="text-[12px] font-bold text-[#1d3a8f]">✓ Saved</span>}
           </div>
         </div>
       )}
@@ -147,7 +147,7 @@ function Toggle({ on, onChange, labels = ["On", "Off"], disabled }: { on: boolea
         const active = on === v;
         // "On/Shown/Yes" active → confident green; "Off/Hidden/No" active → calm slate.
         const activeStyle = v
-          ? { background: "linear-gradient(180deg,#34d67f,#16a34a)", color: "#fff", boxShadow: "0 2px 7px -1px rgba(16,163,74,.5)" }
+          ? { background: "linear-gradient(180deg,#34d67f,#3f78d8)", color: "#fff", boxShadow: "0 2px 7px -1px rgba(16,163,74,.5)" }
           : { background: "linear-gradient(180deg,#9aa0af,#6b7280)", color: "#fff", boxShadow: "0 2px 7px -1px rgba(71,85,105,.4)" };
         return (
           <button

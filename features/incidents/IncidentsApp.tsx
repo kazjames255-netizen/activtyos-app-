@@ -173,7 +173,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                 <span className="text-[13.5px] font-extrabold">{l.childName}</span>
                 <Badge tone={sevTone[l.severity] ?? sevTone.minor}>{l.severity}</Badge>
                 {l.parentNotified ? (
-                  <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>parent informed</Badge>
+                  <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>parent informed</Badge>
                 ) : (
                   <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>
                 )}

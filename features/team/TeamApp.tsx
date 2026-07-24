@@ -108,7 +108,7 @@ export function TeamApp() {
         <Button variant={canInviteFranchise ? "default" : "primary"} disabled={busy} onClick={() => createInvite("staff")}>
           + Invite staff
         </Button>
-        {sentNote && <span className="text-[12px] font-bold text-[var(--green,#0e9f6e)]">{sentNote}</span>}
+        {sentNote && <span className="text-[12px] font-bold text-[#3f78d8]">{sentNote}</span>}
       </div>
 
       <SectionHead>Invite links</SectionHead>
@@ -140,7 +140,7 @@ export function TeamApp() {
               </div>
               <div className="flex items-center gap-2">
                 {inv.usedBy ? (
-                  <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>Used</Badge>
+                  <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>Used</Badge>
                 ) : (
                   <>
                     <Badge tone={{ bg: "#FCE9CE", fg: "#B45309" }}>Pending</Badge>

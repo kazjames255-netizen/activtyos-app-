@@ -106,7 +106,7 @@ export function CalendarApp() {
                     <span className="text-[11.5px] text-[var(--ink-3)]">{e.block}</span>
                     {!e.open ? <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>closed</Badge>
                       : e.spotsLeft === 0 ? <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>full</Badge>
-                      : e.spotsLeft !== undefined ? <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>{e.spotsLeft} left</Badge> : null}
+                      : e.spotsLeft !== undefined ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{e.spotsLeft} left</Badge> : null}
                   </div>
                 ))}
               </div>

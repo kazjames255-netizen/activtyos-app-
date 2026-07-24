@@ -57,7 +57,7 @@ export function AccountApp() {
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>My account</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{p.email} · {roleLabel[p.role] ?? p.role}</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--green-soft,#e7f8ee)] px-3 py-2 text-[12.5px] text-[#0f7a44]">{ok}</div>}
+      {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
       <Card className="mb-3 p-4">
         <div className="mb-2 text-[13.5px] font-extrabold">Profile</div>
@@ -72,7 +72,7 @@ export function AccountApp() {
       <Card className="mb-3 p-4">
         <div className="mb-2 text-[13.5px] font-extrabold">Change password</div>
         {pwMsg.err && <div className="mb-2 text-[12px] text-[var(--red)]">{pwMsg.err}</div>}
-        {pwMsg.ok && <div className="mb-2 text-[12px] text-[#0f7a44]">{pwMsg.ok}</div>}
+        {pwMsg.ok && <div className="mb-2 text-[12px] text-[#1d3a8f]">{pwMsg.ok}</div>}
         <div className="grid gap-2.5 sm:grid-cols-3">
           <div><FieldLabel>Current</FieldLabel><Input type="password" value={pw.current} onChange={(e) => setPw((s) => ({ ...s, current: e.target.value }))} className="w-full" /></div>
           <div><FieldLabel>New</FieldLabel><Input type="password" value={pw.next} onChange={(e) => setPw((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>

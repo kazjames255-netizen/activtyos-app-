@@ -102,7 +102,7 @@ export function ReferralsApp() {
       {/* Impact — what referrals brought in vs what the discounts cost (£ vs %). */}
       {d && d.friendsBooked > 0 && (
         <Card className="mb-3.5 grid gap-3 p-4 sm:grid-cols-3">
-          <div><div className="text-[20px] font-extrabold leading-none text-[#0f7a44]">{money(d.referredRevenue)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">bookings from referrals</div></div>
+          <div><div className="text-[20px] font-extrabold leading-none text-[#1d3a8f]">{money(d.referredRevenue)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">bookings from referrals</div></div>
           <div><div className="text-[20px] font-extrabold leading-none text-[var(--red,#e21d27)]">−{money(d.friendDiscountTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">discounts given · <b>{costPct}%</b> of revenue</div></div>
           <div><div className="text-[20px] font-extrabold leading-none">{d.rewardsRedeemed}<span className="text-[14px] font-bold text-[var(--ink-3)]"> / {d.rewardsIssued}</span></div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">rewards redeemed · {d.outstandingCount} still out{d.outstandingLiability > 0 ? ` (${money(d.outstandingLiability)} owed)` : ""}</div></div>
         </Card>
@@ -168,11 +168,11 @@ export function ReferralsApp() {
                       {r.bookingRef
                         ? <Link href={`/${portal}/bookings?ref=${encodeURIComponent(r.bookingRef)}`} className="rounded-full border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--brand-strong,#16306e)] hover:-translate-y-px">View booking {r.bookingRef} ›</Link>
                         : <span className="text-[10.5px] text-[var(--ink-3)]">no booking linked</span>}
-                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.rewardRedeemed ? "bg-[#e7f8ee] text-[#0f7a44]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{r.rewardRedeemed ? "✓ Reward redeemed" : "Reward not yet used"}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.rewardRedeemed ? "bg-[#eaf0fc] text-[#1d3a8f]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{r.rewardRedeemed ? "✓ Reward redeemed" : "Reward not yet used"}</span>
                     </div>
                   </div>
                   <div className="flex-none self-start text-right">
-                    <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}{r.cap ? ` ≤${money(r.cap)}` : ""}</span>
+                    <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}{r.cap ? ` ≤${money(r.cap)}` : ""}</span>
                     <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">referrer reward</div>
                   </div>
                 </div>

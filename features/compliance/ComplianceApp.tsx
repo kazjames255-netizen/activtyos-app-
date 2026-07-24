@@ -12,7 +12,7 @@ const TYPES = ["DBS check", "Safeguarding", "Paediatric first aid", "First aid",
 const tone: Record<Cert["status"], { bg: string; fg: string }> = {
   expired: { bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" },
   expiring: { bg: "#fdf3d8", fg: "#9a5a00" },
-  valid: { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" },
+  valid: { bg: "#eaf0fc", fg: "#1d3a8f" },
 };
 const label: Record<Cert["status"], string> = { expired: "expired", expiring: "expiring soon", valid: "valid" };
 const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");

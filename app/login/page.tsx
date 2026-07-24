@@ -99,10 +99,10 @@ function LoginForm() {
           </div>
         </div>
         {error && <div className="text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-        {notice && <div className="text-[12.5px] font-semibold text-[#0f7a44]">{notice}</div>}
+        {notice && <div className="text-[12.5px] font-semibold text-[#1d3a8f]">{notice}</div>}
         <button type="submit" disabled={busy}
           className="mt-1 w-full rounded-xl py-3 text-[14.5px] font-extrabold text-white transition-opacity hover:opacity-95 disabled:opacity-60"
-          style={{ background: "var(--cta,#15b364)" }}>
+          style={{ background: "var(--cta,#3f78d8)" }}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>

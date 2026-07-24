@@ -85,7 +85,7 @@ export function TripsApp() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13.5px] font-extrabold">{t.destination}</span>
                 <span className="text-[12px] text-[var(--ink-3)]">{fmt(t.date)}{t.departTime ? ` · ${t.departTime}` : ""}{t.returnTime ? `–${t.returnTime}` : ""}</span>
-                {t.consentObtained ? <Badge tone={{ bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }}>consent ✓</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>consent pending</Badge>}
+                {t.consentObtained ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent ✓</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>consent pending</Badge>}
                 <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{t.headcount ?? t.childNames.length} children · {t.staff.length} staff</span>
               </div>
               <div className="mt-1.5 flex gap-2">
