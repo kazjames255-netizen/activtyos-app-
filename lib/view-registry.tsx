@@ -53,6 +53,26 @@ import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
+import { planned } from "@/features/planned/PlannedApp";
+
+// Roadmap areas — honest "Planned" pages until the real feature lands
+// (never the old prototype's canned data). Swap for a real component here
+// when built; the nav item needs no change.
+const AiPlanned = (portal: string) =>
+  planned({
+    title: "AI assistant",
+    blurb: "Ask questions about your day in plain English — bookings, spaces, who's in, what's owed — and get answers from your live data.",
+    links: [{ href: `/${portal}/messages`, label: "Messages", hint: "a human answers today" }],
+  });
+const PayrollPlanned = (portal: string, scheduleView: string) =>
+  planned({
+    title: "Payroll",
+    blurb: "Hours from the rota, rates per role, and a run-ready payroll export each month.",
+    links: [
+      { href: `/${portal}/${scheduleView}`, label: portal === "company" ? "Team & invites" : "Schedule", hint: "who works, and when" },
+      { href: `/${portal}/finance`, label: "Finances", hint: "money in and out today" },
+    ],
+  });
 
 /**
  * Views that have a true React implementation — which is now ALL of them:
@@ -108,6 +128,19 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
+    ai: AiPlanned("company"),
+    payroll: PayrollPlanned("company", "staff"),
+    "ho-framework": planned({
+      title: "Franchise Support Framework",
+      blurb: "The head-office playbook per franchise: support visits, standards checks and improvement plans in one place.",
+      links: [{ href: "/company/staff", label: "Team & invites", hint: "your franchises live here" }],
+    }),
+    // Routable aliases so old links don't 404 — the sidebar shows only the
+    // canonical item, but the slug still resolves to the real view.
+    registers: RegistersApp,
+    children: CustomersApp,
+    "company-setup": SetupApp,
+    moments2: MomentsApp,
   },
   franchise: {
     dash: DashboardApp,
@@ -147,6 +180,9 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
+    ai: AiPlanned("franchise"),
+    payroll: PayrollPlanned("franchise", "schedule"),
+    moments2: MomentsApp,
   },
   freelancer: {
     dash: DashboardApp,
@@ -185,6 +221,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
+    ai: AiPlanned("freelancer"),
+    moments2: MomentsApp,
   },
   staff: {
     dash: StaffDashApp,
@@ -207,6 +245,34 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     compliance: ComplianceApp,
     account: AccountApp,
     privacy: PrivacyApp,
+    ai: AiPlanned("staff"),
+    availability: planned({
+      title: "My availability",
+      blurb: "Tell your organiser which days and hours you can work; the rota builds around it.",
+      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your shifts as they stand" }],
+    }),
+    holiday: planned({
+      title: "My holiday",
+      blurb: "Request time off and see what's approved, with the rota kept in step automatically.",
+      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your shifts as they stand" }],
+    }),
+    expenses: planned({
+      title: "My expenses",
+      blurb: "Snap a receipt, claim it back, and track what's been reimbursed.",
+      links: [{ href: "/staff/messages", label: "Messages", hint: "send receipts to your organiser today" }],
+    }),
+    pay: planned({
+      title: "My pay",
+      blurb: "Payslips, hours worked and what's landing this month — once payroll is built.",
+      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your hours live here" }],
+    }),
+    training: planned({
+      title: "Learning Centre",
+      blurb: "Required training, refreshers and certificates, tracked per staff member.",
+      links: [{ href: "/staff/documents", label: "Documents", hint: "policies and handbooks today" }],
+    }),
+    children: CustomersApp, // routable alias of Families
+    moments2: MomentsApp, // routable alias of Moments
   },
   custdash: {
     browse: BrowseApp,
@@ -226,10 +292,55 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: ParentAccidentsApp,
     account: AccountApp,
     privacy: PrivacyApp,
+    ai: AiPlanned("custdash"),
+    memberships: planned({
+      title: "Memberships",
+      blurb: "Recurring plans from your providers — a term of Tuesdays, a monthly pass — managed and paid from here.",
+      links: [
+        { href: "/custdash/wallet", label: "Wallet", hint: "credit and balances today" },
+        { href: "/custdash/coupons", label: "Coupons", hint: "codes your providers gave you" },
+      ],
+    }),
+    dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {
     dash: OverviewApp,
     providers: ProvidersApp,
+    // Platform tooling on the roadmap — these need PLATFORM-scoped
+    // backends (a platform account has no tenant, so the operator
+    // components can't run here).
+    features: planned({
+      title: "Provider features",
+      blurb: "Turn features on and off per provider from HQ — trials, staged rollouts, plans.",
+      links: [{ href: "/platform/providers", label: "Providers", hint: "each tenant's live state" }],
+    }),
+    billing: planned({
+      title: "Billing",
+      blurb: "Platform subscriptions and per-provider billing, collected automatically.",
+      links: [{ href: "/platform/providers", label: "Providers", hint: "who's on which plan" }],
+    }),
+    support: planned({
+      title: "Support",
+      blurb: "Every provider's support threads triaged in one HQ inbox.",
+      links: [{ href: "/platform/providers", label: "Providers", hint: "reach a provider directly" }],
+    }),
+    messages: planned({
+      title: "Messages",
+      blurb: "HQ announcements out to providers, and their replies back.",
+    }),
+    email: planned({
+      title: "Email",
+      blurb: "Platform-level email campaigns to providers, with delivery tracking.",
+    }),
+    privacy: planned({
+      title: "Data & privacy",
+      blurb: "Platform-wide data-subject requests, retention rules and audit trail.",
+    }),
+    ai: planned({
+      title: "AI assistant",
+      blurb: "Ask questions across the whole platform — growth, churn, capacity — answered from live data.",
+      links: [{ href: "/platform/dash", label: "Overview", hint: "the live numbers today" }],
+    }),
   },
 };
 

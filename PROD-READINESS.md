@@ -66,27 +66,28 @@ with in-page card payment), staff `timetable` (earlier), company/franchise
 **Mapped to existing real components:** `support` → SupportApp for
 company/franchise/freelancer.
 
-**Removed from nav until genuinely built** (restore each by building the
-feature, registering it, re-adding the nav item):
+**Honest "Planned" pages** (`features/planned/PlannedApp.tsx` — a clearly
+labelled roadmap page with "use this today" links; swap the `planned()`
+entry in `lib/view-registry.tsx` for the real component when each lands):
 - `ai` ×6 — an AI assistant is a product decision, not a stub.
 - `payroll` (company, franchise), staff `pay` — payroll domain not built.
-- `moments2` ×4 — duplicate of the real `moments`.
-- company `children`, staff `children` — covered by Customers & families.
-- company `company-setup` — covered by Setup & features + Account.
-- company `ho-framework` — prototype-only concept.
-- company `registers` — duplicate of the real `admin-registers`.
-- staff `availability`, `holiday` — no shifts-backend support yet; fold
-  into Schedule when built.
-- staff `expenses` — staff expense *claims* don't exist server-side
-  (tenant expenses are the operator's money view).
+- staff `availability`, `holiday` — no shifts-backend support yet.
+- staff `expenses` — staff expense *claims* don't exist server-side.
 - staff `training` — no learning-content backend.
-- custdash `dash` — parents land on Browse; `memberships` — no backend.
+- custdash `memberships` — no recurring-plan backend.
 - platform `features`, `billing`, `support`, `messages`, `email`,
   `privacy` — need platform-scoped backends (tenant components won't run
-  for tenant-less platform accounts). Platform keeps Overview + Providers.
+  for tenant-less platform accounts).
 
-Also: 5 duplicate nav entries removed (`marketing` ×3 portals, custdash
-`account` + `refer`); bare `/custdash` now lands on Browse; `legacyView`
+**Routable aliases** (slug resolves so old links don't 404, but only the
+canonical item is in the sidebar): company `registers`→Registers,
+`children`→Families, `company-setup`→Setup, `moments2`→Moments (also on
+franchise/freelancer/staff), staff `children`→Families, custdash
+`dash`→Browse.
+
+Also: 5 literal duplicate nav entries removed (`marketing` ×3 portals,
+custdash `account` + `refer`); bare `/custdash` lands on Browse; the
+registry — not nav membership — now decides what's routable; `legacyView`
 fields in nav config are inert metadata to strip in a later cleanup.
 
 ## Cleanup (doesn't lie to users, but should go)

@@ -1,8 +1,8 @@
 // The sidebar's source of truth, used by components/shell/Sidebar.tsx and
 // app/[portal]/[view]/page.tsx. Every item here MUST have a component in
-// lib/view-registry.tsx — the legacy prototype iframe fallback is gone, so
-// an unregistered slug 404s. A view that isn't built yet doesn't go in the
-// nav (the not-yet-built list lives in PROD-READINESS.md).
+// lib/view-registry.tsx — the legacy prototype iframe is gone. Views that
+// aren't built yet point at an honest "Planned" page (features/planned).
+// Registered slugs OUTSIDE the nav stay routable (old links don't 404).
 
 export type PortalKey = "company" | "franchise" | "freelancer" | "staff" | "custdash" | "platform";
 
@@ -11,8 +11,7 @@ export type NavIcon = { type: "glyph"; value: string } | { type: "svg"; markup: 
 export interface NavItem {
   /** Clean route slug used in our URLs: /[portal]/[view] */
   view: string;
-  /** The legacy prototype's data-view value. The iframe bridge that used it
-   *  is gone — kept as inert metadata until the field is stripped. */
+  /** The legacy prototype's data-view value — inert metadata now. */
   legacyView: string;
   label: string;
   icon: NavIcon | null;
@@ -31,6 +30,7 @@ export interface NavGroup {
 }
 
 export const PORTALS: PortalKey[] = ["company", "franchise", "freelancer", "staff", "custdash", "platform"];
+
 
 export const PORTAL_LABELS: Record<PortalKey, string> = {
   company: "Company / Head Office",
@@ -67,6 +67,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "marketing", legacyView: "admin-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+      ],
+    },
+    {
+      label: "Support",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "ho-framework", legacyView: "ho-framework", label: "Franchise Support Framework", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\" rx=\"2\"></rect><path d=\"M9 3.5V6h6V3.5M8.5 11l1.6 1.6L13 9.5M8.5 16l1.6 1.6L13 14.5\"></path></svg>" }, badge: null },
       ],
     },
     {
@@ -147,8 +155,10 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "calendar", legacyView: "cal-admin", label: "Calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
         { view: "meals", legacyView: "admin-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
+        { view: "payroll", legacyView: "payroll", label: "Payroll", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
         { view: "compliance", legacyView: "compliance", label: "Learning Centre3", icon: { type: "glyph", value: "◎" }, badge: null },
         { view: "subscription", legacyView: "subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
+        { view: "ai", legacyView: "ai", label: "AI Assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
     },
   ],
@@ -191,6 +201,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "staff", legacyView: "franchise-staff", label: "Staff", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3.5 19a5.5 5.5 0 0 1 11 0\"></path><path d=\"M16 5.5a3 3 0 0 1 0 5.8M20.5 19a5.5 5.5 0 0 0-4-5.3\"></path></svg>" }, badge: null },
+        { view: "payroll", legacyView: "franchise-payroll", label: "Payroll", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
         { view: "compliance", legacyView: "franchise-compliance", label: "Learning Centre1", icon: { type: "glyph", value: "◎" }, badge: null },
       ],
     },
@@ -214,6 +225,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "invoices", legacyView: "franchise-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "reconciliation", legacyView: "franchise-reconciliation", label: "Reconciliation", icon: { type: "glyph", value: "⇄" }, badge: null },
         { view: "subscription", legacyView: "franchise-subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
+        { view: "ai", legacyView: "franchise-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
     },
     {
@@ -317,6 +329,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      label: "AI",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "ai", legacyView: "freelancer-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
+      ],
+    },
+    {
       label: "Settings",
       pinned: false,
       footer: false,
@@ -377,6 +397,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "schedule", legacyView: "staff-schedule", label: "My schedule", icon: { type: "glyph", value: "▦" }, badge: null },
+        { view: "availability", legacyView: "staff-availability", label: "My availability", icon: { type: "glyph", value: "⏱" }, badge: null },
+        { view: "holiday", legacyView: "staff-holiday", label: "My holiday", icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "tasks", legacyView: "staff-tasks", label: "Tasks", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
       ],
     },
@@ -403,7 +425,9 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
+        { view: "training", legacyView: "staff-training", label: "Learning Centre", icon: { type: "glyph", value: "◎" }, badge: null },
         { view: "documents", legacyView: "staff-documents", label: "Documents", icon: { type: "glyph", value: "▤" }, badge: null },
+        { view: "ai", legacyView: "staff-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
     },
     {
@@ -411,8 +435,17 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
+        { view: "expenses", legacyView: "staff-expenses", label: "My expenses", icon: { type: "glyph", value: "🧾" }, badge: null },
         { view: "account", legacyView: "staff-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
         { view: "privacy", legacyView: "staff-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },
+      ],
+    },
+    {
+      label: "Coming soon",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "pay", legacyView: "staff-pay", label: "My pay", icon: { type: "glyph", value: "£" }, badge: null },
       ],
     },
     {
@@ -477,6 +510,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "payments", legacyView: "custdash-payments", label: "Payments", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\"></rect><path d=\"M2 10h20M6 15h4\"></path></svg>" }, badge: null },
+        { view: "memberships", legacyView: "custdash-memberships", label: "Memberships", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z\"></path></svg>" }, badge: null },
         { view: "wallet", legacyView: "custdash-wallet", label: "Wallet", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"></rect><path d=\"M16 12h.01M2 10h20\"></path></svg>" }, badge: null },
         { view: "coupons", legacyView: "custdash-coupons", label: "Coupons & discount codes", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 5L5 19\"></path><circle cx=\"6.5\" cy=\"6.5\" r=\"2.5\"></circle><circle cx=\"17.5\" cy=\"17.5\" r=\"2.5\"></circle></svg>" }, badge: null },
         { view: "refer", legacyView: "custdash-refer", label: "Refer a friend", icon: { type: "glyph", value: "🎁" }, badge: null },
@@ -488,6 +522,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "messages", legacyView: "custdash-messages", label: "Messages", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3 7l9 6 9-6\"></path></svg>" }, badge: null },
+        { view: "ai", legacyView: "custdash-ai", label: "AI assistant", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l3 3M15.4 15.4l3 3M18.4 5.6l-3 3M8.6 15.4l-3 3\"></path></svg>" }, badge: null },
         { view: "account", legacyView: "custdash-account", label: "My account", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"></circle><path d=\"M4 21a8 8 0 0 1 16 0\"></path></svg>" }, badge: null },
         { view: "privacy", legacyView: "custdash-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },
         { view: "activityos", legacyView: "custdash-help", label: "Help & support", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"></circle><path d=\"M9.5 9a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3.2M12 17h.01\"></path></svg>" }, badge: null },
@@ -517,6 +552,27 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "providers", legacyView: "platform-providers", label: "Providers", icon: { type: "glyph", value: "▣" }, badge: null },
+        { view: "features", legacyView: "platform-features", label: "Provider features", icon: { type: "glyph", value: "◐" }, badge: null },
+      ],
+    },
+    {
+      label: "Oversight",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "billing", legacyView: "platform-billing", label: "Billing", icon: { type: "glyph", value: "£" }, badge: null },
+        { view: "support", legacyView: "platform-support", label: "Support", icon: { type: "glyph", value: "?" }, badge: null },
+        { view: "ai", legacyView: "platform-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
+        { view: "privacy", legacyView: "platform-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },
+      ],
+    },
+    {
+      label: "Communication",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "messages", legacyView: "platform-messages", label: "Messages", icon: { type: "glyph", value: "▧" }, badge: null },
+        { view: "email", legacyView: "platform-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
       ],
     },
     {
