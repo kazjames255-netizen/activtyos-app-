@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
+import { LineItemsEditor, PrintableDoc, lineTotal, type LineItem } from "@/features/money/doc-shared";
 import { Card } from "@/components/ui";
 
 const LIGHT_PALETTE = {
@@ -12,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; bookingRef?: string; description?: string; amount: number; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; overdue?: boolean }
+interface Invoice { id: string; customerName: string; customerEmail?: string; bookingRef?: string; reference?: string; description?: string; amount: number; lineItems?: LineItem[]; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -32,7 +34,7 @@ type Tab = "overview" | "ledger" | "customers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; customerName: string; customerEmail: string; hasBooking: boolean; bookingRef: string; description: string; amount: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+type Editor = { id?: string; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -54,6 +56,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<Sort>("date");
+  const [viewing, setViewing] = useState<Invoice | null>(null);
+  const [emailing, setEmailing] = useState(false);
+  const { settings } = useSettings();
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/invoices").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -112,16 +117,22 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await navigator.clipboard.writeText(link); setCopied(p.id); setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800); } catch { setError("Couldn’t copy — link: " + link); }
   }
 
-  const openAdd = () => setEditor({ customerName: "", customerEmail: "", hasBooking: false, bookingRef: "", description: "", amount: "", date: todayIso(), dueDate: "", status: "draft", notes: "" });
-  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", amount: String(p.amount), date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  const openAdd = () => setEditor({ customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
+  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  async function emailDoc(p: Invoice) {
+    const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
+    if (!to) return;
+    setEmailing(true);
+    try { await apiPost(`/api/invoices/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
 
   async function save() {
     if (!editor) return;
-    const amt = Number(editor.amount);
+    const lines = editor.lineItems.filter((li) => li.description.trim() || li.unitPrice > 0);
     if (!editor.customerName.trim()) { setError("Customer name is required."); return; }
-    if (!amt || amt < 0) { setError("Enter a valid amount."); return; }
+    if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, amount: amt, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
+    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
       if (editor.id) await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body);
       else await apiPost("/api/invoices", body);
@@ -294,11 +305,13 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
                   {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
+                  <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
+                  <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to customer" aria-label="Email">✉</button>
                   <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                   <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                 </Card>
@@ -330,12 +343,13 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Parent’s name" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="parent@email.com" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Amount (£)</span><input type="number" min="0" step="0.01" value={editor.amount} onChange={(e) => setEditor({ ...editor, amount: e.target.value })} placeholder="0.00" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Invoice no.</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
                 <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Due date</span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
               </div>
-              <label className="mt-2.5 block"><span className={labelCls}>Description</span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
+              <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
+              <label className="mt-2.5 block"><span className={labelCls}>Description <span className="font-normal normal-case text-[var(--ink-3)]">(short summary, optional)</span></span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
 
               <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
                 <label className="flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={editor.hasBooking} onChange={(e) => setEditor({ ...editor, hasBooking: e.target.checked })} /> Link this invoice to a booking</label>
@@ -355,6 +369,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           </Card>
         </div>
       )}
+
+      {viewing && <PrintableDoc kind="invoice" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} payUrl={viewing.status !== "paid" ? payLink(viewing) : undefined} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
     </div>
   );
 }

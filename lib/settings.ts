@@ -294,6 +294,17 @@ export interface TenantSettings {
   money?: { show?: "outgoing" | "incoming" | "both"; usePurchaseOrders?: boolean };
 
   /**
+   * Business & bank details printed on POs and invoices (and their PDFs/emails).
+   * All optional — a provider fills in what they have. Bank details show only on
+   * invoices (money in), as the "how to pay" block.
+   */
+  billing?: {
+    businessName?: string; address?: string; email?: string; phone?: string; vatNumber?: string;
+    bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string;
+    paymentTerms?: string; footer?: string;
+  };
+
+  /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
    * off hides it from the operator's own nav — and, for anything a family also
