@@ -59,6 +59,12 @@ const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] t
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
 const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
 const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
+// Crisp line icons (currentColor) — much cleaner than emoji on the action buttons.
+const svgProps = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const IcView = () => <svg {...svgProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>;
+const IcSend = () => <svg {...svgProps}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
+const IcEdit = () => <svg {...svgProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
+const IcTrash = () => <svg {...svgProps}><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>;
 
 export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
@@ -295,9 +301,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
                     <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>
                     <div className="flex flex-none items-center gap-1">
-                      <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                      <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
                       <div className="relative">
-                        <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send">✉️</button>
+                        <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
                         {sendFor === p.id && (
                           <>
                             <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
@@ -310,7 +316,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                           </>
                         )}
                       </div>
-                      <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit">✏️</button>
+                      <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit"><IcEdit /></button>
                     </div>
                   </div>
                 ))}
@@ -375,9 +381,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11.5px] font-bold outline-none" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUSES.map((s) => <option key={s} value={s} style={{ background: "#fff", color: "var(--ink)" }}>{STATUS_META[s].label}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
-                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
                     <div className="relative">
-                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send">✉️</button>
+                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send"><IcSend /></button>
                       {sendFor === p.id && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
@@ -390,8 +396,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                         </>
                       )}
                     </div>
-                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit">✏️</button>
-                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete">🗑️</button>
+                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit"><IcEdit /></button>
+                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete"><IcTrash /></button>
                   </div>
                 </Card>
               ))}
@@ -407,8 +413,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.customerName}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}{p.customerEmail ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">→ {p.customerEmail}</span> : ""}</div>
                 <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUS_META[p.status].label}</span>
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
-                <button type="button" onClick={() => emailDoc(p, "link")} disabled={emailing} className={iconBtn} title="Resend email" aria-label="Resend">✉️</button>
+                <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View"><IcView /></button>
+                <button type="button" onClick={() => emailDoc(p, "link")} disabled={emailing} className={iconBtn} title="Resend email" aria-label="Resend"><IcSend /></button>
               </Card>
             ))}
           </div>
