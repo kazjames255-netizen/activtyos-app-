@@ -81,7 +81,7 @@ export function MasterCard({
 }) {
   return (
     <div className={`overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-[0_1px_3px_rgba(20,30,60,.06)] ${className}`}>
-      <div className="px-4 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
+      <div className="px-4 py-2.5 text-white" style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
         {header}
       </div>
       <div className={bodyClassName}>{children}</div>

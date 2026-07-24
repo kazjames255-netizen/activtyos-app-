@@ -956,7 +956,7 @@ function LibraryCard({
       }}
     >
       {/* Featured gradient header — matches the Money "at a glance" card. */}
-      <div className="-mx-3.5 -mt-3.5 mb-3 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
+      <div className="-mx-3.5 -mt-3.5 mb-3 px-3.5 py-2.5 text-white" style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
       <div className="flex items-start justify-between gap-2">
         {renaming ? (
           <div className="flex flex-1 items-center gap-1.5">

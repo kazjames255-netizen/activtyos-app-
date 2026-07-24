@@ -1286,10 +1286,6 @@ export function CustomersApp() {
                 key={c.id}
                 className="group relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-px hover:shadow-[0_14px_30px_-20px_rgba(9,20,44,.6)]"
               >
-                {/* The family's own colour down the edge — a wall of white
-                    cards is the thing that made this page a wall. */}
-                <span className="absolute inset-y-0 left-0 z-10 w-1.5" style={{ background: tint }} />
-
                 {/* Two faces, one card. The track is twice the width and
                     slides by half — so the contact options arrive from the
                     right rather than landing on top of anything. */}
@@ -1302,68 +1298,47 @@ export function CustomersApp() {
                 {/* No avatar on a family. It's an adult we'll never have a
                     photo of, so the circle was two initials in a colour the
                     spine and the stage pill already carry. */}
-                <div className="flex items-start gap-3 p-4 pl-5">
+                {/* MASTER header (style 8) — navy gradient with a radial spotlight */}
+                <div className="flex items-start justify-between gap-3 px-4 py-2.5 text-white" style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="truncate text-[15px] font-extrabold">{c.name}</span>
-                      <span
-                        className="rounded-full px-2 py-[2px] text-[10px] font-extrabold text-white"
-                        style={{ background: tint }}
-                        title={stageDef.hint}
-                      >
-                        {stageDef.label}
-                      </span>
-                      {c.locationName && (
-                        <span className="rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[2px] text-[10px] font-extrabold text-[var(--brand-ink,#1d3a8f)]">
-                          📍 {c.locationName}
-                        </span>
-                      )}
-                      {c.marketingOptIn && (
-                        <span className="rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-extrabold text-[#1d3a8f]">
-                          ✉ Marketing
-                        </span>
-                      )}
-                      {c.invitedAt && (
-                        <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-extrabold text-[#5b6478]">
-                          Invited
-                        </span>
-                      )}
+                      <span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold text-white" style={{ background: tint }} title={stageDef.hint}>{stageDef.label}</span>
+                      {c.locationName && <span className="rounded-full bg-white/20 px-2 py-[2px] text-[10px] font-extrabold text-white">📍 {c.locationName}</span>}
+                      {c.marketingOptIn && <span className="rounded-full bg-white/20 px-2 py-[2px] text-[10px] font-extrabold text-white">✉ Marketing</span>}
+                      {c.invitedAt && <span className="rounded-full bg-white/20 px-2 py-[2px] text-[10px] font-extrabold text-white">Invited</span>}
                     </div>
-                    <div className="truncate text-[11.5px] text-[var(--ink-3)]">
-                      {[c.email, c.phone].filter(Boolean).join(" · ") || "No contact details"}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {(c.children ?? []).length === 0 ? (
-                        <span className="text-[11px] text-[var(--ink-3)]">No children on record</span>
-                      ) : (
-                        (c.children ?? []).map((k) => (
-                          <button
-                            key={k.name}
-                            type="button"
-                            title={`Open ${k.name}'s profile`}
-                            onClick={() => {
-                              setView("children");
-                              setOpenKid(childKey(c.id, k.name));
-                              topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                            }}
-                            className="rounded-full border px-2.5 py-[3px] text-[11px] font-bold transition-colors hover:brightness-95"
-                            style={{ borderColor: `${tint}44`, background: `${tint}12`, color: "var(--ink-2)" }}
-                          >
-                            {k.name}
-                            {ageOf(k) !== null ? ` · ${ageOf(k)}` : ""}
-                          </button>
-                        ))
-                      )}
-                    </div>
+                    <div className="truncate text-[11.5px] text-white/75">{[c.email, c.phone].filter(Boolean).join(" · ") || "No contact details"}</div>
                   </div>
-
                   <div className="flex-none text-right">
-                    <div className="text-[19px] font-extrabold tabular-nums">{st.n}</div>
-                    <div className="text-[10.5px] text-[var(--ink-3)]">
-                      booking{st.n === 1 ? "" : "s"}
-                    </div>
+                    <div className="text-[19px] font-extrabold leading-none tabular-nums">{st.n}</div>
+                    <div className="mt-0.5 text-[10.5px] text-white/70">booking{st.n === 1 ? "" : "s"}</div>
                   </div>
+                </div>
+
+                {/* Body — children on record */}
+                <div className="flex flex-wrap gap-1.5 px-4 py-3 pl-5">
+                  {(c.children ?? []).length === 0 ? (
+                    <span className="text-[11px] text-[var(--ink-3)]">No children on record</span>
+                  ) : (
+                    (c.children ?? []).map((k) => (
+                      <button
+                        key={k.name}
+                        type="button"
+                        title={`Open ${k.name}'s profile`}
+                        onClick={() => {
+                          setView("children");
+                          setOpenKid(childKey(c.id, k.name));
+                          topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                        className="rounded-full border px-2.5 py-[3px] text-[11px] font-bold transition-colors hover:brightness-95"
+                        style={{ borderColor: `${tint}44`, background: `${tint}12`, color: "var(--ink-2)" }}
+                      >
+                        {k.name}
+                        {ageOf(k) !== null ? ` · ${ageOf(k)}` : ""}
+                      </button>
+                    ))
+                  )}
                 </div>
 
                 {/* Actions sit on their own strip: reachable, but not shouting
