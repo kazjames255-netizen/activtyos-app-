@@ -78,19 +78,16 @@
   --sig-blue: #2254b3;
   --sig-pink: #ee1f63;
   --tb-accent: #e91e63;
-  --side-bg: linear-gradient(160deg, #1c3b8c, #172b6a);
+  /* Matches the Money hero: navy → card-blue, white text, white active pill. */
+  --side-bg: linear-gradient(165deg, #16306e 0%, #23479f 50%, #3f78d8 100%);
   --side-ink: #ffffff;
-  --side-muted: #92a0d6;
-  --side-nav: #c4cdec;
-  --side-icon: #aab6e0;
-  --side-hover: color-mix(in srgb, var(--sig-blue) 16%, transparent);
-  --side-active: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--sig-blue) 42%, transparent),
-    color-mix(in srgb, var(--sig-pink) 42%, transparent)
-  );
-  --side-aink: #ffffff;
-  --side-ring: color-mix(in srgb, var(--sig-pink) 55%, transparent);
+  --side-muted: #b8c6ee;
+  --side-nav: #e3e9fb;
+  --side-icon: #c3d0f2;
+  --side-hover: rgba(255, 255, 255, 0.12);
+  --side-active: #ffffff;
+  --side-aink: #1d3a8f;
+  --side-ring: color-mix(in srgb, #ffffff 45%, transparent);
   --side-ct-bg: #f5b81f;
   --side-ct-ink: #3a2c00;
   --side-who: rgba(255, 255, 255, 0.08);
