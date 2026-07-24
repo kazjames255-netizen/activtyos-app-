@@ -227,7 +227,13 @@ listings.get("/", async (req, res) => {
   let visible = snap.docs.filter((d) => {
     const l = d.data();
     if (tenantFilter && l.tenantId !== tenantFilter) return false;
-    return (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
+    // Production guard: a listing only reaches a family when it's genuinely
+    // finished — a real title, live, public, not archived. A seeded stub or
+    // half-built draft with no title never leaks to the marketplace. (The
+    // `?? "live"` default stays for legacy titled listings; bookability — at
+    // least one block — is enforced below, once blocks are joined.)
+    const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
+    return !!title && (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
   });
 
   // Marketplace opt-in. The cross-provider feed (no ?tenantId) shows only
@@ -266,7 +272,10 @@ listings.get("/", async (req, res) => {
     venueById.set(tenantIds[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
   });
 
-  const list = await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() })));
+  const list = (await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))))
+    // Bookability guard: a publicly-shown listing must have at least one block
+    // (a dated run with sessions) — otherwise there's literally nothing to book.
+    .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0);
   res.json(
     list.map((l) => {
       const byCat = catNames.get(l.tenantId as string);
@@ -277,7 +286,11 @@ listings.get("/", async (req, res) => {
         .map((id) => byCat?.get(id))
         .filter((n): n is string => !!n);
       const venue = venueById.get(l.tenantId as string)?.get(l.venueId as string);
-      return { ...l, categories, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      // Normalise the display title: older listings stored it as `name`, newer
+      // ones as `title`. The browse UI reads `title`, so fall back to `name`
+      // rather than showing a blank card.
+      const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
+      return { ...l, title, categories, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     }),
   );
 });
