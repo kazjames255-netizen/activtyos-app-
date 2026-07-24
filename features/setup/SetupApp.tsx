@@ -6,6 +6,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import {
@@ -1079,6 +1080,7 @@ function QuestionsEditor({
 
 export function SetupApp() {
   const { settings, questions, loading, save, error } = useSettings();
+  const [tmplPreview, setTmplPreview] = useState(false);
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
@@ -1461,8 +1463,11 @@ export function SetupApp() {
           </div>
 
           <div className="mt-4 border-t border-[var(--line)] pt-4">
-            <div className="text-[14px] font-extrabold text-[var(--ink)]">Invoice template — what to show</div>
-            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Add your logo and pick which optional fields appear when you raise an invoice.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[14px] font-extrabold text-[var(--ink)]">Invoice template — what to show</div>
+              <button type="button" onClick={() => setTmplPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">👁 Preview invoice</button>
+            </div>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Add your logo and pick which optional fields appear when you raise an invoice. Hit <b>Preview</b> to see a sample with your details.</p>
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div>
                 <FieldLabel>Logo</FieldLabel>
@@ -1484,6 +1489,18 @@ export function SetupApp() {
             </div>
             {settings.billing?.fields?.vat && <div className="mt-2.5 max-w-[200px]"><FieldLabel>Default VAT %</FieldLabel><Input type="number" value={settings.billing?.defaultTaxRate ?? ""} placeholder="20" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), defaultTaxRate: e.target.value === "" ? undefined : Number(e.target.value) } } })} className="w-full" /></div>}
           </div>
+          {tmplPreview && (() => {
+            const f = settings.billing?.fields ?? {};
+            const sample = {
+              reference: "INV-1001", customerName: "Sample Customer Ltd", customerAddress: "1 Example Street, Townsville AB1 2CD", customerEmail: "customer@example.com",
+              poNumber: f.poNumber ? "4200075991" : undefined, accountRef: f.accountRef ? "ACC-001" : undefined,
+              date: new Date().toISOString().slice(0, 10),
+              lineItems: [{ description: "Summer camp — week 1", qty: 1, unitPrice: 120 }, { description: "Extended day", qty: 3, unitPrice: 8 }],
+              taxRate: f.vat ? (settings.billing?.defaultTaxRate ?? 20) : undefined,
+              notes: "This is a preview of how your invoices will look.",
+            } as Record<string, unknown>;
+            return <PrintableDoc kind="invoice" doc={sample} billing={settings.billing} onClose={() => setTmplPreview(false)} />;
+          })()}
         </Section>
       )}
 
