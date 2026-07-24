@@ -66,7 +66,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "marketing", legacyView: "admin-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "marketing", legacyView: "admin-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "referrals", legacyView: "admin-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
       ],
     },
     {
@@ -107,7 +108,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "purchasing", legacyView: "admin-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "admin-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "splitfees", legacyView: "admin-splitfees", label: "Split fees", icon: { type: "glyph", value: "％" }, badge: null },
-        { view: "referrals", legacyView: "admin-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
       ],
     },
     {
@@ -210,7 +210,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "marketing", legacyView: "franchise-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "marketing", legacyView: "franchise-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "referrals", legacyView: "franchise-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
       ],
     },
     {
@@ -219,7 +220,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "finance", legacyView: "franchise-finance", label: "Finance & analytics", icon: { type: "glyph", value: "£" }, badge: null },
-        { view: "referrals", legacyView: "franchise-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "expenses", legacyView: "franchise-expenses", label: "Money out", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M6 2.8h9l4 4V21l-2.2-1.3L14.6 21l-2.6-1.5L9.4 21l-2.2-1.3L5 21V4.3A1.5 1.5 0 0 1 6 2.8z\"></path><path d=\"M9 8h6M9 11.4h6M9 14.8h4\"></path></svg>" }, badge: null },
         { view: "purchasing", legacyView: "franchise-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "franchise-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
@@ -311,7 +311,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "marketing", legacyView: "freelancer-marketing", label: "Marketing", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "marketing", legacyView: "freelancer-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "referrals", legacyView: "freelancer-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
       ],
     },
     {
@@ -320,7 +321,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "finance", legacyView: "freelancer-finance", label: "Finance & analytics", icon: { type: "glyph", value: "£" }, badge: null },
-        { view: "referrals", legacyView: "freelancer-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
         { view: "expenses", legacyView: "freelancer-expenses", label: "Money out", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M6 2.8h9l4 4V21l-2.2-1.3L14.6 21l-2.6-1.5L9.4 21l-2.2-1.3L5 21V4.3A1.5 1.5 0 0 1 6 2.8z\"></path><path d=\"M9 8h6M9 11.4h6M9 14.8h4\"></path></svg>" }, badge: null },
         { view: "purchasing", legacyView: "freelancer-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "freelancer-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
