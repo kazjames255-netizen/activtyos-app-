@@ -31,6 +31,8 @@ const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 w
 
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso || todayIso()}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const DUE_PRESETS = [3, 5, 7, 10];
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 type Tab = "overview" | "ledger" | "invoices" | "suppliers";
@@ -524,7 +526,14 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                 <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="PO-1234" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Due date</span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Due date</span>
+                  <input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} />
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {DUE_PRESETS.map((n) => { const iso = addDaysIso(editor.date, n); const on = editor.dueDate === iso; return (
+                      <button key={n} type="button" onClick={() => setEditor({ ...editor, dueDate: iso })} className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition-colors" style={on ? { background: "#1d3a8f", color: "#fff", borderColor: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{n === 7 ? "⭐ " : ""}+{n}d</button>
+                    ); })}
+                  </div>
+                </label>
                 <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
               </div>
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
