@@ -103,7 +103,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       <PageHero
         title="Bookings"
         lede={`${bookings.length} bookings · newest first · approvals, waitlist, payments, refunds and manual bookings`}
-        icon="🗓️"
+        icon="🎟️"
         actions={<>
           <Button
             disabled={bookings.length === 0}

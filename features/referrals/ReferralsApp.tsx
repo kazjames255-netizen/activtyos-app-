@@ -67,7 +67,7 @@ export function ReferralsApp() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[240px] flex-1">
             <div className="flex items-center gap-2 text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px]">🎁</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px]">🏆</span>
               Referrals
             </div>
             <p className="mt-1 max-w-[520px] text-[12px] leading-[1.45] text-white/85">

@@ -243,7 +243,7 @@ export function BlocksApp() {
         } as React.CSSProperties
       }
     >
-      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🎟️" />
+      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" />
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">

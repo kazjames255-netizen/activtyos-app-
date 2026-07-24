@@ -202,7 +202,7 @@ export function MarketingApp() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">％</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🏷️</span>
               Discount codes
             </div>
             <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
