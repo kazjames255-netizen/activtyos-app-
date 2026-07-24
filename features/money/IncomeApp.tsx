@@ -12,18 +12,41 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
-interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean }
+interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean }
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
-interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; status: string; paidAt?: string }
+interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; status: string; paidAt?: string; paidVia?: "link" | "manual" }
 interface InvPayload { items: Invoice[] }
+interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string }
 
 const CATEGORIES = ["Sessions", "Camps", "Memberships", "Merchandise", "Grants", "Fundraising", "Deposits", "Other"];
 const INVOICE_CAT = "Invoices";
+const BOOKINGS_CAT = "Bookings";
 const CAT_ICON: Record<string, string> = {
-  Sessions: "🎟️", Camps: "⛺", Memberships: "💳", Merchandise: "🧢", Grants: "🏛️",
-  Fundraising: "🎗️", Deposits: "🐷", Invoices: "📄", Other: "•",
+  Bookings: "🎟️", Invoices: "📄", Sessions: "🏃", Camps: "⛺", Memberships: "💳", Merchandise: "🧢", Grants: "🏛️",
+  Fundraising: "🎗️", Deposits: "🐷", Other: "•",
 };
 const icon = (c: string) => CAT_ICON[c] ?? "•";
+// Payment "type" for the by-method breakdown. Normalises the many booking
+// method strings + invoice/manual sources into a tidy, icon-led set.
+const METHOD_ICON: Record<string, string> = {
+  Card: "💳", "Bank transfer": "🏦", "Tax-Free Childcare": "🧸", "Childcare vouchers": "🎟️",
+  "HAF (funded £0)": "🍎", "Free place": "🎗️", Cash: "💵", PayPal: "🅿️", Invoice: "📄", "Store credit": "👛", Other: "•",
+};
+const methodIcon = (m: string) => METHOD_ICON[m] ?? "💰";
+// Fold the assorted raw method labels down to the tidy set above.
+function normaliseMethod(raw?: string): string {
+  const m = (raw || "").trim();
+  if (!m || m === "—") return "Other";
+  if (/cash/i.test(m)) return "Cash";
+  if (/paypal/i.test(m)) return "PayPal";
+  if (/tax.?free|tfc/i.test(m)) return "Tax-Free Childcare";
+  if (/voucher/i.test(m)) return "Childcare vouchers";
+  if (/haf/i.test(m)) return "HAF (funded £0)";
+  if (/free/i.test(m)) return "Free place";
+  if (/bank|transfer/i.test(m)) return "Bank transfer";
+  if (/card/i.test(m)) return "Card";
+  return m;
+}
 const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
@@ -37,6 +60,17 @@ type Editor = { id?: string; date: string; category: string; amount: string; sou
 
 // Money section house style — navy blue, matching Expenses and Invoices.
 const ACCENT = "#1d3a8f", ACCENT_DK = "#16306e";
+// A tasteful multi-hue palette (blue family + gold/violet, no green/red) so the
+// payment-type breakdown reads fancy without leaving the blue house style.
+const HUES = [
+  { soft: "#eaf0fc", bar: "linear-gradient(90deg,#4f8bf5,#16306e)" },
+  { soft: "#ece9fd", bar: "linear-gradient(90deg,#8a7bf0,#4b3bc9)" },
+  { soft: "#f6e9fb", bar: "linear-gradient(90deg,#c46ee0,#8a2fb0)" },
+  { soft: "#fdf1dc", bar: "linear-gradient(90deg,#f2b24a,#c67d12)" },
+  { soft: "#e5f2fd", bar: "linear-gradient(90deg,#5bb3f0,#1f77c9)" },
+  { soft: "#eceff4", bar: "linear-gradient(90deg,#8aa0c0,#48566e)" },
+  { soft: "#e8ecfb", bar: "linear-gradient(90deg,#6d84e8,#2f3fa8)" },
+];
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#cdddf7]";
@@ -46,6 +80,7 @@ const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 
 export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -62,9 +97,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/income").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p.items ?? [])).catch(() => {});
+    apiGet<Booking[]>("/api/bookings").then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  useRealtime(["income", "invoices"], refresh);
+  useRealtime(["income", "invoices", "bookings"], refresh);
 
   const logged = useMemo(() => data?.items ?? [], [data]); // real, editable income
   const now = useMemo(() => new Date(), []);
@@ -72,13 +108,24 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const lastMonthKey = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
   const thisYear = String(now.getFullYear());
 
+  // Money in from bookings taken through the platform — read-only rows, tagged
+  // with the payment method so the by-type breakdown works. Dated by when the
+  // booking was taken; amountPaid wins over the headline amount.
+  const bookingRows = useMemo<Income[]>(() => bookings
+    .map((b) => {
+      const paid = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0);
+      return { b, paid };
+    })
+    .filter(({ paid }) => paid > 0)
+    .map(({ b, paid }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true })), [bookings]);
+
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.
   const invoiceRows = useMemo<Income[]>(() => invoices
     .filter((v) => v.status === "paid")
-    .map((v) => ({ id: `inv-${v.id}`, date: (v.paidAt || v.date || "").slice(0, 10), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? `Invoice ${v.reference}` : "Invoice", virtual: true })), [invoices]);
+    .map((v) => ({ id: `inv-${v.id}`, date: (v.paidAt || v.date || "").slice(0, 10), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? `Invoice ${v.reference}` : "Invoice", method: "Invoice", virtual: true })), [invoices]);
 
-  const allItems = useMemo(() => [...invoiceRows, ...logged], [invoiceRows, logged]);
+  const allItems = useMemo(() => [...bookingRows, ...invoiceRows, ...logged], [bookingRows, invoiceRows, logged]);
 
   // ── Analytics ──
   const monthly = useMemo(() => {
@@ -112,6 +159,18 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const by: Record<string, { total: number; count: number }> = {};
     for (const x of allItems) { if (!x.source) continue; (by[x.source] ||= { total: 0, count: 0 }); by[x.source].total += x.amount; by[x.source].count++; }
     return Object.entries(by).map(([source, v]) => ({ source, ...v })).sort((a, b) => b.total - a.total);
+  }, [allItems]);
+
+  // Money in split by TYPE OF PAYMENT — card, vouchers, cash, TFC, invoice… so
+  // you can see how customers actually pay. Manually-logged income with no
+  // method falls under its own category label.
+  const byMethod = useMemo(() => {
+    const by: Record<string, { total: number; count: number }> = {};
+    for (const x of allItems) {
+      const m = x.method || (x.category === INVOICE_CAT ? "Invoice" : x.category || "Other");
+      (by[m] ||= { total: 0, count: 0 }); by[m].total += x.amount; by[m].count++;
+    }
+    return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
   const filtered = useMemo(() => {
@@ -171,9 +230,9 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await del(`/api/income/series/${encodeURIComponent(editor.seriesId)}`); setEditor(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
   function exportCsv() {
-    const header = ["Date", "Category", "Amount", "Source", "Notes", "Source type"];
+    const header = ["Date", "Category", "Amount", "Source", "Payment type", "Notes", "Source type"];
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const rows = filtered.map((x) => [x.date, x.category, x.amount, x.source ?? "", x.notes ?? "", x.virtual ? "paid invoice" : "logged"]);
+    const rows = filtered.map((x) => [x.date, x.category, x.amount, x.source ?? "", x.method ?? "", x.notes ?? "", x.category === BOOKINGS_CAT ? "booking" : x.virtual ? "paid invoice" : "logged"]);
     const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `income-${range}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -188,7 +247,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
           Income
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Every pound coming in — paid invoices fold in automatically, and you can log cash takings, grants and anything else here.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Every pound coming in — paid bookings and invoices fold in automatically (by payment type), and you can log cash takings, grants and anything else here.</p>
       </div>
       )}
 
@@ -271,6 +330,34 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             </Card>
           </div>
 
+          {/* By payment type — how the money in was actually paid */}
+          <Card className="p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <div className="text-[13.5px] font-extrabold">By payment type</div>
+              <div className="text-[11px] text-[var(--ink-3)]">how your customers paid</div>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {byMethod.map((m, i) => {
+                const hue = HUES[i % HUES.length];
+                return (
+                  <div key={m.method} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[16px]" style={{ background: hue.soft }}>{methodIcon(m.method)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2 text-[12px]">
+                        <span className="truncate font-bold">{m.method}</span>
+                        <span className="flex-none tabular-nums"><b>{money(m.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((m.total / grandTotal) * 100)}%</span></span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (m.total / byMethod[0].total) * 100)}%`, background: hue.bar }} /></div>
+                        <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{m.count}×</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
           <Card className="p-4">
             <div className="mb-2.5 flex items-center justify-between">
               <div className="text-[13.5px] font-extrabold">Recent</div>
@@ -281,7 +368,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <div key={x.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                   <span className="w-[92px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
                   <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.virtual ? <span className="flex-none text-[11px]" title="Paid invoice">📄</span> : x.seriesId ? <span className="flex-none text-[11px]" title={`Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""}`}>🔁</span> : null}
+                  {x.category === BOOKINGS_CAT ? <span className="flex-none text-[11px]" title={`Booking · ${x.method ?? "paid"}`}>🎟️</span> : x.virtual ? <span className="flex-none text-[11px]" title="Paid invoice">📄</span> : x.seriesId ? <span className="flex-none text-[11px]" title={`Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""}`}>🔁</span> : null}
                   <span className="min-w-0 flex-1 truncate text-[var(--ink-3)]">{x.source || "—"}{x.notes ? ` · ${x.notes}` : ""}</span>
                   <span className="flex-none font-extrabold tabular-nums">{money(x.amount)}</span>
                 </div>
@@ -334,7 +421,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <Card key={x.id} className={`flex flex-wrap items-center gap-2.5 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""}`}>
                   <span className="w-[104px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
                   <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">📄 invoice</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
+                  {x.category === BOOKINGS_CAT ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">🎟️ {x.method ?? "booking"}</span> : x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">📄 invoice</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
                   <span className="min-w-0 flex-1 truncate text-[12.5px]">{x.source || <span className="text-[var(--ink-3)]">—</span>}{x.notes ? <span className="text-[var(--ink-3)]"> · {x.notes}</span> : ""}</span>
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
                   {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">auto</span> : (
