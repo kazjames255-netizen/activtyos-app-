@@ -63,13 +63,13 @@ const ACCENT = "#1d3a8f", ACCENT_DK = "#16306e";
 // A tasteful multi-hue palette (blue family + gold/violet, no green/red) so the
 // payment-type breakdown reads fancy without leaving the blue house style.
 const HUES = [
-  { soft: "#eaf0fc", bar: "linear-gradient(90deg,#4f8bf5,#16306e)" },
-  { soft: "#ece9fd", bar: "linear-gradient(90deg,#8a7bf0,#4b3bc9)" },
-  { soft: "#f6e9fb", bar: "linear-gradient(90deg,#c46ee0,#8a2fb0)" },
-  { soft: "#fdf1dc", bar: "linear-gradient(90deg,#f2b24a,#c67d12)" },
-  { soft: "#e5f2fd", bar: "linear-gradient(90deg,#5bb3f0,#1f77c9)" },
-  { soft: "#eceff4", bar: "linear-gradient(90deg,#8aa0c0,#48566e)" },
-  { soft: "#e8ecfb", bar: "linear-gradient(90deg,#6d84e8,#2f3fa8)" },
+  { soft: "#eaf0fc", text: "#1d3a8f", bar: "linear-gradient(90deg,#4f8bf5,#16306e)" },
+  { soft: "#ece9fd", text: "#4b3bc9", bar: "linear-gradient(90deg,#8a7bf0,#4b3bc9)" },
+  { soft: "#f6e9fb", text: "#8a2fb0", bar: "linear-gradient(90deg,#c46ee0,#8a2fb0)" },
+  { soft: "#fbeede", text: "#a9660a", bar: "linear-gradient(90deg,#f2b24a,#c67d12)" },
+  { soft: "#e5f2fd", text: "#1f77c9", bar: "linear-gradient(90deg,#5bb3f0,#1f77c9)" },
+  { soft: "#eceff4", text: "#48566e", bar: "linear-gradient(90deg,#8aa0c0,#48566e)" },
+  { soft: "#e8ecfb", text: "#2f3fa8", bar: "linear-gradient(90deg,#6d84e8,#2f3fa8)" },
 ];
 // Stable hue per label so a category always gets the same colour.
 const hueFor = (label: string) => HUES[[...label].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
@@ -357,16 +357,19 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             </div>
             <div className="mb-2 text-[11px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{money(ovTotal)}</b> in · {ovRangeLabel}</div>
             {ovCats.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No income in this period.</div> : (
-              <div className="flex flex-col gap-2">
-                {ovCats.slice(0, 8).map((c) => (
-                  <div key={c.category}>
-                    <div className="mb-0.5 flex items-baseline justify-between text-[12px]">
-                      <span className="truncate font-bold">{icon(c.category)} {c.category}</span>
-                      <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / (ovTotal || 1)) * 100)}%</span></span>
+              <div className="flex flex-col gap-2.5">
+                {ovCats.slice(0, 8).map((c) => {
+                  const h = hueFor(c.category);
+                  return (
+                    <div key={c.category}>
+                      <div className="mb-1 flex items-baseline justify-between text-[12px]">
+                        <span className="flex min-w-0 items-center gap-1.5 font-bold"><span className="h-2 w-2 flex-none rounded-full" style={{ background: h.text }} /><span className="truncate">{c.category}</span></span>
+                        <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / (ovTotal || 1)) * 100)}%</span></span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / ovCats[0].total) * 100)}%`, background: h.bar }} /></div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / ovCats[0].total) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -468,18 +471,18 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               {recent.map((x) => {
                 const hue = hueFor(x.category || "Other");
                 return (
-                  <div key={x.id} className="group flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition-all hover:-translate-y-px hover:border-[#cdddf7] hover:shadow-[0_6px_18px_-10px_rgba(29,58,143,.45)]">
-                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[18px] shadow-sm" style={{ background: hue.soft }}>{icon(x.category)}</span>
+                  <div key={x.id} className="group flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition-colors hover:border-[#cdddf7] hover:bg-[#fafbfe]">
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[15px] font-extrabold" style={{ background: hue.soft, color: hue.text }}>{(x.category || "?").charAt(0).toUpperCase()}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-[13px] font-extrabold">{x.source || x.category}</span>
-                        <span className="flex-none rounded-md px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em]" style={{ background: hue.soft, color: ACCENT_DK }}>{x.category}</span>
-                        {x.seriesId && !x.virtual && <span className="flex-none text-[10px]" title="Repeating">🔁</span>}
+                        <span className="flex-none rounded-md px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em]" style={{ background: hue.soft, color: hue.text }}>{x.category}</span>
+                        {x.seriesId && !x.virtual && <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Repeats</span>}
                       </div>
                       <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{fmtDay(x.date)}{x.method ? ` · ${x.method}` : ""}{x.notes ? ` · ${x.notes}` : ""}</div>
                     </div>
-                    <div className="flex flex-none items-baseline gap-0.5">
-                      <span className="text-[11px] font-bold text-[#3f78d8]">+</span>
+                    <div className="flex flex-none items-baseline gap-0.5 text-[var(--ink)]">
+                      <span className="text-[11px] font-semibold text-[var(--ink-3)]">+</span>
                       <span className="text-[15px] font-extrabold tabular-nums">{money(x.amount)}</span>
                     </div>
                   </div>
