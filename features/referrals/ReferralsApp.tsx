@@ -81,23 +81,24 @@ export function ReferralsApp() {
               </div>
             )}
           </div>
-          {d && d.leaderboard.length > 0 && (
-            <div className="relative z-10 w-full max-w-[280px] self-start rounded-xl border border-white/70 bg-white/95 px-3 py-2 shadow-[0_8px_20px_-10px_rgba(29,58,143,.55)] backdrop-blur-sm">
-              <div className="mb-1 text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[#1d3a8f]">🏆 Top 5 referrers</div>
-              <div className="flex flex-col">
-                {d.leaderboard.slice(0, 5).map((l, i) => (
-                  <div key={l.email} className="flex items-center gap-2 border-b border-[var(--line)] py-1 text-[11.5px] last:border-b-0">
-                    <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[9px] font-extrabold text-[#1d3a8f]">{i + 1}</span>
-                    <div className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{l.name || nameOf(l.email)}</div>
-                    <div className="flex-none text-right text-[var(--ink-2)]"><b>{l.count}</b> <span className="text-[9.5px] text-[var(--ink-3)]">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+
+      {d && d.leaderboard.length > 0 && (
+        <Card className="mb-3.5 p-4">
+          <div className="mb-2.5 text-[13.5px] font-extrabold">🏆 Top 5 referrers</div>
+          <div className="flex flex-col">
+            {d.leaderboard.slice(0, 5).map((l, i) => (
+              <div key={l.email} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
+                <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold text-[#1d3a8f]">{i + 1}</span>
+                <div className="min-w-0 flex-1 truncate font-bold">{l.name || nameOf(l.email)}</div>
+                <div className="flex-none text-right"><span className="font-extrabold tabular-nums">{l.count}</span> <span className="text-[10.5px] text-[var(--ink-3)]">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Impact — what referrals brought in vs what the discounts cost (£ vs %). */}
       {d && d.friendsBooked > 0 && (
