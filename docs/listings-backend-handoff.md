@@ -3363,3 +3363,30 @@ data migration needed — all new fields are optional/back-compatible.
 **Data note:** to make the subscription toggle demoable I set the freelancer
 demo tenant (`VOiiaTnDNd03MLbZaVcM`) to the **Pro** plan (£39/mo) via
 `PUT /api/subscription`. Change it back on the Subscription page if unwanted.
+
+---
+
+# Money → Purchasing & invoices: recurring, attachments, suppliers — 24 July 2026
+
+Same treatment as Expenses, applied to `features/money/PurchasingApp.tsx` off the
+existing `/api/purchasing`. Blue/white hero + Overview / All orders / Invoices /
+Suppliers tabs, pipeline by status, overdue + due-soon surfacing, 6-month trend,
+search + filter + CSV. **Backend additions already made and tested** (flagged for
+Swagger):
+
+- **`POST /api/purchasing` accepts a recurrence** — optional `repeat`
+  ("weekly"|"fortnightly"|"monthly") + `repeatUntil`. Fans out one order per
+  period (cap `MAX_OCCURRENCES = 104`) sharing a fresh `seriesId`; **the due
+  date keeps the same day-gap** on each occurrence. Response `{created, seriesId,
+  items[]}`. One-off POST unchanged.
+- **`DELETE /api/purchasing/series/:seriesId`** — batch-delete a whole series.
+- Schema (`poSchema`) gained optional `attachmentUrl` (the invoice document —
+  image via `/api/uploads`, or a link), `repeat`, `repeatUntil`, `seriesId`.
+
+Supplier "rename" is a client-side bulk `PUT /api/purchasing/:id {supplier}`
+over that supplier's orders — no route change. No subscription toggle here
+(that was Expenses-specific to the operator's own ActivityOS fee).
+
+**TODO for you:** regenerate Swagger/OpenAPI for the two `/api/purchasing`
+changes. No migration — new fields are optional/back-compatible. (Sample orders
+seeded onto the freelancer demo tenant `VOiiaTnDNd03MLbZaVcM` for the UI.)
