@@ -435,8 +435,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                     <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
                   {p.attachmentUrl
-                    ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 supplier invoice</a>
-                    : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Attach the supplier's invoice">＋ attach invoice</button>}
+                    ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "supplier invoice" : "receipt"}</a>
+                    : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title={isPo ? "Attach the supplier's invoice" : "Attach the receipt"}>＋ attach {isPo ? "invoice" : "receipt"}</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11px] font-bold text-[#0f7a44] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
@@ -474,7 +474,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
               <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5">
                 <span className="flex-none rounded-full bg-[#e7f8ee] px-2 py-0.5 text-[10.5px] font-bold text-[#0f7a44]">✓ Paid</span>
                 <div className="min-w-0 flex-1 truncate"><span className="text-[13px] font-bold">{p.supplier}</span>{p.reference ? <span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{p.reference}</span> : ""}<span className="ml-1.5 text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}</span></div>
-                {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 invoice</a>}
+                {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "invoice" : "receipt"}</a>}
                 <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                 <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
               </Card>
