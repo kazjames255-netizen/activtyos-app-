@@ -525,18 +525,18 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover 
                 <div className="p-3">
                   {kids.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-1 py-3 text-center">
-                      <div className="text-[15px] font-extrabold text-[#0f7a44]">✓ No staff required</div>
+                      <div className="text-[15px] font-extrabold text-[#1d3a8f]">✓ No staff required</div>
                       <div className="text-[11px] text-[var(--ink-3)]">No children in this group today — drag one here to place them.</div>
                     </div>
                   ) : (
                     <>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={met ? { background: "#e7f8ee", color: "#0f7a44" } : { background: "#fdebec", color: "#c0392b" }}>
+                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={met ? { background: "#eaf0fc", color: "#1d3a8f" } : { background: "#fdebec", color: "#c0392b" }}>
                       {met ? "🙂 In ratio" : `😟 ${need - have} staff short`}
                     </span>
                     {/* Needed vs got, read at a glance. */}
                     <span className="inline-flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">
-                      <b className="text-[13px]" style={{ color: met ? "#0f7a44" : "#c0392b" }}>{have}</b>
+                      <b className="text-[13px]" style={{ color: met ? "#1d3a8f" : "#c0392b" }}>{have}</b>
                       <span className="opacity-70">of</span>
                       <b className="text-[13px] text-[var(--ink-2)]">{need}</b>
                       <span>needed</span>
@@ -693,7 +693,7 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
               <span className="text-[12px] text-[var(--ink-2)]">Total children</span><span className="text-[22px] font-extrabold">{totalChildren}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-              <span className="text-[12px] text-[var(--ink-2)]">Total staff needed</span><span className="text-[22px] font-extrabold" style={{ color: "#e2225f" }}>{totalStaff}</span>
+              <span className="text-[12px] text-[var(--ink-2)]">Total staff needed</span><span className="text-[22px] font-extrabold" style={{ color: "#6a4fd0" }}>{totalStaff}</span>
             </div>
             <div className="mt-2 flex flex-col gap-1">
               {lines.map((l, i) => (
@@ -953,8 +953,8 @@ export function RatiosApp() {
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
-          <HeroTile icon="staff" tint="#e2225f" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
-          <HeroTile icon="groups" tint="#0e9f6e" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
+          <HeroTile icon="staff" tint="#6a4fd0" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
+          <HeroTile icon="groups" tint="#1d3a8f" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
         </div>
       )}
 

@@ -27,28 +27,57 @@ export const LIGHT_PALETTE = {
   "--line": "#ece6f1",
 } as CSSProperties;
 
+/**
+ * Money-section style hero — a blue gradient banner with the page title, an
+ * optional lede, an optional icon and an actions slot. Shared so every operator
+ * page reads like the Money in / out screens.
+ */
+export function PageHero({
+  title,
+  lede,
+  actions,
+  icon,
+}: {
+  title: ReactNode;
+  lede?: ReactNode;
+  actions?: ReactNode;
+  icon?: ReactNode;
+}) {
+  return (
+    <div
+      className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
+      style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            {icon && <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">{icon}</span>}
+            {title}
+          </div>
+          {lede && <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>}
+        </div>
+        {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
 export function OperatorPage({
   title,
   lede,
   actions,
+  icon,
   children,
 }: {
   title: ReactNode;
   lede?: ReactNode;
   actions?: ReactNode;
+  icon?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] p-5" style={LIGHT_PALETTE}>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-[20px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            {title}
-          </h2>
-          {lede && <p className="text-[13px] text-[var(--ink-3)]">{lede}</p>}
-        </div>
-        {actions && <div className="flex items-center gap-2.5">{actions}</div>}
-      </div>
+      <PageHero title={title} lede={lede} actions={actions} icon={icon} />
       {children}
     </div>
   );
