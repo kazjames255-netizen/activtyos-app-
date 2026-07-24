@@ -15,16 +15,18 @@ const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surfac
 
 // The document body as standalone HTML — used for the on-screen preview and the
 // print/PDF window. Mirrors the server email renderer (server/lib/moneyDoc.ts).
-export function docHtml(kind: "po" | "invoice", doc: Record<string, unknown>, billing?: Billing, payUrl?: string): string {
+export function docHtml(kind: "po" | "invoice" | "bill", doc: Record<string, unknown>, billing?: Billing, payUrl?: string): string {
   const b = billing ?? {};
   const business = esc(b.businessName || "Your business");
   const addr = esc(b.address || "").replace(/\n/g, "<br>");
   const contact = [b.email, b.phone].filter(Boolean).map(esc).join(" · ");
   const vat = b.vatNumber ? `VAT ${esc(b.vatNumber)}` : "";
-  const title = kind === "po" ? "PURCHASE ORDER" : "INVOICE";
-  const party = kind === "po"
-    ? `<b>To</b><br>${esc(doc.supplier)}${doc.supplierEmail ? `<br>${esc(doc.supplierEmail)}` : ""}`
-    : `<b>Bill to</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
+  const title = kind === "po" ? "PURCHASE ORDER" : kind === "bill" ? "BILL" : "INVOICE";
+  const party = kind === "bill"
+    ? `<b>From</b><br>${esc(doc.supplier)}${doc.supplierEmail ? `<br>${esc(doc.supplierEmail)}` : ""}`
+    : kind === "po"
+      ? `<b>For</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`
+      : `<b>Bill to</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
   const items: LineItem[] = Array.isArray(doc.lineItems) && (doc.lineItems as LineItem[]).length
     ? (doc.lineItems as LineItem[])
     : [{ description: String(doc.description || doc.notes || "Amount"), qty: 1, unitPrice: Number(doc.amount) || 0 }];
@@ -70,13 +72,14 @@ export function LineItemsEditor({ items, onChange }: { items: LineItem[]; onChan
 }
 
 // Full-screen document preview with Print/Save-PDF, Email and (invoices) pay-link.
-export function PrintableDoc({ kind, doc, billing, payUrl, emailing, onEmail, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; emailing?: boolean; onEmail?: () => void; onClose: () => void }) {
+export function PrintableDoc({ kind, doc, billing, payUrl, emailing, onEmail, onClose }: { kind: "po" | "invoice" | "bill"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; emailing?: boolean; onEmail?: () => void; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const html = docHtml(kind, doc, billing, payUrl);
+  const docName = kind === "po" ? "Purchase order" : kind === "bill" ? "Bill" : "Invoice";
   const print = () => {
     const w = window.open("", "_blank", "width=820,height=1040");
     if (!w) return;
-    w.document.write(`<html><head><title>${kind === "po" ? "Purchase order" : "Invoice"}${doc.reference ? ` ${esc(doc.reference)}` : ""}</title></head><body style="margin:28px">${html}</body></html>`);
+    w.document.write(`<html><head><title>${docName}${doc.reference ? ` ${esc(doc.reference)}` : ""}</title></head><body style="margin:28px">${html}</body></html>`);
     w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   };
   const copy = async () => { if (!payUrl) return; try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* noop */ } };

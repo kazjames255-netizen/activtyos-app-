@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; bookingRef?: string; reference?: string; description?: string; amount: number; lineItems?: LineItem[]; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
+interface Invoice { id: string; kind?: "invoice" | "po"; customerName: string; customerEmail?: string; bookingRef?: string; reference?: string; description?: string; amount: number; lineItems?: LineItem[]; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -34,7 +34,7 @@ type Tab = "overview" | "ledger" | "customers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+type Editor = { id?: string; kind: "invoice" | "po"; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -66,7 +66,12 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["invoices"], refresh);
 
-  const items = useMemo(() => data?.items ?? [], [data]);
+  const usePO = settings.money?.usePurchaseOrders ?? false;
+  const [docKind, setDocKind] = useState<"invoice" | "po">("invoice");
+  const kind = usePO ? docKind : "invoice"; // no PO switch unless enabled in Setup
+  // The list is scoped to the selected document type — invoices vs POs.
+  const items = useMemo(() => (data?.items ?? []).filter((p) => (p.kind ?? "invoice") === kind), [data, kind]);
+  const isPo = kind === "po";
   const today = todayIso();
   const now = useMemo(() => new Date(), []);
   const thisMonthKey = monthKeyOf(now);
@@ -76,7 +81,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const outstanding = useMemo(() => items.filter((p) => OWED.has(p.status)).reduce((s, p) => s + p.amount, 0), [items]);
   const overdueItems = useMemo(() => items.filter(isOverdue), [items, today]);
   const overdueTotal = overdueItems.reduce((s, p) => s + p.amount, 0);
-  const collected = data?.summary.collected ?? 0;
+  const collected = useMemo(() => items.filter((p) => p.status === "paid" && (p.date || "").slice(0, 4) === thisYear).reduce((s, p) => s + p.amount, 0), [items, thisYear]);
 
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) }; });
@@ -117,13 +122,20 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await navigator.clipboard.writeText(link); setCopied(p.id); setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800); } catch { setError("Couldn’t copy — link: " + link); }
   }
 
-  const openAdd = () => setEditor({ customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
-  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  const openAdd = () => setEditor({ kind, customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
+  const openEdit = (p: Invoice) => setEditor({ id: p.id, kind: p.kind ?? "invoice", customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
   async function emailDoc(p: Invoice) {
-    const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
+    const to = (p.customerEmail || window.prompt(`Email this ${p.kind === "po" ? "purchase order" : "invoice"} to:`, "") || "").trim();
     if (!to) return;
     setEmailing(true);
     try { await apiPost(`/api/invoices/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
+  async function convertToInvoice(p: Invoice) {
+    if (!confirm(`Create an invoice from PO for ${p.customerName}?`)) return;
+    try {
+      await apiPost("/api/invoices", { kind: "invoice", customerName: p.customerName, customerEmail: p.customerEmail || undefined, bookingRef: p.bookingRef || undefined, description: p.description || undefined, date: todayIso(), status: "draft", notes: `From PO ${p.reference ?? ""}`.trim(), lineItems: p.lineItems?.length ? p.lineItems : [{ description: p.description || "Item", qty: 1, unitPrice: p.amount }] });
+      setError(null); setDocKind("invoice"); refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create invoice"); }
   }
 
   async function save() {
@@ -132,7 +144,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     if (!editor.customerName.trim()) { setError("Customer name is required."); return; }
     if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
+    const body: Record<string, unknown> = { kind: editor.kind, customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
       if (editor.id) await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body);
       else await apiPost("/api/invoices", body);
@@ -159,7 +171,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New invoice</button>
+        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New {isPo ? "PO" : "invoice"}</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📨</span>
           Invoices
@@ -176,26 +188,35 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       </div>
       )}
 
-      <div className="mb-3 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[12px] text-[#1d3a8f]">🔗 Pay-links are live pages on your system. <b>Online card payment is being connected</b> — until then the pay page shows your amount + your pay methods, and you mark an invoice paid when the money lands.</div>
+      {usePO && (
+        <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
+          {([["invoice", "📨 Invoices"], ["po", "📄 Purchase orders"]] as const).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setDocKind(k)} className="rounded-full px-4 py-1.5 transition-colors" style={docKind === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+          ))}
+        </div>
+      )}
+
+      {!isPo && <div className="mb-3 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[12px] text-[#1d3a8f]">🔗 Pay-links are live pages on your system. <b>Online card payment is being connected</b> — until then the pay page shows your amount + your pay methods, and you mark an invoice paid when the money lands.</div>}
+      {isPo && <div className="mb-3 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📄 A purchase order is the agreed order with a parent. Raise it, then use <b>→ Invoice</b> to bill against it when it’s time to collect.</div>}
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", "All invoices"], ["customers", "Customers"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", isPo ? "All POs" : "All invoices"], ["customers", "Customers"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
-        {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>＋ New invoice</button>}
+        {embedded && <button type="button" onClick={openAdd} className={btnPrimary}>＋ New {isPo ? "PO" : "invoice"}</button>}
       </div>
 
       {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : items.length === 0 ? (
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">📨</div>
-          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">No invoices yet</div>
-          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">Bill a parent for an amount — a deposit, a balance, or anything ad-hoc. Link it to a booking if you like, then send them the pay-link.</p>
-          <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>＋ New invoice</button>
+          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{isPo ? "No purchase orders yet" : "No invoices yet"}</div>
+          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">{isPo ? "Raise a purchase order — the agreed order with a parent — then bill against it with an invoice when it’s time to collect." : "Bill a parent for an amount — a deposit, a balance, or anything ad-hoc. Link it to a booking if you like, then send them the pay-link."}</p>
+          <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>＋ New {isPo ? "PO" : "invoice"}</button>
         </Card>
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-3.5">
@@ -270,7 +291,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
-                <button type="button" onClick={openAdd} className={btnPrimary}>＋ New invoice</button>
+                <button type="button" onClick={openAdd} className={btnPrimary}>＋ New {isPo ? "PO" : "invoice"}</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -307,7 +328,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     </div>
                     <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
-                  {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
+                  {!isPo && p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
+                  {isPo && <button type="button" onClick={() => convertToInvoice(p)} className="flex-none text-[10.5px] font-bold text-[#1d3a8f] hover:underline" title="Create an invoice from this PO">→ Invoice</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
@@ -339,7 +361,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
           <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
             <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
+              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (editor.kind === "po" ? "Edit purchase order" : "Edit invoice") : editor.kind === "po" ? "New purchase order" : "New invoice"}</div>
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Parent’s name" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="parent@email.com" className={fieldCls} /></label>
@@ -370,7 +392,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
         </div>
       )}
 
-      {viewing && <PrintableDoc kind="invoice" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} payUrl={viewing.status !== "paid" ? payLink(viewing) : undefined} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind={viewing.kind === "po" ? "po" : "invoice"} doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} payUrl={viewing.kind !== "po" && viewing.status !== "paid" ? payLink(viewing) : undefined} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
     </div>
   );
 }
