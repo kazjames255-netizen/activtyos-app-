@@ -3455,24 +3455,3 @@ POs and invoices are now proper documents.
 `SMTP_HOST`/`MAIL_FROM` for real email in prod; `WEB_URL` env
 (`PUBLIC_WEB_URL`/`APP_URL`) so invoice pay-links use the right origin. Stripe
 pay wiring (from the earlier note) still makes the pay-link auto-mark paid.
-
----
-
-# Money: POs moved to the money-IN side — 24 July 2026
-
-Corrected the model to the customer-PO→invoice flow (POs are raised TO parents,
-then invoiced against — both money-in). Outgoing is now just supplier bills.
-
-- **`invoices` collection gains `kind: "invoice" | "po"`** (default invoice).
-  The money-in side has an Invoices / Purchase orders switch (gated by
-  `settings.money.usePurchaseOrders`); "→ Invoice" converts a PO into a new
-  draft invoice (client-side copy). Email endpoint renders `kind==="po"` as a
-  PURCHASE ORDER (no pay-link) vs an INVOICE (with pay-link).
-- **Outgoing (`purchaseOrders` collection) is relabelled "Supplier bills"** —
-  no PO framing. Its email now renders a **BILL** ("From {supplier}"). Data
-  unchanged; purely presentational + the new default status "received".
-- `renderMoneyDoc` / client `docHtml` now take `"po" | "invoice" | "bill"`; a PO
-  addresses the customer ("For …"), a bill the supplier ("From …").
-
-No migration — `kind` is optional (absent = invoice). Swagger: add `kind` to
-`/api/invoices`.
