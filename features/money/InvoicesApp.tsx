@@ -34,6 +34,7 @@ type Tab = "overview" | "ledger" | "customers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "due" | "amount";
+type Cust = { id: string; name: string; email?: string; children?: { name?: string }[] };
 type Editor = { id?: string; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
@@ -59,6 +60,16 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [viewing, setViewing] = useState<Invoice | null>(null);
   const [emailing, setEmailing] = useState(false);
   const { settings } = useSettings();
+  // Look up an existing parent/customer on the system (by name, email or child).
+  const [finder, setFinder] = useState(false);
+  const [custs, setCusts] = useState<Cust[] | null>(null);
+  const [cq, setCq] = useState("");
+  const openFinder = () => { setFinder((v) => !v); if (!custs) apiGet<Cust[]>("/api/customers").then(setCusts).catch(() => setCusts([])); };
+  const custMatches = useMemo(() => {
+    const n = cq.trim().toLowerCase();
+    const list = custs ?? [];
+    return (n ? list.filter((c) => `${c.name} ${c.email ?? ""} ${(c.children ?? []).map((k) => k.name ?? "").join(" ")}`.toLowerCase().includes(n)) : list).slice(0, 25);
+  }, [custs, cq]);
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/invoices").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -171,7 +182,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📨</span>
           Invoices
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Money coming in — bill a parent, link it to a booking, and send a pay-link. Track what’s owed, overdue and collected.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Money coming in — bill a customer and send a pay-link. Track what’s owed, overdue and collected.</p>
         {data && (
           <div className="mt-4 flex flex-wrap gap-2.5">
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">To collect</div></div>
@@ -201,7 +212,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">📨</div>
           <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">No invoices yet</div>
-          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">Bill a parent for an amount — a deposit, a balance, or anything ad-hoc. Link it to a booking if you like, then send them the pay-link.</p>
+          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">Bill a customer for an amount — a deposit, a balance, or anything ad-hoc. If it’s a parent, look them up on the system; then send the pay-link.</p>
           <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>＋ New invoice</button>
         </Card>
       ) : tab === "overview" ? (
@@ -346,10 +357,28 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
           <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
             <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
+                <button type="button" onClick={openFinder} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">🔎 Find a parent</button>
+              </div>
+              {finder && (
+                <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+                  <input autoFocus value={cq} onChange={(e) => setCq(e.target.value)} placeholder="Search by parent name, email or child’s name…" className={fieldCls} />
+                  <div className="mt-2 flex max-h-[190px] flex-col overflow-y-auto">
+                    {custs === null ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">Loading…</div>
+                    : custMatches.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No matches.</div>
+                    : custMatches.map((c) => (
+                      <button key={c.id} type="button" onClick={() => { setEditor({ ...editor, customerName: c.name, customerEmail: c.email ?? "" }); setFinder(false); setCq(""); }} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] hover:bg-[var(--surface)]">
+                        <span className="min-w-0 truncate"><b>{c.name}</b>{c.children?.length ? <span className="text-[var(--ink-3)]"> · {c.children.map((k) => k.name).filter(Boolean).join(", ")}</span> : ""}</span>
+                        <span className="flex-none text-[11px] text-[var(--ink-3)]">{c.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid gap-2.5 sm:grid-cols-2">
-                <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Parent’s name" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="parent@email.com" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Customer or business name" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="customer@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Invoice no.</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
                 <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
@@ -361,7 +390,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <label className="mt-2.5 block"><span className={labelCls}>Notes <span className="font-normal normal-case text-[var(--ink-3)]">(private)</span></span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} className={fieldCls} /></label>
 
               {editor.id && editor.payToken && editor.status !== "paid" && (
-                <div className="mt-2.5 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[11.5px] text-[#1d3a8f]">🔗 Pay-link ready. Close and use <b>“pay-link”</b> on the row to copy it for this parent.</div>
+                <div className="mt-2.5 rounded-lg border border-[#cde3f7] bg-[#eef6fd] px-3 py-2 text-[11.5px] text-[#1d3a8f]">🔗 Pay-link ready. Close and use <b>“pay-link”</b> on the row to copy it for this customer.</div>
               )}
 
               <div className="mt-4 flex justify-end gap-2">
