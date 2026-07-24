@@ -1437,6 +1437,28 @@ export function SetupApp() {
           <Row label="We raise purchase orders" hint="On: the Bills page keeps a draft (PO) stage before a bill is received and paid. Off (common for smaller providers): you just track supplier bills — received, then paid.">
             <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={["Yes", "No"]} />
           </Row>
+
+          <div className="mt-4 border-t border-[var(--line)] pt-4">
+            <div className="text-[14px] font-extrabold text-[var(--ink)]">Business &amp; bank details</div>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Printed on your POs and invoices (and their PDFs/emails). Bank details appear on invoices as the “how to pay” block.</p>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {([
+                ["businessName", "Business name", "Little Kickers Ltd"],
+                ["email", "Contact email", "hello@yourbiz.co.uk"],
+                ["phone", "Phone", "07700 900000"],
+                ["vatNumber", "VAT number (if any)", "GB123456789"],
+                ["address", "Address", "12 High St, Townsville, AB1 2CD"],
+                ["paymentTerms", "Payment terms", "Due within 14 days"],
+                ["bankName", "Bank name", "Barclays"],
+                ["accountName", "Account name", "Little Kickers Ltd"],
+                ["sortCode", "Sort code", "12-34-56"],
+                ["accountNumber", "Account number", "12345678"],
+              ] as const).map(([k, label, ph]) => (
+                <div key={k}><FieldLabel>{label}</FieldLabel><Input value={settings.billing?.[k] ?? ""} placeholder={ph} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), [k]: e.target.value } } })} className="w-full" /></div>
+              ))}
+            </div>
+            <div className="mt-2.5"><FieldLabel>Invoice/PO footer note</FieldLabel><Input value={settings.billing?.footer ?? ""} placeholder="Thank you for your business" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), footer: e.target.value } } })} className="w-full" /></div>
+          </div>
         </Section>
       )}
 

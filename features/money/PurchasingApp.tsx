@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { LineItemsEditor, PrintableDoc, lineTotal, type LineItem } from "@/features/money/doc-shared";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -14,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; supplier: string; reference?: string; date: string; dueDate?: string; amount: number; status: Status; notes?: string; attachmentUrl?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -36,7 +37,7 @@ type Tab = "overview" | "ledger" | "invoices" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | "duesoon" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; supplier: string; reference: string; date: string; dueDate: string; amount: string; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+type Editor = { id?: string; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -88,6 +89,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const [iSup, setISup] = useState("all");
   const [iFrom, setIFrom] = useState("");
   const [iTo, setITo] = useState("");
+  const [viewing, setViewing] = useState<PO | null>(null);
+  const [emailing, setEmailing] = useState(false);
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/purchasing").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -173,18 +176,32 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ supplier: "", reference: "", date: todayIso(), dueDate: "", amount: "", status: usePO ? "draft" : "sent", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
-  const openEdit = (p: PO) => setEditor({ id: p.id, supplier: p.supplier, reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", amount: String(p.amount), status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
+  const openAdd = () => setEditor({ supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: usePO ? "draft" : "sent", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
+  const openEdit = (p: PO) => setEditor({ id: p.id, supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
+  async function emailDoc(p: PO) {
+    const to = (p.supplierEmail || window.prompt("Email this purchase order to:", "") || "").trim();
+    if (!to) return;
+    setEmailing(true);
+    try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
+  async function createInvoiceFromPO(p: PO) {
+    const customerName = (window.prompt("Create an invoice from this PO — who is it billed to?", "") || "").trim();
+    if (!customerName) return;
+    try {
+      await apiPost("/api/invoices", { customerName, date: todayIso(), status: "draft", notes: `From PO ${p.reference ?? ""}`.trim(), lineItems: p.lineItems?.length ? p.lineItems : [{ description: p.notes || "Item", qty: 1, unitPrice: p.amount }] });
+      setError(null); window.alert("Draft invoice created — switch to “Money in” to review and send it.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create invoice"); }
+  }
 
   async function save() {
     if (!editor) return;
-    const amt = Number(editor.amount);
+    const lines = editor.lineItems.filter((li) => li.description.trim() || li.unitPrice > 0);
     if (!editor.supplier.trim()) { setError("Supplier is required."); return; }
-    if (!amt || amt < 0) { setError("Enter a valid amount."); return; }
+    if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { supplier: editor.supplier.trim(), reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, amount: amt, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
+    const body: Record<string, unknown> = { supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
@@ -394,11 +411,14 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                       {p.seriesId && <span className="rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title={p.repeatUntil ? `Repeats every ${p.repeat ? REPEAT_LABEL[p.repeat] : ""} until ${fmtDay(p.repeatUntil)}` : "Repeating"}>🔁 {p.repeat ? REPEAT_LABEL[p.repeat] : ""}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.notes ? ` · ${p.notes}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
                   </div>
                   {p.attachmentUrl && <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">🧾 invoice</a>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
+                  <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
+                  <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to supplier" aria-label="Email">✉</button>
+                  <button type="button" onClick={() => createInvoiceFromPO(p)} className="flex-none text-[10.5px] font-bold text-[#1d3a8f] hover:underline" title="Create an invoice from this">→ Invoice</button>
                   <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                   <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                 </Card>
@@ -500,12 +520,13 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
               <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit order" : "New order / invoice"}</div>
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1234" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Amount (£)</span><input type="number" min="0" step="0.01" value={editor.amount} onChange={(e) => setEditor({ ...editor, amount: e.target.value })} placeholder="0.00" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="PO-1234" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Due date</span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
               </div>
+              <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What it’s for" className={fieldCls} /></label>
 
               {!editor.id && (
@@ -553,6 +574,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
           </Card>
         </div>
       )}
+
+      {viewing && <PrintableDoc kind="po" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
     </div>
   );
 }

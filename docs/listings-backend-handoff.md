@@ -3423,3 +3423,35 @@ Split Money into **outgoing** (Expenses + Bills/POs) and **incoming**
 **TODO for you:** Swagger for `/api/invoices` (+ the public pay endpoint), and
 the Stripe checkout wiring above when payments land. No migration (all new/optional).
 (3 demo invoices seeded onto `VOiiaTnDNd03MLbZaVcM`.)
+
+---
+
+# Money documents: line items, PDF, email, business/bank details — 24 July 2026
+
+POs and invoices are now proper documents.
+
+- **Line items** on both: `lineItems: [{description, qty, unitPrice}]` on
+  `poSchema` + `invoiceSchema`. When present, the server computes `amount` from
+  them (POST + PUT); `amount` is now optional in the body. Old rows without
+  lineItems still render (renderer falls back to a single line from amount/notes).
+- **Email a document** (real send via the shared `sendMail`): new
+  `POST /api/purchasing/:id/email {to?}` (to = body or supplierEmail) and
+  `POST /api/invoices/:id/email {to?}` (to = body or customerEmail; the invoice
+  includes the pay-link, and a draft auto-moves to **sent**). Both set
+  `emailedAt`. Rendered by `server/src/lib/moneyDoc.ts` (mirrored client-side in
+  `features/money/doc-shared.tsx` for the on-screen PDF). No SMTP configured →
+  Ethereal dev inbox (preview URL logged); set `SMTP_HOST` for real delivery.
+- **PDF**: client-side — the operator opens a document preview and prints/saves
+  to PDF (`window.open` + `print`). No server PDF or new dep.
+- New fields: `poSchema.supplierEmail`, both `.reference`/`.emailedAt`.
+- **New tenant setting `settings.billing`** = `{ businessName, address, email,
+  phone, vatNumber, bankName, accountName, sortCode, accountNumber,
+  paymentTerms, footer }` — printed on docs; bank block shows on invoices only.
+  Setup → Money. Read server-side in the email endpoints from tenant settings.
+- **PO → Invoice**: client-side convenience — copies a PO's line items into a
+  new draft invoice (`POST /api/invoices`). No backend link kept.
+
+**TODO for you:** Swagger for the two `/email` endpoints + the new fields; set
+`SMTP_HOST`/`MAIL_FROM` for real email in prod; `WEB_URL` env
+(`PUBLIC_WEB_URL`/`APP_URL`) so invoice pay-links use the right origin. Stripe
+pay wiring (from the earlier note) still makes the pay-link auto-mark paid.
