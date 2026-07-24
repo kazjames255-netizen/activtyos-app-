@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
@@ -11,7 +13,7 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
-type Row = { referrerEmail: string; referrerName?: string | null; friendEmail: string; friendName?: string | null; reward?: number; friendOff?: number; friendSpend?: number; type?: "amount" | "percent"; cap?: number | null; at?: string; viaCode?: string };
+type Row = { referrerEmail: string; referrerName?: string | null; friendEmail: string; friendName?: string | null; reward?: number; friendOff?: number; friendSpend?: number; friendDiscount?: number; type?: "amount" | "percent"; cap?: number | null; bookingRef?: string | null; rewardRedeemed?: boolean; at?: string; viaCode?: string };
 type Data = {
   enabled: boolean;
   type: "amount" | "percent";
@@ -19,6 +21,9 @@ type Data = {
   referrerReward: number;
   friendsBooked: number;
   rewardsPaid: number;
+  referredRevenue: number;
+  friendDiscountTotal: number;
+  rewardsRedeemed: number;
   leaderboard: { email: string; name?: string | null; count: number; reward: number }[];
   recent: Row[];
 };
@@ -30,9 +35,12 @@ const fmtAmt = (v?: number, type?: "amount" | "percent") => (type === "percent" 
 export function ReferralsApp() {
   const [d, setD] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const portal = usePathname().split("/")[1] || "freelancer";
   const load = () => apiGet<Data>("/api/referrals").then((r) => { setD(r); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   useEffect(() => { void load(); }, []);
-  useRealtime(["referrals"], load);
+  useRealtime(["referrals", "bookings", "discountCodes"], load);
+  // Discount as a share of the revenue those referrals brought in (£ vs %).
+  const costPct = d && d.referredRevenue > 0 ? Math.round((d.friendDiscountTotal / d.referredRevenue) * 100) : 0;
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -48,12 +56,21 @@ export function ReferralsApp() {
         {d && (
           <div className="mt-4 flex flex-wrap gap-2.5">
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.friendsBooked}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Friends booked</div></div>
-            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.type === "percent" ? d.friendsBooked : money(d.rewardsPaid)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{d.type === "percent" ? "Reward codes" : "Rewards issued"}</div></div>
+            <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(d.referredRevenue)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Bookings brought in</div></div>
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{d.leaderboard.length}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Referrers</div></div>
           </div>
         )}
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+
+      {/* Impact — what referrals brought in vs what the discounts cost (£ vs %). */}
+      {d && d.friendsBooked > 0 && (
+        <Card className="mb-3.5 grid gap-3 p-4 sm:grid-cols-3">
+          <div><div className="text-[20px] font-extrabold leading-none text-[#0f7a44]">{money(d.referredRevenue)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">bookings from referrals</div></div>
+          <div><div className="text-[20px] font-extrabold leading-none text-[var(--red,#e21d27)]">−{money(d.friendDiscountTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">discounts given · <b>{costPct}%</b> of revenue</div></div>
+          <div><div className="text-[20px] font-extrabold leading-none">{d.rewardsRedeemed}<span className="text-[14px] font-bold text-[var(--ink-3)]"> / {d.friendsBooked}</span></div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">referrer rewards redeemed</div></div>
+        </Card>
+      )}
 
       {!d ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : d.friendsBooked === 0 ? (
@@ -86,9 +103,15 @@ export function ReferralsApp() {
                 <div key={i} className="flex items-center gap-2 border-b border-dashed border-[var(--line)] py-2.5 text-[12.5px] last:border-b-0">
                   <div className="min-w-0 flex-1">
                     <div className="truncate"><b>{r.referrerName || nameOf(r.referrerEmail)}</b> <span className="text-[var(--ink-3)]">referred</span> <b>{r.friendName || nameOf(r.friendEmail)}</b></div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmt(r.at)} · friend spent {money(r.friendSpend ?? 0)} · got {fmtAmt(r.friendOff, r.type ?? d.type)} off</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmt(r.at)} · friend spent {money(r.friendSpend ?? 0)}{r.friendDiscount ? ` (saved ${money(r.friendDiscount)})` : ""}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {r.bookingRef
+                        ? <Link href={`/${portal}/bookings?ref=${encodeURIComponent(r.bookingRef)}`} className="rounded-full border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--brand-strong,#16306e)] hover:-translate-y-px">View booking {r.bookingRef} ›</Link>
+                        : <span className="text-[10.5px] text-[var(--ink-3)]">no booking linked</span>}
+                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.rewardRedeemed ? "bg-[#e7f8ee] text-[#0f7a44]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{r.rewardRedeemed ? "✓ Reward redeemed" : "Reward not yet used"}</span>
+                    </div>
                   </div>
-                  <div className="flex-none text-right">
+                  <div className="flex-none self-start text-right">
                     <span className="rounded-full bg-[#e7f8ee] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a44]">{fmtAmt(r.reward ?? 0, r.type ?? d.type)}{r.cap ? ` ≤${money(r.cap)}` : ""}</span>
                     <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">referrer reward</div>
                   </div>

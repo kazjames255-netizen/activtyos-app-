@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRealtime } from "@/lib/realtime";
 import { useBookingsStore } from "./store";
 import { BookingsList } from "./BookingsList";
@@ -24,6 +25,14 @@ export function BookingsApp() {
 
   useEffect(() => void refresh(), [refresh]);
   useRealtime(["bookings"], refresh);
+
+  // Deep link (e.g. from the Referrals dashboard's "View booking"): open it.
+  const open = useBookingsStore((s) => s.open);
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) open(ref);
+  }, [searchParams, open]);
 
   return (
     // Listings and Sessions & blocks each set this light palette locally, so

@@ -28,7 +28,7 @@ referralsAdmin.get("/", async (req, res) => {
   const ref = lib?.settings?.referral;
 
   const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; friendOff?: number; friendSpend?: number; type?: "amount" | "percent"; cap?: number; at?: string; viaCode?: string });
+  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; friendOff?: number; friendSpend?: number; friendDiscount?: number; bookingRef?: string | null; rewardCode?: string | null; type?: "amount" | "percent"; cap?: number; at?: string; viaCode?: string });
   const rewardsPaid = list.reduce((s, r) => s + (Number(r.reward) || 0), 0);
 
   // Resolve real family names from the customer list (fallback to the email).
@@ -36,6 +36,17 @@ referralsAdmin.get("/", async (req, res) => {
   const nameByEmail = new Map<string, string>();
   custSnap.docs.forEach((d) => { const c = d.data() as { email?: string; name?: string }; if (c.email && c.name) nameByEmail.set(c.email.toLowerCase(), c.name); });
   const nm = (email: string) => nameByEmail.get(email.toLowerCase()) ?? null;
+
+  // Which reward codes have actually been redeemed (usedCount > 0).
+  const rewSnap = await db.collection("discountCodes").where("tenantId", "==", tenantId).where("referralReward", "==", true).get();
+  const usedByCode = new Map<string, number>();
+  rewSnap.docs.forEach((d) => { const c = d.data() as { code?: string; usedCount?: number }; if (c.code) usedByCode.set(c.code, Number(c.usedCount) || 0); });
+  const redeemed = (code?: string | null) => !!code && (usedByCode.get(code) ?? 0) > 0;
+
+  // Totals: revenue the referrals brought in, and the discounts they cost.
+  const referredRevenue = Math.round(list.reduce((s, r) => s + (Number(r.friendSpend) || 0), 0) * 100) / 100;
+  const friendDiscountTotal = Math.round(list.reduce((s, r) => s + (Number(r.friendDiscount) || 0), 0) * 100) / 100;
+  const rewardsRedeemed = list.filter((r) => redeemed(r.rewardCode)).length;
 
   const counts = new Map<string, { count: number; reward: number }>();
   for (const r of list) {
@@ -48,8 +59,10 @@ referralsAdmin.get("/", async (req, res) => {
   const recent = list.slice(0, 100).map((r) => ({
     referrerEmail: r.referrerEmail, referrerName: nm(r.referrerEmail),
     friendEmail: r.friendEmail, friendName: nm(r.friendEmail),
-    friendOff: Number(r.friendOff) || 0, friendSpend: Number(r.friendSpend) || 0,
-    reward: Number(r.reward) || 0, type: r.type ?? "amount", cap: r.cap ?? null, at: r.at ?? null, viaCode: r.viaCode ?? null,
+    friendOff: Number(r.friendOff) || 0, friendSpend: Number(r.friendSpend) || 0, friendDiscount: Number(r.friendDiscount) || 0,
+    reward: Number(r.reward) || 0, type: r.type ?? "amount", cap: r.cap ?? null,
+    bookingRef: r.bookingRef ?? null, rewardRedeemed: redeemed(r.rewardCode),
+    at: r.at ?? null, viaCode: r.viaCode ?? null,
   }));
   res.json({
     enabled: !!ref?.enabled,
@@ -58,6 +71,9 @@ referralsAdmin.get("/", async (req, res) => {
     referrerReward: Number(ref?.referrerReward) || 0,
     friendsBooked: list.length,
     rewardsPaid,
+    referredRevenue,
+    friendDiscountTotal,
+    rewardsRedeemed,
     leaderboard,
     recent,
   });
@@ -82,7 +98,7 @@ const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = 
  *  code reserved to them + a "thanks" message/email. Called from the booking
  *  redemption. Idempotent per (referrer, friend) and a no-op if referrals are
  *  off or the reward is £0. Best-effort — never blocks the friend's booking. */
-export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string, friendSpend = 0): Promise<void> {
+export async function rewardReferrer(tenantId: string, referrerEmail: string, friendEmail: string, viaCode: string, friendSpend = 0, opts: { friendDiscount?: number; bookingRef?: string } = {}): Promise<void> {
   const rel = referrerEmail.trim().toLowerCase();
   const fel = friendEmail.trim().toLowerCase();
   if (!rel || rel === fel) return;
@@ -101,16 +117,25 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
   const cap = type === "percent" && ref.capToFriendSpend ? spend : undefined;
   const rewardTxt = (type === "percent" ? `${reward}% off` : `£${reward} off`) + (cap != null ? ` (up to £${cap})` : "");
   const now = new Date().toISOString();
-  await db.collection("referrals").add({ tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, friendOff, type, friendSpend: spend, ...(cap != null ? { cap } : {}), at: now });
-  if (reward <= 0) return;
 
+  // Mint the reward code (when there is a reward), then record the referral with
+  // everything the dashboard shows: what the friend spent + got off, and the
+  // reward code (whose usedCount tells us if it's been redeemed) + the booking.
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "Your provider";
-  const rewardCode = normaliseCode(`THANKS${hash(rel + now).toString(36).toUpperCase().slice(0, 5)}`);
-  await db.collection("discountCodes").add({
-    tenantId, code: rewardCode, type, value: reward, assignedTo: rel,
-    ...(cap != null ? { maxOff: cap } : {}),
-    active: true, usedCount: 0, referralReward: true, createdAt: now,
+  const rewardCode = reward > 0 ? normaliseCode(`THANKS${hash(rel + now).toString(36).toUpperCase().slice(0, 5)}`) : null;
+  if (rewardCode) {
+    await db.collection("discountCodes").add({
+      tenantId, code: rewardCode, type, value: reward, assignedTo: rel,
+      ...(cap != null ? { maxOff: cap } : {}),
+      active: true, usedCount: 0, referralReward: true, createdAt: now,
+    });
+  }
+  await db.collection("referrals").add({
+    tenantId, referrerEmail: rel, friendEmail: fel, viaCode, reward, friendOff, type,
+    friendSpend: spend, friendDiscount: Math.max(0, Math.round((Number(opts.friendDiscount) || 0) * 100) / 100),
+    bookingRef: opts.bookingRef ?? null, rewardCode, ...(cap != null ? { cap } : {}), at: now,
   });
+  if (!rewardCode) return;
 
   // Message + email the referrer (mirrors notifyAssigned; carries a copyable chip).
   const id = `${tenantId}__${rel}`;

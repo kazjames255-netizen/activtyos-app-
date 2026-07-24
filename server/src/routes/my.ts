@@ -606,6 +606,9 @@ my.post("/bookings", async (req, res) => {
   // across the items' pass portions. Shares lib/discountCodes with the preview
   // endpoint so what the parent saw is exactly what they're charged.
   let discountCodes: string[] = [];
+  // A referral code in the basket → reward the referrer AFTER the booking is
+  // written (so we can link the booking). Captured here, fired after the tx.
+  let referralHit: { referrerEmail: string; code: string; friendDiscount: number } | null = null;
   const rawCodes = [...(input.discountCode ? [input.discountCode] : []), ...(input.discountCodes ?? [])];
   const wantedCodes = [...new Set(rawCodes.map((c) => normaliseCode(c)).filter(Boolean))];
   if (wantedCodes.length) {
@@ -638,6 +641,7 @@ my.post("/bookings", async (req, res) => {
       const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
       if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
       totalOff = round2(totalOff + check.off);
+      if (l.data.referral && l.data.referrerEmail && familyEmail) referralHit = { referrerEmail: l.data.referrerEmail, code: l.code, friendDiscount: check.off };
     }
     totalOff = Math.min(totalOff, discounted); // never below zero on the pass subtotal
     const ratio = discounted > 0 ? (discounted - totalOff) / discounted : 1;
@@ -653,9 +657,6 @@ my.post("/bookings", async (req, res) => {
     for (const l of loaded) {
       void l.doc.ref.update({ usedCount: FieldValue.increment(1) });
       if (l.data.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: l.doc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
-      // Refer-a-friend: the friend just booked → reward the referrer, capped to
-      // what the friend actually paid (final total after their own discount).
-      if (l.data.referral && l.data.referrerEmail && familyEmail) void rewardReferrer(listing.tenantId, l.data.referrerEmail, familyEmail, l.code, amounts.reduce((s, a) => round2(s + a), 0));
     }
   }
 
@@ -796,6 +797,16 @@ my.post("/bookings", async (req, res) => {
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
+
+    // Refer-a-friend: now the friend's booking exists, reward the referrer —
+    // capped to what the friend paid — and link the booking for the dashboard.
+    if (referralHit && familyEmail) {
+      const placedBooking = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
+      void rewardReferrer(listing.tenantId, referralHit.referrerEmail, familyEmail, referralHit.code, target, {
+        friendDiscount: referralHit.friendDiscount,
+        bookingRef: placedBooking?.ref,
+      });
+    }
 
     // One email for the basket, not one per child. On-behalf bookings get
     // the account+pay email instead (no child data in it — a mistyped
