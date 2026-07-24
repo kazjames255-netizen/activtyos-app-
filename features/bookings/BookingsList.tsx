@@ -112,7 +112,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           >
             ⬇ Export
           </Button>
-          <Button variant="primary" onClick={openCreate} className="!bg-white !border-white !text-[#1d3a8f]">
+          <Button variant="primary" onClick={openCreate} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
             ＋ Take a booking
           </Button>
         </>}
