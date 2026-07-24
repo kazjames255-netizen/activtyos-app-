@@ -162,7 +162,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "blocks", legacyView: "admin-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
-        { view: "locations", legacyView: "admin-locations", label: "Locations", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "listings", legacyView: "listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "customers", legacyView: "admin-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "messages", legacyView: "messages", label: "Messages", icon: { type: "glyph", value: "▧" }, badge: "2" },
@@ -210,7 +209,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "ratios", legacyView: "fr-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "franchise-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
-        { view: "locations", legacyView: "franchise-locations", label: "Locations & setup", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "schedule", legacyView: "franchise-schedule", label: "Schedule", icon: { type: "glyph", value: "▦" }, badge: null },
         { view: "calendar", legacyView: "cal-franchise", label: "Calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "franchise-timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
@@ -323,7 +321,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "freelancer-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
-        { view: "locations", legacyView: "freelancer-locations", label: "Locations & setup", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "schedule", legacyView: "freelancer-schedule", label: "Schedule", icon: { type: "glyph", value: "▦" }, badge: null },
         { view: "calendar", legacyView: "cal-freelancer", label: "Calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "freelancer-timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
