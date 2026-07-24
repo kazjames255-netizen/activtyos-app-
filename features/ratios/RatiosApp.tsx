@@ -841,6 +841,7 @@ export function RatiosApp() {
   return (
     <OperatorPage
       title="Ratios & groups"
+      icon="🏅"
       lede="Set your groups and target ratios, and track live cover as you take registers"
     >
       {/* How ratios work — folded away, with a walkthrough video to come. */}

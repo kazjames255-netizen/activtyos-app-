@@ -953,7 +953,7 @@ function LibraryCard({
         borderColor: dragOver ? color : "var(--line)",
         borderLeftWidth: "6px",
         borderLeftColor: color,
-        background: `color-mix(in srgb, ${color} 7%, #ffffff)`,
+        background: "#ffffff",
         boxShadow: dragOver ? `0 0 0 2px ${color}` : undefined,
       }}
     >

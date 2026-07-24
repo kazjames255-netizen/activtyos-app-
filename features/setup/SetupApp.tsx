@@ -1114,7 +1114,7 @@ export function SetupApp() {
 
   if (loading)
     return (
-      <OperatorPage title="Setup & features">
+      <OperatorPage title="Setup & features" icon="⚙️">
         <span className="text-[var(--ink-3)]">Loading…</span>
       </OperatorPage>
     );
@@ -1136,6 +1136,7 @@ export function SetupApp() {
   return (
     <OperatorPage
       title="Setup & features"
+      icon="⚙️"
       lede="How your account runs — set once, used everywhere"
       actions={
         <span className="text-[12px] text-[var(--ink-3)]">
