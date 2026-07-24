@@ -138,7 +138,7 @@ const EYFS_3TO5_QT = 13;
 function PolicyTable({ groups }: { groups: RatioGroup[] }) {
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] rounded-t-xl border-b border-[#e3ecfb] bg-gradient-to-r from-[#eef4fd] via-[#f6f9fe] to-transparent [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
         Your ratio policy <span className="font-normal text-[var(--ink-3)]">— set in Setup → Age groups &amp; rooms; shown here for reference</span>
       </summary>
@@ -197,7 +197,7 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
   const edit = (m: StaffMember) => { setEditId(m.id); setName(`${m.first} ${m.last}`.trim()); setRole(m.role ?? ""); };
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
-      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] rounded-t-xl border-b border-[#e3ecfb] bg-gradient-to-r from-[#eef4fd] via-[#f6f9fe] to-transparent [&::-webkit-details-marker]:hidden">
         🧑‍🏫 Your team <span className="font-normal text-[var(--ink-3)]">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
       </summary>
       <div className="px-3.5 pb-3.5">
@@ -654,7 +654,7 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
 
   return (
     <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] rounded-t-xl border-b border-[#e3ecfb] bg-gradient-to-r from-[#eef4fd] via-[#f6f9fe] to-transparent [&::-webkit-details-marker]:hidden">
         🧮 Staffing ratio calculator <span className="font-normal text-[var(--ink-3)]">— model any mix, or drop in a live day · EYFS bands + your targets</span>
       </summary>
       <div className="px-3.5 pb-3.5">
