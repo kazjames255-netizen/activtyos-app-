@@ -3474,3 +3474,27 @@ Invoices gained professional-doc fields (from a real customer invoice sample):
   Status removed from the create form (managed inline in the ledger).
 
 Swagger: add the new `/api/invoices` fields. No migration (all optional).
+
+---
+
+# Money restructure: Income route + bill category — 24 July 2026
+
+Money split into two hubs (money-out = Expenses+Bills+POs, money-in =
+Invoices+Income). Backend deltas:
+
+- **NEW `/api/income`** (`server/src/routes/income.ts`) — mirrors
+  `/api/expenses` exactly: operator-scoped CRUD over the **`income`**
+  collection, `incomeSchema` = `{date, category, amount, source?, notes?,
+  repeat?, repeatUntil?, seriesId?}`, recurrence fan-out on POST + `DELETE
+  /api/income/series/:seriesId`. Registered in `index.ts`; realtime listener
+  for `income` added to `events.ts`. Money-in view folds **paid invoices** in
+  on the client (read-only), so income rows are only the ad-hoc extras
+  (cash on the door, grants).
+- **Bill `category`** — `poSchema` in `purchasing.ts` += optional
+  `category` (string, ≤60). Lets a paid bill fold into the money-out /
+  Expenses picture under a matching category. No migration (optional).
+- `settings.money` += `basis: "cash"|"accrual"` (default cash) — drives when
+  a bill counts as money-out spend (client-side fold-in only; no server use yet).
+
+Swagger: add the `/api/income` resource + the `category` field on purchasing.
+No migrations — all additive/optional.
