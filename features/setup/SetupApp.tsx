@@ -1425,16 +1425,16 @@ export function SetupApp() {
       {tab === "money" && (
         <Section
           title="Money — what you track"
-          lede="Your Money section splits into money going OUT (Expenses + supplier Bills/POs) and money coming IN (customer Invoices with pay-links). Show one side or both, and choose whether you raise formal purchase orders."
+          lede="Your Money section splits into money going OUT (Expenses + supplier Bills) and money coming IN (Invoices — and Purchase Orders — you send parents). Show one side or both, and choose whether you raise purchase orders."
         >
-          <Row label="Show in your Money menu" hint="Outgoing = Expenses + Bills/POs. Incoming = customer Invoices. Both shows everything.">
+          <Row label="Show in your Money menu" hint="Outgoing = Expenses + supplier Bills. Incoming = Invoices (and POs) to parents. Both shows everything.">
             <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold">
               {(["outgoing", "incoming", "both"] as const).map((k) => (
                 <button key={k} type="button" onClick={() => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), show: k } } })} className="px-3.5 py-1.5 capitalize transition-colors" style={(settings.money?.show ?? "both") === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{k}</button>
               ))}
             </div>
           </Row>
-          <Row label="We raise purchase orders" hint="On: the Bills page keeps a draft (PO) stage before a bill is received and paid. Off (common for smaller providers): you just track supplier bills — received, then paid.">
+          <Row label="We raise purchase orders" hint="On: the money-in side gets an Invoices / Purchase orders switch, so you can raise a PO (the agreed order with a parent) and later bill against it. Off: invoices only.">
             <Toggle on={!!settings.money?.usePurchaseOrders} onChange={(v) => void save({ settings: { ...settings, money: { ...(settings.money ?? {}), usePurchaseOrders: v } } })} labels={["Yes", "No"]} />
           </Row>
 

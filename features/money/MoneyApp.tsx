@@ -21,8 +21,8 @@ export function MoneyApp() {
   const canSwitch = show === "both";
 
   const SIDES = [
-    { key: "out" as const, arrow: "↑", label: "Money out", sub: "Bills & POs", dot: "#e2643b" },
-    { key: "in" as const, arrow: "↓", label: "Money in", sub: "Invoices", dot: "#22a06b" },
+    { key: "out" as const, arrow: "↑", label: "Money out", sub: "Supplier bills", dot: "#e2643b" },
+    { key: "in" as const, arrow: "↓", label: "Money in", sub: "POs & invoices", dot: "#22a06b" },
   ];
 
   return (
@@ -33,7 +33,7 @@ export function MoneyApp() {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💷</span>
           Bills &amp; Invoices
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything moving through your business — <b>money out</b> (supplier bills &amp; POs) and <b>money in</b> (invoices you send parents). Pick a side below.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything moving through your business — <b>money out</b> (supplier bills) and <b>money in</b> (POs &amp; invoices you send parents). Pick a side below.</p>
 
         {canSwitch ? (
           <div className="mt-4 inline-flex gap-1 rounded-2xl bg-white/15 p-1 backdrop-blur-sm">

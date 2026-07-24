@@ -28,6 +28,9 @@ const lineItemSchema = z.object({
   unitPrice: z.number().nonnegative().default(0),
 });
 const invoiceSchema = z.object({
+  // An incoming document is either a purchase order (the agreed order) or the
+  // invoice you raise against it — both go TO the customer/parent (money in).
+  kind: z.enum(["invoice", "po"]).default("invoice"),
   customerName: z.string().trim().min(1).max(160),
   customerEmail: z.string().trim().max(160).optional(),
   bookingRef: z.string().trim().max(80).optional(),
@@ -111,9 +114,11 @@ invoices.post("/:id/email", async (req, res) => {
   if (!to) { res.status(400).json({ error: "No email address to send to — add the customer's email." }); return; }
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
-  const payUrl = doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
-  const html = renderMoneyDoc("invoice", doc, billing, payUrl);
-  await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
+  const isPo = doc.kind === "po";
+  const payUrl = !isPo && doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
+  const provider = (billing?.businessName as string) || (tenant.data()?.name as string) || "your provider";
+  const html = renderMoneyDoc(isPo ? "po" : "invoice", doc, billing, payUrl);
+  await sendMail(to, `${isPo ? "Purchase order" : "Invoice"}${doc.reference ? ` ${doc.reference}` : ""} from ${provider}`, html);
   const emailedAt = new Date().toISOString();
   // Sending an invoice moves a draft to "sent" (now awaiting payment).
   await o.snap.ref.set({ emailedAt, ...(doc.status === "draft" ? { status: "sent" } : {}) }, { merge: true });
