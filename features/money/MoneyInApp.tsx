@@ -68,7 +68,8 @@ export function MoneyInApp() {
           <Kpi big={money(inYear)} sub={`In ${thisYear}`} />
           <Kpi big={money(outstanding)} sub="Awaiting payment" />
         </div>
-        <div className="mt-2 text-[11px] text-white/75">This month: <b className="text-white">{money(bkMonth)}</b> bookings + <b className="text-white">{money(invMonth)}</b> invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
+        <div className="mt-2 text-[11px] text-white/75">This month received: <b className="text-white">{money(bkMonth)}</b> bookings + <b className="text-white">{money(invMonth)}</b> invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
+        <div className="mt-0.5 text-[10.5px] text-white/60">Awaiting payment is invoiced but <b className="text-white/80">not yet received</b> — it isn’t counted in the totals above until it’s paid.</div>
       </div>
 
       {/* Sub-area tabs */}
