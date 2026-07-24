@@ -1477,7 +1477,7 @@ export function SetupApp() {
             <div className="mt-3">
               <FieldLabel>Optional invoice fields — tick what you use</FieldLabel>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]">
-                {([["poNumber", "Customer PO number"], ["accountRef", "Account ref"], ["address", "Bill-to address"], ["vat", "VAT / tax"]] as const).map(([k, label]) => (
+                {([["poNumber", "Customer PO number"], ["accountRef", "Account ref"], ["vat", "VAT / tax"]] as const).map(([k, label]) => (
                   <label key={k} className="flex items-center gap-1.5 font-bold"><input type="checkbox" checked={!!settings.billing?.fields?.[k]} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), fields: { ...(settings.billing?.fields ?? {}), [k]: e.target.checked } } } })} /> {label}</label>
                 ))}
               </div>

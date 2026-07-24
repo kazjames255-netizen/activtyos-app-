@@ -42,6 +42,8 @@ const invoiceSchema = z.object({
   date: z.string().max(10),
   dueDate: z.string().max(10).optional(),
   status: z.enum(STATUSES).default("draft"),
+  paidVia: z.enum(["link", "manual"]).optional(),   // how it was marked paid
+  paidAt: z.string().max(40).optional(),
   notes: z.string().trim().max(2_000).optional(),
   emailedAt: z.string().max(40).optional(),
 });

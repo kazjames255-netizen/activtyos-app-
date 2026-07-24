@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
+interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; paidVia?: "link" | "manual"; paidAt?: string; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -176,7 +176,12 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); } finally { setSaving(false); }
   }
-  async function setStatus(p: Invoice, status: Status) { try { await apiPut(`/api/invoices/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function setStatus(p: Invoice, status: Status) {
+    // Marking paid here = manual/bank confirmation (online card payment via the
+    // pay-link would set paidVia:"link" — pending Stripe).
+    const extra = status === "paid" ? { paidVia: "manual" as const, paidAt: new Date().toISOString() } : {};
+    try { await apiPut(`/api/invoices/${encodeURIComponent(p.id)}`, { status, ...extra }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
   async function remove(p: Invoice) {
     if (!confirm(`Delete the invoice for ${p.customerName} (${money(p.amount)})?`)) return;
     try { await del(`/api/invoices/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
@@ -307,7 +312,6 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
-                <button type="button" onClick={openAdd} className={btnPrimary}>＋ New invoice</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -342,7 +346,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#0f7a44]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
                   </div>
                   <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11.5px] font-bold outline-none" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUSES.map((s) => <option key={s} value={s} style={{ background: "#fff", color: "var(--ink)" }}>{STATUS_META[s].label}</option>)}</select>
@@ -373,15 +377,17 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {customers.map((c) => (
-            <Card key={c.customer} className="p-3.5">
-              <div className="flex items-center justify-between"><div className="text-[13.5px] font-extrabold">{c.customer}</div><div className="text-[15px] font-extrabold tabular-nums">{money(c.total)}</div></div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (customers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
-                <span><b className="text-[var(--ink)]">{c.count}</b> invoice{c.count === 1 ? "" : "s"}</span>
-                {c.outstanding > 0 && <span><b className="text-[#a86400]">{money(c.outstanding)}</b> awaiting payment</span>}
-                <span>avg <b className="text-[var(--ink)]">{money(c.total / c.count)}</b></span>
-              </div>
-            </Card>
+            <button key={c.customer} type="button" onClick={() => { setQ(c.customer); setTab("ledger"); }} className="block w-full text-left" title="View this customer’s invoices">
+              <Card className="p-3.5 transition hover:border-[#1d3a8f]">
+                <div className="flex items-center justify-between"><div className="text-[13.5px] font-extrabold">{c.customer}</div><div className="flex items-center gap-1.5 text-[15px] font-extrabold tabular-nums">{money(c.total)}<span className="text-[12px] font-bold text-[#1d3a8f]">›</span></div></div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (customers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
+                <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
+                  <span><b className="text-[var(--ink)]">{c.count}</b> invoice{c.count === 1 ? "" : "s"}</span>
+                  {c.outstanding > 0 && <span><b className="text-[#a86400]">{money(c.outstanding)}</b> awaiting payment</span>}
+                  <span>avg <b className="text-[var(--ink)]">{money(c.total / c.count)}</b></span>
+                </div>
+              </Card>
+            </button>
           ))}
         </div>
       )}
@@ -433,7 +439,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   </div>
                 </label>
               </div>
-              {tf.address && <label className="mt-2.5 block"><span className={labelCls}>Bill-to address</span><textarea value={editor.customerAddress} onChange={(e) => setEditor({ ...editor, customerAddress: e.target.value })} rows={2} placeholder="Street, town, postcode" className={`${fieldCls} w-full resize-none`} /></label>}
+              <label className="mt-2.5 block"><span className={labelCls}>Bill-to address <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span><textarea value={editor.customerAddress} onChange={(e) => setEditor({ ...editor, customerAddress: e.target.value })} rows={2} placeholder="Street, town, postcode" className={`${fieldCls} w-full resize-none`} /></label>
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Description <span className="font-normal normal-case text-[var(--ink-3)]">(short summary, optional)</span></span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
 
