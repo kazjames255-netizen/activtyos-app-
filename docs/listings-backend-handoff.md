@@ -3312,3 +3312,54 @@ my new listing" symptom.
 company's marketplace toggle on — it now shows in the parent's Browse. (A parent
 who books any provider also keeps seeing that provider whether or not it's
 listed.)
+
+---
+
+# Money → Expenses: recurring, receipts, categories, subscription — 24 July 2026
+
+Rebuilt `features/money/ExpensesApp.tsx` from the basic list into a full
+dashboard (blue/white hero, Overview / All expenses / Receipts / Categories
+tabs, 6-month trend, search + filter + CSV). Mostly front-end off the existing
+`/api/expenses`, with **two small backend additions I've already made and
+tested** — flagged here so they're on your radar / in Swagger:
+
+- **`POST /api/expenses` now accepts a recurrence** — extra optional fields on
+  the body: `repeat: "weekly"|"fortnightly"|"monthly"` + `repeatUntil` (YYYY-MM-DD).
+  When both are present the route **fans out one doc per occurrence** from
+  `date` through `repeatUntil` (capped `MAX_OCCURRENCES = 104`), all sharing a
+  fresh `seriesId`; response is `{created, seriesId, items[]}` instead of the
+  single doc. Each row stores `repeat`, `repeatUntil`, `seriesId`. A one-off
+  POST (no `repeat`) is unchanged.
+- **`DELETE /api/expenses/series/:seriesId`** — deletes every row in a series
+  (tenant-scoped batch). Returns `{ok, deleted}`. Registered before `/:id`.
+- Schema (`expenseSchema`) gained `repeat`, `repeatUntil`, `seriesId` (all
+  optional); `receiptUrl` already existed.
+
+**Receipts** reuse the existing image store: `POST /api/uploads {dataUrl}` →
+`{url}` (client compresses to JPEG < 900KB), rendered from `/api/images/:id`.
+No new endpoint. **PDF receipts aren't supported** (uploads.ts only accepts
+`data:image/*`) — if you enable Firebase Storage later, PDF upload is the
+natural follow-up; for now the UI also takes a pasted link for PDFs.
+
+**Subscription inclusion is front-end only.** A Yes/No toggle folds the
+operator's own ActivityOS plan fee into their expense totals. It reads the plan
+price from `GET /api/subscription` and injects **virtual** monthly rows
+client-side (never written to `expenses`), so it always reflects the live plan
+and needs no cron. **Nothing for you to build** unless we later want it as real
+billing. Persisted via a new `settings.expenses` key (see below).
+
+**New tenant setting `settings.expenses`** (library `settings` bag):
+`{ includeSubscription?: boolean, categories?: string[] }`. `categories` is the
+persistent custom-category registry (lets a category exist / be renamed / be
+deleted independently of any expense). Written through the existing
+`PUT /api/library` read-modify-write — **no route change**. It's operator-only,
+so it is deliberately **not** added to `PUBLIC_SETTINGS_KEYS`. Category rename
+is a client-side bulk `PUT /api/expenses/:id {category}` over the affected rows.
+
+**TODO for you:** (1) regenerate Swagger/OpenAPI for the two `/api/expenses`
+changes above; (2) note `settings.expenses` in the library settings docs. No
+data migration needed — all new fields are optional/back-compatible.
+
+**Data note:** to make the subscription toggle demoable I set the freelancer
+demo tenant (`VOiiaTnDNd03MLbZaVcM`) to the **Pro** plan (£39/mo) via
+`PUT /api/subscription`. Change it back on the Subscription page if unwanted.
