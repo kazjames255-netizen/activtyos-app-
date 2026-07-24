@@ -35,11 +35,11 @@ type Range = "all" | "month" | "lastmonth" | "year";
 type Sort = "date" | "oldest" | "amount" | "amountAsc";
 type Editor = { id?: string; date: string; category: string; amount: string; source: string; notes: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
 
-// Money-in accent: a fresh green, distinct from the blue money-out world.
-const GREEN = "#0f9d58", GREEN_DK = "#0b7a43";
-const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#0f9d58] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
+// Money section house style — navy blue, matching Expenses and Invoices.
+const ACCENT = "#1d3a8f", ACCENT_DK = "#16306e";
+const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
-const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#a7e0bf]";
+const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#cdddf7]";
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
 
@@ -182,8 +182,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   return (
     <div className={embedded ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={embedded ? undefined : LIGHT_PALETTE}>
       {!embedded && (
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(15,157,88,.5)]" style={{ background: "linear-gradient(120deg,#0b7a43 0%,#22c073 60%,#ffffff 100%)" }}>
-        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#0b7a43] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log income</button>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}>
+        <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#16306e] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ Log income</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
           Income
@@ -198,7 +198,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
           {([["overview", "Overview"], ["ledger", "All income"], ["categories", "Categories"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: GREEN, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+            <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
         <button type="button" onClick={openAdd} className={btnPrimary}>＋ Log income</button>
@@ -215,7 +215,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-3.5">
           <Card className="grid gap-3 p-4 sm:grid-cols-4">
-            <div><div className="text-[20px] font-extrabold leading-none">{money(thisMonthTotal)}</div><div className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]">in this month{deltaPct !== null && <span className={`font-bold ${deltaPct >= 0 ? "text-[#0f9d58]" : "text-[#d0693b]"}`}>{deltaPct >= 0 ? "▲" : "▼"}{Math.abs(deltaPct)}%</span>}</div></div>
+            <div><div className="text-[20px] font-extrabold leading-none">{money(thisMonthTotal)}</div><div className="mt-1 flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]">in this month{deltaPct !== null && <span className={`font-bold ${deltaPct >= 0 ? "text-[#1d3a8f]" : "text-[#d0693b]"}`}>{deltaPct >= 0 ? "▲" : "▼"}{Math.abs(deltaPct)}%</span>}</div></div>
             <div><div className="text-[20px] font-extrabold leading-none">{money(lastMonthTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">last month</div></div>
             <div><div className="text-[20px] font-extrabold leading-none">{money(yearTotal)}</div><div className="mt-1 text-[11.5px] text-[var(--ink-3)]">in {thisYear}</div></div>
             <div><div className="text-[20px] font-extrabold leading-none">{biggest ? money(biggest.amount) : "—"}</div><div className="mt-1 truncate text-[11.5px] text-[var(--ink-3)]">biggest{biggest ? ` · ${biggest.category}` : ""}</div></div>
@@ -230,7 +230,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                   {monthly.map((m) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} entr${m.count === 1 ? "y" : "ies"}`}>
                       <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
-                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.key === thisMonthKey ? `linear-gradient(180deg,${GREEN},${GREEN_DK})` : "linear-gradient(180deg,#43c37f,#1ba85e)" }} />
+                      <div className="w-full max-w-[46px] rounded-t-[4px]" style={{ height: `${8 + (m.total / max) * 96}px`, background: m.key === thisMonthKey ? `linear-gradient(180deg,${ACCENT},${ACCENT_DK})` : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }} />
                       <div className="mt-1.5 text-[11px] font-bold text-[var(--ink-3)]">{m.label}</div>
                     </div>
                   ))}
@@ -249,7 +249,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                       <span className="truncate font-bold">{icon(c.category)} {c.category}</span>
                       <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / grandTotal) * 100)}%</span></span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / cats[0].total) * 100)}%`, background: `linear-gradient(90deg,#43c37f,${GREEN_DK})` }} /></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / cats[0].total) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>
                   </div>
                 ))}
               </div>
@@ -261,7 +261,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <div className="flex flex-col">
                   {sources.slice(0, 6).map((s, i) => (
                     <div key={s.source} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#e4f6ec] text-[11px] font-extrabold text-[#0b7a43]">{i + 1}</span>
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[11px] font-extrabold text-[#16306e]">{i + 1}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{s.source}</div>
                       <div className="flex-none text-right"><div className="font-extrabold tabular-nums">{money(s.total)}</div><div className="text-[10.5px] text-[var(--ink-3)]">{s.count}×</div></div>
                     </div>
@@ -274,7 +274,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           <Card className="p-4">
             <div className="mb-2.5 flex items-center justify-between">
               <div className="text-[13.5px] font-extrabold">Recent</div>
-              <button type="button" onClick={() => setTab("ledger")} className="text-[12px] font-bold text-[#0b7a43] hover:underline">View all →</button>
+              <button type="button" onClick={() => setTab("ledger")} className="text-[12px] font-bold text-[#16306e] hover:underline">View all →</button>
             </div>
             <div className="flex flex-col">
               {recent.map((x) => (
@@ -295,7 +295,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
                 <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search source or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[#a7e0bf]" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search source or note…" className="w-[210px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-3 text-[12px] text-[var(--ink)] outline-none focus:border-[#cdddf7]" />
               </div>
               <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={`${pill} rounded-full`}>
                 <option value="all">All categories</option>
@@ -309,17 +309,17 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                 {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: GREEN, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                  <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                 {([["date", "Newest"], ["oldest", "Oldest"], ["amount", "Largest"], ["amountAsc", "Smallest"]] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: GREEN, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                  <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
-              {activeFilters > 0 && <button type="button" onClick={clearFilters} className="text-[11.5px] font-bold text-[#0b7a43] hover:underline">Clear {activeFilters} filter{activeFilters === 1 ? "" : "s"} ✕</button>}
+              {activeFilters > 0 && <button type="button" onClick={clearFilters} className="text-[11.5px] font-bold text-[#16306e] hover:underline">Clear {activeFilters} filter{activeFilters === 1 ? "" : "s"} ✕</button>}
             </div>
           </Card>
 
@@ -334,12 +334,12 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <Card key={x.id} className={`flex flex-wrap items-center gap-2.5 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""}`}>
                   <span className="w-[104px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
                   <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.virtual ? <span className="flex-none rounded-md bg-[#e4f6ec] px-1.5 py-0.5 text-[10.5px] font-bold text-[#0b7a43]">📄 invoice</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#e4f6ec] px-1.5 py-0.5 text-[10.5px] font-bold text-[#0b7a43]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
+                  {x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]">📄 invoice</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#16306e]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
                   <span className="min-w-0 flex-1 truncate text-[12.5px]">{x.source || <span className="text-[var(--ink-3)]">—</span>}{x.notes ? <span className="text-[var(--ink-3)]"> · {x.notes}</span> : ""}</span>
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
                   {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">auto</span> : (
                     <>
-                      <button type="button" onClick={() => openEdit(x)} className="flex-none text-[var(--ink-3)] hover:text-[#0b7a43]" aria-label="Edit">✎</button>
+                      <button type="button" onClick={() => openEdit(x)} className="flex-none text-[var(--ink-3)] hover:text-[#16306e]" aria-label="Edit">✎</button>
                       <button type="button" onClick={() => remove(x)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                     </>
                   )}
@@ -353,10 +353,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
           {cats.map((c) => (
             <Card key={c.category} className="p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.category === INVOICE_CAT && <span className="ml-1.5 rounded-full bg-[#e4f6ec] px-1.5 py-0.5 text-[10px] font-bold text-[#0b7a43]">auto</span>}</div>
+                <div className="text-[13.5px] font-extrabold">{icon(c.category)} {c.category}{c.category === INVOICE_CAT && <span className="ml-1.5 rounded-full bg-[#eaf0fc] px-1.5 py-0.5 text-[10px] font-bold text-[#16306e]">auto</span>}</div>
                 <div className="text-[15px] font-extrabold tabular-nums">{money(c.total)}</div>
               </div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (cats[0]?.total || 1)) * 100)}%`, background: `linear-gradient(90deg,#43c37f,${GREEN_DK})` }} /></div>
+              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (cats[0]?.total || 1)) * 100)}%`, background: `linear-gradient(90deg,#4f8bf5,${ACCENT_DK})` }} /></div>
               <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
                 <span><b className="text-[var(--ink)]">{grandTotal ? Math.round((c.total / grandTotal) * 100) : 0}%</b> of income</span>
                 <span><b className="text-[var(--ink)]">{c.count}</b> entr{c.count === 1 ? "y" : "ies"}</span>
@@ -386,7 +386,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                   ) : (
                     <div className="flex gap-1">
                       <select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{catOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-                      <button type="button" onClick={() => { setNewCat(true); setEditor({ ...editor, category: "" }); }} className="flex-none whitespace-nowrap rounded-lg border border-[var(--line)] px-2 text-[12px] font-bold text-[#0b7a43]">＋ New</button>
+                      <button type="button" onClick={() => { setNewCat(true); setEditor({ ...editor, category: "" }); }} className="flex-none whitespace-nowrap rounded-lg border border-[var(--line)] px-2 text-[12px] font-bold text-[#16306e]">＋ New</button>
                     </div>
                   )}
                 </div>

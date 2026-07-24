@@ -52,7 +52,7 @@ export function MoneyInApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Money-in hero — Invoices + Income folded into one headline */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(15,157,88,.5)]" style={{ background: "linear-gradient(120deg,#0b7a43 0%,#22c073 60%,#ffffff 100%)" }}>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
           Money in
@@ -60,7 +60,7 @@ export function MoneyInApp() {
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business takes in — customer <b>invoices</b> and other <b>income</b>. Paid invoices fold into your income totals below.</p>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <Kpi big={money(inMonth)} sub="In this month" />
-          <Kpi big={money(inYear)} sub={`In in ${thisYear}`} />
+          <Kpi big={money(inYear)} sub={`In ${thisYear}`} />
           <Kpi big={money(outstanding)} sub="Awaiting payment" />
         </div>
         <div className="mt-2 text-[11px] text-white/75">This month: <b className="text-white">{money(invMonth)}</b> from invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
@@ -69,7 +69,7 @@ export function MoneyInApp() {
       {/* Sub-area tabs */}
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
         {([["invoices", "📄 Invoices"], ["income", "💰 Income"]] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: "#0f9d58", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+          <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
         ))}
       </div>
 
