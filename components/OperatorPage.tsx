@@ -62,6 +62,33 @@ export function PageHero({
   );
 }
 
+/**
+ * MASTER card — the house card style: a navy→blue gradient header band with an
+ * all-white body. `header` renders on the gradient (white text); `children` is
+ * the body. Use everywhere a card should read like the Money "at a glance" /
+ * Blocks cards.
+ */
+export function MasterCard({
+  header,
+  children,
+  className = "",
+  bodyClassName = "p-4",
+}: {
+  header: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+}) {
+  return (
+    <div className={`overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-[0_1px_3px_rgba(20,30,60,.06)] ${className}`}>
+      <div className="px-4 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
+        {header}
+      </div>
+      <div className={bodyClassName}>{children}</div>
+    </div>
+  );
+}
+
 export function OperatorPage({
   title,
   lede,

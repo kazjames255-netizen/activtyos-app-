@@ -14,10 +14,10 @@ const DENSE_VARIANTS = new Set<ButtonVariant>(["default", "primary", "danger", "
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   default:
     "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--ink-3)]",
-  primary: "border border-transparent bg-[#e22295] text-white hover:brightness-105",
+  primary: "border border-transparent bg-[#f0b100] text-[#241a00] hover:brightness-105",
   danger:
     "border border-[#f3c0bb] bg-[var(--surface)] text-[var(--red,#e21d27)] hover:bg-[var(--red-soft,#fdebec)]",
-  cta: "border border-[#e22295] bg-[var(--surface)] text-[#e22295] hover:bg-[var(--brand-soft)]",
+  cta: "border border-[#e0a500] bg-[var(--surface)] text-[#a56d00] hover:bg-[var(--brand-soft)]",
   ghost:
     "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--brand)]",
   solid: "bg-[var(--brand)] text-white border border-[var(--brand)] hover:brightness-110",
