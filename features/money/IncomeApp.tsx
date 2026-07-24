@@ -408,7 +408,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <div className="text-[13.5px] font-extrabold">Awaiting payment</div>
                 <div className="text-[12px] font-extrabold tabular-nums">{money(awaitingTotal)}{overdueCount > 0 && <span className="ml-1.5 rounded-full bg-[#fdebec] px-1.5 py-0.5 text-[10px] font-bold text-[#c02532]">{overdueCount} overdue</span>}</div>
               </div>
-              <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">Not yet received — not included in your income totals.</div>
+              <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">Customer invoices you’ve sent but not yet been paid. Excludes unpaid bookings — and isn’t counted in your income totals until paid.</div>
               {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">You’re all paid up — no invoices outstanding. 🎉</div> : (
                 <div className="flex flex-col gap-1">
                   {(showAllAwaiting ? awaiting : awaiting.slice(0, 5)).map((v) => (
