@@ -32,12 +32,22 @@ new fakes the moment they're spotted.
   charge on the provider's connected account, same rules as booking
   checkout; invoice flips to paid on confirmation).
 
+- [x] **Playwright UI e2e suite** (`npm run e2e`, July 2026) — 20 tests: auth,
+  signup, portal guard, every nav view in all 6 portals, blocks→wizard→publish,
+  browse→book→live operator row, staff invite join, operator↔parent messaging,
+  invoice drafting. Found & fixed: parents got a 403 replying to a provider
+  message unless they had a booking (`server/src/routes/messages.ts`); the API
+  allowed publishing a listing with no block bundle → dead booking widget
+  (`server/src/routes/listings.ts` publishProblems); form labels were `<div>`s
+  (no a11y association) — `FieldLabel` is now a real `<label htmlFor>`.
+
 ## Blocking for prod
 
-- [ ] **SMTP_HOST unset → all email goes to a throwaway Ethereal inbox.**
-  Every "email sent" confirmation (bookings, invoices, broadcasts, POs,
-  invites) currently delivers nothing. Configure real SMTP + SPF/DKIM.
-  (`server/src/lib/mailer.ts:34-44`)
+- [x] ~~SMTP_HOST unset → Ethereal inbox~~ — Gmail SMTP configured in
+  `server/.env` (app password); real delivery works. Remaining niceties:
+  Gmail caps ~500 sends/day and mails come "from" the Gmail address —
+  switch to a transactional provider + custom domain SPF/DKIM when volume
+  or branding demands it. (`server/src/lib/mailer.ts`)
 - [x] ~~Staff portal landing page is the legacy iframe~~ — real
   StaffDashApp now (today's sessions, open tasks, day-plan link).
 - [ ] **Firestore has no Storage bucket** — images live as Firestore docs

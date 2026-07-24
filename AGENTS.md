@@ -61,6 +61,12 @@ Non-negotiables shared by all views:
 ## Verifying your work
 
 - `npm run dev:all` (web :3000, API :4000; web may fall back to :3001).
+- `npm run e2e` — the Playwright UI suite (e2e/): auth + signup, a smoke test
+  of EVERY nav view in all six portals, the full booking journey (blocks →
+  wizard publish → parent books → live operator update), invites, messages,
+  invoices. It provisions throwaway `@activityos-test.com` accounts on the
+  live dev stack (reused across runs); `npm run e2e:cleanup` deletes them and
+  everything they own. New views/flows should get a spec here.
 - Create throwaway accounts at `/signup` (Freelancer/Company provision a
   tenant; Parent for the customer side; franchise/staff join via invite
   links from Team & invites).

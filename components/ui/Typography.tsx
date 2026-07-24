@@ -9,12 +9,16 @@ export function SectionHead({ children }: { children: ReactNode }) {
   );
 }
 
-// Label directly above a single form field.
-export function FieldLabel({ children }: { children: ReactNode }) {
+// Label directly above a single form field. Pass htmlFor (with a matching id
+// on the input) so assistive tech — and tests — can find the field by name.
+export function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (
-    <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
+    <label
+      htmlFor={htmlFor}
+      className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]"
+    >
       {children}
-    </div>
+    </label>
   );
 }
 

@@ -165,7 +165,11 @@ function publishProblems(merged: Record<string, unknown>): string[] {
   const recipe = runRecipeOf(merged);
   const runs = desiredRuns(recipe, { start: "09:00", end: "15:30" });
   if (!runs.length) problems.push("dates with at least one running day");
-  if (!((merged.passes as unknown[]) ?? []).length) problems.push("a block with passes");
+  // blockId too, not just snapshotted passes: without the bundle the customer
+  // page has no timings and the booking widget is dead ("Pick a block in
+  // Tickets & pricing…") — the wizard blocks this client-side, this is the
+  // control for API writes.
+  if (!merged.blockId || !((merged.passes as unknown[]) ?? []).length) problems.push("a block with passes");
   return problems;
 }
 

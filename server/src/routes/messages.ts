@@ -32,6 +32,14 @@ async function hasBooking(tenantId: string, email: string) {
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
   return !snap.empty;
 }
+// A parent may also write when a conversation already exists — an operator can
+// message any customer (booking or not), and a message the parent can read but
+// never answer is a dead end ("You can only message a provider you've booked
+// with" on the reply box under the provider's own message).
+async function threadExists(tenantId: string, email: string) {
+  const snap = await threadsCol.doc(threadId(tenantId, email)).get();
+  return snap.exists;
+}
 // An operator may message anyone in their own customer list, booking or not —
 // the customer list is who they've chosen to work with. Case-insensitive so a
 // mixed-case stored email still matches the lowercased recipient.
@@ -103,7 +111,10 @@ messages.post("/", async (req, res) => {
     const email = req.user?.email;
     if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
     tenantId = parsed.data.tenantId;
-    if (!(await hasBooking(tenantId, email))) { res.status(403).json({ error: "You can only message a provider you've booked with" }); return; }
+    if (!(await hasBooking(tenantId, email)) && !(await threadExists(tenantId, email))) {
+      res.status(403).json({ error: "You can only message a provider you've booked with" });
+      return;
+    }
     parentEmail = email.toLowerCase();
     parentName = req.user?.name ?? email;
     from = "parent";

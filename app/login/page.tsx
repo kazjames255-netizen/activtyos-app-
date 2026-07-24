@@ -78,14 +78,14 @@ function LoginForm() {
       <p className="mb-5 mt-1 text-[13.5px] text-[var(--ink-3)]">Welcome back. Sign in to your workspace.</p>
       <form onSubmit={submit} className="flex flex-col gap-3.5">
         <div>
-          <FieldLabel>Email</FieldLabel>
-          <Input type="email" required autoComplete="email" placeholder="you@example.com"
+          <FieldLabel htmlFor="login-email">Email</FieldLabel>
+          <Input id="login-email" type="email" required autoComplete="email" placeholder="you@example.com"
             value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" />
         </div>
         <div>
-          <FieldLabel>Password</FieldLabel>
+          <FieldLabel htmlFor="login-password">Password</FieldLabel>
           <div className="relative">
-            <Input type={showPw ? "text" : "password"} required autoComplete="current-password"
+            <Input id="login-password" type={showPw ? "text" : "password"} required autoComplete="current-password"
               value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pr-14" />
             <button type="button" onClick={() => setShowPw((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink-2)]">

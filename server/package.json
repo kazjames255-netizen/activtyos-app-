@@ -10,6 +10,7 @@
     "set-role": "tsx src/setRole.ts",
     "create-admin": "tsx src/createAdmin.ts",
     "test:isolation": "tsx src/isolationTest.mts",
+    "e2e-cleanup": "tsx src/e2eCleanup.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

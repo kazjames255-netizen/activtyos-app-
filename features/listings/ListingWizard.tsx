@@ -1563,8 +1563,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
     <div className="max-w-[720px]">
       <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — including weekends. The calendar builds itself." />
       <div className="mb-3 flex gap-3">
-        <div className="flex-1"><FieldLabel>Camp runs from</FieldLabel><Input type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
-        <div className="flex-1"><FieldLabel>Camp runs to</FieldLabel><Input type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
+        <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Camp runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
+        <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Camp runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
       </div>
       <SectionHead icon="▥">Block size</SectionHead>
       <div className="mb-3 flex flex-wrap gap-1.5">

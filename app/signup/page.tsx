@@ -200,8 +200,9 @@ function SignupForm() {
       <form onSubmit={submit} className="flex flex-col gap-3">
         {needsBusinessName && (
           <div>
-            <FieldLabel>Business name</FieldLabel>
+            <FieldLabel htmlFor="signup-business">Business name</FieldLabel>
             <Input
+              id="signup-business"
               required
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
@@ -211,8 +212,9 @@ function SignupForm() {
           </div>
         )}
         <div>
-          <FieldLabel>Your name</FieldLabel>
+          <FieldLabel htmlFor="signup-name">Your name</FieldLabel>
           <Input
+            id="signup-name"
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -221,8 +223,9 @@ function SignupForm() {
         </div>
         {!inviteToken && accountType === "parent" && (
           <div>
-            <FieldLabel>Postcode <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
+            <FieldLabel htmlFor="signup-postcode">Postcode <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
             <Input
+              id="signup-postcode"
               autoComplete="postal-code"
               value={postcode}
               onChange={(e) => setPostcode(e.target.value.toUpperCase())}
@@ -271,8 +274,9 @@ function SignupForm() {
           </div>
         )}
         <div>
-          <FieldLabel>Email</FieldLabel>
+          <FieldLabel htmlFor="signup-email">Email</FieldLabel>
           <Input
+            id="signup-email"
             type="email"
             required
             autoComplete="email"
@@ -282,8 +286,9 @@ function SignupForm() {
           />
         </div>
         <div>
-          <FieldLabel>Password</FieldLabel>
+          <FieldLabel htmlFor="signup-password">Password</FieldLabel>
           <Input
+            id="signup-password"
             type="password"
             required
             autoComplete="new-password"
