@@ -101,9 +101,9 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const { settings } = useSettings();
   // Some providers raise formal purchase orders (draft = the PO stage); many
   // just track supplier bills. Setup → Money toggles the PO stage on/off.
-  // Outgoing is supplier bills you pay (POs live on the money-in side now).
-  const visibleStatuses = useMemo(() => STATUSES.filter((s) => s !== "draft"), []);
-  const newLabel = "＋ New bill";
+  const usePO = settings.money?.usePurchaseOrders ?? false;
+  const visibleStatuses = useMemo(() => (usePO ? STATUSES : STATUSES.filter((s) => s !== "draft")), [usePO]);
+  const newLabel = usePO ? "＋ Raise a PO" : "＋ New bill";
 
   const items = useMemo(() => data?.items ?? [], [data]);
   const today = todayIso();
@@ -177,13 +177,21 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
+  const openAdd = () => setEditor({ supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: usePO ? "draft" : "sent", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
   const openEdit = (p: PO) => setEditor({ id: p.id, supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
-    const to = (p.supplierEmail || window.prompt("Email this bill to:", "") || "").trim();
+    const to = (p.supplierEmail || window.prompt("Email this purchase order to:", "") || "").trim();
     if (!to) return;
     setEmailing(true);
     try { await apiPost(`/api/purchasing/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
+  async function createInvoiceFromPO(p: PO) {
+    const customerName = (window.prompt("Create an invoice from this PO — who is it billed to?", "") || "").trim();
+    if (!customerName) return;
+    try {
+      await apiPost("/api/invoices", { customerName, date: todayIso(), status: "draft", notes: `From PO ${p.reference ?? ""}`.trim(), lineItems: p.lineItems?.length ? p.lineItems : [{ description: p.notes || "Item", qty: 1, unitPrice: p.amount }] });
+      setError(null); window.alert("Draft invoice created — switch to “Money in” to review and send it.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create invoice"); }
   }
 
   async function save() {
@@ -246,9 +254,9 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         <button type="button" onClick={openAdd} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">{newLabel}</button>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🧾</span>
-          Supplier bills
+          Purchasing &amp; invoices
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Bills you owe suppliers — from received to paid. Track what’s outstanding, what’s overdue, and keep every invoice document attached.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Purchase orders and supplier invoices — from draft to paid. Track what you owe, what’s overdue, and every invoice document in one place.</p>
         {data && (
           <div className="mt-4 flex flex-wrap gap-2.5">
             <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{money(outstanding)}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">Outstanding</div></div>
@@ -275,8 +283,8 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
       : items.length === 0 ? (
         <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
           <div className="text-[30px]">🧾</div>
-          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">No bills yet</div>
-          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">Log a supplier bill you need to pay — with line items, track it from received to paid, flag what’s overdue, and keep the invoice document attached.</p>
+          <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">{usePO ? "No POs or bills yet" : "No bills yet"}</div>
+          <p className="mx-auto mt-1 max-w-[440px] leading-[1.6]">{usePO ? "Raise a purchase order to a supplier, or log a bill you’ve received" : "Log a supplier bill you need to pay"} — with line items, track it from {usePO ? "draft PO " : ""}to paid, flag what’s overdue, and keep the invoice document attached.</p>
           <button type="button" onClick={openAdd} className={`${btnPrimary} mx-auto mt-4`}>{newLabel}</button>
         </Card>
       ) : tab === "overview" ? (
@@ -411,6 +419,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
                   <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to supplier" aria-label="Email">✉</button>
+                  <button type="button" onClick={() => createInvoiceFromPO(p)} className="flex-none text-[10.5px] font-bold text-[#1d3a8f] hover:underline" title="Create an invoice from this">→ Invoice</button>
                   <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                   <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                 </Card>
@@ -509,7 +518,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
           <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
             <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit bill" : "New supplier bill"}</div>
+              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? (usePO ? "Edit purchase order" : "Edit bill") : usePO ? "Raise a purchase order" : "New bill"}</div>
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Reference</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="PO-1234" className={fieldCls} /></label>
@@ -567,7 +576,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         </div>
       )}
 
-      {viewing && <PrintableDoc kind="bill" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind="po" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
     </div>
   );
 }

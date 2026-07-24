@@ -11,20 +11,18 @@ const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&a
 const money = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toFixed(2)}`;
 const fmtDay = (iso?: unknown) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
-export function renderMoneyDoc(kind: "po" | "invoice" | "bill", doc: Doc, billing: Billing, payUrl?: string): string {
+export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billing, payUrl?: string): string {
   const b = billing ?? {};
   const business = esc(b.businessName || "Your business");
   const addr = Array.isArray(b.addressLines) ? (b.addressLines as string[]).map(esc).join("<br>") : esc(b.address || "");
   const contact = [b.email, b.phone].filter(Boolean).map(esc).join(" · ");
   const vat = b.vatNumber ? `VAT ${esc(b.vatNumber)}` : "";
 
-  const title = kind === "po" ? "PURCHASE ORDER" : kind === "bill" ? "BILL" : "INVOICE";
-  const party = kind === "bill"
-    ? `<b>From</b><br>${esc(doc.supplier)}${doc.supplierEmail ? `<br>${esc(doc.supplierEmail)}` : ""}`
-    : kind === "po"
-      ? `<b>For</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`
-      : `<b>Bill to</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
-  const ref = doc.reference;
+  const title = kind === "po" ? "PURCHASE ORDER" : "INVOICE";
+  const party = kind === "po"
+    ? `<b>To</b><br>${esc(doc.supplier)}${doc.supplierEmail ? `<br>${esc(doc.supplierEmail)}` : ""}`
+    : `<b>Bill to</b><br>${esc(doc.customerName)}${doc.customerEmail ? `<br>${esc(doc.customerEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
+  const ref = kind === "po" ? doc.reference : doc.reference;
 
   const items: LineItem[] = Array.isArray(doc.lineItems) && doc.lineItems.length
     ? doc.lineItems

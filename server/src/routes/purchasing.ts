@@ -155,8 +155,8 @@ purchasing.post("/:id/email", async (req, res) => {
   if (!to) { res.status(400).json({ error: "No email address to send to." }); return; }
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
-  const html = renderMoneyDoc("bill", doc, billing);
-  await sendMail(to, `Bill query${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
+  const html = renderMoneyDoc("po", doc, billing);
+  await sendMail(to, `Purchase order${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
   const emailedAt = new Date().toISOString();
   await o.snap.ref.set({ emailedAt }, { merge: true });
   res.json({ ok: true, emailedAt, to });
