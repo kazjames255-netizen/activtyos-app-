@@ -75,6 +75,12 @@ const HUES = [
 const hueFor = (label: string) => HUES[[...label].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
 // Up-to-two-letter initials for a name, for tidy avatar chips.
 const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+// Refined monochrome line icons for the at-a-glance tiles (classy, not emoji).
+const statSvg = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const IcCoins = () => <svg {...statSvg}><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6" /><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" /></svg>;
+const IcTrend = () => <svg {...statSvg}><path d="M3 17l6-6 4 4 7-7" /><path d="M17 7h4v4" /></svg>;
+const IcBars = () => <svg {...statSvg}><path d="M6 20v-6M12 20V9M18 20v-9" /></svg>;
+const IcAward = () => <svg {...statSvg}><circle cx="12" cy="9" r="5" /><path d="M9 13.4 8 22l4-2.2L16 22l-1-8.6" /></svg>;
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#cdddf7]";
@@ -427,20 +433,26 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               )}
             </Card>
 
-            {/* This year at a glance — stat tiles */}
+            {/* This year at a glance — classy stat tiles */}
             <Card className="p-4">
-              <div className="mb-3 text-[13.5px] font-extrabold">{thisYear} at a glance</div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="mb-3 flex items-baseline justify-between">
+                <div className="text-[13.5px] font-extrabold">{thisYear} at a glance</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-3)]">Year to date</div>
+              </div>
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--line)]">
                 {([
-                  { ic: "💷", tint: HUES[0].soft, big: money(yearStats.collected), lab: "collected so far" },
-                  { ic: "📈", tint: HUES[1].soft, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: yearStats.best ? `best month · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : "best month" },
-                  { ic: "📊", tint: HUES[4].soft, big: money(yearStats.avg), lab: `avg / month${yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}` },
-                  { ic: "⭐", tint: HUES[3].soft, big: yearStats.largest ? money(yearStats.largest) : "—", lab: "biggest payment" },
+                  { Ic: IcCoins, big: money(yearStats.collected), lab: "Collected so far", sub: `${yearStats.activeMonths || 0} month${yearStats.activeMonths === 1 ? "" : "s"} active` },
+                  { Ic: IcTrend, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: "Best month", sub: yearStats.best ? monthLabel(yearStats.best[0]) : "—" },
+                  { Ic: IcBars, big: money(yearStats.avg), lab: "Avg / month", sub: "across active months" },
+                  { Ic: IcAward, big: yearStats.largest ? money(yearStats.largest) : "—", lab: "Biggest payment", sub: "single receipt" },
                 ]).map((t) => (
-                  <div key={t.lab} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-                    <span className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg text-[14px]" style={{ background: t.tint }}>{t.ic}</span>
-                    <div className="text-[18px] font-extrabold leading-none tabular-nums">{t.big}</div>
-                    <div className="mt-1 truncate text-[10.5px] font-medium uppercase tracking-[0.03em] text-[var(--ink-3)]">{t.lab}</div>
+                  <div key={t.lab} className="bg-[var(--surface)] p-3.5">
+                    <div className="mb-2.5 flex items-center gap-1.5 text-[var(--ink-3)]">
+                      <t.Ic />
+                      <span className="text-[9.5px] font-semibold uppercase tracking-[0.09em]">{t.lab}</span>
+                    </div>
+                    <div className="text-[21px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
+                    <div className="mt-1.5 truncate text-[10.5px] text-[var(--ink-3)]">{t.sub}</div>
                   </div>
                 ))}
               </div>
