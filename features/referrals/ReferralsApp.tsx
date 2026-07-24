@@ -82,14 +82,14 @@ export function ReferralsApp() {
             )}
           </div>
           {d && d.leaderboard.length > 0 && (
-            <div className="relative z-10 w-full max-w-[300px] self-stretch rounded-lg bg-[#16306e]/70 px-2.5 py-1.5 shadow-md backdrop-blur-sm">
-              <div className="mb-0.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/80">🏆 Top 5 referrers</div>
+            <div className="relative z-10 w-full max-w-[280px] self-start rounded-xl border border-white/70 bg-white/95 px-3 py-2 shadow-[0_8px_20px_-10px_rgba(29,58,143,.55)] backdrop-blur-sm">
+              <div className="mb-1 text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[#1d3a8f]">🏆 Top 5 referrers</div>
               <div className="flex flex-col">
                 {d.leaderboard.slice(0, 5).map((l, i) => (
-                  <div key={l.email} className="flex items-center gap-2 border-b border-white/12 py-0.5 text-[11px] last:border-b-0">
-                    <span className="flex h-4 w-4 flex-none items-center justify-center rounded-full bg-white/25 text-[9px] font-extrabold text-white">{i + 1}</span>
-                    <div className="min-w-0 flex-1 truncate font-bold text-white">{l.name || nameOf(l.email)}</div>
-                    <div className="flex-none text-right text-white/90"><b>{l.count}</b> <span className="text-[9.5px] text-white/70">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
+                  <div key={l.email} className="flex items-center gap-2 border-b border-[var(--line)] py-1 text-[11.5px] last:border-b-0">
+                    <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[9px] font-extrabold text-[#1d3a8f]">{i + 1}</span>
+                    <div className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{l.name || nameOf(l.email)}</div>
+                    <div className="flex-none text-right text-[var(--ink-2)]"><b>{l.count}</b> <span className="text-[9.5px] text-[var(--ink-3)]">{d.type === "percent" ? `code${l.count === 1 ? "" : "s"}` : `· ${money(l.reward)}`}</span></div>
                   </div>
                 ))}
               </div>

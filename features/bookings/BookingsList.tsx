@@ -23,6 +23,7 @@ import {
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { ExportWizard } from "./ExportWizard";
+import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
 
 /**
@@ -99,17 +100,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
     <div>
       {/* Header — the page title belongs to the page, not to a 264px rail. */}
       {!compact && (
-      <div className="mb-2.5 flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="m-0 font-[var(--ff-display)] text-[20px] leading-tight text-[var(--ink)]">
-            Bookings
-          </h3>
-          <div className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {bookings.length} bookings · newest first · approvals, waitlist, payments, refunds and
-            manual bookings
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PageHero
+        title="Bookings"
+        lede={`${bookings.length} bookings · newest first · approvals, waitlist, payments, refunds and manual bookings`}
+        icon="🗓️"
+        actions={<>
           <Button
             disabled={bookings.length === 0}
             title={bookings.length ? "Choose bookings, columns and a format" : "Nothing to export"}
@@ -117,11 +112,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           >
             ⬇ Export
           </Button>
-          <Button variant="primary" onClick={openCreate} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
+          <Button variant="primary" onClick={openCreate} className="!bg-white !border-white !text-[#1d3a8f]">
             ＋ Take a booking
           </Button>
-        </div>
-      </div>
+        </>}
+      />
       )}
 
       {!compact && (

@@ -78,9 +78,9 @@ export function MoneyOutApp() {
           <Kpi big={money(outYear)} sub={`Out in ${thisYear}`} />
           <Kpi big={money(outstanding)} sub="Bills outstanding" />
           {/* Cash / accrual basis — decides when a bill counts as spend */}
-          <div className="ml-auto flex items-center gap-1 rounded-2xl bg-white/15 p-1 backdrop-blur-sm">
+          <div className="ml-auto inline-flex items-center gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
             {([["cash", "Cash", "counts when paid"], ["accrual", "Accrual", "counts when billed"]] as const).map(([k, label, hint]) => (
-              <button key={k} type="button" title={hint} onClick={() => void saveSettings({ settings: { ...settings, money: { ...(settings.money ?? {}), basis: k } } })} className="rounded-xl px-3 py-1.5 text-[11.5px] font-extrabold transition-colors" style={basis === k ? { background: "#fff", color: "#1d3a8f" } : { color: "#fff" }}>{label}</button>
+              <button key={k} type="button" title={hint} onClick={() => void saveSettings({ settings: { ...settings, money: { ...(settings.money ?? {}), basis: k } } })} className="rounded-xl px-3 py-1.5 text-[11.5px] font-extrabold transition-colors" style={basis === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
             ))}
           </div>
         </div>
