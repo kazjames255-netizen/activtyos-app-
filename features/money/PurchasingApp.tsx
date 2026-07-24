@@ -576,7 +576,7 @@ export function PurchasingApp({ embedded = false }: { embedded?: boolean } = {})
         </div>
       )}
 
-      {viewing && <PrintableDoc kind="po" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind="po" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} actions={[{ key: "email", label: emailing ? "Sending…" : "✉️ Email to supplier", onClick: () => emailDoc(viewing), disabled: emailing }]} onClose={() => setViewing(null)} />}
     </div>
   );
 }

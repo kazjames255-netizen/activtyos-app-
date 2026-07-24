@@ -72,7 +72,8 @@ export function LineItemsEditor({ items, onChange }: { items: LineItem[]; onChan
 }
 
 // Full-screen document preview with Print/Save-PDF, Email and (invoices) pay-link.
-export function PrintableDoc({ kind, doc, billing, payUrl, emailing, onEmail, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; emailing?: boolean; onEmail?: () => void; onClose: () => void }) {
+export type DocAction = { key: string; label: string; onClick: () => void; disabled?: boolean };
+export function PrintableDoc({ kind, doc, billing, payUrl, actions, onClose }: { kind: "po" | "invoice"; doc: Record<string, unknown>; billing?: Billing; payUrl?: string; actions?: DocAction[]; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const html = docHtml(kind, doc, billing, payUrl);
   const print = () => {
@@ -86,10 +87,10 @@ export function PrintableDoc({ kind, doc, billing, payUrl, emailing, onEmail, on
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
       <div className="my-6 w-[min(720px,96vw)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-          <button type="button" onClick={print} className="rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110">⬇ Download / Print PDF</button>
-          {onEmail && <button type="button" onClick={onEmail} disabled={emailing} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)] disabled:opacity-50">{emailing ? "Sending…" : "✉ Email"}</button>}
+          <button type="button" onClick={print} className="rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110">⬇️ Download PDF</button>
+          {actions?.map((a) => <button key={a.key} type="button" onClick={a.onClick} disabled={a.disabled} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)] disabled:opacity-50">{a.label}</button>)}
           {payUrl && <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">{copied ? "✓ Link copied" : "🔗 Copy pay-link"}</button>}
-          <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)]">Close</button>
+          <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">✕ Close</button>
         </div>
         <div className="rounded-xl bg-white p-6 shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]" dangerouslySetInnerHTML={{ __html: html }} />
       </div>

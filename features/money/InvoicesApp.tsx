@@ -119,11 +119,18 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const openAdd = () => setEditor({ customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
   const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
-  async function emailDoc(p: Invoice) {
+  // mode "link" = email the PDF with the online pay-link; "bank" = bank details only.
+  async function emailDoc(p: Invoice, mode: "link" | "bank" = "link") {
     const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
     if (!to) return;
     setEmailing(true);
-    try { await apiPost(`/api/invoices/${encodeURIComponent(p.id)}/email`, { to }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+    try { await apiPost(`/api/invoices/${encodeURIComponent(p.id)}/email`, { to, link: mode !== "bank" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Email failed"); } finally { setEmailing(false); }
+  }
+  function whatsApp(p: Invoice) {
+    const link = payLink(p);
+    const biz = settings.billing?.businessName || "us";
+    const msg = `Hi${p.customerName ? ` ${p.customerName}` : ""}, here's your invoice${p.reference ? ` ${p.reference}` : ""} for ${money(p.amount)} from ${biz}.${link ? ` Pay here: ${link}` : ""}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
   async function save() {
@@ -134,9 +141,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     setSaving(true);
     const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
-      if (editor.id) await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body);
-      else await apiPost("/api/invoices", body);
-      setEditor(null); setError(null); refresh();
+      if (editor.id) { await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body); setEditor(null); }
+      else { const created = await apiPost<Invoice>("/api/invoices", body); setEditor(null); setViewing(created); } // straight to the draft, ready to send
+      setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); } finally { setSaving(false); }
   }
   async function setStatus(p: Invoice, status: Status) { try { await apiPut(`/api/invoices/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
@@ -359,14 +366,18 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
-                <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "Create invoice"}</button>
+                <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "View draft →"}</button>
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      {viewing && <PrintableDoc kind="invoice" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} payUrl={viewing.status !== "paid" ? payLink(viewing) : undefined} emailing={emailing} onEmail={() => emailDoc(viewing)} onClose={() => setViewing(null)} />}
+      {viewing && <PrintableDoc kind="invoice" doc={viewing as unknown as Record<string, unknown>} billing={settings.billing} payUrl={viewing.status !== "paid" ? payLink(viewing) : undefined} actions={[
+        { key: "link", label: emailing ? "Sending…" : "✉️ Email + pay-link", onClick: () => emailDoc(viewing, "link"), disabled: emailing },
+        { key: "bank", label: "🏦 Email (bank details only)", onClick: () => emailDoc(viewing, "bank"), disabled: emailing },
+        { key: "wa", label: "💬 WhatsApp", onClick: () => whatsApp(viewing) },
+      ]} onClose={() => setViewing(null)} />}
     </div>
   );
 }
