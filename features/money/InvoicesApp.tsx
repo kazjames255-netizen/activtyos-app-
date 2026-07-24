@@ -105,7 +105,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const outstanding = useMemo(() => items.filter((p) => OWED.has(p.status)).reduce((s, p) => s + p.amount, 0), [items]);
   const overdueItems = useMemo(() => items.filter(isOverdue), [items, today]);
   const overdueTotal = overdueItems.reduce((s, p) => s + p.amount, 0);
-  const collected = data?.summary.collected ?? 0;
+  // Computed locally (not from the server summary) so every KPI reacts instantly
+  // to a delete/edit/status change.
+  const collected = useMemo(() => items.filter((p) => p.status === "paid" && (p.date || "").slice(0, 4) === thisYear).reduce((s, p) => s + p.amount, 0), [items, thisYear]);
 
   const monthly = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: monthKeyOf(d), label: d.toLocaleDateString("en-GB", { month: "short" }) }; });
@@ -185,7 +187,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   }
   async function remove(p: Invoice) {
     if (!confirm(`Delete the invoice for ${p.customerName} (${money(p.amount)})?`)) return;
-    try { await del(`/api/invoices/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    setData((d) => (d ? { ...d, items: d.items.filter((i) => i.id !== p.id) } : d)); // optimistic — KPIs update at once
+    try { await del(`/api/invoices/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); refresh(); }
   }
   function exportCsv() {
     const header = ["Customer", "Email", "Booking", "Description", "Date", "Due", "Amount", "Status"];
@@ -349,6 +352,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                     </div>
                     <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#0f7a44]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
                   </div>
+                  {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#dbe7fb]" title="Copy the customer's pay-link">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
                   <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11.5px] font-bold outline-none" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUSES.map((s) => <option key={s} value={s} style={{ background: "#fff", color: "var(--ink)" }}>{STATUS_META[s].label}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
