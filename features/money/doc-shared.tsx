@@ -11,7 +11,9 @@ const fmtDay = (iso?: string) => (iso ? new Date(`${String(iso).slice(0, 10)}T00
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 export const lineTotal = (items: LineItem[]) => Math.round(items.reduce((s, li) => s + (li.qty || 0) * (li.unitPrice || 0), 0) * 100) / 100;
 
-const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]";
+// No w-full here — the row sizes each input explicitly (flex-1 / w-14 / w-24),
+// and a w-full would override those and collapse the description field.
+const fieldCls = "min-w-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]";
 
 // The document body as standalone HTML — used for the on-screen preview and the
 // print/PDF window. Mirrors the server email renderer (server/lib/moneyDoc.ts).

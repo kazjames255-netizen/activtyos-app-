@@ -365,18 +365,14 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Parent’s name" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="parent@email.com" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Invoice no.</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-5501" : "INV-1001"} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
-                <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO date" : "Invoice date"}</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Due date</span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
               </div>
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Description <span className="font-normal normal-case text-[var(--ink-3)]">(short summary, optional)</span></span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
 
-              <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
-                <label className="flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={editor.hasBooking} onChange={(e) => setEditor({ ...editor, hasBooking: e.target.checked })} /> Link this invoice to a booking</label>
-                {editor.hasBooking && <input value={editor.bookingRef} onChange={(e) => setEditor({ ...editor, bookingRef: e.target.value })} placeholder="Booking reference (e.g. APF-10312)" className={`${fieldCls} mt-2`} />}
-              </div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes <span className="font-normal normal-case text-[var(--ink-3)]">(private)</span></span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} className={fieldCls} /></label>
 
               {editor.id && editor.payToken && editor.status !== "paid" && (
