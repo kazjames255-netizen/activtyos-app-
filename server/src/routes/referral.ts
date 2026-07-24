@@ -52,6 +52,20 @@ referralsAdmin.get("/", async (req, res) => {
   // £ still owed — only computable for fixed-£ rewards (a % reward's £ isn't known until redeemed).
   const outstandingLiability = Math.round(list.filter((r) => r.rewardCode && !redeemed(r.rewardCode) && r.type !== "percent").reduce((s, r) => s + (Number(r.reward) || 0), 0) * 100) / 100;
 
+  // Last 3 months (incl. current) — friends booked + revenue per month.
+  const now = new Date();
+  const monthly = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+    return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString("en-GB", { month: "short" }), count: 0, revenue: 0 };
+  });
+  const monthIdx = new Map(monthly.map((m, i) => [m.key, i]));
+  for (const r of list) {
+    if (!r.at) continue;
+    const d = new Date(r.at);
+    const i = monthIdx.get(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    if (i != null) { monthly[i].count += 1; monthly[i].revenue += Number(r.friendSpend) || 0; }
+  }
+
   const counts = new Map<string, { count: number; reward: number }>();
   for (const r of list) {
     const cur = counts.get(r.referrerEmail) ?? { count: 0, reward: 0 };
@@ -81,6 +95,7 @@ referralsAdmin.get("/", async (req, res) => {
     rewardsRedeemed,
     outstandingCount,
     outstandingLiability,
+    monthly: monthly.map((m) => ({ label: m.label, count: m.count, revenue: Math.round(m.revenue * 100) / 100 })),
     leaderboard,
     recent,
   });

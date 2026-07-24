@@ -198,7 +198,7 @@ export function MarketingApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero */}
-      <div className="mb-4 rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg, #1d3a8f 0%, #2f6bd8 55%, #6a4fd0 100%)" }}>
+      <div className="mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
@@ -208,7 +208,7 @@ export function MarketingApp() {
             <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
           </div>
           {!open && (
-            <button type="button" onClick={openCreate} className="flex-none rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm transition-transform hover:-translate-y-px">＋ New code</button>
+            <button type="button" onClick={openCreate} className="z-10 flex-none rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New code</button>
           )}
         </div>
         {codes && codes.length > 0 && (
