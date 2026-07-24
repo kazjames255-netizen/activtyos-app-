@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; paidVia?: "link" | "manual"; paidAt?: string; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
+interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; poAttachmentUrl?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; paidVia?: "link" | "manual"; paidAt?: string; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -38,7 +38,7 @@ type Range = "all" | "today" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
 type Sort = "date" | "oldest" | "due" | "amount";
 type Cust = { id: string; name: string; email?: string; children?: { name?: string }[] };
-type Editor = { id?: string; customerName: string; customerEmail: string; customerAddress: string; reference: string; poNumber: string; accountRef: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; taxRate: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+type Editor = { id?: string; customerName: string; customerEmail: string; customerAddress: string; reference: string; poNumber: string; poAttachmentUrl: string; accountRef: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; taxRate: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
 // Next consecutive invoice number from what's already been used (editable).
 function nextInvoiceNo(items: { reference?: string }[]): string {
   let best: { prefix: string; num: number; width: number } | null = null;
@@ -83,6 +83,15 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [viewing, setViewing] = useState<Invoice | null>(null);
   const [emailing, setEmailing] = useState(false);
   const [sendFor, setSendFor] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  async function onPickPO(file: File) {
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(file); });
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
+      setEditor((ed) => (ed ? { ...ed, poAttachmentUrl: url } : ed));
+    } catch (e) { setError(e instanceof Error ? e.message : "Upload failed — a photo/image of the PO for now."); } finally { setUploading(false); }
+  }
   const { settings } = useSettings();
   const tf = settings.billing?.fields ?? {}; // which optional invoice fields to show
   // Look up an existing parent/customer on the system (by name, email or child).
@@ -157,8 +166,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await navigator.clipboard.writeText(link); setCopied(p.id); setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800); } catch { setError("Couldn’t copy — link: " + link); }
   }
 
-  const openAdd = () => setEditor({ customerName: "", customerEmail: "", customerAddress: "", reference: nextInvoiceNo(items), poNumber: "", accountRef: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], taxRate: String(settings.billing?.defaultTaxRate ?? ""), date: todayIso(), dueDate: "", status: "draft", notes: "" });
-  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", customerAddress: p.customerAddress ?? "", reference: p.reference ?? "", poNumber: p.poNumber ?? "", accountRef: p.accountRef ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], taxRate: p.taxRate != null ? String(p.taxRate) : "", date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  const openAdd = () => setEditor({ customerName: "", customerEmail: "", customerAddress: "", reference: nextInvoiceNo(items), poNumber: "", poAttachmentUrl: "", accountRef: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], taxRate: String(settings.billing?.defaultTaxRate ?? ""), date: todayIso(), dueDate: "", status: "draft", notes: "" });
+  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", customerAddress: p.customerAddress ?? "", reference: p.reference ?? "", poNumber: p.poNumber ?? "", poAttachmentUrl: p.poAttachmentUrl ?? "", accountRef: p.accountRef ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], taxRate: p.taxRate != null ? String(p.taxRate) : "", date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
   // mode "link" = email the PDF with the online pay-link; "bank" = bank details only.
   async function emailDoc(p: Invoice, mode: "link" | "bank" = "link") {
     const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
@@ -179,7 +188,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     if (!editor.customerName.trim()) { setError("Customer name is required."); return; }
     if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, customerAddress: editor.customerAddress.trim() || undefined, reference: editor.reference.trim() || undefined, poNumber: editor.poNumber.trim() || undefined, accountRef: editor.accountRef.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, taxRate: editor.taxRate.trim() ? Number(editor.taxRate) : undefined, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
+    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, customerAddress: editor.customerAddress.trim() || undefined, reference: editor.reference.trim() || undefined, poNumber: editor.poNumber.trim() || undefined, poAttachmentUrl: editor.poAttachmentUrl.trim() || undefined, accountRef: editor.accountRef.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, taxRate: editor.taxRate.trim() ? Number(editor.taxRate) : undefined, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
       if (editor.id) { await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body); setEditor(null); }
       else { const created = await apiPost<Invoice>("/api/invoices", body); setEditor(null); setViewing(created); } // straight to the draft, ready to send
@@ -472,7 +481,13 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="customer@email.com" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Invoice no. <span className="font-normal normal-case text-[var(--ink-3)]">(auto)</span></span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
-                {tf.poNumber && <label className="block"><span className={labelCls}>Customer PO no.</span><input value={editor.poNumber} onChange={(e) => setEditor({ ...editor, poNumber: e.target.value })} placeholder="4200075991" className={fieldCls} /></label>}
+                {tf.poNumber && <div className="block"><span className={labelCls}>Customer PO no. <span className="font-normal normal-case text-[var(--ink-3)]">(+ optional upload)</span></span>
+                  <div className="flex gap-1">
+                    <input value={editor.poNumber} onChange={(e) => setEditor({ ...editor, poNumber: e.target.value })} placeholder="4200075991" className={fieldCls} />
+                    <label className="flex flex-none cursor-pointer items-center rounded-lg border border-[var(--line)] px-2.5 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]" title="Upload a copy of the customer's PO">{uploading ? "…" : editor.poAttachmentUrl ? "✓ PO" : "⬆ PO"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickPO(f); e.target.value = ""; }} /></label>
+                  </div>
+                  {editor.poAttachmentUrl && <div className="mt-1 flex items-center gap-2 text-[11px]"><a href={editor.poAttachmentUrl} target="_blank" rel="noreferrer" className="font-bold text-[#1d3a8f]">View uploaded PO</a><button type="button" onClick={() => setEditor({ ...editor, poAttachmentUrl: "" })} className="font-bold text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button></div>}
+                </div>}
                 {tf.accountRef && <label className="block"><span className={labelCls}>Account ref</span><input value={editor.accountRef} onChange={(e) => setEditor({ ...editor, accountRef: e.target.value })} placeholder="LOND001" className={fieldCls} /></label>}
                 {tf.vat && <label className="block"><span className={labelCls}>VAT %</span><input type="number" min="0" step="0.5" value={editor.taxRate} onChange={(e) => setEditor({ ...editor, taxRate: e.target.value })} placeholder="20" className={fieldCls} /></label>}
                 <label className="block"><span className={labelCls}>Due date</span>
