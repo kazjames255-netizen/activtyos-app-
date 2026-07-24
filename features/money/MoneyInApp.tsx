@@ -64,9 +64,9 @@ export function MoneyInApp() {
             Money in
           </div>
           {/* In/out sub-view switch, on the hero */}
-          <div className="inline-flex flex-none gap-1 rounded-2xl bg-white/15 p-1 backdrop-blur-sm">
+          <div className="inline-flex flex-none gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
             {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#fff", color: "#1d3a8f" } : { color: "#fff" }}>{label}</button>
+              <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
             ))}
           </div>
         </div>
