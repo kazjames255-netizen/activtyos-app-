@@ -137,10 +137,10 @@ const EYFS_3TO5_QT = 13;
 // there's no second place that could contradict Setup.
 function PolicyTable({ groups }: { groups: RatioGroup[] }) {
   return (
-    <details className="mb-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-white rounded-t-xl bg-gradient-to-r from-[#16306e] to-[#3f78d8] [&::-webkit-details-marker]:hidden">
+    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
-        Your ratio policy <span className="font-normal text-white/75">— set in Setup → Age groups &amp; rooms; shown here for reference</span>
+        Your ratio policy <span className="font-normal text-[var(--ink-3)]">— set in Setup → Age groups &amp; rooms; shown here for reference</span>
       </summary>
       <div className="overflow-x-auto px-3.5 pb-3.5">
         <table className="w-full border-collapse text-[12.5px]">
@@ -196,9 +196,9 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
   };
   const edit = (m: StaffMember) => { setEditId(m.id); setName(`${m.first} ${m.last}`.trim()); setRole(m.role ?? ""); };
   return (
-    <details className="mb-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
-      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-white rounded-t-xl bg-gradient-to-r from-[#16306e] to-[#3f78d8] [&::-webkit-details-marker]:hidden">
-        🧑‍🏫 Your team <span className="font-normal text-white/75">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
+    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" open>
+      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+        🧑‍🏫 Your team <span className="font-normal text-[var(--ink-3)]">— {staff.length ? `${staff.length} to assign` : "add staff to assign them below"} · shared with your listings&rsquo; Staff step</span>
       </summary>
       <div className="px-3.5 pb-3.5">
         <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -653,9 +653,9 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
   const liveCount = new Set(dayChildren.map((c) => c.childId ?? c.ref)).size;
 
   return (
-    <details className="mb-4 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-white rounded-t-xl bg-gradient-to-r from-[#16306e] to-[#3f78d8] [&::-webkit-details-marker]:hidden">
-        🧮 Staffing ratio calculator <span className="font-normal text-white/75">— model any mix, or drop in a live day · EYFS bands + your targets</span>
+    <details className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <summary className="cursor-pointer list-none px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+        🧮 Staffing ratio calculator <span className="font-normal text-[var(--ink-3)]">— model any mix, or drop in a live day · EYFS bands + your targets</span>
       </summary>
       <div className="px-3.5 pb-3.5">
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -693,7 +693,7 @@ function RatioCalculator({ groups, dayChildren, dateText }: { groups: RatioGroup
               <span className="text-[12px] text-[var(--ink-2)]">Total children</span><span className="text-[22px] font-extrabold">{totalChildren}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-              <span className="text-[12px] text-[var(--ink-2)]">Total staff needed</span><span className="text-[22px] font-extrabold" style={{ color: "#b8860b" }}>{totalStaff}</span>
+              <span className="text-[12px] text-[var(--ink-2)]">Total staff needed</span><span className="text-[22px] font-extrabold" style={{ color: "#6a4fd0" }}>{totalStaff}</span>
             </div>
             <div className="mt-2 flex flex-col gap-1">
               {lines.map((l, i) => (
@@ -953,9 +953,9 @@ export function RatiosApp() {
       {/* Hero tiles */}
       {ready && (
         <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <HeroTile icon="children" tint="#f0b100" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
-          <HeroTile icon="staff" tint="#d99a00" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
-          <HeroTile icon="groups" tint="#b8860b" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
+          <HeroTile icon="children" tint="#2f6bd8" label={activeKey ? `Children ${to12h(activeKey.split("|")[0])}–${to12h(activeKey.split("|")[1])}` : "Children on site"} value={children.length} sub={`across ${groupCount} group${groupCount === 1 ? "" : "s"}${sendCount ? ` · ${sendCount} SEND` : ""}`} />
+          <HeroTile icon="staff" tint="#6a4fd0" label="Staff on duty" value={cover.onDuty} sub={cover.needed > 0 ? `${cover.needed} needed · ${cover.within ? "within target ✓" : `${cover.needed - cover.onDuty} short`}` : "no staff needed"} />
+          <HeroTile icon="groups" tint="#1d3a8f" label="Groups today" value={groupCount} sub={groupCount ? "every child placed by age" : "no children in range"} />
         </div>
       )}
 
