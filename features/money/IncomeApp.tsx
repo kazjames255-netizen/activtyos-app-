@@ -493,7 +493,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                 const hue = hueFor(x.category || "Other");
                 return (
                   <div key={x.id} className="group flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition-colors hover:border-[#cdddf7] hover:bg-[#fafbfe]">
-                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[15px] font-extrabold" style={{ background: hue.soft, color: hue.text }}>{(x.category || "?").charAt(0).toUpperCase()}</span>
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[15px] font-extrabold text-white" style={{ background: hue.bar, boxShadow: `0 6px 14px -6px ${hue.text}` }}>{(x.category || "?").charAt(0).toUpperCase()}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-[13px] font-extrabold">{x.source || x.category}</span>
