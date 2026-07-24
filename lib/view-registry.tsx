@@ -35,7 +35,6 @@ import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
 import { CalendarApp } from "@/features/calendar/CalendarApp";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
-import { ListingsApp } from "@/features/listings/ListingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
 import { SupportApp } from "@/features/support/SupportApp";
 import { TemplatesApp } from "@/features/templates/TemplatesApp";
@@ -71,7 +70,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dashboard: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
-    listings: ListingsApp,
+    listings: FreelancerListingsApp,
     timetable: TimetableApp,
     staff: TeamApp,
     "admin-registers": RegistersApp,
@@ -108,7 +107,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
-    listings: ListingsApp,
+    listings: FreelancerListingsApp,
     timetable: TimetableApp,
     staff: TeamApp,
     registers: RegistersApp,
