@@ -63,7 +63,7 @@ function MessageBookingModal({ booking, onClose }: { booking: Booking; onClose: 
         </div>
         {sent ? (
           <div className="px-5 py-8 text-center">
-            <div className="text-[14px] font-bold text-[#0f7a44]">✓ Message sent to {booking.booker}.</div>
+            <div className="text-[14px] font-bold text-[#1d3a8f]">✓ Message sent to {booking.booker}.</div>
             <div className="mt-3"><Button variant="primary" onClick={onClose}>Done</Button></div>
           </div>
         ) : (
@@ -696,7 +696,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 <Badge
                   tone={
                     b.recon
-                      ? { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }
+                      ? { bg: "#eaf0fc", fg: "#1d3a8f" }
                       : { bg: "#FCE9CE", fg: "#B45309" }
                   }
                 >
@@ -720,7 +720,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
                 <Badge
                   tone={
                     b.evid === "Received"
-                      ? { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" }
+                      ? { bg: "#eaf0fc", fg: "#1d3a8f" }
                       : { bg: "#FCE9CE", fg: "#B45309" }
                   }
                 >

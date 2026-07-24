@@ -5,7 +5,7 @@ import { useBookingsStore } from "./store";
 import {
   FILTER_TABS,
   attendeeCount,
-  avatarColour,
+  avatarGradient,
   bookingKids,
   matchesFilter,
   matchesSearch,
@@ -117,7 +117,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           >
             ⬇ Export
           </Button>
-          <Button variant="primary" onClick={openCreate}>
+          <Button variant="primary" onClick={openCreate} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
             ＋ Take a booking
           </Button>
         </div>
@@ -364,8 +364,8 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 {/* The child's initial, not the payer's — a photo goes here
                     once a booking carries the child's id (handoff §I). */}
                 <span
-                  className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white"
-                  style={{ background: avatarColour(lead) }}
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-white shadow-[0_5px_12px_-6px_rgba(29,58,143,.7)]"
+                  style={{ background: avatarGradient(lead) }}
                 >
                   {lead.charAt(0).toUpperCase()}
                 </span>
@@ -407,7 +407,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <button
                     onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }}
                     title="Confirm the voucher money has arrived — marks it paid and tells the family"
-                    className="flex-none whitespace-nowrap rounded-full bg-[#0f7a44] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
+                    className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
                   >
                     Mark voucher received
                   </button>

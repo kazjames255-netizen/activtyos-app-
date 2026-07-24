@@ -210,14 +210,31 @@ export function runsOn(b: Booking, iso: string): boolean {
 
 /** Palette for family initials. Deliberately not the status colours — a
  *  booking's colour must never be mistaken for its state. */
-const AVATARS = ["#2f6bd8", "#e22295", "#6a4fd0", "#0ea5e9", "#f97316", "#0f7a44", "#8b5cf6"];
+// Blue "house" family — no green/orange/pink — so avatars stay on-palette.
+const AVATARS = ["#3f78d8", "#2f3fa8", "#6a4fd0", "#1f77c9", "#8a2fb0", "#1d3a8f", "#4b6bd0"];
+const AVATAR_GRADS = [
+  "linear-gradient(135deg,#4f8bf5,#16306e)",
+  "linear-gradient(135deg,#6d84e8,#2f3fa8)",
+  "linear-gradient(135deg,#8a7bf0,#4b3bc9)",
+  "linear-gradient(135deg,#5bb3f0,#1f77c9)",
+  "linear-gradient(135deg,#c46ee0,#8a2fb0)",
+  "linear-gradient(135deg,#4f8bf5,#1d3a8f)",
+  "linear-gradient(135deg,#7f97ec,#3140a0)",
+];
+function avatarHash(name: string): number {
+  let h = 0;
+  for (const ch of name.trim().toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 100000;
+  return h;
+}
 
 /** The same family gets the same colour every time, so a list of bookings is
  *  scannable by who's in it rather than by reading every name. */
 export function avatarColour(name: string): string {
-  let h = 0;
-  for (const ch of name.trim().toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 100000;
-  return AVATARS[h % AVATARS.length];
+  return AVATARS[avatarHash(name) % AVATARS.length];
+}
+/** Gradient variant for the list rows (blue-house style). */
+export function avatarGradient(name: string): string {
+  return AVATAR_GRADS[avatarHash(name) % AVATAR_GRADS.length];
 }
 
 export function money(n: number): string {
@@ -259,17 +276,20 @@ export function matchesSearch(b: Booking, q: string): boolean {
 // Badge palette taken from the legacy theme (.b-green/.b-amber/.b-blue/.b-red/.b-grey)
 // so the React view sits consistently alongside the surrounding app.
 type BadgeTone = { bg: string; fg: string };
-const GREEN: BadgeTone = { bg: "var(--green-soft,#e7f8ee)", fg: "#0f7a44" };
+// Blue "house" palette — no green (the operator prefers the money-in blues).
+const NAVY: BadgeTone = { bg: "#eaf0fc", fg: "#1d3a8f" };   // Confirmed
+const INDIGO: BadgeTone = { bg: "#e8ecfb", fg: "#2f3fa8" }; // Paid
+const VIOLET: BadgeTone = { bg: "#f6e9fb", fg: "#8a2fb0" }; // Waitlisted
 const AMBER: BadgeTone = { bg: "#FCE9CE", fg: "#B45309" };
-const BLUE: BadgeTone = { bg: "#e8f3fc", fg: "#1d6fb8" };
+const BLUE: BadgeTone = { bg: "#e5f2fd", fg: "#1f77c9" };   // voucher / funded
 const RED: BadgeTone = { bg: "var(--red-soft,#fdebec)", fg: "#bb1620" };
 const GREY: BadgeTone = { bg: "#eef0f6", fg: "#5b6478" };
 
 export function statusTone(status: string): BadgeTone {
   const map: Record<string, BadgeTone> = {
     "Approval needed": AMBER,
-    Confirmed: GREEN,
-    Waitlisted: BLUE,
+    Confirmed: NAVY,
+    Waitlisted: VIOLET,
     Offered: AMBER,
     Cancelled: RED,
     Declined: RED,
@@ -279,7 +299,7 @@ export function statusTone(status: string): BadgeTone {
 
 export function payTone(pay: string): BadgeTone {
   const map: Record<string, BadgeTone> = {
-    Paid: GREEN,
+    Paid: INDIGO,
     Unpaid: AMBER,
     "Invoice sent": AMBER,
     // Distinct from Unpaid on purpose: nobody is being chased for this one
