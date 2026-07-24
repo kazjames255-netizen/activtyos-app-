@@ -111,7 +111,9 @@ invoices.post("/:id/email", async (req, res) => {
   if (!to) { res.status(400).json({ error: "No email address to send to — add the customer's email." }); return; }
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
-  const payUrl = doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
+  // `link:false` sends the bank-details-only version (no online pay-link).
+  const withLink = req.body?.link !== false;
+  const payUrl = withLink && doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
   const html = renderMoneyDoc("invoice", doc, billing, payUrl);
   await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
   const emailedAt = new Date().toISOString();
