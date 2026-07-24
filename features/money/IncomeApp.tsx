@@ -86,6 +86,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [newCat, setNewCat] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showAllAwaiting, setShowAllAwaiting] = useState(false);
 
   const [q, setQ] = useState("");
   const [catFilter, setCatFilter] = useState("all");
@@ -168,10 +169,10 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
   }, [bookingRows]);
 
-  // Money still owed you — unpaid invoices, overdue first.
+  // Money still owed you — unpaid invoices, largest first.
   const awaiting = useMemo(() => invoices
     .filter((v) => v.status === "sent")
-    .sort((a, b) => (a.overdue === b.overdue ? (a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1 : a.overdue ? -1 : 1)), [invoices]);
+    .sort((a, b) => b.amount - a.amount), [invoices]);
   const awaitingTotal = useMemo(() => awaiting.reduce((s, v) => s + v.amount, 0), [awaiting]);
   const overdueCount = useMemo(() => awaiting.filter((v) => v.overdue).length, [awaiting]);
 
@@ -335,7 +336,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               </div>
               {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">You’re all paid up — no invoices outstanding. 🎉</div> : (
                 <div className="flex flex-col">
-                  {awaiting.slice(0, 6).map((v) => (
+                  {(showAllAwaiting ? awaiting : awaiting.slice(0, 5)).map((v) => (
                     <div key={v.id} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                       <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[12px]" style={{ background: v.overdue ? "#fdebec" : "#eaf0fc" }}>{v.overdue ? "⚠️" : "📄"}</span>
                       <div className="min-w-0 flex-1">
@@ -345,7 +346,11 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                       <div className="flex-none font-extrabold tabular-nums">{money(v.amount)}</div>
                     </div>
                   ))}
-                  {awaiting.length > 6 && <div className="pt-2 text-center text-[11.5px] text-[var(--ink-3)]">+ {awaiting.length - 6} more — see the Invoices tab</div>}
+                  {awaiting.length > 5 && (
+                    <button type="button" onClick={() => setShowAllAwaiting((v) => !v)} className="mt-1.5 flex items-center justify-center gap-1 rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[#16306e] transition hover:bg-[var(--panel)]">
+                      {showAllAwaiting ? "Show less ▴" : `Show ${awaiting.length - 5} more ▾`}
+                    </button>
+                  )}
                 </div>
               )}
             </Card>
