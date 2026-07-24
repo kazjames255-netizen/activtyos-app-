@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Status = "draft" | "sent" | "paid" | "cancelled";
-interface Invoice { id: string; customerName: string; customerEmail?: string; bookingRef?: string; reference?: string; description?: string; amount: number; lineItems?: LineItem[]; date: string; dueDate?: string; status: Status; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
+interface Invoice { id: string; customerName: string; customerEmail?: string; customerAddress?: string; bookingRef?: string; reference?: string; poNumber?: string; accountRef?: string; description?: string; amount: number; lineItems?: LineItem[]; taxRate?: number; date: string; dueDate?: string; status: Status; paidVia?: "link" | "manual"; paidAt?: string; notes?: string; payToken?: string; emailedAt?: string; overdue?: boolean }
 interface Payload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "paid", "cancelled"];
@@ -33,17 +33,31 @@ const DUE_PRESETS = [3, 5, 7, 10];
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 type Tab = "overview" | "ledger" | "customers";
-type Range = "all" | "month" | "lastmonth" | "year";
+type Range = "all" | "today" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | Status;
-type Sort = "date" | "due" | "amount";
+type Sort = "date" | "oldest" | "due" | "amount";
 type Cust = { id: string; name: string; email?: string; children?: { name?: string }[] };
-type Editor = { id?: string; customerName: string; customerEmail: string; reference: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+type Editor = { id?: string; customerName: string; customerEmail: string; customerAddress: string; reference: string; poNumber: string; accountRef: string; hasBooking: boolean; bookingRef: string; description: string; lineItems: LineItem[]; taxRate: string; date: string; dueDate: string; status: Status; notes: string; payToken?: string };
+// Next consecutive invoice number from what's already been used (editable).
+function nextInvoiceNo(items: { reference?: string }[]): string {
+  let best: { prefix: string; num: number; width: number } | null = null;
+  for (const it of items) {
+    const m = /^(.*?)(\d+)\s*$/.exec(it.reference ?? "");
+    if (!m) continue;
+    const num = parseInt(m[2], 10);
+    if (!best || num > best.num) best = { prefix: m[1], num, width: m[2].length };
+  }
+  if (!best) return "1";
+  return best.prefix + String(best.num + 1).padStart(best.width, "0");
+}
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]";
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]";
 const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink)] outline-none";
+const iconBtn = "flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]";
+const menuItem = "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-bold text-[var(--ink)] transition-colors hover:bg-[var(--panel)]";
 
 export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [data, setData] = useState<Payload | null>(null);
@@ -61,7 +75,9 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [sort, setSort] = useState<Sort>("date");
   const [viewing, setViewing] = useState<Invoice | null>(null);
   const [emailing, setEmailing] = useState(false);
+  const [sendFor, setSendFor] = useState<string | null>(null);
   const { settings } = useSettings();
+  const tf = settings.billing?.fields ?? {}; // which optional invoice fields to show
   // Look up an existing parent/customer on the system (by name, email or child).
   const [finder, setFinder] = useState(false);
   const [custs, setCusts] = useState<Cust[] | null>(null);
@@ -109,6 +125,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (flt === "outstanding" && !OWED.has(p.status)) return false;
       if (flt === "overdue" && !isOverdue(p)) return false;
       if (STATUSES.includes(flt as Status) && p.status !== flt) return false;
+      if (range === "today" && d !== today) return false;
       if (range === "month" && d.slice(0, 7) !== thisMonthKey) return false;
       if (range === "lastmonth" && d.slice(0, 7) !== monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1))) return false;
       if (range === "year" && d.slice(0, 4) !== thisYear) return false;
@@ -117,7 +134,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (needle && !`${p.customerName} ${p.bookingRef ?? ""} ${p.description ?? ""} ${p.notes ?? ""}`.toLowerCase().includes(needle)) return false;
       return true;
     });
-    const cmp: Record<Sort, (a: Invoice, b: Invoice) => number> = { date: (a, b) => (a.date < b.date ? 1 : -1), due: (a, b) => ((a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1), amount: (a, b) => b.amount - a.amount };
+    const cmp: Record<Sort, (a: Invoice, b: Invoice) => number> = { date: (a, b) => (a.date < b.date ? 1 : -1), oldest: (a, b) => (a.date > b.date ? 1 : -1), due: (a, b) => ((a.dueDate || "9999") < (b.dueDate || "9999") ? -1 : 1), amount: (a, b) => b.amount - a.amount };
     return [...rows].sort(cmp[sort]);
   }, [items, q, flt, range, from, to, sort, thisMonthKey, thisYear, now, today]);
   const filteredTotal = filtered.reduce((s, p) => s + p.amount, 0);
@@ -130,8 +147,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     try { await navigator.clipboard.writeText(link); setCopied(p.id); setTimeout(() => setCopied((c) => (c === p.id ? null : c)), 1800); } catch { setError("Couldn’t copy — link: " + link); }
   }
 
-  const openAdd = () => setEditor({ customerName: "", customerEmail: "", reference: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], date: todayIso(), dueDate: "", status: "draft", notes: "" });
-  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", reference: p.reference ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
+  const openAdd = () => setEditor({ customerName: "", customerEmail: "", customerAddress: "", reference: nextInvoiceNo(items), poNumber: "", accountRef: "", hasBooking: false, bookingRef: "", description: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], taxRate: String(settings.billing?.defaultTaxRate ?? ""), date: todayIso(), dueDate: "", status: "draft", notes: "" });
+  const openEdit = (p: Invoice) => setEditor({ id: p.id, customerName: p.customerName, customerEmail: p.customerEmail ?? "", customerAddress: p.customerAddress ?? "", reference: p.reference ?? "", poNumber: p.poNumber ?? "", accountRef: p.accountRef ?? "", hasBooking: !!p.bookingRef, bookingRef: p.bookingRef ?? "", description: p.description ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.description ?? "", qty: 1, unitPrice: p.amount }], taxRate: p.taxRate != null ? String(p.taxRate) : "", date: p.date, dueDate: p.dueDate ?? "", status: p.status, notes: p.notes ?? "", payToken: p.payToken });
   // mode "link" = email the PDF with the online pay-link; "bank" = bank details only.
   async function emailDoc(p: Invoice, mode: "link" | "bank" = "link") {
     const to = (p.customerEmail || window.prompt("Email this invoice to:", "") || "").trim();
@@ -152,14 +169,19 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     if (!editor.customerName.trim()) { setError("Customer name is required."); return; }
     if (lineTotal(lines) <= 0) { setError("Add at least one line with an amount."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, reference: editor.reference.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
+    const body: Record<string, unknown> = { customerName: editor.customerName.trim(), customerEmail: editor.customerEmail.trim() || undefined, customerAddress: editor.customerAddress.trim() || undefined, reference: editor.reference.trim() || undefined, poNumber: editor.poNumber.trim() || undefined, accountRef: editor.accountRef.trim() || undefined, bookingRef: editor.hasBooking ? editor.bookingRef.trim() || undefined : undefined, description: editor.description.trim() || undefined, lineItems: lines, taxRate: editor.taxRate.trim() ? Number(editor.taxRate) : undefined, date: editor.date, dueDate: editor.dueDate || undefined, status: editor.status, notes: editor.notes.trim() || undefined };
     try {
       if (editor.id) { await apiPut(`/api/invoices/${encodeURIComponent(editor.id)}`, body); setEditor(null); }
       else { const created = await apiPost<Invoice>("/api/invoices", body); setEditor(null); setViewing(created); } // straight to the draft, ready to send
       setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); } finally { setSaving(false); }
   }
-  async function setStatus(p: Invoice, status: Status) { try { await apiPut(`/api/invoices/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function setStatus(p: Invoice, status: Status) {
+    // Marking paid here = manual/bank confirmation (online card payment via the
+    // pay-link would set paidVia:"link" — pending Stripe).
+    const extra = status === "paid" ? { paidVia: "manual" as const, paidAt: new Date().toISOString() } : {};
+    try { await apiPut(`/api/invoices/${encodeURIComponent(p.id)}`, { status, ...extra }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
   async function remove(p: Invoice) {
     if (!confirm(`Delete the invoice for ${p.customerName} (${money(p.amount)})?`)) return;
     try { await del(`/api/invoices/${encodeURIComponent(p.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
@@ -290,19 +312,18 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
-                <button type="button" onClick={openAdd} className={btnPrimary}>＋ New invoice</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
+                {([["all", "All time"], ["today", "Today"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
-                {([["date", "Newest"], ["due", "Due date"], ["amount", "Largest"]] as const).map(([k, label]) => (
+                {([["date", "Newest"], ["oldest", "Oldest"], ["due", "Due date"], ["amount", "Largest"]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
@@ -325,15 +346,29 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                       {p.bookingRef && <span className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">🎟 {p.bookingRef}</span>}
                       {isOverdue(p) && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-2 py-0.5 text-[10px] font-bold text-[var(--red,#e21d27)]">overdue</span>}
                     </div>
-                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{fmtDay(p.date)}{p.dueDate ? ` · due ${fmtDay(p.dueDate)}` : ""}{p.description ? ` · ${p.description}` : ""}{p.emailedAt ? <span className="ml-1 font-bold text-[#0f7a44]">· ✉ emailed {fmtDay(p.emailedAt.slice(0, 10))}</span> : ""}{p.status === "paid" ? <span className="ml-1 font-bold text-[#0f7a44]">· ✅ Paid {p.paidVia === "link" ? "via link" : "manually"}{p.paidAt ? ` ${fmtDay(p.paidAt.slice(0, 10))}` : ""}</span> : ""}</div>
                   </div>
-                  {p.payToken && p.status !== "paid" && p.status !== "cancelled" && <button type="button" onClick={() => copyLink(p)} className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">{copied === p.id ? "✓ copied" : "🔗 pay-link"}</button>}
-                  <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
-                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
-                  <button type="button" onClick={() => setViewing(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" title="View / download PDF" aria-label="View">📄</button>
-                  <button type="button" onClick={() => emailDoc(p)} disabled={emailing} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f] disabled:opacity-40" title="Email to customer" aria-label="Email">✉</button>
-                  <button type="button" onClick={() => openEdit(p)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
-                  <button type="button" onClick={() => remove(p)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
+                  <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                  <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11.5px] font-bold outline-none" style={{ background: STATUS_META[p.status].bg, color: STATUS_META[p.status].fg }}>{STATUSES.map((s) => <option key={s} value={s} style={{ background: "#fff", color: "var(--ink)" }}>{STATUS_META[s].label}</option>)}</select>
+                  <div className="flex flex-none items-center gap-1">
+                    <button type="button" onClick={() => setViewing(p)} className={iconBtn} title="View / download PDF" aria-label="View">📄</button>
+                    <div className="relative">
+                      <button type="button" onClick={() => setSendFor(sendFor === p.id ? null : p.id)} className={`${iconBtn} ${sendFor === p.id ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : ""}`} title="Send" aria-label="Send">✉️</button>
+                      {sendFor === p.id && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setSendFor(null)} />
+                          <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-[0_12px_30px_-8px_rgba(29,58,143,.35)]">
+                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "link"); }} className={menuItem}>✉️ Email + pay-link</button>
+                            <button type="button" onClick={() => { setSendFor(null); void emailDoc(p, "bank"); }} className={menuItem}>🏦 Email (bank details only)</button>
+                            <button type="button" onClick={() => { setSendFor(null); whatsApp(p); }} className={menuItem}>💬 WhatsApp</button>
+                            {p.payToken && p.status !== "paid" && <button type="button" onClick={() => { setSendFor(null); copyLink(p); }} className={menuItem}>{copied === p.id ? "✓ Copied" : "🔗 Copy pay-link"}</button>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => openEdit(p)} className={iconBtn} title="Edit" aria-label="Edit">✏️</button>
+                    <button type="button" onClick={() => remove(p)} className={`${iconBtn} hover:border-[var(--red)] hover:bg-[var(--red-soft,#fdebec)] hover:text-[var(--red)]`} title="Delete" aria-label="Delete">🗑️</button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -342,27 +377,36 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {customers.map((c) => (
-            <Card key={c.customer} className="p-3.5">
-              <div className="flex items-center justify-between"><div className="text-[13.5px] font-extrabold">{c.customer}</div><div className="text-[15px] font-extrabold tabular-nums">{money(c.total)}</div></div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (customers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
-                <span><b className="text-[var(--ink)]">{c.count}</b> invoice{c.count === 1 ? "" : "s"}</span>
-                {c.outstanding > 0 && <span><b className="text-[#a86400]">{money(c.outstanding)}</b> awaiting payment</span>}
-                <span>avg <b className="text-[var(--ink)]">{money(c.total / c.count)}</b></span>
-              </div>
-            </Card>
+            <button key={c.customer} type="button" onClick={() => { setQ(c.customer); setTab("ledger"); }} className="block w-full text-left" title="View this customer’s invoices">
+              <Card className="p-3.5 transition hover:border-[#1d3a8f]">
+                <div className="flex items-center justify-between"><div className="text-[13.5px] font-extrabold">{c.customer}</div><div className="flex items-center gap-1.5 text-[15px] font-extrabold tabular-nums">{money(c.total)}<span className="text-[12px] font-bold text-[#1d3a8f]">›</span></div></div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / (customers[0]?.total || 1)) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
+                <div className="mt-1.5 flex flex-wrap gap-x-4 text-[11.5px] text-[var(--ink-3)]">
+                  <span><b className="text-[var(--ink)]">{c.count}</b> invoice{c.count === 1 ? "" : "s"}</span>
+                  {c.outstanding > 0 && <span><b className="text-[#a86400]">{money(c.outstanding)}</b> awaiting payment</span>}
+                  <span>avg <b className="text-[var(--ink)]">{money(c.total / c.count)}</b></span>
+                </div>
+              </Card>
+            </button>
           ))}
         </div>
       )}
 
       {editor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditor(null)}>
-          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
-                <button type="button" onClick={openFinder} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:border-[var(--ink-3)]">🔎 Find a parent</button>
+          <Card className="max-h-[92vh] w-[min(600px,94vw)] overflow-hidden p-0" style={LIGHT_PALETTE}>
+            <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] overflow-y-auto">
+              <div className="relative flex flex-wrap items-center justify-between gap-2 overflow-hidden p-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 70%,#5b95e8 100%)" }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-[18px]">🧾</span>
+                  <div>
+                    <div className="text-[17px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{editor.id ? "Edit invoice" : "New invoice"}</div>
+                    <div className="mt-0.5 text-[11px] font-bold text-white/80">Total {money(lineTotal(editor.lineItems) * (1 + (Number(editor.taxRate) || 0) / 100))}</div>
+                  </div>
+                </div>
+                <button type="button" onClick={openFinder} className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] shadow-sm hover:brightness-105">🔎 Find a parent</button>
               </div>
+              <div className="p-5">
               {finder && (
                 <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
                   <input autoFocus value={cq} onChange={(e) => setCq(e.target.value)} placeholder="Search by parent name, email or child’s name…" className={fieldCls} />
@@ -381,9 +425,11 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block"><span className={labelCls}>Customer name</span><input value={editor.customerName} onChange={(e) => setEditor({ ...editor, customerName: e.target.value })} placeholder="Customer or business name" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Email</span><input type="email" value={editor.customerEmail} onChange={(e) => setEditor({ ...editor, customerEmail: e.target.value })} placeholder="customer@email.com" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Invoice no.</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Status</span><select value={editor.status} onChange={(e) => setEditor({ ...editor, status: e.target.value as Status })} className={fieldCls}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select></label>
+                <label className="block"><span className={labelCls}>Invoice no. <span className="font-normal normal-case text-[var(--ink-3)]">(auto)</span></span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder="INV-1001" className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Invoice date</span><input type="date" value={editor.date} onChange={(e) => setEditor({ ...editor, date: e.target.value })} className={fieldCls} /></label>
+                {tf.poNumber && <label className="block"><span className={labelCls}>Customer PO no.</span><input value={editor.poNumber} onChange={(e) => setEditor({ ...editor, poNumber: e.target.value })} placeholder="4200075991" className={fieldCls} /></label>}
+                {tf.accountRef && <label className="block"><span className={labelCls}>Account ref</span><input value={editor.accountRef} onChange={(e) => setEditor({ ...editor, accountRef: e.target.value })} placeholder="LOND001" className={fieldCls} /></label>}
+                {tf.vat && <label className="block"><span className={labelCls}>VAT %</span><input type="number" min="0" step="0.5" value={editor.taxRate} onChange={(e) => setEditor({ ...editor, taxRate: e.target.value })} placeholder="20" className={fieldCls} /></label>}
                 <label className="block"><span className={labelCls}>Due date</span>
                   <input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} />
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -393,6 +439,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   </div>
                 </label>
               </div>
+              <label className="mt-2.5 block"><span className={labelCls}>Bill-to address <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span><textarea value={editor.customerAddress} onChange={(e) => setEditor({ ...editor, customerAddress: e.target.value })} rows={2} placeholder="Street, town, postcode" className={`${fieldCls} w-full resize-none`} /></label>
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Description <span className="font-normal normal-case text-[var(--ink-3)]">(short summary, optional)</span></span><input value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} placeholder="e.g. Summer camp balance" className={fieldCls} /></label>
 
@@ -406,6 +453,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
                 <button type="button" onClick={save} disabled={saving} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : "Save & view →"}</button>
+              </div>
               </div>
             </div>
           </Card>

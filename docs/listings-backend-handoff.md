@@ -3455,3 +3455,22 @@ POs and invoices are now proper documents.
 `SMTP_HOST`/`MAIL_FROM` for real email in prod; `WEB_URL` env
 (`PUBLIC_WEB_URL`/`APP_URL`) so invoice pay-links use the right origin. Stripe
 pay wiring (from the earlier note) still makes the pay-link auto-mark paid.
+
+---
+
+# Invoice template fields + VAT — 24 July 2026
+
+Invoices gained professional-doc fields (from a real customer invoice sample):
+- `invoiceSchema` += `customerAddress`, `poNumber` (the customer's PO this
+  invoice is against), `accountRef`, `taxRate` (VAT %). **Stored `amount` is now
+  the grand total** (subtotal + VAT) so analytics stay correct; the doc renderer
+  shows Subtotal / VAT / Total.
+- `settings.billing` += `logoUrl`, `companyReg`, `fields` (which optional fields
+  to show: `{poNumber,accountRef,address,vat}`), `defaultTaxRate`. Logo uploaded
+  via existing `/api/uploads`. Setup → Money → "Invoice template".
+- `renderMoneyDoc`/client `docHtml` now render logo, company reg, bill-to
+  address, PO/account ref and the VAT breakdown.
+- Invoice number auto-increments client-side (next consecutive, editable);
+  Status removed from the create form (managed inline in the ledger).
+
+Swagger: add the new `/api/invoices` fields. No migration (all optional).

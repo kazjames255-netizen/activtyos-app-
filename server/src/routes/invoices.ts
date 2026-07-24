@@ -30,21 +30,30 @@ const lineItemSchema = z.object({
 const invoiceSchema = z.object({
   customerName: z.string().trim().min(1).max(160),
   customerEmail: z.string().trim().max(160).optional(),
+  customerAddress: z.string().trim().max(500).optional(),
   bookingRef: z.string().trim().max(80).optional(),
   reference: z.string().trim().max(80).optional(),
+  poNumber: z.string().trim().max(80).optional(),   // the customer's PO this invoice is against
+  accountRef: z.string().trim().max(80).optional(),
   description: z.string().trim().max(300).optional(),
   amount: z.number().nonnegative().optional(),
   lineItems: z.array(lineItemSchema).max(50).optional(),
+  taxRate: z.number().min(0).max(100).optional(),   // VAT %, applied to the subtotal
   date: z.string().max(10),
   dueDate: z.string().max(10).optional(),
   status: z.enum(STATUSES).default("draft"),
+  paidVia: z.enum(["link", "manual"]).optional(),   // how it was marked paid
+  paidAt: z.string().max(40).optional(),
   notes: z.string().trim().max(2_000).optional(),
   emailedAt: z.string().max(40).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 type LineItem = z.infer<typeof lineItemSchema>;
-const totalOf = (lineItems: LineItem[] | undefined, fallback: number | undefined) =>
+const subtotalOf = (lineItems: LineItem[] | undefined, fallback: number | undefined) =>
   lineItems && lineItems.length ? round2(lineItems.reduce((s, li) => s + li.qty * li.unitPrice, 0)) : round2(fallback ?? 0);
+// The stored amount is the grand total (subtotal + VAT), so analytics stay right.
+const grandTotal = (lineItems: LineItem[] | undefined, fallback: number | undefined, taxRate: number | undefined) =>
+  round2(subtotalOf(lineItems, fallback) * (1 + (taxRate ?? 0) / 100));
 
 function scope(req: Request, res: import("express").Response): string | null {
   const auth = req.auth!;
@@ -77,7 +86,7 @@ invoices.post("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = invoiceSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, amount: totalOf(parsed.data.lineItems, parsed.data.amount), payToken: randomUUID(), tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, amount: grandTotal(parsed.data.lineItems, parsed.data.amount, parsed.data.taxRate), payToken: randomUUID(), tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -96,7 +105,7 @@ invoices.put("/:id", async (req, res) => {
   const parsed = invoiceSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
-  const patch = { ...p, ...(p.lineItems !== undefined ? { amount: totalOf(p.lineItems, p.amount) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
+  const patch = { ...p, ...(p.lineItems !== undefined ? { amount: grandTotal(p.lineItems, p.amount, p.taxRate) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });

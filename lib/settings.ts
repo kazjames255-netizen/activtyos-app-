@@ -302,6 +302,11 @@ export interface TenantSettings {
     businessName?: string; address?: string; email?: string; phone?: string; vatNumber?: string;
     bankName?: string; accountName?: string; sortCode?: string; accountNumber?: string;
     paymentTerms?: string; footer?: string;
+    // Template extras printed on invoices/POs.
+    logoUrl?: string; companyReg?: string;
+    // Which optional per-invoice fields to offer on the form + show on the doc.
+    fields?: { poNumber?: boolean; accountRef?: boolean; address?: boolean; vat?: boolean };
+    defaultTaxRate?: number;
   };
 
   /**
