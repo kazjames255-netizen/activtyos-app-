@@ -73,6 +73,8 @@ const HUES = [
 ];
 // Stable hue per label so a category always gets the same colour.
 const hueFor = (label: string) => HUES[[...label].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
+// Up-to-two-letter initials for a name, for tidy avatar chips.
+const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
 const fieldCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#cdddf7]";
@@ -402,19 +404,22 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               </div>
               <div className="mb-2 text-[10.5px] text-[var(--ink-3)]">Not yet received — not included in your income totals.</div>
               {awaiting.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">You’re all paid up — no invoices outstanding. 🎉</div> : (
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-1">
                   {(showAllAwaiting ? awaiting : awaiting.slice(0, 5)).map((v) => (
-                    <div key={v.id} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[12px]" style={{ background: v.overdue ? "#fdebec" : "#eaf0fc" }}>{v.overdue ? "⚠️" : "📄"}</span>
+                    <div key={v.id} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-[var(--panel)]">
+                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={v.overdue ? { background: "#fdebec", color: "#c02532" } : { background: "#eaf0fc", color: "#16306e" }}>{initials(v.customerName)}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-bold">{v.customerName}</div>
-                        <div className="text-[10.5px] text-[var(--ink-3)]">{v.reference ? `${v.reference} · ` : ""}{v.dueDate ? (v.overdue ? <span className="font-bold text-[#c02532]">overdue {fmtDay(v.dueDate)}</span> : `due ${fmtDay(v.dueDate)}`) : "no due date"}</div>
+                        <div className="truncate text-[12.5px] font-bold">{v.customerName}</div>
+                        <div className="flex items-center gap-1.5 text-[10.5px] text-[var(--ink-3)]">
+                          {v.reference && <span className="truncate">{v.reference}</span>}
+                          {v.dueDate ? (v.overdue ? <span className="rounded-full bg-[#fdebec] px-1.5 py-px font-bold text-[#c02532]">overdue · {fmtDay(v.dueDate)}</span> : <span>due {fmtDay(v.dueDate)}</span>) : <span>no due date</span>}
+                        </div>
                       </div>
-                      <div className="flex-none font-extrabold tabular-nums">{money(v.amount)}</div>
+                      <div className="flex-none text-[13px] font-extrabold tabular-nums">{money(v.amount)}</div>
                     </div>
                   ))}
                   {awaiting.length > 5 && (
-                    <button type="button" onClick={() => setShowAllAwaiting((v) => !v)} className="mt-1.5 flex items-center justify-center gap-1 rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[#16306e] transition hover:bg-[var(--panel)]">
+                    <button type="button" onClick={() => setShowAllAwaiting((v) => !v)} className="mt-1 flex items-center justify-center gap-1 rounded-lg border border-[var(--line)] py-1.5 text-[11.5px] font-bold text-[#16306e] transition hover:bg-[var(--panel)]">
                       {showAllAwaiting ? "Show less ▴" : `Show ${awaiting.length - 5} more ▾`}
                     </button>
                   )}
@@ -422,14 +427,22 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
               )}
             </Card>
 
-            {/* This year at a glance */}
+            {/* This year at a glance — stat tiles */}
             <Card className="p-4">
               <div className="mb-3 text-[13.5px] font-extrabold">{thisYear} at a glance</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.collected)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">collected so far</div></div>
-                <div><div className="text-[19px] font-extrabold leading-none">{yearStats.best ? money(yearStats.best[1]) : "—"}</div><div className="mt-1 truncate text-[11px] text-[var(--ink-3)]">best month{yearStats.best ? ` · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : ""}</div></div>
-                <div><div className="text-[19px] font-extrabold leading-none">{money(yearStats.avg)}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">avg / month{yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}</div></div>
-                <div><div className="text-[19px] font-extrabold leading-none">{yearStats.largest ? money(yearStats.largest) : "—"}</div><div className="mt-1 text-[11px] text-[var(--ink-3)]">biggest payment</div></div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {([
+                  { ic: "💷", tint: HUES[0].soft, big: money(yearStats.collected), lab: "collected so far" },
+                  { ic: "📈", tint: HUES[1].soft, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: yearStats.best ? `best month · ${monthLabel(yearStats.best[0]).replace(/ \d+$/, "")}` : "best month" },
+                  { ic: "📊", tint: HUES[4].soft, big: money(yearStats.avg), lab: `avg / month${yearStats.activeMonths ? ` · ${yearStats.activeMonths} mo` : ""}` },
+                  { ic: "⭐", tint: HUES[3].soft, big: yearStats.largest ? money(yearStats.largest) : "—", lab: "biggest payment" },
+                ]).map((t) => (
+                  <div key={t.lab} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                    <span className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg text-[14px]" style={{ background: t.tint }}>{t.ic}</span>
+                    <div className="text-[18px] font-extrabold leading-none tabular-nums">{t.big}</div>
+                    <div className="mt-1 truncate text-[10.5px] font-medium uppercase tracking-[0.03em] text-[var(--ink-3)]">{t.lab}</div>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
