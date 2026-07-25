@@ -161,8 +161,8 @@ function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onO
                   <div className="truncate text-[12.5px] font-extrabold">{l.business}</div>
                   <div className="truncate text-[11px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
                   <div className="mt-1.5 flex items-center justify-between text-[10.5px]">
-                    <span className="text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]} · {l.owner}</span>
-                    <span className="font-extrabold text-[#1d3a8f]">{money(l.estMrr)}/mo</span>
+                    <span className="text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
+                    <span className="rounded-full bg-[#eaf0fc] px-1.5 py-0.5 font-bold capitalize text-[#1d3a8f]">{l.plan}</span>
                   </div>
                   {l.activities[0] && <div className="mt-1 truncate text-[10px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</div>}
                 </div>
@@ -307,8 +307,7 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
             <label className="block"><span className={lbl}>Source</span><select className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
             <label className="block"><span className={lbl}>Owner (rep)</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Priya" /></label>
             <label className="block"><span className={lbl}>Likely plan</span><select className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></label>
-            <label className="block"><span className={lbl}>Est. £/mo</span><input type="number" className={fld} value={f.estMrr} onChange={(e) => set({ estMrr: Number(e.target.value) || 0 })} /></label>
-            <label className="block sm:col-span-2"><span className={lbl}>Stage</span><select className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+            <label className="block"><span className={lbl}>Stage</span><select className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
             <label className="block sm:col-span-2"><span className={lbl}>Notes</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
           </div>
 
