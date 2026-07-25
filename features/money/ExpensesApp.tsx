@@ -502,7 +502,6 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
               </select>
               <div className="ml-auto flex items-center gap-2">
                 <button type="button" onClick={exportCsv} className={btnGhost}>⬇ Export CSV</button>
-                <button type="button" onClick={openAdd} className={btnPrimary}>＋ Log expense</button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
