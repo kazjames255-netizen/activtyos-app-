@@ -11,6 +11,12 @@ const lbl = "text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const gbp = (n: number) => `£${(Number(n) || 0).toLocaleString("en-GB")}`;
 const ICONS: Record<string, string> = { freelancer: "⭐", company: "🏛️", franchise: "🌐" };
+// Per-tier colour so each plan reads as its own thing, matching the house theme.
+const TIER_C: Record<string, { grad: string; solid: string }> = {
+  freelancer: { grad: "linear-gradient(120deg,#b45309 0%,#f0b100 100%)", solid: "#f0b100" },
+  company: { grad: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)", solid: "#1d3a8f" },
+  franchise: { grad: "linear-gradient(120deg,#5b21b6 0%,#a855f7 100%)", solid: "#7c3aed" },
+};
 
 /**
  * platform/pricing — edit the live catalogue (prices, bands, staff limits and
@@ -73,12 +79,12 @@ export function PlatformPricingApp() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {plans.map((p, i) => (
-          <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(16,24,40,.06)]">
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-              <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-                <span className="text-[17px]">{ICONS[p.id] ?? "•"}</span>{p.name || "Plan"}
+          <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_2px_10px_rgba(16,24,40,.06)]" style={{ borderColor: `${(TIER_C[p.id] ?? TIER_C.company).solid}40` }}>
+            <div className="flex items-center justify-between gap-2 px-4 py-3.5 text-white" style={{ background: (TIER_C[p.id] ?? TIER_C.company).grad }}>
+              <span className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+                <span className="text-[18px]">{ICONS[p.id] ?? "•"}</span>{p.name || "Plan"}
               </span>
-              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">{gbp(p.price)}/mo{p.bands ? "+" : ""}</span>
+              <span className="rounded-full bg-white/25 px-2.5 py-0.5 text-[11px] font-extrabold text-white">{gbp(p.price)}/mo{p.bands ? "+" : ""}</span>
             </div>
 
             <div className="flex flex-col gap-3.5 p-4">
