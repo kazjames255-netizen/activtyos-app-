@@ -14,6 +14,13 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 
+// Per-tier branding so each plan reads as its own thing (matches the pricing page).
+const TIER: Record<string, { icon: string; c: string; grad: string }> = {
+  freelancer: { icon: "⭐", c: "#e0930a", grad: "linear-gradient(120deg,#b45309 0%,#f0b100 100%)" },
+  company: { icon: "🏛️", c: "#1d3a8f", grad: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" },
+  franchise: { icon: "🌐", c: "#7c3aed", grad: "linear-gradient(120deg,#5b21b6 0%,#a855f7 100%)" },
+};
+
 interface Band { id: string; label: string; price: number; staffMax?: number | null }
 interface Plan { id: string; name: string; price: number; cadence: string; blurb: string; features: string[]; bands?: Band[]; perLocationPct?: number }
 interface Current {
@@ -98,10 +105,15 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
     const recommended = p.id === data.current.plan;
     const m = monthlyPrice(p);
     const annualTotal = m * 10;
+    const t = TIER[p.id] ?? TIER.company;
     return (
-      <div key={p.id} className={`relative flex flex-col rounded-2xl border-2 bg-[var(--surface)] p-4 ${recommended ? "border-[#1d3a8f] shadow-[0_14px_34px_-18px_rgba(29,58,143,.55)]" : "border-[var(--line)]"}`}>
-        {recommended && <div className="absolute -top-2.5 left-4 rounded-full bg-[#1d3a8f] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">{gate ? "Your plan" : "Most popular"}</div>}
-        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.name}</div>
+      <div key={p.id} className="relative flex flex-col overflow-hidden rounded-2xl border-2 bg-[var(--surface)] p-4" style={{ borderColor: recommended ? t.c : "var(--line)", boxShadow: recommended ? "0 14px 34px -18px rgba(29,58,143,.35)" : undefined }}>
+        <div className="-mx-4 -mt-4 mb-3 h-1.5" style={{ background: t.grad }} />
+        {recommended && <div className="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: t.c }}>{gate ? "Your plan" : "Popular"}</div>}
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[15px]" style={{ background: `${t.c}1f` }}>{t.icon}</span>
+          <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.name}</span>
+        </div>
         <div className="mt-1 flex items-baseline gap-1">
           <span className="text-[24px] font-extrabold">{annual ? gbp(annualTotal) : gbp(m)}</span>
           <span className="text-[12px] text-[var(--ink-3)]">{annual ? "/yr" : "/mo"}{p.bands ? " from" : ""}</span>
@@ -112,12 +124,12 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {p.bands.map((b) => {
               const on = bandFor(p) === b.id;
-              return <button key={b.id} type="button" onClick={() => setBand((s) => ({ ...s, [p.id]: b.id }))} className="rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors" style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{b.label}</button>;
+              return <button key={b.id} type="button" onClick={() => setBand((s) => ({ ...s, [p.id]: b.id }))} className="rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors" style={on ? { borderColor: t.c, background: t.c, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{b.label}</button>;
             })}
           </div>
         )}
         <ul className="mt-3 flex flex-1 flex-col gap-1.5">
-          {p.features.map((f, i) => <li key={i} className={`flex gap-1.5 text-[12px] ${f.endsWith(":") ? "font-bold text-[var(--ink-2)]" : "text-[var(--ink-2)]"}`}>{!f.endsWith(":") && <span className="text-[#1d3a8f]">✓</span>}{f}</li>)}
+          {p.features.map((f, i) => <li key={i} className={`flex gap-1.5 text-[12px] ${f.endsWith(":") ? "font-bold text-[var(--ink-2)]" : "text-[var(--ink-2)]"}`}>{!f.endsWith(":") && <span style={{ color: t.c }}>✓</span>}{f}</li>)}
         </ul>
         {opts?.cta !== false && (
           <div className="mt-3.5">
