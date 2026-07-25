@@ -57,7 +57,15 @@ export function PlatformAnalyticsApp() {
       const dt = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i + 1, 1));
       return { month: mKey(dt), mrr: Math.max(0, Math.round(lastMrr + avgDelta * (i + 1))) };
     });
-    return { mrr: slice(mrrSeries), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection, avgDelta, lastMrr };
+    // Drop leading all-zero months so sparse data starts where activity begins
+    // (keep at least the last 2 points so a chart is never a single dot).
+    const trim = <T,>(arr: T[], zero: (x: T) => boolean) => { let i = 0; while (i < arr.length - 2 && zero(arr[i])) i++; return arr.slice(i); };
+    return {
+      mrr: trim(slice(mrrSeries), (x) => x.mrr === 0),
+      signups: trim(slice(d.signupsByMonth), (x) => x.cumulative === 0),
+      gmv: trim(slice(d.gmvByMonth), (x) => x.booked === 0 && x.paid === 0),
+      projection, avgDelta, lastMrr,
+    };
   }, [d, months, mode]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
