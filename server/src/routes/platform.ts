@@ -179,10 +179,13 @@ platform.get("/analytics", async (req, res) => {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
-  const [tenantsSnap, bookingsSnap] = await Promise.all([
+  const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
     db.collection("tenants").get(),
     db.collection("bookings").get(),
+    db.collection("libraries").get(),
   ]);
+  const settingsById: Record<string, Record<string, unknown>> = {};
+  for (const ld of libsSnap.docs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
   const now = new Date();
   const DAY = 86_400_000;
   const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -199,7 +202,7 @@ platform.get("/analytics", async (req, res) => {
   const byType: Record<string, number> = {};
   const attribution: Record<string, number> = {};
   const topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[] = [];
-  const atRisk: { id: string; name: string; cancelAt: string | null; fee: number }[] = [];
+  const atRisk: { id: string; name: string; cancelAt: string | null; fee: number; contactEmail: string | null; phone: string | null }[] = [];
 
   for (const t of tenants) {
     const sub = t.subscription ?? {};
@@ -220,7 +223,13 @@ platform.get("/analytics", async (req, res) => {
     }
     if (status === "active") active++;
     if (status === "trialing") trialing++;
-    if (status === "canceling") { canceling++; atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, cancelAt: (sub.cancelAt as string) ?? null, fee: price }); }
+    if (status === "canceling") {
+      canceling++;
+      const billing = (settingsById[t.id]?.billing as Record<string, unknown> | undefined) ?? {};
+      let contactEmail: string | null = (billing.email as string) || null;
+      if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* owner gone */ } }
+      atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, cancelAt: (sub.cancelAt as string) ?? null, fee: price, contactEmail, phone: (billing.phone as string) ?? null });
+    }
     if (status === "canceled") canceled++;
     if (["active", "trialing", "canceling", "canceled"].includes(status)) started++;
   }

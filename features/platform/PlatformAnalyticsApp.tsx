@@ -15,7 +15,7 @@ interface Analytics {
   gmvByMonth: { month: string; booked: number; paid: number }[];
   projection: { month: string; mrr: number }[];
   topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[];
-  atRisk: { id: string; name: string; cancelAt: string | null; fee: number }[];
+  atRisk: { id: string; name: string; cancelAt: string | null; fee: number; contactEmail: string | null; phone: string | null }[];
 }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
@@ -23,6 +23,7 @@ const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100";
 const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString("en-GB")}`);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const tenure = (d: number) => (d >= 365 ? `${(d / 365).toFixed(1)} yrs` : d >= 30 ? `${Math.round(d / 30)} mo` : `${d} days`);
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
 const STATUS_C: Record<string, string> = { active: "#0f7a43", trialing: "#1d3a8f", canceling: "#a5670a", canceled: "#c02636", none: "#8a86a3" };
@@ -41,7 +42,19 @@ export function PlatformAnalyticsApp() {
   const view = useMemo(() => {
     if (!d) return null;
     const slice = <T,>(arr: T[]) => arr.slice(-months);
-    return { mrr: slice(d.mrrByMonth), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth) };
+    // Project the SAME number of months forward as the selected window, from the
+    // recent average monthly change.
+    const recent = d.mrrByMonth.slice(-6).map((x) => x.mrr);
+    const deltas = recent.slice(1).map((v, i) => v - recent[i]);
+    const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+    const last = d.mrrByMonth[d.mrrByMonth.length - 1];
+    const lastMrr = last?.mrr ?? d.summary.mrr;
+    const start = last ? new Date(`${last.month}-01T00:00:00Z`) : new Date();
+    const projection = Array.from({ length: months }, (_, i) => {
+      const dt = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i + 1, 1));
+      return { month: mKey(dt), mrr: Math.max(0, Math.round(lastMrr + avgDelta * (i + 1))) };
+    });
+    return { mrr: slice(d.mrrByMonth), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection };
   }, [d, months]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
@@ -75,7 +88,7 @@ export function PlatformAnalyticsApp() {
 
       {/* MRR trend + projection */}
       <Card title="Recurring revenue" right={<Legend items={[["MRR", BLUE], ["Projected", GOLD]]} />} className="mt-4">
-        <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={d.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
+        <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
       </Card>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -117,19 +130,7 @@ export function PlatformAnalyticsApp() {
             </div>
           ) : <Empty>No paying providers yet.</Empty>}
         </Card>
-        <Card title="At risk — cancelling" right={d.atRisk.length ? <span className="rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[11px] font-bold text-[#a5670a]">{money(d.atRisk.reduce((a, b) => a + b.fee, 0))}/mo at risk</span> : undefined}>
-          {d.atRisk.length ? (
-            <div className="flex flex-col divide-y divide-[var(--line)]">
-              {d.atRisk.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
-                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
-                  <span className="text-[11px] text-[var(--ink-3)]">ends {p.cancelAt ? new Date(p.cancelAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}</span>
-                  <span className="w-16 text-right font-extrabold tabular-nums text-[#a5670a]">{money(p.fee)}/mo</span>
-                </div>
-              ))}
-            </div>
-          ) : <Empty>Nobody&rsquo;s cancelling. 🎉</Empty>}
-        </Card>
+        <AtRiskCard rows={d.atRisk} />
       </div>
     </div>
   );
@@ -181,21 +182,35 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
   const projLine = projection ? `M${x(series.length - 1)},${y(series[series.length - 1]?.value ?? 0)} ` + projection.map((p, i) => `L${x(series.length + i)},${y(p.value)}`).join(" ") : "";
   const hi = hover;
 
+  const lastVal = series[series.length - 1]?.value ?? 0;
+  const projEnd = projection && projection.length ? projection[projection.length - 1] : null;
+  const s2End = series2 && series2.length ? series2[series2.length - 1] : null;
+  // A subtle value label in SVG coords — coloured text with a white halo, placed
+  // below the point when it's near the top so it never collides with the legend.
+  const valLabel = (cx: number, cy: number, text: string, fill: string, anchor: "middle" | "end") => {
+    const ly = cy < 26 ? cy + 15 : cy - 9;
+    const xc = anchor === "end" ? Math.min(cx, W - 2) : Math.max(text.length * 3.4, Math.min(W - text.length * 3.4, cx));
+    return <text x={xc} y={ly} fontSize="11" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor={anchor}>{text}</text>;
+  };
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: "visible" }}
+      <svg viewBox={`0 0 ${W} ${H + 6}`} className="w-full" style={{ overflow: "visible" }}
         onMouseLeave={() => setHover(null)}
         onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); const rel = ((e.clientX - r.left) / r.width) * W; setHover(Math.max(0, Math.min(n - 1, Math.round((rel - PAD) / ((W - 2 * PAD) / Math.max(1, n - 1)))))); }}>
         <defs>
           <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.22" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient>
         </defs>
-        {[0.25, 0.5, 0.75].map((g) => <line key={g} x1={PAD} x2={W - PAD} y1={PAD + g * (H - 2 * PAD)} y2={PAD + g * (H - 2 * PAD)} stroke="var(--line)" strokeWidth="1" />)}
+        {[1, 0.66, 0.33].map((g) => { const yy = y(max * g); return <g key={g}><line x1={PAD} x2={W - PAD} y1={yy} y2={yy} stroke="var(--line)" strokeWidth="1" /><text x={PAD} y={yy - 3} fontSize="9" fill="var(--ink-3)">{fmt(max * g)}</text></g>; })}
         <path d={areaP} fill="url(#tg)" />
         <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
         {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
         {projection && <path d={projLine} fill="none" stroke={GOLD} strokeWidth="2.5" strokeDasharray="4 4" strokeLinejoin="round" />}
-        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1]?.value ?? 0)} r="3.5" fill={color} />
         {hi != null && <line x1={x(hi)} x2={x(hi)} y1={PAD} y2={H - PAD} stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="3 3" />}
+        {/* permanent value labels */}
+        <circle cx={x(series.length - 1)} cy={y(lastVal)} r="3.5" fill={color} />
+        {valLabel(x(series.length - 1), y(lastVal), fmt(lastVal), color, projEnd ? "end" : "middle")}
+        {projEnd && <><circle cx={x(n - 1)} cy={y(projEnd.value)} r="3.5" fill={GOLD} />{valLabel(x(n - 1), y(projEnd.value), fmt(projEnd.value), "#b47e00", "end")}</>}
+        {s2End && <><circle cx={x(series2!.length - 1)} cy={y(s2End.value)} r="3.5" fill={color2} />{valLabel(x(series2!.length - 1), y(s2End.value), fmt(s2End.value), color2!, "end")}</>}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{all.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
       {hi != null && (
@@ -221,6 +236,52 @@ function SignupBars({ data }: { data: { month: string; count: number; cumulative
         {data.map((x, i) => <circle key={i} cx={PAD + i * bw + bw / 2} cy={cy(x.cumulative)} r="2.5" fill={BLUE}><title>{`${monthLabel(x.month)}: ${x.cumulative} total`}</title></circle>)}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((x, i) => <span key={i}>{monthLabel(x.month)}</span>)}</div>
+    </div>
+  );
+}
+
+// At-risk = providers who've actively cancelled and are in their notice period
+// (access until cancelAt). Listed with contact so HQ can reach out to win them
+// back. Collapsed by default — there may be lots.
+function AtRiskCard({ rows }: { rows: Analytics["atRisk"] }) {
+  const [open, setOpen] = useState(false);
+  const atRiskMrr = rows.reduce((a, b) => a + b.fee, 0);
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>At risk — cancelling</div>
+        {rows.length > 0 && <span className="rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[11px] font-bold text-[#a5670a]">{money(atRiskMrr)}/mo at risk</span>}
+      </div>
+      <p className="mb-3 text-[11.5px] leading-snug text-[var(--ink-3)]">
+        Providers who&rsquo;ve asked to cancel. They keep access until the date shown, then they&rsquo;re locked out — reach out before then to win them back.
+      </p>
+      {rows.length === 0 ? (
+        <Empty>Nobody&rsquo;s cancelling. 🎉</Empty>
+      ) : (
+        <>
+          <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)]">
+            <span>{rows.length} provider{rows.length === 1 ? "" : "s"} to contact</span>
+            <span className={`text-[13px] text-[var(--ink-3)] transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+          </button>
+          {open && (
+            <div className="mt-2 flex flex-col divide-y divide-[var(--line)] rounded-xl border border-[var(--line)]">
+              {rows.map((p) => (
+                <div key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[12.5px]">
+                  <span className="min-w-0 flex-1 truncate font-extrabold">{p.name}</span>
+                  <span className="text-[11px] text-[#a5670a]">ends {p.cancelAt ? new Date(p.cancelAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}</span>
+                  <span className="w-14 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
+                  <div className="flex w-full items-center gap-2 text-[11.5px]">
+                    {p.contactEmail
+                      ? <a href={`mailto:${p.contactEmail}?subject=${encodeURIComponent("Your ActivityOS subscription")}`} className="font-semibold text-[#1d3a8f] hover:underline">✉ {p.contactEmail}</a>
+                      : <span className="text-[var(--ink-3)]">no email</span>}
+                    {p.phone && <a href={`tel:${p.phone}`} className="font-semibold text-[#1d3a8f] hover:underline">📞 {p.phone}</a>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
