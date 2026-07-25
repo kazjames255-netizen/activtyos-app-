@@ -20,6 +20,7 @@ import { DashboardApp } from "@/features/dashboard/DashboardApp";
 import { StaffDashApp } from "@/features/dashboard/StaffDashApp";
 import { PaymentsApp as ParentPaymentsApp } from "@/features/parent/PaymentsApp";
 import { MarketingApp } from "@/features/marketing/MarketingApp";
+import { MarketingStrategiesApp } from "@/features/marketing/MarketingStrategiesApp";
 import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
@@ -127,6 +128,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     documents: DocumentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    "marketing-strategies": MarketingStrategiesApp,
     referrals: ReferralsApp,
     splitfees: SplitFeesApp,
     email: EmailApp,
@@ -180,6 +182,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    "marketing-strategies": MarketingStrategiesApp,
     referrals: ReferralsApp,
     email: EmailApp,
     account: AccountApp,
@@ -221,6 +224,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     subscription: SubscriptionApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
+    "marketing-strategies": MarketingStrategiesApp,
     referrals: ReferralsApp,
     email: EmailApp,
     account: AccountApp,

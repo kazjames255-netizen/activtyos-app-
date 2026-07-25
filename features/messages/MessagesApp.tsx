@@ -363,6 +363,11 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
               ＋ {mode === "operator" ? "Message customers" : "New message"}
             </button>
+            {mode === "operator" && (
+              <Link href={`/${portalSeg}/templates`}>
+                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">📝 Templates</button>
+              </Link>
+            )}
             {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
               <Link href={`/${portalSeg}/activityos`}>
                 <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{mode === "parent" ? "Report a problem" : "✦ Message ActivityOS"}</button>
