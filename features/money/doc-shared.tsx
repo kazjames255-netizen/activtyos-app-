@@ -29,14 +29,19 @@ export function docHtml(kind: "po" | "invoice" | "bill", doc: Record<string, unk
   const title = kind === "po" ? "PURCHASE ORDER" : kind === "bill" ? "BILL" : "INVOICE";
   const partyName = isInv ? doc.customerName : doc.supplier;
   const partyEmail = isInv ? doc.customerEmail : doc.supplierEmail;
-  const party = `<b>${isInv ? "Bill to" : kind === "bill" ? "From" : "To"}</b><br>${esc(partyName)}${doc.customerAddress ? `<br>${esc(doc.customerAddress).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
+  const partyPhone = isInv ? undefined : doc.supplierPhone;
+  const partyAddr = isInv ? doc.customerAddress : doc.supplierAddress;
+  const party = `<b>${isInv ? "Bill to" : kind === "bill" ? "From" : "To"}</b><br>${esc(partyName)}${partyAddr ? `<br>${esc(partyAddr).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${partyPhone ? `<br>${esc(partyPhone)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
   const meta = [
     doc.reference ? `${kind === "po" ? "PO" : kind === "bill" ? "Bill" : "Invoice"} No: ${esc(doc.reference)}` : "",
-    doc.date ? `Date: ${fmtDay(doc.date as string)}` : "",
-    doc.dueDate ? `Due: ${fmtDay(doc.dueDate as string)}` : "",
-    doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
+    doc.date ? `${kind === "po" ? "Order date" : "Date"}: ${fmtDay(doc.date as string)}` : "",
+    doc.dueDate ? `${kind === "po" ? "Delivery by" : "Due"}: ${fmtDay(doc.dueDate as string)}` : "",
+    kind === "invoice" && doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
     doc.accountRef ? `Account Ref: ${esc(doc.accountRef)}` : "",
   ].filter(Boolean).join("<br>");
+  // A PO tells the supplier where to send the goods — that's your own address.
+  const deliverTo = kind === "po" && (addr || business) ? `<div style="margin-top:14px;font-size:12.5px;color:#4a4763"><b>Deliver to</b><br>${business}${addr ? `<br>${addr}` : ""}</div>` : "";
+  const terms = b.paymentTerms && kind !== "bill" ? `<div style="margin-top:12px;font-size:12px;color:#6b6880"><b>${kind === "po" ? "Payment terms" : "Terms"}:</b> ${esc(b.paymentTerms)}</div>` : "";
   const items: LineItem[] = Array.isArray(doc.lineItems) && (doc.lineItems as LineItem[]).length
     ? (doc.lineItems as LineItem[])
     : [{ description: String(doc.description || doc.notes || "Amount"), qty: 1, unitPrice: Number(doc.amount) || 0 }];
@@ -54,9 +59,10 @@ export function docHtml(kind: "po" | "invoice" | "bill", doc: Record<string, unk
   return `<div style="max-width:640px;margin:0 auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#171534;font-size:14px;line-height:1.5">
     <div style="display:flex;justify-content:space-between;align-items:flex-start"><div>${logo}<div style="font-size:18px;font-weight:800">${business}</div><div style="color:#6b6880;font-size:12.5px;margin-top:2px">${addr}${addr && contact ? "<br>" : ""}${contact}${vat ? `<br>${vat}` : ""}</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:#1d3a8f;letter-spacing:.04em">${title}</div></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:18px;font-size:13px"><div style="color:#4a4763">${party}</div><div style="text-align:right;color:#4a4763">${meta}</div></div>
+    ${deliverTo}
     <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px"><thead><tr style="text-align:left;color:#8a86a3;font-size:11px;text-transform:uppercase;letter-spacing:.05em"><th style="padding:6px">Description</th><th style="padding:6px;text-align:right">Qty</th><th style="padding:6px;text-align:right">Unit</th><th style="padding:6px;text-align:right">Total</th></tr></thead><tbody>${rows}</tbody></table>
     ${totals}
-    ${bank}${doc.notes ? `<div style="margin-top:14px;color:#6b6880;font-size:12.5px">${esc(doc.notes)}</div>` : ""}${footNote ? `<div style="margin-top:18px;border-top:1px solid #eee;padding-top:10px;color:#8a86a3;font-size:11.5px">${footNote}</div>` : ""}
+    ${bank}${terms}${doc.notes ? `<div style="margin-top:14px;color:#6b6880;font-size:12.5px">${esc(doc.notes)}</div>` : ""}${footNote ? `<div style="margin-top:18px;border-top:1px solid #eee;padding-top:10px;color:#8a86a3;font-size:11.5px">${footNote}</div>` : ""}
   </div>`;
 }
 

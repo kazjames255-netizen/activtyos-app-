@@ -15,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; expenseId?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; supplierPhone?: string; supplierAddress?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; expenseId?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -105,10 +105,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const [emailing, setEmailing] = useState(false);
   const [sendFor, setSendFor] = useState<string | null>(null);
 
-  const [savedSuppliers, setSavedSuppliers] = useState<string[]>([]);
+  const [savedSuppliers, setSavedSuppliers] = useState<{ name: string; email?: string; phone?: string; address?: string }[]>([]);
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/purchasing").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<{ name: string }[]>("/api/suppliers").then((s) => setSavedSuppliers((Array.isArray(s) ? s : []).map((x) => x.name).filter(Boolean))).catch(() => {});
+    apiGet<{ name: string; email?: string; phone?: string; address?: string }[]>("/api/suppliers").then((s) => setSavedSuppliers(Array.isArray(s) ? s.filter((x) => x.name) : [])).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["purchaseOrders", "suppliers"], refresh);
@@ -220,7 +220,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { kind: editor.kind, category: editor.category || undefined, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
+    // Pull the saved supplier's contact details onto the doc so a PO carries a
+    // full "To" block (address/phone) and the emailed copy matches.
+    const sup = savedSuppliers.find((s) => s.name.trim().toLowerCase() === editor.supplier.trim().toLowerCase());
+    const body: Record<string, unknown> = { kind: editor.kind, category: editor.category || undefined, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || sup?.email || undefined, supplierPhone: sup?.phone || undefined, supplierAddress: sup?.address || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
@@ -609,7 +612,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="block sm:col-span-2"><span className={labelCls}>Supplier {savedSuppliers.length > 0 && <span className="font-normal normal-case text-[var(--ink-3)]">— pick a saved one or type</span>}</span>
                   <input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} list="poSuppliers" autoComplete="off" />
-                  <datalist id="poSuppliers">{savedSuppliers.map((n) => <option key={n} value={n} />)}</datalist>
+                  <datalist id="poSuppliers">{savedSuppliers.map((s) => <option key={s.name} value={s.name} />)}</datalist>
                 </label>
                 <label className="block sm:col-span-2"><span className={labelCls}>Category <span className="font-normal normal-case text-[var(--ink-3)]">— so it counts in your money-out picture</span></span><select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
                 <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Supplier invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : "e.g. their INV-5567"} className={fieldCls} /></label>

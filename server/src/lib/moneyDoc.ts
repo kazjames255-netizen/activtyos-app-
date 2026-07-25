@@ -24,14 +24,18 @@ export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billin
   const title = kind === "po" ? "PURCHASE ORDER" : "INVOICE";
   const partyName = kind === "po" ? doc.supplier : doc.customerName;
   const partyEmail = kind === "po" ? doc.supplierEmail : doc.customerEmail;
-  const party = `<b>${kind === "po" ? "To" : "Bill to"}</b><br>${esc(partyName)}${doc.customerAddress ? `<br>${esc(doc.customerAddress).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
+  const partyPhone = kind === "po" ? doc.supplierPhone : undefined;
+  const partyAddr = kind === "po" ? doc.supplierAddress : doc.customerAddress;
+  const party = `<b>${kind === "po" ? "To" : "Bill to"}</b><br>${esc(partyName)}${partyAddr ? `<br>${esc(partyAddr).replace(/\n/g, "<br>")}` : ""}${partyEmail ? `<br>${esc(partyEmail)}` : ""}${partyPhone ? `<br>${esc(partyPhone)}` : ""}${doc.bookingRef ? `<br>Booking ${esc(doc.bookingRef)}` : ""}`;
   const meta = [
     doc.reference ? `${kind === "po" ? "PO" : "Invoice"} No: ${esc(doc.reference)}` : "",
-    doc.date ? `Date: ${fmtDay(doc.date)}` : "",
-    doc.dueDate ? `Due: ${fmtDay(doc.dueDate)}` : "",
-    doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
+    doc.date ? `${kind === "po" ? "Order date" : "Date"}: ${fmtDay(doc.date)}` : "",
+    doc.dueDate ? `${kind === "po" ? "Delivery by" : "Due"}: ${fmtDay(doc.dueDate)}` : "",
+    kind === "invoice" && doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
     doc.accountRef ? `Account Ref: ${esc(doc.accountRef)}` : "",
   ].filter(Boolean).join("<br>");
+  const deliverTo = kind === "po" && (addr || business) ? `<div style="margin-top:14px;font-size:12.5px;color:#4a4763"><b>Deliver to</b><br>${business}${addr ? `<br>${addr}` : ""}</div>` : "";
+  const terms = b.paymentTerms ? `<div style="margin-top:12px;font-size:12px;color:#6b6880"><b>${kind === "po" ? "Payment terms" : "Terms"}:</b> ${esc(b.paymentTerms)}</div>` : "";
 
   const items: LineItem[] = Array.isArray(doc.lineItems) && doc.lineItems.length
     ? doc.lineItems
@@ -64,12 +68,14 @@ export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billin
       <div style="color:#4a4763">${party}</div>
       <div style="text-align:right;color:#4a4763">${meta}</div>
     </div>
+    ${deliverTo}
     <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px">
       <thead><tr style="text-align:left;color:#8a86a3;font-size:11px;text-transform:uppercase;letter-spacing:.05em"><th style="padding:6px">Description</th><th style="padding:6px;text-align:right">Qty</th><th style="padding:6px;text-align:right">Unit</th><th style="padding:6px;text-align:right">Total</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     ${totalsBlock}
     ${bankBlock}
+    ${terms}
     ${doc.notes ? `<div style="margin-top:14px;color:#6b6880;font-size:12.5px">${esc(doc.notes)}</div>` : ""}
     ${footNote ? `<div style="margin-top:18px;border-top:1px solid #eee;padding-top:10px;color:#8a86a3;font-size:11.5px">${footNote}</div>` : ""}
   </div>`;

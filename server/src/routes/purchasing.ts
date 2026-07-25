@@ -28,6 +28,8 @@ const poSchema = z.object({
   // Set when a PO has been turned into a (pending) expense, so it isn't added twice.
   expenseId: z.string().trim().max(60).optional(),
   supplierEmail: z.string().trim().max(160).optional(),
+  supplierPhone: z.string().trim().max(60).optional(),
+  supplierAddress: z.string().trim().max(400).optional(),
   reference: z.string().trim().max(80).optional(),
   date: z.string().max(10),
   dueDate: z.string().max(10).optional(),
