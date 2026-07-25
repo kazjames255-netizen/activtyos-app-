@@ -151,7 +151,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       })
       .catch(() => {});
     loadTemplates();
-  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode]);
   // Who's booked on the chosen listings — so the operator can review + un-tick.
   useEffect(() => {
     // Only fetches (async setState) — no synchronous setState in the effect body.
