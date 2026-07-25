@@ -23,6 +23,18 @@ const CAT_ICON: Record<string, string> = {
   Supplies: "📦", Training: "🎓", Software: "💻", Utilities: "💡", Other: "•",
 };
 const icon = (c: string) => CAT_ICON[c] ?? "•";
+// Category colours (blue family) + gradient avatars, matching the booking rows.
+const HUES = [
+  { soft: "#eaf0fc", text: "#1d3a8f", bar: "linear-gradient(135deg,#4f8bf5,#16306e)" },
+  { soft: "#ece9fd", text: "#4b3bc9", bar: "linear-gradient(135deg,#8a7bf0,#4b3bc9)" },
+  { soft: "#f6e9fb", text: "#8a2fb0", bar: "linear-gradient(135deg,#c46ee0,#8a2fb0)" },
+  { soft: "#fbeede", text: "#a9660a", bar: "linear-gradient(135deg,#f2b24a,#c67d12)" },
+  { soft: "#e5f2fd", text: "#1f77c9", bar: "linear-gradient(135deg,#5bb3f0,#1f77c9)" },
+  { soft: "#eceff4", text: "#48566e", bar: "linear-gradient(135deg,#8aa0c0,#48566e)" },
+  { soft: "#e8ecfb", text: "#2f3fa8", bar: "linear-gradient(135deg,#6d84e8,#2f3fa8)" },
+];
+const hueFor = (label: string) => HUES[[...(label || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
+const initials = (name: string) => (name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
 const REPEAT_LABEL: Record<Repeat, string> = { weekly: "week", fortnightly: "2 weeks", monthly: "month" };
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
@@ -386,16 +398,19 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
           <div className="grid gap-3.5 lg:grid-cols-2">
             <Card className="p-4">
               <div className="mb-2.5 text-[13.5px] font-extrabold">Where it goes</div>
-              <div className="flex flex-col gap-2">
-                {cats.slice(0, 8).map((c) => (
-                  <div key={c.category}>
-                    <div className="mb-0.5 flex items-baseline justify-between text-[12px]">
-                      <span className="truncate font-bold">{icon(c.category)} {c.category}</span>
-                      <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / grandTotal) * 100)}%</span></span>
+              <div className="flex flex-col gap-2.5">
+                {cats.slice(0, 8).map((c) => {
+                  const h = hueFor(c.category);
+                  return (
+                    <div key={c.category}>
+                      <div className="mb-1 flex items-baseline justify-between text-[12px]">
+                        <span className="flex min-w-0 items-center gap-1.5 font-bold"><span className="h-2 w-2 flex-none rounded-full" style={{ background: h.text }} /><span className="truncate">{c.category}</span></span>
+                        <span className="flex-none tabular-nums"><b>{money(c.total)}</b> <span className="text-[var(--ink-3)]">· {Math.round((c.total / (grandTotal || 1)) * 100)}%</span></span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / cats[0].total) * 100)}%`, background: h.bar }} /></div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.max(3, (c.total / cats[0].total) * 100)}%`, background: "linear-gradient(90deg,#3f78d8,#1d3a8f)" }} /></div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
 
@@ -420,16 +435,28 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="text-[13.5px] font-extrabold">Recent</div>
               <button type="button" onClick={() => setTab("ledger")} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">View all →</button>
             </div>
-            <div className="flex flex-col">
-              {recent.map((x) => (
-                <div key={x.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                  <span className="w-[92px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
-                  <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.virtual ? <span className="flex-none text-[11px]" title="ActivityOS subscription">🚀</span> : x.seriesId ? <span className="flex-none text-[11px]" title={`Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""}`}>🔁</span> : null}
-                  <span className="min-w-0 flex-1 truncate text-[var(--ink-3)]">{x.supplier || "—"}{x.notes ? ` · ${x.notes}` : ""}</span>
-                  <span className="flex-none font-extrabold tabular-nums">{money(x.amount)}</span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1.5">
+              {recent.map((x) => {
+                const label = x.supplier || x.category;
+                const h = hueFor(x.category || "Other");
+                const pending = statusOf(x) === "pending";
+                return (
+                  <div key={x.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition-colors hover:border-[#cdddf7] hover:bg-[#fafbfe]">
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-white shadow-[0_5px_12px_-6px_rgba(29,58,143,.7)]" style={{ background: h.bar }}>{initials(label)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-extrabold">{label}</span>
+                        <span className="flex-none rounded-md px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em]" style={{ background: hueFor(x.category).soft, color: hueFor(x.category).text }}>{x.category}</span>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{fmtDay(x.date)}{x.notes ? ` · ${x.notes}` : ""}</div>
+                    </div>
+                    {!x.virtual && (pending
+                      ? <span className="flex-none rounded-full bg-[#fbeede] px-2.5 py-1 text-[10px] font-bold text-[#a9660a]">Pending</span>
+                      : <span className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[10px] font-bold text-[#1d3a8f]">Paid</span>)}
+                    <span className="flex-none text-[15px] font-extrabold tabular-nums">{money(x.amount)}</span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
