@@ -20,7 +20,7 @@ interface Analytics {
 }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100";
+const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100", PINK = "#EE1F63";
 const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString("en-GB")}`);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
@@ -121,7 +121,7 @@ export function PlatformAnalyticsApp() {
       {/* MRR trend (2/3) + long-range projections (1/3) */}
       <div className="mt-3 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", GOLD]]} />} className="h-full">
+          <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", PINK]]} />} className="h-full">
             <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
           </Card>
         </div>
@@ -205,8 +205,8 @@ function Projections({ lastMrr, avgDelta, mode }: { lastMrr: number; avgDelta: n
   return (
     <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-1 flex items-center gap-2">
-        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Where it could go</div>
-        <span className="rounded-full bg-[#fff5db] px-2 py-0.5 text-[10px] font-bold text-[#b47e00]">Projection</span>
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🚀 Where it could go</div>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white" style={{ background: `linear-gradient(90deg,${PINK},#ff6aa0)` }}>Projection</span>
       </div>
       <p className="mb-3 text-[11px] leading-snug text-[var(--ink-3)]">If recent growth holds ({mode === "paying" ? "paying" : "incl. trials"}), projected recurring revenue:</p>
       <div className="flex flex-1 flex-col justify-between gap-3">
@@ -214,9 +214,9 @@ function Projections({ lastMrr, avgDelta, mode }: { lastMrr: number; avgDelta: n
           <div key={r.label}>
             <div className="flex items-baseline justify-between">
               <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{r.label}</span>
-              <span className="text-[16px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">/mo</span></span>
+              <span className="text-[17px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)", color: PINK }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">/mo</span></span>
             </div>
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.mrr / max) * 100}%`, background: GOLD }} /></div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.mrr / max) * 100}%`, background: `linear-gradient(90deg,${PINK},#ff8ab6)`, boxShadow: "0 1px 6px rgba(238,31,99,.35)" }} /></div>
             <div className="mt-0.5 text-right text-[10.5px] text-[var(--ink-3)]">{money(r.arr)}/yr</div>
           </div>
         ))}
@@ -272,12 +272,12 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
         {areaP2 && <path d={areaP2} fill="url(#tg2)" />}
         <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
         {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
-        {projection && <path d={projLine} fill="none" stroke={GOLD} strokeWidth="2.5" strokeDasharray="4 4" strokeLinejoin="round" />}
+        {projection && <path d={projLine} fill="none" stroke={PINK} strokeWidth="3" strokeDasharray="2 5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 2px 5px rgba(238,31,99,.35))" }} />}
         {hi != null && <line x1={x(hi)} x2={x(hi)} y1={PAD} y2={H - PAD} stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="3 3" />}
         {/* permanent value labels */}
         <circle cx={x(series.length - 1)} cy={y(lastVal)} r="3.5" fill={color} />
         {valLabel(x(series.length - 1), y(lastVal), fmt(lastVal), color, projEnd ? "end" : "middle")}
-        {projEnd && <><circle cx={x(n - 1)} cy={y(projEnd.value)} r="3.5" fill={GOLD} />{valLabel(x(n - 1), y(projEnd.value), fmt(projEnd.value), "#b47e00", "end")}</>}
+        {projEnd && <><circle cx={x(n - 1)} cy={y(projEnd.value)} r="4" fill={PINK} />{valLabel(x(n - 1), y(projEnd.value), fmt(projEnd.value), PINK, "end")}</>}
         {s2End && <><circle cx={x(series2!.length - 1)} cy={y(s2End.value)} r="3.5" fill={color2} />{valLabel(x(series2!.length - 1), y(s2End.value), fmt(s2End.value), color2!, "end")}</>}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{all.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
@@ -293,28 +293,36 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
 function SignupBars({ data }: { data: { month: string; count: number; cumulative: number }[] }) {
   const maxC = Math.max(1, ...data.map((x) => x.count));
   const maxCum = Math.max(1, ...data.map((x) => x.cumulative));
-  const W = 640, H = 170, TOP = 20, BOT = 12; // headroom for labels
+  const W = 640, H = 170, TOP = 24, BOT = 14;
   const plot = H - TOP - BOT;
   const bw = (W - 16) / data.length;
-  const bx = (i: number) => 8 + i * bw;
+  const barW = Math.min(bw * 0.6, 46); // cap so 1–2 months don't become giant slabs
   const by = (v: number) => H - BOT - (v / maxC) * plot;
   const cy = (v: number) => H - BOT - (v / maxCum) * plot;
-  const cx = (i: number) => bx(i) + bw / 2;
+  const cx = (i: number) => 8 + i * bw + bw / 2;
   const total = data[data.length - 1]?.cumulative ?? 0;
   const cumPath = data.map((x, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(x.cumulative)}`).join(" ");
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: "visible" }}>
-        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity="0.14" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient></defs>
+        <defs>
+          <linearGradient id="sgbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5aa0f0" /><stop offset="1" stopColor={LIGHTB} /></linearGradient>
+          <linearGradient id="sgarea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity="0.12" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient>
+        </defs>
         {[0.5, 1].map((g) => { const yy = by(maxC * g); return <line key={g} x1={8} x2={W - 8} y1={yy} y2={yy} stroke="var(--line)" strokeWidth="1" />; })}
-        {/* monthly join bars */}
+        {/* monthly join bars — width-capped, count inside when tall enough */}
         {data.map((x, i) => {
-          const h = (x.count / maxC) * plot;
-          if (x.count === 0) return <rect key={i} x={bx(i) + bw * 0.28} y={H - BOT - 2} width={bw * 0.44} height={2} rx={1} fill="var(--line)" />;
-          return <g key={i}><rect x={bx(i) + bw * 0.22} y={H - BOT - h} width={bw * 0.56} height={h} rx={4} fill={LIGHTB}><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect><text x={cx(i)} y={H - BOT - h - 4} fontSize="10" fontWeight="800" fill={LIGHTB} textAnchor="middle">{x.count}</text></g>;
+          if (x.count === 0) return <rect key={i} x={cx(i) - 10} y={H - BOT - 3} width={20} height={3} rx={1.5} fill="var(--line)" />;
+          const h = (x.count / maxC) * plot; const top = H - BOT - h;
+          return <g key={i}>
+            <rect x={cx(i) - barW / 2} y={top} width={barW} height={h} rx={6} fill="url(#sgbar)"><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect>
+            {h > 22
+              ? <text x={cx(i)} y={top + 15} fontSize="11" fontWeight="800" fill="#fff" textAnchor="middle">{x.count}</text>
+              : <text x={cx(i)} y={top - 5} fontSize="10" fontWeight="800" fill={LIGHTB} textAnchor="middle">{x.count}</text>}
+          </g>;
         })}
-        {/* cumulative total area + line */}
-        <path d={`${cumPath} L${cx(data.length - 1)},${H - BOT} L${cx(0)},${H - BOT} Z`} fill="url(#sg)" />
+        {/* cumulative total line */}
+        <path d={`${cumPath} L${cx(data.length - 1)},${H - BOT} L${cx(0)},${H - BOT} Z`} fill="url(#sgarea)" />
         <path d={cumPath} fill="none" stroke={BLUE} strokeWidth="2.5" strokeLinejoin="round" />
         <circle cx={cx(data.length - 1)} cy={cy(total)} r="3.5" fill={BLUE} />
         <text x={Math.min(W - 2, cx(data.length - 1))} y={cy(total) - 9} fontSize="11" fontWeight="800" fill={BLUE} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="end">{total} total</text>
