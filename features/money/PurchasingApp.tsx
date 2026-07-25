@@ -105,11 +105,13 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const [emailing, setEmailing] = useState(false);
   const [sendFor, setSendFor] = useState<string | null>(null);
 
+  const [savedSuppliers, setSavedSuppliers] = useState<string[]>([]);
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/purchasing").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<{ name: string }[]>("/api/suppliers").then((s) => setSavedSuppliers((Array.isArray(s) ? s : []).map((x) => x.name).filter(Boolean))).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  useRealtime(["purchaseOrders"], refresh);
+  useRealtime(["purchaseOrders", "suppliers"], refresh);
 
   const { settings } = useSettings();
   // Some providers raise formal purchase orders (draft = the PO stage); many
@@ -589,7 +591,10 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
               </div>
               <div className="p-5">
               <div className="grid gap-2.5 sm:grid-cols-2">
-                <label className="block sm:col-span-2"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} /></label>
+                <label className="block sm:col-span-2"><span className={labelCls}>Supplier {savedSuppliers.length > 0 && <span className="font-normal normal-case text-[var(--ink-3)]">— pick a saved one or type</span>}</span>
+                  <input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you’re paying" className={fieldCls} list="poSuppliers" autoComplete="off" />
+                  <datalist id="poSuppliers">{savedSuppliers.map((n) => <option key={n} value={n} />)}</datalist>
+                </label>
                 <label className="block sm:col-span-2"><span className={labelCls}>Category <span className="font-normal normal-case text-[var(--ink-3)]">— so it counts in your money-out picture</span></span><select value={editor.category} onChange={(e) => setEditor({ ...editor, category: e.target.value })} className={fieldCls}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
                 <label className="block"><span className={labelCls}>{editor.kind === "po" ? "PO number" : "Supplier invoice no."}</span><input value={editor.reference} onChange={(e) => setEditor({ ...editor, reference: e.target.value })} placeholder={editor.kind === "po" ? "PO-1234" : "e.g. their INV-5567"} className={fieldCls} /></label>
                 <label className="block"><span className={labelCls}>Supplier email</span><input type="email" value={editor.supplierEmail} onChange={(e) => setEditor({ ...editor, supplierEmail: e.target.value })} placeholder="supplier@email.com" className={fieldCls} /></label>
