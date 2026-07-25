@@ -16,7 +16,7 @@ interface Analytics {
   gmvByMonth: { month: string; booked: number; paid: number }[];
   projection: { month: string; mrr: number }[];
   topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[];
-  atRisk: { id: string; name: string; cancelAt: string | null; fee: number; contactEmail: string | null; phone: string | null }[];
+  atRisk: { id: string; name: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string }[];
 }
 
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
@@ -332,44 +332,67 @@ function SignupBars({ data }: { data: { month: string; count: number; cumulative
   );
 }
 
-// At-risk = providers who've actively cancelled and are in their notice period
-// (access until cancelAt). Listed with contact so HQ can reach out to win them
-// back. Collapsed by default — there may be lots.
+// Reason key for the churn-risk model.
+const RISK: Record<string, { label: string; color: string; hint: string }> = {
+  payment_failed: { label: "Payment failed", color: "#c02636", hint: "card declined — will lapse" },
+  cancelling: { label: "Cancelling", color: "#e8590c", hint: "asked to cancel" },
+  trial_ending: { label: "Trial ending", color: "#a5670a", hint: "≤3 days left, no plan yet" },
+  never_launched: { label: "Never launched", color: "#6b6880", hint: "no bookings taken yet" },
+  quiet: { label: "Gone quiet", color: "#b47e00", hint: "no bookings in 45+ days" },
+};
+
+// At-risk = a churn-risk model over booking activity + subscription state.
+// Each provider is flagged with WHY, ranked most urgent first, with contact so
+// HQ can reach out. Collapsed by default — there may be lots.
 function AtRiskCard({ rows }: { rows: Analytics["atRisk"] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const atRiskMrr = rows.reduce((a, b) => a + b.fee, 0);
+  const present = [...new Set(rows.map((r) => r.reason))];
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>At risk — cancelling</div>
-        {rows.length > 0 && <span className="rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[11px] font-bold text-[#a5670a]">{money(atRiskMrr)}/mo at risk</span>}
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>At risk — who to save</div>
+        {rows.length > 0 && <span className="rounded-full bg-[#fdebec] px-2.5 py-0.5 text-[11px] font-bold text-[#c02636]">{money(atRiskMrr)}/mo at risk</span>}
       </div>
-      <p className="mb-3 text-[11.5px] leading-snug text-[var(--ink-3)]">
-        Providers who&rsquo;ve asked to cancel. They keep access until the date shown, then they&rsquo;re locked out — reach out before then to win them back.
+      <p className="mb-2 text-[11.5px] leading-snug text-[var(--ink-3)]">
+        Providers worth a call — flagged from their <b>booking activity</b> and <b>subscription state</b>, ranked most urgent first. Reach out before you lose them.
       </p>
+
+      {/* Key */}
+      <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-[var(--panel)] px-3 py-2 text-[10.5px]">
+        {Object.entries(RISK).map(([k, r]) => (
+          <span key={k} className="flex items-center gap-1.5" title={r.hint}>
+            <span className="h-2 w-2 rounded-full" style={{ background: r.color }} />
+            <span className="font-bold text-[var(--ink-2)]">{r.label}</span>
+            <span className="text-[var(--ink-3)]">— {r.hint}</span>
+          </span>
+        ))}
+      </div>
+
       {rows.length === 0 ? (
-        <Empty>Nobody&rsquo;s cancelling. 🎉</Empty>
+        <Empty>Nobody at risk right now. 🎉</Empty>
       ) : (
         <>
           <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-2.5 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)]">
-            <span>{rows.length} provider{rows.length === 1 ? "" : "s"} to contact</span>
+            <span>{rows.length} provider{rows.length === 1 ? "" : "s"} to contact · {present.map((k) => RISK[k]?.label).filter(Boolean).join(", ")}</span>
             <span className={`text-[13px] text-[var(--ink-3)] transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
           </button>
           {open && (
             <div className="mt-2 flex flex-col divide-y divide-[var(--line)] rounded-xl border border-[var(--line)]">
-              {rows.map((p) => (
-                <div key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[12.5px]">
-                  <span className="min-w-0 flex-1 truncate font-extrabold">{p.name}</span>
-                  <span className="text-[11px] text-[#a5670a]">ends {p.cancelAt ? new Date(p.cancelAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}</span>
-                  <span className="w-14 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
-                  <div className="flex w-full items-center gap-2 text-[11.5px]">
-                    {p.contactEmail
-                      ? <a href={`mailto:${p.contactEmail}?subject=${encodeURIComponent("Your ActivityOS subscription")}`} className="font-semibold text-[#1d3a8f] hover:underline">✉ {p.contactEmail}</a>
-                      : <span className="text-[var(--ink-3)]">no email</span>}
+              {rows.map((p) => { const r = RISK[p.reason] ?? { label: p.reason, color: "#6b6880", hint: "" }; return (
+                <div key={p.id} className="px-3 py-2.5 text-[12.5px]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 flex-1 truncate font-extrabold">{p.name}</span>
+                    <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold text-white" style={{ background: r.color }}>{r.label}</span>
+                    {p.fee > 0 && <span className="w-14 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>}
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+                    <span className="text-[var(--ink-3)]" style={{ color: r.color }}>{p.detail}</span>
+                    {p.contactEmail && <a href={`mailto:${p.contactEmail}?subject=${encodeURIComponent("Your ActivityOS account")}`} className="font-semibold text-[#1d3a8f] hover:underline">✉ {p.contactEmail}</a>}
                     {p.phone && <a href={`tel:${p.phone}`} className="font-semibold text-[#1d3a8f] hover:underline">📞 {p.phone}</a>}
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           )}
         </>

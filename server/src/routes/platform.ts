@@ -202,7 +202,7 @@ platform.get("/analytics", async (req, res) => {
   const byType: Record<string, number> = {};
   const attribution: Record<string, number> = {};
   const topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[] = [];
-  const atRisk: { id: string; name: string; cancelAt: string | null; fee: number; contactEmail: string | null; phone: string | null }[] = [];
+  const atRisk: { id: string; name: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string }[] = [];
 
   for (const t of tenants) {
     const sub = t.subscription ?? {};
@@ -223,13 +223,7 @@ platform.get("/analytics", async (req, res) => {
     }
     if (status === "active") { active++; mrrPaying += price; }
     if (status === "trialing") { trialing++; mrrTrial += price; }
-    if (status === "canceling") {
-      canceling++; mrrPaying += price;
-      const billing = (settingsById[t.id]?.billing as Record<string, unknown> | undefined) ?? {};
-      let contactEmail: string | null = (billing.email as string) || null;
-      if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* owner gone */ } }
-      atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, cancelAt: (sub.cancelAt as string) ?? null, fee: price, contactEmail, phone: (billing.phone as string) ?? null });
-    }
+    if (status === "canceling") { canceling++; mrrPaying += price; }
     if (status === "canceled") canceled++;
     if (["active", "trialing", "canceling", "canceled"].includes(status)) started++;
   }
@@ -255,15 +249,44 @@ platform.get("/analytics", async (req, res) => {
   const mrrByMonth = mrrAt(BILLABLE);
   const mrrPayingByMonth = mrrAt(PAYING);
 
-  // GMV (what parents pay providers) from bookings.
+  // GMV (what parents pay providers) from bookings, + last-booking per tenant.
   const gmvBuckets: Record<string, { booked: number; paid: number }> = {};
+  const lastBooking: Record<string, number> = {};
   let gmvBooked = 0, gmvPaid = 0;
   for (const d of bookingsSnap.docs) {
-    const b = d.data() as { amount?: number; pay?: string; createdAt?: string };
+    const b = d.data() as { amount?: number; pay?: string; createdAt?: string; tenantId?: string };
     const amt = Number(b.amount) || 0; const paid = b.pay === "Paid" ? amt : 0;
     gmvBooked += amt; gmvPaid += paid;
+    if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!lastBooking[b.tenantId] || t > lastBooking[b.tenantId]) lastBooking[b.tenantId] = t; }
     if (b.createdAt) { const k = mKey(new Date(b.createdAt)); if (months.includes(k)) { gmvBuckets[k] = gmvBuckets[k] ?? { booked: 0, paid: 0 }; gmvBuckets[k].booked += amt; gmvBuckets[k].paid += paid; } }
   }
+
+  // Churn-risk model: flag providers we want to keep, with the reason why.
+  // Priority: payment failed → cancelling → trial ending → never launched → gone quiet.
+  const QUIET_DAYS = 45, LAUNCH_GRACE = 14, TRIAL_SOON = 3;
+  for (const t of tenants) {
+    const sub = t.subscription ?? {};
+    const status = (sub.status as string) ?? "active";
+    if (!["active", "trialing", "canceling", "past_due"].includes(status)) continue;
+    const price = Number(sub.price) || 0;
+    const lb = lastBooking[t.id];
+    const daysSince = lb ? Math.round((now.getTime() - lb) / DAY) : null;
+    const ageDays = t.createdAt ? (now.getTime() - Date.parse(t.createdAt)) / DAY : 0;
+    const trialLeft = sub.trialEndsAt ? (Date.parse(sub.trialEndsAt as string) - now.getTime()) / DAY : Infinity;
+    let reason: string | null = null, detail = "";
+    if (status === "past_due") { reason = "payment_failed"; detail = "Card payment failed"; }
+    else if (status === "canceling") { reason = "cancelling"; detail = `Cancels ${sub.cancelAt ? new Date(sub.cancelAt as string).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "soon"}`; }
+    else if (status === "trialing" && trialLeft <= TRIAL_SOON) { reason = "trial_ending"; detail = `Trial ends in ${Math.max(0, Math.round(trialLeft))}d`; }
+    else if (lb === undefined && ageDays > LAUNCH_GRACE) { reason = "never_launched"; detail = "No bookings taken yet"; }
+    else if (daysSince != null && daysSince > QUIET_DAYS) { reason = "quiet"; detail = `No bookings in ${daysSince}d`; }
+    if (!reason) continue;
+    const billing = (settingsById[t.id]?.billing as Record<string, unknown> | undefined) ?? {};
+    let contactEmail: string | null = (billing.email as string) || null;
+    if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* owner gone */ } }
+    atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail });
+  }
+  const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, trial_ending: 2, never_launched: 3, quiet: 4 };
+  atRisk.sort((a, b) => (RISK_RANK[a.reason] - RISK_RANK[b.reason]) || (b.fee - a.fee));
   const gmvByMonth = months.map((k) => ({ month: k, booked: Math.round(gmvBuckets[k]?.booked ?? 0), paid: Math.round(gmvBuckets[k]?.paid ?? 0) }));
 
   // Simple linear MRR projection from the last 6 months' average delta.
