@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { PlatformPricingApp } from "./PlatformPricingApp";
 
 interface Provider {
   id: string; name: string; type: string; createdAt: string | null; ownerEmail: string | null;
@@ -41,6 +42,7 @@ const feeLabel = (sub: Record<string, unknown>) => (sub.price != null ? `${gbp(s
 /** platform/providers — every provider (full signup record + subscription) plus
  *  the billing summary the MRR adds up to. (Merged from the old Billing page.) */
 export function ProvidersApp() {
+  const [tab, setTab] = useState<"providers" | "pricing">("providers");
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +60,25 @@ export function ProvidersApp() {
   useEffect(load, [load]);
   useRealtime(["tenants"], load);
 
-  if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!providers) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading providers…</div>;
+  const tabs = (
+    <div className="mb-4 flex gap-1 border-b border-[var(--line)]">
+      {([["providers", "Providers & billing"], ["pricing", "Pricing"]] as ["providers" | "pricing", string][]).map(([id, label]) => (
+        <button key={id} type="button" onClick={() => setTab(id)} className="relative px-3.5 py-2 text-[13px] font-bold transition-colors"
+          style={tab === id ? { color: "#1d3a8f" } : { color: "var(--ink-3)" }}>
+          {label}
+          {tab === id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded bg-[#1d3a8f]" />}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (tab === "pricing") return <div className="text-[var(--ink)]">{tabs}<PlatformPricingApp /></div>;
+  if (error) return <div className="text-[var(--ink)]">{tabs}<div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div></div>;
+  if (!providers) return <div className="text-[var(--ink)]">{tabs}<div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading providers…</div></div>;
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Providers &amp; billing</h2>
+      {tabs}
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Every tenant on the platform — {providers.length}, what they&rsquo;re on and the revenue it adds up to. Click a row for the full signup record and subscription.</p>
 
       {summary && (

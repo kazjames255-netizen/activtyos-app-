@@ -50,7 +50,6 @@ import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { ScheduleApp } from "@/features/parent/ScheduleApp";
 import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
-import { PlatformPricingApp } from "@/features/platform/PlatformPricingApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
@@ -325,7 +324,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
       links: [{ href: "/platform/providers", label: "Providers", hint: "each tenant's live state" }],
     }),
     billing: ProvidersApp, // merged into Providers & billing
-    pricing: PlatformPricingApp,
+    pricing: ProvidersApp, // Pricing is now a tab on Providers & billing
     support: SupportInboxApp,
     messages: SupportInboxApp,
     email: planned({
