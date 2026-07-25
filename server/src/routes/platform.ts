@@ -248,6 +248,13 @@ platform.get("/analytics", async (req, res) => {
   });
   const mrrByMonth = mrrAt(BILLABLE);
   const mrrPayingByMonth = mrrAt(PAYING);
+  // Live (billable) providers at each month end.
+  const activeByMonth = months.map((k) => {
+    const end = monthEnd(k);
+    let c = 0;
+    for (const t of tenants) { const sub = t.subscription ?? {}; if (!BILLABLE.has(sub.status as string)) continue; const since = (sub.since as string) ?? t.createdAt; if (since && new Date(since) <= end) c++; }
+    return { month: k, count: c };
+  });
 
   // GMV (what parents pay providers) from bookings, + last-booking per tenant.
   const gmvBuckets: Record<string, { booked: number; paid: number }> = {};
@@ -304,7 +311,7 @@ platform.get("/analytics", async (req, res) => {
       gmvBooked: Math.round(gmvBooked), gmvPaid: Math.round(gmvPaid),
     },
     byPlan, byStatus, byType, attribution,
-    signupsByMonth, mrrByMonth, mrrPayingByMonth, gmvByMonth, projection,
+    signupsByMonth, mrrByMonth, mrrPayingByMonth, activeByMonth, gmvByMonth, projection,
     topProviders: topProviders.slice(0, 8), atRisk,
   });
 });

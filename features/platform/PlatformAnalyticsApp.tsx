@@ -13,6 +13,7 @@ interface Analytics {
   signupsByMonth: { month: string; count: number; cumulative: number }[];
   mrrByMonth: { month: string; mrr: number }[];
   mrrPayingByMonth: { month: string; mrr: number }[];
+  activeByMonth: { month: string; count: number }[];
   gmvByMonth: { month: string; booked: number; paid: number }[];
   projection: { month: string; mrr: number }[];
   topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[];
@@ -103,7 +104,7 @@ export function PlatformAnalyticsApp() {
             <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{money(mode === "paying" ? s.arrPaying : s.arr)}/yr {mode === "paying" ? "paying" : "incl. trials"}</div>
           </div>
         </div>
-        <Kpi label="Active providers" value={String(s.active + s.canceling)} sub={`${s.trialing} on trial · ${s.totalProviders} total`} accent={LIGHTB} />
+        <ActiveTile value={s.active + s.canceling} sub={`${s.trialing} on trial · ${s.totalProviders} total`} series={d.activeByMonth.slice(-6)} />
         <Kpi label="Avg. time with us" value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} accent="#0f7a43" />
         <Kpi label="Trial → paid" value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} accent={GOLD} />
       </div>
@@ -182,6 +183,28 @@ function Kpi({ label, value, sub, accent }: { label: string; value: string; sub:
         <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
         <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
         <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
+      </div>
+    </div>
+  );
+}
+// Active-providers KPI with a 6-month monthly mini bar chart of live providers.
+function ActiveTile({ value, sub, series }: { value: number; sub: string; series: { month: string; count: number }[] }) {
+  const max = Math.max(1, ...series.map((x) => x.count));
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div className="absolute left-0 top-0 h-full w-1" style={{ background: LIGHTB }} />
+      <div className="pl-1.5">
+        <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Active providers</div>
+        <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
+        <div className="mt-2.5 flex items-end gap-1" style={{ height: 30 }}>
+          {series.map((x, i) => (
+            <div key={x.month} className="flex flex-1 items-end" style={{ height: "100%" }} title={`${monthLabel(x.month)}: ${x.count} live`}>
+              <div className="w-full rounded-t-[3px]" style={{ height: `${Math.max(8, (x.count / max) * 100)}%`, background: i === series.length - 1 ? BLUE : "#bcd0f2" }} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex gap-1 text-[9px] font-semibold text-[var(--ink-3)]">{series.map((x) => <span key={x.month} className="flex-1 text-center">{monthLabel(x.month)}</span>)}</div>
       </div>
     </div>
   );
