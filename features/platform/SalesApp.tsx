@@ -38,6 +38,7 @@ const ACT: { id: Activity["type"]; label: string }[] = [
   { id: "call", label: "📞 Call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" }, { id: "demo", label: "🎥 Demo" }, { id: "note", label: "📝 Note" },
 ];
 const PLAN_MRR: Record<Lead["plan"], number> = { freelancer: 29, company: 69, franchise: 86 };
+const OUTCOMES = ["Interested", "Booked a demo", "Sent info / pricing", "Call back later", "No answer", "Left voicemail", "Wants to think", "Not interested", "Wrong contact", "Signed up 🎉"];
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const money = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
 const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
@@ -317,7 +318,8 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
             <div className="flex flex-wrap gap-2">
               <select className={`${fld} w-auto`} value={act.type} onChange={(e) => setAct({ ...act, type: e.target.value as Activity["type"] })}>{ACT.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
               <input className={`${fld} min-w-[120px] flex-1`} placeholder="What happened" value={act.note} onChange={(e) => setAct({ ...act, note: e.target.value })} />
-              <input className={`${fld} w-[130px]`} placeholder="Outcome" value={act.outcome} onChange={(e) => setAct({ ...act, outcome: e.target.value })} />
+              <input className={`${fld} w-[170px]`} list="sales-outcomes" placeholder="Outcome — pick or type" value={act.outcome} onChange={(e) => setAct({ ...act, outcome: e.target.value })} />
+              <datalist id="sales-outcomes">{OUTCOMES.map((o) => <option key={o} value={o} />)}</datalist>
               <button type="button" onClick={logActivity} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white">Log</button>
             </div>
             {f.activities.length > 0 && (
