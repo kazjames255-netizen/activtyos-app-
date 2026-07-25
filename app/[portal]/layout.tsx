@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
 import { SubscriptionGate } from "@/components/auth/SubscriptionGate";
 import { TrialBanner } from "@/components/billing/TrialBanner";
+import { PageTracker } from "@/components/analytics/PageTracker";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 
 // The customer dashboard runs the same light palette the operator screens sit
@@ -33,6 +34,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
   return (
     <RequireAuth>
       <PortalGuard portal={portalKey}>
+        <PageTracker portal={portalKey} />
         <SubscriptionGate portal={portalKey}>
         <div className="flex h-screen">
           <Sidebar portal={portalKey} />

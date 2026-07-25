@@ -170,6 +170,101 @@ platform.get("/providers", async (req, res) => {
   res.json({ providers });
 });
 
+// GET /api/platform/page-engagement — average time providers spend on each
+// page, last 3 months vs the previous 3, filterable by provider type. Shows
+// which pages/tabs are actually used. `?type=all|freelancer|company`.
+platform.get("/page-engagement", async (req, res) => {
+  if (req.auth!.role !== "platform") {
+    res.status(403).json({ error: "Requires the platform role" });
+    return;
+  }
+  const type = typeof req.query.type === "string" ? req.query.type : "all";
+  const now = Date.now(), DAY = 86_400_000;
+  const curFrom = new Date(now - 90 * DAY).toISOString();
+  const prevFrom = new Date(now - 180 * DAY).toISOString();
+  const snap = await db.collection("pageViews").where("createdAt", ">=", prevFrom).get();
+  const cur: Record<string, { sec: number; n: number }> = {};
+  const prev: Record<string, { sec: number; n: number }> = {};
+  for (const d of snap.docs) {
+    const p = d.data() as { role?: string; view?: string; seconds?: number; createdAt?: string };
+    if (type !== "all" && p.role !== type) continue;
+    if (!p.view) continue;
+    const bucket = (p.createdAt ?? "") >= curFrom ? cur : prev;
+    bucket[p.view] = bucket[p.view] ?? { sec: 0, n: 0 };
+    bucket[p.view].sec += Number(p.seconds) || 0;
+    bucket[p.view].n += 1;
+  }
+  const rows = [...new Set([...Object.keys(cur), ...Object.keys(prev)])].map((view) => {
+    const c = cur[view] ?? { sec: 0, n: 0 };
+    const pr = prev[view] ?? { sec: 0, n: 0 };
+    const avg = c.n ? c.sec / c.n : 0;
+    const avgPrev = pr.n ? pr.sec / pr.n : 0;
+    return {
+      view,
+      avgSeconds: Math.round(avg), views: c.n, totalSeconds: c.sec,
+      avgPrevSeconds: Math.round(avgPrev), viewsPrev: pr.n,
+      deltaPct: avgPrev ? (avg - avgPrev) / avgPrev : null,
+    };
+  }).filter((r) => r.views > 0 || r.viewsPrev > 0);
+  rows.sort((a, b) => b.views - a.views || b.avgSeconds - a.avgSeconds);
+  res.json({ rows, totalViews: rows.reduce((s, r) => s + r.views, 0) });
+});
+
+// Churn-risk model shared by the dedicated At-risk page.
+const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, trial_ending: 2, never_launched: 3, quiet: 4 };
+async function computeAtRisk() {
+  const now = Date.now(), DAY = 86_400_000;
+  const [tenantsSnap, bookingsSnap, libsSnap] = await Promise.all([
+    db.collection("tenants").get(),
+    db.collection("bookings").get(),
+    db.collection("libraries").get(),
+  ]);
+  const settingsById: Record<string, Record<string, unknown>> = {};
+  for (const ld of libsSnap.docs) settingsById[ld.id] = (ld.data()?.settings as Record<string, unknown>) ?? {};
+  const lastBooking: Record<string, number> = {};
+  for (const dd of bookingsSnap.docs) { const b = dd.data() as { tenantId?: string; createdAt?: string }; if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!lastBooking[b.tenantId] || t > lastBooking[b.tenantId]) lastBooking[b.tenantId] = t; } }
+  const QUIET_DAYS = 45, LAUNCH_GRACE = 14, TRIAL_SOON = 3;
+  const rows: { id: string; name: string; type: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string; contactedAt: string | null }[] = [];
+  for (const d of tenantsSnap.docs) {
+    const t = d.data() as Record<string, unknown> & { name?: string; type?: string; createdAt?: string; ownerUid?: string; subscription?: Record<string, unknown>; retentionContactedAt?: string };
+    const sub = t.subscription ?? {};
+    const status = (sub.status as string) ?? "active";
+    if (!["active", "trialing", "canceling", "past_due"].includes(status)) continue;
+    const price = Number(sub.price) || 0;
+    const lb = lastBooking[d.id];
+    const daysSince = lb ? Math.round((now - lb) / DAY) : null;
+    const ageDays = t.createdAt ? (now - Date.parse(t.createdAt)) / DAY : 0;
+    const trialLeft = sub.trialEndsAt ? (Date.parse(sub.trialEndsAt as string) - now) / DAY : Infinity;
+    let reason: string | null = null, detail = "";
+    if (status === "past_due") { reason = "payment_failed"; detail = "Card payment failed"; }
+    else if (status === "canceling") { reason = "cancelling"; detail = `Cancels ${sub.cancelAt ? new Date(sub.cancelAt as string).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "soon"}`; }
+    else if (status === "trialing" && trialLeft <= TRIAL_SOON) { reason = "trial_ending"; detail = `Trial ends in ${Math.max(0, Math.round(trialLeft))}d`; }
+    else if (lb === undefined && ageDays > LAUNCH_GRACE) { reason = "never_launched"; detail = "No bookings taken yet"; }
+    else if (daysSince != null && daysSince > QUIET_DAYS) { reason = "quiet"; detail = `No bookings in ${daysSince}d`; }
+    if (!reason) continue;
+    const billing = (settingsById[d.id]?.billing as Record<string, unknown> | undefined) ?? {};
+    let contactEmail: string | null = (billing.email as string) || null;
+    if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid)).email ?? null; } catch { /* owner gone */ } }
+    rows.push({ id: d.id, name: t.name ?? d.id, type: t.type ?? "freelancer", fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail, contactedAt: t.retentionContactedAt ?? null });
+  }
+  rows.sort((a, b) => (RISK_RANK[a.reason] - RISK_RANK[b.reason]) || (b.fee - a.fee));
+  return rows;
+}
+
+// GET /api/platform/at-risk — full churn-risk list (with contacted state).
+platform.get("/at-risk", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  res.json({ rows: await computeAtRisk() });
+});
+
+// POST /api/platform/at-risk/:id/contacted — mark (or un-mark) as contacted.
+platform.post("/at-risk/:id/contacted", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const contacted = (req.body as { contacted?: boolean })?.contacted !== false;
+  await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
+  res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
+});
+
 // GET /api/platform/analytics — the money/trends dashboard for HQ: MRR/ARR,
 // churn, tenure, conversion, signups & GMV over 12 months, attribution, top
 // providers, at-risk, and a simple MRR projection. Full-collection reads at
@@ -202,7 +297,6 @@ platform.get("/analytics", async (req, res) => {
   const byType: Record<string, number> = {};
   const attribution: Record<string, number> = {};
   const topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[] = [];
-  const atRisk: { id: string; name: string; fee: number; contactEmail: string | null; phone: string | null; reason: string; detail: string }[] = [];
 
   for (const t of tenants) {
     const sub = t.subscription ?? {};
@@ -256,44 +350,15 @@ platform.get("/analytics", async (req, res) => {
     return { month: k, count: c };
   });
 
-  // GMV (what parents pay providers) from bookings, + last-booking per tenant.
+  // GMV (what parents pay providers) from bookings.
   const gmvBuckets: Record<string, { booked: number; paid: number }> = {};
-  const lastBooking: Record<string, number> = {};
   let gmvBooked = 0, gmvPaid = 0;
   for (const d of bookingsSnap.docs) {
-    const b = d.data() as { amount?: number; pay?: string; createdAt?: string; tenantId?: string };
+    const b = d.data() as { amount?: number; pay?: string; createdAt?: string };
     const amt = Number(b.amount) || 0; const paid = b.pay === "Paid" ? amt : 0;
     gmvBooked += amt; gmvPaid += paid;
-    if (b.tenantId && b.createdAt) { const t = Date.parse(b.createdAt); if (!lastBooking[b.tenantId] || t > lastBooking[b.tenantId]) lastBooking[b.tenantId] = t; }
     if (b.createdAt) { const k = mKey(new Date(b.createdAt)); if (months.includes(k)) { gmvBuckets[k] = gmvBuckets[k] ?? { booked: 0, paid: 0 }; gmvBuckets[k].booked += amt; gmvBuckets[k].paid += paid; } }
   }
-
-  // Churn-risk model: flag providers we want to keep, with the reason why.
-  // Priority: payment failed → cancelling → trial ending → never launched → gone quiet.
-  const QUIET_DAYS = 45, LAUNCH_GRACE = 14, TRIAL_SOON = 3;
-  for (const t of tenants) {
-    const sub = t.subscription ?? {};
-    const status = (sub.status as string) ?? "active";
-    if (!["active", "trialing", "canceling", "past_due"].includes(status)) continue;
-    const price = Number(sub.price) || 0;
-    const lb = lastBooking[t.id];
-    const daysSince = lb ? Math.round((now.getTime() - lb) / DAY) : null;
-    const ageDays = t.createdAt ? (now.getTime() - Date.parse(t.createdAt)) / DAY : 0;
-    const trialLeft = sub.trialEndsAt ? (Date.parse(sub.trialEndsAt as string) - now.getTime()) / DAY : Infinity;
-    let reason: string | null = null, detail = "";
-    if (status === "past_due") { reason = "payment_failed"; detail = "Card payment failed"; }
-    else if (status === "canceling") { reason = "cancelling"; detail = `Cancels ${sub.cancelAt ? new Date(sub.cancelAt as string).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "soon"}`; }
-    else if (status === "trialing" && trialLeft <= TRIAL_SOON) { reason = "trial_ending"; detail = `Trial ends in ${Math.max(0, Math.round(trialLeft))}d`; }
-    else if (lb === undefined && ageDays > LAUNCH_GRACE) { reason = "never_launched"; detail = "No bookings taken yet"; }
-    else if (daysSince != null && daysSince > QUIET_DAYS) { reason = "quiet"; detail = `No bookings in ${daysSince}d`; }
-    if (!reason) continue;
-    const billing = (settingsById[t.id]?.billing as Record<string, unknown> | undefined) ?? {};
-    let contactEmail: string | null = (billing.email as string) || null;
-    if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* owner gone */ } }
-    atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, fee: price, contactEmail, phone: (billing.phone as string) ?? null, reason, detail });
-  }
-  const RISK_RANK: Record<string, number> = { payment_failed: 0, cancelling: 1, trial_ending: 2, never_launched: 3, quiet: 4 };
-  atRisk.sort((a, b) => (RISK_RANK[a.reason] - RISK_RANK[b.reason]) || (b.fee - a.fee));
   const gmvByMonth = months.map((k) => ({ month: k, booked: Math.round(gmvBuckets[k]?.booked ?? 0), paid: Math.round(gmvBuckets[k]?.paid ?? 0) }));
 
   // Simple linear MRR projection from the last 6 months' average delta.
@@ -312,6 +377,6 @@ platform.get("/analytics", async (req, res) => {
     },
     byPlan, byStatus, byType, attribution,
     signupsByMonth, mrrByMonth, mrrPayingByMonth, activeByMonth, gmvByMonth, projection,
-    topProviders: topProviders.slice(0, 8), atRisk,
+    topProviders: topProviders.slice(0, 8),
   });
 });

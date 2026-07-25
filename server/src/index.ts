@@ -28,6 +28,7 @@ import { medications } from "./routes/medications";
 import { childFiles } from "./routes/childFiles";
 import { referral, referralsAdmin } from "./routes/referral";
 import { platform } from "./routes/platform";
+import { analytics } from "./routes/analytics";
 import { reconciliation } from "./routes/reconciliation";
 import { dashboard } from "./routes/dashboard";
 import { discounts } from "./routes/discounts";
@@ -159,6 +160,7 @@ app.use("/api/invites", invites);
 app.use("/api/tenants", tenants);
 app.use("/api/me", me);
 app.use("/api/platform", platform);
+app.use("/api/analytics", analytics);
 
 // Surface async route errors as JSON 500s rather than hanging the request.
 // (Express identifies error middleware by its 4-arg signature, so the unused
