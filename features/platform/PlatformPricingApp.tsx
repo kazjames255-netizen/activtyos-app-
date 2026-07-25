@@ -34,6 +34,9 @@ export function PlatformPricingApp() {
 
   const setPlan = (i: number, patch: Partial<Plan>) => setPlans((ps) => ps!.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const setBand = (pi: number, bi: number, patch: Partial<Band>) => setPlans((ps) => ps!.map((p, j) => (j === pi ? { ...p, bands: p.bands!.map((b, k) => (k === bi ? { ...b, ...patch } : b)) } : p)));
+  const setFeat = (pi: number, fi: number, val: string) => setPlans((ps) => ps!.map((p, j) => (j === pi ? { ...p, features: p.features.map((f, k) => (k === fi ? val : f)) } : p)));
+  const addFeat = (pi: number) => setPlans((ps) => ps!.map((p, j) => (j === pi ? { ...p, features: [...p.features, ""] } : p)));
+  const rmFeat = (pi: number, fi: number) => setPlans((ps) => ps!.map((p, j) => (j === pi ? { ...p, features: p.features.filter((_, k) => k !== fi) } : p)));
   const num = (v: string) => (v === "" ? 0 : Number(v));
 
   async function save() {
@@ -86,8 +89,26 @@ export function PlatformPricingApp() {
                 <label className="flex flex-col gap-1"><span className={lbl}>Plan name</span><input className={fld} value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} /></label>
                 <label className="flex flex-col gap-1"><span className={lbl}>Base £/mo</span><input type="number" min="0" className={fld} value={p.price} onChange={(e) => setPlan(i, { price: num(e.target.value) })} /></label>
               </div>
-              <label className="flex flex-col gap-1"><span className={lbl}>Description</span><textarea rows={2} className={`${fld} resize-y`} value={p.blurb} onChange={(e) => setPlan(i, { blurb: e.target.value })} /></label>
-              <label className="flex flex-col gap-1"><span className={lbl}>Features — one per line</span><textarea rows={6} className={`${fld} resize-y`} value={p.features.join("\n")} onChange={(e) => setPlan(i, { features: e.target.value.split("\n") })} /></label>
+              <label className="flex flex-col gap-1"><span className={lbl}>Description</span><textarea rows={3} className={`${fld} min-h-[68px] resize-y leading-relaxed`} value={p.blurb} onChange={(e) => setPlan(i, { blurb: e.target.value })} /></label>
+
+              <div className="flex flex-col gap-1.5">
+                <span className={lbl}>Features</span>
+                <div className="flex flex-col gap-1.5">
+                  {p.features.map((f, fi) => (
+                    <div key={fi} className="flex items-center gap-2">
+                      <span className="shrink-0 text-[13px] font-bold text-[#1d3a8f]">✓</span>
+                      <input className={`${fld} min-w-0 flex-1 !py-1.5`} value={f} placeholder="Describe a feature…"
+                        onChange={(e) => setFeat(i, fi, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeat(i); } }} />
+                      <button type="button" onClick={() => rmFeat(i, fi)} aria-label="Remove feature"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] text-[var(--ink-3)] transition-colors hover:bg-[#fdebec] hover:text-[#c02636]">✕</button>
+                    </div>
+                  ))}
+                  {p.features.length === 0 && <p className="text-[11.5px] italic text-[var(--ink-3)]">No features yet — add the first one below.</p>}
+                </div>
+                <button type="button" onClick={() => addFeat(i)}
+                  className="mt-0.5 self-start rounded-lg border border-dashed border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[#1d3a8f] transition-colors hover:border-[#1d3a8f] hover:bg-[#eaf0fc]">+ Add feature</button>
+              </div>
 
               {p.bands && (
                 <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
