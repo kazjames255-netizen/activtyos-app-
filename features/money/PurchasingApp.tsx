@@ -661,9 +661,15 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                 )}
               </div>
 
-              <div className="mt-4 flex justify-end gap-2">
-                <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
-                <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : editor.kind === "po" ? "Save PO" : "Save bill"}</button>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                {editor.id && isPo ? ((data?.items ?? []).find((p) => p.id === editor.id)?.expenseId
+                  ? <span className="text-[11.5px] font-bold text-[var(--ink-3)]">✓ Added to Expenses</span>
+                  : <button type="button" onClick={() => { const p = (data?.items ?? []).find((x) => x.id === editor.id); if (p) { void addToExpenses(p); setEditor(null); } }} className="rounded-full border border-[#cdddf7] bg-[#eaf0fc] px-3.5 py-2 text-[12px] font-extrabold text-[#1d3a8f] transition hover:brightness-95" title="Mark received & create a pending expense from this PO">＋ Add to Expenses</button>)
+                  : <span />}
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
+                  <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : editor.kind === "po" ? "Save PO" : "Save bill"}</button>
+                </div>
               </div>
               </div>
             </div>
