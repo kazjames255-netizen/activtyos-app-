@@ -3498,3 +3498,16 @@ Invoices+Income). Backend deltas:
 
 Swagger: add the `/api/income` resource + the `category` field on purchasing.
 No migrations — all additive/optional.
+
+---
+
+# Suppliers directory — 25 July 2026
+
+Saved supplier contacts reused when logging expenses.
+- **NEW `/api/suppliers`** (`server/src/routes/suppliers.ts`) — operator-scoped
+  CRUD over the **`suppliers`** collection; `supplierSchema` = `{name (req),
+  email?, phone?, address?, notes?}`. Registered in `index.ts`; realtime
+  listener for `suppliers` added to `events.ts`.
+- Front-end: Money-out → Expenses has a **Suppliers** tab (card list + add/edit)
+  and the expense form's Supplier field is a datalist that pulls from it.
+- No migration. Swagger: add the `/api/suppliers` resource.

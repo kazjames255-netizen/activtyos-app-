@@ -16,6 +16,8 @@ type Repeat = "weekly" | "fortnightly" | "monthly";
 interface Expense { id: string; date: string; category: string; amount: number; supplier?: string; notes?: string; receiptUrl?: string; status?: "pending" | "paid"; dueDate?: string; paidAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; createdByName?: string; virtual?: boolean }
 interface Payload { items: Expense[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Sub { current: { plan: string; since: string | null; details: { name: string; price: number; cadence: string } } }
+interface Supplier { id: string; name: string; email?: string; phone?: string; address?: string; notes?: string }
+type SupEditor = { id?: string; name: string; email: string; phone: string; address: string; notes: string };
 
 const CATEGORIES = ["Equipment", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Supplies", "Training", "Software", "Utilities", "Other"];
 const CAT_ICON: Record<string, string> = {
@@ -41,7 +43,7 @@ const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDate
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-type Tab = "overview" | "ledger" | "pending" | "paid" | "receipts" | "categories";
+type Tab = "overview" | "ledger" | "pending" | "paid" | "receipts" | "categories" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Sort = "date" | "oldest" | "amount" | "amountAsc";
 type Editor = { id?: string; date: string; category: string; amount: string; supplier: string; notes: string; receiptUrl: string; status: "pending" | "paid"; dueDate: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
@@ -100,6 +102,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [renaming, setRenaming] = useState<{ name: string; value: string } | null>(null);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supEditor, setSupEditor] = useState<SupEditor | null>(null);
 
   const { settings, save: saveSettings } = useSettings();
   const registry = useMemo(() => settings.expenses?.categories ?? [], [settings]);
@@ -120,10 +124,29 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/expenses").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Supplier[]>("/api/suppliers").then((s) => setSuppliers(Array.isArray(s) ? s : [])).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Sub>("/api/subscription").then(setSub).catch(() => {}); }, []);
-  useRealtime(["expenses"], refresh);
+  useRealtime(["expenses", "suppliers"], refresh);
+
+  // ── Suppliers directory ──
+  const openSupAdd = () => setSupEditor({ name: "", email: "", phone: "", address: "", notes: "" });
+  const openSupEdit = (s: Supplier) => setSupEditor({ id: s.id, name: s.name, email: s.email ?? "", phone: s.phone ?? "", address: s.address ?? "", notes: s.notes ?? "" });
+  async function saveSupplier() {
+    if (!supEditor) return;
+    if (!supEditor.name.trim()) { setError("Give the supplier a name."); return; }
+    const body = { name: supEditor.name.trim(), email: supEditor.email.trim() || undefined, phone: supEditor.phone.trim() || undefined, address: supEditor.address.trim() || undefined, notes: supEditor.notes.trim() || undefined };
+    try {
+      if (supEditor.id) await apiPut(`/api/suppliers/${encodeURIComponent(supEditor.id)}`, body);
+      else await apiPost("/api/suppliers", body);
+      setSupEditor(null); setError(null); refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save supplier"); }
+  }
+  async function removeSupplier(s: Supplier) {
+    if (!confirm(`Delete supplier “${s.name}”? Expenses that used them keep their name.`)) return;
+    try { await del(`/api/suppliers/${encodeURIComponent(s.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
 
   const items = useMemo(() => data?.items ?? [], [data]); // real, editable expenses
   const now = useMemo(() => new Date(), []);
@@ -182,7 +205,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     return Object.entries(by).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
-  const suppliers = useMemo(() => {
+  const topSuppliers = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};
     for (const x of allItems) { if (!x.supplier) continue; (by[x.supplier] ||= { total: 0, count: 0 }); by[x.supplier].total += x.amount; by[x.supplier].count++; }
     return Object.entries(by).map(([supplier, v]) => ({ supplier, ...v })).sort((a, b) => b.total - a.total);
@@ -350,7 +373,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       {/* Tabs */}
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", "All"], ["pending", `Pending${pendingItems.length ? ` · ${pendingItems.length}` : ""}`], ["paid", `Paid${paidCount ? ` · ${paidCount}` : ""}`], ["receipts", `Receipts${withReceipt.length ? ` · ${withReceipt.length}` : ""}`], ["categories", "Categories"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", "All"], ["pending", `Pending${pendingItems.length ? ` · ${pendingItems.length}` : ""}`], ["paid", `Paid${paidCount ? ` · ${paidCount}` : ""}`], ["receipts", `Receipts${withReceipt.length ? ` · ${withReceipt.length}` : ""}`], ["categories", "Categories"], ["suppliers", `Suppliers${suppliers.length ? ` · ${suppliers.length}` : ""}`]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -416,9 +439,9 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
             <Card className="p-4">
               <div className="mb-2.5 text-[13.5px] font-extrabold">Top suppliers</div>
-              {suppliers.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Add a supplier when logging to see this.</div> : (
+              {topSuppliers.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Add a supplier when logging to see this.</div> : (
                 <div className="flex flex-col">
-                  {suppliers.slice(0, 6).map((s, i) => (
+                  {topSuppliers.slice(0, 6).map((s, i) => (
                     <div key={s.supplier} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
                       <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-soft,#eaf0fc)] text-[11px] font-extrabold text-[var(--brand-strong,#16306e)]">{i + 1}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{s.supplier}</div>
@@ -581,7 +604,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
             </Card>
           )}
         </div>
-      ) : (
+      ) : tab === "categories" ? (
         // Categories tab — spend breakdown + rename / delete management
         <div className="flex flex-col gap-1.5">
           {catRows.map((c) => (
@@ -614,6 +637,46 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
           ))}
           <div className="flex items-baseline justify-between px-1 pt-1 text-[12.5px]"><span className="text-[var(--ink-3)]">Total across {catRows.filter((c) => c.total > 0).length} categor{catRows.filter((c) => c.total > 0).length === 1 ? "y" : "ies"}</span><span className="text-[15px] font-extrabold">{money(grandTotal)}</span></div>
         </div>
+      ) : (
+        // Suppliers tab — a saved contact directory reused when logging expenses
+        <div className="flex flex-col gap-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[13px] text-[var(--ink-3)]">{suppliers.length ? `${suppliers.length} saved` : "No suppliers saved yet"} — pick them from a dropdown when logging an expense.</div>
+            <button type="button" onClick={openSupAdd} className={btnPrimary}>＋ Add supplier</button>
+          </div>
+          {suppliers.length === 0 ? (
+            <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">
+              <div className="mt-1 text-[15px] font-extrabold text-[var(--ink)]">Save your suppliers</div>
+              <p className="mx-auto mt-1 max-w-[420px] leading-[1.6]">Keep who you pay in one place — name, email, phone and address — then pick them from a dropdown when you log an expense.</p>
+              <button type="button" onClick={openSupAdd} className={`${btnPrimary} mx-auto mt-4`}>＋ Add your first supplier</button>
+            </Card>
+          ) : (
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {suppliers.map((s) => {
+                const h = hueFor(s.name);
+                return (
+                  <Card key={s.id} className="flex items-start gap-3 p-3.5">
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-white shadow-[0_5px_12px_-6px_rgba(29,58,143,.7)]" style={{ background: h.bar }}>{initials(s.name)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px] font-extrabold">{s.name}</div>
+                      <div className="mt-0.5 flex flex-col gap-0.5 text-[11.5px] text-[var(--ink-3)]">
+                        {s.email && <a href={`mailto:${s.email}`} className="truncate hover:text-[#1d3a8f]">{s.email}</a>}
+                        {s.phone && <a href={`tel:${s.phone}`} className="truncate hover:text-[#1d3a8f]">{s.phone}</a>}
+                        {s.address && <span className="truncate">{s.address}</span>}
+                        {s.notes && <span className="truncate">{s.notes}</span>}
+                        {!s.email && !s.phone && !s.address && !s.notes && <span>No contact details</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-none flex-col items-end gap-1.5">
+                      <button type="button" onClick={() => openSupEdit(s)} className="text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Edit" aria-label="Edit">✎</button>
+                      <button type="button" onClick={() => removeSupplier(s)} className="text-[15px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" title="Delete" aria-label="Delete">×</button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Add / edit modal */}
@@ -639,7 +702,10 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   )}
                 </div>
                 <label className="block"><span className={labelCls}>Amount (£)</span><input type="number" min="0" step="0.01" value={editor.amount} onChange={(e) => setEditor({ ...editor, amount: e.target.value })} placeholder="0.00" className={fieldCls} /></label>
-                <label className="block"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you paid" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Supplier {suppliers.length > 0 && <span className="font-normal normal-case text-[var(--ink-3)]">— pick a saved one or type</span>}</span>
+                  <input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you paid" className={fieldCls} list="expenseSuppliers" autoComplete="off" />
+                  <datalist id="expenseSuppliers">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+                </label>
               </div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What was it for?" className={fieldCls} /></label>
 
@@ -696,6 +762,31 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" onClick={() => setEditor(null)} className={btnGhost}>Cancel</button>
                 <button type="button" onClick={save} disabled={saving || uploading} className={btnPrimary}>{saving ? "Saving…" : editor.id ? "Save changes" : editor.repeat !== "none" ? "Create series" : "Log expense"}</button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Supplier add / edit modal */}
+      {supEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSupEditor(null)}>
+          <Card className="max-h-[92vh] w-[min(480px,94vw)] overflow-y-auto p-5" style={LIGHT_PALETTE}>
+            <div onClick={(e) => e.stopPropagation()}>
+              <div className="mb-3 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{supEditor.id ? "Edit supplier" : "Add a supplier"}</div>
+              <label className="block"><span className={labelCls}>Name</span><input autoFocus value={supEditor.name} onChange={(e) => setSupEditor({ ...supEditor, name: e.target.value })} placeholder="e.g. Riverside Sports Hall" className={fieldCls} /></label>
+              <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                <label className="block"><span className={labelCls}>Email</span><input type="email" value={supEditor.email} onChange={(e) => setSupEditor({ ...supEditor, email: e.target.value })} placeholder="accounts@…" className={fieldCls} /></label>
+                <label className="block"><span className={labelCls}>Phone</span><input value={supEditor.phone} onChange={(e) => setSupEditor({ ...supEditor, phone: e.target.value })} placeholder="07…" className={fieldCls} /></label>
+              </div>
+              <label className="mt-2.5 block"><span className={labelCls}>Address</span><input value={supEditor.address} onChange={(e) => setSupEditor({ ...supEditor, address: e.target.value })} placeholder="Street, town, postcode" className={fieldCls} /></label>
+              <label className="mt-2.5 block"><span className={labelCls}>Notes <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span><input value={supEditor.notes} onChange={(e) => setSupEditor({ ...supEditor, notes: e.target.value })} placeholder="Account ref, contact name…" className={fieldCls} /></label>
+              <div className="mt-4 flex justify-between gap-2">
+                {supEditor.id ? <button type="button" onClick={() => { const s = suppliers.find((x) => x.id === supEditor.id); if (s) void removeSupplier(s); setSupEditor(null); }} className="text-[12.5px] font-bold text-[var(--red,#e21d27)] hover:underline">Delete</button> : <span />}
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSupEditor(null)} className={btnGhost}>Cancel</button>
+                  <button type="button" onClick={saveSupplier} className={btnPrimary}>{supEditor.id ? "Save" : "Add supplier"}</button>
+                </div>
               </div>
             </div>
           </Card>
