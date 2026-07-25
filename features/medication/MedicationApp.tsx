@@ -94,7 +94,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   }
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-2 text-[13.5px] font-extrabold">Authorise a medication</div>
+      <div className="mb-2 text-[13.5px] font-extrabold">Administer a medication</div>
       <div className="grid gap-2.5 sm:grid-cols-3">
         <div><FieldLabel>Child</FieldLabel><Input value={d.childName} onChange={(e) => set({ childName: e.target.value })} className="w-full" /></div>
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
@@ -209,7 +209,7 @@ export function MedicationApp() {
           </div>
           {!adding && (
             <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
-              ＋ Authorise a medication
+              ＋ Administer a medication
             </button>
           )}
         </div>
