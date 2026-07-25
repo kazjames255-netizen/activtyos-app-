@@ -131,6 +131,15 @@ h4 {
   color: var(--ink);
 }
 
+/* Headings inside a white-on-dark hero/banner must stay white — otherwise the
+   element rule above wins over the inherited white and the title goes dark. */
+.text-white h1,
+.text-white h2,
+.text-white h3,
+.text-white h4 {
+  color: inherit;
+}
+
 /* Booking flow steps — dates, children, each extra, pay. A short fade-and-lift
    so moving between them reads as one continuous flow rather than the panel
    redrawing. */
