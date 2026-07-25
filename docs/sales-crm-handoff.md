@@ -51,6 +51,14 @@ Stage → close-probability (used for the weighted forecast): new .05, contacted
 - **Rep logins (later):** a `sales` role that only sees its own `owner` leads;
   platform sees all. Then `owner`/`by` become uids.
 
+## Also built front-of-house (needs backend equivalents)
+- **CSV import** — the UI parses a spreadsheet client-side (flexible headers,
+  dedupes by email) and adds leads. Backend: `POST /api/platform/leads/bulk`
+  taking an array, applying the same email-dedupe.
+- **Inbound search** — the board has a search that matches name/email/**phone
+  (digits)** so a caller is found instantly (or "+ New lead" if not). Keep a
+  server-side lookup by normalised phone/email for the same purpose.
+
 ## Front-end swap
 Replace the localStorage store in `SalesApp.tsx` (`loadLeads`/`saveLeads`/`SEED`)
 with `useRealtime(["leads"], …)` + the api helpers — the component shape (Lead /

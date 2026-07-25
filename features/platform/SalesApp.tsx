@@ -76,6 +76,8 @@ export function SalesApp() {
   const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [detail, setDetail] = useState<Lead | null>(null);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [query, setQuery] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
 
   const persist = (next: Lead[]) => { setLeads(next); saveLeads(next); };
@@ -98,14 +100,31 @@ export function SalesApp() {
                 <button key={v} type="button" onClick={() => setTab(v)} className="rounded-full px-3 py-1 transition-colors" style={tab === v ? { background: "#fff", color: "#1d3a8f" } : { color: "rgba(255,255,255,.8)" }}>{l}</button>
               ))}
             </div>
+            <button type="button" onClick={() => setImporting(true)} className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-white/20">⬆ Import CSV</button>
             <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#ffd23f] px-4 py-2 text-[12.5px] font-extrabold text-[#3a2a00] hover:brightness-105">+ Add lead</button>
           </div>
         </div>
       </div>
 
-      {tab === "pipeline"
-        ? <Pipeline leads={leads} onOpen={setDetail} onMove={move} drag={drag} setDrag={setDrag} />
-        : <Dashboard leads={leads} />}
+      {tab === "pipeline" ? (() => {
+        const q = query.trim().toLowerCase();
+        const qDigits = q.replace(/\D/g, "");
+        const filtered = !q ? leads : leads.filter((l) => {
+          const hay = `${l.business} ${l.contactName} ${l.email} ${l.location} ${l.owner}`.toLowerCase();
+          const phoneMatch = qDigits.length >= 3 && l.phone.replace(/\D/g, "").includes(qDigits);
+          return hay.includes(q) || phoneMatch;
+        });
+        return (
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍 Find a lead — name, email or phone (e.g. an inbound caller)" className="w-full max-w-[440px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+              {q && <span className="text-[12px] text-[var(--ink-3)]">{filtered.length} match{filtered.length === 1 ? "" : "es"} · <button type="button" onClick={() => setQuery("")} className="font-bold text-[#1d3a8f]">clear</button></span>}
+              {q && filtered.length === 0 && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#0f7a43] px-3 py-1.5 text-[12px] font-bold text-white">+ New lead (not found)</button>}
+            </div>
+            <Pipeline leads={filtered} onOpen={setDetail} onMove={move} drag={drag} setDrag={setDrag} />
+          </>
+        );
+      })() : <Dashboard leads={leads} />}
 
       {(detail || adding) && (
         <LeadModal
@@ -115,6 +134,7 @@ export function SalesApp() {
           onDelete={detail ? () => remove(detail.id) : undefined}
         />
       )}
+      {importing && <ImportModal existing={leads} onClose={() => setImporting(false)} onImport={(next) => { persist([...next, ...leads]); setImporting(false); }} />}
     </div>
   );
 }
@@ -122,7 +142,7 @@ export function SalesApp() {
 // ── Pipeline (kanban) ───────────────────────────────────────────────────────
 function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; drag: string | null; setDrag: (id: string | null) => void }) {
   return (
-    <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+    <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
       {STAGES.map((st) => {
         const items = leads.filter((l) => l.stage === st.id);
         const sum = items.reduce((a, b) => a + b.estMrr, 0);
@@ -333,4 +353,110 @@ function Tile({ label, value, sub, accent }: { label: string; value: string; sub
 }
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><div className="mb-3 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>{children}</div>;
+}
+
+// ── CSV import ──────────────────────────────────────────────────────────────
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = [], field = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(field); rows.push(row); row = []; field = ""; }
+    else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((x) => x.trim() !== ""));
+}
+type Field = "business" | "contactName" | "email" | "phone" | "location" | "source" | "owner" | "plan" | "estMrr" | "stage" | "notes";
+const ALIASES: Record<Field, string[]> = {
+  contactName: ["contact", "contact name", "contact_name", "person", "full name", "first name", "lead name"],
+  business: ["business", "company", "business name", "organisation", "organization", "provider", "name", "club", "camp"],
+  email: ["email", "e-mail", "email address", "mail"],
+  phone: ["phone", "tel", "telephone", "mobile", "number", "phone number", "contact number"],
+  location: ["location", "city", "town", "area", "region", "county"],
+  source: ["source", "channel", "lead source"],
+  owner: ["owner", "rep", "assigned", "assigned to", "sales rep", "salesperson"],
+  plan: ["plan", "tier", "package"],
+  estMrr: ["est mrr", "estmrr", "value", "mrr", "monthly", "price", "£/mo", "est £"],
+  stage: ["stage", "status", "pipeline"],
+  notes: ["notes", "note", "comment", "comments"],
+};
+const fieldForHeader = (h: string): Field | null => { const k = h.trim().toLowerCase(); for (const f of Object.keys(ALIASES) as Field[]) if (ALIASES[f].includes(k)) return f; return null; };
+const normSource = (v: string): Source => { const k = v.toLowerCase(); if (k.includes("cold") || k.includes("call")) return "cold_call"; if (k.includes("email") || k.includes("mail")) return "email"; if (k.includes("social") || k.includes("insta") || k.includes("face") || k.includes("linked") || k.includes("dm")) return "social"; if (k.includes("refer")) return "referral"; if (k.includes("event") || k.includes("confer") || k.includes("expo")) return "event"; if (k.includes("inbound") || k.includes("web") || k.includes("form")) return "inbound"; return "cold_call"; };
+const normPlan = (v: string): Lead["plan"] => { const k = v.toLowerCase(); if (k.includes("free") || k.includes("solo")) return "freelancer"; if (k.includes("franch")) return "franchise"; return "company"; };
+const normStage = (v: string): Stage => { const k = v.toLowerCase(); if (k.includes("won") || k.includes("customer") || k.includes("signed")) return "won"; if (k.includes("lost") || k.includes("dead")) return "lost"; if (k.includes("trial")) return "trial"; if (k.includes("demo")) return "demo"; if (k.includes("contact")) return "contacted"; return "new"; };
+
+function ImportModal({ existing, onClose, onImport }: { existing: Lead[]; onClose: () => void; onImport: (l: Lead[]) => void }) {
+  const [parsed, setParsed] = useState<{ leads: Lead[]; skipped: number; fileName: string } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onFile = async (file: File) => {
+    setErr(null); setParsed(null);
+    try {
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) { setErr("That file has no data rows."); return; }
+      const headers = rows[0];
+      const col: Partial<Record<Field, number>> = {};
+      headers.forEach((h, i) => { const f = fieldForHeader(h); if (f && col[f] == null) col[f] = i; });
+      if (col.business == null && col.contactName == null && col.email == null) { setErr("Couldn't find a Business, Name or Email column."); return; }
+      const seen = new Set(existing.map((l) => l.email.trim().toLowerCase()).filter(Boolean));
+      const leads: Lead[] = []; let skipped = 0;
+      for (const r of rows.slice(1)) {
+        const g = (f: Field) => (col[f] != null ? (r[col[f]!] ?? "").trim() : "");
+        const email = g("email");
+        if (email && seen.has(email.toLowerCase())) { skipped++; continue; }
+        if (email) seen.add(email.toLowerCase());
+        const plan = col.plan != null ? normPlan(g("plan")) : "company";
+        const est = Number(g("estMrr").replace(/[^0-9.]/g, ""));
+        const now = nowIso();
+        leads.push({ id: uid(), business: g("business") || g("contactName") || email || "Untitled", contactName: g("contactName"), email, phone: g("phone"), location: g("location"), source: col.source != null ? normSource(g("source")) : "cold_call", owner: g("owner"), plan, estMrr: est > 0 ? est : PLAN_MRR[plan], stage: col.stage != null ? normStage(g("stage")) : "new", notes: g("notes"), activities: [], createdAt: now, updatedAt: now });
+      }
+      if (!leads.length) { setErr(skipped ? `All ${skipped} rows are already in your pipeline (matched by email).` : "No valid rows found."); return; }
+      setParsed({ leads, skipped, fileName: file.name });
+    } catch { setErr("Couldn't read that file — is it a .csv?"); }
+  };
+
+  const template = "data:text/csv;charset=utf-8," + encodeURIComponent("Business,Contact name,Email,Phone,Location,Source,Owner,Plan,Est MRR,Stage,Notes\nSunrise Camps,Jo Bloggs,jo@sunrise.example,07700 900000,Leeds,Cold call,Priya,Company,69,New,Met at expo\n");
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
+      <div className="my-6 w-[min(600px,96vw)] rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3.5 text-white" style={{ background: HERO }}>
+          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Import leads from CSV</div>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">✕ Close</button>
+        </div>
+        <div className="p-5">
+          <p className="text-[12.5px] text-[var(--ink-3)]">Upload your spreadsheet (CSV) — we read the columns automatically (Business, Contact name, Email, Phone, Location, Source, Owner, Plan, Est MRR, Stage, Notes). Rows already in your pipeline (same email) are skipped.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="cursor-pointer rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white hover:brightness-110">Choose CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.target.value = ""; }} /></label>
+            <a href={template} download="activityos-leads-template.csv" className="text-[12px] font-bold text-[#1d3a8f] hover:underline">⬇ Download template</a>
+          </div>
+          {err && <div className="mt-3 rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-bold text-[var(--red)]">{err}</div>}
+          {parsed && (
+            <div className="mt-4">
+              <div className="rounded-lg bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f]">✓ {parsed.fileName}: {parsed.leads.length} lead{parsed.leads.length === 1 ? "" : "s"} ready{parsed.skipped ? ` · ${parsed.skipped} skipped` : ""}</div>
+              <div className="mt-2 overflow-hidden rounded-xl border border-[var(--line)]">
+                <div className="max-h-[220px] overflow-y-auto">
+                  {parsed.leads.slice(0, 25).map((l) => (
+                    <div key={l.id} className="flex items-center gap-2 border-b border-[var(--line)] px-3 py-1.5 text-[12px] last:border-0">
+                      <span className="min-w-0 flex-1 truncate font-semibold">{l.business}</span>
+                      <span className="truncate text-[11px] text-[var(--ink-3)]">{l.email || l.phone || "—"}</span>
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: stageOf(l.stage).color }}>{stageOf(l.stage).label}</span>
+                    </div>
+                  ))}
+                </div>
+                {parsed.leads.length > 25 && <div className="px-3 py-1.5 text-[10.5px] text-[var(--ink-3)]">+ {parsed.leads.length - 25} more…</div>}
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">Cancel</button>
+                <button type="button" onClick={() => onImport(parsed.leads)} className="rounded-full bg-[#0f7a43] px-5 py-2 text-[12.5px] font-extrabold text-white">Import {parsed.leads.length}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
