@@ -57,7 +57,7 @@ export function PlatformAnalyticsApp() {
       const dt = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i + 1, 1));
       return { month: mKey(dt), mrr: Math.max(0, Math.round(lastMrr + avgDelta * (i + 1))) };
     });
-    return { mrr: slice(mrrSeries), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection };
+    return { mrr: slice(mrrSeries), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection, avgDelta, lastMrr };
   }, [d, months, mode]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
@@ -73,17 +73,10 @@ export function PlatformAnalyticsApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📈 Provider analytics</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
-              {([["incl", "Incl. trials"], ["paying", "Paying only"]] as const).map(([m, label]) => (
-                <button key={m} type="button" onClick={() => setMode(m)} className="rounded-full px-3 py-1 transition-colors" style={mode === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{label}</button>
-              ))}
-            </div>
-            <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
-              {[3, 6, 12].map((m) => (
-                <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{m}m</button>
-              ))}
-            </div>
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold" title="Applies to the money figures — includes or excludes providers still on their free trial">
+            {([["incl", "Incl. trials"], ["paying", "Paying only"]] as const).map(([m, label]) => (
+              <button key={m} type="button" onClick={() => setMode(m)} className="rounded-full px-3 py-1 transition-colors" style={mode === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{label}</button>
+            ))}
           </div>
         </div>
       </div>
@@ -107,10 +100,25 @@ export function PlatformAnalyticsApp() {
         <Kpi label="Trial → paid" value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} accent={GOLD} />
       </div>
 
-      {/* MRR trend + projection */}
-      <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", GOLD]]} />} className="mt-4">
-        <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
-      </Card>
+      {/* Trend period — controls the charts below, not the KPI cards above. */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Trends over time</div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
+          {[3, 6, 12].map((m) => (
+            <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{m}m</button>
+          ))}
+        </div>
+      </div>
+
+      {/* MRR trend (2/3) + long-range projections (1/3) */}
+      <div className="mt-3 grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", GOLD]]} />} className="h-full">
+            <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
+          </Card>
+        </div>
+        <Projections lastMrr={view.lastMrr} avgDelta={view.avgDelta} mode={mode} />
+      </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card title="New signups" right={<span className="text-[11.5px] text-[var(--ink-3)]">bars = joined · line = total</span>}>
@@ -178,6 +186,34 @@ function Card({ title, right, children, className = "" }: { title: string; right
         {right}
       </div>
       {children}
+    </div>
+  );
+}
+// Long-range MRR/ARR projection at 1/2/3/5 years from recent monthly growth.
+function Projections({ lastMrr, avgDelta, mode }: { lastMrr: number; avgDelta: number; mode: "incl" | "paying" }) {
+  const horizons: [number, string][] = [[12, "1 year"], [24, "2 years"], [36, "3 years"], [60, "5 years"]];
+  const rows = horizons.map(([h, label]) => { const mrr = Math.max(0, Math.round(lastMrr + avgDelta * h)); return { label, mrr, arr: mrr * 12 }; });
+  const max = Math.max(1, ...rows.map((r) => r.mrr));
+  return (
+    <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div className="mb-1 flex items-center gap-2">
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Where it could go</div>
+        <span className="rounded-full bg-[#fff5db] px-2 py-0.5 text-[10px] font-bold text-[#b47e00]">Projection</span>
+      </div>
+      <p className="mb-3 text-[11px] leading-snug text-[var(--ink-3)]">If recent growth holds ({mode === "paying" ? "paying" : "incl. trials"}), projected recurring revenue:</p>
+      <div className="flex flex-1 flex-col justify-between gap-3">
+        {rows.map((r) => (
+          <div key={r.label}>
+            <div className="flex items-baseline justify-between">
+              <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{r.label}</span>
+              <span className="text-[16px] font-extrabold tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(r.mrr)}<span className="text-[11px] font-normal text-[var(--ink-3)]">/mo</span></span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.mrr / max) * 100}%`, background: GOLD }} /></div>
+            <div className="mt-0.5 text-right text-[10.5px] text-[var(--ink-3)]">{money(r.arr)}/yr</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] leading-snug text-[var(--ink-3)]">Straight-line from recent average monthly growth — a guide, not a guarantee.</p>
     </div>
   );
 }
