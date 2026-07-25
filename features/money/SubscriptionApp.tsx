@@ -199,7 +199,14 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   const overStaff = c.staffLimit != null && staffUsed != null && staffUsed >= c.staffLimit;
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Subscription</h2>
+      {/* Hero — matches the other Money pages (Expenses / Purchasing). */}
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💳</span>
+          Subscription
+        </div>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Your ActivityOS plan — see what you’re on, switch plans, or cancel anytime.</p>
+      </div>
 
       {c.status !== "none" && (
         <div className="mb-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
