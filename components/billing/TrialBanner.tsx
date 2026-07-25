@@ -30,7 +30,7 @@ export function TrialBanner({ portal }: { portal: string }) {
   if (c.status === "trialing") {
     const d = days(c.trialEndsAt);
     return (
-      <Link href={href} className="block border-b border-[var(--line)] bg-white px-4 py-2 text-center text-[12.5px] font-bold text-[#1d3a8f]">
+      <Link href={href} className="block bg-white px-4 py-2 text-center text-[12.5px] font-bold text-[#1d3a8f]">
         Free trial — {d} day{d === 1 ? "" : "s"} left · <span className="underline">Manage plan →</span>
       </Link>
     );
