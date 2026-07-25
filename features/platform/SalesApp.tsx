@@ -178,8 +178,8 @@ function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onO
 }
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
-const PERIODS: [string, string][] = [["today", "Today"], ["week", "Last week"], ["month", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["9m", "9 months"]];
-const PERIOD_DAYS: Record<string, number> = { week: 7, month: 30, "3m": 90, "6m": 180, "9m": 270 };
+const PERIODS: [string, string][] = [["today", "Today"], ["5d", "5 days"], ["week", "Last week"], ["month", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["9m", "9 months"]];
+const PERIOD_DAYS: Record<string, number> = { "5d": 5, week: 7, month: 30, "3m": 90, "6m": 180, "9m": 270 };
 
 function Dashboard({ leads }: { leads: Lead[] }) {
   const [now] = useState(() => Date.now()); // captured once — pure during render
@@ -208,6 +208,23 @@ function Dashboard({ leads }: { leads: Lead[] }) {
   const bySource = (() => { const m: Record<string, number> = {}; for (const l of newLeads) m[l.source] = (m[l.source] ?? 0) + 1; return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
   const bySourceMax = Math.max(1, ...bySource.map((s) => s[1]));
 
+  // This window vs the equal window before it.
+  const len = now - cutoff;
+  const winMetrics = (from: number, to: number) => {
+    const inW = (iso: string) => { const t = new Date(iso).getTime(); return t >= from && t < to; };
+    const a = leads.flatMap((l) => l.activities).filter((x) => inW(x.at));
+    return {
+      newLeads: leads.filter((l) => inW(l.createdAt)).length,
+      contacted: a.filter((x) => x.type === "call" || x.type === "email" || x.type === "social").length,
+      demos: a.filter((x) => x.type === "demo").length,
+      trials: leads.filter((l) => l.stage === "trial" && inW(l.updatedAt)).length,
+      won: leads.filter((l) => l.stage === "won" && inW(l.updatedAt)).length,
+    };
+  };
+  const cur = winMetrics(cutoff, now);
+  const prev = winMetrics(cutoff - len, cutoff);
+  const COMPARE: [string, keyof typeof cur][] = [["New leads", "newLeads"], ["Contacted", "contacted"], ["Demos", "demos"], ["Trials", "trials"], ["New customers", "won"]];
+
   return (
     <div className="mt-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -223,6 +240,30 @@ function Dashboard({ leads }: { leads: Lead[] }) {
         <Tile label="Weighted forecast · now" value={money(forecast)} sub="pipeline × stage odds" accent="#7c3aed" />
         <Tile label={`New customers · ${pLabel}`} value={String(wonP.length)} sub={`${money(wonMrr)}/mo won · ${Math.round(winRate * 100)}% win`} accent="#0f7a43" />
         <Tile label={`Activity · ${pLabel}`} value={String(activities.length)} sub={`${byType.call ?? 0} calls · ${byType.email ?? 0} emails · ${byType.demo ?? 0} demos`} accent="#f0b100" />
+      </div>
+
+      <div className="mt-4">
+        <Card title={`This ${pLabel} vs the previous ${pLabel}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12.5px]">
+              <thead><tr className="text-left text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="pb-2">Metric</th><th className="pb-2 text-right">Previous</th><th className="pb-2 text-right">This {pLabel}</th><th className="pb-2 text-right">Change</th></tr></thead>
+              <tbody>
+                {COMPARE.map(([label, key]) => {
+                  const c = cur[key], p = prev[key], delta = c - p;
+                  const col = delta > 0 ? "#0f7a43" : delta < 0 ? "#c02636" : "var(--ink-3)";
+                  return (
+                    <tr key={key} className="border-t border-[var(--line)]">
+                      <td className="py-2 font-semibold">{label}</td>
+                      <td className="py-2 text-right tabular-nums text-[var(--ink-3)]">{p}</td>
+                      <td className="py-2 text-right text-[15px] font-extrabold tabular-nums">{c}</td>
+                      <td className="py-2 text-right font-bold tabular-nums" style={{ color: col }}>{delta > 0 ? "▲ +" : delta < 0 ? "▼ −" : "• "}{delta === 0 ? "0" : Math.abs(delta)}{p > 0 ? ` (${delta >= 0 ? "+" : "−"}${Math.round((Math.abs(delta) / p) * 100)}%)` : ""}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
