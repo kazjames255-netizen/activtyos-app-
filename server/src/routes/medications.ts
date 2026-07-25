@@ -33,6 +33,7 @@ const medSchema = z.object({
   route: z.string().trim().max(60).optional(), // oral / inhaler / cream …
   condition: z.string().trim().max(160).optional(), // "asthma"
   schedule: z.string().trim().max(200).optional(), // "twice daily", "as needed"
+  instructions: z.string().trim().max(2000).optional(), // how to administer — shown to staff
   asNeeded: z.boolean().default(false), // PRN
   storage: z.string().trim().max(200).optional(),
   heldOnSite: z.boolean().default(false),
