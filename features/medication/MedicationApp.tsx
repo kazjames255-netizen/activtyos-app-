@@ -67,6 +67,45 @@ const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateSt
 type MedDraft = Partial<Med> & { childName: string; name: string; dose: string };
 const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded: false, heldOnSite: false, consentGranted: false });
 
+// Search the operator's own families/children (from /api/customers) so the Child
+// field is picked, not free-typed — the first step to linking a record to the
+// parent. Free-typing still works if a child isn't on file yet.
+interface Fam { id: string; name: string; email?: string; children?: { name: string }[] }
+function ChildPicker({ value, onPick }: { value: string; onPick: (childName: string) => void }) {
+  const [families, setFamilies] = useState<Fam[]>([]);
+  const [q, setQ] = useState(value);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { apiGet<Fam[]>("/api/customers").then(setFamilies).catch(() => {}); }, []);
+
+  const ql = q.trim().toLowerCase();
+  const opts: { child: string; sub: string }[] = [];
+  for (const f of families) {
+    const kids = f.children ?? [];
+    if (kids.length === 0) opts.push({ child: f.name, sub: f.email ?? "family" });
+    for (const k of kids) opts.push({ child: k.name, sub: f.name });
+  }
+  const matches = opts.filter((o) => !ql || o.child.toLowerCase().includes(ql) || o.sub.toLowerCase().includes(ql)).slice(0, 8);
+
+  return (
+    <div className="relative">
+      <Input value={q} placeholder="Search child or family…" className="w-full"
+        onChange={(e) => { setQ(e.target.value); onPick(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+      {open && matches.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
+          {matches.map((o, i) => (
+            <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(o.child); onPick(o.child); setOpen(false); }}
+              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-[var(--panel)]">
+              <span className="font-semibold">{o.child}</span>
+              <span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<MedDraft>(emptyMed());
   const [freq, setFreq] = useState<"daily" | "asneeded">("daily");
@@ -97,7 +136,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     <Card className="mb-3.5 p-4">
       <div className="mb-2 text-[13.5px] font-extrabold">Administer a medication</div>
       <div className="grid gap-2.5 sm:grid-cols-3">
-        <div><FieldLabel>Child</FieldLabel><Input value={d.childName} onChange={(e) => set({ childName: e.target.value })} className="w-full" /></div>
+        <div><FieldLabel>Child / family</FieldLabel><ChildPicker value={d.childName} onPick={(name) => set({ childName: name })} /></div>
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
         <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
         <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
