@@ -30,15 +30,15 @@ export function TrialBanner({ portal }: { portal: string }) {
   if (c.status === "trialing") {
     const d = days(c.trialEndsAt);
     return (
-      <Link href={href} className="block bg-[#1d3a8f] px-4 py-2 text-center text-[12.5px] font-bold text-white hover:brightness-110">
-        🎉 Free trial — {d} day{d === 1 ? "" : "s"} left. Add your payment details to keep going. <span className="underline">Manage plan →</span>
+      <Link href={href} className="block bg-[#1d3a8f] px-4 py-2 text-center text-[12.5px] font-bold text-white">
+        Free trial — {d} day{d === 1 ? "" : "s"} left · <span className="underline">Manage plan →</span>
       </Link>
     );
   }
   if (c.status === "canceling") {
     return (
-      <Link href={href} className="block bg-[#a5670a] px-4 py-2 text-center text-[12.5px] font-bold text-white hover:brightness-110">
-        Your plan cancels on {fmt(c.cancelAt)} — you keep access until then. <span className="underline">Reactivate →</span>
+      <Link href={href} className="block bg-[#a5670a] px-4 py-2 text-center text-[12.5px] font-bold text-white">
+        Cancels {fmt(c.cancelAt)} · <span className="underline">Reactivate →</span>
       </Link>
     );
   }
