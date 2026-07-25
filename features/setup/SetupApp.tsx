@@ -68,7 +68,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1105,7 +1105,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1143,6 +1143,7 @@ export function SetupApp() {
   const TABS: [Tab, string][] = [
     ["features", "Features"],
     ["people", "Child questions"],
+    ["medication", "Medication"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
@@ -1180,6 +1181,26 @@ export function SetupApp() {
       </HowItWorks>
 
       <TabStrip tabs={TABS} value={tab} onChange={setTab} />
+
+      {tab === "medication" && (
+        <Section
+          title="Medication"
+          lede="How medicines are recorded on the Medication page. Written parental consent is always required before a dose; these set what happens around each administration."
+        >
+          <Row label="Tell the parent when a dose is given" hint="Notifies the parent in their customer area each time a dose is logged.">
+            <Toggle on={settings.medication?.informParentGiven ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentGiven: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Tell the parent if a dose is missed or refused" hint="Also notify when a dose is recorded as NOT given — safeguarding good practice.">
+            <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
+            <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
+            <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
+          </Row>
+        </Section>
+      )}
 
       {tab === "people" && (
         <>
@@ -1286,24 +1307,6 @@ export function SetupApp() {
                 <AlwaysOn />
                 <NumberBox value={settings.emergencyContacts} onChange={(n) => set("emergencyContacts", n)} min={1} max={4} />
               </span>
-            </Row>
-          </Section>
-
-          <Section
-            title="Medication"
-            lede="How medicines are recorded on the Medication page. Written parental consent is always required before a dose; these set what happens around each administration."
-          >
-            <Row label="Tell the parent when a dose is given" hint="Notifies the parent in their customer area each time a dose is logged.">
-              <Toggle on={settings.medication?.informParentGiven ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentGiven: v })} labels={["Yes", "No"]} />
-            </Row>
-            <Row label="Tell the parent if a dose is missed or refused" hint="Also notify when a dose is recorded as NOT given — safeguarding good practice.">
-              <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={["Yes", "No"]} />
-            </Row>
-            <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
-              <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
-            </Row>
-            <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
-              <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
             </Row>
           </Section>
 
@@ -1547,7 +1550,7 @@ export function SetupApp() {
             const sample = {
               reference: "INV-1001", customerName: "Sample Customer Ltd", customerAddress: "1 Example Street, Townsville AB1 2CD", customerEmail: "customer@example.com",
               poNumber: f.poNumber ? "4200075991" : undefined, accountRef: f.accountRef ? "ACC-001" : undefined,
-              date: new Date().toISOString().slice(0, 10),
+              date: "2026-01-15",
               lineItems: [{ description: "Summer camp — week 1", qty: 1, unitPrice: 120 }, { description: "Extended day", qty: 3, unitPrice: 8 }],
               taxRate: f.vat ? (settings.billing?.defaultTaxRate ?? 20) : undefined,
               notes: "This is a preview of how your invoices will look.",
@@ -1557,7 +1560,7 @@ export function SetupApp() {
           {poPreview && (() => {
             const sample = {
               reference: "PO-1001", supplier: "Sample Supplier Ltd", supplierAddress: "12 Trade Park, Industry Way, Townsville AB1 2CD", supplierEmail: "sales@supplier.example",
-              date: new Date().toISOString().slice(0, 10), dueDate: new Date(Date.now() + 12096e5).toISOString().slice(0, 10),
+              date: "2026-01-15", dueDate: "2026-01-29",
               requestedBy: settings.billing?.businessName ? `${settings.billing.businessName} — Ops` : "Operations",
               deliveryAddress: settings.billing?.address ?? "", comments: "Please confirm receipt of this order by return email.",
               lineItems: [{ description: "Summer HAF programme — SEN", qty: 1, unitPrice: 16800 }, { description: "Extra sessions", qty: 4, unitPrice: 120 }],
