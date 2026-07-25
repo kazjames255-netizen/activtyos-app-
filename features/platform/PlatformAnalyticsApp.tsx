@@ -227,7 +227,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 // Area/line trend with optional 2nd series and a dashed projection tail; hover shows values.
 function TrendChart({ series, series2, projection, fmt, color, color2 }: { series: { label: string; value: number }[]; series2?: { label: string; value: number }[]; projection?: { label: string; value: number }[]; fmt: (n: number) => string; color: string; color2?: string }) {
   const [hover, setHover] = useState<number | null>(null);
-  const W = 640, H = 150, PAD = 8;
+  const W = 640, H = 168, PAD = 10;
   const all = [...series, ...(projection ?? [])];
   const pts = [...series.map((p) => p.value), ...(series2?.map((p) => p.value) ?? []), ...(projection?.map((p) => p.value) ?? [])];
   const max = Math.max(1, ...pts);
@@ -236,6 +236,7 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
   const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
   const line = (arr: { value: number }[], off = 0) => arr.map((p, i) => `${i === 0 ? "M" : "L"}${x(i + off).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
   const areaP = `${line(series)} L${x(series.length - 1)},${H - PAD} L${x(0)},${H - PAD} Z`;
+  const areaP2 = series2 && series2.length ? `${line(series2)} L${x(series2.length - 1)},${H - PAD} L${x(0)},${H - PAD} Z` : "";
   const projLine = projection ? `M${x(series.length - 1)},${y(series[series.length - 1]?.value ?? 0)} ` + projection.map((p, i) => `L${x(series.length + i)},${y(p.value)}`).join(" ") : "";
   const hi = hover;
 
@@ -256,9 +257,11 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
         onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); const rel = ((e.clientX - r.left) / r.width) * W; setHover(Math.max(0, Math.min(n - 1, Math.round((rel - PAD) / ((W - 2 * PAD) / Math.max(1, n - 1)))))); }}>
         <defs>
           <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.22" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient>
+          {color2 && <linearGradient id="tg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color2} stopOpacity="0.16" /><stop offset="1" stopColor={color2} stopOpacity="0" /></linearGradient>}
         </defs>
         {[1, 0.66, 0.33].map((g) => { const yy = y(max * g); return <g key={g}><line x1={PAD} x2={W - PAD} y1={yy} y2={yy} stroke="var(--line)" strokeWidth="1" /><text x={PAD} y={yy - 3} fontSize="9" fill="var(--ink-3)">{fmt(max * g)}</text></g>; })}
         <path d={areaP} fill="url(#tg)" />
+        {areaP2 && <path d={areaP2} fill="url(#tg2)" />}
         <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
         {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
         {projection && <path d={projLine} fill="none" stroke={GOLD} strokeWidth="2.5" strokeDasharray="4 4" strokeLinejoin="round" />}
@@ -282,15 +285,31 @@ function TrendChart({ series, series2, projection, fmt, color, color2 }: { serie
 function SignupBars({ data }: { data: { month: string; count: number; cumulative: number }[] }) {
   const maxC = Math.max(1, ...data.map((x) => x.count));
   const maxCum = Math.max(1, ...data.map((x) => x.cumulative));
-  const W = 640, H = 150, PAD = 8;
-  const bw = (W - 2 * PAD) / data.length;
-  const cy = (v: number) => H - PAD - (v / maxCum) * (H - 2 * PAD);
+  const W = 640, H = 170, TOP = 20, BOT = 12; // headroom for labels
+  const plot = H - TOP - BOT;
+  const bw = (W - 16) / data.length;
+  const bx = (i: number) => 8 + i * bw;
+  const by = (v: number) => H - BOT - (v / maxC) * plot;
+  const cy = (v: number) => H - BOT - (v / maxCum) * plot;
+  const cx = (i: number) => bx(i) + bw / 2;
+  const total = data[data.length - 1]?.cumulative ?? 0;
+  const cumPath = data.map((x, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(x.cumulative)}`).join(" ");
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        {data.map((x, i) => { const h = (x.count / maxC) * (H - 2 * PAD); return <rect key={i} x={PAD + i * bw + bw * 0.2} y={H - PAD - h} width={bw * 0.6} height={Math.max(0, h)} rx="3" fill={LIGHTB} opacity={0.85}><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect>; })}
-        <path d={data.map((x, i) => `${i === 0 ? "M" : "L"}${PAD + i * bw + bw / 2},${cy(x.cumulative)}`).join(" ")} fill="none" stroke={BLUE} strokeWidth="2.5" />
-        {data.map((x, i) => <circle key={i} cx={PAD + i * bw + bw / 2} cy={cy(x.cumulative)} r="2.5" fill={BLUE}><title>{`${monthLabel(x.month)}: ${x.cumulative} total`}</title></circle>)}
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: "visible" }}>
+        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity="0.14" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient></defs>
+        {[0.5, 1].map((g) => { const yy = by(maxC * g); return <line key={g} x1={8} x2={W - 8} y1={yy} y2={yy} stroke="var(--line)" strokeWidth="1" />; })}
+        {/* monthly join bars */}
+        {data.map((x, i) => {
+          const h = (x.count / maxC) * plot;
+          if (x.count === 0) return <rect key={i} x={bx(i) + bw * 0.28} y={H - BOT - 2} width={bw * 0.44} height={2} rx={1} fill="var(--line)" />;
+          return <g key={i}><rect x={bx(i) + bw * 0.22} y={H - BOT - h} width={bw * 0.56} height={h} rx={4} fill={LIGHTB}><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect><text x={cx(i)} y={H - BOT - h - 4} fontSize="10" fontWeight="800" fill={LIGHTB} textAnchor="middle">{x.count}</text></g>;
+        })}
+        {/* cumulative total area + line */}
+        <path d={`${cumPath} L${cx(data.length - 1)},${H - BOT} L${cx(0)},${H - BOT} Z`} fill="url(#sg)" />
+        <path d={cumPath} fill="none" stroke={BLUE} strokeWidth="2.5" strokeLinejoin="round" />
+        <circle cx={cx(data.length - 1)} cy={cy(total)} r="3.5" fill={BLUE} />
+        <text x={Math.min(W - 2, cx(data.length - 1))} y={cy(total) - 9} fontSize="11" fontWeight="800" fill={BLUE} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="end">{total} total</text>
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((x, i) => <span key={i}>{monthLabel(x.month)}</span>)}</div>
     </div>
