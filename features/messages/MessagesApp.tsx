@@ -154,7 +154,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
   // Who's booked on the chosen listings — so the operator can review + un-tick.
   useEffect(() => {
-    if (mode !== "operator" || listingTargets.length === 0) { setListingRecipients([]); return; }
+    // Only fetches (async setState) — no synchronous setState in the effect body.
+    // The empty case needs no clear: every read of listingRecipients is gated on
+    // listingTargets.length > 0, and a new selection overwrites via the fetch.
+    if (mode !== "operator" || listingTargets.length === 0) return;
     apiPost<{ email: string; name: string; child?: string }[]>("/api/messages/listing-recipients", { listings: listingTargets })
       .then((rs) => { setListingRecipients(rs); setExcludedEmails((ex) => ex.filter((e) => rs.some((r) => r.email === e))); })
       .catch(() => {});
