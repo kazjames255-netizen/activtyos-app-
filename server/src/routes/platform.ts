@@ -243,13 +243,17 @@ platform.get("/analytics", async (req, res) => {
   let cum = tenants.filter((t) => t.createdAt && new Date(t.createdAt) < monthEnd(months[0])).length;
   const signupsByMonth = months.map((k) => { const count = signBuckets[k] ?? 0; cum += count; return { month: k, count, cumulative: cum }; });
 
-  // Approx MRR at each month end = billable providers who'd started by then.
-  const mrrByMonth = months.map((k) => {
+  // Approx MRR at each month end = providers who'd started by then. Two series:
+  // incl. trials (billable) and paying-only (active + cancelling).
+  const PAYING = new Set(["active", "canceling"]);
+  const mrrAt = (statuses: Set<string>) => months.map((k) => {
     const end = monthEnd(k);
     let m = 0;
-    for (const t of tenants) { const sub = t.subscription ?? {}; if (!BILLABLE.has(sub.status as string)) continue; const since = (sub.since as string) ?? t.createdAt; if (since && new Date(since) <= end) m += Number(sub.price) || 0; }
+    for (const t of tenants) { const sub = t.subscription ?? {}; if (!statuses.has(sub.status as string)) continue; const since = (sub.since as string) ?? t.createdAt; if (since && new Date(since) <= end) m += Number(sub.price) || 0; }
     return { month: k, mrr: m };
   });
+  const mrrByMonth = mrrAt(BILLABLE);
+  const mrrPayingByMonth = mrrAt(PAYING);
 
   // GMV (what parents pay providers) from bookings.
   const gmvBuckets: Record<string, { booked: number; paid: number }> = {};
@@ -277,7 +281,7 @@ platform.get("/analytics", async (req, res) => {
       gmvBooked: Math.round(gmvBooked), gmvPaid: Math.round(gmvPaid),
     },
     byPlan, byStatus, byType, attribution,
-    signupsByMonth, mrrByMonth, gmvByMonth, projection,
+    signupsByMonth, mrrByMonth, mrrPayingByMonth, gmvByMonth, projection,
     topProviders: topProviders.slice(0, 8), atRisk,
   });
 });

@@ -12,6 +12,7 @@ interface Analytics {
   attribution: Record<string, number>;
   signupsByMonth: { month: string; count: number; cumulative: number }[];
   mrrByMonth: { month: string; mrr: number }[];
+  mrrPayingByMonth: { month: string; mrr: number }[];
   gmvByMonth: { month: string; booked: number; paid: number }[];
   projection: { month: string; mrr: number }[];
   topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[];
@@ -32,6 +33,7 @@ export function PlatformAnalyticsApp() {
   const [d, setD] = useState<Analytics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(12);
+  const [mode, setMode] = useState<"incl" | "paying">("incl");
 
   const load = useCallback(() => {
     apiGet<Analytics>("/api/platform/analytics").then((a) => { setD(a); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -42,20 +44,21 @@ export function PlatformAnalyticsApp() {
   const view = useMemo(() => {
     if (!d) return null;
     const slice = <T,>(arr: T[]) => arr.slice(-months);
+    const mrrSeries = mode === "paying" ? d.mrrPayingByMonth : d.mrrByMonth;
     // Project the SAME number of months forward as the selected window, from the
-    // recent average monthly change.
-    const recent = d.mrrByMonth.slice(-6).map((x) => x.mrr);
+    // recent average monthly change of the chosen (incl/paying) series.
+    const recent = mrrSeries.slice(-6).map((x) => x.mrr);
     const deltas = recent.slice(1).map((v, i) => v - recent[i]);
     const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
-    const last = d.mrrByMonth[d.mrrByMonth.length - 1];
-    const lastMrr = last?.mrr ?? d.summary.mrr;
+    const last = mrrSeries[mrrSeries.length - 1];
+    const lastMrr = last?.mrr ?? (mode === "paying" ? d.summary.mrrPaying : d.summary.mrr);
     const start = last ? new Date(`${last.month}-01T00:00:00Z`) : new Date();
     const projection = Array.from({ length: months }, (_, i) => {
       const dt = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i + 1, 1));
       return { month: mKey(dt), mrr: Math.max(0, Math.round(lastMrr + avgDelta * (i + 1))) };
     });
-    return { mrr: slice(d.mrrByMonth), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection };
-  }, [d, months]);
+    return { mrr: slice(mrrSeries), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth), projection };
+  }, [d, months, mode]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!d || !view) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading analytics…</div>;
@@ -70,10 +73,17 @@ export function PlatformAnalyticsApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📈 Provider analytics</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</p>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
-            {[3, 6, 12].map((m) => (
-              <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{m}m</button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
+              {([["incl", "Incl. trials"], ["paying", "Paying only"]] as const).map(([m, label]) => (
+                <button key={m} type="button" onClick={() => setMode(m)} className="rounded-full px-3 py-1 transition-colors" style={mode === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{label}</button>
+              ))}
+            </div>
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
+              {[3, 6, 12].map((m) => (
+                <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{m}m</button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -84,12 +94,12 @@ export function PlatformAnalyticsApp() {
           <div className="absolute left-0 top-0 h-full w-1" style={{ background: BLUE }} />
           <div className="pl-1.5">
             <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Monthly recurring</div>
-            <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(s.mrr)}</span><span className="text-[10.5px] text-[var(--ink-3)]">incl. trials</span></div>
+            <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(mode === "paying" ? s.mrrPaying : s.mrr)}</span><span className="text-[10.5px] text-[var(--ink-3)]">{mode === "paying" ? "paying only" : "incl. trials"}</span></div>
             <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
               <span className="font-bold text-[#0f7a43]">{money(s.mrrPaying)}<span className="font-normal text-[var(--ink-3)]"> paying</span></span>
               <span className="font-bold text-[#1d3a8f]">{money(s.mrrTrial)}<span className="font-normal text-[var(--ink-3)]"> on trial</span></span>
             </div>
-            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{money(s.arrPaying)}/yr paying · {money(s.arr)}/yr incl. trials</div>
+            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{money(mode === "paying" ? s.arrPaying : s.arr)}/yr {mode === "paying" ? "paying" : "incl. trials"}</div>
           </div>
         </div>
         <Kpi label="Active providers" value={String(s.active + s.canceling)} sub={`${s.trialing} on trial · ${s.totalProviders} total`} accent={LIGHTB} />
@@ -98,7 +108,7 @@ export function PlatformAnalyticsApp() {
       </div>
 
       {/* MRR trend + projection */}
-      <Card title="Recurring revenue" right={<Legend items={[["MRR", BLUE], ["Projected", GOLD]]} />} className="mt-4">
+      <Card title="Recurring revenue" right={<Legend items={[[mode === "paying" ? "Paying MRR" : "MRR incl. trials", BLUE], ["Projected", GOLD]]} />} className="mt-4">
         <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={view.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
       </Card>
 
