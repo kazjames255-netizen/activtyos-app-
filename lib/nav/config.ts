@@ -555,6 +555,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "analytics", legacyView: "platform-analytics", label: "Provider analytics", icon: { type: "glyph", value: "📈" }, badge: null },
         { view: "engagement", legacyView: "platform-engagement", label: "Page engagement", icon: { type: "glyph", value: "🔥" }, badge: null },
         { view: "at-risk", legacyView: "platform-at-risk", label: "At risk", icon: { type: "glyph", value: "🚨" }, badge: null },
+        { view: "sales", legacyView: "platform-sales", label: "Sales pipeline", icon: { type: "glyph", value: "💼" }, badge: null },
         { view: "features", legacyView: "platform-features", label: "Provider features", icon: { type: "glyph", value: "◐" }, badge: null },
       ],
     },

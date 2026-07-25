@@ -1,0 +1,321 @@
+"use client";
+
+import { useState } from "react";
+
+// ── Sales CRM (front-end only for now) ──────────────────────────────────────
+// Runs on a localStorage demo store so it fully works and demos; the data model
+// below maps 1:1 to the backend Amir will build (see docs/sales-crm-handoff.md).
+// No rep logins yet — one HQ view.
+
+type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
+type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound";
+interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string }
+interface Lead {
+  id: string; business: string; contactName: string; email: string; phone: string; location: string;
+  source: Source; owner: string; plan: "freelancer" | "company" | "franchise"; estMrr: number;
+  stage: Stage; lostReason?: string; notes: string; activities: Activity[]; createdAt: string; updatedAt: string;
+}
+
+// 5 clear steps left→right (a fresh Lead → a New customer who's signed up), plus
+// Lost held separately at the end. When a signup matches a lead's email/phone/
+// business, the backend auto-moves it to "New customer" (see sales-crm-handoff).
+const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
+  { id: "new", label: "1 · Lead", color: "#6b6880", prob: 0.1 },
+  { id: "contacted", label: "2 · Contacted", color: "#3f78d8", prob: 0.25 },
+  { id: "demo", label: "3 · Demo", color: "#7c3aed", prob: 0.5 },
+  { id: "trial", label: "4 · Trial", color: "#a5670a", prob: 0.8 },
+  { id: "won", label: "5 · New customer 🎉", color: "#0f7a43", prob: 1 },
+  { id: "lost", label: "Lost", color: "#c02636", prob: 0 },
+];
+const stageOf = (id: Stage) => STAGES.find((s) => s.id === id)!;
+const SOURCES: { id: Source; label: string }[] = [
+  { id: "cold_call", label: "📞 Cold call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" },
+  { id: "referral", label: "🤝 Referral" }, { id: "event", label: "🎟️ Event" }, { id: "inbound", label: "🌐 Inbound" },
+];
+const srcLabel = (s: Source) => SOURCES.find((x) => x.id === s)?.label ?? s;
+const ACT: { id: Activity["type"]; label: string }[] = [
+  { id: "call", label: "📞 Call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" }, { id: "demo", label: "🎥 Demo" }, { id: "note", label: "📝 Note" },
+];
+const PLAN_MRR: Record<Lead["plan"], number> = { freelancer: 29, company: 69, franchise: 86 };
+const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
+const money = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
+const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
+const nowIso = () => new Date().toISOString();
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const KEY = "aos.sales.leads.v2";
+const loadLeads = (): Lead[] => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
+const saveLeads = (l: Lead[]) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { /* ignore */ } };
+
+const SEED: Lead[] = [
+  seed("Riverdale Rugby Camps", "Tom Hale", "tom@riverdale.example", "07700 900111", "Leeds", "cold_call", "Priya", "company", "contacted", "Keen, wants multi-venue.", [["call", "Intro call — interested", "Booking demo"], ["email", "Sent pricing", ""]]),
+  seed("Little Kickers North", "Sara Reyes", "sara@lkn.example", "0161 555 0199", "Manchester", "referral", "Priya", "franchise", "demo", "Franchise of 4 sites.", [["demo", "Demo booked Fri", ""]]),
+  seed("Bounce Gymnastics", "Dan Cole", "dan@bounce.example", "07700 900222", "Bristol", "social", "Jamie", "freelancer", "contacted", "DM'd on Insta.", [["social", "Replied on Instagram", "Sent link"]]),
+  seed("Spark Drama School", "Mia Fox", "mia@spark.example", "0113 400 7788", "Leeds", "email", "Jamie", "company", "new", "", []),
+  seed("Aqua Tots Swim", "Owen Pratt", "owen@aquatots.example", "0151 700 4455", "Liverpool", "cold_call", "Priya", "company", "trial", "On free trial, likes it.", [["call", "Onboarding help", "Happy"]]),
+  seed("Summit Climbing Kids", "Ella Bond", "ella@summit.example", "07700 900333", "Sheffield", "event", "Jamie", "freelancer", "won", "Signed up!", [["demo", "Demo went great", "Won"]]),
+  seed("Melody Music Minis", "Raj Shah", "raj@melody.example", "0121 500 6677", "Birmingham", "inbound", "Priya", "freelancer", "lost", "Went with a competitor.", [["email", "Followed up twice", "No response"]]),
+  seed("Champions Football", "Kate Lynn", "kate@champions.example", "07700 900444", "Newcastle", "cold_call", "Jamie", "company", "new", "", []),
+];
+function seed(business: string, contactName: string, email: string, phone: string, location: string, source: Source, owner: string, plan: Lead["plan"], stage: Stage, notes: string, acts: [Activity["type"], string, string][]): Lead {
+  const createdAt = new Date(Date.now() - Math.round(Math.random() * 40) * 86400000).toISOString();
+  return { id: uid(), business, contactName, email, phone, location, source, owner, plan, estMrr: PLAN_MRR[plan], stage, notes, createdAt, updatedAt: createdAt, activities: acts.map(([type, note, outcome]) => ({ id: uid(), type, note, outcome, at: createdAt, by: owner })) };
+}
+
+export function SalesApp() {
+  const [leads, setLeads] = useState<Lead[]>(() => {
+    if (typeof window === "undefined") return [];
+    const l = loadLeads();
+    if (l.length) return l;
+    saveLeads(SEED);
+    return SEED;
+  });
+  const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
+  const [detail, setDetail] = useState<Lead | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [drag, setDrag] = useState<string | null>(null);
+
+  const persist = (next: Lead[]) => { setLeads(next); saveLeads(next); };
+  const upsert = (lead: Lead) => persist(leads.some((x) => x.id === lead.id) ? leads.map((x) => (x.id === lead.id ? lead : x)) : [{ ...lead }, ...leads]);
+  const remove = (id: string) => { persist(leads.filter((x) => x.id !== id)); setDetail(null); };
+  const move = (id: string, stage: Stage) => persist(leads.map((x) => (x.id === id ? { ...x, stage, updatedAt: nowIso() } : x)));
+
+  return (
+    <div className="text-[var(--ink)]">
+      <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
+        <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>💼 Sales pipeline</h2>
+            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Track every prospect from first touch to paying provider — outreach, demos, and who&rsquo;s converting.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
+              {([["pipeline", "Pipeline"], ["dashboard", "Dashboard"]] as const).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setTab(v)} className="rounded-full px-3 py-1 transition-colors" style={tab === v ? { background: "#fff", color: "#1d3a8f" } : { color: "rgba(255,255,255,.8)" }}>{l}</button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#ffd23f] px-4 py-2 text-[12.5px] font-extrabold text-[#3a2a00] hover:brightness-105">+ Add lead</button>
+          </div>
+        </div>
+      </div>
+
+      {tab === "pipeline"
+        ? <Pipeline leads={leads} onOpen={setDetail} onMove={move} drag={drag} setDrag={setDrag} />
+        : <Dashboard leads={leads} />}
+
+      {(detail || adding) && (
+        <LeadModal
+          lead={detail}
+          onClose={() => { setDetail(null); setAdding(false); }}
+          onSave={(l) => { upsert(l); setDetail(null); setAdding(false); }}
+          onDelete={detail ? () => remove(detail.id) : undefined}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Pipeline (kanban) ───────────────────────────────────────────────────────
+function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; drag: string | null; setDrag: (id: string | null) => void }) {
+  return (
+    <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+      {STAGES.map((st) => {
+        const items = leads.filter((l) => l.stage === st.id);
+        const sum = items.reduce((a, b) => a + b.estMrr, 0);
+        return (
+          <div key={st.id} className="flex w-[230px] shrink-0 flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)]"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); if (drag) onMove(drag, st.id); setDrag(null); }}>
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2.5">
+              <span className="flex items-center gap-1.5 text-[12.5px] font-extrabold"><span className="h-2 w-2 rounded-full" style={{ background: st.color }} />{st.label}</span>
+              <span className="text-[10.5px] font-bold text-[var(--ink-3)]">{items.length} · {money(sum)}</span>
+            </div>
+            <div className="flex min-h-[80px] flex-col gap-2 p-2">
+              {items.map((l) => (
+                <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(l)}
+                  className="cursor-pointer rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
+                  <div className="truncate text-[12.5px] font-extrabold">{l.business}</div>
+                  <div className="truncate text-[11px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
+                  <div className="mt-1.5 flex items-center justify-between text-[10.5px]">
+                    <span className="text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]} · {l.owner}</span>
+                    <span className="font-extrabold text-[#1d3a8f]">{money(l.estMrr)}/mo</span>
+                  </div>
+                  {l.activities[0] && <div className="mt-1 truncate text-[10px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</div>}
+                </div>
+              ))}
+              {items.length === 0 && <div className="py-3 text-center text-[10.5px] text-[var(--ink-3)]">Drop here</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Dashboard ───────────────────────────────────────────────────────────────
+function Dashboard({ leads }: { leads: Lead[] }) {
+  const [now] = useState(() => Date.now()); // captured once — pure during render
+  const open = leads.filter((l) => l.stage !== "won" && l.stage !== "lost");
+  const pipeline = open.reduce((a, b) => a + b.estMrr, 0);
+  const forecast = open.reduce((a, b) => a + b.estMrr * stageOf(b.stage).prob, 0);
+  const won = leads.filter((l) => l.stage === "won");
+  const lost = leads.filter((l) => l.stage === "lost");
+  const winRate = won.length + lost.length ? won.length / (won.length + lost.length) : 0;
+  const wonMrr = won.reduce((a, b) => a + b.estMrr, 0);
+
+  const bySource = (() => {
+    const m: Record<string, { n: number; won: number }> = {};
+    for (const l of leads) { m[l.source] = m[l.source] ?? { n: 0, won: 0 }; m[l.source].n++; if (l.stage === "won") m[l.source].won++; }
+    return Object.entries(m).sort((a, b) => b[1].n - a[1].n);
+  })();
+
+  const acts = (() => {
+    const weekAgo = now - 7 * 86400000;
+    const recent = leads.flatMap((l) => l.activities.map((a) => ({ ...a, business: l.business }))).filter((a) => new Date(a.at).getTime() >= weekAgo);
+    const byType: Record<string, number> = {};
+    for (const a of recent) byType[a.type] = (byType[a.type] ?? 0) + 1;
+    const byRep: Record<string, number> = {};
+    for (const a of recent) byRep[a.by] = (byRep[a.by] ?? 0) + 1;
+    const feed = leads.flatMap((l) => l.activities.map((a) => ({ ...a, business: l.business }))).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8);
+    return { byType, byRep, feed, total: recent.length };
+  })();
+
+  const funnelMax = Math.max(1, ...STAGES.filter((s) => s.id !== "lost").map((s) => leads.filter((l) => l.stage === s.id).length));
+
+  return (
+    <div className="mt-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Tile label="Open pipeline" value={money(pipeline)} sub={`${open.length} live leads`} accent="#1d3a8f" />
+        <Tile label="Weighted forecast" value={money(forecast)} sub="pipeline × stage odds" accent="#7c3aed" />
+        <Tile label="Won" value={money(wonMrr)} sub={`${won.length} closed · ${Math.round(winRate * 100)}% win rate`} accent="#0f7a43" />
+        <Tile label="Activity · 7 days" value={String(acts.total)} sub={`${acts.byType.call ?? 0} calls · ${acts.byType.email ?? 0} emails · ${acts.byType.demo ?? 0} demos`} accent="#f0b100" />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card title="Pipeline funnel">
+          <div className="flex flex-col gap-2">
+            {STAGES.filter((s) => s.id !== "lost").map((st) => {
+              const items = leads.filter((l) => l.stage === st.id);
+              const sum = items.reduce((a, b) => a + b.estMrr, 0);
+              return (
+                <div key={st.id}>
+                  <div className="mb-1 flex items-center justify-between text-[12px]"><span className="flex items-center gap-1.5 font-semibold"><span className="h-2 w-2 rounded-full" style={{ background: st.color }} />{st.label}</span><span className="text-[var(--ink-3)]">{items.length} · {money(sum)}</span></div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(items.length / funnelMax) * 100}%`, background: st.color }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+        <Card title="Leads by source — what's working">
+          <div className="flex flex-col gap-2.5">
+            {bySource.map(([src, v]) => (
+              <div key={src}>
+                <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold">{srcLabel(src as Source)}</span><span className="text-[var(--ink-3)]">{v.n} leads · {v.won} won</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(v.n / Math.max(1, ...bySource.map((s) => s[1].n))) * 100}%`, background: "#3f78d8" }} /></div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card title="Rep activity · last 7 days">
+          {Object.keys(acts.byRep).length ? (
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {Object.entries(acts.byRep).sort((a, b) => b[1] - a[1]).map(([rep, n]) => (
+                <div key={rep} className="flex items-center justify-between py-2 text-[12.5px]"><span className="font-semibold">{rep}</span><span className="font-extrabold tabular-nums">{n} touches</span></div>
+              ))}
+            </div>
+          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No activity this week.</div>}
+        </Card>
+        <Card title="Recent activity">
+          <div className="flex flex-col divide-y divide-[var(--line)]">
+            {acts.feed.map((a) => (
+              <div key={a.id} className="flex items-start gap-2 py-2 text-[12px]">
+                <span>{ACT.find((x) => x.id === a.type)?.label.split(" ")[0]}</span>
+                <div className="min-w-0 flex-1"><span className="font-semibold">{a.business}</span> <span className="text-[var(--ink-3)]">— {a.note}{a.outcome ? ` (${a.outcome})` : ""}</span></div>
+                <span className="shrink-0 text-[10.5px] text-[var(--ink-3)]">{fmtDay(a.at)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── Lead modal (add / edit / activity) ──────────────────────────────────────
+function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead) => void; onDelete?: () => void }) {
+  const [f, setF] = useState<Lead>(() => lead ?? {
+    id: uid(), business: "", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
+  });
+  const [act, setAct] = useState<{ type: Activity["type"]; note: string; outcome: string }>({ type: "call", note: "", outcome: "" });
+  const set = (patch: Partial<Lead>) => setF((x) => ({ ...x, ...patch }));
+  const fld = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
+  const lbl = "text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]";
+  const logActivity = () => { if (!act.note.trim()) return; set({ activities: [{ id: uid(), type: act.type, note: act.note.trim(), outcome: act.outcome.trim() || undefined, at: nowIso(), by: f.owner || "—" }, ...f.activities], updatedAt: nowIso() }); setAct({ type: "call", note: "", outcome: "" }); };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
+      <div className="my-6 w-[min(640px,96vw)] rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3.5 text-white" style={{ background: HERO }}>
+          <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? f.business || "Lead" : "New lead"}</div>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">✕ Close</button>
+        </div>
+        <div className="p-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block sm:col-span-2"><span className={lbl}>Business</span><input className={fld} value={f.business} onChange={(e) => set({ business: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Contact name</span><input className={fld} value={f.contactName} onChange={(e) => set({ contactName: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Location</span><input className={fld} value={f.location} onChange={(e) => set({ location: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Email</span><input className={fld} value={f.email} onChange={(e) => set({ email: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Phone</span><input className={fld} value={f.phone} onChange={(e) => set({ phone: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Source</span><select className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+            <label className="block"><span className={lbl}>Owner (rep)</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Priya" /></label>
+            <label className="block"><span className={lbl}>Likely plan</span><select className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></label>
+            <label className="block"><span className={lbl}>Est. £/mo</span><input type="number" className={fld} value={f.estMrr} onChange={(e) => set({ estMrr: Number(e.target.value) || 0 })} /></label>
+            <label className="block sm:col-span-2"><span className={lbl}>Stage</span><select className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+            <label className="block sm:col-span-2"><span className={lbl}>Notes</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
+          </div>
+
+          {/* Activity log */}
+          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#1d3a8f]">Activity — log a touch</div>
+            <div className="flex flex-wrap gap-2">
+              <select className={`${fld} w-auto`} value={act.type} onChange={(e) => setAct({ ...act, type: e.target.value as Activity["type"] })}>{ACT.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
+              <input className={`${fld} min-w-[120px] flex-1`} placeholder="What happened" value={act.note} onChange={(e) => setAct({ ...act, note: e.target.value })} />
+              <input className={`${fld} w-[130px]`} placeholder="Outcome" value={act.outcome} onChange={(e) => setAct({ ...act, outcome: e.target.value })} />
+              <button type="button" onClick={logActivity} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white">Log</button>
+            </div>
+            {f.activities.length > 0 && (
+              <div className="mt-2.5 flex flex-col divide-y divide-[var(--line)]">
+                {f.activities.map((a) => (
+                  <div key={a.id} className="flex items-start gap-2 py-1.5 text-[12px]"><span>{ACT.find((x) => x.id === a.type)?.label.split(" ")[0]}</span><div className="min-w-0 flex-1"><span className="font-semibold">{a.note}</span>{a.outcome ? <span className="text-[var(--ink-3)]"> — {a.outcome}</span> : null}<span className="text-[10.5px] text-[var(--ink-3)]"> · {a.by} · {fmtDay(a.at)}</span></div></div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            {onDelete ? <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--red)] hover:underline">Delete lead</button> : <span />}
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">Cancel</button>
+              <button type="button" onClick={() => onSave({ ...f, business: f.business.trim() || "Untitled", updatedAt: nowIso() })} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white">{lead ? "Save" : "Add lead"}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Tile({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
+      <div className="pl-1.5"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div><div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div></div>
+    </div>
+  );
+}
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><div className="mb-3 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>{children}</div>;
+}

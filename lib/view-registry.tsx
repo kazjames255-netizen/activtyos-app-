@@ -55,6 +55,7 @@ import { PlatformPricingApp } from "@/features/platform/PlatformPricingApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
+import { SalesApp } from "@/features/platform/SalesApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
@@ -314,6 +315,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     analytics: PlatformAnalyticsApp,
     engagement: PlatformEngagementApp,
     "at-risk": PlatformAtRiskApp,
+    sales: SalesApp,
     // Platform tooling on the roadmap — these need PLATFORM-scoped
     // backends (a platform account has no tenant, so the operator
     // components can't run here).
