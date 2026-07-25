@@ -232,6 +232,7 @@ export function MedicationApp() {
   const [canManage, setCanManage] = useState(false);
   const [logging, setLogging] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [confirm, setConfirm] = useState<{ id: string; given: boolean } | null>(null);
 
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
@@ -337,12 +338,20 @@ export function MedicationApp() {
                   {m.archived ? (
                     <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>
                   ) : m.consentGranted ? (
-                    <>
-                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
-                      <Button sm variant="primary" disabled={logging === m.id} onClick={() => quickLog(m, true)}>✓ Yes</Button>
-                      <Button sm variant="danger" disabled={logging === m.id} onClick={() => quickLog(m, false)}>✕ No</Button>
-                      <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? "Close" : "＋ with time / notes"}</button>
-                    </>
+                    confirm?.id === m.id ? (
+                      <>
+                        <span className="text-[11.5px] font-bold text-[var(--ink)]">Confirm: {m.name} for {m.childName} — <span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? "GIVEN" : "NOT given"}</span> now?</span>
+                        <Button sm variant={confirm.given ? "primary" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
+                        <Button sm onClick={() => setConfirm(null)}>Cancel</Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
+                        <Button sm variant="primary" onClick={() => setConfirm({ id: m.id, given: true })}>✓ Yes</Button>
+                        <Button sm variant="danger" onClick={() => setConfirm({ id: m.id, given: false })}>✕ No</Button>
+                        <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? "Close" : "＋ with time / notes"}</button>
+                      </>
+                    )
                   ) : (
                     <span className="text-[11.5px] font-bold text-[#c02636]">Consent needed before a dose can be recorded</span>
                   )}
