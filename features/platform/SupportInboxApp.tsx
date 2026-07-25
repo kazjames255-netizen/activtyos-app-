@@ -153,7 +153,7 @@ export function SupportInboxApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
           <div>
-            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Support &amp; messages</h2>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Messages &amp; support</h2>
             <p className="mt-0.5 text-[12.5px] text-white/80">Talk to providers and their customers, and triage reported bugs — all in one HQ inbox.</p>
           </div>
           <div className="flex gap-2">
