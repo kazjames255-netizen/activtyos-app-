@@ -15,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; supplierPhone?: string; supplierAddress?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; expenseId?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; supplierPhone?: string; supplierAddress?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; expenseId?: string; deliveryAddress?: string; requestedBy?: string; comments?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -42,7 +42,7 @@ type Tab = "overview" | "ledger" | "paid" | "invoices" | "suppliers";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Flt = "all" | "outstanding" | "overdue" | "duesoon" | Status;
 type Sort = "date" | "due" | "amount";
-type Editor = { id?: string; kind: "bill" | "po"; category: string; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+type Editor = { id?: string; kind: "bill" | "po"; category: string; supplier: string; supplierEmail: string; reference: string; date: string; dueDate: string; lineItems: LineItem[]; status: Status; notes: string; attachmentUrl: string; deliveryAddress: string; requestedBy: string; comments: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -198,8 +198,8 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const supplierNames = useMemo(() => suppliers.map((s) => s.supplier), [suppliers]);
 
   // ── Actions ──
-  const openAdd = () => setEditor({ kind, category: "Supplies", supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", repeat: "none", repeatUntil: "" });
-  const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", category: p.category ?? "Supplies", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
+  const openAdd = () => setEditor({ kind, category: "Supplies", supplier: "", supplierEmail: "", reference: "", date: todayIso(), dueDate: "", lineItems: [{ description: "", qty: 1, unitPrice: 0 }], status: isPo ? "draft" : "received", notes: "", attachmentUrl: "", deliveryAddress: "", requestedBy: "", comments: "", repeat: "none", repeatUntil: "" });
+  const openEdit = (p: PO) => setEditor({ id: p.id, kind: p.kind ?? "bill", category: p.category ?? "Supplies", supplier: p.supplier, supplierEmail: p.supplierEmail ?? "", reference: p.reference ?? "", date: p.date, dueDate: p.dueDate ?? "", lineItems: p.lineItems?.length ? p.lineItems.map((li) => ({ ...li })) : [{ description: p.notes ?? "", qty: 1, unitPrice: p.amount }], status: p.status, notes: p.notes ?? "", attachmentUrl: p.attachmentUrl ?? "", deliveryAddress: p.deliveryAddress ?? "", requestedBy: p.requestedBy ?? "", comments: p.comments ?? "", repeat: p.repeat ?? "none", repeatUntil: p.repeatUntil ?? "", seriesId: p.seriesId });
   async function emailDoc(p: PO) {
     const to = (p.supplierEmail || window.prompt(`Email this ${p.kind === "po" ? "purchase order" : "bill query"} to:`, "") || "").trim();
     if (!to) return;
@@ -223,7 +223,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
     // Pull the saved supplier's contact details onto the doc so a PO carries a
     // full "To" block (address/phone) and the emailed copy matches.
     const sup = savedSuppliers.find((s) => s.name.trim().toLowerCase() === editor.supplier.trim().toLowerCase());
-    const body: Record<string, unknown> = { kind: editor.kind, category: editor.category || undefined, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || sup?.email || undefined, supplierPhone: sup?.phone || undefined, supplierAddress: sup?.address || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined };
+    const body: Record<string, unknown> = { kind: editor.kind, category: editor.category || undefined, supplier: editor.supplier.trim(), supplierEmail: editor.supplierEmail.trim() || sup?.email || undefined, supplierPhone: sup?.phone || undefined, supplierAddress: sup?.address || undefined, reference: editor.reference.trim() || undefined, date: editor.date, dueDate: editor.dueDate || undefined, lineItems: lines, status: editor.status, notes: editor.notes.trim() || undefined, attachmentUrl: editor.attachmentUrl.trim() || undefined, deliveryAddress: editor.kind === "po" ? editor.deliveryAddress.trim() || undefined : undefined, requestedBy: editor.kind === "po" ? editor.requestedBy.trim() || undefined : undefined, comments: editor.kind === "po" ? editor.comments.trim() || undefined : undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/purchasing/${encodeURIComponent(editor.id)}`, body);
@@ -630,6 +630,19 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
               </div>
               <div className="mt-3"><span className={labelCls}>Items</span><LineItemsEditor items={editor.lineItems} onChange={(li) => setEditor({ ...editor, lineItems: li })} /></div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What it’s for" className={fieldCls} /></label>
+
+              {editor.kind === "po" && (
+                <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                  <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#1d3a8f]">Purchase-order details <span className="font-normal normal-case text-[var(--ink-3)]">— printed on the PO</span></div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block"><span className={labelCls}>Requested by</span><input value={editor.requestedBy} onChange={(e) => setEditor({ ...editor, requestedBy: e.target.value })} placeholder="Who raised it" className={fieldCls} /></label>
+                    <label className="block"><span className={labelCls}>Delivery date <span className="font-normal normal-case text-[var(--ink-3)]">— uses the ‘due’ date above</span></span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>
+                    <label className="block sm:col-span-2"><span className={labelCls}>Deliver to <span className="font-normal normal-case text-[var(--ink-3)]">— leave blank to use your business address</span></span><textarea value={editor.deliveryAddress} onChange={(e) => setEditor({ ...editor, deliveryAddress: e.target.value })} rows={2} placeholder="Site / address where goods should be delivered" className={`${fieldCls} resize-y`} /></label>
+                    <label className="block sm:col-span-2"><span className={labelCls}>Comments to supplier</span><textarea value={editor.comments} onChange={(e) => setEditor({ ...editor, comments: e.target.value })} rows={2} placeholder="e.g. Please quote this PO number on your invoice" className={`${fieldCls} resize-y`} /></label>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[var(--ink-3)]">Payment method, supplier instructions &amp; terms come from your <b>PO template</b> in Setup → Money.</p>
+                </div>
+              )}
 
               {!editor.id && (
                 <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">

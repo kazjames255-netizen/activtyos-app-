@@ -33,6 +33,11 @@ const poSchema = z.object({
   reference: z.string().trim().max(80).optional(),
   date: z.string().max(10),
   dueDate: z.string().max(10).optional(),
+  // PO-specific document fields (Deliver-to block + who raised it + free-text
+  // comments to the supplier), mirroring a formal purchase order.
+  deliveryAddress: z.string().trim().max(400).optional(),
+  requestedBy: z.string().trim().max(120).optional(),
+  comments: z.string().trim().max(2_000).optional(),
   amount: z.number().nonnegative().optional(),
   lineItems: z.array(lineItemSchema).max(50).optional(),
   status: z.enum(STATUSES).default("draft"),

@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
+import { SubscriptionGate } from "@/components/auth/SubscriptionGate";
+import { TrialBanner } from "@/components/billing/TrialBanner";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 
 // The customer dashboard runs the same light palette the operator screens sit
@@ -29,6 +31,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
   return (
     <RequireAuth>
       <PortalGuard portal={portalKey}>
+        <SubscriptionGate portal={portalKey}>
         <div className="flex h-screen">
           <Sidebar portal={portalKey} />
           {/* Light palette wraps the whole right column for custdash — the
@@ -42,9 +45,12 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             </div>
             {/* Customer-only running bar of the family's usable discount codes. */}
             {light && <CouponTicker />}
+            {/* Operator trial / cancellation nudge bar. */}
+            {!light && <TrialBanner portal={portalKey} />}
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>
           </div>
         </div>
+        </SubscriptionGate>
       </PortalGuard>
     </RequireAuth>
   );

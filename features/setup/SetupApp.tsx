@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS } from "@/lib/use-customer-area";
-import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/ui";
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -1101,6 +1101,7 @@ function QuestionsEditor({
 export function SetupApp() {
   const { settings, questions, loading, save, error } = useSettings();
   const [tmplPreview, setTmplPreview] = useState(false);
+  const [poPreview, setPoPreview] = useState(false);
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
@@ -1510,6 +1511,19 @@ export function SetupApp() {
             </div>
             {settings.billing?.fields?.vat && <div className="mt-2.5 max-w-[200px]"><FieldLabel>Default VAT %</FieldLabel><Input type="number" value={settings.billing?.defaultTaxRate ?? ""} placeholder="20" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), defaultTaxRate: e.target.value === "" ? undefined : Number(e.target.value) } } })} className="w-full" /></div>}
           </div>
+
+          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[14px] font-extrabold text-[var(--ink)]">Purchase-order template</div>
+              <button type="button" onClick={() => setPoPreview(true)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm hover:brightness-110">👁 Preview PO</button>
+            </div>
+            <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">Boilerplate printed on every purchase order below the items. The per-PO bits (supplier, deliver-to, comments) are set when you raise the order.</p>
+            <div className="grid gap-3">
+              <div><FieldLabel>Payment method</FieldLabel><Input value={settings.billing?.poPaymentMethod ?? ""} placeholder="e.g. To be invoiced — 30 days from receipt" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poPaymentMethod: e.target.value } } })} className="w-full" /></div>
+              <div><FieldLabel>Instructions to suppliers <span className="font-normal normal-case text-[var(--ink-3)]">— one per line, auto-numbered</span></FieldLabel><textarea value={settings.billing?.poInstructions ?? ""} rows={4} placeholder={"Quote this PO number on all invoices\nEmail invoices as PDF to accounts@yourbusiness.com\nA delivery note must accompany all goods"} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poInstructions: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
+              <div><FieldLabel>Terms &amp; conditions</FieldLabel><textarea value={settings.billing?.poTerms ?? ""} rows={3} placeholder="By accepting this order you agree to our standard terms and conditions…" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), poTerms: e.target.value } } })} className={`${inputCls} w-full resize-y`} /></div>
+            </div>
+          </div>
           {tmplPreview && (() => {
             const f = settings.billing?.fields ?? {};
             const sample = {
@@ -1521,6 +1535,17 @@ export function SetupApp() {
               notes: "This is a preview of how your invoices will look.",
             } as Record<string, unknown>;
             return <PrintableDoc kind="invoice" doc={sample} billing={settings.billing} onClose={() => setTmplPreview(false)} />;
+          })()}
+          {poPreview && (() => {
+            const sample = {
+              reference: "PO-1001", supplier: "Sample Supplier Ltd", supplierAddress: "12 Trade Park, Industry Way, Townsville AB1 2CD", supplierEmail: "sales@supplier.example",
+              date: new Date().toISOString().slice(0, 10), dueDate: new Date(Date.now() + 12096e5).toISOString().slice(0, 10),
+              requestedBy: settings.billing?.businessName ? `${settings.billing.businessName} — Ops` : "Operations",
+              deliveryAddress: settings.billing?.address ?? "", comments: "Please confirm receipt of this order by return email.",
+              lineItems: [{ description: "Summer HAF programme — SEN", qty: 1, unitPrice: 16800 }, { description: "Extra sessions", qty: 4, unitPrice: 120 }],
+              notes: "This is a preview of how your purchase orders will look.",
+            } as Record<string, unknown>;
+            return <PrintableDoc kind="po" doc={sample} billing={settings.billing} onClose={() => setPoPreview(false)} />;
           })()}
         </Section>
       )}

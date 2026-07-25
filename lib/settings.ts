@@ -268,6 +268,12 @@ export interface TenantSettings {
   /** Which the operator picked at onboarding — kept so Setup can show it and
    *  re-resolve from the live name if they later rename the business. */
   providerNameMode: "person" | "business";
+  /** What the provider runs (holiday camps, clubs, classes…), captured at
+   *  onboarding. Informational — surfaces in Setup and helps tailor copy. */
+  activityKinds?: string[];
+  /** Business postcode from onboarding — lets the storefront sort by distance
+   *  without re-asking. Also stored on the tenant doc. */
+  postcode?: string;
   /**
    * List this provider in the cross-provider marketplace — the parent Browse
    * feed that shows every opted-in provider's live public activities, not just
@@ -316,6 +322,11 @@ export interface TenantSettings {
     // Which optional per-invoice fields to offer on the form + show on the doc.
     fields?: { poNumber?: boolean; accountRef?: boolean; address?: boolean; vat?: boolean };
     defaultTaxRate?: number;
+    // Purchase-order template boilerplate (editable in Setup → Money), printed
+    // on every PO document below the order.
+    poPaymentMethod?: string;    // e.g. "To be invoiced"
+    poInstructions?: string;     // numbered instructions to suppliers (one per line)
+    poTerms?: string;            // terms & conditions text
   };
 
   /**

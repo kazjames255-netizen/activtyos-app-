@@ -561,6 +561,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "billing", legacyView: "platform-billing", label: "Billing", icon: { type: "glyph", value: "£" }, badge: null },
+        { view: "pricing", legacyView: "platform-pricing", label: "Pricing", icon: { type: "glyph", value: "◈" }, badge: null },
         { view: "support", legacyView: "platform-support", label: "Support", icon: { type: "glyph", value: "?" }, badge: null },
         { view: "ai", legacyView: "platform-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
         { view: "privacy", legacyView: "platform-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },

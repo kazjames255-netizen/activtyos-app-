@@ -62,3 +62,53 @@ platform.get("/overview", async (req, res) => {
     accounts: { total: usersSnap.size, byRole: accountsByRole },
   });
 });
+
+// GET /api/platform/subscriptions — every tenant's plan/status/spend (HQ billing
+// view: "what has each provider purchased"). Staff count = staff+franchise members.
+platform.get("/subscriptions", async (req, res) => {
+  if (req.auth!.role !== "platform") {
+    res.status(403).json({ error: "Requires the platform role" });
+    return;
+  }
+  const [tenantsSnap, usersSnap] = await Promise.all([
+    db.collection("tenants").get(),
+    db.collection("users").get(),
+  ]);
+  const staffByTenant: Record<string, number> = {};
+  for (const d of usersSnap.docs) {
+    const u = d.data();
+    if ((u.role === "staff" || u.role === "franchise") && u.tenantId) {
+      staffByTenant[u.tenantId as string] = (staffByTenant[u.tenantId as string] ?? 0) + 1;
+    }
+  }
+  const rows = tenantsSnap.docs.map((d) => {
+    const t = d.data();
+    const sub = (t.subscription as Record<string, unknown> | undefined) ?? null;
+    return {
+      id: d.id,
+      name: (t.name as string) ?? d.id,
+      type: (t.type as string) ?? "freelancer",
+      createdAt: (t.createdAt as string) ?? null,
+      plan: (sub?.plan as string) ?? null,
+      band: (sub?.band as string) ?? null,
+      status: (sub?.status as string) ?? "active",
+      price: (sub?.price as number) ?? null,
+      cadence: (sub?.cadence as string) ?? "month",
+      trialEndsAt: (sub?.trialEndsAt as string) ?? null,
+      staffCount: staffByTenant[d.id] ?? 0,
+      staffLimit: (sub?.staffLimit as number | null) ?? null,
+    };
+  });
+  rows.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
+  const billable = rows.filter((r) => ["active", "trialing", "canceling"].includes(r.status));
+  const mrr = billable.reduce((s, r) => s + (r.price ?? 0), 0);
+  res.json({
+    rows,
+    summary: {
+      total: rows.length,
+      mrr,
+      trialing: rows.filter((r) => r.status === "trialing").length,
+      active: rows.filter((r) => r.status === "active").length,
+    },
+  });
+});

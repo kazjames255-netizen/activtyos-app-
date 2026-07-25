@@ -8,7 +8,7 @@ type Doc = Record<string, unknown> & { amount?: number; lineItems?: LineItem[] }
 type Billing = Record<string, unknown> | undefined;
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
-const money = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toFixed(2)}`;
+const money = (n: number) => `£${(Math.round((n || 0) * 100) / 100).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDay = (iso?: unknown) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
 export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billing, payUrl?: string): string {
@@ -31,18 +31,36 @@ export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billin
     doc.reference ? `${kind === "po" ? "PO" : "Invoice"} No: ${esc(doc.reference)}` : "",
     doc.date ? `${kind === "po" ? "Order date" : "Date"}: ${fmtDay(doc.date)}` : "",
     doc.dueDate ? `${kind === "po" ? "Delivery by" : "Due"}: ${fmtDay(doc.dueDate)}` : "",
+    kind === "po" && doc.requestedBy ? `Requested by: ${esc(doc.requestedBy)}` : "",
     kind === "invoice" && doc.poNumber ? `Purchase Order No: ${esc(doc.poNumber)}` : "",
     doc.accountRef ? `Account Ref: ${esc(doc.accountRef)}` : "",
   ].filter(Boolean).join("<br>");
-  const deliverTo = kind === "po" && (addr || business) ? `<div style="margin-top:14px;font-size:12.5px;color:#4a4763"><b>Deliver to</b><br>${business}${addr ? `<br>${addr}` : ""}</div>` : "";
+  // PO "Deliver to" — a per-PO delivery address if given, else the buyer's own.
+  const deliverAddr = doc.deliveryAddress ? esc(doc.deliveryAddress).replace(/\n/g, "<br>") : addr;
+  const deliverTo = kind === "po" && (deliverAddr || business)
+    ? `<div style="margin-top:14px;padding:12px 14px;background:#f6f8fc;border-radius:10px;font-size:12.5px;color:#4a4763"><b style="color:#1d3a8f">Deliver to</b><br>${business}${deliverAddr ? `<br>${deliverAddr}` : ""}${doc.dueDate ? `<br><span style="color:#6b6880">Delivery date: ${fmtDay(doc.dueDate)}</span>` : ""}</div>`
+    : "";
   const terms = b.paymentTerms ? `<div style="margin-top:12px;font-size:12px;color:#6b6880"><b>${kind === "po" ? "Payment terms" : "Terms"}:</b> ${esc(b.paymentTerms)}</div>` : "";
+  // PO boilerplate from settings: comments, payment method, supplier instructions, T&Cs.
+  const numbered = (txt: unknown) => String(txt ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+    .map((l, i) => `<div style="display:flex;gap:8px;margin-top:3px"><span style="color:#8a86a3;min-width:14px">${i + 1}.</span><span>${esc(l)}</span></div>`).join("");
+  const poComments = kind === "po" && doc.comments
+    ? `<div style="margin-top:14px;font-size:12.5px;color:#4a4763"><b style="color:#1d3a8f">Comments</b><div style="margin-top:3px">${esc(doc.comments).replace(/\n/g, "<br>")}</div></div>` : "";
+  const poPayMethod = kind === "po" && b.poPaymentMethod
+    ? `<div style="margin-top:12px;font-size:12.5px;color:#4a4763"><b style="color:#1d3a8f">Payment method:</b> ${esc(b.poPaymentMethod)}</div>` : "";
+  const poInstructions = kind === "po" && b.poInstructions
+    ? `<div style="margin-top:14px;font-size:12px;color:#6b6880"><b style="color:#1d3a8f">Instructions to suppliers</b>${numbered(b.poInstructions)}</div>` : "";
+  const poTerms = kind === "po" && b.poTerms
+    ? `<div style="margin-top:14px;padding-top:10px;border-top:1px solid #eee;font-size:11.5px;color:#8a86a3"><b>Terms &amp; conditions</b><div style="margin-top:3px">${esc(b.poTerms).replace(/\n/g, "<br>")}</div></div>` : "";
 
   const items: LineItem[] = Array.isArray(doc.lineItems) && doc.lineItems.length
     ? doc.lineItems
     : [{ description: (doc.description as string) || (doc.notes as string) || "Amount", qty: 1, unitPrice: doc.amount ?? 0 }];
-  const rows = items.map((li) => {
+  const isPo = kind === "po";
+  const rows = items.map((li, i) => {
     const lineTotal = (li.qty ?? 1) * (li.unitPrice ?? 0);
-    return `<tr><td style="padding:8px 6px;border-bottom:1px solid #eee">${esc(li.description)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${li.qty ?? 1}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${money(li.unitPrice ?? 0)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right"><b>${money(lineTotal)}</b></td></tr>`;
+    const no = isPo ? `<td style="padding:8px 6px;border-bottom:1px solid #eee;color:#8a86a3;font-variant-numeric:tabular-nums">${String((i + 1) * 10).padStart(5, "0")}</td>` : "";
+    return `<tr>${no}<td style="padding:8px 6px;border-bottom:1px solid #eee">${esc(li.description)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${li.qty ?? 1}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${money(li.unitPrice ?? 0)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right"><b>${money(lineTotal)}</b></td></tr>`;
   }).join("");
   const subtotal = r2(items.reduce((s, li) => s + (li.qty ?? 1) * (li.unitPrice ?? 0), 0));
   const rate = Number(doc.taxRate) || 0;
@@ -68,15 +86,19 @@ export function renderMoneyDoc(kind: "po" | "invoice", doc: Doc, billing: Billin
       <div style="color:#4a4763">${party}</div>
       <div style="text-align:right;color:#4a4763">${meta}</div>
     </div>
-    ${deliverTo}
     <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px">
-      <thead><tr style="text-align:left;color:#8a86a3;font-size:11px;text-transform:uppercase;letter-spacing:.05em"><th style="padding:6px">Description</th><th style="padding:6px;text-align:right">Qty</th><th style="padding:6px;text-align:right">Unit</th><th style="padding:6px;text-align:right">Total</th></tr></thead>
+      <thead><tr style="text-align:left;color:#8a86a3;font-size:11px;text-transform:uppercase;letter-spacing:.05em">${isPo ? `<th style="padding:6px">No</th>` : ""}<th style="padding:6px">Description</th><th style="padding:6px;text-align:right">Qty</th><th style="padding:6px;text-align:right">Unit</th><th style="padding:6px;text-align:right">Total</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     ${totalsBlock}
+    ${poComments}
+    ${deliverTo}
+    ${poPayMethod}
     ${bankBlock}
     ${terms}
+    ${poInstructions}
     ${doc.notes ? `<div style="margin-top:14px;color:#6b6880;font-size:12.5px">${esc(doc.notes)}</div>` : ""}
+    ${poTerms}
     ${footNote ? `<div style="margin-top:18px;border-top:1px solid #eee;padding-top:10px;color:#8a86a3;font-size:11.5px">${footNote}</div>` : ""}
   </div>`;
 }
