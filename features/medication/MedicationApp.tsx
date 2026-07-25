@@ -1,9 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
+
+const LIGHT_PALETTE = {
+  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
+  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
+} as CSSProperties;
 
 // ─────────────────────────────────────────────────────────────────────────
 // Medication — authorised medicines (with parental consent) and the MAR
@@ -171,14 +177,40 @@ export function MedicationApp() {
   }
 
   const dosesFor = (id: string) => admins.filter((a) => a.medicationId === id);
+  const consented = meds?.filter((m) => m.consentGranted).length ?? 0;
+  const needsConsent = meds?.filter((m) => !m.consentGranted).length ?? 0;
+  const dosesToday = admins.filter((a) => a.date === todayIso()).length;
+  const tiles: [string, string | number][] = [["On file", meds?.length ?? 0], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
 
   return (
-    <div className="text-[var(--ink)]">
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Medication</h2>
-        {!adding && <Button variant="primary" onClick={() => setAdding(true)}>＋ Authorise a medication</Button>}
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {/* Hero — matches the other portal pages (blue → white). */}
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💊</span>
+              Medication
+            </div>
+            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Authorised medicines and every dose given — nothing is administered without a parent’s consent.</p>
+          </div>
+          {!adding && (
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
+              ＋ Authorise a medication
+            </button>
+          )}
+        </div>
+        {meds && (
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            {tiles.map(([label, v]) => (
+              <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
+                <div className="text-[20px] font-extrabold leading-none">{v}</div>
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Authorised medicines and every dose given — nothing is administered without a parent’s consent.</p>
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {adding && <MedForm onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
