@@ -5,7 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 
 interface Analytics {
-  summary: { mrr: number; arr: number; totalProviders: number; active: number; trialing: number; canceling: number; canceled: number; avgTenureDays: number; churnRate: number; trialConversion: number; newThisMonth: number; gmvBooked: number; gmvPaid: number };
+  summary: { mrr: number; arr: number; mrrPaying: number; mrrTrial: number; arrPaying: number; totalProviders: number; active: number; trialing: number; canceling: number; canceled: number; avgTenureDays: number; churnRate: number; trialConversion: number; newThisMonth: number; gmvBooked: number; gmvPaid: number };
   byPlan: Record<string, { count: number; mrr: number }>;
   byStatus: Record<string, number>;
   byType: Record<string, number>;
@@ -80,7 +80,18 @@ export function PlatformAnalyticsApp() {
 
       {/* KPI tiles */}
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Monthly recurring" value={money(s.mrr)} sub={`${money(s.arr)} / year run-rate`} accent={BLUE} />
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <div className="absolute left-0 top-0 h-full w-1" style={{ background: BLUE }} />
+          <div className="pl-1.5">
+            <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Monthly recurring</div>
+            <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(s.mrr)}</span><span className="text-[10.5px] text-[var(--ink-3)]">incl. trials</span></div>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
+              <span className="font-bold text-[#0f7a43]">{money(s.mrrPaying)}<span className="font-normal text-[var(--ink-3)]"> paying</span></span>
+              <span className="font-bold text-[#1d3a8f]">{money(s.mrrTrial)}<span className="font-normal text-[var(--ink-3)]"> on trial</span></span>
+            </div>
+            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{money(s.arrPaying)}/yr paying · {money(s.arr)}/yr incl. trials</div>
+          </div>
+        </div>
         <Kpi label="Active providers" value={String(s.active + s.canceling)} sub={`${s.trialing} on trial · ${s.totalProviders} total`} accent={LIGHTB} />
         <Kpi label="Avg. time with us" value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} accent="#0f7a43" />
         <Kpi label="Trial → paid" value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} accent={GOLD} />

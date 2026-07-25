@@ -196,7 +196,7 @@ platform.get("/analytics", async (req, res) => {
 
   const tenants = tenantsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; type?: string; createdAt?: string; heardAbout?: string; subscription?: Record<string, unknown> })[];
 
-  let mrr = 0, active = 0, trialing = 0, canceling = 0, canceled = 0, started = 0, tenureSum = 0, tenureCount = 0;
+  let mrr = 0, mrrPaying = 0, mrrTrial = 0, active = 0, trialing = 0, canceling = 0, canceled = 0, started = 0, tenureSum = 0, tenureCount = 0;
   const byPlan: Record<string, { count: number; mrr: number }> = {};
   const byStatus: Record<string, number> = {};
   const byType: Record<string, number> = {};
@@ -221,10 +221,10 @@ platform.get("/analytics", async (req, res) => {
       if (price > 0) topProviders.push({ id: t.id, name: (t.name as string) ?? t.id, plan, band: (sub.band as string) ?? null, fee: price, tenureDays });
       tenureSum += tenureDays; tenureCount++;
     }
-    if (status === "active") active++;
-    if (status === "trialing") trialing++;
+    if (status === "active") { active++; mrrPaying += price; }
+    if (status === "trialing") { trialing++; mrrTrial += price; }
     if (status === "canceling") {
-      canceling++;
+      canceling++; mrrPaying += price;
       const billing = (settingsById[t.id]?.billing as Record<string, unknown> | undefined) ?? {};
       let contactEmail: string | null = (billing.email as string) || null;
       if (!contactEmail && t.ownerUid) { try { contactEmail = (await auth.getUser(t.ownerUid as string)).email ?? null; } catch { /* owner gone */ } }
@@ -272,7 +272,7 @@ platform.get("/analytics", async (req, res) => {
   topProviders.sort((a, b) => b.fee - a.fee);
   res.json({
     summary: {
-      mrr, arr: mrr * 12, totalProviders: tenants.length, active, trialing, canceling, canceled,
+      mrr, arr: mrr * 12, mrrPaying, mrrTrial, arrPaying: mrrPaying * 12, totalProviders: tenants.length, active, trialing, canceling, canceled,
       avgTenureDays, churnRate, trialConversion, newThisMonth: signBuckets[months[months.length - 1]] ?? 0,
       gmvBooked: Math.round(gmvBooked), gmvPaid: Math.round(gmvPaid),
     },
