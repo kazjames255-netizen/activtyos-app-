@@ -153,42 +153,51 @@ function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onO
 }
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
+const PERIODS: [string, string][] = [["today", "Today"], ["week", "Last week"], ["month", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["9m", "9 months"]];
+const PERIOD_DAYS: Record<string, number> = { week: 7, month: 30, "3m": 90, "6m": 180, "9m": 270 };
+
 function Dashboard({ leads }: { leads: Lead[] }) {
   const [now] = useState(() => Date.now()); // captured once — pure during render
+  const [period, setPeriod] = useState("month");
+  const DAY = 86_400_000;
+  const midnight = (() => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+  const cutoff = period === "today" ? midnight : now - (PERIOD_DAYS[period] ?? 30) * DAY;
+  const within = (iso: string) => new Date(iso).getTime() >= cutoff;
+  const pLabel = (PERIODS.find((p) => p[0] === period)?.[1] ?? "").toLowerCase();
+
+  // Now-snapshots (live pipeline — not time-bound).
   const open = leads.filter((l) => l.stage !== "won" && l.stage !== "lost");
   const pipeline = open.reduce((a, b) => a + b.estMrr, 0);
   const forecast = open.reduce((a, b) => a + b.estMrr * stageOf(b.stage).prob, 0);
-  const won = leads.filter((l) => l.stage === "won");
-  const lost = leads.filter((l) => l.stage === "lost");
-  const winRate = won.length + lost.length ? won.length / (won.length + lost.length) : 0;
-  const wonMrr = won.reduce((a, b) => a + b.estMrr, 0);
-
-  const bySource = (() => {
-    const m: Record<string, { n: number; won: number }> = {};
-    for (const l of leads) { m[l.source] = m[l.source] ?? { n: 0, won: 0 }; m[l.source].n++; if (l.stage === "won") m[l.source].won++; }
-    return Object.entries(m).sort((a, b) => b[1].n - a[1].n);
-  })();
-
-  const acts = (() => {
-    const weekAgo = now - 7 * 86400000;
-    const recent = leads.flatMap((l) => l.activities.map((a) => ({ ...a, business: l.business }))).filter((a) => new Date(a.at).getTime() >= weekAgo);
-    const byType: Record<string, number> = {};
-    for (const a of recent) byType[a.type] = (byType[a.type] ?? 0) + 1;
-    const byRep: Record<string, number> = {};
-    for (const a of recent) byRep[a.by] = (byRep[a.by] ?? 0) + 1;
-    const feed = leads.flatMap((l) => l.activities.map((a) => ({ ...a, business: l.business }))).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 8);
-    return { byType, byRep, feed, total: recent.length };
-  })();
-
   const funnelMax = Math.max(1, ...STAGES.filter((s) => s.id !== "lost").map((s) => leads.filter((l) => l.stage === s.id).length));
+
+  // Period-filtered figures.
+  const newLeads = leads.filter((l) => within(l.createdAt));
+  const wonP = leads.filter((l) => l.stage === "won" && within(l.updatedAt));
+  const lostP = leads.filter((l) => l.stage === "lost" && within(l.updatedAt));
+  const wonMrr = wonP.reduce((a, b) => a + b.estMrr, 0);
+  const winRate = wonP.length + lostP.length ? wonP.length / (wonP.length + lostP.length) : 0;
+  const activities = leads.flatMap((l) => l.activities.map((a) => ({ ...a, business: l.business }))).filter((a) => within(a.at)).sort((a, b) => (a.at < b.at ? 1 : -1));
+  const byType: Record<string, number> = {}; for (const a of activities) byType[a.type] = (byType[a.type] ?? 0) + 1;
+  const byRep: Record<string, number> = {}; for (const a of activities) byRep[a.by] = (byRep[a.by] ?? 0) + 1;
+  const bySource = (() => { const m: Record<string, number> = {}; for (const l of newLeads) m[l.source] = (m[l.source] ?? 0) + 1; return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
+  const bySourceMax = Math.max(1, ...bySource.map((s) => s[1]));
 
   return (
     <div className="mt-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-bold text-[var(--ink-3)]">Show:</span>
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
+          {PERIODS.map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setPeriod(id)} className="rounded-full px-3 py-1 transition-colors" style={period === id ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+          ))}
+        </div>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Open pipeline" value={money(pipeline)} sub={`${open.length} live leads`} accent="#1d3a8f" />
-        <Tile label="Weighted forecast" value={money(forecast)} sub="pipeline × stage odds" accent="#7c3aed" />
-        <Tile label="Won" value={money(wonMrr)} sub={`${won.length} closed · ${Math.round(winRate * 100)}% win rate`} accent="#0f7a43" />
-        <Tile label="Activity · 7 days" value={String(acts.total)} sub={`${acts.byType.call ?? 0} calls · ${acts.byType.email ?? 0} emails · ${acts.byType.demo ?? 0} demos`} accent="#f0b100" />
+        <Tile label="Open pipeline · now" value={money(pipeline)} sub={`${open.length} live leads`} accent="#1d3a8f" />
+        <Tile label="Weighted forecast · now" value={money(forecast)} sub="pipeline × stage odds" accent="#7c3aed" />
+        <Tile label={`New customers · ${pLabel}`} value={String(wonP.length)} sub={`${money(wonMrr)}/mo won · ${Math.round(winRate * 100)}% win`} accent="#0f7a43" />
+        <Tile label={`Activity · ${pLabel}`} value={String(activities.length)} sub={`${byType.call ?? 0} calls · ${byType.email ?? 0} emails · ${byType.demo ?? 0} demos`} accent="#f0b100" />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -206,31 +215,33 @@ function Dashboard({ leads }: { leads: Lead[] }) {
             })}
           </div>
         </Card>
-        <Card title="Leads by source — what's working">
-          <div className="flex flex-col gap-2.5">
-            {bySource.map(([src, v]) => (
-              <div key={src}>
-                <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold">{srcLabel(src as Source)}</span><span className="text-[var(--ink-3)]">{v.n} leads · {v.won} won</span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(v.n / Math.max(1, ...bySource.map((s) => s[1].n))) * 100}%`, background: "#3f78d8" }} /></div>
-              </div>
-            ))}
-          </div>
+        <Card title={`New leads by source · ${pLabel}`}>
+          {bySource.length ? (
+            <div className="flex flex-col gap-2.5">
+              {bySource.map(([src, n]) => (
+                <div key={src}>
+                  <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold">{srcLabel(src as Source)}</span><span className="text-[var(--ink-3)]">{n} lead{n === 1 ? "" : "s"}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(n / bySourceMax) * 100}%`, background: "#3f78d8" }} /></div>
+                </div>
+              ))}
+            </div>
+          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No new leads in this period.</div>}
         </Card>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title="Rep activity · last 7 days">
-          {Object.keys(acts.byRep).length ? (
+        <Card title={`Rep activity · ${pLabel}`}>
+          {Object.keys(byRep).length ? (
             <div className="flex flex-col divide-y divide-[var(--line)]">
-              {Object.entries(acts.byRep).sort((a, b) => b[1] - a[1]).map(([rep, n]) => (
+              {Object.entries(byRep).sort((a, b) => b[1] - a[1]).map(([rep, n]) => (
                 <div key={rep} className="flex items-center justify-between py-2 text-[12.5px]"><span className="font-semibold">{rep}</span><span className="font-extrabold tabular-nums">{n} touches</span></div>
               ))}
             </div>
-          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No activity this week.</div>}
+          ) : <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">No activity in this period.</div>}
         </Card>
-        <Card title="Recent activity">
+        <Card title={`Recent activity · ${pLabel}`}>
           <div className="flex flex-col divide-y divide-[var(--line)]">
-            {acts.feed.map((a) => (
+            {activities.slice(0, 8).map((a) => (
               <div key={a.id} className="flex items-start gap-2 py-2 text-[12px]">
                 <span>{ACT.find((x) => x.id === a.type)?.label.split(" ")[0]}</span>
                 <div className="min-w-0 flex-1"><span className="font-semibold">{a.business}</span> <span className="text-[var(--ink-3)]">— {a.note}{a.outcome ? ` (${a.outcome})` : ""}</span></div>
