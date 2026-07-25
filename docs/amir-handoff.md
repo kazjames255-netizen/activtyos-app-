@@ -41,13 +41,24 @@ for you.
    `supportThreads` collection + platform CRUD, and the **bug-report intake** that
    auto-captures page/device/steps (in-app + inbound email). Spec:
    `docs/support-inbox-handoff.md`.
-4. **API docs** — `server/openapi.yaml` is missing the whole Money area + all the
+4. **Medication → link child + notify parent** — operator Medication page is
+   fully built (frequency/repeat, instructions [I added `instructions` to
+   `medSchema`], one-tap **Given? Yes/No** + confirm + timestamp, child/family
+   search picker, Active/Archived + Restore, and a **Setup → Medication** tab of
+   policy toggles: inform-parent-when-given / when-missed / require-witness /
+   leads-only). What's yours: resolve `childId` from the picked child so a dose
+   reaches the parent, surface it in `ParentMedicationApp`, and **notify** the
+   parent in the customer area (gated by the new settings). Also add `given`
+   (bool) to `administerSchema` so the outcome persists first-class. Spec:
+   `docs/medication-parent-notify-handoff.md`. (This is the same "child-link on
+   safeguarding/medication forms" item — now with the UI + settings ready.)
+5. **API docs** — `server/openapi.yaml` is missing the whole Money area + all the
    routes above (subscription, pricing, analytics, page-engagement, at-risk,
    providers, subscriptions, pageview, income, suppliers) + register-role's new
    fields.
-5. **Postcode → browse-by-distance** — signup now captures it; wire into your
+6. **Postcode → browse-by-distance** — signup now captures it; wire into your
    geocoding (§B).
-6. **(Perf, later)** the HQ analytics endpoints do full-collection reads — fine
+7. **(Perf, later)** the HQ analytics endpoints do full-collection reads — fine
    now, swap for scheduled rollups as volume grows.
 
 ## Still standing from before (not from this batch)
