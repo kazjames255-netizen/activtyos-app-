@@ -1196,9 +1196,11 @@ export function SetupApp() {
           <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
             <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
           </Row>
-          <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
-            <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
-          </Row>
+          {portal !== "freelancer" && (
+            <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
+              <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
+            </Row>
+          )}
         </Section>
       )}
 
