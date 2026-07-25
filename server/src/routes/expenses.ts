@@ -17,6 +17,12 @@ const expenseSchema = z.object({
   supplier: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(),
   receiptUrl: z.string().trim().max(600).optional(),
+  // Money-out status: a "pending" expense is money you owe (what used to be a
+  // bill); "paid" is money that's left. Due date + paidAt support the pending
+  // workflow. Defaults to paid so a plain logged spend needs nothing extra.
+  status: z.enum(["pending", "paid"]).default("paid"),
+  dueDate: z.string().max(10).optional(),
+  paidAt: z.string().max(40).optional(),
   // A recurring cost (e.g. weekly venue hire): the client sends the cadence +
   // an end date, and POST materialises one row per occurrence sharing a
   // seriesId so the whole run can be badged and deleted together.

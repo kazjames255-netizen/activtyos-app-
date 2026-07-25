@@ -13,7 +13,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
-interface Expense { id: string; date: string; category: string; amount: number; supplier?: string; notes?: string; receiptUrl?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; createdByName?: string; virtual?: boolean }
+interface Expense { id: string; date: string; category: string; amount: number; supplier?: string; notes?: string; receiptUrl?: string; status?: "pending" | "paid"; dueDate?: string; paidAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; createdByName?: string; virtual?: boolean }
 interface Payload { items: Expense[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Sub { current: { plan: string; since: string | null; details: { name: string; price: number; cadence: string } } }
 
@@ -29,10 +29,11 @@ const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDate
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-type Tab = "overview" | "ledger" | "receipts" | "categories";
+type Tab = "overview" | "ledger" | "pending" | "paid" | "receipts" | "categories";
 type Range = "all" | "month" | "lastmonth" | "year";
 type Sort = "date" | "oldest" | "amount" | "amountAsc";
-type Editor = { id?: string; date: string; category: string; amount: string; supplier: string; notes: string; receiptUrl: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+type Editor = { id?: string; date: string; category: string; amount: string; supplier: string; notes: string; receiptUrl: string; status: "pending" | "paid"; dueDate: string; repeat: "none" | Repeat; repeatUntil: string; seriesId?: string };
+const statusOf = (x: Expense): "pending" | "paid" => x.status ?? "paid";
 
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50";
 const btnGhost = "inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] transition hover:border-[var(--ink-3)]";
@@ -185,6 +186,10 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     }).sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
   }, [cats, registry, items]);
 
+  const pendingItems = useMemo(() => items.filter((x) => statusOf(x) === "pending"), [items]);
+  const pendingTotal = useMemo(() => pendingItems.reduce((s, x) => s + x.amount, 0), [pendingItems]);
+  const paidCount = useMemo(() => items.filter((x) => statusOf(x) === "paid").length, [items]);
+
   const withReceipt = useMemo(() => items.filter((x) => x.receiptUrl), [items]);
   const missingReceipt = useMemo(() => items.filter((x) => !x.receiptUrl), [items]);
   const receiptsShown = useMemo(() => withReceipt.filter((x) => (rCat === "all" || (x.category || "Other") === rCat) && (!rFrom || x.date >= rFrom) && (!rTo || x.date <= rTo)), [withReceipt, rCat, rFrom, rTo]);
@@ -194,6 +199,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     const needle = q.trim().toLowerCase();
     const rows = allItems.filter((x) => {
       const d = x.date || "";
+      if (tab === "pending" && statusOf(x) !== "pending") return false;
+      if (tab === "paid" && statusOf(x) !== "paid") return false;
       if (catFilter !== "all" && (x.category || "Other") !== catFilter) return false;
       if (receiptFilter === "with" && !x.receiptUrl) return false;
       if (receiptFilter === "without" && x.receiptUrl) return false;
@@ -210,7 +217,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       amount: (a, b) => b.amount - a.amount, amountAsc: (a, b) => a.amount - b.amount,
     };
     return [...rows].sort(cmp[sort]);
-  }, [allItems, q, catFilter, receiptFilter, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear]);
+  }, [allItems, q, catFilter, receiptFilter, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear, tab]);
   const filteredTotal = filtered.reduce((s, x) => s + x.amount, 0);
   const activeFilters = (catFilter !== "all" ? 1 : 0) + (receiptFilter !== "all" ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
   const clearFilters = () => { setQ(""); setCatFilter("all"); setReceiptFilter("all"); setRange("all"); setFrom(""); setTo(""); };
@@ -219,8 +226,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const catOptions = useMemo(() => Array.from(new Set([...CATEGORIES, ...registry, ...items.map((x) => x.category)])), [registry, items]);
 
   // ── Actions ───────────────────────────────────────────────────────────
-  const openAdd = () => { setNewCat(false); setEditor({ date: todayIso(), category: "Equipment", amount: "", supplier: "", notes: "", receiptUrl: "", repeat: "none", repeatUntil: "" }); };
-  const openEdit = (x: Expense) => { setNewCat(false); setEditor({ id: x.id, date: x.date, category: x.category, amount: String(x.amount), supplier: x.supplier ?? "", notes: x.notes ?? "", receiptUrl: x.receiptUrl ?? "", repeat: x.repeat ?? "none", repeatUntil: x.repeatUntil ?? "", seriesId: x.seriesId }); };
+  const openAdd = () => { setNewCat(false); setEditor({ date: todayIso(), category: "Equipment", amount: "", supplier: "", notes: "", receiptUrl: "", status: tab === "pending" ? "pending" : "paid", dueDate: "", repeat: "none", repeatUntil: "" }); };
+  const openEdit = (x: Expense) => { setNewCat(false); setEditor({ id: x.id, date: x.date, category: x.category, amount: String(x.amount), supplier: x.supplier ?? "", notes: x.notes ?? "", receiptUrl: x.receiptUrl ?? "", status: statusOf(x), dueDate: x.dueDate ?? "", repeat: x.repeat ?? "none", repeatUntil: x.repeatUntil ?? "", seriesId: x.seriesId }); };
   const patchRegistry = (next: string[]) => saveSettings({ settings: { ...settings, expenses: { ...(settings.expenses ?? {}), categories: Array.from(new Set(next)) } } });
 
   async function save() {
@@ -232,7 +239,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, supplier: editor.supplier.trim() || undefined, notes: editor.notes.trim() || undefined, receiptUrl: editor.receiptUrl.trim() || undefined };
+    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, supplier: editor.supplier.trim() || undefined, notes: editor.notes.trim() || undefined, receiptUrl: editor.receiptUrl.trim() || undefined, status: editor.status, dueDate: editor.status === "pending" ? (editor.dueDate || undefined) : undefined, paidAt: editor.status === "paid" ? (editor.id ? undefined : new Date().toISOString()) : undefined };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/expenses/${encodeURIComponent(editor.id)}`, body);
@@ -253,6 +260,9 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   async function remove(x: Expense) {
     if (x.virtual || !confirm(`Delete this ${money(x.amount)} expense?`)) return;
     try { await del(`/api/expenses/${encodeURIComponent(x.id)}`); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
+  async function markPaid(x: Expense) {
+    try { await apiPut(`/api/expenses/${encodeURIComponent(x.id)}`, { status: "paid", paidAt: new Date().toISOString() }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
   async function deleteSeries() {
     if (!editor?.seriesId) return;
@@ -276,9 +286,9 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     void patchRegistry(registry.filter((c) => c !== name));
   }
   function exportCsv() {
-    const header = ["Date", "Category", "Amount", "Supplier", "Notes", "Receipt", "Repeats", "Repeat until", "Source"];
+    const header = ["Date", "Category", "Amount", "Status", "Due", "Supplier", "Notes", "Receipt", "Repeats", "Repeat until", "Source"];
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const rows = filtered.map((x) => [x.date, x.category, x.amount, x.supplier ?? "", x.notes ?? "", x.receiptUrl ?? "", x.repeat ?? "", x.repeatUntil ?? "", x.virtual ? "subscription" : "logged"]);
+    const rows = filtered.map((x) => [x.date, x.category, x.amount, statusOf(x), x.dueDate ?? "", x.supplier ?? "", x.notes ?? "", x.receiptUrl ?? "", x.repeat ?? "", x.repeatUntil ?? "", x.virtual ? "subscription" : "logged"]);
     const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `expenses-${range}${from || to ? "-custom" : ""}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -328,7 +338,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       {/* Tabs */}
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex flex-wrap rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
-          {([["overview", "Overview"], ["ledger", "All expenses"], ["receipts", `Receipts${withReceipt.length ? ` · ${withReceipt.length}` : ""}`], ["categories", "Categories"]] as const).map(([k, label]) => (
+          {([["overview", "Overview"], ["ledger", "All"], ["pending", `Pending${pendingItems.length ? ` · ${pendingItems.length}` : ""}`], ["paid", `Paid${paidCount ? ` · ${paidCount}` : ""}`], ["receipts", `Receipts${withReceipt.length ? ` · ${withReceipt.length}` : ""}`], ["categories", "Categories"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className="rounded-full px-4 py-1.5 transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
           ))}
         </div>
@@ -423,7 +433,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
             </div>
           </Card>
         </div>
-      ) : tab === "ledger" ? (
+      ) : (tab === "ledger" || tab === "pending" || tab === "paid") ? (
         <div className="flex flex-col gap-3">
           <Card className="flex flex-col gap-2.5 p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -474,11 +484,13 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                   <span className="w-[104px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
                   <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
                   {x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">🚀 subscription</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
+                  {!x.virtual && statusOf(x) === "pending" && <span className="flex-none rounded-full bg-[#fbeede] px-2 py-0.5 text-[10px] font-bold text-[#a9660a]" title={x.dueDate ? `Due ${fmtDay(x.dueDate)}` : "Owed — not yet paid"}>Pending{x.dueDate ? ` · due ${fmtDay(x.dueDate)}` : ""}</span>}
                   <span className="min-w-0 flex-1 truncate text-[12.5px]">{x.supplier || <span className="text-[var(--ink-3)]">—</span>}{x.notes ? <span className="text-[var(--ink-3)]"> · {x.notes}</span> : ""}</span>
                   {x.receiptUrl && <a href={x.receiptUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">📎 receipt</a>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
                   {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">auto</span> : (
                     <>
+                      {statusOf(x) === "pending" && <button type="button" onClick={() => markPaid(x)} className="flex-none rounded-full bg-[#e7f0ff] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
                       <button type="button" onClick={() => openEdit(x)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
                       <button type="button" onClick={() => remove(x)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
                     </>
@@ -603,6 +615,19 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <label className="block"><span className={labelCls}>Supplier</span><input value={editor.supplier} onChange={(e) => setEditor({ ...editor, supplier: e.target.value })} placeholder="Who you paid" className={fieldCls} /></label>
               </div>
               <label className="mt-2.5 block"><span className={labelCls}>Notes</span><input value={editor.notes} onChange={(e) => setEditor({ ...editor, notes: e.target.value })} placeholder="What was it for?" className={fieldCls} /></label>
+
+              <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                <div>
+                  <span className={labelCls}>Status</span>
+                  <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold">
+                    {([["paid", "Paid"], ["pending", "Pending"]] as const).map(([k, label]) => (
+                      <button key={k} type="button" onClick={() => setEditor({ ...editor, status: k })} className="px-4 py-1.5 transition-colors" style={editor.status === k ? { background: k === "pending" ? "#a9660a" : "#1d3a8f", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">{editor.status === "pending" ? "Money you owe — not paid yet." : "Money that's already gone out."}</p>
+                </div>
+                {editor.status === "pending" && <label className="block"><span className={labelCls}>Due date <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span><input type="date" value={editor.dueDate} onChange={(e) => setEditor({ ...editor, dueDate: e.target.value })} className={fieldCls} /></label>}
+              </div>
 
               {!editor.id && (
                 <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
