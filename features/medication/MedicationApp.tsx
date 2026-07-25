@@ -46,6 +46,7 @@ interface AdminEvent {
   date: string;
   time?: string;
   doseGiven: string;
+  given?: boolean;
   administeredByName?: string;
   witnessedBy?: string;
   notes?: string;
@@ -136,18 +137,20 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
 
 function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
   const [dose, setDose] = useState(med.dose);
+  const [given, setGiven] = useState(true);
   const [date, setDate] = useState(todayIso());
   const [time, setTime] = useState(nowTime());
   const [witnessedBy, setWitnessedBy] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const stampNow = () => { setDate(todayIso()); setTime(nowTime()); };
   async function give() {
-    if (!date) { setError("Pick the day it was given."); return; }
+    if (!date) { setError("Pick the day."); return; }
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, doseGiven: dose, witnessedBy, notes });
+      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, given, doseGiven: given ? dose : "Not given", witnessedBy, notes });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t record");
@@ -156,7 +159,15 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
   }
   return (
     <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
-      <div className="mb-1.5 text-[12px] font-extrabold">Record a dose of {med.name}</div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-extrabold">Record a dose of {med.name}</span>
+        <span className="ml-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Given?</span>
+        <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
+          <button type="button" onClick={() => setGiven(true)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={given ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>✓ Yes</button>
+          <button type="button" onClick={() => setGiven(false)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={!given ? { background: "#c02636", color: "#fff" } : { color: "var(--ink-3)" }}>✕ No</button>
+        </div>
+        <button type="button" onClick={stampNow} className="ml-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">🕒 Now</button>
+      </div>
       <div className="grid gap-2 sm:grid-cols-5">
         <div><FieldLabel>Dose</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Day given</FieldLabel><Input type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
@@ -165,7 +176,7 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
       </div>
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-2 flex gap-2"><Button sm variant="primary" disabled={busy} onClick={give}>{busy ? "Recording…" : "Confirm dose given"}</Button><Button sm onClick={onDone}>Cancel</Button></div>
+      <div className="mt-2 flex gap-2"><Button sm variant={given ? "primary" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={onDone}>Cancel</Button></div>
     </div>
   );
 }
@@ -267,9 +278,10 @@ export function MedicationApp() {
                       <div className="text-[12px] text-[var(--ink-3)]">No doses recorded yet.</div>
                     ) : (
                       doses.map((a) => (
-                        <div key={a.id} className="border-b border-dashed border-[var(--line)] py-1 text-[12px] last:border-b-0">
+                        <div key={a.id} className="flex flex-wrap items-center gap-x-1.5 border-b border-dashed border-[var(--line)] py-1 text-[12px] last:border-b-0">
+                          {(() => { const notGiven = a.given === false || a.doseGiven === "Not given"; return <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={notGiven ? { background: "#fdebec", color: "#c02636" } : { background: "#e7f6ee", color: "#0f7a43" }}>{notGiven ? "✕ Not given" : "✓ Given"}</span>; })()}
                           <b>{fmt(a.date)}{a.time ? ` · ${a.time}` : ""}</b> — {a.doseGiven}
-                          <span className="text-[var(--ink-3)]"> · by {a.administeredByName}{a.witnessedBy ? `, witnessed ${a.witnessedBy}` : ""}{a.notes ? ` · ${a.notes}` : ""}</span>
+                          <span className="text-[var(--ink-3)]">· by {a.administeredByName}{a.witnessedBy ? `, witnessed ${a.witnessedBy}` : ""}{a.notes ? ` · ${a.notes}` : ""}</span>
                         </div>
                       ))
                     )}
