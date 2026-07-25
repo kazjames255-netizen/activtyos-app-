@@ -27,7 +27,8 @@ const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
   { id: "won", label: "5 · New customer 🎉", color: "#0f7a43", prob: 1 },
   { id: "lost", label: "Lost", color: "#c02636", prob: 0 },
 ];
-const stageOf = (id: Stage) => STAGES.find((s) => s.id === id)!;
+const stageOf = (id: Stage) => STAGES.find((s) => s.id === id) ?? STAGES[0];
+const VALID_STAGES = new Set(STAGES.map((s) => s.id));
 const SOURCES: { id: Source; label: string }[] = [
   { id: "cold_call", label: "📞 Cold call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" },
   { id: "referral", label: "🤝 Referral" }, { id: "event", label: "🎟️ Event" }, { id: "inbound", label: "🌐 Inbound" },
@@ -64,10 +65,13 @@ function seed(business: string, contactName: string, email: string, phone: strin
 export function SalesApp() {
   const [leads, setLeads] = useState<Lead[]>(() => {
     if (typeof window === "undefined") return [];
-    const l = loadLeads();
-    if (l.length) return l;
-    saveLeads(SEED);
-    return SEED;
+    const raw = loadLeads();
+    if (!raw.length) { saveLeads(SEED); return SEED; }
+    // Migrate any leads saved with a stage that no longer exists (e.g. old
+    // "interested") so nothing crashes on stageOf().
+    const fixed = raw.map((l) => (VALID_STAGES.has(l.stage) ? l : { ...l, stage: "new" as Stage }));
+    if (fixed.some((l, i) => l !== raw[i])) saveLeads(fixed);
+    return fixed;
   });
   const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [detail, setDetail] = useState<Lead | null>(null);
