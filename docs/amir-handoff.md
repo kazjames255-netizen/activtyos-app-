@@ -35,13 +35,19 @@ for you.
    **phone/email lookup** (inbound callers), and the **auto-convert on signup**
    (match a lead by email/phone/business in `register-role` → move to "New
    customer" + link tenantId). Spec: `docs/sales-crm-handoff.md`.
-3. **API docs** — `server/openapi.yaml` is missing the whole Money area + all the
+3. **HQ Support & messages inbox** — new inbox UI (providers by tier + a
+   provider's customers + reported bugs) runs on localStorage; the composer's
+   provider directory already reads your live `/api/platform/providers`. Build the
+   `supportThreads` collection + platform CRUD, and the **bug-report intake** that
+   auto-captures page/device/steps (in-app + inbound email). Spec:
+   `docs/support-inbox-handoff.md`.
+4. **API docs** — `server/openapi.yaml` is missing the whole Money area + all the
    routes above (subscription, pricing, analytics, page-engagement, at-risk,
    providers, subscriptions, pageview, income, suppliers) + register-role's new
    fields.
-4. **Postcode → browse-by-distance** — signup now captures it; wire into your
+5. **Postcode → browse-by-distance** — signup now captures it; wire into your
    geocoding (§B).
-5. **(Perf, later)** the HQ analytics endpoints do full-collection reads — fine
+6. **(Perf, later)** the HQ analytics endpoints do full-collection reads — fine
    now, swap for scheduled rollups as volume grows.
 
 ## Still standing from before (not from this batch)

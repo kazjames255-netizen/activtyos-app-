@@ -56,6 +56,7 @@ import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
 import { SalesApp } from "@/features/platform/SalesApp";
+import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
@@ -326,15 +327,8 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     }),
     billing: PlatformBillingApp,
     pricing: PlatformPricingApp,
-    support: planned({
-      title: "Support",
-      blurb: "Every provider's support threads triaged in one HQ inbox.",
-      links: [{ href: "/platform/providers", label: "Providers", hint: "reach a provider directly" }],
-    }),
-    messages: planned({
-      title: "Messages",
-      blurb: "HQ announcements out to providers, and their replies back.",
-    }),
+    support: SupportInboxApp,
+    messages: SupportInboxApp,
     email: planned({
       title: "Email",
       blurb: "Platform-level email campaigns to providers, with delivery tracking.",
