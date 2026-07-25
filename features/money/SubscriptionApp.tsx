@@ -186,7 +186,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   const staffUsed = c.staffUsed ?? null;
   const overStaff = c.staffLimit != null && staffUsed != null && staffUsed >= c.staffLimit;
   return (
-    <div className="text-[var(--ink)]">
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Subscription</h2>
 
       {c.status !== "none" && (
