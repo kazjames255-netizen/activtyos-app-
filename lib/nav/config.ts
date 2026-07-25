@@ -543,7 +543,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: true,
       footer: false,
       items: [
-        { view: "dash", legacyView: "platform-dash", label: "Overview", icon: { type: "glyph", value: "▦" }, badge: null },
+        { view: "analytics", legacyView: "platform-analytics", label: "Analytics", icon: { type: "glyph", value: "📈" }, badge: null },
       ],
     },
     {
@@ -552,7 +552,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "providers", legacyView: "platform-providers", label: "Providers & billing", icon: { type: "glyph", value: "▣" }, badge: null },
-        { view: "analytics", legacyView: "platform-analytics", label: "Provider analytics", icon: { type: "glyph", value: "📈" }, badge: null },
         { view: "engagement", legacyView: "platform-engagement", label: "Page engagement", icon: { type: "glyph", value: "🔥" }, badge: null },
         { view: "at-risk", legacyView: "platform-at-risk", label: "At risk", icon: { type: "glyph", value: "🚨" }, badge: null },
         { view: "sales", legacyView: "platform-sales", label: "Sales pipeline", icon: { type: "glyph", value: "💼" }, badge: null },

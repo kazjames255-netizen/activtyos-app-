@@ -28,15 +28,37 @@ const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).p
 const tenure = (d: number) => (d >= 365 ? `${(d / 365).toFixed(1)} yrs` : d >= 30 ? `${Math.round(d / 30)} mo` : `${d} days`);
 const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
 const STATUS_C: Record<string, string> = { active: "#0f7a43", trialing: "#1d3a8f", canceling: "#a5670a", canceled: "#c02636", none: "#8a86a3" };
+const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#6d28d9,#a855f7)", "linear-gradient(135deg,#0f7a43,#34c17b)"];
+const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
+
+interface RecentProv { id: string; name: string; type: string; createdAt: string | null; subscription: Record<string, unknown> | null }
+const kindOf = (p: RecentProv) => ((p.subscription?.plan as string) === "franchise" ? "franchise" : p.type === "company" ? "company" : "freelancer");
+function sinceLabel(iso: string | null, nowMs: number) {
+  if (!iso) return "just joined";
+  const days = Math.floor((nowMs - Date.parse(iso)) / 86400000);
+  if (days <= 0) return "joined today";
+  if (days === 1) return "joined yesterday";
+  if (days < 30) return `joined ${days} days ago`;
+  return "since " + new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export function PlatformAnalyticsApp() {
   const [d, setD] = useState<Analytics | null>(null);
+  const [recent, setRecent] = useState<RecentProv[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(12);
   const [mode, setMode] = useState<"incl" | "paying">("incl");
+  const [nowMs] = useState(() => Date.now());
 
   const load = useCallback(() => {
-    apiGet<Analytics>("/api/platform/analytics").then((a) => { setD(a); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    Promise.all([
+      apiGet<Analytics>("/api/platform/analytics"),
+      apiGet<{ providers: RecentProv[] }>("/api/platform/providers"),
+    ]).then(([a, p]) => {
+      setD(a); setError(null);
+      setRecent([...p.providers].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6));
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(load, [load]);
   useRealtime(["tenants", "bookings"], load);
@@ -152,21 +174,54 @@ export function PlatformAnalyticsApp() {
         </Card>
       </div>
 
-      <Card title="Top providers by fee" className="mt-4">
-        {d.topProviders.length ? (
-          <div className="flex flex-col divide-y divide-[var(--line)]">
-            {d.topProviders.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
-                <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
-                <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.plan}{p.band ? ` · ${p.band}` : ""}</span>
-                <span className="text-[11px] text-[var(--ink-3)]">{tenure(p.tenureDays)}</span>
-                <span className="w-16 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
-              </div>
-            ))}
-          </div>
-        ) : <Empty>No paying providers yet.</Empty>}
-      </Card>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <NewestProviders items={recent} nowMs={nowMs} />
+        <Card title="Top providers by fee">
+          {d.topProviders.length ? (
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {d.topProviders.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
+                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+                  <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.plan}{p.band ? ` · ${p.band}` : ""}</span>
+                  <span className="text-[11px] text-[var(--ink-3)]">{tenure(p.tenureDays)}</span>
+                  <span className="w-16 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
+                </div>
+              ))}
+            </div>
+          ) : <Empty>No paying providers yet.</Empty>}
+        </Card>
+      </div>
     </div>
+  );
+}
+
+// The newest signups, colour-keyed by tier with a gradient avatar and a gold
+// NEW flash for anyone who joined in the last fortnight. (Moved here from the
+// retired Overview page.)
+function NewestProviders({ items, nowMs }: { items: RecentProv[]; nowMs: number }) {
+  return (
+    <Card title="🆕 Newest providers">
+      {items.length ? (
+        <div className="flex flex-col gap-2">
+          {items.map((p) => {
+            const kind = kindOf(p);
+            const c = PLAN_C[kind] ?? BLUE;
+            const days = p.createdAt ? Math.floor((nowMs - Date.parse(p.createdAt)) / 86400000) : 999;
+            return (
+              <div key={p.id} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-2.5 py-2" style={{ background: `linear-gradient(90deg, ${c}14, transparent 62%)` }}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[12px] font-extrabold text-white shadow-sm" style={{ background: grad(p.name) }}>{initials(p.name)}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-bold">{p.name}</div>
+                  <div className="text-[11px] text-[var(--ink-3)]">{sinceLabel(p.createdAt, nowMs)}</div>
+                </div>
+                {days <= 14 && <span className="rounded-full px-2 py-0.5 text-[9.5px] font-extrabold tracking-wide text-[#3a2a00]" style={{ background: GOLD }}>NEW</span>}
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize" style={{ background: `${c}1f`, color: c }}>{kind}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : <Empty>No providers yet.</Empty>}
+    </Card>
   );
 }
 

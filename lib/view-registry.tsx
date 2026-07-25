@@ -48,7 +48,6 @@ import { ReferApp } from "@/features/parent/ReferApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { ScheduleApp } from "@/features/parent/ScheduleApp";
-import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
@@ -309,7 +308,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {
-    dash: OverviewApp,
+    dash: PlatformAnalyticsApp, // Overview retired — /platform/dash lands on Analytics
     providers: ProvidersApp,
     analytics: PlatformAnalyticsApp,
     engagement: PlatformEngagementApp,
@@ -338,7 +337,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: planned({
       title: "AI assistant",
       blurb: "Ask questions across the whole platform — growth, churn, capacity — answered from live data.",
-      links: [{ href: "/platform/dash", label: "Overview", hint: "the live numbers today" }],
+      links: [{ href: "/platform/analytics", label: "Analytics", hint: "the live numbers today" }],
     }),
   },
 };
