@@ -136,16 +136,18 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
 
 function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
   const [dose, setDose] = useState(med.dose);
+  const [date, setDate] = useState(todayIso());
   const [time, setTime] = useState(nowTime());
   const [witnessedBy, setWitnessedBy] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function give() {
+    if (!date) { setError("Pick the day it was given."); return; }
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date: todayIso(), time, doseGiven: dose, witnessedBy, notes });
+      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, doseGiven: dose, witnessedBy, notes });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t record");
@@ -155,8 +157,9 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
   return (
     <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
       <div className="mb-1.5 text-[12px] font-extrabold">Record a dose of {med.name}</div>
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-5">
         <div><FieldLabel>Dose</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
+        <div><FieldLabel>Day given</FieldLabel><Input type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Time</FieldLabel><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Witnessed by</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
