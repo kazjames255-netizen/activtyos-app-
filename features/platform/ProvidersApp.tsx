@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 
 interface Provider {
   id: string; name: string; type: string; createdAt: string | null; ownerEmail: string | null;
+  contactEmail: string | null; phone: string | null;
   providerName: string | null; providerNameMode: string | null; activityKinds: string[];
   address: string | null; postcode: string | null; logoUrl: string | null;
   heardAbout: string | null; referredBy: string | null;
@@ -25,11 +26,21 @@ const SM: Record<string, { label: string; bg: string; fg: string }> = {
 const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
+const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#16306e,#2f6bd8)"];
+const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
+const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
+// A franchise is a company tenant on the franchise plan; freelancer/company come from the tenant type.
+const kindOf = (p: Provider) => ((p.subscription?.plan as string) === "franchise" ? "franchise" : p.type);
+const FILTERS: { id: string; label: string }[] = [
+  { id: "all", label: "All" }, { id: "freelancer", label: "Freelancer" }, { id: "company", label: "Company" }, { id: "franchise", label: "Franchise" },
+];
+
 /** platform/providers — every provider, expandable to their full signup record. */
 export function ProvidersApp() {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>("all");
 
   const load = useCallback(() => {
     apiGet<{ providers: Provider[] }>("/api/platform/providers")
@@ -49,24 +60,38 @@ export function ProvidersApp() {
 
       <InviteProviders />
 
-      <div className="mb-2 mt-6 text-[13px] font-extrabold">On the platform</div>
+      <div className="mb-3 mt-6 flex flex-wrap gap-2">
+        {FILTERS.map((f) => {
+          const n = f.id === "all" ? providers.length : providers.filter((p) => kindOf(p) === f.id).length;
+          const on = filter === f.id;
+          return (
+            <button key={f.id} type="button" onClick={() => setFilter(f.id)}
+              className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+              style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+              {f.label} <span className={on ? "text-white/70" : "text-[var(--ink-3)]"}>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex flex-col gap-2">
-        {providers.map((p) => {
+        {providers.filter((p) => filter === "all" || kindOf(p) === filter).map((p) => {
           const sub = p.subscription ?? {};
           const status = (sub.status as string) ?? "none";
           const sm = SM[status] ?? SM.none;
           const isOpen = open === p.id;
           return (
-            <div key={p.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-              <button type="button" onClick={() => setOpen(isOpen ? null : p.id)} className="flex w-full flex-wrap items-center gap-2.5 px-3.5 py-3 text-left hover:bg-[var(--panel)]">
-                <span className={`text-[13px] transition-transform ${isOpen ? "rotate-90" : ""} text-[var(--ink-3)]`}>▸</span>
+            <div key={p.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+              <button type="button" onClick={() => setOpen(isOpen ? null : p.id)} className="flex w-full flex-wrap items-center gap-3 px-3.5 py-3 text-left hover:bg-[var(--panel)]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[15px] font-extrabold text-white shadow-sm" style={{ background: grad(p.name) }}>{initials(p.name)}</span>
                 <div className="min-w-0">
-                  <div className="text-[14px] font-extrabold">{p.name}</div>
-                  <div className="text-[11px] text-[var(--ink-3)]">{p.ownerEmail ?? "—"} · since {p.createdAt?.slice(0, 10) ?? "—"}</div>
+                  <div className="text-[14.5px] font-extrabold">{p.name}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{p.ownerEmail ?? "—"} · since {fmt(p.createdAt).replace(", 2026", "")}</div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                  <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.type}</span>
-                  <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
+                  <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{kindOf(p)}</span>
+                  <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
+                  <span className={`text-[13px] transition-transform ${isOpen ? "rotate-90" : ""} text-[var(--ink-3)]`}>▸</span>
                 </div>
               </button>
 
@@ -75,6 +100,8 @@ export function ProvidersApp() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Section title="Signup answers">
                       <Row k="Business name" v={p.name} />
+                      <Row k="Email" v={p.contactEmail ?? p.ownerEmail ?? "—"} />
+                      <Row k="Phone" v={p.phone ?? "—"} />
                       <Row k="Shown to parents as" v={p.providerName ? `${p.providerName} (${p.providerNameMode === "person" ? "own name" : "business name"})` : "—"} />
                       <Row k="What they run" v={p.activityKinds.length ? p.activityKinds.join(", ") : "—"} />
                       <Row k="Based" v={[p.address, p.postcode].filter(Boolean).join(", ") || "—"} />

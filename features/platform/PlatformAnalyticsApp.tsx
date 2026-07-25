@@ -1,0 +1,241 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { get as apiGet } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
+
+interface Analytics {
+  summary: { mrr: number; arr: number; totalProviders: number; active: number; trialing: number; canceling: number; canceled: number; avgTenureDays: number; churnRate: number; trialConversion: number; newThisMonth: number; gmvBooked: number; gmvPaid: number };
+  byPlan: Record<string, { count: number; mrr: number }>;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  attribution: Record<string, number>;
+  signupsByMonth: { month: string; count: number; cumulative: number }[];
+  mrrByMonth: { month: string; mrr: number }[];
+  gmvByMonth: { month: string; booked: number; paid: number }[];
+  projection: { month: string; mrr: number }[];
+  topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[];
+  atRisk: { id: string; name: string; cancelAt: string | null; fee: number }[];
+}
+
+const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
+const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100";
+const money = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n).toLocaleString("en-GB")}`);
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const tenure = (d: number) => (d >= 365 ? `${(d / 365).toFixed(1)} yrs` : d >= 30 ? `${Math.round(d / 30)} mo` : `${d} days`);
+const PLAN_C: Record<string, string> = { freelancer: "#3f78d8", company: "#1d3a8f", franchise: "#7c3aed" };
+const STATUS_C: Record<string, string> = { active: "#0f7a43", trialing: "#1d3a8f", canceling: "#a5670a", canceled: "#c02636", none: "#8a86a3" };
+
+export function PlatformAnalyticsApp() {
+  const [d, setD] = useState<Analytics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [months, setMonths] = useState(12);
+
+  const load = useCallback(() => {
+    apiGet<Analytics>("/api/platform/analytics").then((a) => { setD(a); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+  }, []);
+  useEffect(load, [load]);
+  useRealtime(["tenants", "bookings"], load);
+
+  const view = useMemo(() => {
+    if (!d) return null;
+    const slice = <T,>(arr: T[]) => arr.slice(-months);
+    return { mrr: slice(d.mrrByMonth), signups: slice(d.signupsByMonth), gmv: slice(d.gmvByMonth) };
+  }, [d, months]);
+
+  if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
+  if (!d || !view) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading analytics…</div>;
+  const s = d.summary;
+
+  return (
+    <div className="text-[var(--ink)]">
+      <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
+        <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📈 Provider analytics</h2>
+            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</p>
+          </div>
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
+            {[3, 6, 12].map((m) => (
+              <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{m}m</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* KPI tiles */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi label="Monthly recurring" value={money(s.mrr)} sub={`${money(s.arr)} / year run-rate`} accent={BLUE} />
+        <Kpi label="Active providers" value={String(s.active + s.canceling)} sub={`${s.trialing} on trial · ${s.totalProviders} total`} accent={LIGHTB} />
+        <Kpi label="Avg. time with us" value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} accent="#0f7a43" />
+        <Kpi label="Trial → paid" value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} accent={GOLD} />
+      </div>
+
+      {/* MRR trend + projection */}
+      <Card title="Recurring revenue" right={<Legend items={[["MRR", BLUE], ["Projected", GOLD]]} />} className="mt-4">
+        <TrendChart series={view.mrr.map((x) => ({ label: x.month, value: x.mrr }))} projection={d.projection.map((x) => ({ label: x.month, value: x.mrr }))} fmt={money} color={BLUE} />
+      </Card>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card title="New signups" right={<span className="text-[11.5px] text-[var(--ink-3)]">bars = joined · line = total</span>}>
+          <SignupBars data={view.signups} />
+        </Card>
+        <Card title="Booking value through providers" right={<Legend items={[["Booked", LIGHTB], ["Paid", "#0f7a43"]]} />}>
+          <TrendChart series={view.gmv.map((x) => ({ label: x.month, value: x.booked }))} series2={view.gmv.map((x) => ({ label: x.month, value: x.paid }))} fmt={money} color={LIGHTB} color2="#0f7a43" />
+          <div className="mt-2 flex gap-4 text-[12px] text-[var(--ink-3)]"><span>All-time booked <b className="text-[var(--ink)]">{money(s.gmvBooked)}</b></span><span>Paid <b className="text-[var(--ink)]">{money(s.gmvPaid)}</b></span></div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <Card title="Revenue by plan">
+          <Breakdown entries={Object.entries(d.byPlan).map(([k, v]) => ({ label: k, value: v.mrr, sub: `${v.count} · ${money(v.mrr)}/mo`, color: PLAN_C[k] ?? BLUE }))} />
+        </Card>
+        <Card title="Providers by status">
+          <Breakdown entries={Object.entries(d.byStatus).map(([k, v]) => ({ label: k, value: v, sub: String(v), color: STATUS_C[k] ?? "#8a86a3" }))} />
+        </Card>
+        <Card title="How they heard about us">
+          {Object.keys(d.attribution).length
+            ? <Breakdown entries={Object.entries(d.attribution).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v, sub: String(v), color: LIGHTB }))} />
+            : <Empty>No attribution yet — new signups record this.</Empty>}
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card title="Top providers by fee">
+          {d.topProviders.length ? (
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {d.topProviders.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
+                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+                  <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[10.5px] font-bold capitalize text-[#1d3a8f]">{p.plan}{p.band ? ` · ${p.band}` : ""}</span>
+                  <span className="text-[11px] text-[var(--ink-3)]">{tenure(p.tenureDays)}</span>
+                  <span className="w-16 text-right font-extrabold tabular-nums">{money(p.fee)}/mo</span>
+                </div>
+              ))}
+            </div>
+          ) : <Empty>No paying providers yet.</Empty>}
+        </Card>
+        <Card title="At risk — cancelling" right={d.atRisk.length ? <span className="rounded-full bg-[#fdf0e3] px-2 py-0.5 text-[11px] font-bold text-[#a5670a]">{money(d.atRisk.reduce((a, b) => a + b.fee, 0))}/mo at risk</span> : undefined}>
+          {d.atRisk.length ? (
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {d.atRisk.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 py-2 text-[12.5px]">
+                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+                  <span className="text-[11px] text-[var(--ink-3)]">ends {p.cancelAt ? new Date(p.cancelAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}</span>
+                  <span className="w-16 text-right font-extrabold tabular-nums text-[#a5670a]">{money(p.fee)}/mo</span>
+                </div>
+              ))}
+            </div>
+          ) : <Empty>Nobody&rsquo;s cancelling. 🎉</Empty>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── Pieces ────────────────────────────────────────────────────────────────
+function Kpi({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
+      <div className="pl-1.5">
+        <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
+        <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
+      </div>
+    </div>
+  );
+}
+function Card({ title, right, children, className = "" }: { title: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 ${className}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+function Legend({ items }: { items: [string, string][] }) {
+  return <div className="flex gap-3 text-[11px] font-bold text-[var(--ink-3)]">{items.map(([l, c]) => <span key={l} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{l}</span>)}</div>;
+}
+function Empty({ children }: { children: React.ReactNode }) {
+  return <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{children}</div>;
+}
+
+// Area/line trend with optional 2nd series and a dashed projection tail; hover shows values.
+function TrendChart({ series, series2, projection, fmt, color, color2 }: { series: { label: string; value: number }[]; series2?: { label: string; value: number }[]; projection?: { label: string; value: number }[]; fmt: (n: number) => string; color: string; color2?: string }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 640, H = 150, PAD = 8;
+  const all = [...series, ...(projection ?? [])];
+  const pts = [...series.map((p) => p.value), ...(series2?.map((p) => p.value) ?? []), ...(projection?.map((p) => p.value) ?? [])];
+  const max = Math.max(1, ...pts);
+  const n = all.length;
+  const x = (i: number) => PAD + (i * (W - 2 * PAD)) / Math.max(1, n - 1);
+  const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
+  const line = (arr: { value: number }[], off = 0) => arr.map((p, i) => `${i === 0 ? "M" : "L"}${x(i + off).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
+  const areaP = `${line(series)} L${x(series.length - 1)},${H - PAD} L${x(0)},${H - PAD} Z`;
+  const projLine = projection ? `M${x(series.length - 1)},${y(series[series.length - 1]?.value ?? 0)} ` + projection.map((p, i) => `L${x(series.length + i)},${y(p.value)}`).join(" ") : "";
+  const hi = hover;
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: "visible" }}
+        onMouseLeave={() => setHover(null)}
+        onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); const rel = ((e.clientX - r.left) / r.width) * W; setHover(Math.max(0, Math.min(n - 1, Math.round((rel - PAD) / ((W - 2 * PAD) / Math.max(1, n - 1)))))); }}>
+        <defs>
+          <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.22" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map((g) => <line key={g} x1={PAD} x2={W - PAD} y1={PAD + g * (H - 2 * PAD)} y2={PAD + g * (H - 2 * PAD)} stroke="var(--line)" strokeWidth="1" />)}
+        <path d={areaP} fill="url(#tg)" />
+        <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
+        {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
+        {projection && <path d={projLine} fill="none" stroke={GOLD} strokeWidth="2.5" strokeDasharray="4 4" strokeLinejoin="round" />}
+        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1]?.value ?? 0)} r="3.5" fill={color} />
+        {hi != null && <line x1={x(hi)} x2={x(hi)} y1={PAD} y2={H - PAD} stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="3 3" />}
+      </svg>
+      <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{all.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
+      {hi != null && (
+        <div className="pointer-events-none absolute -top-1 rounded-lg bg-[var(--ink)] px-2 py-1 text-[11px] font-bold text-white shadow" style={{ left: `${(x(hi) / W) * 100}%`, transform: "translateX(-50%)" }}>
+          {monthLabel(all[hi].label)} · {fmt(all[hi].value)}{series2 && series2[hi] ? ` / ${fmt(series2[hi].value)}` : ""}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SignupBars({ data }: { data: { month: string; count: number; cumulative: number }[] }) {
+  const maxC = Math.max(1, ...data.map((x) => x.count));
+  const maxCum = Math.max(1, ...data.map((x) => x.cumulative));
+  const W = 640, H = 150, PAD = 8;
+  const bw = (W - 2 * PAD) / data.length;
+  const cy = (v: number) => H - PAD - (v / maxCum) * (H - 2 * PAD);
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        {data.map((x, i) => { const h = (x.count / maxC) * (H - 2 * PAD); return <rect key={i} x={PAD + i * bw + bw * 0.2} y={H - PAD - h} width={bw * 0.6} height={Math.max(0, h)} rx="3" fill={LIGHTB} opacity={0.85}><title>{`${monthLabel(x.month)}: ${x.count} joined`}</title></rect>; })}
+        <path d={data.map((x, i) => `${i === 0 ? "M" : "L"}${PAD + i * bw + bw / 2},${cy(x.cumulative)}`).join(" ")} fill="none" stroke={BLUE} strokeWidth="2.5" />
+        {data.map((x, i) => <circle key={i} cx={PAD + i * bw + bw / 2} cy={cy(x.cumulative)} r="2.5" fill={BLUE}><title>{`${monthLabel(x.month)}: ${x.cumulative} total`}</title></circle>)}
+      </svg>
+      <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((x, i) => <span key={i}>{monthLabel(x.month)}</span>)}</div>
+    </div>
+  );
+}
+
+function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string }[] }) {
+  const max = Math.max(1, ...entries.map((e) => e.value));
+  if (!entries.length) return <Empty>Nothing yet.</Empty>;
+  return (
+    <div className="flex flex-col gap-2.5">
+      {entries.map((e) => (
+        <div key={e.label}>
+          <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold capitalize">{e.label}</span><span className="text-[var(--ink-3)]">{e.sub}</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(e.value / max) * 100}%`, background: e.color }} /></div>
+        </div>
+      ))}
+    </div>
+  );
+}

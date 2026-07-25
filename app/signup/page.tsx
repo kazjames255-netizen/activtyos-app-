@@ -110,6 +110,8 @@ function SignupForm() {
   const [providerNameMode, setProviderNameMode] = useState<"person" | "business">("business");
   const [postcode, setPostcode] = useState("");
   const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [kinds, setKinds] = useState<string[]>([]);
   const [logo, setLogo] = useState<string>("");
   const [heard, setHeard] = useState("");
@@ -207,6 +209,8 @@ function SignupForm() {
               ...(kinds.length ? { activityKinds: kinds } : {}),
               ...(address.trim() ? { address: address.trim() } : {}),
               ...(postcode.trim() ? { postcode: postcode.trim() } : {}),
+              ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
+              ...(phone.trim() ? { phone: phone.trim() } : {}),
               ...(logoUrl ? { logoUrl } : {}),
               ...(heard ? { heardAbout: heard } : {}),
               ...(referredBy ? { referredBy } : {}),
@@ -338,6 +342,14 @@ function SignupForm() {
                 <Input id="b-pc" required autoComplete="postal-code" value={postcode} onChange={(e) => setPostcode(e.target.value.toUpperCase())} placeholder="Postcode" className="w-full" aria-label="Postcode" />
               </div>
               <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Used on your invoices and to show families how near you are.</p>
+            </div>
+            <div>
+              <FieldLabel>Contact details <span className="font-normal normal-case text-[var(--ink-3)]">— shown to parents & on invoices</span></FieldLabel>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input id="b-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="Contact email (optional)" className="w-full" aria-label="Contact email" />
+                <Input id="b-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" className="w-full" aria-label="Phone" />
+              </div>
+              <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Leave email blank to use your login email.</p>
             </div>
           </div>
         )}

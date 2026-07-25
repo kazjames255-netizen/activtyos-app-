@@ -26,7 +26,9 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
   const { portal } = await props.params;
   if (!PORTALS.includes(portal as PortalKey)) notFound();
   const portalKey = portal as PortalKey;
-  const light = portalKey === "custdash";
+  // Customer + platform (HQ) portals run the full light palette (light header +
+  // body), not the near-black operator shell.
+  const light = portalKey === "custdash" || portalKey === "platform";
 
   return (
     <RequireAuth>
@@ -44,7 +46,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
               <Header portal={portalKey} />
             </div>
             {/* Customer-only running bar of the family's usable discount codes. */}
-            {light && <CouponTicker />}
+            {portalKey === "custdash" && <CouponTicker />}
             {/* Operator trial / cancellation nudge bar. */}
             {!light && <TrialBanner portal={portalKey} />}
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>

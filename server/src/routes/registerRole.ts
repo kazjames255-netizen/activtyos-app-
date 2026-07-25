@@ -32,6 +32,8 @@ const schema = z.discriminatedUnion("role", [
     activityKinds: z.array(z.string().trim().max(40)).max(12).optional(),
     address: z.string().trim().max(400).optional(),
     postcode: z.string().trim().max(12).optional(),
+    contactEmail: z.string().trim().max(160).optional(),
+    phone: z.string().trim().max(40).optional(),
     logoUrl: z.string().trim().max(600).optional(),
     // Marketing attribution — where the operator first heard about ActivityOS.
     heardAbout: z.string().trim().max(60).optional(),
@@ -73,13 +75,17 @@ registerRole.post("/", async (req, res) => {
     return;
   }
 
-  const { role, businessName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan } = parsed.data;
+  const { role, businessName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan, contactEmail, phone } = parsed.data;
   const tenantRef = db.collection("tenants").doc();
   const libRef = db.collection("libraries").doc(tenantRef.id);
   // Only carry the billing keys that were actually given (drop undefineds so we
   // never write `field: undefined` into Firestore).
   const billingSeed: Record<string, unknown> = {
     businessName,
+    // Contact email defaults to the login email so there's always one to show
+    // on invoices / the storefront; phone is optional.
+    email: contactEmail || user.email || undefined,
+    ...(phone ? { phone } : {}),
     ...(address ? { address } : {}),
     ...(logoUrl ? { logoUrl } : {}),
     ...(billing?.bankName ? { bankName: billing.bankName } : {}),

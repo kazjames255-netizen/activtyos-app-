@@ -146,6 +146,9 @@ platform.get("/providers", async (req, res) => {
       type: (t.type as string) ?? "freelancer",
       createdAt: (t.createdAt as string) ?? null,
       ownerEmail,
+      // Contact — the business email/phone shown to parents (falls back to login email).
+      contactEmail: (billing.email as string) ?? ownerEmail ?? null,
+      phone: (billing.phone as string) ?? null,
       // Signup answers.
       providerName: (s.providerName as string) ?? null,
       providerNameMode: (s.providerNameMode as string) ?? null,
@@ -165,4 +168,107 @@ platform.get("/providers", async (req, res) => {
   }));
   providers.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
   res.json({ providers });
+});
+
+// GET /api/platform/analytics — the money/trends dashboard for HQ: MRR/ARR,
+// churn, tenure, conversion, signups & GMV over 12 months, attribution, top
+// providers, at-risk, and a simple MRR projection. Full-collection reads at
+// current scale (becomes a scheduled rollup later).
+platform.get("/analytics", async (req, res) => {
+  if (req.auth!.role !== "platform") {
+    res.status(403).json({ error: "Requires the platform role" });
+    return;
+  }
+  const [tenantsSnap, bookingsSnap] = await Promise.all([
+    db.collection("tenants").get(),
+    db.collection("bookings").get(),
+  ]);
+  const now = new Date();
+  const DAY = 86_400_000;
+  const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const months: string[] = [];
+  for (let i = 11; i >= 0; i--) months.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
+  const monthEnd = (k: string) => { const [y, m] = k.split("-").map(Number); return new Date(Date.UTC(y, m, 0, 23, 59, 59)); };
+  const BILLABLE = new Set(["active", "trialing", "canceling"]);
+
+  const tenants = tenantsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; type?: string; createdAt?: string; heardAbout?: string; subscription?: Record<string, unknown> })[];
+
+  let mrr = 0, active = 0, trialing = 0, canceling = 0, canceled = 0, started = 0, tenureSum = 0, tenureCount = 0;
+  const byPlan: Record<string, { count: number; mrr: number }> = {};
+  const byStatus: Record<string, number> = {};
+  const byType: Record<string, number> = {};
+  const attribution: Record<string, number> = {};
+  const topProviders: { id: string; name: string; plan: string; band: string | null; fee: number; tenureDays: number }[] = [];
+  const atRisk: { id: string; name: string; cancelAt: string | null; fee: number }[] = [];
+
+  for (const t of tenants) {
+    const sub = t.subscription ?? {};
+    const status = (sub.status as string) ?? "active"; // legacy no-field tenants = active, £0
+    byStatus[status] = (byStatus[status] ?? 0) + 1;
+    const plan = (sub.plan as string) ?? (t.type === "company" ? "company" : "freelancer");
+    const kind = plan === "franchise" ? "franchise" : (t.type ?? "freelancer");
+    byType[kind] = (byType[kind] ?? 0) + 1;
+    if (t.heardAbout) attribution[t.heardAbout] = (attribution[t.heardAbout] ?? 0) + 1;
+    const price = Number(sub.price) || 0;
+    const tenureDays = t.createdAt ? Math.max(0, Math.round((now.getTime() - Date.parse(t.createdAt)) / DAY)) : 0;
+    if (BILLABLE.has(status)) {
+      mrr += price;
+      byPlan[plan] = byPlan[plan] ?? { count: 0, mrr: 0 };
+      byPlan[plan].count++; byPlan[plan].mrr += price;
+      if (price > 0) topProviders.push({ id: t.id, name: (t.name as string) ?? t.id, plan, band: (sub.band as string) ?? null, fee: price, tenureDays });
+      tenureSum += tenureDays; tenureCount++;
+    }
+    if (status === "active") active++;
+    if (status === "trialing") trialing++;
+    if (status === "canceling") { canceling++; atRisk.push({ id: t.id, name: (t.name as string) ?? t.id, cancelAt: (sub.cancelAt as string) ?? null, fee: price }); }
+    if (status === "canceled") canceled++;
+    if (["active", "trialing", "canceling", "canceled"].includes(status)) started++;
+  }
+  const avgTenureDays = tenureCount ? Math.round(tenureSum / tenureCount) : 0;
+  const churnRate = canceled + active + canceling ? canceled / (canceled + active + canceling) : 0;
+  const trialConversion = started ? (active + canceling) / started : 0;
+
+  // Signups per month + cumulative.
+  const signBuckets: Record<string, number> = {};
+  for (const t of tenants) if (t.createdAt) { const k = mKey(new Date(t.createdAt)); if (months.includes(k)) signBuckets[k] = (signBuckets[k] ?? 0) + 1; }
+  let cum = tenants.filter((t) => t.createdAt && new Date(t.createdAt) < monthEnd(months[0])).length;
+  const signupsByMonth = months.map((k) => { const count = signBuckets[k] ?? 0; cum += count; return { month: k, count, cumulative: cum }; });
+
+  // Approx MRR at each month end = billable providers who'd started by then.
+  const mrrByMonth = months.map((k) => {
+    const end = monthEnd(k);
+    let m = 0;
+    for (const t of tenants) { const sub = t.subscription ?? {}; if (!BILLABLE.has(sub.status as string)) continue; const since = (sub.since as string) ?? t.createdAt; if (since && new Date(since) <= end) m += Number(sub.price) || 0; }
+    return { month: k, mrr: m };
+  });
+
+  // GMV (what parents pay providers) from bookings.
+  const gmvBuckets: Record<string, { booked: number; paid: number }> = {};
+  let gmvBooked = 0, gmvPaid = 0;
+  for (const d of bookingsSnap.docs) {
+    const b = d.data() as { amount?: number; pay?: string; createdAt?: string };
+    const amt = Number(b.amount) || 0; const paid = b.pay === "Paid" ? amt : 0;
+    gmvBooked += amt; gmvPaid += paid;
+    if (b.createdAt) { const k = mKey(new Date(b.createdAt)); if (months.includes(k)) { gmvBuckets[k] = gmvBuckets[k] ?? { booked: 0, paid: 0 }; gmvBuckets[k].booked += amt; gmvBuckets[k].paid += paid; } }
+  }
+  const gmvByMonth = months.map((k) => ({ month: k, booked: Math.round(gmvBuckets[k]?.booked ?? 0), paid: Math.round(gmvBuckets[k]?.paid ?? 0) }));
+
+  // Simple linear MRR projection from the last 6 months' average delta.
+  const recent = mrrByMonth.slice(-6).map((x) => x.mrr);
+  const deltas = recent.slice(1).map((v, i) => v - recent[i]);
+  const avgDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+  const lastMrr = recent.length ? recent[recent.length - 1] : mrr;
+  const projection = [1, 2, 3].map((n) => ({ month: mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + n, 1))), mrr: Math.max(0, Math.round(lastMrr + avgDelta * n)) }));
+
+  topProviders.sort((a, b) => b.fee - a.fee);
+  res.json({
+    summary: {
+      mrr, arr: mrr * 12, totalProviders: tenants.length, active, trialing, canceling, canceled,
+      avgTenureDays, churnRate, trialConversion, newThisMonth: signBuckets[months[months.length - 1]] ?? 0,
+      gmvBooked: Math.round(gmvBooked), gmvPaid: Math.round(gmvPaid),
+    },
+    byPlan, byStatus, byType, attribution,
+    signupsByMonth, mrrByMonth, gmvByMonth, projection,
+    topProviders: topProviders.slice(0, 8), atRisk,
+  });
 });
