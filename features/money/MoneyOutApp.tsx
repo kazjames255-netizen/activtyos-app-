@@ -81,6 +81,11 @@ export function MoneyOutApp() {
           </div>
         </div>
         <div className="mt-2 text-[11px] text-white/75">This month: <b className="text-white">{money(paidMonth)}</b> paid + <b className="text-white">{money(pendMonth)}</b> pending{basis === "cash" ? " (pending not counted above until paid)" : ""}</div>
+        <div className="mt-0.5 text-[10.5px] text-white/60">
+          {basis === "cash"
+            ? <><b className="text-white/80">Cash basis:</b> an expense counts as spend the day you mark it <b className="text-white/80">Paid</b> — money you owe (Pending) isn’t in the totals yet.</>
+            : <><b className="text-white/80">Accrual basis:</b> an expense counts as spend the day it’s <b className="text-white/80">logged</b> — Pending and Paid both count, so committed money shows straight away.</>}
+        </div>
       </div>
 
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
