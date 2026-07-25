@@ -68,6 +68,8 @@ const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded:
 
 function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<MedDraft>(emptyMed());
+  const [freq, setFreq] = useState<"daily" | "asneeded">("daily");
+  const [times, setTimes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<MedDraft>) => setD((p) => ({ ...p, ...patch }));
@@ -79,8 +81,11 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     }
     setBusy(true);
     setError(null);
+    // Regular (repeat) meds store their daily time(s) in `schedule`; as-needed
+    // meds flip `asNeeded` so the list flags them and they aren't a daily dose.
+    const schedule = freq === "daily" ? (times.trim() ? `Every day · ${times.trim()}` : "Every day") : "As needed";
     try {
-      await apiPost("/api/medications", d);
+      await apiPost("/api/medications", { ...d, asNeeded: freq === "asneeded", schedule });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t save");
@@ -95,7 +100,15 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
         <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
         <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-        <div><FieldLabel>When to give</FieldLabel><Input value={d.schedule ?? ""} onChange={(e) => set({ schedule: e.target.value })} placeholder="e.g. as needed" className="w-full" /></div>
+        <div>
+          <FieldLabel>Frequency</FieldLabel>
+          <div className="flex gap-1.5">
+            {(["daily", "asneeded"] as const).map((f) => (
+              <button key={f} type="button" onClick={() => setFreq(f)} className="flex-1 rounded-lg border px-2 py-2 text-[11.5px] font-bold transition-colors" style={freq === f ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{f === "daily" ? "🔁 Every day" : "As needed"}</button>
+            ))}
+          </div>
+          {freq === "daily" && <Input value={times} onChange={(e) => setTimes(e.target.value)} placeholder="time(s) e.g. 12:00" className="mt-1.5 w-full" />}
+        </div>
         <div><FieldLabel>Expiry date</FieldLabel><Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" /></div>
         <div className="sm:col-span-3"><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
       </div>
@@ -234,7 +247,7 @@ export function MedicationApp() {
                   ) : (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                   )}
-                  {m.asNeeded && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge>}
+                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-2">
