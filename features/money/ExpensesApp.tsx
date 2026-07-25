@@ -528,24 +528,34 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
           {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing matches those filters.</Card> : (
             <div className="flex flex-col gap-1.5">
-              {filtered.map((x) => (
-                <Card key={x.id} className={`flex flex-wrap items-center gap-2.5 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""}`}>
-                  <span className="w-[104px] flex-none text-[11.5px] text-[var(--ink-3)]">{fmtDay(x.date)}</span>
-                  <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{icon(x.category)} {x.category}</span>
-                  {x.virtual ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">🚀 subscription</span> : x.seriesId ? <span className="flex-none rounded-md bg-[#eaf0fc] px-1.5 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>🔁 {x.repeat ? REPEAT_LABEL[x.repeat] : ""}</span> : null}
-                  {!x.virtual && statusOf(x) === "pending" && <span className="flex-none rounded-full bg-[#fbeede] px-2 py-0.5 text-[10px] font-bold text-[#a9660a]" title={x.dueDate ? `Due ${fmtDay(x.dueDate)}` : "Owed — not yet paid"}>Pending{x.dueDate ? ` · due ${fmtDay(x.dueDate)}` : ""}</span>}
-                  <span className="min-w-0 flex-1 truncate text-[12.5px]">{x.supplier || <span className="text-[var(--ink-3)]">—</span>}{x.notes ? <span className="text-[var(--ink-3)]"> · {x.notes}</span> : ""}</span>
-                  {x.receiptUrl && <a href={x.receiptUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">📎 receipt</a>}
-                  <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(x.amount)}</span>
-                  {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">auto</span> : (
-                    <>
-                      {statusOf(x) === "pending" && <button type="button" onClick={() => markPaid(x)} className="flex-none rounded-full bg-[#e7f0ff] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
-                      <button type="button" onClick={() => openEdit(x)} className="flex-none text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
-                      <button type="button" onClick={() => remove(x)} className="flex-none text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
-                    </>
-                  )}
-                </Card>
-              ))}
+              {filtered.map((x) => {
+                const label = x.supplier || x.category;
+                const h = hueFor(x.category || "Other");
+                const pending = !x.virtual && statusOf(x) === "pending";
+                return (
+                  <Card key={x.id} className={`flex items-center gap-3 p-2.5 ${x.virtual ? "bg-[var(--panel)]" : ""}`}>
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-white shadow-[0_5px_12px_-6px_rgba(29,58,143,.7)]" style={{ background: h.bar }}>{initials(label)}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-[13px] font-extrabold">{label}</span>
+                        <span className="flex-none rounded-md px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em]" style={{ background: hueFor(x.category).soft, color: hueFor(x.category).text }}>{x.category}</span>
+                        {x.virtual ? <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Subscription</span> : x.seriesId ? <span className="flex-none rounded-md bg-[var(--panel)] px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]" title={x.repeatUntil ? `Repeats every ${x.repeat ? REPEAT_LABEL[x.repeat] : ""} until ${fmtDay(x.repeatUntil)}` : "Repeating"}>Repeats</span> : null}
+                        {pending && <span className="flex-none rounded-full bg-[#fbeede] px-2 py-[1px] text-[9px] font-bold text-[#a9660a]" title={x.dueDate ? `Due ${fmtDay(x.dueDate)}` : "Owed — not yet paid"}>Pending{x.dueDate ? ` · due ${fmtDay(x.dueDate)}` : ""}</span>}
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{fmtDay(x.date)}{x.notes ? ` · ${x.notes}` : ""}</div>
+                    </div>
+                    {x.receiptUrl && <a href={x.receiptUrl} target="_blank" rel="noreferrer" className="flex-none text-[11px] font-bold text-[#1d3a8f] hover:underline">receipt</a>}
+                    <span className="flex-none text-[14px] font-extrabold tabular-nums">{money(x.amount)}</span>
+                    {x.virtual ? <span className="flex-none text-[10.5px] text-[var(--ink-3)]">auto</span> : (
+                      <div className="flex flex-none items-center gap-1.5">
+                        {pending && <button type="button" onClick={() => markPaid(x)} className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
+                        <button type="button" onClick={() => openEdit(x)} className="text-[var(--ink-3)] hover:text-[#1d3a8f]" aria-label="Edit">✎</button>
+                        <button type="button" onClick={() => remove(x)} className="text-[16px] leading-none text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Delete">×</button>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
