@@ -231,17 +231,19 @@ export function MedicationApp() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [logging, setLogging] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const refresh = useCallback(() => {
-    apiGet<Med[]>("/api/medications").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    // Fetch archived too so they're never lost — the UI shows Active / Archived.
+    apiGet<Med[]>("/api/medications?includeArchived=1").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<AdminEvent[]>("/api/medications/administrations").then(setAdmins).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useRealtime(["medications", "medicationAdmin"], refresh);
 
-  async function archive(m: Med) {
-    try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived: true }) }); refresh(); }
+  async function setArchived(m: Med, archived: boolean) {
+    try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived }) }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
   // One-tap log for the common case — stamps today + now with the given/not-given
@@ -255,10 +257,13 @@ export function MedicationApp() {
   }
 
   const dosesFor = (id: string) => admins.filter((a) => a.medicationId === id);
-  const consented = meds?.filter((m) => m.consentGranted).length ?? 0;
-  const needsConsent = meds?.filter((m) => !m.consentGranted).length ?? 0;
+  const active = (meds ?? []).filter((m) => !m.archived);
+  const archivedMeds = (meds ?? []).filter((m) => m.archived);
+  const consented = active.filter((m) => m.consentGranted).length;
+  const needsConsent = active.filter((m) => !m.consentGranted).length;
   const dosesToday = admins.filter((a) => a.date === todayIso()).length;
-  const tiles: [string, string | number][] = [["On file", meds?.length ?? 0], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
+  const tiles: [string, string | number][] = [["On file", active.length], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
+  const shown = showArchived ? archivedMeds : active;
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -293,13 +298,25 @@ export function MedicationApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {adding && <MedForm onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
 
+      {meds && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {([[false, "Active", active.length], [true, "Archived", archivedMeds.length]] as [boolean, string, number][]).map(([arch, label, n]) => (
+            <button key={label} type="button" onClick={() => setShowArchived(arch)}
+              className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+              style={showArchived === arch ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+              {label} <span className={showArchived === arch ? "text-white/70" : "text-[var(--ink-3)]"}>{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!meds ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      ) : meds.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No medications on file.</Card>
+      ) : shown.length === 0 ? (
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{showArchived ? "No archived medications." : "No medications on file."}</Card>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {meds.map((m) => {
+          {shown.map((m) => {
             const doses = dosesFor(m.id);
             return (
               <Card key={m.id} className="p-3.5">
@@ -317,7 +334,9 @@ export function MedicationApp() {
                 </div>
                 {m.instructions && <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  {m.consentGranted ? (
+                  {m.archived ? (
+                    <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>
+                  ) : m.consentGranted ? (
                     <>
                       <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
                       <Button sm variant="primary" disabled={logging === m.id} onClick={() => quickLog(m, true)}>✓ Yes</Button>
@@ -328,7 +347,9 @@ export function MedicationApp() {
                     <span className="text-[11.5px] font-bold text-[#c02636]">Consent needed before a dose can be recorded</span>
                   )}
                   <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? "Hide" : `History (${doses.length})`}</Button>
-                  {canManage && <Button sm variant="danger" onClick={() => archive(m)}>Archive</Button>}
+                  {canManage && (m.archived
+                    ? <Button sm variant="primary" onClick={() => setArchived(m, false)}>Restore</Button>
+                    : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
                 {administering === m.id && <AdministerForm med={m} onDone={() => { setAdministering(null); refresh(); }} />}
                 {openId === m.id && (
