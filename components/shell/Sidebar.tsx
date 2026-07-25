@@ -62,7 +62,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons }: { item: 
       className={itemCls}
       style={
         active
-          ? { background: "var(--side-active)", color: "var(--side-aink)" }
+          ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", fontWeight: 700, boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
           : { color: "var(--side-nav)" }
       }
     >
@@ -263,6 +263,9 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               <span style={{ color: "var(--side-ink)" }}>Activity</span>
               <span style={{ color: "#EE1F63" }}>OS</span>
             </span>
+          </div>
+          <div className="mt-1.5 text-[10px] font-semibold leading-snug" style={{ color: "var(--side-muted)" }}>
+            The unfair advantage for camps, clubs &amp; coaches
           </div>
         </div>
       </div>
