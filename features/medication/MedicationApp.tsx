@@ -176,7 +176,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   );
 }
 
-function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
+function AdministerForm({ med, onDone }: { med: Med; onDone: (recorded: boolean) => void }) {
   const [dose, setDose] = useState(med.dose);
   const [given, setGiven] = useState(true);
   const [date, setDate] = useState(todayIso());
@@ -192,7 +192,7 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
     setError(null);
     try {
       await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, given, doseGiven: given ? dose : "Not given", witnessedBy, notes });
-      onDone();
+      onDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t record");
       setBusy(false);
@@ -217,7 +217,7 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: () => void }) {
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
       </div>
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-2 flex gap-2"><Button sm variant={given ? "primary" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={onDone}>Cancel</Button></div>
+      <div className="mt-2 flex gap-2"><Button sm variant={given ? "primary" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={() => onDone(false)}>Cancel</Button></div>
     </div>
   );
 }
@@ -233,6 +233,8 @@ export function MedicationApp() {
   const [logging, setLogging] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [confirm, setConfirm] = useState<{ id: string; given: boolean } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const flash = (msg: string) => { setNotice(msg); setTimeout(() => setNotice(null), 4500); };
 
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
@@ -252,7 +254,7 @@ export function MedicationApp() {
   async function quickLog(m: Med, given: boolean) {
     setLogging(m.id);
     setError(null);
-    try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); refresh(); }
+    try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); flash(given ? "✓ Administration logged — parent informed" : "✓ Logged as not given — parent informed"); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t record"); }
     finally { setLogging(null); }
   }
@@ -296,6 +298,7 @@ export function MedicationApp() {
         )}
       </div>
 
+      {notice && <div className="mb-3 rounded-lg border border-[#bfe6cf] bg-[#e7f6ee] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">{notice}</div>}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {adding && <MedForm onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
 
@@ -360,7 +363,7 @@ export function MedicationApp() {
                     ? <Button sm variant="primary" onClick={() => setArchived(m, false)}>Restore</Button>
                     : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
-                {administering === m.id && <AdministerForm med={m} onDone={() => { setAdministering(null); refresh(); }} />}
+                {administering === m.id && <AdministerForm med={m} onDone={(recorded) => { setAdministering(null); if (recorded) flash("✓ Administration logged — parent informed"); refresh(); }} />}
                 {openId === m.id && (
                   <div className="mt-2 border-t border-[var(--line)] pt-2">
                     {doses.length === 0 ? (
