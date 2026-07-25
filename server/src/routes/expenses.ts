@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { FieldValue } from "firebase-admin/firestore";
 import type { Role } from "../middleware/role";
 
 // Expenses (Money) — the provider's outgoings: what was spent, on what, with
@@ -126,5 +127,9 @@ expenses.delete("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Expense not found" }); return; }
   await o.snap.ref.delete();
+  // Unlink any PO that was turned into this expense, so it can be re-added.
+  const tenantId = o.snap.data()!.tenantId as string;
+  const linked = await db.collection("purchaseOrders").where("tenantId", "==", tenantId).where("expenseId", "==", req.params.id).get();
+  await Promise.all(linked.docs.map((d) => d.ref.update({ expenseId: FieldValue.delete() })));
   res.json({ ok: true });
 });
