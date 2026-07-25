@@ -365,15 +365,19 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
           <div className="grid gap-3.5 lg:grid-cols-2">
             {/* Needs attention */}
             <Card className="p-4">
-              <div className="mb-2.5 text-[13.5px] font-extrabold">Needs paying</div>
+              <div className="mb-2 flex items-baseline justify-between">
+                <div className="text-[13.5px] font-extrabold">Needs paying</div>
+                <div className="text-[10.5px] text-[var(--ink-3)]">tap a row to edit</div>
+              </div>
               {overdueItems.length + dueSoon.length === 0 ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Nothing overdue or due soon 🎉</div> : (
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-0.5">
                   {[...overdueItems, ...dueSoon].slice(0, 7).map((p) => (
-                    <button key={p.id} type="button" onClick={() => openEdit(p)} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-2 text-left text-[12.5px] last:border-b-0">
-                      <span className={`flex-none rounded-full px-2 py-0.5 text-[10px] font-bold ${isOverdue(p) ? "bg-[var(--red-soft,#fdebec)] text-[var(--red,#e21d27)]" : "bg-[#fff4e0] text-[#a86400]"}`}>{isOverdue(p) ? "overdue" : "due soon"}</span>
+                    <button key={p.id} type="button" onClick={() => openEdit(p)} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--panel)]">
+                      <span className={`flex-none rounded-full px-2 py-0.5 text-[9.5px] font-bold ${isOverdue(p) ? "bg-[var(--red-soft,#fdebec)] text-[var(--red,#e21d27)]" : "bg-[#fff4e0] text-[#a86400]"}`}>{isOverdue(p) ? "overdue" : "due soon"}</span>
                       <div className="min-w-0 flex-1 truncate font-bold">{p.supplier}</div>
                       <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(p.dueDate)}</span>
                       <span className="flex-none font-extrabold tabular-nums">{money(p.amount)}</span>
+                      <span className="flex-none text-[13px] font-bold text-[var(--ink-3)] opacity-40 transition group-hover:opacity-100 group-hover:text-[#1d3a8f]">✎</span>
                     </button>
                   ))}
                 </div>
