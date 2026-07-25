@@ -189,6 +189,7 @@ export function MedicationApp() {
   const [administering, setAdministering] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [logging, setLogging] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     apiGet<Med[]>("/api/medications").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -201,6 +202,15 @@ export function MedicationApp() {
   async function archive(m: Med) {
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived: true }) }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
+  // One-tap log for the common case — stamps today + now with the given/not-given
+  // outcome. The detailed form ("with time / notes") handles back-dating etc.
+  async function quickLog(m: Med, given: boolean) {
+    setLogging(m.id);
+    setError(null);
+    try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t record"); }
+    finally { setLogging(null); }
   }
 
   const dosesFor = (id: string) => admins.filter((a) => a.medicationId === id);
@@ -264,10 +274,17 @@ export function MedicationApp() {
                   {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  <Button sm variant="primary" disabled={!m.consentGranted} onClick={() => setAdministering(administering === m.id ? null : m.id)} title={m.consentGranted ? "" : "No consent on file"}>
-                    Record a dose
-                  </Button>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {m.consentGranted ? (
+                    <>
+                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
+                      <Button sm variant="primary" disabled={logging === m.id} onClick={() => quickLog(m, true)}>✓ Yes</Button>
+                      <Button sm variant="danger" disabled={logging === m.id} onClick={() => quickLog(m, false)}>✕ No</Button>
+                      <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? "Close" : "＋ with time / notes"}</button>
+                    </>
+                  ) : (
+                    <span className="text-[11.5px] font-bold text-[#c02636]">Consent needed before a dose can be recorded</span>
+                  )}
                   <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? "Hide" : `History (${doses.length})`}</Button>
                   {canManage && <Button sm variant="danger" onClick={() => archive(m)}>Archive</Button>}
                 </div>
