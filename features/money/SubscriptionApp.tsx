@@ -101,15 +101,19 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   );
 
   const planCard = (p: Plan, opts?: { cta?: boolean }) => {
-    const current = !gate && p.id === data.current.plan && data.current.status !== "none";
-    const recommended = p.id === data.current.plan;
+    // Match the current plan by the resolved plan the header shows (details.id),
+    // falling back to the raw id — so an out-of-sync `plan` field can't make the
+    // active plan offer "Switch to …" instead of "Current plan".
+    const currentId = data.current.details?.id ?? data.current.plan;
+    const current = !gate && p.id === currentId && data.current.status !== "none";
+    const recommended = p.id === currentId;
     const m = monthlyPrice(p);
     const annualTotal = m * 10;
     const t = TIER[p.id] ?? TIER.company;
     return (
       <div key={p.id} className="relative flex flex-col overflow-hidden rounded-2xl border-2 bg-[var(--surface)] p-4" style={{ borderColor: recommended ? t.c : "var(--line)", boxShadow: recommended ? "0 14px 34px -18px rgba(29,58,143,.35)" : undefined }}>
         <div className="-mx-4 -mt-4 mb-3 h-1.5" style={{ background: t.grad }} />
-        {recommended && <div className="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: t.c }}>{gate ? "Your plan" : "Popular"}</div>}
+        {recommended && <div className="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white" style={{ background: t.c }}>{gate ? "Your plan" : "Current plan"}</div>}
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl text-[15px]" style={{ background: `${t.c}1f` }}>{t.icon}</span>
           <span className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.name}</span>
@@ -133,7 +137,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         </ul>
         {opts?.cta !== false && (
           <div className="mt-3.5">
-            {current ? <Button className="w-full" disabled>Your plan</Button>
+            {current ? <Button className="w-full" disabled>✓ Current plan</Button>
               : <Button variant="primary" className="w-full justify-center" onClick={() => start(p)} disabled={saving === p.id}>{saving === p.id ? "Starting…" : data.current.status === "none" || gate ? "Start free trial" : `Switch to ${p.name}`}</Button>}
           </div>
         )}
