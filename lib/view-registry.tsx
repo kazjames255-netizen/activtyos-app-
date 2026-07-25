@@ -50,7 +50,6 @@ import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
 import { ScheduleApp } from "@/features/parent/ScheduleApp";
 import { OverviewApp } from "@/features/platform/OverviewApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
-import { PlatformBillingApp } from "@/features/platform/PlatformBillingApp";
 import { PlatformPricingApp } from "@/features/platform/PlatformPricingApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
@@ -325,7 +324,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
       blurb: "Turn features on and off per provider from HQ — trials, staged rollouts, plans.",
       links: [{ href: "/platform/providers", label: "Providers", hint: "each tenant's live state" }],
     }),
-    billing: PlatformBillingApp,
+    billing: ProvidersApp, // merged into Providers & billing
     pricing: PlatformPricingApp,
     support: SupportInboxApp,
     messages: SupportInboxApp,

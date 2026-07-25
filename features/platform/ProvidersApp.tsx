@@ -35,16 +35,24 @@ const FILTERS: { id: string; label: string }[] = [
   { id: "all", label: "All" }, { id: "freelancer", label: "Freelancer" }, { id: "company", label: "Company" }, { id: "franchise", label: "Franchise" },
 ];
 
-/** platform/providers — every provider, expandable to their full signup record. */
+interface Summary { total: number; mrr: number; trialing: number; active: number }
+const feeLabel = (sub: Record<string, unknown>) => (sub.price != null ? `${gbp(sub.price as number)}/${sub.cadence === "year" ? "yr" : "mo"}` : null);
+
+/** platform/providers — every provider (full signup record + subscription) plus
+ *  the billing summary the MRR adds up to. (Merged from the old Billing page.) */
 export function ProvidersApp() {
   const [providers, setProviders] = useState<Provider[] | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
 
   const load = useCallback(() => {
-    apiGet<{ providers: Provider[] }>("/api/platform/providers")
-      .then((d) => { setProviders(d.providers); setError(null); })
+    Promise.all([
+      apiGet<{ providers: Provider[] }>("/api/platform/providers"),
+      apiGet<{ summary: Summary }>("/api/platform/subscriptions"),
+    ])
+      .then(([p, s]) => { setProviders(p.providers); setSummary(s.summary); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load providers"));
   }, []);
   useEffect(load, [load]);
@@ -55,8 +63,19 @@ export function ProvidersApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Providers</h2>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Every tenant on the platform — {providers.length}. Click a row for the full signup record and subscription.</p>
+      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Providers &amp; billing</h2>
+      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Every tenant on the platform — {providers.length}, what they&rsquo;re on and the revenue it adds up to. Click a row for the full signup record and subscription.</p>
+
+      {summary && (
+        <div className="mb-5 grid gap-3 sm:grid-cols-4">
+          {([["Providers", String(summary.total)], ["Monthly recurring", `${gbp(summary.mrr)}/mo`], ["On trial", String(summary.trialing)], ["Active", String(summary.active)]] as [string, string][]).map(([k, v]) => (
+            <div key={k} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{k}</div>
+              <div className="mt-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <InviteProviders />
 
@@ -89,6 +108,7 @@ export function ProvidersApp() {
                   <div className="text-[11.5px] text-[var(--ink-3)]">{p.ownerEmail ?? "—"} · since {fmt(p.createdAt).replace(", 2026", "")}</div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                  {feeLabel(sub) && <span className="rounded-full bg-[#f4f6fb] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{feeLabel(sub)}</span>}
                   <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{kindOf(p)}</span>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
                   <span className={`text-[13px] transition-transform ${isOpen ? "rotate-90" : ""} text-[var(--ink-3)]`}>▸</span>
@@ -156,9 +176,8 @@ function Row({ k, v }: { k: string; v: string }) {
  * `?invite=` tokens, which join an existing tenant.)
  */
 function InviteProviders() {
-  const [origin, setOrigin] = useState("");
+  const [origin] = useState(() => (typeof window === "undefined" ? "" : window.location.origin));
   const [copied, setCopied] = useState(false);
-  useEffect(() => setOrigin(window.location.origin), []);
 
   const link = `${origin || ""}/signup?ref=invite`;
   const copy = async () => {
