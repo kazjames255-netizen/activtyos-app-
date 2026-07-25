@@ -23,7 +23,9 @@ interface Status {
 }
 interface PaymentRecord {
   id: string;
-  refs: string[];
+  /** Booking refs — absent on invoice pay-link records (kind: "invoice"). */
+  refs?: string[];
+  kind?: string;
   email?: string;
   amount: number;
   type?: string; // "refund" for refunds; absent for payments
@@ -124,7 +126,9 @@ export function PaymentsApp() {
               </span>
               <span className="min-w-0 flex-1 truncate text-[var(--ink-2)]">
                 {p.type === "refund" ? "Refund · " : ""}
-                {p.refs.join(", ")}
+                {/* Invoice pay-link records carry no booking refs — say what
+                    they are instead of crashing the whole Finance page. */}
+                {p.refs?.length ? p.refs.join(", ") : p.kind === "invoice" ? "Invoice payment" : "—"}
                 {p.email ? ` · ${p.email}` : ""}
               </span>
               {p.platformFallback && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>test fallback</Badge>}

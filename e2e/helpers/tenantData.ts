@@ -49,6 +49,8 @@ export async function provisionLiveListing(
     marketplaceListed?: boolean;
     maxAttendees?: number;
     waitlist?: boolean;
+    /** Run every day starting today (moments/registers need a session TODAY). */
+    startToday?: boolean;
   },
 ): Promise<ProvisionedListing> {
   const s = await fbSignIn(operator.email);
@@ -72,19 +74,20 @@ export async function provisionLiveListing(
     calcOn: true,
   });
 
-  // Runs Mon–Fri starting next week for two weeks — always future-dated.
+  // Default: Mon–Fri starting next week (always future-dated). startToday:
+  // every day of the week from today, so today's boards have a session.
   const start = new Date();
-  start.setDate(start.getDate() + ((8 - start.getDay()) % 7 || 7)); // next Monday
+  if (!opts.startToday) start.setDate(start.getDate() + ((8 - start.getDay()) % 7 || 7)); // next Monday
   const end = new Date(start);
-  end.setDate(end.getDate() + 11); // into the second week (Mon..Fri)
+  end.setDate(end.getDate() + 11);
 
   const listing = await apiPost<{ id: string; tenantId: string }>("/api/listings", s.idToken, {
     title: opts.title,
     venueId,
     runFrom: iso(start),
     runTo: iso(end),
-    blockMode: "weekly",
-    days: [1, 2, 3, 4, 5],
+    blockMode: opts.startToday ? ("custom" as const) : ("weekly" as const),
+    days: opts.startToday ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
     maxAttendees: String(opts.maxAttendees ?? 16),
     capacityScope: "day",
     ...(opts.waitlist ? { waitlist: true, waitlistMode: "manual" as const } : {}),
@@ -104,6 +107,20 @@ export async function provisionLiveListing(
     body: JSON.stringify({ listingIds: [listing.id] }),
   });
   return { id: listing.id, title: opts.title, tenantId: listing.tenantId, runFrom: iso(start), runTo: iso(end) };
+}
+
+/** Save a child on the parent's account (checkout resolves childId by name). */
+export async function createParentChild(
+  parent: TestAccount,
+  opts: { name: string; dob?: string; photoConsent?: boolean },
+): Promise<string> {
+  const s = await fbSignIn(parent.email);
+  const child = await apiPost<{ id: string }>("/api/my/children", s.idToken, {
+    name: opts.name,
+    dob: opts.dob ?? "2018-05-14",
+    ...(opts.photoConsent !== undefined ? { photoConsent: opts.photoConsent } : {}),
+  });
+  return child.id;
 }
 
 /**

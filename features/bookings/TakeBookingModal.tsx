@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useBookingsStore } from "./store";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 import { BookingOnly, type ServerListing } from "@/features/listings/ListingWizard";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
+import { blockOn } from "@/features/listings/capacity";
+import { money } from "./helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Take a booking — the same booking flow a parent gets, run by an operator.
@@ -46,6 +48,69 @@ export function TakeBookingModal() {
   // one being asked for has arrived. Setting "loading" and clearing "full"
   // synchronously in the effect cascaded a render before the fetch even began.
   const [full, setFull] = useState<ServerListing | null>(null);
+  // The real submission — the widget collects everything, this books it.
+  const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
+  const [done, setDone] = useState<{ refs: string[]; total: number; email?: string } | null>(null);
+
+  type BookPayload = Parameters<NonNullable<Parameters<typeof BookingOnly>[0]["onBook"]>>[0];
+
+  async function takeBooking(p: BookPayload) {
+    if (!full) return;
+    setBookState({ busy: true, error: null });
+    try {
+      // One line per child per pass, only the days that child is on — the
+      // same shaping the parent checkout does (ListingWizard book()).
+      type Line = { blockId: string; pass: string; dates: string[]; child: string; itemId: string; periodId?: string };
+      const lines: Line[] = [];
+      for (const item of p.basket) {
+        const perChild = new Map<string, string[]>();
+        for (const iso of item.dates) {
+          for (const name of p.dayAssign[item.id]?.[iso] ?? []) {
+            perChild.set(name, [...(perChild.get(name) ?? []), iso]);
+          }
+        }
+        for (const [child, dates] of perChild) {
+          const blk = blockOn(full.blocks, dates[0]);
+          if (!blk) throw new Error("Those dates aren't open for booking any more.");
+          lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId });
+        }
+      }
+      if (!lines.length) throw new Error("Nobody is on any of these days yet.");
+      // The family the booking belongs to: an existing customer by id, or the
+      // details typed in "Anyone else" — the server finds-or-creates by email.
+      const onBehalfOf = p.parent
+        ? p.parent.id && p.parent.id !== "new"
+          ? { customerId: p.parent.id }
+          : { name: p.parent.name, email: p.parent.email, phone: p.parent.phone }
+        : undefined;
+      const byBlock = new Map<string, Line[]>();
+      for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
+      const refs: string[] = [];
+      let total = 0;
+      for (const [blockId, items] of byBlock) {
+        const res = await apiPost<{ bookings: { ref: string; email: string }[]; total: number }>("/api/my/bookings", {
+          listingId: full.id,
+          blockId,
+          method: p.method,
+          ...(onBehalfOf ? { onBehalfOf } : {}),
+          items: items.map((l) => {
+            const sel = p.addonSel[`${l.itemId}|${l.child}`] ?? {};
+            const addons = Object.entries(sel).map(([aid, days]) => {
+              const ans = p.addonAns[`${l.itemId}|${l.child}|${aid}`] ?? {};
+              return { id: aid, ...(days[0] === "*" ? {} : { days }), ...(Object.keys(ans).length ? { answers: ans } : {}) };
+            });
+            return { pass: l.pass, dates: l.dates, child: l.child, ...(l.periodId ? { periodId: l.periodId } : {}), ...(addons.length ? { addons } : {}) };
+          }),
+        });
+        refs.push(...res.bookings.map((x) => x.ref));
+        total += res.total;
+      }
+      setDone({ refs, total, email: p.parent?.email });
+      setBookState({ busy: false, error: null });
+    } catch (e) {
+      setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
+    }
+  }
 
   useEffect(() => {
     if (!show || listings) return;
@@ -110,6 +175,10 @@ export function TakeBookingModal() {
   const dismiss = () => {
     setShow({ showCreate: false });
     close();
+    // The component stays mounted between opens — a finished booking must not
+    // greet the next one.
+    setDone(null);
+    setBookState({ busy: false, error: null });
   };
 
   return (
@@ -199,10 +268,26 @@ export function TakeBookingModal() {
           </div>
         )}
 
-        {full?.id === activeId && (
-          <div className="mt-3">
-            <BookingOnly key={full.id} listing={full} />
+        {done ? (
+          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5 text-center">
+            <div className="text-[28px]">✓</div>
+            <div className="mt-1 text-[15px] font-extrabold">Booking created — ref {done.refs.join(", ")}</div>
+            <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">
+              {done.total > 0
+                ? `It sits as Invoice sent for ${money(done.total)} — the payment-link email is on its way${done.email ? ` to ${done.email}` : ""}.`
+                : "Nothing to collect — the booking is confirmed."}
+            </div>
+            <button type="button" onClick={dismiss}
+              className="mt-3 rounded-full bg-[var(--brand-2,#2f6bd8)] px-4 py-2 text-[12.5px] font-extrabold text-white">
+              Done
+            </button>
           </div>
+        ) : (
+          full?.id === activeId && (
+            <div className="mt-3">
+              <BookingOnly key={full.id} listing={full} onBook={(p) => void takeBooking(p)} bookState={bookState} />
+            </div>
+          )
         )}
       </div>
     </div>

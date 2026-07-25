@@ -45,6 +45,31 @@ new fakes the moment they're spotted.
   (`server/src/routes/listings.ts` publishProblems); form labels were `<div>`s
   (no a11y association) — `FieldLabel` is now a real `<label htmlFor>`.
 
+- [x] **Tier-3 e2e specs** (July 2026, 39 tests total) — safeguarding
+  (accidents, medication consent→dose loop, meal shop, photo moments with
+  consent), setup→checkout round trip, timetable publish→staff, rota→staff,
+  ratio groups, storefront, broadcasts. Bugs found & FIXED this pass:
+  - **"Take a booking" never created a booking** — the operator checkout only
+    submitted in parent mode; the modal showed "Booked! 🎉" with no API call.
+    Wired `onBook` through for operators (`TakeBookingModal` posts the basket
+    with `onBehalfOf`; real success panel with the refs).
+  - **Timetable day grid hung in an infinite render loop** — zustand selector
+    `s.groups()` returned a fresh array per snapshot (React "getSnapshot
+    should be cached"). Components now select `groupsList` + useMemo.
+  - **Operator Finance page crashed after an invoice card payment** —
+    `p.refs.join()` on pay-link records that have no `refs`.
+  - **PageHero rendered titles as divs** — pages migrated to it lost their
+    headings (a11y); now a real `<h2>`.
+
+## Known gaps the tests can't paper over
+
+- [ ] **Operator-logged accidents/medication never reach the parent** — the
+  operator forms are free-text with no child link, but the parent views match
+  on `childId`. Needs a booked-child picker on the incident/medication forms
+  (safeguarding.spec covers the API-level record a picker would create).
+- [ ] Setup → "Ask about dietary needs" is read by nothing outside Setup
+  (the parent child form shows Dietary unconditionally).
+
 ## Blocking for prod
 
 - [x] ~~SMTP_HOST unset → Ethereal inbox~~ — Gmail SMTP configured in

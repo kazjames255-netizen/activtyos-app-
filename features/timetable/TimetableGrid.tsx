@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTimetableStore } from "./store";
+import { useEffect, useMemo, useState } from "react";
+import { groupsFrom, useTimetableStore } from "./store";
 import { facColor, groupIntoWeeks } from "./engine";
 import { SWATCHES } from "./data";
 import type { Cell, PlanRow } from "./types";
@@ -107,7 +107,8 @@ function Banner({ row }: { row: PlanRow }) {
 function DayGrid() {
   const plan = useTimetableStore((s) => s.plan);
   const cur = useTimetableStore((s) => s.cur);
-  const groups = useTimetableStore((s) => s.groups());
+  const groupsList = useTimetableStore((s) => s.groupsList);
+  const groups = useMemo(() => groupsFrom(groupsList), [groupsList]);
   const FAC = useTimetableStore((s) => s.FAC);
   const dayList = useTimetableStore((s) => s.dayList);
   const mode = useTimetableStore((s) => s.mode);
@@ -228,7 +229,8 @@ function DayGrid() {
 function WeekGrid() {
   const plan = useTimetableStore((s) => s.plan);
   const cur = useTimetableStore((s) => s.cur);
-  const groups = useTimetableStore((s) => s.groups());
+  const groupsList = useTimetableStore((s) => s.groupsList);
+  const groups = useMemo(() => groupsFrom(groupsList), [groupsList]);
   const FAC = useTimetableStore((s) => s.FAC);
   const dayList = useTimetableStore((s) => s.dayList);
 

@@ -630,7 +630,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -1782,8 +1782,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         disabled={(!parentMode && !b.parent) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
-          // A parent's confirm actually books; the operator preview still just
-          // shows the done screen until the operator flow is wired.
+          // With an onBook handler the confirm actually books — the parent
+          // checkout AND the operator's Take a booking. Without one (the
+          // wizard's preview) it just shows the done screen.
           // For a voucher the scheme is part of the answer — a bookings list
           // showing "voucher" with no scheme can't be reconciled against the
           // money when it arrives. Fold it into the stored method so it's
@@ -1794,7 +1795,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 ? `Childcare voucher — ${chosenVoucher.name}`
                 : "Childcare voucher"
               : method;
-          if (parentMode && onBook) onBook({
+          if (onBook) onBook({
+            parent: b.parent ?? null,
             method: submitMethod,
             // The scheme the parent picked — the backend keys the "Awaiting
             // voucher payment" state off this, not the method string.

@@ -19,7 +19,7 @@ test.describe("operator publishes a listing via the wizard", () => {
 
     // Build a block bundle: one period, one pass, into the library.
     await page.goto("/freelancer/blocks");
-    await expect(page.getByRole("heading", { name: "Blocks", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Sessions & blocks" })).toBeVisible();
     // Unique names so we can wait for OUR cards (cards render async, and
     // earlier runs leave cards behind). Everything on the board goes into the
     // block — extras are harmless, missing passes are not.
@@ -90,7 +90,7 @@ test.describe("parent books; operator sees it live", () => {
     const opCtx = await browser.newContext({ storageState: statePath("company") });
     const opPage = await opCtx.newPage();
     await opPage.goto("/company/bookings");
-    await expect(opPage.getByRole("heading", { level: 3, name: "Bookings" })).toBeVisible();
+    await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible();
 
     // Parent finds the listing in Browse.
     await page.goto("/custdash/browse");

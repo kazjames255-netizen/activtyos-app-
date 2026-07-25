@@ -188,7 +188,11 @@ interface TimetableState {
   publish: () => Promise<void>;
 }
 
-function groupsFrom(list: Group[]): string[] {
+// Exported for components: select `s.groupsList` (stable reference) and
+// derive with useMemo. Selecting `s.groups()` returns a FRESH array every
+// snapshot, which React rejects ("getSnapshot should be cached") and
+// re-renders forever — the day grid hung on exactly that.
+export function groupsFrom(list: Group[]): string[] {
   const src = list && list.length ? list : DEFAULT_GROUPS;
   return src.map((g) => (g.band ? g.name + " (" + g.band + ")" : g.name));
 }

@@ -50,10 +50,12 @@ export function PageHero({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+          {/* A real heading, not a div — screen readers (and tests) navigate by
+              page headings, and the migration to PageHero silently removed them. */}
+          <h2 className="m-0 flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             {icon && <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">{icon}</span>}
             {title}
-          </div>
+          </h2>
           {lede && <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>}
         </div>
         {actions && <div className="flex flex-none flex-wrap items-center gap-2">{actions}</div>}

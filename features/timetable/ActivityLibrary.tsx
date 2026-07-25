@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useTimetableStore } from "./store";
+import { useMemo, useState } from "react";
+import { groupsFrom, useTimetableStore } from "./store";
 import { shortGroup } from "./engine";
 import { Input } from "@/components/ui";
 
@@ -39,7 +39,8 @@ export function ActivityLibrary() {
   const CATS = useTimetableStore((s) => s.CATS);
   const FAC = useTimetableStore((s) => s.FAC);
   const openCat = useTimetableStore((s) => s.openCat);
-  const groups = useTimetableStore((s) => s.groups());
+  const groupsList = useTimetableStore((s) => s.groupsList);
+  const groups = useMemo(() => groupsFrom(groupsList), [groupsList]);
   const toggleCatOpen = useTimetableStore((s) => s.toggleCatOpen);
   const toggleActOn = useTimetableStore((s) => s.toggleActOn);
   const setActPlace = useTimetableStore((s) => s.setActPlace);

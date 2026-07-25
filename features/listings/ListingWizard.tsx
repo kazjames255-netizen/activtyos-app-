@@ -769,7 +769,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
  */
 export function BookingOnly({ listing, onBook, bookState }: {
   listing: ServerListing;
-  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   bookState?: { busy: boolean; error: string | null };
 }) {
   const d = draftFromListing(listing);
@@ -2326,7 +2326,7 @@ function myBrand() {
  * — so everyone gets the same starting gun on a popular run.
  */
 
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -2400,7 +2400,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 }
 
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
   const b = useBooking(d, booking, weeks, blocks, mode);
   const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId };
@@ -2794,7 +2794,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
 
 function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, tenantId }: {
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
-  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>> }) => void; bookState?: { busy: boolean; error: string | null };
+  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
   /** The provider's brand in the page header. Defaults to the signed-in
