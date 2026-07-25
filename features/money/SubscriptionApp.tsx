@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
 import { Button } from "@/components/ui";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 // The gate renders as a full-screen replacement for the portal shell, so it
 // carries its own light palette (matching the operator portals) rather than
@@ -44,6 +46,8 @@ const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
  *    + card capture + Start 7-day free trial. Mirrors activityos.uk/pricing.
  */
 export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; onStarted?: () => void } = {}) {
+  const router = useRouter();
+  const { signOutUser } = useAuth();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -157,7 +161,10 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         <div className="mx-auto max-w-[1000px] px-4 py-8">
           <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
             <div className="px-6 py-6 sm:px-8">
-              <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span style={{ color: "#fff" }}>Activity</span><span style={{ color: "#EE1F63" }}>OS</span></div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span style={{ color: "#fff" }}>Activity</span><span style={{ color: "#EE1F63" }}>OS</span></div>
+                <button type="button" onClick={async () => { await signOutUser(); router.replace("/login"); }} className="rounded-full border border-white/30 bg-white/10 px-3.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-white/20">Log out</button>
+              </div>
               <div className="mt-3 text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Almost there</div>
               <h1 className="mt-1 text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Pick a plan to start your free trial</h1>
               <p className="mt-1.5 max-w-[560px] text-[13px] leading-snug text-white/85">A flat monthly fee — never a cut of your bookings. Every plan settles payments to your own account. Cancel anytime.</p>
