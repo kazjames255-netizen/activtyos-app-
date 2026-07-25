@@ -1290,6 +1290,24 @@ export function SetupApp() {
           </Section>
 
           <Section
+            title="Medication"
+            lede="How medicines are recorded on the Medication page. Written parental consent is always required before a dose; these set what happens around each administration."
+          >
+            <Row label="Tell the parent when a dose is given" hint="Notifies the parent in their customer area each time a dose is logged.">
+              <Toggle on={settings.medication?.informParentGiven ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentGiven: v })} labels={["Yes", "No"]} />
+            </Row>
+            <Row label="Tell the parent if a dose is missed or refused" hint="Also notify when a dose is recorded as NOT given — safeguarding good practice.">
+              <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={["Yes", "No"]} />
+            </Row>
+            <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
+              <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
+            </Row>
+            <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
+              <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
+            </Row>
+          </Section>
+
+          <Section
             title="Your own questions"
             lede="Anything else you need to know, asked once by the family on the child's profile and carried to every booking after — nobody re-types them. Add your own, hide the ones that don't apply to you, and choose whether a question goes on every listing or only some."
           >

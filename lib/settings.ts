@@ -329,6 +329,16 @@ export interface TenantSettings {
     poTerms?: string;            // terms & conditions text
   };
 
+  /** Medication administration policy — edited in Setup → Medication, read by
+   *  features/medication/MedicationApp.tsx (and, for notifications, by the
+   *  backend once wired — see docs/medication-parent-notify-handoff.md). */
+  medication?: {
+    informParentGiven?: boolean;   // notify the parent when a dose is logged
+    informParentMissed?: boolean;  // …and when a dose is missed / refused
+    requireWitness?: boolean;      // a second person must witness each dose
+    leadsOnly?: boolean;           // only leads/managers can record doses, not all staff
+  };
+
   /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
@@ -580,6 +590,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emergencyContacts: 1,
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
+  medication: { informParentGiven: true, informParentMissed: true, requireWitness: false, leadsOnly: false },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
@@ -625,6 +636,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
+    medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

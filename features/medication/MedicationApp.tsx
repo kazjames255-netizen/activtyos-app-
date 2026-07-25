@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 
 const LIGHT_PALETTE = {
@@ -176,7 +177,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   );
 }
 
-function AdministerForm({ med, onDone }: { med: Med; onDone: (recorded: boolean) => void }) {
+function AdministerForm({ med, onDone, requireWitness }: { med: Med; onDone: (recorded: boolean, given?: boolean) => void; requireWitness?: boolean }) {
   const [dose, setDose] = useState(med.dose);
   const [given, setGiven] = useState(true);
   const [date, setDate] = useState(todayIso());
@@ -188,11 +189,12 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: (recorded: boolean)
   const stampNow = () => { setDate(todayIso()); setTime(nowTime()); };
   async function give() {
     if (!date) { setError("Pick the day."); return; }
+    if (requireWitness && !witnessedBy.trim()) { setError("A witness is required for each dose."); return; }
     setBusy(true);
     setError(null);
     try {
       await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, given, doseGiven: given ? dose : "Not given", witnessedBy, notes });
-      onDone(true);
+      onDone(true, given);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t record");
       setBusy(false);
@@ -213,7 +215,7 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: (recorded: boolean)
         <div><FieldLabel>Dose</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Day given</FieldLabel><Input type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
         <div><FieldLabel>Time</FieldLabel><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
-        <div><FieldLabel>Witnessed by</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} className="w-full" /></div>
+        <div><FieldLabel>Witnessed by{requireWitness ? " *" : ""}</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} placeholder={requireWitness ? "required" : ""} className="w-full" /></div>
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
       </div>
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
@@ -223,6 +225,9 @@ function AdministerForm({ med, onDone }: { med: Med; onDone: (recorded: boolean)
 }
 
 export function MedicationApp() {
+  const { settings } = useSettings();
+  const med = settings.medication ?? {};
+  const [role, setRole] = useState("");
   const [meds, setMeds] = useState<Med[] | null>(null);
   const [admins, setAdmins] = useState<AdminEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +240,12 @@ export function MedicationApp() {
   const [confirm, setConfirm] = useState<{ id: string; given: boolean } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const flash = (msg: string) => { setNotice(msg); setTimeout(() => setNotice(null), 4500); };
+  // Only leads/managers record doses when the setting is on (staff are blocked).
+  const canRecord = !(med.leadsOnly && role === "staff");
+  const parentMsg = (given: boolean) => {
+    const informed = given ? (med.informParentGiven ?? true) : (med.informParentMissed ?? true);
+    return `✓ ${given ? "Administration logged" : "Logged as not given"}${informed ? " — parent informed" : ""}`;
+  };
 
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
@@ -242,7 +253,7 @@ export function MedicationApp() {
     apiGet<AdminEvent[]>("/api/medications/administrations").then(setAdmins).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => { setRole(me.role); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
   useRealtime(["medications", "medicationAdmin"], refresh);
 
   async function setArchived(m: Med, archived: boolean) {
@@ -254,7 +265,7 @@ export function MedicationApp() {
   async function quickLog(m: Med, given: boolean) {
     setLogging(m.id);
     setError(null);
-    try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); flash(given ? "✓ Administration logged — parent informed" : "✓ Logged as not given — parent informed"); refresh(); }
+    try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); flash(parentMsg(given)); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t record"); }
     finally { setLogging(null); }
   }
@@ -341,7 +352,14 @@ export function MedicationApp() {
                   {m.archived ? (
                     <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>
                   ) : m.consentGranted ? (
-                    confirm?.id === m.id ? (
+                    !canRecord ? (
+                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Only leads can record doses.</span>
+                    ) : med.requireWitness ? (
+                      <>
+                        <Button sm variant="primary" onClick={() => setAdministering(administering === m.id ? null : m.id)}>{administering === m.id ? "Close" : "＋ Record a dose"}</Button>
+                        <span className="text-[11px] text-[var(--ink-3)]">a witness is required</span>
+                      </>
+                    ) : confirm?.id === m.id ? (
                       <>
                         <span className="text-[11.5px] font-bold text-[var(--ink)]">Confirm: {m.name} for {m.childName} — <span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? "GIVEN" : "NOT given"}</span> now?</span>
                         <Button sm variant={confirm.given ? "primary" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
@@ -363,7 +381,7 @@ export function MedicationApp() {
                     ? <Button sm variant="primary" onClick={() => setArchived(m, false)}>Restore</Button>
                     : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
-                {administering === m.id && <AdministerForm med={m} onDone={(recorded) => { setAdministering(null); if (recorded) flash("✓ Administration logged — parent informed"); refresh(); }} />}
+                {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}
                 {openId === m.id && (
                   <div className="mt-2 border-t border-[var(--line)] pt-2">
                     {doses.length === 0 ? (
