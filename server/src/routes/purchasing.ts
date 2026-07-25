@@ -25,6 +25,8 @@ const poSchema = z.object({
   // A bill is a categorised outgoing (like an expense) so it can be folded into
   // the money-out/Expenses picture. POs carry it too for when they become a bill.
   category: z.string().trim().max(60).optional(),
+  // Set when a PO has been turned into a (pending) expense, so it isn't added twice.
+  expenseId: z.string().trim().max(60).optional(),
   supplierEmail: z.string().trim().max(160).optional(),
   reference: z.string().trim().max(80).optional(),
   date: z.string().max(10),

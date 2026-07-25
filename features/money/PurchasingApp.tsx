@@ -15,7 +15,7 @@ const LIGHT_PALETTE = {
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
 type Status = "draft" | "sent" | "received" | "paid" | "cancelled";
-interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
+interface PO { id: string; kind?: "bill" | "po"; category?: string; supplier: string; supplierEmail?: string; reference?: string; date: string; dueDate?: string; amount: number; lineItems?: LineItem[]; status: Status; notes?: string; attachmentUrl?: string; emailedAt?: string; expenseId?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; overdue?: boolean }
 interface Payload { items: PO[]; summary: { count: number; outstanding: number; overdue: number } }
 
 const STATUSES: Status[] = ["draft", "sent", "received", "paid", "cancelled"];
@@ -229,6 +229,15 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); } finally { setSaving(false); }
   }
   async function setStatus(p: PO, status: Status) { try { await apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { status }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  // Turn a received PO into a Pending expense so it flows into money-out totals.
+  async function addToExpenses(p: PO) {
+    if (p.expenseId) return;
+    try {
+      const exp = await apiPost<{ id: string }>("/api/expenses", { date: todayIso(), category: p.category || "Supplies", amount: p.amount, supplier: p.supplier, notes: `From PO${p.reference ? ` ${p.reference}` : ""}`, status: "pending", dueDate: p.dueDate || undefined });
+      await apiPut(`/api/purchasing/${encodeURIComponent(p.id)}`, { expenseId: exp.id, status: "received" });
+      setError(null); refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t add to expenses"); }
+  }
   async function onPickDoc(file: File) {
     setUploading(true); setError(null);
     try {
@@ -446,6 +455,9 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                     ? <a href={p.attachmentUrl} target="_blank" rel="noreferrer" className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">🧾 {isPo ? "supplier invoice" : "receipt"}</a>
                     : <button type="button" onClick={() => openEdit(p)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]" title={isPo ? "Attach the supplier's invoice" : "Attach the receipt"}>＋ attach {isPo ? "invoice" : "receipt"}</button>}
                   <span className="flex-none text-[13px] font-extrabold tabular-nums">{money(p.amount)}</span>
+                  {isPo && (p.expenseId
+                    ? <span className="flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)]" title="Added to Expenses as a pending expense">✓ In expenses</span>
+                    : <button type="button" onClick={() => addToExpenses(p)} className="flex-none whitespace-nowrap rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95" title="Mark received & create a pending expense from this PO">＋ Add to expenses</button>)}
                   {OUTSTANDING.has(p.status) && <button type="button" onClick={() => setStatus(p, "paid")} className="flex-none rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95">Mark paid</button>}
                   <select value={p.status} onChange={(e) => setStatus(p, e.target.value as Status)} className="flex-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink)] outline-none">{visibleStatuses.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
                   <div className="flex flex-none items-center gap-1">
