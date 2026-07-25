@@ -153,7 +153,7 @@ export function SupportInboxApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
           <div>
-            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Support &amp; messages</h2>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>Support &amp; messages</h2>
             <p className="mt-0.5 text-[12.5px] text-white/80">Talk to providers and their customers, and triage reported bugs — all in one HQ inbox.</p>
           </div>
           <div className="flex gap-2">
@@ -299,12 +299,19 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
   const [party, setParty] = useState<Party>("provider");
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [providerId, setProviderId] = useState("");
+  const [provQuery, setProvQuery] = useState("");
   const [custName, setCustName] = useState("");
   const [custEmail, setCustEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
-  const list = useMemo(() => providers.filter((p) => tierFilter === "all" || tierOf(p) === tierFilter), [providers, tierFilter]);
+  const list = useMemo(() => {
+    const ql = provQuery.trim().toLowerCase();
+    return providers
+      .filter((p) => tierFilter === "all" || tierOf(p) === tierFilter)
+      .filter((p) => !ql || p.name.toLowerCase().includes(ql) || (p.contactEmail ?? p.ownerEmail ?? "").toLowerCase().includes(ql))
+      .slice(0, 50);
+  }, [providers, tierFilter, provQuery]);
   const chosen = providers.find((p) => p.id === providerId) ?? null;
 
   const canSend = !!subject.trim() && !!body.trim() && (party === "provider" ? !!chosen : (!!custName.trim() && !!custEmail.trim() && !!chosen));
@@ -333,16 +340,6 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
             ))}
           </div>
 
-          {party === "provider" && (
-            <div className="flex flex-wrap gap-1.5">
-              {([["all", "All"], ["freelancer", "Freelancer"], ["company", "Company"], ["franchise", "Franchise"]] as [("all" | Tier), string][]).map(([id, label]) => (
-                <button key={id} type="button" onClick={() => setTierFilter(id)}
-                  className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
-                  style={tierFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
-              ))}
-            </div>
-          )}
-
           {party === "customer" && (
             <div className="grid grid-cols-2 gap-2">
               <Field label="Customer name"><input value={custName} onChange={(e) => setCustName(e.target.value)} className={inputCls} /></Field>
@@ -350,12 +347,45 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
             </div>
           )}
 
-          <Field label={party === "provider" ? "Provider" : "Their provider"}>
-            <select value={providerId} onChange={(e) => setProviderId(e.target.value)} className={inputCls}>
-              <option value="">{providers.length ? "Select…" : "Loading providers…"}</option>
-              {list.map((p) => <option key={p.id} value={p.id}>{p.name} · {TIERS[tierOf(p)].label}</option>)}
-            </select>
-          </Field>
+          <div>
+            <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">{party === "provider" ? "Provider" : "Their provider"}</span>
+            {chosen ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-[#1d3a8f] bg-[#eaf0fc] px-3 py-2">
+                <span className="flex items-center gap-2 text-[13px] font-bold text-[#1d3a8f]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-extrabold text-white" style={{ background: grad(chosen.name) }}>{initials(chosen.name)}</span>
+                  {chosen.name} <TierChip tier={tierOf(chosen)} />
+                </span>
+                <button type="button" onClick={() => setProviderId("")} className="text-[12px] font-bold text-[#1d3a8f] underline">Change</button>
+              </div>
+            ) : (
+              <>
+                <input value={provQuery} onChange={(e) => setProvQuery(e.target.value)} autoFocus
+                  placeholder={providers.length ? "Search providers by name or email…" : "Loading providers…"} className={inputCls} />
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {([["all", "All"], ["freelancer", "Freelancer"], ["company", "Company"], ["franchise", "Franchise"]] as [("all" | Tier), string][]).map(([id, label]) => (
+                    <button key={id} type="button" onClick={() => setTierFilter(id)}
+                      className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
+                      style={tierFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
+                  ))}
+                </div>
+                <div className="mt-1.5 max-h-44 overflow-y-auto rounded-lg border border-[var(--line)]">
+                  {list.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">{providers.length ? "No providers match." : "Loading…"}</div>
+                  ) : list.map((p) => (
+                    <button key={p.id} type="button" onClick={() => setProviderId(p.id)}
+                      className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-left last:border-0 hover:bg-[var(--panel)]">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold text-white" style={{ background: grad(p.name) }}>{initials(p.name)}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold">{p.name}</span>
+                        <span className="block truncate text-[11px] text-[var(--ink-3)]">{p.contactEmail ?? p.ownerEmail ?? "—"}</span>
+                      </span>
+                      <TierChip tier={tierOf(p)} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           <Field label="Subject"><input value={subject} onChange={(e) => setSubject(e.target.value)} className={inputCls} placeholder="What's this about?" /></Field>
           <Field label="Message"><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className={inputCls} /></Field>
