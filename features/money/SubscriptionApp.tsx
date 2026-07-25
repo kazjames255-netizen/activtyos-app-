@@ -138,7 +138,11 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         {opts?.cta !== false && (
           <div className="mt-3.5">
             {current ? <Button className="w-full" disabled>✓ Current plan</Button>
-              : <Button variant="primary" className="w-full justify-center" onClick={() => start(p)} disabled={saving === p.id}>{saving === p.id ? "Starting…" : data.current.status === "none" || gate ? "Start free trial" : `Switch to ${p.name}`}</Button>}
+              : <button type="button" onClick={() => start(p)} disabled={saving === p.id}
+                  className="w-full rounded-full px-4 py-2.5 text-[13px] font-extrabold transition-transform hover:-translate-y-px disabled:opacity-60"
+                  style={{ background: t.c, color: p.id === "freelancer" ? "#3a2a00" : "#fff" }}>
+                  {saving === p.id ? "Starting…" : data.current.status === "none" || gate ? "Start free trial" : `Switch to ${p.name}`}
+                </button>}
           </div>
         )}
       </div>
