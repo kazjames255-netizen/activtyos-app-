@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
-import { INJURY_BANK, TREATMENT_BANK, suggestedTreatment } from "./firstAid";
+import { INJURY_BANK, TREATMENT_BANK, treatmentsFor } from "./firstAid";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents — the safeguarding log. One component, `kind` picks
@@ -49,6 +49,7 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
   const [step, setStep] = useState(1);
   const [treatSel, setTreatSel] = useState<string[]>([]);
   const [treatOther, setTreatOther] = useState("");
+  const [showAllTreat, setShowAllTreat] = useState(false);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
   const toggleTreat = (t: string) => setTreatSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
   useEffect(() => { apiGet<{ child?: string; childId?: string }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
@@ -105,11 +106,6 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
               <div><FieldLabel>First aider</FieldLabel><Input value={d.firstAider ?? ""} onChange={(e) => set({ firstAider: e.target.value })} placeholder="who gave first aid" className="w-full" /></div>
               <div className="sm:col-span-2">
                 <FieldLabel>First aid / treatment given — tick all that apply</FieldLabel>
-                {(() => { const sug = suggestedTreatment(d.injury); return sug && !treatSel.includes(sug) ? (
-                  <button type="button" onClick={() => toggleTreat(sug)} className="mb-1.5 w-full rounded-lg border border-[#cfe0f7] bg-[#eef4fd] px-2.5 py-1.5 text-left text-[11.5px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">
-                    💡 Suggested for {d.injury} (UK first aid): <span className="font-normal">{sug}</span> — tap to add
-                  </button>
-                ) : null; })()}
                 {(treatSel.length > 0 || !!treatOther.trim()) && (
                   <div className="mb-1.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2">
                     <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#1d3a8f]">Selected · what will be recorded</div>
@@ -129,21 +125,42 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
                     </div>
                   </div>
                 )}
-                <div className="mb-1 flex items-center justify-between px-0.5">
-                  <span className="text-[10.5px] font-semibold text-[var(--ink-3)]">{treatSel.length} ticked · scroll for more ↓</span>
-                  {treatSel.length > 0 && <button type="button" onClick={() => setTreatSel([])} className="text-[10.5px] font-semibold text-[#1d3a8f] underline">Clear</button>}
-                </div>
-                <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
-                  {TREATMENT_BANK.map((t) => {
-                    const on = treatSel.includes(t);
-                    return (
-                      <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
-                        <input type="checkbox" checked={on} onChange={() => toggleTreat(t)} className="mt-0.5 shrink-0" />
-                        <span>{t}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                {(() => {
+                  const relevant = treatmentsFor(d.injury);
+                  const hasRelevant = relevant.length > 0;
+                  // show injury-specific options unless the operator opts into the full bank
+                  const list = showAllTreat || !hasRelevant ? TREATMENT_BANK : relevant;
+                  // keep any ticked items that aren't in the shown list visible too
+                  const shown = [...list, ...treatSel.filter((t) => !list.includes(t))];
+                  return (
+                    <>
+                      <div className="mb-1 flex items-center justify-between px-0.5">
+                        <span className="text-[10.5px] font-semibold text-[var(--ink-3)]">
+                          {hasRelevant && !showAllTreat
+                            ? <>💡 First aid for <b className="text-[#1d3a8f]">{d.injury}</b> · {treatSel.length} ticked</>
+                            : <>{treatSel.length} ticked{d.injury ? "" : " · pick an injury above for tailored options"}</>}
+                        </span>
+                        {treatSel.length > 0 && <button type="button" onClick={() => setTreatSel([])} className="text-[10.5px] font-semibold text-[#1d3a8f] underline">Clear</button>}
+                      </div>
+                      <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
+                        {shown.map((t) => {
+                          const on = treatSel.includes(t);
+                          return (
+                            <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
+                              <input type="checkbox" checked={on} onChange={() => toggleTreat(t)} className="mt-0.5 shrink-0" />
+                              <span>{t}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {hasRelevant && (
+                        <button type="button" onClick={() => setShowAllTreat((v) => !v)} className="mt-1 text-[11px] font-semibold text-[#1d3a8f] underline">
+                          {showAllTreat ? `Show only first aid for ${d.injury}` : "Show all treatments"}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
                 <Input value={treatOther} onChange={(e) => setTreatOther(e.target.value)} placeholder="Add your own / extra detail…" className="mt-2 w-full" />
                 <p className="mt-1 text-[10.5px] leading-snug text-[var(--ink-3)]">Tick what was done (one or more) and add anything else. Suggestions follow NHS / St John Ambulance guidance — always use your trained first aider&rsquo;s judgement.</p>
               </div>

@@ -102,10 +102,150 @@ const RULES: [RegExp, string][] = [
   [/graze|cut|scratch|blister|friction|rope/i, "Rinsed under running water, dried, and a plaster/dressing applied"],
 ];
 
-/** The suggested first-aid treatment for a typed injury, or null if none maps. */
+/** The single best suggested first-aid treatment for a typed injury, or null. */
 export function suggestedTreatment(injury?: string): string | null {
   const s = (injury ?? "").trim();
   if (!s) return null;
   for (const [re, t] of RULES) if (re.test(s)) return t;
   return null;
+}
+
+// keyword → the set of treatments actually relevant to that injury (ordered,
+// most-likely first). Drawn from TREATMENT_BANK — always overridable, and the
+// UI still lets you open the full list.
+const RELEVANT: [RegExp, string[]][] = [
+  [/anaphylax|severe allerg/i, [
+    "Adrenaline auto-injector given as per the child's allergy plan and 999 called",
+    "Placed in the recovery position; breathing monitored; 999 called",
+    "999 called / emergency services contacted",
+  ]],
+  [/allergic|allergy/i, [
+    "Care plan followed; kept under close observation for any reaction",
+    "Adrenaline auto-injector given as per the child's allergy plan and 999 called",
+    "Wound cleaned; parent informed",
+  ]],
+  [/asthma/i, [
+    "Reliever inhaler given as per the child's asthma plan; kept calm and upright",
+    "999 called / emergency services contacted",
+  ]],
+  [/seizure|fit\b/i, [
+    "Kept safe during the seizure, timed, and placed in the recovery position after; 999 as needed",
+    "Placed in the recovery position; breathing monitored; 999 called",
+    "999 called / emergency services contacted",
+  ]],
+  [/faint|dizzy/i, [
+    "Laid down with legs raised until they recovered (faint)",
+    "Moved into the shade, cooled, and given sips of water",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/chok/i, [
+    "Choking first aid given (back blows / thrusts); 999 called as it did not clear",
+    "999 called / emergency services contacted",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/broken|fracture|dislocat/i, [
+    "Injured limb supported and immobilised, kept still, and 999 called",
+    "Rested and raised, with a wrapped ice pack applied for up to 20 minutes",
+    "999 called / emergency services contacted",
+  ]],
+  [/neck|back injury|spine|spinal/i, [
+    "Kept still with head/neck supported and 999 called",
+    "999 called / emergency services contacted",
+  ]],
+  [/head|concuss/i, [
+    "Cold compress applied; monitored for signs of concussion (drowsiness, vomiting, headache)",
+    "Cold compress applied to reduce swelling",
+    "Reassured and monitored — no first aid needed",
+    "999 called / emergency services contacted",
+  ]],
+  [/nose ?bleed|nosebleed/i, [
+    "Sat forward and the soft part of the nose pinched for 10 minutes",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/knocked-?out tooth|tooth.*out|out.*tooth/i, [
+    "Tooth kept moist in milk; parent advised to see a dentist urgently",
+    "Mouth rinsed with cold water; cold compress applied",
+  ]],
+  [/tooth|mouth|tongue|lip/i, [
+    "Mouth rinsed with cold water; cold compress applied",
+    "Cold compress applied to reduce swelling",
+    "Tooth kept moist in milk; parent advised to see a dentist urgently",
+  ]],
+  [/chemical|substance.*eye|eye.*chemical/i, [
+    "Eye flushed with clean water for at least 10–20 minutes (chemical)",
+    "999 called / emergency services contacted",
+  ]],
+  [/eye|grit/i, [
+    "Eye rinsed with clean water; not rubbed",
+    "Cold compress applied to the eye",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/black eye/i, [
+    "Cold compress applied to the eye",
+    "Cold compress applied to reduce swelling",
+  ]],
+  [/ear|up the nose|object.*nose|object.*ear|foreign/i, [
+    "Object left in place — not poked at — and parent/medical help arranged",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/scald|burn/i, [
+    "Cooled under cool running water for 20 minutes and covered loosely",
+    "999 called / emergency services contacted",
+  ]],
+  [/sunburn/i, [
+    "Moved into the shade, cooled, and given sips of water",
+    "Cooled under cool running water for 20 minutes and covered loosely",
+  ]],
+  [/heat|dehydrat|vomit/i, [
+    "Moved into the shade, cooled, and given sips of water",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/sting/i, [
+    "Sting scraped away, cold compress applied, and monitored for a reaction",
+    "Care plan followed; kept under close observation for any reaction",
+  ]],
+  [/bite|nettle|tick/i, [
+    "Bite/sting area cleaned; cold compress applied; monitored for a reaction",
+    "Rinsed under running water, dried, and a plaster/dressing applied",
+    "Care plan followed; kept under close observation for any reaction",
+  ]],
+  [/sprain|twist/i, [
+    "Supported with a bandage, rested and elevated (Protect, Rest, Ice, Compress, Elevate)",
+    "Rested and raised, with a wrapped ice pack applied for up to 20 minutes",
+    "Cold compress applied to reduce swelling",
+  ]],
+  [/deep cut|puncture/i, [
+    "Firm pressure applied with a clean dressing and the wound kept raised",
+    "Firm pressure applied to control bleeding and 999 called",
+    "Rinsed under running water, dried, and a plaster/dressing applied",
+  ]],
+  [/splinter/i, [
+    "Splinter left in place — parent advised to remove at home",
+    "Rinsed under running water, dried, and a plaster/dressing applied",
+  ]],
+  [/blister|friction|rope/i, [
+    "Cooled under cool running water for 20 minutes and covered loosely",
+    "Cleaned with water and covered with a plaster",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/bruise|bang|bump|knock|trapped|stub|winded|shin/i, [
+    "Cold compress applied to reduce swelling",
+    "Reassured and monitored — no first aid needed",
+  ]],
+  [/graze|cut|scratch/i, [
+    "Rinsed under running water, dried, and a plaster/dressing applied",
+    "Cleaned with water and covered with a plaster",
+    "Firm pressure applied with a clean dressing and the wound kept raised",
+  ]],
+];
+
+/**
+ * Treatments relevant to a given injury, most-likely first. Returns [] when no
+ * injury is typed or nothing maps — the caller can then offer the full bank.
+ */
+export function treatmentsFor(injury?: string): string[] {
+  const s = (injury ?? "").trim();
+  if (!s) return [];
+  for (const [re, list] of RELEVANT) if (re.test(s)) return list;
+  return [];
 }
