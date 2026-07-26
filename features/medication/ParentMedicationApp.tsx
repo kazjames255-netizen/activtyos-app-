@@ -230,35 +230,44 @@ export function ParentMedicationApp() {
           {meds.map((m) => {
             const md = dosesFor(m.id);
             return (
-              <Card key={m.id} className="p-3.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[13.5px] font-extrabold">{m.name}</span>
-                  <span className="text-[12px] text-[var(--ink-2)]">{m.dose}{m.route ? ` · ${m.route}` : ""}</span>
-                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
-                  {m.consentGranted ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent given</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>consent withdrawn</Badge>}
-                  <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{m.childName}{m.tenantId ? ` · ${providerName(m.tenantId)}` : ""}{m.condition ? ` · ${m.condition}` : ""}</span>
+              <div key={m.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_6px_20px_-8px_rgba(16,24,40,.18)]">
+                {/* Gradient header — matches the family cards. */}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-[15.5px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{m.name}</span>
+                    <span className="text-[12.5px] font-semibold text-white/80">{m.dose}{m.route ? ` · ${m.route}` : ""}</span>
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-white/85">{m.childName}{m.tenantId ? ` · ${providerName(m.tenantId)}` : ""}</span>
                 </div>
-                <div className="mt-1.5 flex gap-2">
-                  <Button sm onClick={() => setOpenMed(openMed === m.id ? null : m.id)}>{openMed === m.id ? "Hide doses" : `Doses given (${md.length})`}</Button>
-                  {m.consentGranted && <Button sm variant="danger" onClick={() => withdraw(m)}>Withdraw consent</Button>}
-                </div>
-                {openMed === m.id && (
-                  <div className="mt-2 border-t border-[var(--line)] pt-2">
-                    {md.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No doses recorded yet.</div> : (
-                      <div className="flex flex-col gap-1">
-                        {md.map((d) => (
-                          <div key={d.id} className="flex flex-wrap items-center gap-2 text-[12px]">
-                            <span className="font-bold tabular-nums">{when(d.date, d.time)}</span>
-                            <span>{d.doseGiven}</span>
-                            <span className="text-[var(--ink-3)]">by {d.administeredByName}</span>
-                            {d.notes && <span className="text-[var(--ink-3)]">· {d.notes}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                {/* Body */}
+                <div className="p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {m.condition && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge>}
+                    {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
+                    {m.consentGranted ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ consent given</Badge> : <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#c02636)" }}>consent withdrawn</Badge>}
                   </div>
-                )}
-              </Card>
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
+                    <Button sm onClick={() => setOpenMed(openMed === m.id ? null : m.id)}>{openMed === m.id ? "Hide doses" : `Doses given (${md.length})`}</Button>
+                    {m.consentGranted && <Button sm variant="danger" onClick={() => withdraw(m)}>Withdraw consent</Button>}
+                  </div>
+                  {openMed === m.id && (
+                    <div className="mt-2.5 rounded-xl bg-[var(--panel)] px-3 py-2.5">
+                      {md.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No doses recorded yet.</div> : (
+                        <div className="flex flex-col gap-1.5">
+                          {md.map((d) => (
+                            <div key={d.id} className="flex flex-wrap items-center gap-2 text-[12px]">
+                              <span className="font-bold tabular-nums">{when(d.date, d.time)}</span>
+                              <span>{d.doseGiven}</span>
+                              <span className="text-[var(--ink-3)]">by {d.administeredByName}</span>
+                              {d.notes && <span className="text-[var(--ink-3)]">· {d.notes}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
