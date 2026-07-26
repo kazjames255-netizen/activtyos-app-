@@ -139,13 +139,13 @@ function sortSessions(a: Session, b: Session): number {
   );
 }
 
-function SessionRow({ s, detail }: { s: Session; detail?: ListingDetail }) {
+function SessionRow({ s, detail, clash }: { s: Session; detail?: ListingDetail; clash?: boolean }) {
   const [open, setOpen] = useState(false);
   // Match the booked timing to a concrete start–finish from the listing.
   const period = detail?.periods.find((p) => p.title === s.timing) ?? (detail?.periods.length === 1 ? detail.periods[0] : undefined);
   const times = period?.start && period?.finish ? `${period.start}–${period.finish}` : null;
   return (
-    <div className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+    <div className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0" style={clash ? { background: "#fff6f6", borderRadius: 8, paddingLeft: 8, paddingRight: 8, marginLeft: -8, marginRight: -8 } : undefined}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-[13px] font-extrabold text-[var(--ink)]">{s.child}</span>
         <span className="text-[12.5px] text-[var(--ink-2)]">{s.listing}</span>
@@ -154,6 +154,7 @@ function SessionRow({ s, detail }: { s: Session; detail?: ListingDetail }) {
             {s.timing}{times ? ` · ${times}` : ""}
           </span>
         )}
+        {clash && <span className="rounded-full bg-[#fdebec] px-2 py-[2px] text-[11px] font-extrabold text-[#c0392b]">⚠️ overlaps another session</span>}
         <span className="ml-auto flex items-center gap-1.5">
           <span className="text-[11px] text-[var(--ink-3)]">Ref {s.ref}</span>
           <Badge tone={statusTone(s.status)}>{s.status}</Badge>
@@ -187,9 +188,31 @@ interface DayPlan {
   dayLabel: string;
 }
 
+const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
 function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; sessions: Session[]; today: string; plan?: DayPlan; detailByRef: Record<string, ListingDetail> }) {
   const rel = date === today ? "Today" : date === addDaysISO(today, 1) ? "Tomorrow" : null;
   const [showPlan, setShowPlan] = useState(false);
+
+  // A child booked onto two sessions the same day whose times overlap (or whose
+  // times we can't rule out) — almost always a mistake worth flagging.
+  const rangeOf = (s: Session): [number, number] | null => {
+    const d = detailByRef[s.ref];
+    const p = d?.periods.find((x) => x.title === s.timing) ?? (d?.periods.length === 1 ? d.periods[0] : undefined);
+    const a = toMin(p?.start), b = toMin(p?.finish);
+    return a != null && b != null ? [a, b] : null;
+  };
+  const clashKeys = new Set<string>();
+  const clashChildren = new Set<string>();
+  const byChild = new Map<string, Session[]>();
+  for (const s of sessions) byChild.set(s.child, [...(byChild.get(s.child) ?? []), s]);
+  for (const [child, ss] of byChild) {
+    if (ss.length < 2) continue;
+    for (let i = 0; i < ss.length; i++) for (let j = i + 1; j < ss.length; j++) {
+      const a = rangeOf(ss[i]), b = rangeOf(ss[j]);
+      const overlaps = !a || !b ? true : a[0] < b[1] && b[0] < a[1]; // unknown times → can't rule it out
+      if (overlaps) { clashKeys.add(ss[i].key); clashKeys.add(ss[j].key); clashChildren.add(child); }
+    }
+  }
   return (
     <Card className="p-4">
       <div className="mb-1.5 flex items-baseline gap-2">
@@ -214,8 +237,14 @@ function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; 
           </button>
         )}
       </div>
+      {clashChildren.size > 0 && (
+        <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
+          <span aria-hidden>⚠️</span>
+          <span>{[...clashChildren].join(" & ")} {clashChildren.size > 1 ? "are" : "is"} booked onto more than one session today with overlapping times. Check this is right — you may want to cancel or move one.</span>
+        </div>
+      )}
       {[...sessions].sort(sortSessions).map((s) => (
-        <SessionRow key={s.key} s={s} detail={detailByRef[s.ref]} />
+        <SessionRow key={s.key} s={s} detail={detailByRef[s.ref]} clash={clashKeys.has(s.key)} />
       ))}
       {plan && showPlan && (
         <div className="mt-3">
