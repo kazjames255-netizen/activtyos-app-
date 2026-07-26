@@ -33,11 +33,12 @@ export function ParentMedicationApp() {
   const [ok, setOk] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [openMed, setOpenMed] = useState<string | null>(null);
-  const [f, setF] = useState({ tenantId: "", name: "", dose: "", route: "", condition: "", storage: "", startDate: "", endDate: "", notes: "", consent: false });
+  const [f, setF] = useState({ tenantId: "", name: "", dose: "", condition: "", storage: "", notes: "", consent: false });
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
   const [childIds, setChildIds] = useState<string[]>([]);
   const [freq, setFreq] = useState<Freq>("everyday");
   const [dates, setDates] = useState<string[]>([]);
+  const [todayStr] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
     apiGet<Med[]>("/api/medications").then(setMeds).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -60,7 +61,7 @@ export function ParentMedicationApp() {
     bookings
       .filter((b) => b.tenantId === f.tenantId && (childIds.length === 0 || childIds.includes(b.childId ?? "")))
       .flatMap((b) => b.dates ?? []),
-  )].sort();
+  )].filter((d) => d >= todayStr).sort();
   const selectedNames = childIds.map((id) => children.find((c) => c.id === id)?.name).filter(Boolean).join(" & ") || "your child";
 
   const toggleChild = (id: string) => setChildIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -80,12 +81,12 @@ export function ParentMedicationApp() {
         const child = children.find((c) => c.id === cid);
         await apiPost("/api/medications/authorise", {
           tenantId: f.tenantId, childId: cid, childName: child?.name ?? "Child",
-          name: f.name, dose: f.dose, route: f.route || undefined, condition: f.condition || undefined,
+          name: f.name, dose: f.dose, condition: f.condition || undefined,
           schedule, asNeeded: freq === "asneeded", storage: f.storage || undefined,
-          startDate: f.startDate || undefined, endDate: f.endDate || undefined, notes: f.notes || undefined,
+          notes: f.notes || undefined,
         });
       }
-      setF((p) => ({ ...p, name: "", dose: "", route: "", condition: "", storage: "", startDate: "", endDate: "", notes: "", consent: false }));
+      setF((p) => ({ ...p, name: "", dose: "", condition: "", storage: "", notes: "", consent: false }));
       setFreq("everyday"); setDates([]);
       setOpen(false); setOk(`Medication authorised for ${childIds.length > 1 ? `${childIds.length} children` : selectedNames} — staff can now administer it.`); load();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t authorise"); }
@@ -126,22 +127,22 @@ export function ParentMedicationApp() {
                 const g = genderStyle(c.sex);
                 return (
                   <button key={c.id} type="button" onClick={() => toggleChild(c.id)}
-                    className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[13px] font-bold transition-colors ${on ? "med-flicker" : ""}`}
-                    style={on ? { borderColor: g.ring, background: g.bg, color: g.fg, ["--glow" as string]: g.ring } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold text-white" style={{ background: on ? g.ring : "var(--ink-3)" }}>{on ? "✓" : (c.name[0] ?? "?")}</span>
+                    className={`flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-[13px] font-extrabold transition-colors ${on ? "med-flicker" : ""}`}
+                    style={on ? { borderColor: g.ring, background: g.ring, color: "#fff", ["--glow" as string]: g.ring } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold" style={on ? { background: "#fff", color: g.ring } : { background: "var(--ink-3)", color: "#fff" }}>{on ? "✓" : (c.name[0] ?? "?")}</span>
                     {c.name}
                   </button>
                 );
               })}
             </div>
+            {childIds.length > 1 && <p className="mt-1.5 text-[12px] font-bold text-[#1d3a8f]">You&rsquo;re authorising this for both children.</p>}
           </div>
 
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
             <div><FieldLabel>Medicine</FieldLabel><Input value={f.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Salbutamol inhaler" className="w-full" /></div>
             <div><FieldLabel>Dose</FieldLabel><Input value={f.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. 2 puffs" className="w-full" /></div>
-            <div><FieldLabel>Route</FieldLabel><Input value={f.route} onChange={(e) => set({ route: e.target.value })} placeholder="inhaler / oral / cream" className="w-full" /></div>
             <div><FieldLabel>For (condition)</FieldLabel><Input value={f.condition} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-            <div><FieldLabel>Storage</FieldLabel><Input value={f.storage} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in their bag" className="w-full" /></div>
+            <div><FieldLabel>Where it&rsquo;s kept</FieldLabel><Input value={f.storage} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in their bag" className="w-full" /></div>
           </div>
 
           {/* When to give — plain-English options. */}
@@ -175,11 +176,7 @@ export function ParentMedicationApp() {
             )}
           </div>
 
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            <div><FieldLabel>Start (optional)</FieldLabel><Input type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} className="w-full" /></div>
-            <div><FieldLabel>End (optional)</FieldLabel><Input type="date" value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} className="w-full" /></div>
-          </div>
-          <div className="mt-2.5"><FieldLabel>Instructions for staff</FieldLabel><Input value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. dab on affected area; wash hands after" className="w-full" /></div>
+          <div className="mt-3"><FieldLabel>Instructions for staff</FieldLabel><Input value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. dab on affected area; wash hands after" className="w-full" /></div>
           <label className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12.5px]"><input type="checkbox" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} className="mt-0.5" /><span>I, the parent/carer of <b>{selectedNames}</b>, give <b>{providerName(f.tenantId)}</b> permission to administer the medication above as described.</span></label>
           <div className="mt-3 flex gap-2"><Button variant="primary" onClick={authorise}>Authorise</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
         </Card>
