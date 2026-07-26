@@ -496,7 +496,7 @@ export function MedicationApp() {
                       <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                     )}
                     {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
-                    {givenToday.length > 0 && <Badge tone={{ bg: "#0f7a43", fg: "#ffffff" }}>✓ Given today{givenToday[0].time ? ` · ${givenToday[0].time}` : ""}</Badge>}
+                    {givenToday.length > 0 && (() => { const t = givenToday.map((a) => a.time).filter(Boolean).sort().join(", "); return <Badge tone={{ bg: "#0f7a43", fg: "#ffffff" }}>✓ Given today{t ? ` · ${t}` : ` · ${givenToday.length}×`}</Badge>; })()}
                     {doses.length > 0
                       ? <span className="text-[11.5px] font-bold text-[#0f7a43]">✓ {doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
                       : <span className="text-[11.5px] text-[var(--ink-3)]">no doses recorded yet</span>}
