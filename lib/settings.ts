@@ -365,6 +365,14 @@ export interface TenantSettings {
     reminderMinutes?: number; // how many minutes before (default 30)
   };
 
+  /** Inventory — reusable categories, storage locations and seasons. */
+  inventory?: {
+    categories?: string[];
+    locations?: string[];
+    seasons?: string[];
+    currentSeason?: string;
+  };
+
   /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
@@ -647,6 +655,12 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     reminderOn: true,
     reminderMinutes: 30,
   },
+  inventory: {
+    categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
+    locations: ["Main store", "Van", "Shed", "Office"],
+    seasons: ["Summer 2026"],
+    currentSeason: "Summer 2026",
+  },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
@@ -701,6 +715,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}) },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
+    inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

@@ -306,6 +306,14 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      label: "Operations",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "inventory", legacyView: "freelancer-inventory", label: "Inventory", icon: { type: "glyph", value: "📦" }, badge: null },
+      ],
+    },
+    {
       label: "Marketing",
       pinned: false,
       footer: false,

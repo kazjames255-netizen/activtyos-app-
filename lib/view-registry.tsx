@@ -36,6 +36,7 @@ import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
 import { CalendarApp } from "@/features/calendar/CalendarApp";
+import { InventoryApp } from "@/features/inventory/InventoryApp";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
 import { SetupApp } from "@/features/setup/SetupApp";
@@ -115,6 +116,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     tasks: TasksApp,
     trips: TripsApp,
     calendar: CalendarApp,
+    inventory: InventoryApp,
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
@@ -170,6 +172,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     trips: TripsApp,
     schedule: RotaApp,
     calendar: CalendarApp,
+    inventory: InventoryApp,
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
@@ -212,6 +215,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     trips: TripsApp,
     schedule: RotaApp,
     calendar: CalendarApp,
+    inventory: InventoryApp,
     locations: LocationsApp,
     newsfeed: NewsfeedApp,
     messages: () => <MessagesApp mode="operator" />,
