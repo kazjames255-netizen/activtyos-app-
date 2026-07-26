@@ -394,7 +394,7 @@ export function emptyDraft(defaults?: {
     // The first policy still in use — a new listing must never start on one
     // the provider has switched off.
     cancellation: firstLive ? policyWording({ ...firstLive, wording: undefined }) : CANCELLATION_POLICIES[3],
-    cancellationPolicyId: firstLive?.id, discounts: [], status: "draft", pageStyle: "playful",
+    cancellationPolicyId: firstLive?.id, discounts: [], status: "draft", pageStyle: "navy",
   };
 }
 
@@ -748,7 +748,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
       booking={withoutHiddenPasses(bookingFromBundle(listing.bundle), d.ticketOverrides)}
       blocks={listing.blocks}
       addons={lib?.addons ?? []}
-      theme={d.pageStyle ?? "playful"}
+      theme={d.pageStyle ?? "navy"}
       brand={listing.tenantName}
       tenantId={listing.tenantId}
       mode="parent"
@@ -788,7 +788,7 @@ export function BookingOnly({ listing, onBook, bookState }: {
       mode="operator"
       onBook={onBook}
       bookState={bookState}
-      theme={d.pageStyle ?? "playful"}
+      theme={d.pageStyle ?? "navy"}
     />
   );
 }
@@ -796,7 +796,7 @@ export function BookingOnly({ listing, onBook, bookState }: {
 // Standalone customer-page preview (for the "View" action on the Listings tab).
 export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; local: LocalState; runs?: RunBlock[] }) {
   const blocks = useBlocks();
-  const [theme, setTheme] = useState<PageTheme>(draft.pageStyle ?? "playful");
+  const [theme, setTheme] = useState<PageTheme>(draft.pageStyle ?? "navy");
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const d2 = { ...draft, images: norm(draft.images), gallery: norm(draft.gallery), bookRules: draft.bookRules ?? {}, ticketOverrides: draft.ticketOverrides ?? {} };
   const venue = local.venues.find((v) => v.id === draft.venueId) || null;
@@ -923,7 +923,7 @@ export function ListingWizard({
     if (await syncApi("live")) { onSaved(); onClose(); }
   };
 
-  const previewProps = { d, venue, local, booking, addons, theme: d.pageStyle ?? "playful", onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
+  const previewProps = { d, venue, local, booking, addons, theme: d.pageStyle ?? "navy", onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
   const stepKey = STEPS[step].key;
 
   return (
