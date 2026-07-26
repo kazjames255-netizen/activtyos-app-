@@ -58,8 +58,8 @@ const DEFAULT_HAZARDS: Hazard[] = [
 const DEFAULT_CHECKPOINTS: Checkpoint[] = [
   { n: "Depart base", counted: null }, { n: "Arrive venue", counted: null }, { n: "Lunch / midpoint", counted: null }, { n: "Before return", counted: null }, { n: "Back at base", counted: null },
 ];
-const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Parent permissions", "Line-manager sign-off", "On the day — head counts", "Return & debrief", "Message parents & payment"];
-const STEP_NUMS = [1, 2, 3, 4, 5, 6, 7, 8]; // step 8 is optional — not counted toward readiness
+const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Children, consent & payment", "Line-manager sign-off", "On the day — head counts", "Return & debrief"];
+const STEP_NUMS = [1, 2, 3, 4, 5, 6, 7];
 // Extensive, editable pick-lists for the itinerary (offered as datalists).
 const ITIN_ACTIVITIES = [
   "Depart base", "Board coach / minibus", "Travel to venue", "Arrive at venue", "Meet venue staff / guide",
@@ -366,11 +366,11 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       {/* step rail — jump to any step (wraps so every tab is visible) */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         {STEP_NUMS.map((n) => {
-          const dn = n <= 7 ? stepDone(t, n) : !!t.parentMsgSentAt, cur = open === n, opt = n === 8;
+          const dn = stepDone(t, n), cur = open === n;
           return (
             <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : opt ? "✚" : n}</span>
-              <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}{opt ? " (optional)" : ""}</span>
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
+              <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}</span>
             </button>
           );
         })}
@@ -380,13 +380,13 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       <div className="overflow-hidden rounded-2xl border" style={{ borderColor: `color-mix(in srgb,${SIG} 40%,var(--line))` }}>
         {STEP_NUMS.map((n) => {
           if (n !== open) return null;
-          const dn = n <= 7 ? stepDone(t, n) : !!t.parentMsgSentAt, locked = n === 6 && !s5Ok(t);
-          const pillTone = n === 8 ? (t.parentMsgSentAt ? { t: "Sent", c: GREEN } : { t: "Optional", c: "#8a86a3" }) : dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
+          const dn = stepDone(t, n), locked = n === 6 && !s5Ok(t);
+          const pillTone = dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
           return (
             <div key={n}>
               <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[15px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : { background: "#eef4fd", color: BLUE }}>{dn ? "✓" : n}</span>
-                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 8</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
+                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 7</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
                 <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${pillTone.c} 14%,transparent)`, color: `color-mix(in srgb,${pillTone.c} 74%,#000)` }}>{pillTone.t}</span>
               </div>
               <div className="bg-[var(--panel)] p-4">
@@ -631,12 +631,13 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     : <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>Complete every head-count checkpoint (Step 6) to close the trip — you can still write the debrief now.</div>}
                 </div>}
 
-                {/* ── Step 8: Message parents & payment (optional) ── */}
-                {n === 8 && (() => {
+                {/* ── Step 4 (part 2): parent letter — consent & payment ── */}
+                {n === 4 && (() => {
                   const msg = t.parentMsg && t.parentMsg.trim() ? t.parentMsg : defaultParentMsg(t, providerName);
                   return (
-                    <div className="flex flex-col gap-3">
-                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>Optional.</b> Skip this if parents consent/pay when they book. Choose what to ask for below — the letter and its buttons adapt.</div>
+                    <div className="mt-1 flex flex-col gap-3 border-t border-[var(--line)] pt-4">
+                      <div className="flex items-center gap-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>✉️ Letter to parents <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">optional</span></div>
+                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">Skip this if parents consent/pay when they book. Choose what to ask for below — the letter and its buttons adapt.</div>
                       <div>{fl("What is this letter asking parents to do?")}
                         <div className="mt-1 flex flex-wrap gap-2">
                           <button type="button" onClick={() => mut((d) => { d.askConsent = d.askConsent === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askConsent !== false ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askConsent !== false ? "✓" : "○"} Ask for consent (permission tick)</button>
@@ -670,7 +671,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         return (
                           <div>
                             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Who this goes to")}<span className="text-[11px] font-semibold" style={{ color: sentN === recips.length && recips.length > 0 ? GREEN : "var(--ink-3)" }}>{sentN}/{recips.length} sent</span></div>
-                            {recips.length === 0 ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">No children on the trip yet — add them in Step 4 (Parent permissions).</div>
+                            {recips.length === 0 ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">No children on the trip yet — add them above first.</div>
                               : <div className="flex flex-col gap-1">
                                 {recips.map((a, i) => {
                                   const idx = (t.attendees ?? []).indexOf(a);
@@ -704,8 +705,8 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       {/* slideshow nav */}
       <div className="mt-3 flex items-center justify-between gap-2">
         <Button disabled={open <= 1} onClick={() => setOpen(Math.max(1, open - 1))}>← Previous</Button>
-        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 8 · {TITLES[open]}</span>
-        <Button variant="solid" disabled={open >= 8} onClick={() => setOpen(Math.min(8, open + 1))}>Next →</Button>
+        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 7 · {TITLES[open]}</span>
+        <Button variant="solid" disabled={open >= 7} onClick={() => setOpen(Math.min(7, open + 1))}>Next →</Button>
       </div>
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
