@@ -127,7 +127,9 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   const [d, setD] = useState<MedDraft>(emptyMed());
   const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
-  const [timeOfDay, setTimeOfDay] = useState("");
+  const [times, setTimes] = useState<string[]>([]);
+  const [timeInput, setTimeInput] = useState("");
+  const addTime = () => { if (timeInput && !times.includes(timeInput)) { setTimes([...times, timeInput].sort()); setTimeInput(""); } };
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +157,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     const base = freq === "booked" ? BOOKED_SCHEDULE
       : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
       : "Only when needed";
-    const schedule = timeOfDay ? `${base} · at ${timeOfDay}` : base;
+    const schedule = times.length ? `${base} · at ${times.join(", ")}` : base;
     try {
       await apiPost("/api/medications", { ...d, childId: linkedChildId ?? d.childId, asNeeded: freq === "asneeded", schedule });
       onSaved();
@@ -211,11 +213,21 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
             )}
           </div>
         )}
-        <div className="mt-3"><FieldLabel>Give at a set time? (optional)</FieldLabel><Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} className="w-auto" /><span className="ml-2 text-[11px] text-[var(--ink-3)]">a bell reminds staff at this time on days it&rsquo;s due</span></div>
-      </div>
-      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-        <div><FieldLabel>Parent giving consent</FieldLabel><Input value={d.consentBy ?? ""} onChange={(e) => set({ consentBy: e.target.value })} className="w-full" /></div>
-        <div><FieldLabel>Consent date</FieldLabel><Input type="date" value={d.consentDate?.slice(0, 10) ?? ""} onChange={(e) => set({ consentDate: e.target.value })} className="w-full" /></div>
+        <div className="mt-3">
+          <FieldLabel>Set times? (optional — add one or more)</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className="w-auto" />
+            <Button sm onClick={addTime}>＋ Add time</Button>
+            <span className="text-[11px] text-[var(--ink-3)]">e.g. twice a day — a bell reminds staff at each time on days it&rsquo;s due</span>
+          </div>
+          {times.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {times.map((t) => (
+                <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {t}<button type="button" onClick={() => setTimes(times.filter((x) => x !== t))} aria-label="Remove time" className="text-[#1d3a8f]">✕</button></span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <label className="mt-2.5 flex items-center gap-2 text-[12.5px] font-bold">
         <input type="checkbox" checked={!!d.consentGranted} onChange={(e) => set({ consentGranted: e.target.checked })} />

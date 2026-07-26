@@ -45,7 +45,9 @@ export function ParentMedicationApp() {
   const [childIds, setChildIds] = useState<string[]>([]);
   const [freq, setFreq] = useState<Freq>("booked");
   const [dates, setDates] = useState<string[]>([]);
-  const [timeOfDay, setTimeOfDay] = useState("");
+  const [times, setTimes] = useState<string[]>([]);
+  const [timeInput, setTimeInput] = useState("");
+  const addTime = () => { if (timeInput && !times.includes(timeInput)) { setTimes([...times, timeInput].sort()); setTimeInput(""); } };
   const [todayStr] = useState(() => new Date().toISOString().slice(0, 10));
   // Notify preference — parents are emailed + get a bell for every dose until
   // they mute it here. (Stored per-device now; the real email/bell + a
@@ -88,7 +90,7 @@ export function ParentMedicationApp() {
     const base = freq === "booked" ? "On every booked day"
       : freq === "chosen" ? `On these days: ${dates.map(fmtDay).join(", ")}`
       : "Only when needed";
-    const schedule = timeOfDay ? `${base} · at ${timeOfDay}` : base;
+    const schedule = times.length ? `${base} · at ${times.join(", ")}` : base;
     setError(null); setOk(null);
     try {
       for (const cid of childIds) {
@@ -101,7 +103,7 @@ export function ParentMedicationApp() {
         });
       }
       setF((p) => ({ ...p, name: "", dose: "", condition: "", storage: "", notes: "", consent: false }));
-      setFreq("booked"); setDates([]); setTimeOfDay("");
+      setFreq("booked"); setDates([]); setTimes([]); setTimeInput("");
       setOpen(false); setOk(`Medication authorised for ${childIds.length > 1 ? `${childIds.length} children` : selectedNames} — staff can now administer it.`); load();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t authorise"); }
   }
@@ -224,7 +226,21 @@ export function ParentMedicationApp() {
             )}
           </div>
 
-          <div className="mt-3"><FieldLabel>Give at a set time? (optional)</FieldLabel><Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} className="w-auto" /><span className="ml-2 text-[11px] text-[var(--ink-3)]">staff get a reminder at this time on days it&rsquo;s due</span></div>
+          <div className="mt-3">
+            <FieldLabel>Set times? (optional — add one or more)</FieldLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className="w-auto" />
+              <Button sm onClick={addTime}>＋ Add time</Button>
+              <span className="text-[11px] text-[var(--ink-3)]">e.g. twice a day — staff get a reminder at each time on days it&rsquo;s due</span>
+            </div>
+            {times.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {times.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {t}<button type="button" onClick={() => setTimes(times.filter((x) => x !== t))} aria-label="Remove time" className="text-[#1d3a8f]">✕</button></span>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="mt-3"><FieldLabel>Instructions for staff</FieldLabel><Input value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. dab on affected area; wash hands after" className="w-full" /></div>
           <label className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12.5px]"><input type="checkbox" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} className="mt-0.5" /><span>I, the parent/carer of <b>{selectedNames}</b>, give <b>{providerName(f.tenantId)}</b> permission to administer the medication above as described.</span></label>
           <div className="mt-3 flex gap-2"><Button variant="solid" onClick={authorise}>Authorise</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
