@@ -102,7 +102,7 @@ export function ParentMedicationApp() {
       <style>{`@keyframes medGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--glow,#1d3a8f) 55%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--glow,#1d3a8f) 0%,transparent)}}.med-flicker{animation:medGlow 1.7s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.med-flicker{animation:none}}`}</style>
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Medication</h2>
-        {providers.length > 0 && children.length > 0 && !open && <Button variant="primary" onClick={() => setOpen(true)}>＋ Authorise a medication</Button>}
+        {providers.length > 0 && children.length > 0 && !open && <Button variant="solid" onClick={() => setOpen(true)}>＋ Authorise a medication</Button>}
       </div>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Authorise medicines for your child, and see every dose the staff record.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
@@ -178,7 +178,7 @@ export function ParentMedicationApp() {
 
           <div className="mt-3"><FieldLabel>Instructions for staff</FieldLabel><Input value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. dab on affected area; wash hands after" className="w-full" /></div>
           <label className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12.5px]"><input type="checkbox" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} className="mt-0.5" /><span>I, the parent/carer of <b>{selectedNames}</b>, give <b>{providerName(f.tenantId)}</b> permission to administer the medication above as described.</span></label>
-          <div className="mt-3 flex gap-2"><Button variant="primary" onClick={authorise}>Authorise</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
+          <div className="mt-3 flex gap-2"><Button variant="solid" onClick={authorise}>Authorise</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
         </Card>
       )}
 
