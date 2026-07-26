@@ -6,6 +6,7 @@ import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card } from "@/components/ui";
+import { bankByCategory, HAZARD_BANK } from "./hazardBank";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Trips & visits — the manual's full end-to-end off-site planner. Browse every
@@ -165,6 +166,9 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remindStamp, setRemindStamp] = useState<string | null>(null);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankQ, setBankQ] = useState("");
+  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.area, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false }); d.raSigned = false; }); };
 
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ staff?: { first?: string; last?: string }[] } | null>("/api/library").then((l) => setTeam((l?.staff ?? []).map((s) => `${s.first ?? ""} ${s.last ?? ""}`.trim()).filter(Boolean))).catch(() => {}); }, []);
@@ -328,11 +332,48 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                     <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("raDate", "RA date", { type: "date" })}</label>
                     <label className="flex flex-col gap-1">{fl("Review")}{fieldInput("raReview", "Review")}</label>
                   </div>
-                  <div className="flex items-center justify-between"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Add hazard</button></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>📚 Add from hazard bank</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
+                  {bankOpen && (() => {
+                    const have = new Set((t.hazards ?? []).map((h) => h.h.trim().toLowerCase()));
+                    const bq = bankQ.trim().toLowerCase();
+                    const groups = bankByCategory().map((g) => ({ ...g, entries: g.entries.filter((e) => !bq || `${e.area} ${e.who} ${e.controls.join(" ")}`.toLowerCase().includes(bq)) })).filter((g) => g.entries.length > 0);
+                    return (
+                      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+                        <div className="mb-2 flex items-center gap-2">
+                          <input value={bankQ} onChange={(e) => setBankQ(e.target.value)} placeholder={`Search ${HAZARD_BANK.length} hazards — travel, water, allergy, safeguarding…`} className={`${inputCls} flex-1`} />
+                          <button type="button" onClick={() => { const ids = groups.flatMap((g) => g.entries).filter((e) => !have.has(e.area.trim().toLowerCase())).map((e) => e.id); ids.forEach(addBankHazard); }} className="whitespace-nowrap rounded-md border border-[var(--line)] px-2 py-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Add all shown</button>
+                        </div>
+                        <div className="flex max-h-[320px] flex-col gap-2.5 overflow-y-auto [scrollbar-width:thin]">
+                          {groups.map((g) => (
+                            <div key={g.cat}>
+                              <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g.cat}</div>
+                              <div className="flex flex-col gap-1.5">
+                                {g.entries.map((e) => {
+                                  const added = have.has(e.area.trim().toLowerCase());
+                                  return (
+                                    <div key={e.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
+                                      <div className="flex items-start gap-2">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-center gap-1.5"><span className="text-[12.5px] font-extrabold">{e.area}</span><Badge tone={{ bg: RISK[e.initial].bg, fg: RISK[e.initial].fg }}>{RISK[e.initial].lbl}→{RISK[e.residual].lbl}</Badge><span className="text-[10.5px] text-[var(--ink-3)]">{e.controls.length} controls</span></div>
+                                          <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{e.who}</div>
+                                        </div>
+                                        <button type="button" disabled={added} onClick={() => addBankHazard(e.id)} className="flex-none rounded-md border px-2.5 py-1 text-[11px] font-bold" style={added ? { borderColor: "var(--line)", color: "var(--ink-3)" } : { borderColor: BLUE, color: BLUE }}>{added ? "✓ Added" : "＋ Add"}</button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                          {groups.length === 0 && <div className="px-1 py-3 text-center text-[12px] text-[var(--ink-3)]">No hazards match “{bankQ}”.</div>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="flex flex-col gap-2">{(t.hazards ?? []).map((h, i) => (
                     <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
                       <div className="flex items-center gap-2"><input value={h.h} onChange={(e) => { edit(`hazards.${i}.h`, e.target.value, "Hazard"); }} placeholder="Hazard" className={`${inputCls} font-bold`} /><button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="px-1 text-[var(--ink-3)] hover:text-[#c02636]">✕</button></div>
-                      <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2"><input value={h.who ?? ""} onChange={(e) => edit(`hazards.${i}.who`, e.target.value, "Who at risk")} placeholder="Who's at risk" className={inputCls} /><input value={h.controls ?? ""} onChange={(e) => edit(`hazards.${i}.controls`, e.target.value, "Controls")} placeholder="Control measures" className={inputCls} /></div>
+                      <div className="mt-1.5 flex flex-col gap-1.5"><input value={h.who ?? ""} onChange={(e) => edit(`hazards.${i}.who`, e.target.value, "Who at risk")} placeholder="Who's at risk & how" className={inputCls} /><textarea value={h.controls ?? ""} onChange={(e) => edit(`hazards.${i}.controls`, e.target.value, "Controls")} placeholder="Control measures — one statement per line" rows={Math.min(8, Math.max(2, (h.controls ?? "").split("\n").length))} className={`${inputCls} resize-y leading-[1.55]`} /></div>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                         <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-3)]">Initial{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.initial, (x) => { mut((d) => { d.hazards![i].initial = x; }); })}</span>)}</span>
                         <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-3)]">Residual{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.residual, (x) => { mut((d) => { d.hazards![i].residual = x; if (d.raSigned) d.raSigned = false; }); })}</span>)}</span>
