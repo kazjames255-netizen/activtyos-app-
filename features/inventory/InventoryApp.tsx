@@ -109,6 +109,21 @@ export function InventoryApp() {
         )}
       </div>
 
+      {/* how it works — top, under the title */}
+      <details className="group mb-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[13px] font-extrabold" style={{ color: BLUE }}><span className="text-[11px] transition-transform group-open:rotate-90">▸</span> How it works</summary>
+        <div className="border-t border-[var(--line)] px-4 py-3 text-[12.5px] leading-[1.6] text-[var(--ink-2)]">
+          <ul className="ml-4 list-disc space-y-1.5">
+            <li><b>Add your kit</b> — each item has a category, where it&rsquo;s stored, how many, an optional reorder level and a season. Items are grouped by category (each colour-coded).</li>
+            <li><b>Do a stock check</b> — <b>Start stock check</b> turns every count into an input; enter the real figure and <b>✓ Count</b> saves it and <b>auto-stamps the time + who</b>. The most-recent count sits on the card; click it to see the <b>last 5 counts</b>.</li>
+            <li><b>Running low</b> — set a reorder level and an item shows <b>⚠ Low</b> when it drops to it. Anything not counted in a while is flagged <b>due a check</b> (set the window in Settings → Inventory).</li>
+            <li><b>Order more → Expenses</b> — <b>🛒 Order</b> records how many, the cost and supplier, and <b>logs a matching expense</b> under the category you pick (Paid or Owed — default in Settings). <b>✓ Received</b> adds them into stock.</li>
+            <li><b>Seasons</b> — pick a season up top; <b>Carry over to next season</b> copies a season&rsquo;s items (kit + counts) into a new one so you don&rsquo;t re-enter everything.</li>
+            <li><b>Find things</b> — filter by category, location, <b>Low stock</b> or <b>Needs a check</b>, or search.</li>
+          </ul>
+        </div>
+      </details>
+
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
       {(adding || editing) && <ItemForm existing={editing ?? undefined} categories={categories} locations={locations} seasons={seasons} defaultSeason={sel} settings={settings} save={save} onClose={() => { setAdding(false); setEditing(null); }} onSaved={() => { setAdding(false); setEditing(null); refresh(); }} onDelete={editing && canManage ? () => remove(editing) : undefined} />}
       {carry && <CarryOverModal seasons={seasons} fromDefault={sel} settings={settings} save={save} onClose={() => setCarry(false)} onDone={(to) => { setCarry(false); setSeason(to); refresh(); }} />}
