@@ -232,7 +232,7 @@ export function ParentMedicationApp() {
             return (
               <div key={m.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_6px_20px_-8px_rgba(16,24,40,.18)]">
                 {/* Gradient header — matches the family cards. */}
-                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#4f8bf5 0%,#7aa9f0 100%)" }}>
                   <span className="flex items-baseline gap-2">
                     <span className="text-[15.5px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{m.name}</span>
                     <span className="text-[12.5px] font-semibold text-white/80">{m.dose}{m.route ? ` · ${m.route}` : ""}</span>
