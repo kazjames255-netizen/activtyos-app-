@@ -142,9 +142,12 @@ export function CalendarApp() {
       <div className="grid grid-cols-7 gap-1">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="pb-1 text-center text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{d}</div>)}
         {cells.map((d) => {
-          const its = itemsOn(iso(d)), inMonth = d.getMonth() === mo, isToday = sameDay(d, today);
+          const inMonth = d.getMonth() === mo;
+          // Days from the previous/next month keep the week aligned but stay blank.
+          if (!inMonth) return <div key={iso(d)} className={`${minH} rounded-lg border border-dashed border-[var(--line)] bg-[var(--panel)] opacity-40`} />;
+          const its = itemsOn(iso(d)), isToday = sameDay(d, today);
           return (
-            <div key={iso(d)} className={`flex ${minH} flex-col rounded-lg border p-1`} style={{ borderColor: isToday ? BLUE : "var(--line)", background: inMonth ? "var(--surface)" : "var(--panel)", opacity: inMonth ? 1 : 0.5, boxShadow: isToday ? `inset 0 0 0 1.5px ${BLUE}` : undefined }}>
+            <div key={iso(d)} className={`flex ${minH} flex-col rounded-lg border p-1`} style={{ borderColor: isToday ? BLUE : "var(--line)", background: "var(--surface)", boxShadow: isToday ? `inset 0 0 0 1.5px ${BLUE}` : undefined }}>
               <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="self-start text-[11.5px] font-extrabold leading-none hover:underline" style={{ color: isToday ? BLUE : its.length ? "var(--ink)" : "var(--ink-3)" }} title="Open this day">{d.getDate()}</button>
               <div className="mt-0.5 flex flex-col gap-0.5">
                 {its.slice(0, cap).map((it, i) => itemChip(it, i))}
@@ -199,36 +202,54 @@ export function CalendarApp() {
     );
   }
 
-  // Day view — an hourly timeline down the left so you can see what's on at 9am
+  // Day view — an hourly timeline; each item spans its full start→end time.
   function dayView() {
     const its = itemsOn(iso(cursor));
     if (!its.length) return <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">No sessions or events on this day.</div>;
-    const hourOf = (t: string) => { const n = parseInt(t.slice(0, 2), 10); return isNaN(n) ? null : n; };
-    const timed = its.filter((it) => it.start && hourOf(it.start) != null);
-    const allDay = its.filter((it) => !it.start || hourOf(it.start) == null);
-    const startHrs = timed.map((it) => hourOf(it.start)!);
-    const endHrs = timed.map((it) => hourOf(it.end) ?? hourOf(it.start)!);
-    const lo = startHrs.length ? Math.max(0, Math.min(...startHrs)) : 9;
-    const hi = timed.length ? Math.min(23, Math.max(lo + 1, ...endHrs)) : 17;
+    const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
+    const allDay = its.filter((it) => toMin(it.start) == null);
+    const timed = its.map((it) => { const s = toMin(it.start); if (s == null) return null; let e = toMin(it.end); if (e == null || e <= s) e = s + 60; return { it, s, e }; }).filter((x): x is { it: Item; s: number; e: number } => !!x);
+    const rowH = 46;
+    const lo = timed.length ? Math.max(0, Math.floor(Math.min(...timed.map((t) => t.s)) / 60)) : 9;
+    const hi = timed.length ? Math.min(24, Math.ceil(Math.max(...timed.map((t) => t.e)) / 60)) : 18; // end boundary hour
     const hours = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k);
+    // greedy column layout so overlapping items sit side-by-side
+    const sorted = [...timed].sort((a, b) => a.s - b.s || a.e - b.e);
+    const colEnds: number[] = [];
+    const placed = sorted.map((t) => { let c = colEnds.findIndex((end) => end <= t.s); if (c < 0) { c = colEnds.length; colEnds.push(t.e); } else colEnds[c] = t.e; return { ...t, col: c }; });
+    const ncol = Math.max(1, colEnds.length);
+    const nowMin = sameDay(cursor, today) ? new Date().getHours() * 60 + new Date().getMinutes() : null;
+    const nowTop = nowMin != null && nowMin >= lo * 60 && nowMin <= hi * 60 ? (nowMin - lo * 60) / 60 * rowH : null;
     return (
       <div className="flex flex-col gap-2">
         {allDay.length > 0 && (
           <div className="flex gap-3">
-            <div className="w-14 flex-none pt-1 text-right text-[11px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">All day</div>
+            <div className="w-12 flex-none pt-1 text-right text-[11px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">All day</div>
             <div className="flex flex-1 flex-col gap-2">{allDay.map((it, i) => dayCard(it, i))}</div>
           </div>
         )}
-        {hours.map((h) => {
-          const at = timed.filter((it) => hourOf(it.start) === h);
-          const isNowHour = sameDay(cursor, today) && new Date().getHours() === h;
-          return (
-            <div key={h} className="flex gap-3 border-t border-[var(--line)] pt-2 first:border-t-0">
-              <div className="w-14 flex-none pt-0.5 text-right text-[12px] font-extrabold tabular-nums" style={{ color: isNowHour ? BLUE : "var(--ink-3)" }}>{pad(h)}:00</div>
-              <div className="flex min-h-[26px] flex-1 flex-col gap-2">{at.length ? at.map((it, i) => dayCard(it, i)) : <div className="h-[1px]" />}</div>
+        <div className="relative" style={{ height: (hi - lo) * rowH + 6 }}>
+          {hours.map((h, idx) => (
+            <div key={h} className="absolute left-0 flex w-full items-start" style={{ top: idx * rowH }}>
+              <div className="w-12 flex-none -translate-y-[7px] pr-2 text-right text-[11.5px] font-extrabold tabular-nums text-[var(--ink-3)]">{pad(h)}:00</div>
+              <div className="flex-1 border-t border-[var(--line)]" />
             </div>
-          );
-        })}
+          ))}
+          {nowTop != null && <div className="absolute z-10 flex w-full items-center" style={{ top: nowTop, left: 0 }}><div className="w-12 flex-none" /><div className="h-[2px] flex-1" style={{ background: RED }} /></div>}
+          <div className="absolute bottom-0 top-0" style={{ left: 48, right: 0 }}>
+            {placed.map(({ it, s, e, col }, i) => {
+              const top = (s - lo * 60) / 60 * rowH, height = Math.max(24, (e - s) / 60 * rowH - 3);
+              const w = 100 / ncol, isEv = it.kind === "event";
+              const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0;
+              return (
+                <button key={i} type="button" onClick={() => isEv && it.event ? setEditing(it.event) : undefined} className={`absolute overflow-hidden rounded-lg border p-1.5 text-left ${isEv ? "cursor-pointer" : "cursor-default"}`} style={{ top, height, left: `calc(${col * w}% + 2px)`, width: `calc(${w}% - 4px)`, background: isEv ? "var(--surface)" : it.color, border: isEv ? `1.5px dashed ${it.color}` : "none", color: isEv ? it.color : "#fff" }} title={`${it.title} · ${it.start}–${it.end}`}>
+                  <div className="truncate text-[11.5px] font-extrabold leading-tight">{isEv ? "📌 " : ""}{it.title}</div>
+                  <div className="truncate text-[10.5px] font-semibold" style={{ opacity: isEv ? 0.8 : 0.9 }}>{it.start}–{it.end}{it.kind === "session" && showBooking && it.cap ? ` · ${pct}%` : ""}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
   }
