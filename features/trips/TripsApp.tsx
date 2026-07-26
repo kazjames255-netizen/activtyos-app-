@@ -306,6 +306,16 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
 
+  // Soft-cancel (keeps the record marked Cancelled) or reinstate a saved trip.
+  async function cancelTrip() {
+    if (!isEdit) return;
+    const cancelling = t.status !== "cancelled";
+    if (cancelling && !confirm(`Cancel the trip to ${t.destination || "this venue"}? It stays on record marked Cancelled — you can reinstate it later.`)) return;
+    setBusy(true); setError(null);
+    try { await apiPut(`/api/trips/${encodeURIComponent(existing!.id)}`, { status: cancelling ? "cancelled" : "planned", returned: false }); onClose(); onSaved(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update"); setBusy(false); }
+  }
+
   const pct = readinessOf(t), act = activeStepOf(t), sp = statusPill(t);
   const chip = (label: string, val: ReactNode, tone?: "ok" | "bad" | "warn") => (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
@@ -711,7 +721,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-        <Button onClick={onClose}>← Back to trips</Button>
+        <div className="flex flex-wrap gap-2"><Button onClick={onClose}>← Back to trips</Button>{isEdit && <Button variant={t.status === "cancelled" ? undefined : "danger"} disabled={busy} onClick={cancelTrip}>{t.status === "cancelled" ? "Reinstate trip" : "Cancel trip"}</Button>}</div>
         <div className="flex gap-2"><Button disabled={busy} onClick={() => save(false)}>{busy ? "Saving…" : "Save"}</Button><Button variant="solid" disabled={busy} onClick={() => save(true)}>{busy ? "Saving…" : "Save & close"}</Button></div>
       </div>
     </Card>
@@ -735,6 +745,7 @@ export function TripsApp() {
   useRealtime(["trips"], refresh);
 
   async function remove(t: Trip) { if (!confirm(`Delete the trip to ${t.destination}?`)) return; try { await api(`/api/trips/${encodeURIComponent(t.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function setStatus(t: Trip, status: Status) { if (status === "cancelled" && !confirm(`Cancel the trip to ${t.destination}? It stays on record marked Cancelled — you can reinstate it later.`)) return; try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { status, returned: false }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   // Quick head count from the card — confirm the next checkpoint without opening the planner.
   async function quickCount(t: Trip, count: number) {
     const cps = (t.checkpoints ?? []).map((c) => ({ ...c }));
@@ -814,6 +825,7 @@ export function TripsApp() {
                   </div>
                   <div className="flex flex-none flex-col gap-2 sm:items-end">
                     <Button sm variant="solid" onClick={() => { setPlanning({ trip: t }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Open planner</Button>
+                    {canManage && <Button sm onClick={() => setStatus(t, t.status === "cancelled" ? "planned" : "cancelled")}>{t.status === "cancelled" ? "Reinstate" : "Cancel trip"}</Button>}
                     {canManage && <Button sm variant="danger" onClick={() => remove(t)}>Delete</Button>}
                   </div>
                 </div>
