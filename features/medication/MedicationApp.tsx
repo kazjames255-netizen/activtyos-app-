@@ -37,6 +37,7 @@ interface Med {
   consentBy?: string;
   consentDate?: string;
   consentGranted: boolean;
+  consentWithdrawnAt?: string;
   notes?: string;
   archived?: boolean;
 }
@@ -125,14 +126,18 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   const [d, setD] = useState<MedDraft>(emptyMed());
   const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
-  const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
+  const [bkgs, setBkgs] = useState<{ child?: string; childId?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<MedDraft>) => setD((p) => ({ ...p, ...patch }));
   // The picked child's upcoming booked days, from this tenant's bookings — the
   // same list the parent sees, so "Only on the days I pick" matches both ends.
-  useEffect(() => { apiGet<{ child?: string; days?: string[] }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
-  const bookedDays = [...new Set(bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (d.childName ?? "").trim().toLowerCase()).flatMap((b) => b.days ?? []))].filter((x) => x >= todayIso()).sort();
+  useEffect(() => { apiGet<{ child?: string; childId?: string; days?: string[] }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
+  const forChild = bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (d.childName ?? "").trim().toLowerCase());
+  const bookedDays = [...new Set(forChild.flatMap((b) => b.days ?? []))].filter((x) => x >= todayIso()).sort();
+  // Resolve the picked child's id from their bookings so the med (and its doses)
+  // link to the child → they reach the parent's Medication view.
+  const linkedChildId = forChild.find((b) => b.childId)?.childId;
 
   async function save() {
     if (!d.childName?.trim() || !d.name?.trim() || !d.dose?.trim()) {
@@ -149,7 +154,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
       : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
       : "Only when needed";
     try {
-      await apiPost("/api/medications", { ...d, asNeeded: freq === "asneeded", schedule });
+      await apiPost("/api/medications", { ...d, childId: linkedChildId ?? d.childId, asNeeded: freq === "asneeded", schedule });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn’t save");
@@ -287,6 +292,7 @@ export function MedicationApp() {
   const [canManage, setCanManage] = useState(false);
   const [logging, setLogging] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [q, setQ] = useState("");
   const [confirm, setConfirm] = useState<{ id: string; given: boolean } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const flash = (msg: string) => { setNotice(msg); setTimeout(() => setNotice(null), 4500); };
@@ -333,7 +339,8 @@ export function MedicationApp() {
   const needsConsent = active.filter((m) => !m.consentGranted).length;
   const dosesToday = admins.filter((a) => a.date === todayIso()).length;
   const tiles: [string, string | number][] = [["On file", active.length], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
-  const shown = showArchived ? archivedMeds : active;
+  const ql = q.trim().toLowerCase();
+  const shown = (showArchived ? archivedMeds : active).filter((m) => !ql || m.childName.toLowerCase().includes(ql) || m.name.toLowerCase().includes(ql));
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -370,7 +377,7 @@ export function MedicationApp() {
       {adding && <MedForm onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
 
       {meds && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           {([[false, "Active", active.length], [true, "Archived", archivedMeds.length]] as [boolean, string, number][]).map(([arch, label, n]) => (
             <button key={label} type="button" onClick={() => setShowArchived(arch)}
               className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
@@ -378,6 +385,8 @@ export function MedicationApp() {
               {label} <span className={showArchived === arch ? "text-white/70" : "text-[var(--ink-3)]"}>{n}</span>
             </button>
           ))}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or medicine…"
+            className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
 
@@ -397,6 +406,8 @@ export function MedicationApp() {
                   {m.condition && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge>}
                   {m.consentGranted ? (
                     <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent on file</Badge>
+                  ) : m.consentWithdrawnAt ? (
+                    <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>⚠️ parent removed consent</Badge>
                   ) : (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                   )}

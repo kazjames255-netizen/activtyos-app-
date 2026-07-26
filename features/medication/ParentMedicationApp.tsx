@@ -52,7 +52,7 @@ export function ParentMedicationApp() {
     apiGet<Provider[]>("/api/my/providers").then((ps) => { setProviders(ps); if (ps[0]) setF((p) => ({ ...p, tenantId: ps[0].tenantId })); }).catch(() => {});
     apiGet<Child[]>("/api/my/children").then((cs) => { setChildren(cs); if (cs[0]) setChildIds([cs[0].id]); }).catch(() => {});
   }, [load]);
-  useRealtime(["children", "bookings"], load);
+  useRealtime(["children", "bookings", "medications", "medicationAdmin"], load);
 
   const providerName = (id: string) => providers.find((p) => p.tenantId === id)?.name ?? "your provider";
   const dosesFor = (medId: string) => doses.filter((d) => d.medicationId === medId);
