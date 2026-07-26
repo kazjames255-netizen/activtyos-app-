@@ -111,13 +111,26 @@ function statusPill(t: Trip): [string, string] {
 // Bookings carry the child (or a kids[] list) + the ISO session dates each
 // occupies — so the planner can offer exactly who's booked on the day.
 interface BookKid { name: string; dates?: string[]; cancelledDays?: string[]; cancelled?: boolean; age?: number }
-interface Booking { child?: string; listing?: string; listingId?: string; days?: string[]; kids?: BookKid[]; status?: string; age?: number }
+interface Booking { child?: string; listing?: string; listingId?: string; pass?: string; days?: string[]; kids?: BookKid[]; status?: string; age?: number }
 const LIVE_BOOKING = (s?: string) => !/cancel|declin|waitl|offer/i.test(s ?? "");
-function bookedOnDate(bkgs: Booking[], listingId: string | undefined, dateIso: string): { n: string; age?: number }[] {
+// distinct passes booked on a listing for a date — so the operator can pick the
+// trip pass (some passes include the trip, some don't).
+function passesFor(bkgs: Booking[], listingId: string | undefined, dateIso: string): string[] {
+  const out = new Set<string>();
+  for (const b of bkgs) {
+    if (!LIVE_BOOKING(b.status) || !b.pass) continue;
+    if (listingId && b.listingId !== listingId) continue;
+    const onDay = b.kids?.length ? b.kids.some((k) => !k.cancelled && (!k.dates?.length || k.dates.includes(dateIso))) : (!b.days?.length || b.days.includes(dateIso));
+    if (onDay) out.add(b.pass);
+  }
+  return [...out].sort();
+}
+function bookedOnDate(bkgs: Booking[], listingId: string | undefined, pass: string | undefined, dateIso: string): { n: string; age?: number }[] {
   const out = new Map<string, { n: string; age?: number }>();
   for (const b of bkgs) {
     if (!LIVE_BOOKING(b.status)) continue;
     if (listingId && b.listingId !== listingId) continue;
+    if (pass && b.pass !== pass) continue;
     if (b.kids?.length) {
       for (const k of b.kids) {
         if (k.cancelled || (k.cancelledDays ?? []).includes(dateIso)) continue;
@@ -227,6 +240,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   const [bankOpen, setBankOpen] = useState(false);
   const [bankQ, setBankQ] = useState("");
   const [venueMenu, setVenueMenu] = useState(false);
+  const [passFilter, setPassFilter] = useState("");
 
   // edit a field by path; records old→new when track-changes is on
   const edit = (key: string, value: unknown, label: string) => {
@@ -242,7 +256,8 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
   const mut = (fn: (d: Trip) => void) => setT((prev) => { const next = structuredClone(prev) as Trip; fn(next); return next; });
   const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.desc, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
   // edit a hazard text field and stamp "last amended" with today + assessor
-  const hazText = (i: number, field: "h" | "who" | "controls", value: string, label: string) => { edit(`hazards.${i}.${field}`, value, label); mut((d) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } }); };
+  // set any hazard field: records the change (when Track changes is on) and stamps "last amended"
+  const hazSet = (i: number, field: "h" | "who" | "controls" | "initial" | "residual" | "done", value: unknown, label: string) => { edit(`hazards.${i}.${field}`, value, label); mut((d) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } }); };
   // look up a saved venue's address when the destination matches one by name
   const venueFor = (name: string) => venues.find((v) => v.name.trim().toLowerCase() === name.trim().toLowerCase());
 
@@ -256,7 +271,8 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
     return () => { alive = false; };
   }, [t.listingId]);
 
-  const booked = useMemo(() => bookedOnDate(bkgs, t.listingId, t.date), [bkgs, t.listingId, t.date]);
+  const booked = useMemo(() => bookedOnDate(bkgs, t.listingId, passFilter || undefined, t.date), [bkgs, t.listingId, passFilter, t.date]);
+  const passOptions = useMemo(() => passesFor(bkgs, t.listingId, t.date), [bkgs, t.listingId, t.date]);
   const listings = useMemo(() => [...new Map(bkgs.filter((b) => b.listingId && b.listing).map((b) => [b.listingId!, b.listing!])).entries()], [bkgs]);
   const rosterNames = new Set((t.roster ?? []).map((s) => s.n));
   const staffSuggest = [...new Set([...listingStaff, ...team])].filter((s) => !rosterNames.has(s));
@@ -479,7 +495,6 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     );
                   })()}
                   <div className="flex flex-col gap-3">{(t.hazards ?? []).map((h, i) => {
-                    const stamp = (d: Trip) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } };
                     return (
                     <div key={i} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                       <div className="mb-2.5 flex items-center justify-between">
@@ -487,19 +502,19 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">✕ Remove</button>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1.5">{fl("Hazard — what it is")}<textarea value={h.h} onChange={(e) => hazText(i, "h", e.target.value, "Hazard")} placeholder="e.g. Too few staff / low ratios" className={`${taCls} min-h-[46px] font-bold`} /></label>
-                        <label className="flex flex-col gap-1.5">{fl("Risk — who's harmed & how")}<textarea value={h.who ?? ""} onChange={(e) => hazText(i, "who", e.target.value, "Who at risk")} placeholder="e.g. Children — injury near roads or water" className={`${taCls} min-h-[46px]`} /></label>
+                        <label className="flex flex-col gap-1.5">{fl("Hazard — what it is")}<textarea value={h.h} onChange={(e) => hazSet(i, "h", e.target.value, "Hazard")} placeholder="e.g. Too few staff / low ratios" className={`${taCls} min-h-[46px] font-bold`} /></label>
+                        <label className="flex flex-col gap-1.5">{fl("Risk — who's harmed & how")}<textarea value={h.who ?? ""} onChange={(e) => hazSet(i, "who", e.target.value, "Who at risk")} placeholder="e.g. Children — injury near roads or water" className={`${taCls} min-h-[46px]`} /></label>
                       </div>
-                      <label className="mt-3 flex flex-col gap-1.5">{fl("Control measures")}<textarea value={h.controls ?? ""} onChange={(e) => hazText(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" className={`${taCls} min-h-[64px]`} /></label>
+                      <label className="mt-3 flex flex-col gap-1.5">{fl("Control measures")}<textarea value={h.controls ?? ""} onChange={(e) => hazSet(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" className={`${taCls} min-h-[64px]`} /></label>
                       <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--line)] pt-3">
                         <div className="flex flex-col gap-1.5">{fl("Risk rating")}
                           <div className="flex flex-wrap items-center gap-2">
-                            <RatingGroup label="Initial" cur={h.initial} on={(x) => mut((d) => { d.hazards![i].initial = x; stamp(d); })} />
+                            <RatingGroup label="Initial" cur={h.initial} on={(x) => hazSet(i, "initial", x, "Initial risk")} />
                             <span className="text-[13px] font-bold text-[var(--ink-3)]">→</span>
-                            <RatingGroup label="Residual" cur={h.residual} on={(x) => mut((d) => { d.hazards![i].residual = x; stamp(d); })} />
+                            <RatingGroup label="Residual" cur={h.residual} on={(x) => hazSet(i, "residual", x, "Residual risk")} />
                           </div>
                         </div>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold transition-colors" style={h.done ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => mut((d) => { d.hazards![i].done = e.target.checked; stamp(d); })} />Controls in place</label>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold transition-colors" style={h.done ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => hazSet(i, "done", e.target.checked, "Controls in place")} />Controls in place</label>
                       </div>
                       <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Last amended: {h.amendedBy ? `${h.amendedBy} · ` : ""}{h.amendedOn ? fmtDate(h.amendedOn) : "—"}</div>
                     </div>
@@ -534,7 +549,21 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
 
                 {/* ── Step 4: Parent permissions ── */}
                 {n === 4 && <div className="flex flex-col gap-2.5">
-                  {notBooked.length > 0 && <button type="button" onClick={() => mut((d) => { const have = new Set((d.attendees ?? []).map((a) => a.n)); notBooked.forEach((b) => { if (!have.has(b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); }); })} className="self-start rounded-lg border-2 border-dashed border-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>＋ Add {notBooked.length} child{notBooked.length === 1 ? "" : "ren"} booked on {fmtDate(t.date)}</button>}
+                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+                    <div className="mb-2 text-[12.5px] font-extrabold">Add children booked on this trip</div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1">{fl("From which camp / club")}<select value={t.listingId ?? ""} onChange={(e) => { edit("listingId", e.target.value || "", "Listing"); setPassFilter(""); }} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+                      <label className="flex flex-col gap-1">{fl("Which pass (some include the trip, some don't)")}<select value={passFilter} onChange={(e) => setPassFilter(e.target.value)} className={inputCls}><option value="">All passes</option>{passOptions.map((p) => <option key={p} value={p}>{p}</option>)}</select>{passOptions.length === 0 && <span className="text-[10.5px] text-[var(--ink-3)]">No passes found for this listing/date.</span>}</label>
+                    </div>
+                    <div className="mt-2 mb-1 flex items-center justify-between"><span className="text-[11px] font-semibold text-[var(--ink-3)]">{notBooked.length} booked on {fmtDate(t.date)}{passFilter ? ` · ${passFilter}` : ""} not yet added</span>{notBooked.length > 0 && <button type="button" onClick={() => mut((d) => { const have = new Set((d.attendees ?? []).map((a) => a.n)); notBooked.forEach((b) => { if (!have.has(b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); }); })} className="rounded-md border border-[#1d3a8f] px-2.5 py-1 text-[11px] font-bold" style={{ color: BLUE }}>✓ Add all {notBooked.length}</button>}</div>
+                    {notBooked.length > 0 ? <div className="flex max-h-44 flex-col gap-1 overflow-y-auto [scrollbar-width:thin]">{notBooked.map((b) => (
+                      <div key={b.n} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
+                        <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[10.5px] font-extrabold" style={{ color: BLUE }}>{ini(b.n)}</span>
+                        <span className="flex-1 text-[12.5px] font-semibold">{b.n}{b.age ? <span className="font-normal text-[var(--ink-3)]"> · age {b.age}</span> : ""}</span>
+                        <button type="button" onClick={() => mut((d) => { if (!(d.attendees ?? []).some((a) => a.n === b.n)) (d.attendees ??= []).push({ n: b.n, age: b.age, consent: "pending", paid: false, em: false }); })} className="rounded-md border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>＋ Add</button>
+                      </div>
+                    ))}</div> : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">{booked.length === 0 ? "No children booked on this date for the chosen listing/pass." : "Everyone booked here is already on the trip."}</div>}
+                  </div>
                   {(t.attendees ?? []).length > 0 ? <>
                     <div className="text-[12px] text-[var(--ink-2)]"><b>{attendingOf(t).length}</b> consented · <b style={{ color: AMBER }}>{pendingOf(t).length}</b> pending · <b style={{ color: "var(--ink-3)" }}>{declinedOf(t).length}</b> not coming · <b>{paidCountOf(t)}/{(t.attendees ?? []).length - declinedOf(t).length}</b> paid</div>
                     <div className="flex h-2 overflow-hidden rounded-full bg-[var(--line)]">
@@ -587,7 +616,12 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                 </div>)}
 
                 {/* ── Step 7: Return & debrief ── */}
-                {n === 7 && (!s6Ok(t) ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Complete every head-count checkpoint to close the trip.</div> : t.returned ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed. All children accounted for and handed back.</div> : <div className="flex flex-col gap-2"><textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} rows={2} placeholder="Debrief — what went well, anything to change next time…" className={`${inputCls} resize-y`} /><Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button></div>)}
+                {n === 7 && <div className="flex flex-col gap-2.5">
+                  <label className="flex flex-col gap-1.5">{fl("Debrief notes")}<textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} placeholder="Debrief — what went well, any incidents, anything to change next time…" className={`${taCls} min-h-[72px]`} /></label>
+                  {t.returned ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed — all children accounted for and handed back. You can still edit the debrief above.<button type="button" onClick={() => mut((d) => { d.returned = false; d.status = "planned"; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open trip</button></div>
+                    : s6Ok(t) ? <Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button>
+                    : <div className="rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>Complete every head-count checkpoint (Step 6) to close the trip — you can still write the debrief now.</div>}
+                </div>}
 
                 {/* ── Step 8: Message parents & payment (optional) ── */}
                 {n === 8 && (() => {
@@ -682,6 +716,14 @@ export function TripsApp() {
   useRealtime(["trips"], refresh);
 
   async function remove(t: Trip) { if (!confirm(`Delete the trip to ${t.destination}?`)) return; try { await api(`/api/trips/${encodeURIComponent(t.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  // Quick head count from the card — confirm the next checkpoint without opening the planner.
+  async function quickCount(t: Trip, count: number) {
+    const cps = (t.checkpoints ?? []).map((c) => ({ ...c }));
+    const next = cps.findIndex((c) => c.counted == null);
+    if (next < 0) return;
+    cps[next] = { ...cps[next], counted: count, time: nowLabel() };
+    try { await apiPut(`/api/trips/${encodeURIComponent(t.id)}`, { checkpoints: cps }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
 
   const all = useMemo(() => trips ?? [], [trips]);
   const upcoming = all.filter((t) => !t.returned && t.status !== "cancelled" && t.date >= todayIso()).length;
@@ -753,6 +795,21 @@ export function TripsApp() {
                     {canManage && <Button sm variant="danger" onClick={() => remove(t)}>Delete</Button>}
                   </div>
                 </div>
+                {s5Ok(t) && !t.returned && (() => {
+                  const go = attendingOf(t).length, cps = t.checkpoints ?? [];
+                  const doneN = cps.filter((c) => c.counted != null).length;
+                  const nextCp = cps.find((c) => c.counted == null);
+                  const last = [...cps].reverse().find((c) => c.counted != null);
+                  const allOk = !nextCp;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] bg-[#eef4fd] px-4 py-2.5">
+                      <span className="text-[12px] font-extrabold" style={{ color: BLUE }}>🧮 Head count</span>
+                      <span className="text-[11.5px] text-[var(--ink-2)]">{go} on trip · {doneN}/{cps.length} checkpoints{last ? ` · last ${last.counted}/${go} at ${last.time}` : ""}</span>
+                      {allOk ? <span className="ml-auto rounded-full bg-[#e7f6ee] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: GREEN }}>✓ all counted</span>
+                        : <button type="button" onClick={() => quickCount(t, go)} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: BLUE }}>✓ {nextCp!.n}: all {go} present</button>}
+                    </div>
+                  );
+                })()}
                 {notifies && !t.returned && pendingOf(t).length > 0 && <div className="border-t border-[var(--line)] bg-[#f4f8ff] px-4 py-2 text-[11.5px] text-[var(--ink-2)]">📨 {pendingOf(t).length} parent{pendingOf(t).length === 1 ? "" : "s"} still to confirm consent — chase from Step 4.</div>}
               </Card>
             );
