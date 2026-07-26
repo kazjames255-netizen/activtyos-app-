@@ -610,12 +610,19 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
   // A pending change-of-date request — from the backend once it stores one, or
   // the local marker set on submit while that endpoint is being built (§U).
-  const pendingMove = useMemo(() => {
-    const backend = (b as Booking & { dateChangeRequest?: { status?: string } }).dateChangeRequest?.status === "pending";
-    let local = false;
-    if (typeof window !== "undefined") { try { local = !!localStorage.getItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ } }
-    return (backend || local) && !cancelled;
-  }, [b, cancelled]);
+  // Returns the requested moves so the card can show the actual date swaps.
+  type Move = { childName?: string; from: string; to: string };
+  const pendingMove = useMemo<{ moves: Move[] } | null>(() => {
+    const be = (b as Booking & { dateChangeRequest?: { status?: string; moves?: Move[] } }).dateChangeRequest;
+    if (be?.status === "pending") return { moves: be.moves ?? [] };
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(`aos.pendingMove.${b.ref}`);
+        if (raw) return { moves: (JSON.parse(raw).moves ?? []) as Move[] };
+      } catch { /* ignore */ }
+    }
+    return null;
+  }, [b]);
   // Refund state, so a cancelled booking tells the family what came back.
   const refundAmt = b.cancel?.amount ?? 0;
   const refundIssued = b.pay === "Refunded" || b.pay === "Partially refunded" || b.cancel?.refund === "approved";
@@ -637,8 +644,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge tone={statusTone(b.status)}>{b.status}</Badge>
-          {pendingMove && <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change pending</Badge>}
+          {pendingMove ? <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change pending</Badge> : <Badge tone={statusTone(b.status)}>{b.status}</Badge>}
           {b.cancel?.refund === "pending" && (
             <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
           )}
@@ -647,14 +653,21 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         </div>
       </div>
 
-      {pendingMove && !cancelled && (
-        <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] font-semibold text-[#8a5300]">
-          <span aria-hidden>⏳</span>
-          <span>Change of date requested — pending your provider&rsquo;s approval. Once they approve, the new date is applied automatically.</span>
+      {pendingMove && (
+        <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
+          <div className="font-bold">⏳ Change of date requested — pending your provider&rsquo;s approval.</div>
+          {pendingMove.moves.length > 0 && (
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {pendingMove.moves.map((m, i) => (
+                <li key={i} className="font-semibold">{m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} → <b>{fmtIso(m.to)}</b></li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-1 text-[11px] text-[#8a5300]/80">Once they approve, the new date{pendingMove.moves.length > 1 ? "s are" : " is"} applied automatically.</div>
         </div>
       )}
 
-      {cancelled && (
+      {cancelled && !pendingMove && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
           <span aria-hidden className="text-[#c0392b]">✕</span>
           <span>

@@ -14,6 +14,10 @@ export type RowAction =
   | "promote"
   | "refund-approve"
   | "refund-decline"
+  // Approve / deny a parent's pending date-change request. Approve applies the
+  // day swaps; both clear the pending flag.
+  | "move-approve"
+  | "move-deny"
   // Waiting list: offer the place with a 2-hour hold (vs "promote", the
   // operator's immediate — possibly overbooking — seat).
   | "offer";
@@ -65,6 +69,20 @@ export function applyRowAction(b: Booking, action: RowAction): void {
     b.pay = "Refunded";
   } else if (action === "refund-decline") {
     if (b.cancel) b.cancel.refund = "declined";
+  } else if (action === "move-approve") {
+    const req = b.dateChangeRequest;
+    if (req) {
+      const swap = (arr?: string[]) => arr?.map((d) => req.moves.find((m) => m.from === d)?.to ?? d);
+      for (const m of req.moves) {
+        const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
+        if (kid && kid.dates?.length) kid.dates = swap(kid.dates)!;
+        else b.days = swap(b.days);
+      }
+      req.status = "approved";
+      b.note = "Date change approved.";
+    }
+  } else if (action === "move-deny") {
+    if (b.dateChangeRequest) { b.dateChangeRequest.status = "denied"; b.note = "Date change declined."; }
   }
 }
 

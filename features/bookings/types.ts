@@ -122,6 +122,13 @@ export interface Booking {
   cancel: CancelInfo | null;
   past?: boolean;
   refundLog?: RefundLogEntry[];
+  /** A parent's pending request to move day(s) to other dates — surfaced to the
+   *  operator to approve/deny from the row. On approve the swaps are applied. */
+  dateChangeRequest?: {
+    moves: { childName?: string; childId?: string; from: string; to: string }[];
+    requestedAt?: string;
+    status: "pending" | "approved" | "denied";
+  } | null;
 
   // Transient UI state (kept on the record to match the legacy flows).
   _cancelling?: boolean;

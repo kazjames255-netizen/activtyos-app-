@@ -86,4 +86,21 @@ subset of the booking's remaining days) plus a **`resolution`**:
 concrete calendar pick (structured `from→to`) so an approval auto-applies there
 too. Front-end follow-up; its endpoint is `/api/my/bookings/:ref/amend`.
 
+## Operator side (front-end built, needs the data persisted)
+So the provider can approve/deny **without opening the booking**, the operator
+bookings list (`features/bookings/BookingsList.tsx`) now shows, on any row whose
+`booking.dateChangeRequest.status === "pending"`: a **"Date change requested"**
+badge, the exact swap (`Mon 27 Jul → Wed 5 Aug`), and inline **Approve move** /
+**Deny** buttons. These dispatch the new `move-approve` / `move-deny` row actions
+in `features/bookings/mutations.ts` (shared pure mutations — **your server route
+applies them too**): approve rewrites each `from→to` on the child's dates and
+sets `status:"approved"`; deny sets `status:"denied"`. Booking stays out of the
+"Cancelled" styling while a move is pending.
+
+**What you must do for it to appear:** the `/amend` request (see #2 changedate)
+must **persist `dateChangeRequest` on the booking doc** — that's the only way the
+operator (a different session) sees it; the parent side currently bridges with a
+local `aos.pendingMove.{ref}` marker that the operator can't read. Once you store
+it, both sides light up with no further front-end work.
+
 Nothing changes for a whole-booking cancel (no `days`/`resolution`/`moves`).

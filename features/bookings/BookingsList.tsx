@@ -32,6 +32,12 @@ import { HowItWorks } from "@/components/HowItWorks";
  * amount, because the detail beside it is showing everything else.
  */
 /** "today", "yesterday", or "12 Jul" — the shape you'd say out loud. */
+// Short "Mon 27 Jul" for a date-change swap shown on the row.
+const fmtRowDate = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+};
+
 function prettyBookedOn(b: { createdAt?: string }): string {
   const d = bookedOn(b as never);
   if (!d) return "";
@@ -334,7 +340,8 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             // partial; approve/decline clear it). "pending" too, for safety.
             const refundPending = !!b.cancel && ["full", "partial", "pending"].includes(b.cancel.refund ?? "");
             const isVoucherBk = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
-            const off = b.status === "Cancelled";
+            const moveReq = b.dateChangeRequest?.status === "pending" ? b.dateChangeRequest : null;
+            const off = b.status === "Cancelled" && !moveReq;
             return (
               <div
                 key={b.ref}
@@ -394,6 +401,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   {refundPending && (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
                   )}
+                  {moveReq && <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change requested</Badge>}
                 </span>
 
                 {/* Voucher money arrives outside the app — reconcile it right
@@ -406,6 +414,20 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   >
                     Mark voucher received
                   </button>
+                )}
+
+                {/* Parent asked to move day(s) — approve/deny from the row, with
+                    the exact swap shown so it's decided without opening. */}
+                {moveReq && (
+                  <span className="flex flex-none items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="hidden whitespace-nowrap rounded-full bg-[#fdf3d8] px-2.5 py-[3px] text-[11px] font-bold text-[#8a5300] lg:inline" title="Requested date change">
+                      {moveReq.moves.map((m) => `${fmtRowDate(m.from)} → ${fmtRowDate(m.to)}`).join(", ")}
+                    </span>
+                    <button onClick={() => act(b.ref, "move-approve")} title="Approve the date change — the swap is applied and the family is told"
+                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Approve move</button>
+                    <button onClick={() => act(b.ref, "move-deny")} title="Decline the date change — the booking is unchanged and the family is told"
+                      className="whitespace-nowrap rounded-full bg-[#fdebec] px-3 py-[5px] text-[11px] font-bold text-[#c0392b] hover:brightness-105">Deny</button>
+                  </span>
                 )}
 
                 {/* Refund owed on a cancellation — action it from the row. For a
