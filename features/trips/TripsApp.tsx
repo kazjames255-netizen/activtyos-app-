@@ -31,6 +31,7 @@ interface Trip {
   itinerary?: ItinItem[]; kit?: string;
   hazards?: Hazard[]; raSigned?: boolean; raAssessor?: string; raDate?: string; raRef?: string; raReview?: string;
   roster?: RosterMember[]; attendees?: Attendee[]; checkpoints?: Checkpoint[]; signoff?: Signoff; returned?: boolean;
+  parentMsg?: string; payBy?: string; parentMsgSentAt?: string;
   childNames: string[]; staff: string[]; headcount?: number; consentObtained: boolean; notes?: string; status: Status; createdByName?: string;
 }
 
@@ -57,7 +58,8 @@ const DEFAULT_HAZARDS: Hazard[] = [
 const DEFAULT_CHECKPOINTS: Checkpoint[] = [
   { n: "Depart base", counted: null }, { n: "Arrive venue", counted: null }, { n: "Lunch / midpoint", counted: null }, { n: "Before return", counted: null }, { n: "Back at base", counted: null },
 ];
-const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Parent permissions", "Line-manager sign-off", "On the day — head counts", "Return & debrief"];
+const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Parent permissions", "Line-manager sign-off", "On the day — head counts", "Return & debrief", "Message parents & payment"];
+const STEP_NUMS = [1, 2, 3, 4, 5, 6, 7, 8]; // step 8 is optional — not counted toward readiness
 // Extensive, editable pick-lists for the itinerary (offered as datalists).
 const ITIN_ACTIVITIES = [
   "Depart base", "Board coach / minibus", "Travel to venue", "Arrive at venue", "Meet venue staff / guide",
@@ -147,7 +149,22 @@ function blankTrip(ratioTarget: number): Trip {
 
 // ── small field helpers ───────────────────────────────────────────────────
 const inputCls = "w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]";
-const fl = (s: string) => <span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{s}</span>;
+// auto-fit textarea — grows to fit all its text (field-sizing) so nothing is clipped
+const taCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] leading-[1.55] outline-none focus:border-[#1d3a8f] [field-sizing:content] resize-y";
+const fl = (s: string) => <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]"><span className="h-3 w-[3px] flex-none rounded-full bg-[#3f78d8]" />{s}</span>;
+// a polished connected L/M/H segmented control for risk ratings
+function RatingGroup({ label, cur, on }: { label: string; cur?: RiskLevel; on: (v: RiskLevel) => void }) {
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</span>
+      <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] shadow-[0_1px_2px_rgba(23,21,52,.04)]">
+        {(["L", "M", "H"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => on(v)} className="border-l border-[var(--line)] px-2.5 py-1 text-[11px] font-extrabold transition-colors first:border-l-0" style={cur === v ? { background: RISK[v].fg, color: "#fff" } : { background: "var(--surface)", color: RISK[v].fg }}>{RISK[v].lbl}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Ring({ pct }: { pct: number }) {
   const r = 52, circ = 2 * Math.PI * r, off = circ * (1 - pct / 100), col = pct >= 100 ? GREEN : BLUE;
@@ -166,7 +183,33 @@ function Ring({ pct }: { pct: number }) {
 }
 
 // ── the 7-step planner ────────────────────────────────────────────────────
-function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: Trip; ratioTarget: number; onSaved: () => void; onClose: () => void }) {
+const defaultParentMsg = (t: Trip, provider: string) => `Hi,
+
+We're excited to offer your child a place on our trip to {Destination} on {Date}, departing {Depart} and back by {Return}.
+
+Getting there: {Transport}
+Cost: £{Cost} per child
+
+To confirm your child's place, please pay £{Cost} by {PayBy} using the secure link below. If we don't receive payment by then, we may offer the place to another family.
+
+[ Pay for this trip → ]
+
+Any questions, please contact {Lead} on {LeadPhone}.
+
+Thank you,
+${provider}`;
+const resolveMsg = (msg: string, t: Trip, provider: string) => msg
+  .replace(/{Destination}/g, t.destination || "the venue")
+  .replace(/{Address}/g, t.address || "")
+  .replace(/{Date}/g, fmtDate(t.date) || "the date")
+  .replace(/{Depart}/g, t.departTime || "—").replace(/{Return}/g, t.returnTime || "—")
+  .replace(/{Transport}/g, t.transport || "—").replace(/{Cost}/g, t.cost || "0.00")
+  .replace(/{PayBy}/g, t.payBy ? fmtDate(t.payBy) : "the date below")
+  .replace(/{Lead}/g, t.lead || "the trip lead").replace(/{LeadPhone}/g, t.leadPhone || "—")
+  .replace(/{Provider}/g, provider);
+const MERGE_FIELDS = ["{Destination}", "{Date}", "{Depart}", "{Return}", "{Transport}", "{Cost}", "{PayBy}", "{Lead}", "{LeadPhone}", "{Provider}"];
+
+function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: { existing?: Trip; ratioTarget: number; providerName: string; onSaved: () => void; onClose: () => void }) {
   const isEdit = !!existing;
   const [t, setT] = useState<Trip>(() => existing ? { ...blankTrip(ratioTarget), ...existing, hazards: existing.hazards?.length ? existing.hazards : DEFAULT_HAZARDS.map((h) => ({ ...h })), checkpoints: existing.checkpoints?.length ? existing.checkpoints : DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), roster: existing.roster ?? [], attendees: existing.attendees ?? [], itinerary: existing.itinerary?.length ? existing.itinerary : [{ t: "", a: "", k: "" }], signoff: existing.signoff ?? {} } : blankTrip(ratioTarget));
   const [open, setOpen] = useState<number>(existing ? Math.min(7, activeStepOf(existing)) : 1);
@@ -183,6 +226,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
   const [remindStamp, setRemindStamp] = useState<string | null>(null);
   const [bankOpen, setBankOpen] = useState(false);
   const [bankQ, setBankQ] = useState("");
+  const [venueMenu, setVenueMenu] = useState(false);
 
   // edit a field by path; records old→new when track-changes is on
   const edit = (key: string, value: unknown, label: string) => {
@@ -229,6 +273,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
       evc: t.evc || undefined, cost: t.cost || undefined, offsiteRatio: t.offsiteRatio ?? ratioTarget, itinerary: (t.itinerary ?? []).filter((r) => r.a?.trim() || r.t?.trim()),
       kit: t.kit || undefined, hazards: (t.hazards ?? []).filter((h) => h.h.trim()), raSigned: !!t.raSigned, raAssessor: t.raAssessor || undefined, raDate: t.raDate || undefined, raRef: t.raRef || undefined, raReview: t.raReview || undefined,
       roster: t.roster ?? [], attendees: t.attendees ?? [], checkpoints: t.checkpoints ?? [], signoff: t.signoff ?? {}, returned: !!t.returned,
+      parentMsg: t.parentMsg || undefined, payBy: t.payBy || undefined, parentMsgSentAt: t.parentMsgSentAt || undefined,
       childNames, staff: (t.roster ?? []).map((s) => s.n), consentObtained: permsOk(t), notes: t.notes || undefined, status: t.returned ? "completed" : (t.status ?? "planned"),
     };
     try {
@@ -243,9 +288,6 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
       <div className="text-[9px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</div>
       <div className="mt-0.5 text-[16px] font-extrabold leading-none" style={{ color: tone === "ok" ? GREEN : tone === "bad" ? RED : tone === "warn" ? AMBER : "var(--ink)" }}>{val}</div>
     </div>
-  );
-  const seg = (val: "L" | "M" | "H", cur: RiskLevel | undefined, on: (v: RiskLevel) => void) => (
-    <button type="button" onClick={() => on(val)} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold transition-colors" style={cur === val ? { background: RISK[val].fg, color: "#fff" } : { background: RISK[val].bg, color: RISK[val].fg }}>{RISK[val].lbl}</button>
   );
   const fieldInput = (key: keyof Trip, label: string, opts?: { type?: string; placeholder?: string }) => (
     <input type={opts?.type ?? "text"} value={(t[key] as string) ?? ""} placeholder={opts?.placeholder} onChange={(e) => edit(String(key), e.target.value, label)} className={inputCls} />
@@ -299,12 +341,12 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
 
       {/* step rail — jump to any step */}
       <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-          const dn = stepDone(t, n), cur = open === n;
+        {STEP_NUMS.map((n) => {
+          const dn = n <= 7 ? stepDone(t, n) : !!t.parentMsgSentAt, cur = open === n, opt = n === 8;
           return (
             <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex flex-none items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
-              <span className="hidden text-[11.5px] font-bold lg:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}</span>
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : opt ? "✚" : n}</span>
+              <span className="hidden text-[11.5px] font-bold lg:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}{opt ? " (optional)" : ""}</span>
             </button>
           );
         })}
@@ -312,25 +354,40 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
 
       {/* current step — one at a time (slideshow) */}
       <div className="overflow-hidden rounded-2xl border" style={{ borderColor: `color-mix(in srgb,${SIG} 40%,var(--line))` }}>
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+        {STEP_NUMS.map((n) => {
           if (n !== open) return null;
-          const dn = stepDone(t, n), locked = n === 6 && !s5Ok(t);
-          const pillTone = dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
+          const dn = n <= 7 ? stepDone(t, n) : !!t.parentMsgSentAt, locked = n === 6 && !s5Ok(t);
+          const pillTone = n === 8 ? (t.parentMsgSentAt ? { t: "Sent", c: GREEN } : { t: "Optional", c: "#8a86a3" }) : dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
           return (
             <div key={n}>
               <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[15px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : { background: "#eef4fd", color: BLUE }}>{dn ? "✓" : n}</span>
-                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 7</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
+                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 8</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
                 <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${pillTone.c} 14%,transparent)`, color: `color-mix(in srgb,${pillTone.c} 74%,#000)` }}>{pillTone.t}</span>
               </div>
               <div className="bg-[var(--panel)] p-4">
                 {/* ── Step 1 ── */}
                 {n === 1 && <div className="flex flex-col gap-3">
-                  <datalist id="trip-venues">{venues.map((v) => <option key={v.name} value={v.name} />)}</datalist>
-                  <datalist id="trip-addresses">{venues.filter((v) => v.address).map((v) => <option key={v.name} value={v.address}>{v.name}</option>)}</datalist>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1">{fl("Where are you going?")}<input list="trip-venues" value={t.destination ?? ""} onChange={(e) => { const v = e.target.value; edit("destination", v, "Destination"); const m = venueFor(v); if (m?.address && !t.address?.trim()) edit("address", m.address, "Address"); }} placeholder="Search your venues, or type a place" className={inputCls} /></label>
-                    <label className="flex flex-col gap-1">{fl("Address")}<input list="trip-addresses" value={t.address ?? ""} onChange={(e) => edit("address", e.target.value, "Address")} placeholder="Postcode or full address" className={inputCls} /></label>
+                    <div className="relative flex flex-col gap-1">{fl("Where are you going?")}
+                      <input value={t.destination ?? ""} onChange={(e) => { const v = e.target.value; edit("destination", v, "Destination"); setVenueMenu(true); const m = venueFor(v); if (m?.address) edit("address", m.address, "Address"); }} onFocus={() => setVenueMenu(true)} onBlur={() => setTimeout(() => setVenueMenu(false), 150)} placeholder="Search your saved venues, or type a place" className={inputCls} autoComplete="off" />
+                      {venueMenu && (() => {
+                        const q = (t.destination ?? "").trim().toLowerCase();
+                        const matches = venues.filter((v) => !q || v.name.toLowerCase().includes(q) || (v.address ?? "").toLowerCase().includes(q)).slice(0, 8);
+                        if (matches.length === 0) return null;
+                        return (
+                          <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
+                            {matches.map((v) => (
+                              <button key={v.name} type="button" onMouseDown={(e) => { e.preventDefault(); edit("destination", v.name, "Destination"); edit("address", v.address ?? "", "Address"); setVenueMenu(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-2 text-left last:border-b-0 hover:bg-[#eef4fd]">
+                                <span className="text-[12.5px] font-bold">📍 {v.name}</span>
+                                {v.address && <span className="text-[11px] text-[var(--ink-3)]">{v.address}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <label className="flex flex-col gap-1">{fl("Address")}<input value={t.address ?? ""} onChange={(e) => edit("address", e.target.value, "Address")} placeholder="Postcode or full address (auto-fills from a saved venue)" className={inputCls} /></label>
                     {listings.length > 0 && <label className="flex flex-col gap-1 sm:col-span-2">{fl("For which camp/club? (pulls booked children, staff & venue)")}<select value={t.listingId ?? ""} onChange={(e) => edit("listingId", e.target.value || "", "Listing")} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
                     <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("date", "Date", { type: "date" })}</label>
                     <label className="flex flex-col gap-1">{fl("Cost per child (£)")}{fieldInput("cost", "Cost per child")}</label>
@@ -347,7 +404,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                     </div>
                   </div>
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">Itinerary & key actions</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Add stop</button></div>
+                    <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">Itinerary & key actions</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Add itinerary / action</button></div>
                     <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={a} />)}</datalist>
                     <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={a} />)}</datalist>
                     <div className="flex flex-col gap-1.5">{(t.itinerary ?? []).map((r, i) => (
@@ -360,7 +417,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                     ))}</div>
                     <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Start typing to search the list, or write your own — every field is editable.</div>
                   </div>
-                  <label className="flex flex-col gap-1">{fl("Kit to take")}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, "Kit")} rows={2} placeholder="Packed lunch, water, sun cream, weather-appropriate clothing, medication, first-aid kit…" className={`${inputCls} resize-y`} /><span className="text-[11px] text-[var(--ink-2)]"><b>Emergency on the day:</b> trip lead {t.leadPhone || "—"} · office · 999.</span></label>
+                  <label className="flex flex-col gap-1">{fl("Kit to take")}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, "Kit")} placeholder="Packed lunch, water, sun cream, weather-appropriate clothing, medication, first-aid kit…" className={`${taCls} min-h-[52px]`} /><span className="text-[11px] text-[var(--ink-2)]"><b>Emergency on the day:</b> trip lead {t.leadPhone || "—"} · office · 999.</span></label>
                 </div>}
 
                 {/* ── Step 2: Risk assessment ── */}
@@ -413,35 +470,30 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                       </div>
                     );
                   })()}
-                  {(t.hazards ?? []).length > 0 && <div className="hidden grid-cols-[1.1fr_1fr_1.6fr_auto] gap-2 px-2.5 text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:grid"><span>Hazard description</span><span>Who might be harmed &amp; how</span><span>Control measures</span><span>Risk rating</span></div>}
-                  <div className="flex flex-col gap-2">{(t.hazards ?? []).map((h, i) => {
+                  <div className="flex flex-col gap-3">{(t.hazards ?? []).map((h, i) => {
                     const stamp = (d: Trip) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } };
                     return (
-                    <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
-                      <div className="grid gap-2 sm:grid-cols-[1.1fr_1fr_1.6fr_auto]">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Hazard description</span>
-                          <textarea value={h.h} onChange={(e) => hazText(i, "h", e.target.value, "Hazard")} placeholder="Hazard description" rows={2} className={`${inputCls} resize-y font-bold leading-[1.4]`} />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Who might be harmed &amp; how</span>
-                          <textarea value={h.who ?? ""} onChange={(e) => hazText(i, "who", e.target.value, "Who at risk")} placeholder="Who might be harmed and how" rows={2} className={`${inputCls} resize-y leading-[1.4]`} />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Control measures</span>
-                          <textarea value={h.controls ?? ""} onChange={(e) => hazText(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" rows={Math.min(9, Math.max(2, (h.controls ?? "").split("\n").length))} className={`${inputCls} resize-y leading-[1.55]`} />
-                        </div>
-                        <div className="flex min-w-[92px] flex-col gap-1.5">
-                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Risk rating</span>
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--ink-3)]">Initial{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.initial, (x) => mut((d) => { d.hazards![i].initial = x; stamp(d); }))}</span>)}</span>
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--ink-3)]">Residual{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.residual, (x) => mut((d) => { d.hazards![i].residual = x; stamp(d); }))}</span>)}</span>
-                          <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="mt-0.5 self-start text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">✕ Remove</button>
-                        </div>
+                    <div key={i} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
+                      <div className="mb-2.5 flex items-center justify-between">
+                        <span className="rounded-full bg-[#eef4fd] px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: BLUE }}>Hazard {i + 1}</span>
+                        <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">✕ Remove</button>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
-                        <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-bold" style={{ color: h.done ? GREEN : "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => mut((d) => { d.hazards![i].done = e.target.checked; stamp(d); })} />Controls in place &amp; actions taken</label>
-                        <span className="text-[10.5px] text-[var(--ink-3)]">Last amended: {h.amendedBy ? `${h.amendedBy} · ` : ""}{h.amendedOn ? fmtDate(h.amendedOn) : "—"}</span>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1.5">{fl("Hazard — what it is")}<textarea value={h.h} onChange={(e) => hazText(i, "h", e.target.value, "Hazard")} placeholder="e.g. Too few staff / low ratios" className={`${taCls} min-h-[46px] font-bold`} /></label>
+                        <label className="flex flex-col gap-1.5">{fl("Risk — who's harmed & how")}<textarea value={h.who ?? ""} onChange={(e) => hazText(i, "who", e.target.value, "Who at risk")} placeholder="e.g. Children — injury near roads or water" className={`${taCls} min-h-[46px]`} /></label>
                       </div>
+                      <label className="mt-3 flex flex-col gap-1.5">{fl("Control measures")}<textarea value={h.controls ?? ""} onChange={(e) => hazText(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" className={`${taCls} min-h-[64px]`} /></label>
+                      <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--line)] pt-3">
+                        <div className="flex flex-col gap-1.5">{fl("Risk rating")}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <RatingGroup label="Initial" cur={h.initial} on={(x) => mut((d) => { d.hazards![i].initial = x; stamp(d); })} />
+                            <span className="text-[13px] font-bold text-[var(--ink-3)]">→</span>
+                            <RatingGroup label="Residual" cur={h.residual} on={(x) => mut((d) => { d.hazards![i].residual = x; stamp(d); })} />
+                          </div>
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-bold transition-colors" style={h.done ? { background: "#e7f6ee", color: GREEN } : { background: "var(--panel)", color: "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => mut((d) => { d.hazards![i].done = e.target.checked; stamp(d); })} />Controls in place</label>
+                      </div>
+                      <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Last amended: {h.amendedBy ? `${h.amendedBy} · ` : ""}{h.amendedOn ? fmtDate(h.amendedOn) : "—"}</div>
                     </div>
                     );
                   })}</div>
@@ -528,6 +580,34 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
 
                 {/* ── Step 7: Return & debrief ── */}
                 {n === 7 && (!s6Ok(t) ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Complete every head-count checkpoint to close the trip.</div> : t.returned ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed. All children accounted for and handed back.</div> : <div className="flex flex-col gap-2"><textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} rows={2} placeholder="Debrief — what went well, anything to change next time…" className={`${inputCls} resize-y`} /><Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button></div>)}
+
+                {/* ── Step 8: Message parents & payment (optional) ── */}
+                {n === 8 && (() => {
+                  const msg = t.parentMsg && t.parentMsg.trim() ? t.parentMsg : defaultParentMsg(t, providerName);
+                  return (
+                    <div className="flex flex-col gap-3">
+                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>Optional.</b> Skip this if parents pay when they book. Use it to invite parents to pay for an added trip — the details below pull from this trip.</div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1">{fl("Ask parents to pay by")}<input type="date" value={t.payBy ?? ""} min={todayIso()} max={t.date} onChange={(e) => edit("payBy", e.target.value, "Pay-by date")} className={inputCls} /></label>
+                        <div className="flex flex-col gap-1">{fl("Cost per child")}<div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-bold">£{t.cost || "0.00"} <span className="font-normal text-[var(--ink-3)]">· set in Step 1</span></div></div>
+                      </div>
+                      <div>
+                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Message to parents (editable)")}<button type="button" onClick={() => edit("parentMsg", defaultParentMsg(t, providerName), "Parent message")} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">↺ Reset to template</button></div>
+                        <textarea value={msg} onChange={(e) => edit("parentMsg", e.target.value, "Parent message")} className={`${inputCls} min-h-[180px] [field-sizing:content] resize-y leading-[1.6]`} />
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1"><span className="text-[10.5px] font-semibold text-[var(--ink-3)]">Merge fields:</span>{MERGE_FIELDS.map((f) => <code key={f} className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10.5px] text-[#1d3a8f]">{f}</code>)}</div>
+                      </div>
+                      <div>
+                        {fl("Preview — what parents receive")}
+                        <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+                          <div className="whitespace-pre-line text-[12.5px] leading-[1.6] text-[var(--ink-2)]">{resolveMsg(msg, t, providerName)}</div>
+                          <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>💳 Pay £{t.cost || "0.00"} for {t.destination || "the trip"}{t.payBy ? ` · by ${fmtDate(t.payBy)}` : ""}</div>
+                        </div>
+                      </div>
+                      {t.parentMsgSentAt ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Sent to {attendingOf(t).length + pendingOf(t).length} parent{attendingOf(t).length + pendingOf(t).length === 1 ? "" : "s"} on {t.parentMsgSentAt}. Payment shows on this trip and in each parent&rsquo;s profile.<button type="button" onClick={() => mut((d) => { d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Resend</button></div>
+                        : <div><Button variant="solid" onClick={() => mut((d) => { d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })}>Send to parents & generate pay link</Button><div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Sends the message + a secure pay link to the parents on this trip (Step 4) and adds it to their profile — the emailing, link and profile entry are wired up by your backend.</div></div>}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );
@@ -536,8 +616,8 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
       {/* slideshow nav */}
       <div className="mt-3 flex items-center justify-between gap-2">
         <Button disabled={open <= 1} onClick={() => setOpen(Math.max(1, open - 1))}>← Previous</Button>
-        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 7 · {TITLES[open]}</span>
-        <Button variant="solid" disabled={open >= 7} onClick={() => setOpen(Math.min(7, open + 1))}>Next →</Button>
+        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 8 · {TITLES[open]}</span>
+        <Button variant="solid" disabled={open >= 8} onClick={() => setOpen(Math.min(8, open + 1))}>Next →</Button>
       </div>
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
@@ -593,7 +673,7 @@ export function TripsApp() {
       </div>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
-      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} onSaved={refresh} onClose={() => setPlanning(null)} />}
+      {planning && <TripPlanner key={planning.trip?.id ?? "new"} existing={planning.trip} ratioTarget={ratioTarget} providerName={settings.providerName || "Your provider"} onSaved={refresh} onClose={() => setPlanning(null)} />}
 
       {!planning && trips && all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">

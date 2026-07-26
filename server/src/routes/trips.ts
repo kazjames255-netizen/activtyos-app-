@@ -57,6 +57,11 @@ const tripSchema = z.object({
   checkpoints: z.array(z.object({ n: z.string().max(80), counted: z.number().int().nonnegative().nullable().optional(), time: z.string().max(40).optional() })).max(30).optional(),
   signoff: z.object({ approvedBy: z.string().max(120).optional(), approvedAt: z.string().max(60).optional(), submitted: z.boolean().optional() }).optional(),
   returned: z.boolean().optional(),
+  // Optional parent message/payment step: an editable template + a pay-by date.
+  // Sending the link + showing it in the parent's profile is Amir's.
+  parentMsg: z.string().max(4_000).optional(),
+  payBy: z.string().max(40).optional(),
+  parentMsgSentAt: z.string().max(60).optional(),
   consentObtained: z.boolean().default(false),
   notes: z.string().trim().max(2_000).optional(),
   status: z.enum(["planned", "completed", "cancelled"]).default("planned"),

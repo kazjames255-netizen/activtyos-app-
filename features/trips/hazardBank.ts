@@ -1,9 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Hazard bank — an extensive, editable library of trip/off-site-visit hazards
-// with who's at risk, a suggested risk rating and a set of control-measure
-// statements. Grounded in a real School Trips & Educational Visits risk
-// assessment (Tall Oaks Academy Trust, 31 Aug 2022) and general activity-
-// provider good practice (HSE, EVOLVE / National Guidance, EYFS ratios).
+// Hazard bank — an extensive, editable library of trip/off-site-visit hazards.
+// Each entry names the HAZARD (what it is, e.g. "too few staff"), the RISK
+// (who could be harmed and how, e.g. "children — injury"), a suggested risk
+// rating and a set of control-measure statements. Grounded in a real School
+// Trips & Educational Visits risk assessment (Tall Oaks Academy Trust, 31 Aug
+// 2022) and general activity-provider good practice (HSE, EVOLVE / National
+// Guidance, EYFS ratios).
 //
 // The operator browses this in the RA step and adds any hazard they want; once
 // added it becomes an ordinary, fully editable hazard row on their assessment.
@@ -14,8 +16,8 @@ export type BankRisk = "L" | "M" | "H";
 export interface BankEntry {
   id: string;
   cat: string; // grouping for the picker
-  area: string; // hazard description / heading
-  who: string; // who might be harmed and how
+  area: string; // the hazard — what it is
+  who: string; // the risk — who could be harmed and how (the injury/harm)
   initial: BankRisk; // risk before controls
   residual: BankRisk; // risk with controls in place
   controls: string[]; // control-measure statements
@@ -35,7 +37,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "planning-evc", cat: "Planning & supervision",
     area: "Untrained staff / poor trip planning & coordination",
-    who: "Staff, children and the public — a trip run without proper planning or a competent lead.",
+    who: "Staff, children and the public could be harmed — a trip run without proper planning or a competent lead means hazards are missed, leading to injury, a child going missing or a safeguarding failure.",
     initial: "H", residual: "L",
     controls: [
       "A trained Educational Visits Coordinator (EVC) prepares or checks a thorough risk assessment before the visit.",
@@ -48,8 +50,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "planning-ratios", cat: "Planning & supervision",
-    area: "Insufficient staffing / adult-to-child ratios",
-    who: "Children — too few adults to supervise safely, especially near roads, water or crowds.",
+    area: "Too few staff / adult-to-child ratios not met",
+    who: "Children could be harmed — with too few adults, a child may not be supervised near roads, water or crowds, leading to injury, going missing or a medical need being missed.",
     initial: "H", residual: "L",
     controls: [
       "Staff the trip to at least the setting's off-site ratio, tighter than the on-site ratio and set by risk assessment.",
@@ -61,8 +63,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "planning-headcount", cat: "Planning & supervision",
-    area: "Head counts & registration",
-    who: "Children — a child unaccounted for at a transition point.",
+    area: "No / infrequent head counts & registration",
+    who: "Children could be harmed — a child left unaccounted for at a transition point may be lost, injured or left behind.",
     initial: "M", residual: "L",
     controls: [
       "A full head count is taken and logged at every checkpoint: before departure, on arrival, before and after each activity, and before return.",
@@ -74,7 +76,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "planning-lost", cat: "Planning & supervision",
     area: "Lost or separated child",
-    who: "A child — becomes separated from the group at the venue or in transit.",
+    who: "A child could be harmed — becoming separated from the group at the venue or in transit risks the child being lost, distressed, approached by a stranger or injured.",
     initial: "H", residual: "L",
     controls: [
       "A predetermined meeting point is agreed and shown to children at the start of the visit.",
@@ -86,8 +88,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "planning-behaviour", cat: "Planning & supervision",
-    area: "Behaviour & conduct",
-    who: "Children and others — unsafe behaviour causing injury or a child leaving the group.",
+    area: "Poor behaviour / not following instructions",
+    who: "Children and others could be harmed — unsafe behaviour (pushing, running off, not following directions) can cause injury or a child leaving the group.",
     initial: "M", residual: "L",
     controls: [
       "Expectations and a code of conduct are made clear to children before and throughout the visit.",
@@ -98,8 +100,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "planning-inclusion", cat: "Planning & supervision",
-    area: "Inclusion, SEND & equality",
-    who: "Disabled or additional-needs participants — placed at a disadvantage or inappropriate risk.",
+    area: "Inclusion, SEND & equality not considered",
+    who: "Disabled or additional-needs participants could be harmed or excluded — without reasonable adjustments a child may be placed at a substantial disadvantage or at inappropriate risk.",
     initial: "M", residual: "L",
     controls: [
       "Reasonable adjustments are made so participants are not placed at a substantial disadvantage (Equality Act 2010).",
@@ -110,8 +112,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "planning-planb", cat: "Planning & supervision",
-    area: "Contingency / Plan B",
-    who: "All attending — unforeseen change (weather, transport, venue closure, emergency).",
+    area: "No contingency / Plan B",
+    who: "All attending could be harmed — an unforeseen change (weather, transport breakdown, venue closure or an emergency) with no fallback leaves the group stranded, exposed or unable to respond.",
     initial: "M", residual: "L",
     controls: [
       "An alternative plan is agreed in case circumstances change on the day.",
@@ -125,7 +127,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "travel-roads", cat: "Travel & transport",
     area: "Walking & crossing roads",
-    who: "Staff, pupils and the public — pedestrian/road traffic while moving on foot.",
+    who: "Staff, pupils and the public could be harmed — road traffic while moving on foot risks a child being struck by a vehicle, causing serious injury.",
     initial: "M", residual: "L",
     controls: [
       "Children walk in organised pairs with adults spaced at regular intervals, and an adult at the front and rear.",
@@ -137,7 +139,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "travel-coach", cat: "Travel & transport",
     area: "Coach / minibus journey",
-    who: "Staff and pupils — embarking, disembarking and in transit.",
+    who: "Staff and pupils could be harmed — embarking, disembarking or a collision/sudden stop in transit risks impact injury, or a child being struck in the road beside the vehicle.",
     initial: "M", residual: "L",
     controls: [
       "Children are supervised stepping on and off the bus, in pairs while walking to it.",
@@ -151,7 +153,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "travel-public", cat: "Travel & transport",
     area: "Public transport (bus / train)",
-    who: "Children — crowded platforms, gaps, doors and mixing with the public.",
+    who: "Children could be harmed — crowded platforms, the platform edge/gap, closing doors and mixing with the public risk falls, injury or a child being separated.",
     initial: "M", residual: "L",
     controls: [
       "Children are counted on and off at every stop; adults board first and last.",
@@ -163,7 +165,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "travel-embark", cat: "Travel & transport",
     area: "Embarking / disembarking / car parks",
-    who: "Children — moving vehicles in car parks and drop-off areas.",
+    who: "Children could be harmed — moving vehicles in car parks and drop-off areas risk a child being struck, causing serious injury.",
     initial: "M", residual: "L",
     controls: [
       "Children are held on the pavement/safe area until the group is ready to move as one.",
@@ -176,7 +178,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "safe-public", cat: "Safeguarding & security",
     area: "Contact with members of the public / strangers",
-    who: "Children — unsupervised contact with the public on route and at the venue.",
+    who: "Children could be harmed — unsupervised contact with the public on route and at the venue risks a safeguarding incident or a child being approached or led away.",
     initial: "M", residual: "L",
     controls: [
       "Children are supervised by a DBS-checked adult at all times and stay within specified areas.",
@@ -187,8 +189,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "safe-dbs", cat: "Safeguarding & security",
-    area: "Adult supervision & DBS",
-    who: "Children — contact with adults who have not been safely recruited.",
+    area: "Unchecked adults supervising children",
+    who: "Children could be harmed — contact with an adult who has not been safely recruited (no DBS) is a safeguarding risk.",
     initial: "M", residual: "L",
     controls: [
       "Only adults with a valid enhanced DBS supervise or are alone with children.",
@@ -200,7 +202,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "safe-toilet", cat: "Safeguarding & security",
     area: "Toileting & intimate care",
-    who: "Children — supervision and safeguarding around toilets.",
+    who: "Children could be harmed — poor supervision around toilets is both a safeguarding risk and a risk of a child being left unaccounted for.",
     initial: "M", residual: "L",
     controls: [
       "Children go to the toilet as required and wash hands thoroughly.",
@@ -212,7 +214,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "safe-photo", cat: "Safeguarding & security",
     area: "Photography & social media",
-    who: "Children — images taken or shared without consent.",
+    who: "Children could be harmed — images taken or shared without consent are a safeguarding and privacy risk.",
     initial: "L", residual: "L",
     controls: [
       "Photos are only taken on setting devices and only where photo consent is held.",
@@ -222,8 +224,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "safe-collection", cat: "Safeguarding & security",
-    area: "Collection & handover",
-    who: "Children — released to an unauthorised adult at the end of the visit.",
+    area: "Collection & handover at the end",
+    who: "A child could be harmed — being released to an unauthorised adult at the end of the visit is a serious safeguarding risk.",
     initial: "M", residual: "L",
     controls: [
       "Children are only released to a parent/authorised collector, checked against the register.",
@@ -236,7 +238,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-slips", cat: "Health, medical & welfare",
     area: "Slips, trips & falls",
-    who: "Pupils and staff — uneven surfaces, foreign objects and wet ground.",
+    who: "Pupils and staff could be harmed — uneven surfaces, foreign objects and wet ground risk trips and falls causing cuts, bruises, sprains or fractures.",
     initial: "M", residual: "L",
     controls: [
       "Staff check the areas and routes used for foreign objects and trip hazards.",
@@ -247,8 +249,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "health-medical", cat: "Health, medical & welfare",
-    area: "Medical conditions & medication",
-    who: "Pupils with health needs — inhalers, medication and health care plans.",
+    area: "Medical conditions & medication (inhalers, etc.)",
+    who: "Pupils with health needs could be harmed — if inhalers, medication or health care plans are not to hand, a condition (e.g. asthma attack) may go untreated.",
     initial: "M", residual: "L",
     controls: [
       "The group leader is fully aware of, and carries a copy of, each pupil's Health Care Plan (HCP).",
@@ -259,8 +261,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "health-firstaid", cat: "Health, medical & welfare",
-    area: "First-aid provision",
-    who: "Pupils and staff — injury or illness without adequate first aid.",
+    area: "Inadequate first-aid provision",
+    who: "Pupils and staff could be harmed — an injury or illness without a trained first aider or kit to hand means treatment is delayed and a minor injury may worsen.",
     initial: "M", residual: "L",
     controls: [
       "A trained paediatric first aider is available at all times.",
@@ -272,7 +274,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-allergy", cat: "Health, medical & welfare",
     area: "Severe allergy / anaphylaxis",
-    who: "Named children with a severe allergy — exposure to an allergen.",
+    who: "Named children with a severe allergy could be harmed — exposure to an allergen can cause anaphylaxis, a life-threatening reaction.",
     initial: "H", residual: "M",
     controls: [
       "Named children's allergies and triggers are known to all supervising staff before departure.",
@@ -284,7 +286,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-food", cat: "Health, medical & welfare",
     area: "Food, catering & packed lunches",
-    who: "Children — allergens, choking or food hygiene.",
+    who: "Children could be harmed — allergens, choking hazards or poor food hygiene risk an allergic reaction, choking or illness.",
     initial: "L", residual: "L",
     controls: [
       "Packed lunches are checked against known allergies; no sharing of food.",
@@ -295,7 +297,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-heat", cat: "Health, medical & welfare",
     area: "Hot weather, sun & hydration",
-    who: "Pupils and staff — heat, dehydration and sunburn.",
+    who: "Pupils and staff could be harmed — heat and sun risk dehydration, heat exhaustion and sunburn.",
     initial: "L", residual: "L",
     controls: [
       "In extreme heat the EVC/lead assesses whether the event should continue.",
@@ -307,7 +309,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-cold", cat: "Health, medical & welfare",
     area: "Cold / wet weather",
-    who: "Pupils and staff — cold, wet conditions causing discomfort or injury.",
+    who: "Pupils and staff could be harmed — cold, wet conditions risk discomfort, hypothermia or cold-related injury.",
     initial: "L", residual: "L",
     controls: [
       "In extreme cold or wet the EVC/lead assesses whether the event should continue.",
@@ -319,7 +321,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "health-manual", cat: "Health, medical & welfare",
     area: "Manual handling & equipment",
-    who: "Staff — lifting equipment, bags or supporting children.",
+    who: "Staff could be harmed — lifting equipment, bags or supporting children risks back or muscle injury.",
     initial: "L", residual: "L",
     controls: [
       "Loads are kept light; staff use good lifting technique and get help for heavy items.",
@@ -331,7 +333,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-fire", cat: "Environment & venue",
     area: "Fire / evacuation",
-    who: "Pupils and staff — fire at the venue or in transit.",
+    who: "Pupils and staff could be harmed — a fire at the venue or in transit risks burns, smoke inhalation or a child being lost during evacuation.",
     initial: "M", residual: "L",
     controls: [
       "In the event of fire, activities cease and staff and children proceed to the venue's fire evacuation point / safe area.",
@@ -342,8 +344,8 @@ export const HAZARD_BANK: BankEntry[] = [
   },
   {
     id: "env-water", cat: "Environment & venue",
-    area: "Water / drowning (pool, river, open water, coast)",
-    who: "Children — drowning or cold-water shock near or in water.",
+    area: "Water (pool, river, open water, coast)",
+    who: "Children could be harmed — water risks drowning or cold-water shock, which can be fatal.",
     initial: "H", residual: "M",
     controls: [
       "A qualified lifeguard (e.g. NPLQ) is on duty where required; staff supervise poolside/waterside.",
@@ -355,7 +357,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-terrain", cat: "Environment & venue",
     area: "Outdoor terrain / uneven ground / forest",
-    who: "Children — trips, falls and getting lost on uneven or wooded ground.",
+    who: "Children could be harmed — uneven or wooded ground risks trips and falls causing injury, or a child getting lost out of sight.",
     initial: "M", residual: "L",
     controls: [
       "Boundaries are set and shown to children; the area is checked for hazards (holes, branches, ticks, litter) before use.",
@@ -366,7 +368,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-animals", cat: "Environment & venue",
     area: "Animals / farm / zoo contact",
-    who: "Children — bites, kicks and infection (e.g. E. coli) from animal contact.",
+    who: "Children could be harmed — animal contact risks bites, kicks and infection (e.g. E. coli) causing illness.",
     initial: "M", residual: "L",
     controls: [
       "Hands are washed thoroughly with soap and water after any animal contact and before eating (gel is not enough).",
@@ -377,7 +379,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-weather-extreme", cat: "Environment & venue",
     area: "Extreme weather (storm / lightning / high wind)",
-    who: "Pupils and staff — storms, lightning or high winds.",
+    who: "Pupils and staff could be harmed — storms, lightning or high winds risk injury from falling branches, being struck, or exposure.",
     initial: "M", residual: "L",
     controls: [
       "The forecast is checked; the EVC/lead decides whether to proceed, shorten or cancel.",
@@ -388,7 +390,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-venue", cat: "Environment & venue",
     area: "Venue-specific hazards & equipment",
-    who: "Children and staff — hazards particular to the venue or its equipment.",
+    who: "Children and staff could be harmed — hazards particular to the venue or its equipment risk injury if the venue's rules aren't followed.",
     initial: "M", residual: "L",
     controls: [
       "The venue's own risk assessment is obtained and reviewed before the visit.",
@@ -399,7 +401,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-crowds", cat: "Environment & venue",
     area: "Crowds / large venues / theme parks",
-    who: "Children — separation and crushing in busy venues.",
+    who: "Children could be harmed — busy venues risk a child being separated in the crowd, or crushing/injury in a press of people.",
     initial: "M", residual: "L",
     controls: [
       "Small groups each keep a named adult; meeting points and times are agreed across the day.",
@@ -410,7 +412,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "env-infection", cat: "Environment & venue",
     area: "Infection control & hygiene",
-    who: "Children and staff — spread of illness.",
+    who: "Children and staff could be harmed — poor hygiene risks the spread of illness through the group.",
     initial: "L", residual: "L",
     controls: [
       "Hand hygiene is maintained, especially before eating and after the toilet or animal contact.",
@@ -423,7 +425,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "act-sport", cat: "Activity-specific",
     area: "Sports & physical activity",
-    who: "Children — sprains, collisions and impact injuries.",
+    who: "Children could be harmed — physical activity risks sprains, collisions and impact injuries.",
     initial: "M", residual: "L",
     controls: [
       "Activities are age-appropriate and led by a competent coach; a warm-up is included.",
@@ -434,7 +436,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "act-swim", cat: "Activity-specific",
     area: "Swimming lesson / pool session",
-    who: "Children — drowning, slips and changing-room supervision.",
+    who: "Children could be harmed — a pool session risks drowning, slips on poolside, and safeguarding in changing rooms.",
     initial: "H", residual: "M",
     controls: [
       "A qualified lifeguard is on duty and staff supervise poolside throughout.",
@@ -445,7 +447,7 @@ export const HAZARD_BANK: BankEntry[] = [
   {
     id: "act-adventure", cat: "Activity-specific",
     area: "Adventurous activity (climbing, watersports, high ropes)",
-    who: "Children — falls, drowning or equipment failure in higher-risk activities.",
+    who: "Children could be harmed — higher-risk activities risk falls from height, drowning or equipment failure causing serious injury.",
     initial: "H", residual: "M",
     controls: [
       "The provider holds a current AALA licence (where required) and provides qualified instructors.",

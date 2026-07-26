@@ -40,6 +40,13 @@ them, additive only): `lead, leadPhone, evc, cost, offsiteRatio, itinerary[], ki
 raRef, raReview, roster[], attendees[], checkpoints[], signoff{}, returned`.
 
 **What's still yours here (on top of §What's yours below):**
+- **Parent message & pay link (new Step 8, optional).** An editable template
+  (merge fields resolved from the trip) + a **pay-by date**; "Send to parents &
+  generate pay link" is a front-end stub that stamps `parentMsgSentAt`. Yours:
+  actually email/notify the parents on the trip, mint the **secure pay link**
+  (Stripe Connect), and surface the request + payment in each parent's profile.
+  Persisted fields: `parentMsg`, `payBy`, `parentMsgSentAt`. It's optional — the
+  operator may collect at booking instead.
 - **Paid consent / Stripe.** Step 4 "Take payment" is a front-end stub that flips a
   `paid` flag. Real payment must run through the provider's connected processor
   (Stripe Connect), and the parent-side flow is where consent + payment actually
