@@ -1049,7 +1049,17 @@ export function ListingWizard({
           <div className="sticky bottom-0 z-20 flex items-center justify-center gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3.5">
             <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
             {step < STEPS.length - 1 ? (
-              <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next ›</Button>
+              <>
+                <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next ›</Button>
+                {/* When editing an existing listing, let them save from any step
+                    instead of walking to the end every time. */}
+                {d.id && (
+                  <Button variant="solid" disabled={busy || blockers.length > 0} onClick={publishAction}
+                    title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to finish first` : "Save your changes now"}>
+                    {blockers.length ? `Save (${blockers.length} left)` : d.status === "live" ? "Save changes" : "Save & publish"}
+                  </Button>
+                )}
+              </>
             ) : (
               <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction}>
                 {blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} to finish` : "Publish"}
