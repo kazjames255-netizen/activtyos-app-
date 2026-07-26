@@ -531,6 +531,13 @@ export interface TenantSettings {
    *  On/off — they keep the value, you keep the cash. Off = a no-refund is
    *  simply nothing back. */
   noRefundCredit: boolean;
+  /** Let a family cancel individual days of a multi-day pass (not just the whole
+   *  booking). Each cancelled day is refunded on its own notice window. */
+  allowPartialCancel: boolean;
+  /** How a single day is valued before the policy % is applied:
+   *  "prorata" = amount ÷ days (simple, default); "reprice" = amount minus the
+   *  single-day price of the days kept (protects the bundle discount). */
+  perDayRefundMode: "prorata" | "reprice";
 
   // ── Listings ──
   defaultCapacity: number;
@@ -625,6 +632,8 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   allowCardRefund: true,
   refundLetCustomerChoose: true,
   noRefundCredit: false,
+  allowPartialCancel: true,
+  perDayRefundMode: "prorata",
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],

@@ -1391,6 +1391,21 @@ export function SetupApp() {
               >
                 <Toggle on={settings.noRefundCredit} onChange={(v) => set("noRefundCredit", v)} />
               </Row>
+              <Row
+                label="Let families cancel single days"
+                hint="On a multi-day pass, a parent can cancel individual days instead of the whole booking. Each day is refunded on its own notice window — a day next week may still get a refund while tomorrow gets none."
+                note="Partial refund + freeing that day's place needs building (Amir)"
+              >
+                <Toggle on={settings.allowPartialCancel} onChange={(v) => set("allowPartialCancel", v)} />
+              </Row>
+              {settings.allowPartialCancel && (
+                <Row
+                  label="How to value one cancelled day"
+                  hint="Pro-rata splits what they paid evenly across the days (simplest). Reprice keeps the days they're not cancelling at the single-day price and refunds the rest — protects any multi-day discount, but can give smaller/odd figures."
+                >
+                  <Toggle on={settings.perDayRefundMode === "reprice"} onChange={(v) => set("perDayRefundMode", v ? "reprice" : "prorata")} labels={["Reprice", "Pro-rata"]} />
+                </Row>
+              )}
             </div>
           </Section>
           <Section

@@ -132,6 +132,11 @@ const PUBLIC_SETTINGS_KEYS = [
   // needs them to know what they're entitled to when cancelling.
   "cancellationPolicies",
   "askReasonParent",
+  // Per-day (partial) cancellation of a multi-day pass: whether it's allowed
+  // and how a single day is valued for the refund. Parent cancel modal reads
+  // these to offer the day-picker and preview the per-day refund.
+  "allowPartialCancel",
+  "perDayRefundMode",
   "voucherProviders",
   "voucherHoldDays",
   "voucherClearDays",

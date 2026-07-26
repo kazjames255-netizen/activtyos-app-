@@ -23,13 +23,18 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     askReason: boolean;
     letChoose: boolean;
     noRefundCredit: boolean;
+    allowPartial: boolean;
+    perDayMode: "prorata" | "reprice";
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Whole booking vs a chosen set of days, and which days are ticked.
+  const [scope, setScope] = useState<"all" | "days">("all");
+  const [pickedDays, setPickedDays] = useState<string[]>([]);
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; perDayRefundMode?: "prorata" | "reprice" } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -39,6 +44,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           askReason: !!s.askReasonParent,
           letChoose: allowCard && !!s.refundLetCustomerChoose,
           noRefundCredit: !!s.noRefundCredit,
+          allowPartial: s.allowPartialCancel ?? true,
+          perDayMode: s.perDayRefundMode ?? "prorata",
         });
       })
       .catch(() => {});
@@ -48,9 +55,23 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   // notice to the first session — so the parent sees their entitlement, not a
   // vague "if a refund is due".
   const policy = cfg ? policyById(cfg.policies, listing?.cancellationPolicyId) ?? cfg.policies[0] ?? null : null;
-  const firstDay = [...(booking.days ?? [])].sort()[0];
+  const allDays = [...(booking.days ?? [])].sort();
+  const firstDay = allDays[0];
   const advice = policy ? refundFor(policy, firstDay, booking.amount, new Date().toISOString(), "parent") : null;
-  const refundDue = !!advice && advice.amount > 0;
+
+  // Per-day (partial) cancellation. Each day is valued at a pro-rata share and
+  // judged on ITS OWN start date, so a later day may refund while tomorrow's
+  // doesn't. Only offered on a multi-day pass when the provider allows it.
+  const localToday = (() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; })();
+  const cancellableDays = allDays.filter((d) => d >= localToday);
+  const canPartial = !!cfg?.allowPartial && allDays.length > 1 && cancellableDays.length > 0;
+  const perDayPaid = allDays.length ? (booking.amount ?? 0) / allDays.length : 0;
+  const perDayRefund = (d: string) => (policy ? refundFor(policy, d, perDayPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
+  const togglePick = (d: string) => setPickedDays((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p, d]));
+  const pickedRefund = pickedDays.reduce((s, d) => s + perDayRefund(d), 0);
+  const partialMode = scope === "days";
+  const effRefund = partialMode ? pickedRefund : advice?.amount ?? 0;
+  const refundDue = effRefund > 0;
   // A voucher was paid outside the app — a refund can't go "back to card"; it
   // goes back through the scheme (slow) or into the wallet (instant).
   const scheme = booking.voucherScheme;
@@ -69,6 +90,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
+        // Partial cancel: the specific days to drop. Omitted = whole booking.
+        days: partialMode ? pickedDays : undefined,
       });
       onDone();
     } catch (e) {
@@ -81,8 +104,44 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     <div className="mt-3 rounded-xl border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] p-3">
       <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">Request cancellation</div>
 
-      {/* Entitlement, stated plainly from the policy. */}
-      {advice && (
+      {/* Whole booking vs individual days (multi-day passes only). */}
+      {canPartial && (
+        <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
+          <div className="grid grid-cols-2 gap-1.5">
+            {([["all", "Whole booking"], ["days", "Choose days"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setScope(v)} className="rounded-lg border p-2 text-[12px] font-extrabold"
+                style={scope === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>{l}</button>
+            ))}
+          </div>
+          {partialMode && (
+            <div className="mt-2">
+              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to cancel — each is refunded on its own notice.</div>
+              <div className="flex flex-col gap-1">
+                {cancellableDays.map((d) => {
+                  const on = pickedDays.includes(d);
+                  const r = perDayRefund(d);
+                  return (
+                    <label key={d} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
+                      style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
+                      <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(d)} /><b>{fmtIso(d)}</b></span>
+                      <span className="text-[11.5px] font-bold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{r > 0 ? `refund ${money(r)}` : "no refund"}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {cfg?.perDayMode === "reprice" && (
+                <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your provider reprices the days you keep at the single-day rate, so the final refund may differ from this estimate.</p>
+              )}
+              <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[12px] font-extrabold" style={{ color: pickedRefund > 0 ? "#1d3a8f" : "#c0392b" }}>
+                {pickedDays.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedDays.length} day${pickedDays.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : `No refund for the ${pickedDays.length} selected day${pickedDays.length > 1 ? "s" : ""} — inside the no-refund window.`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Entitlement, stated plainly from the policy (whole booking). */}
+      {!partialMode && advice && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
           {advice.percent >= 100 ? (
             <div className="font-extrabold text-[#1d3a8f]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
@@ -125,7 +184,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           lets the customer choose where it goes. */}
       {refundDue && cfg?.letChoose && (
         <div className="mt-2">
-          <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(advice!.amount)} refund to</div>
+          <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(effRefund)} refund to</div>
           <div className="grid grid-cols-2 gap-2">
             {([
               ["wallet", "👛 Wallet credit"],
@@ -147,8 +206,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
-        <Button variant="danger" sm onClick={submit} disabled={busy}>
-          {busy ? "Sending…" : "Send cancellation request"}
+        <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && pickedDays.length === 0)}>
+          {busy ? "Sending…" : partialMode ? (pickedDays.length ? `Cancel ${pickedDays.length} day${pickedDays.length === 1 ? "" : "s"}` : "Cancel selected days") : "Send cancellation request"}
         </Button>
       </div>
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
