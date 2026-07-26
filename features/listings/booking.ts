@@ -114,6 +114,19 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
       setSel(same ? [] : avail);
       return;
     }
+    // "Any N days in one week" where the pass needs the WHOLE week (N ≥ the
+    // week's running days) — picking any day takes the entire week, so a parent
+    // doesn't click all five. For a shorter pass (4/3/2/1) they still choose
+    // which days, so this only kicks in when N covers the week.
+    if (rule === "week") {
+      const wk = weeks.find((w) => w.mon === weekMon);
+      const avail = (wk?.days ?? []).filter((x) => !off(x));
+      if (avail.length > 0 && need >= avail.length) {
+        const same = avail.length === sel.length && avail.every((x) => sel.includes(x));
+        setSel(same ? [] : avail.slice(0, need));
+        return;
+      }
+    }
     setSel((prev) => {
       if (prev.includes(iso)) return prev.filter((x) => x !== iso);
       if (prev.length >= need) return prev;
@@ -263,7 +276,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
       : rule === "blocks"
         ? `Tap a week to take the fixed ${need}-day block`
         : rule === "week"
-          ? `Pick any ${need} days within one week (${sel.length}/${need})`
+          ? (weeks.length > 0 && weeks.every((w) => w.days.filter((x) => !off(x)).length <= need)
+              ? `Tap a week to take all ${need} days`
+              : `Pick any ${need} days within one week (${sel.length}/${need})`)
           : `Pick any ${need} days across the weeks below (${sel.length}/${need})`;
   // What the basket would look like if they added the current selection — so
   // an already-earned discount is stated before they commit, not after.
