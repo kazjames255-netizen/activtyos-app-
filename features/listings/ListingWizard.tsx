@@ -2668,7 +2668,13 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf, tenantId }: BookView & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", MUTs = "#adb8ca";
+  const isNavy = surf === SPORT_NAVY;
+  const EL = "#0047ff";
+  const LIME = isNavy ? "#f5b81f" : "#c6ff00";      // gold accent on navy, lime on black
+  const MUTs = isNavy ? "#b9c7ec" : "#adb8ca";
+  // Section banners: a lighter blue on navy so they lift off the navy surface
+  // (electric blue would blend), matching the app's title-bar blues.
+  const BAR = isNavy ? "linear-gradient(120deg,#2f6bd8 0%,#4f9dff 100%)" : `linear-gradient(120deg,${EL},#0090ff)`;
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -2694,13 +2700,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   );
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: `linear-gradient(120deg,${EL},#0090ff)`, barInk: "#fff" }} />
+      <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: BAR }}>Checkout</div>
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: BAR, barInk: "#fff" }} />
     </div>
   );
   return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-5 py-3.5" style={{ background: `linear-gradient(120deg,${EL},#0090ff)` }}>
+      <div className="px-5 py-3.5" style={{ background: BAR }}>
         <div className="flex items-baseline justify-between">
           <span className="text-[18px] font-black italic uppercase text-white">Choose dates &amp; times</span>
           {b.pass && <span className="text-[12px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
@@ -3170,9 +3176,14 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
 function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, topRight }: PageProps & { surf: Surf }) {
-  const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#adb8ca";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const isNavy = surf === SPORT_NAVY;
+  // Navy suits the app: gold accent + bluer neutrals (matching the sidebar);
+  // the black Sport theme keeps its electric lime/cyan.
+  const EL = "#0047ff";
+  const LIME = isNavy ? "#f5b81f" : "#c6ff00";      // headline accent (price, chips, borders) — dark ink sits fine on both
+  const CY = isNavy ? "#9cc0ff" : "#00c2ff";        // location / secondary
+  const MUTs = isNavy ? "#b9c7ec" : "#adb8ca";      // muted text
   // A hint of the app's blue/white title bars on the blue theme's header.
   const headerBg = isNavy ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 68%,#5b8af0 100%)" : undefined;
   const cond = "italic uppercase tracking-[-0.01em]";
