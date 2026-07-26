@@ -146,12 +146,14 @@ export function BrowseApp() {
     return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading activities…</div>;
   }
 
-  // The marketplace. The server already scopes this to the right set — every
-  // provider that's opted into the marketplace, plus this parent's own
-  // providers (anyone they've booked) — so we show it as-is. When it's exactly
-  // one provider (a family tied to a single camp), we still greet them by name.
-  const visible = listings;
-  const listedProviders = new Set(listings.map((l) => l.tenantId));
+  // Phase 1: a parent's Browse is single-provider — only the activities of the
+  // provider(s) this family is actually linked to (anyone they've booked / were
+  // invited by), never the cross-provider marketplace. The server's feed also
+  // includes marketplace-opted providers, so we scope it to the parent's own
+  // providers here. (Cross-provider is Phase 2, behind a per-provider opt-in.)
+  const providerIds = new Set(providers.map((p) => p.tenantId));
+  const visible = providerIds.size ? listings.filter((l) => providerIds.has(l.tenantId)) : listings;
+  const listedProviders = new Set(visible.map((l) => l.tenantId));
   const providerName = listedProviders.size === 1 && providers.length === 1 ? providers[0].name : null;
 
   // Distance from the parent to a listing's venue, or null if either end has no
