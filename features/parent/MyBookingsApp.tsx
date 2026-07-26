@@ -24,18 +24,21 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     letChoose: boolean;
     noRefundCredit: boolean;
     allowPartial: boolean;
-    penalty: number;
-    penaltyUnit: "flat" | "percent";
+    partRefund: boolean;
+    partWallet: boolean;
+    partChangeDate: boolean;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Whole booking vs a chosen set of days, and which days are ticked.
+  // Whole booking vs a chosen set of days, which days are ticked, and what to
+  // do with the released day(s) — refund / wallet / change date.
   const [scope, setScope] = useState<"all" | "days">("all");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
+  const [resolution, setResolution] = useState<"refund" | "wallet" | "changedate" | null>(null);
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialCancelPenalty?: number; partialCancelPenaltyUnit?: "flat" | "percent" } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -46,8 +49,9 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           letChoose: allowCard && !!s.refundLetCustomerChoose,
           noRefundCredit: !!s.noRefundCredit,
           allowPartial: s.allowPartialCancel ?? true,
-          penalty: s.partialCancelPenalty ?? 0,
-          penaltyUnit: s.partialCancelPenaltyUnit ?? "flat",
+          partRefund: s.partialAllowRefund ?? true,
+          partWallet: s.partialAllowWallet ?? true,
+          partChangeDate: s.partialAllowChangeDate ?? false,
         });
       })
       .catch(() => {});
@@ -79,20 +83,24 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   };
   if (kidsList) kidsList.forEach((k) => addSlots(k.name, k.childId, daysForKid(k), k.cancelledDays ?? []));
   else addSlots(booking.child, booking.childId, allDays, []);
-  const canPartial = !!cfg?.allowPartial && totalPaidSlots > 1 && slots.length > 0;
+  // Which resolutions the provider offers for a released day.
+  const resOptions = ([
+    cfg?.partChangeDate ? "changedate" : null,
+    cfg?.partWallet ? "wallet" : null,
+    cfg?.partRefund ? "refund" : null,
+  ].filter(Boolean)) as ("refund" | "wallet" | "changedate")[];
+  const canPartial = !!cfg?.allowPartial && totalPaidSlots > 1 && slots.length > 0 && resOptions.length > 0;
   const slotRefund = (d: string) => (policy ? refundFor(policy, d, perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
   const togglePick = (key: string) => setPickedDays((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const pickedSlots = slots.filter((s) => pickedDays.includes(s.key));
-  const grossRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
-  // Penalty for breaking the pass — a flat £ or a % of the cancelled days'
-  // value — deducted once from the pro-rata refund. Never turns it negative.
-  const cancelledValue = pickedSlots.length * perSlotPaid;
-  const penaltyAmt = !cfg?.penalty || pickedSlots.length === 0 ? 0
-    : cfg.penaltyUnit === "percent" ? (cfg.penalty / 100) * cancelledValue : cfg.penalty;
-  const pickedRefund = Math.max(0, grossRefund - penaltyAmt);
+  // Refund = pro-rata, per policy, per day. Wallet = full pro-rata value (stays
+  // in-house, no policy cut). Change date = no money moves.
+  const pickedRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
+  const pickedWallet = pickedSlots.length * perSlotPaid;
+  const res = resolution && resOptions.includes(resolution) ? resolution : resOptions[0] ?? null;
   const multiKid = !!kidsList && kidsList.length > 1;
   const partialMode = scope === "days";
-  const effRefund = partialMode ? pickedRefund : advice?.amount ?? 0;
+  const effRefund = partialMode ? (res === "refund" ? pickedRefund : 0) : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
   // A voucher was paid outside the app — a refund can't go "back to card"; it
   // goes back through the scheme (slow) or into the wallet (instant).
@@ -130,6 +138,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
+        // Partial only: what to do with the released day(s).
+        resolution: partialMode ? res ?? undefined : undefined,
         ...partial,
       });
       onDone();
@@ -154,7 +164,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           </div>
           {partialMode && (
             <div className="mt-2">
-              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to cancel — each is refunded on its own notice{multiKid ? ", per child" : ""}.</div>
+              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to release{multiKid ? ", per child" : ""}.</div>
               {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
                 const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
                 if (rows.length === 0) return null;
@@ -164,12 +174,10 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                     <div className="flex flex-col gap-1">
                       {rows.map((s) => {
                         const on = pickedDays.includes(s.key);
-                        const r = slotRefund(s.date);
                         return (
-                          <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
+                          <label key={s.key} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
                             style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
-                            <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
-                            <span className="text-[11.5px] font-bold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{r > 0 ? `refund ${money(r)}` : "no refund"}</span>
+                            <input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b>
                           </label>
                         );
                       })}
@@ -177,15 +185,30 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                   </div>
                 );
               })}
-              {pickedSlots.length > 0 && penaltyAmt > 0 && (
-                <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11.5px] text-[var(--ink-2)]">
-                  <div className="flex justify-between"><span>Days&rsquo; refund</span><span>{money(grossRefund)}</span></div>
-                  <div className="flex justify-between text-[var(--ink-3)]"><span>Part-cancel penalty{cfg?.penaltyUnit === "percent" ? ` (${cfg.penalty}%)` : ""}</span><span>−{money(Math.min(penaltyAmt, grossRefund))}</span></div>
+
+              {/* What to do with the released day(s) — one choice for all. */}
+              {pickedSlots.length > 0 && (
+                <div className="mt-2">
+                  <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">What would you like to do with {pickedSlots.length === 1 ? "this day" : "these days"}?</div>
+                  <div className="flex flex-col gap-1.5">
+                    {resOptions.map((o) => {
+                      const on = res === o;
+                      const label = o === "refund" ? "Refund" : o === "wallet" ? "Wallet credit" : "Move to another date";
+                      const detail = o === "refund"
+                        ? (pickedRefund > 0 ? `${money(pickedRefund)} back, per the cancellation policy` : "no refund this close to the day")
+                        : o === "wallet" ? `${money(pickedWallet)} added to your wallet to spend later`
+                        : "pick the replacement date(s) next — the provider confirms the swap";
+                      return (
+                        <button key={o} type="button" onClick={() => setResolution(o)} className="rounded-lg border p-2 text-left"
+                          style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
+                          <div className="text-[12.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{on ? "◉ " : "○ "}{label}</div>
+                          <div className="text-[11px] text-[var(--ink-3)]">{detail}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-              <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[12px] font-extrabold" style={{ color: pickedRefund > 0 ? "#1d3a8f" : "#c0392b" }}>
-                {pickedSlots.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedSlots.length} day${pickedSlots.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : penaltyAmt > 0 && grossRefund > 0 ? `No refund — the penalty covers it.` : `No refund for the ${pickedSlots.length} selected day${pickedSlots.length > 1 ? "s" : ""} — inside the no-refund window.`}
-              </div>
             </div>
           )}
         </div>
@@ -258,7 +281,11 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
         <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && pickedSlots.length === 0)}>
-          {busy ? "Sending…" : partialMode ? (pickedSlots.length ? `Cancel ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}` : "Cancel selected days") : "Send cancellation request"}
+          {busy ? "Sending…" : !partialMode ? "Send cancellation request"
+            : !pickedSlots.length ? "Choose days above"
+            : res === "changedate" ? `Request to move ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}`
+            : res === "wallet" ? `Release ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"} to wallet`
+            : `Cancel ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}`}
         </Button>
       </div>
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">

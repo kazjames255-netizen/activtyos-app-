@@ -1399,19 +1399,18 @@ export function SetupApp() {
                 <Toggle on={settings.allowPartialCancel} onChange={(v) => set("allowPartialCancel", v)} />
               </Row>
               {settings.allowPartialCancel && (
-                <>
-                  <Row
-                    label="Penalty for cancelling part of a pass"
-                    hint="Cancelled days are refunded pro-rata (what they paid ÷ days). This optional penalty is then deducted once — so breaking a multi-day pass costs something even with good notice, protecting your bundle discount. 0 = no penalty."
-                  >
-                    <NumberBox value={settings.partialCancelPenalty} onChange={(n) => set("partialCancelPenalty", n)} min={0} max={settings.partialCancelPenaltyUnit === "percent" ? 100 : 500} suffix={settings.partialCancelPenaltyUnit === "percent" ? "%" : "£"} />
+                <div className="mt-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+                  <div className="mb-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">What a family can do with a released day (the day is valued pro-rata — what they paid ÷ days):</div>
+                  <Row label="Move it to another date" hint="Keep the booking whole — the day just moves. Only turn on if this listing lets families pick days across your dates (not a fixed week); otherwise moving a single day makes no sense.">
+                    <Toggle on={settings.partialAllowChangeDate} onChange={(v) => set("partialAllowChangeDate", v)} />
                   </Row>
-                  {settings.partialCancelPenalty > 0 && (
-                    <Row label="Penalty is" hint="A flat cash amount, or a percentage of the value of the days being cancelled.">
-                      <Toggle on={settings.partialCancelPenaltyUnit === "percent"} onChange={(v) => set("partialCancelPenaltyUnit", v ? "percent" : "flat")} labels={["% of days", "Flat £"]} />
-                    </Row>
-                  )}
-                </>
+                  <Row label="Credit it to their wallet" hint="The day's value goes to the family's wallet to spend on a future booking — instant, and the money stays with you.">
+                    <Toggle on={settings.partialAllowWallet} onChange={(v) => set("partialAllowWallet", v)} />
+                  </Row>
+                  <Row label="Refund it" hint="Cash back under your cancellation policy. The only option that gives money out on a part-cancelled block, so leave it off if you'd rather keep families on move-a-date or wallet credit.">
+                    <Toggle on={settings.partialAllowRefund} onChange={(v) => set("partialAllowRefund", v)} />
+                  </Row>
+                </div>
               )}
             </div>
           </Section>

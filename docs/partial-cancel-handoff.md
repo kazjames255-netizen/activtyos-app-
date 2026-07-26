@@ -23,42 +23,59 @@ the whole booking. Front-end is built (`features/parent/MyBookingsApp.tsx`,
 - Slots are valued at a share of `amount ÷ (total booked child-days)`, so the
   pro-rata denominator already accounts for every child's days.
 
+## Model: release a day → choose what happens to it
+No penalty (that idea + reprice were dropped — a single-day price a listing may
+not sell can't be reliably derived). Instead a released day's **pro-rata value**
+(`amountPaid ÷ total booked child-days`) is handled one of three ways, and the
+parent picks **one resolution for the whole request** (`resolution` field):
+`"refund"` | `"wallet"` | `"changedate"`.
+
 ## Settings (done, exposed publicly)
 `lib/settings.ts` + Setup → Cancellations & refunds:
-- **`allowPartialCancel`** (bool, default **true**) — gates the whole feature.
-- **`partialCancelPenalty`** (number, default **0**) + **`partialCancelPenaltyUnit`**
-  (`"flat"` default | `"percent"`) — an optional penalty for breaking a
-  multi-day pass, deducted **once** from the pro-rata refund (never below £0).
-  Flat = £X; percent = X% of the cancelled days' pro-rata value. This replaces
-  the earlier "reprice" idea, which needed a single-day price that a listing may
-  not have and can't be reliably derived.
-All whitelisted in `GET /api/public/library/:tenantId`.
-
-**Refund maths (authoritative on your side):**
-`grossRefund = Σ policyRefund(day, amountPaid ÷ totalChildDays)` over the
-cancelled slots; `penalty = unit==="percent" ? partialCancelPenalty% × Σ(perSlotPaid) : partialCancelPenalty`;
-`netRefund = max(0, grossRefund − penalty)`. The front-end previews exactly this;
-recompute server-side (don't trust the client figure).
+- **`allowPartialCancel`** (bool, default **true**) — master gate.
+- **`partialAllowRefund`** (default **true**) — cash back, per the cancellation
+  policy (the only leaky one).
+- **`partialAllowWallet`** (default **true**) — pro-rata value → the family's
+  wallet, instant, stays in-house.
+- **`partialAllowChangeDate`** (default **false**) — move the day to another of
+  the listing's dates. Provider opts in (only sensible when the listing lets
+  families pick days across dates, not a fixed week).
+At least one must be on for the option to appear. All whitelisted in
+`GET /api/public/library/:tenantId`.
 
 ## What's yours (backend)
-When `POST /api/my/bookings/:ref/cancel` arrives **with `days`** (a strict
-subset of the booking's remaining days):
-1. **Partial, not full.** For `days` (single child), add them to the booking's
+When `POST /api/my/bookings/:ref/cancel` arrives **with `days`/`kids`** (a strict
+subset of the booking's remaining days) plus a **`resolution`**:
+1. **Release the days.** For `days` (single child), add them to the booking's
    `cancelledDays`. For `kids` (multi-child), add each child's days to *that*
    `kids[].cancelledDays` (match by `childId` then `name`). Keep
-   `status: "Confirmed"` for what remains. If the request cancels *all*
-   remaining child-days, treat it as a normal full cancellation (existing path).
-2. **Refund.** Compute per the "Refund maths" above: pro-rata over the cancelled
-   slots (same `refundFor` you already use, once per day on that day's start),
-   then subtract the single `partialCancelPenalty` (flat or %), floored at £0.
-   Record it as a partial refund request (pending your approval / Stripe), the
-   same shape as a full cancel's `cancel.amount` / `cancel.refund`.
-3. **Capacity.** Free the block/session places for **only** the cancelled days
-   (you already free per-day places on a full cancel — reuse that per date).
-4. **Validation.** Reject dates that aren't in the booking, are already
-   cancelled, or are in the past. Respect `allowPartialCancel = false`
-   (reject `days` and tell them to cancel the whole booking).
-5. **Notify** the provider as a cancellation request as usual, noting it's a
-   partial (which days, the refund figure).
+   `status: "Confirmed"` for what remains. If the request releases *all*
+   remaining child-days **and** resolution isn't `changedate`, treat as a normal
+   full cancellation (existing path).
+2. **Handle the value** by `resolution`:
+   - **`refund`**: pro-rata cash — `Σ refundFor(day, amountPaid ÷ totalChildDays)`
+     over the released days (each on its own start), a partial refund request in
+     the same shape as a full cancel's `cancel.amount`/`cancel.refund`. Only
+     valid if `partialAllowRefund`.
+   - **`wallet`**: credit `releasedDays × (amountPaid ÷ totalChildDays)` to the
+     family's wallet (full pro-rata value, no policy cut, instant). Ties into the
+     wallet backend (§Z). Only valid if `partialAllowWallet`.
+   - **`changedate`**: don't refund — the family is moving those days. Either
+     free them and let the family rebook the replacement date(s) through the
+     amend flow, or accept new dates alongside (your call). Only valid if
+     `partialAllowChangeDate`; front-end still needs a "pick the new date" step
+     (see note below).
+3. **Capacity.** Free the block/session places for **only** the released days
+   (reuse the per-date freeing you already do on a full cancel).
+4. **Validation.** Reject dates not in the booking / already cancelled / past;
+   reject a `resolution` the provider hasn't enabled; respect
+   `allowPartialCancel = false`.
+5. **Notify** the provider — which days, which child(ren), and the resolution
+   (refund £, wallet £, or move).
 
-Nothing changes for a whole-booking cancel (no `days` field).
+**Front-end still to do once you're ready:** the `changedate` path currently
+sends `resolution:"changedate"` but doesn't yet collect the *replacement* dates —
+that wants a small "pick new date(s)" step (can reuse the AmendModal's available-
+date picker). Flagged so it's not mistaken for done.
+
+Nothing changes for a whole-booking cancel (no `days`/`resolution`).

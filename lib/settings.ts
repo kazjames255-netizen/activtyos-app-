@@ -531,17 +531,20 @@ export interface TenantSettings {
    *  On/off — they keep the value, you keep the cash. Off = a no-refund is
    *  simply nothing back. */
   noRefundCredit: boolean;
-  /** Let a family cancel individual days of a multi-day pass (not just the whole
-   *  booking). Each cancelled day is refunded pro-rata (amount ÷ days) on its
-   *  own notice window. */
+  /** Let a family release individual days of a multi-day pass (not just cancel
+   *  the whole booking). What they can do with a released day is set by the
+   *  three flags below — at least one must be on for the option to appear. */
   allowPartialCancel: boolean;
-  /** Penalty for breaking a multi-day pass by cancelling only part of it —
-   *  protects a bundle discount without needing a single-day price. Applied
-   *  once per partial cancel, deducted from the pro-rata refund. 0 = none. */
-  partialCancelPenalty: number;
-  /** Whether the penalty is a flat cash amount or a % of the cancelled days'
-   *  value. */
-  partialCancelPenaltyUnit: "flat" | "percent";
+  /** A released day's pro-rata value can be REFUNDED (cash, per the cancellation
+   *  policy). The only option that lets a block discount leak — off by choice. */
+  partialAllowRefund: boolean;
+  /** A released day's pro-rata value can go to the family's WALLET as spend-later
+   *  credit (stays in the business, instant). */
+  partialAllowWallet: boolean;
+  /** A released day can be MOVED to another of the listing's dates instead of
+   *  cancelled. Only makes sense when the listing lets families pick days across
+   *  your dates (not a fixed week) — off by default; provider opts in. */
+  partialAllowChangeDate: boolean;
 
   // ── Listings ──
   defaultCapacity: number;
@@ -637,8 +640,9 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   refundLetCustomerChoose: true,
   noRefundCredit: false,
   allowPartialCancel: true,
-  partialCancelPenalty: 0,
-  partialCancelPenaltyUnit: "flat",
+  partialAllowRefund: true,
+  partialAllowWallet: true,
+  partialAllowChangeDate: false,
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],
