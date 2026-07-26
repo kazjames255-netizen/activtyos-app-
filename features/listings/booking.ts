@@ -98,12 +98,17 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const need = pass?.days ?? 0;
-  // Most days any single week of this run actually offers.
+  // Most days any single week offers, and the total the whole run offers.
   const weekMax = weeks.reduce((m, w) => Math.max(m, w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length), 0);
+  const runTotal = weeks.reduce((n, w) => n + w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length, 0);
   const rawRule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
-  // "Any N days in one week" is impossible when the pass is longer than a week
-  // runs (a 17-day pass, 5-day week) — fall back to picking across the listing.
-  const rule: BookRule = rawRule === "week" && weekMax > 0 && need > weekMax ? "listing" : rawRule;
+  // Guard impossible rules for old/edge data: a "week" pass longer than a week,
+  // or a "fixed block" that's neither a week block nor the whole run — both
+  // fall back to picking across the listing.
+  const rule: BookRule =
+    rawRule === "week" && weekMax > 0 && need > weekMax ? "listing"
+    : rawRule === "blocks" && weekMax > 0 && need > weekMax && need !== runTotal ? "listing"
+    : rawRule;
   // A single-day pass isn't a fixed block: parents can pick as many days as they
   // like, and each selected day becomes its own 1-day pass in the basket.
   const isSingle = need === 1;
@@ -113,8 +118,11 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     if (!pass || off(iso)) return;
     if (isSingle) { setSel((prev) => (prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso])); return; }
     if (rule === "blocks") {
-      const wk = weeks.find((w) => w.mon === weekMon);
-      const avail = (wk?.days ?? []).filter((x) => !off(x)).slice(0, need);
+      // A whole-run block (need spans more than a week) takes every day; a
+      // within-a-week block takes that week's days.
+      const avail = need > weekMax
+        ? weeks.flatMap((w) => w.days).filter((x) => !off(x)).slice(0, need)
+        : (weeks.find((w) => w.mon === weekMon)?.days ?? []).filter((x) => !off(x)).slice(0, need);
       const same = avail.length === sel.length && avail.every((x) => sel.includes(x));
       setSel(same ? [] : avail);
       return;

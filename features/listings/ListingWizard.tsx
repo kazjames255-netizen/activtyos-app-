@@ -1733,14 +1733,16 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <div className="mt-3">
           <SectionHead icon="🧭">How parents can book each pass</SectionHead>
           {(() => {
-            // How many days a single week of this run actually offers — a pass
-            // longer than that can't be booked "in one week".
+            // Days a single week offers, and the total days the whole run offers.
             const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
+            const totalRun = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length;
             return multiDay.map((t) => {
-              const weekOk = t.days <= weekLen;
+              const weekOk = t.days <= weekLen;                       // fits inside one week
+              const blockOk = t.days <= weekLen || t.days === totalRun; // a week block, or the whole run
+              const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : true);
               const stored = (d.bookRules ?? {})[t.name];
-              // Never show/keep an impossible "in one week" pick.
-              const rule: BookRule = stored && !(stored === "week" && !weekOk) ? stored : (weekOk ? "week" : "listing");
+              // Never show/keep an option that can't actually work for this pass.
+              const rule: BookRule = stored && okFor(stored) ? stored : (weekOk ? "week" : "listing");
               return (
                 <div key={t.name} className="border-b border-dashed border-[var(--line)] py-2 last:border-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -1749,10 +1751,12 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {BOOK_RULES.map(([k, label]) => {
-                      const disabled = k === "week" && !weekOk;
+                      const disabled = !okFor(k);
+                      const why = k === "week" ? `A ${t.days}-day pass can't fit in one week (this run offers ${weekLen} days a week)`
+                        : `A fixed ${t.days}-day block needs the run to be exactly ${t.days} days (it runs ${totalRun})`;
                       return (
                         <button key={k} type="button" disabled={disabled} onClick={() => setBookRule(t.name, k)}
-                          title={disabled ? `A ${t.days}-day pass can't fit in one week (this run offers ${weekLen} days a week)` : undefined}
+                          title={disabled ? why : undefined}
                           className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
                           style={rule === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
                           {label(t.days)}
@@ -1760,7 +1764,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                       );
                     })}
                   </div>
-                  <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}{!weekOk ? " · “in one week” isn’t possible for a pass this long." : ""}</div>
+                  <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}</div>
                 </div>
               );
             });
