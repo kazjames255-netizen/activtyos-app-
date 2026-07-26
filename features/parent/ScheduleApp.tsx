@@ -42,6 +42,24 @@ interface ListingDetail {
   periods: { title: string; start?: string; finish?: string }[];
 }
 
+// A row from GET /api/listings?tenantId= — enough to resolve a booking's
+// listing (by id or block) and read the venue name/address off it.
+interface ListingRow {
+  id: string;
+  location?: string | null;
+  address?: string | null;
+  blocks?: { id: string }[];
+}
+
+// Boy → blue, Girl → pink, unknown → house grey. Same convention as the
+// manual/registers gender chips.
+function genderTone(sex?: string): { bg: string; fg: string; on: string } {
+  const s = (sex ?? "").toLowerCase();
+  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "#1d3a8f", on: "#1d3a8f" };
+  if (s.startsWith("g") || s === "female" || s === "f") return { bg: "#fdeaf3", fg: "#b0186a", on: "#c81e77" };
+  return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
+}
+
 // ── Date helpers (ISO "YYYY-MM-DD", parsed as local to avoid TZ drift) ──────
 function toISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -168,7 +186,7 @@ interface DayPlan {
   dayLabel: string;
 }
 
-function DayGroup({ date, sessions, today, plan, details }: { date: string; sessions: Session[]; today: string; plan?: DayPlan; details: Record<string, ListingDetail> }) {
+function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; sessions: Session[]; today: string; plan?: DayPlan; detailByRef: Record<string, ListingDetail> }) {
   const rel = date === today ? "Today" : date === addDaysISO(today, 1) ? "Tomorrow" : null;
   const [showPlan, setShowPlan] = useState(false);
   return (
@@ -196,7 +214,7 @@ function DayGroup({ date, sessions, today, plan, details }: { date: string; sess
         )}
       </div>
       {[...sessions].sort(sortSessions).map((s) => (
-        <SessionRow key={s.key} s={s} detail={s.listingId ? details[s.listingId] : undefined} />
+        <SessionRow key={s.key} s={s} detail={detailByRef[s.ref]} />
       ))}
       {plan && showPlan && (
         <div className="mt-3">
@@ -216,7 +234,10 @@ function DayGroup({ date, sessions, today, plan, details }: { date: string; sess
 export function ScheduleApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [plans, setPlans] = useState<PublishedWeek[]>([]);
+  const [tenantRows, setTenantRows] = useState<Record<string, ListingRow[]>>({});
   const [details, setDetails] = useState<Record<string, ListingDetail>>({});
+  const [kids, setKids] = useState<Record<string, string>>({}); // child name → sex
+  const [childTab, setChildTab] = useState<string>("all");
   const [error, setError] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
 
@@ -229,15 +250,42 @@ export function ScheduleApp() {
     apiGet<PublishedWeek[]>("/api/timetables/published")
       .then(setPlans)
       .catch(() => {});
+    // The family's children — for the per-child tabs, coloured by gender.
+    apiGet<{ name: string; sex?: string }[]>("/api/my/children")
+      .then((cs) => setKids(Object.fromEntries(cs.map((c) => [c.name.trim(), (c.sex ?? "").toLowerCase()]))))
+      .catch(() => {});
   }, []);
 
   useEffect(refresh, [refresh]);
-  useRealtime(["bookings", "timetables"], refresh);
+  useRealtime(["bookings", "timetables", "children"], refresh);
 
-  // Pull each booked listing's venue, staff and session times (public listing
-  // detail) so we can show where to be / who's on / when. Best-effort per id.
+  // Resolve each booking's listing the way the amend flow does — by blockId
+  // against the tenant's listing list (bookings don't always carry listingId).
+  // That list also gives us the venue name + address directly.
   useEffect(() => {
-    const ids = [...new Set((bookings ?? []).map((b) => b.listingId).filter(Boolean) as string[])];
+    const tids = [...new Set((bookings ?? []).map((b) => b.tenantId).filter(Boolean) as string[])];
+    tids.filter((t) => !tenantRows[t]).forEach((t) => {
+      apiGet<ListingRow[]>(`/api/listings?tenantId=${encodeURIComponent(t)}`)
+        .then((rows) => setTenantRows((m) => ({ ...m, [t]: rows })))
+        .catch(() => {});
+    });
+  }, [bookings, tenantRows]);
+
+  // ref → the resolved listing (id + venue). Then fetch each listing's detail
+  // for staff onsite + concrete session times.
+  const listingForRef = useMemo(() => {
+    const map: Record<string, { id?: string; location?: string | null; address?: string | null }> = {};
+    for (const b of bookings ?? []) {
+      const rows = tenantRows[b.tenantId ?? ""] ?? [];
+      const row = rows.find((r) => (b.listingId && r.id === b.listingId) || (b.blockId && (r.blocks ?? []).some((bk) => bk.id === b.blockId)));
+      if (row) map[b.ref] = { id: row.id, location: row.location, address: row.address };
+      else if (b.listingId) map[b.ref] = { id: b.listingId };
+    }
+    return map;
+  }, [bookings, tenantRows]);
+
+  useEffect(() => {
+    const ids = [...new Set(Object.values(listingForRef).map((x) => x.id).filter(Boolean) as string[])];
     ids.filter((id) => !details[id]).forEach((id) => {
       apiGet<{ library?: { venue?: { name?: string; address?: string } | null; staff?: { name: string }[] }; bundle?: { periods?: { title: string; start?: string; finish?: string }[] } }>(`/api/listings/${encodeURIComponent(id)}`)
         .then((l) => setDetails((m) => ({ ...m, [id]: {
@@ -248,7 +296,22 @@ export function ScheduleApp() {
         } })))
         .catch(() => {});
     });
-  }, [bookings, details]);
+  }, [listingForRef, details]);
+
+  // Merge the venue (from the list) with staff/times (from the detail), per ref.
+  const detailByRef = useMemo(() => {
+    const out: Record<string, ListingDetail> = {};
+    for (const [ref, info] of Object.entries(listingForRef)) {
+      const d = info.id ? details[info.id] : undefined;
+      out[ref] = {
+        location: info.location ?? d?.location ?? null,
+        address: info.address ?? d?.address ?? null,
+        staff: d?.staff ?? [],
+        periods: d?.periods ?? [],
+      };
+    }
+    return out;
+  }, [listingForRef, details]);
 
   // iso date → that day's published plan (first provider wins on a clash).
   const planByDate = useMemo(() => {
@@ -263,9 +326,16 @@ export function ScheduleApp() {
   }, [plans]);
 
   const today = todayISO();
-  const { upcoming, past, undated } = useMemo(() => {
+  const { upcoming, past, undated, childNames } = useMemo(() => {
     const all = bookings ?? [];
-    const sessions = toSessions(all);
+    // Every child in the family's bookings — for the per-child tabs.
+    const childNames = [...new Set(
+      all.flatMap((b) => (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]))
+        .map((n) => n?.trim())
+        .filter(Boolean) as string[],
+    )].sort();
+    const sel = (name?: string) => childTab === "all" || name?.trim() === childTab;
+    const sessions = toSessions(all).filter((s) => sel(s.child));
     const byDate = new Map<string, Session[]>();
     for (const s of sessions) {
       const arr = byDate.get(s.date);
@@ -274,14 +344,15 @@ export function ScheduleApp() {
     }
     const dates = [...byDate.keys()].sort();
     return {
+      childNames,
       upcoming: dates.filter((d) => d >= today).map((d) => ({ date: d, sessions: byDate.get(d)! })),
       past: dates
         .filter((d) => d < today)
         .sort((a, b) => (a < b ? 1 : -1))
         .map((d) => ({ date: d, sessions: byDate.get(d)! })),
-      undated: undatedBookings(all),
+      undated: undatedBookings(all).filter((b) => sel(b.child) || (b.kids ?? []).some((k) => sel(k.name))),
     };
-  }, [bookings, today]);
+  }, [bookings, today, childTab]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
@@ -305,6 +376,25 @@ export function ScheduleApp() {
           <Button variant="primary">+ Book an activity</Button>
         </Link>
       </div>
+
+      {childNames.length > 1 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => setChildTab("all")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+            style={childTab === "all" ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+            All children
+          </button>
+          {childNames.map((name) => {
+            const t = genderTone(kids[name]);
+            const on = childTab === name;
+            return (
+              <button key={name} type="button" onClick={() => setChildTab(name)} className="rounded-full border-2 px-3.5 py-1.5 text-[12.5px] font-extrabold transition-colors"
+                style={on ? { borderColor: t.on, background: t.on, color: "#fff" } : { borderColor: t.bg, background: t.bg, color: t.fg }}>
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {nothing ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
@@ -344,7 +434,7 @@ export function ScheduleApp() {
           )}
 
           {upcoming.map((g) => (
-            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} details={details} />
+            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} detailByRef={detailByRef} />
           ))}
 
           {past.length > 0 && (
@@ -359,7 +449,7 @@ export function ScheduleApp() {
               {showPast && (
                 <div className="mt-2 flex flex-col gap-3 opacity-80">
                   {past.map((g) => (
-                    <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} details={details} />
+                    <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} detailByRef={detailByRef} />
                   ))}
                 </div>
               )}
