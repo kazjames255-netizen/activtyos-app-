@@ -463,7 +463,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               {/* Date-change request on its own full-width line so nothing is
                   cramped — the exact swap, then approve/deny without opening. */}
               {moveReq && (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5">
+                <div onClick={() => open(b.ref)} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5 hover:bg-[#fdf3d8]">
                   <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
                   {moveReq.moves.length === 1 ? (
                     <span className="text-[12.5px] text-[var(--ink)]">
@@ -473,9 +473,9 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
                   )}
                   <span className="ml-auto flex items-center gap-1.5">
-                    <button onClick={() => act(b.ref, "move-approve")} title="Approve — the day is moved and the family is told"
-                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve move</button>
-                    <button onClick={() => act(b.ref, "move-deny")} title="Decline — the booking is unchanged and the family is told"
+                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
+                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
+                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-deny"); }} title="Decline — the booking is unchanged and the family is told"
                       className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
                   </span>
                 </div>
