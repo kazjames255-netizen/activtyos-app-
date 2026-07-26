@@ -127,6 +127,16 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
         return;
       }
     }
+    // "Any N days across the listing" where the pass needs the WHOLE run (a
+    // 16-day pass on a listing that runs 16 days) — any click takes them all.
+    if (rule === "listing") {
+      const allAvail = weeks.flatMap((w) => w.days).filter((x) => !off(x));
+      if (allAvail.length > 0 && need >= allAvail.length) {
+        const same = allAvail.length === sel.length && allAvail.every((x) => sel.includes(x));
+        setSel(same ? [] : allAvail.slice(0, need));
+        return;
+      }
+    }
     setSel((prev) => {
       if (prev.includes(iso)) return prev.filter((x) => x !== iso);
       if (prev.length >= need) return prev;
@@ -279,7 +289,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
           ? (weeks.length > 0 && weeks.every((w) => w.days.filter((x) => !off(x)).length <= need)
               ? `Tap a week to take all ${need} days`
               : `Pick any ${need} days within one week (${sel.length}/${need})`)
-          : `Pick any ${need} days across the weeks below (${sel.length}/${need})`;
+          : (need >= weeks.flatMap((w) => w.days).filter((x) => !off(x)).length && weeks.length > 0
+              ? `Tap any day to take the whole run — all ${need} days`
+              : `Pick any ${need} days across the weeks below (${sel.length}/${need})`);
   // What the basket would look like if they added the current selection — so
   // an already-earned discount is stated before they commit, not after.
   const addPreview = (() => {
