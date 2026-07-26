@@ -2982,7 +2982,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
     <div className={`overflow-hidden ${full ? "" : "rounded-[26px] border border-[#e8edf7]"}`} style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? undefined : undefined }}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-white px-6 py-4">
         <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{brand}</span>
-        <span className="flex items-center gap-4">
+        <span className="flex items-center gap-4 [&_a]:text-[#2f6bd8]">
           {topRight}
           <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
         </span>
@@ -3175,7 +3175,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
     <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}`} style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs }}>
         <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
-        <span className="flex items-center gap-4">
+        <span className="flex items-center gap-4 [&_a]:text-white">
           {topRight}
           <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
         </span>

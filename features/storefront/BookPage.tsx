@@ -68,15 +68,17 @@ export function BookPage({ id }: { id: string }) {
 
   // Header links live INSIDE the storefront's own (black/branded) header bar, so
   // the page is full-bleed with no light edge around it.
+  // Colour is set by each storefront theme (white on the dark page, blue on the
+  // light one) via a [&_a] wrapper — so the links stay legible on both.
   const topRight = signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
-    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} className="text-[12.5px] font-bold text-[#5b9bff] underline">Sign in</Link>
+    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} className="text-[12.5px] font-bold underline">Sign in</Link>
   ) : signedIn && !embedded ? (
     // Not shown in embeds — navigating a provider's iframe into the dashboard
     // would trap the parent page's visitor.
     <span className="flex items-center gap-3 text-[12.5px]">
-      <Link href="/custdash" className="font-bold text-[#5b9bff] underline">← My home page</Link>
-      <Link href="/custdash/bookings" className="font-bold text-[#5b9bff] underline">My bookings</Link>
+      <Link href="/custdash" className="font-bold underline">← My home page</Link>
+      <Link href="/custdash/bookings" className="font-bold underline">My bookings</Link>
     </span>
   ) : null;
 
