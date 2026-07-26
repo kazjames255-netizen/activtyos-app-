@@ -1737,8 +1737,8 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
             const totalRun = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length;
             return multiDay.map((t) => {
-              const weekOk = t.days <= weekLen;                       // fits inside one week
-              const blockOk = t.days <= weekLen || t.days === totalRun; // a week block, or the whole run
+              const weekOk = t.days <= weekLen;                        // fits inside one week
+              const blockOk = t.days === weekLen || t.days === totalRun; // a whole week, or the whole run
               const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : true);
               const stored = (d.bookRules ?? {})[t.name];
               // Never show/keep an option that can't actually work for this pass.
@@ -1753,7 +1753,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                     {BOOK_RULES.map(([k, label]) => {
                       const disabled = !okFor(k);
                       const why = k === "week" ? `A ${t.days}-day pass can't fit in one week (this run offers ${weekLen} days a week)`
-                        : `A fixed ${t.days}-day block needs the run to be exactly ${t.days} days (it runs ${totalRun})`;
+                        : `A fixed block is the whole week (${weekLen} days) or the whole run (${totalRun} days) — a ${t.days}-day pass is neither`;
                       return (
                         <button key={k} type="button" disabled={disabled} onClick={() => setBookRule(t.name, k)}
                           title={disabled ? why : undefined}

@@ -107,7 +107,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // fall back to picking across the listing.
   const rule: BookRule =
     rawRule === "week" && weekMax > 0 && need > weekMax ? "listing"
-    : rawRule === "blocks" && weekMax > 0 && need > weekMax && need !== runTotal ? "listing"
+    : rawRule === "blocks" && weekMax > 0 && need !== weekMax && need !== runTotal ? "listing"
     : rawRule;
   // A single-day pass isn't a fixed block: parents can pick as many days as they
   // like, and each selected day becomes its own 1-day pass in the basket.
