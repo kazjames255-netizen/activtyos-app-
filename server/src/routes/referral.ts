@@ -149,6 +149,9 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
     await db.collection("discountCodes").add({
       tenantId, code: rewardCode, type, value: reward, assignedTo: rel,
       ...(cap != null ? { maxOff: cap } : {}),
+      // A referral reward is a one-time thank-you — redeemable ONCE by the
+      // referrer, then it drops off their usable codes (discountRedemptions).
+      perCustomerLimit: true,
       active: true, usedCount: 0, referralReward: true, createdAt: now,
     });
   }
