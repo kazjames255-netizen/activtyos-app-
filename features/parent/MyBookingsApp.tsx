@@ -68,7 +68,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
   );
 }
 
-function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: () => void }) {
+function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: Booking; listing: AmendListing | null; hasPendingMove?: boolean; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
@@ -233,6 +233,12 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   return (
     <div className="mt-3 rounded-xl border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] p-3">
       <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">Request cancellation</div>
+
+      {hasPendingMove && (
+        <div className="mb-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold text-[#8a5300]">
+          ⏳ You have a date-change request still pending. Cancelling the whole booking will withdraw that request too.
+        </div>
+      )}
 
       {/* Whole booking vs individual days (multi-day passes only). */}
       {canPartial && (
@@ -819,7 +825,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? "Hide details" : "Details"}
         </Button>
-        {b.status === "Confirmed" && (
+        {b.status === "Confirmed" && !pendingMove && (
           <Button sm onClick={() => setAmending(true)}>
             Change dates…
           </Button>
@@ -830,6 +836,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           </Button>
         )}
       </div>
+      {pendingMove && !cancelling && (
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">You&rsquo;ve got a date change pending — you can&rsquo;t request another until your provider responds. You can still cancel if you need to.</div>
+      )}
 
       {amending && <AmendModal booking={b} listing={info} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
 
@@ -913,6 +922,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         <CancelRequest
           booking={b}
           listing={info}
+          hasPendingMove={pendingMove}
           onDone={() => {
             setCancelling(false);
             refresh();
