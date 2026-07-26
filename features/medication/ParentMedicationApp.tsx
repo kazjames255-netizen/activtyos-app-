@@ -255,7 +255,7 @@ export function ParentMedicationApp() {
                   {noteEdit?.id === m.id && (
                     <div className="mt-2.5">
                       <textarea value={noteEdit.text} onChange={(e) => setNoteEdit({ id: m.id, text: e.target.value })} rows={2} placeholder="Add anything the staff should know…" className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
-                      <div className="mt-1.5 flex gap-2"><Button sm variant="solid" onClick={() => saveNote(m.id, noteEdit.text)}>Save note</Button><Button sm onClick={() => setNoteEdit(null)}>Cancel</Button></div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2"><Button sm variant="solid" onClick={() => saveNote(m.id, noteEdit.text)}>Save note</Button><Button sm onClick={() => setNoteEdit(null)}>Cancel</Button><span className="text-[11px] text-[var(--ink-3)]">The provider is emailed &amp; notified when you save.</span></div>
                     </div>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">

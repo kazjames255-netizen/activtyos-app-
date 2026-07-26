@@ -44,6 +44,13 @@ on it**: on each dose, email the parent AND raise an in-app bell notification �
 UNLESS muted. (Muted = they'll just read the Medication page themselves.)
 Withdrawing consent is already wired (`POST /:id/withdraw`).
 
+## Provider notification when a parent adds a note
+`POST /api/medications/:id/note` (built) stores `parentNote` + `parentNoteAt`.
+On that call, **email the provider + raise an in-app bell** for the tenant —
+UNLESS the tenant's `settings.medication.notifyParentNote` is false (a Setup →
+Medication toggle, default on). So it's the mirror of the parent-dose notify,
+in the other direction.
+
 ## Not doing on the front end
 Per Kaz's rule, I stopped at the UI + the tiny `instructions` schema add. The
 child-id resolution, the parent-view wiring, and the notification are yours.

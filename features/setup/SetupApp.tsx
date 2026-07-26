@@ -1193,6 +1193,9 @@ export function SetupApp() {
           <Row label="Tell the parent if a dose is missed or refused" hint="Also notify when a dose is recorded as NOT given — safeguarding good practice.">
             <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={["Yes", "No"]} />
           </Row>
+          <Row label="Notify me when a parent adds a note" hint="Email + a bell here whenever a parent adds or edits a note on their child's medication.">
+            <Toggle on={settings.medication?.notifyParentNote ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentNote: v })} labels={["Yes", "No"]} />
+          </Row>
           <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
             <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
           </Row>
