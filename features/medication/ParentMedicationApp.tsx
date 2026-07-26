@@ -14,7 +14,7 @@ const LIGHT_PALETTE = {
 interface Provider { tenantId: string; name: string }
 interface Child { id: string; name: string; sex?: string }
 interface Booking { childId?: string; childName?: string; tenantId?: string; days?: string[] }
-interface Med { id: string; tenantId?: string; childId?: string; childName: string; name: string; dose: string; route?: string; condition?: string; schedule?: string; asNeeded?: boolean; archived?: boolean; consentGranted?: boolean; source?: string }
+interface Med { id: string; tenantId?: string; childId?: string; childName: string; name: string; dose: string; route?: string; condition?: string; schedule?: string; asNeeded?: boolean; archived?: boolean; consentGranted?: boolean; source?: string; parentNote?: string }
 interface Dose { id: string; medicationId?: string; date?: string; time?: string; doseGiven?: string; administeredByName?: string; notes?: string }
 
 const when = (d?: string, t?: string) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) + (t ? ` · ${t}` : "") : "");
@@ -39,6 +39,7 @@ export function ParentMedicationApp() {
   const [ok, setOk] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [openMed, setOpenMed] = useState<string | null>(null);
+  const [noteEdit, setNoteEdit] = useState<{ id: string; text: string } | null>(null);
   const [f, setF] = useState({ tenantId: "", name: "", dose: "", condition: "", storage: "", notes: "", consent: false });
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
   const [childIds, setChildIds] = useState<string[]>([]);
@@ -101,6 +102,10 @@ export function ParentMedicationApp() {
       setFreq("booked"); setDates([]);
       setOpen(false); setOk(`Medication authorised for ${childIds.length > 1 ? `${childIds.length} children` : selectedNames} — staff can now administer it.`); load();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t authorise"); }
+  }
+  async function saveNote(id: string, note: string) {
+    try { await apiPost(`/api/medications/${encodeURIComponent(id)}/note`, { note: note.trim() }); setNoteEdit(null); load(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save note"); }
   }
   async function withdraw(m: Med) {
     if (!confirm(`Withdraw consent for ${m.name}? Staff won’t be able to give it after this.`)) return;
@@ -246,8 +251,16 @@ export function ParentMedicationApp() {
                     {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
                     {m.consentGranted ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ consent given</Badge> : <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#c02636)" }}>consent withdrawn</Badge>}
                   </div>
+                  {m.parentNote && noteEdit?.id !== m.id && <div className="mt-2.5 rounded-lg border border-[var(--line)] bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">📝 <b className="text-[var(--ink)]">Your note:</b> {m.parentNote}</div>}
+                  {noteEdit?.id === m.id && (
+                    <div className="mt-2.5">
+                      <textarea value={noteEdit.text} onChange={(e) => setNoteEdit({ id: m.id, text: e.target.value })} rows={2} placeholder="Add anything the staff should know…" className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
+                      <div className="mt-1.5 flex gap-2"><Button sm variant="solid" onClick={() => saveNote(m.id, noteEdit.text)}>Save note</Button><Button sm onClick={() => setNoteEdit(null)}>Cancel</Button></div>
+                    </div>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
                     <Button sm onClick={() => setOpenMed(openMed === m.id ? null : m.id)}>{openMed === m.id ? "Hide doses" : `Doses given (${md.length})`}</Button>
+                    <Button sm onClick={() => setNoteEdit(noteEdit?.id === m.id ? null : { id: m.id, text: m.parentNote ?? "" })}>{m.parentNote ? "✎ Edit note" : "＋ Add a note"}</Button>
                     {m.consentGranted && <Button sm variant="danger" onClick={() => withdraw(m)}>Withdraw consent</Button>}
                   </div>
                   {openMed === m.id && (

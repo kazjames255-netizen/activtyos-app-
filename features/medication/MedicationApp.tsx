@@ -39,6 +39,7 @@ interface Med {
   consentGranted: boolean;
   consentWithdrawnAt?: string;
   notes?: string;
+  parentNote?: string;
   archived?: boolean;
 }
 interface AdminEvent {
@@ -416,6 +417,7 @@ export function MedicationApp() {
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
                 </div>
                 {m.instructions && <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}
+                {m.parentNote && <div className="mt-1.5 rounded-lg bg-[#f4f8ff] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📝 <b>Parent note:</b> {m.parentNote}</div>}
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   {m.archived ? (
                     <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>

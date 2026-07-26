@@ -320,3 +320,19 @@ medications.post("/:id/withdraw", async (req, res) => {
   await snap.ref.set({ archived: true, consentGranted: false, consentWithdrawnAt: new Date().toISOString() }, { merge: true });
   res.json({ ok: true });
 });
+
+// POST /api/medications/:id/note — a parent adds/edits their own note on a med
+// (visible to staff). Scoped to their own child, like /withdraw.
+const noteSchema = z.object({ note: z.string().trim().max(1_000) });
+medications.post("/:id/note", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "parent") { res.status(403).json({ error: "Only a parent can add a note here" }); return; }
+  const parsed = noteSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const snap = await medsCol.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Medication not found" }); return; }
+  const childId = snap.data()!.childId as string | undefined;
+  if (!childId || !(await ownsChild(req.user!.uid, childId))) { res.status(404).json({ error: "Medication not found" }); return; }
+  await snap.ref.set({ parentNote: parsed.data.note, parentNoteAt: new Date().toISOString() }, { merge: true });
+  res.json({ ok: true });
+});
