@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
@@ -142,18 +142,29 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           partial = { days: pickedSlots.map((s) => s.date) };
         }
       }
-      // Change-date: a concrete from→to per released day, so approval applies
-      // it automatically. Sent instead of a refund/wallet resolution.
-      const moves = partialMode && res === "changedate"
-        ? pickedSlots.map((s) => ({ childName: s.childName, childId: s.childId, from: s.date, to: moveTo[s.key] }))
-        : undefined;
+      // Change-date is a MOVE, not a cancellation — it goes to the amend
+      // endpoint and leaves the booking Confirmed. The booking then shows
+      // "change of date requested · pending" until the provider approves (at
+      // which point the swap applies automatically from the structured moves).
+      if (partialMode && res === "changedate") {
+        const moves = pickedSlots.map((s) => ({ childName: s.childName, childId: s.childId, from: s.date, to: moveTo[s.key] }));
+        try {
+          await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, { moves, msg: msg.trim() || undefined });
+        } catch (e) {
+          // Amend endpoint isn't live yet (§U) — record the intent locally so
+          // it still shows as pending. Any other error is real.
+          if (!/404|not found/i.test(e instanceof Error ? e.message : "")) throw e;
+        }
+        try { localStorage.setItem(`aos.pendingMove.${booking.ref}`, JSON.stringify({ moves, at: new Date().toISOString() })); } catch { /* ignore */ }
+        onDone();
+        return;
+      }
+      // Refund / wallet / whole cancel — the cancel endpoint (releases days).
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
-        // Partial only: what to do with the released day(s).
         resolution: partialMode ? res ?? undefined : undefined,
-        moves,
         ...partial,
       });
       onDone();
@@ -597,6 +608,14 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
     setOfferBusy(false);
   };
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
+  // A pending change-of-date request — from the backend once it stores one, or
+  // the local marker set on submit while that endpoint is being built (§U).
+  const pendingMove = useMemo(() => {
+    const backend = (b as Booking & { dateChangeRequest?: { status?: string } }).dateChangeRequest?.status === "pending";
+    let local = false;
+    if (typeof window !== "undefined") { try { local = !!localStorage.getItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ } }
+    return (backend || local) && !cancelled;
+  }, [b, cancelled]);
   // Refund state, so a cancelled booking tells the family what came back.
   const refundAmt = b.cancel?.amount ?? 0;
   const refundIssued = b.pay === "Refunded" || b.pay === "Partially refunded" || b.cancel?.refund === "approved";
@@ -619,6 +638,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         </div>
         <div className="flex items-center gap-1.5">
           <Badge tone={statusTone(b.status)}>{b.status}</Badge>
+          {pendingMove && <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change pending</Badge>}
           {b.cancel?.refund === "pending" && (
             <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
           )}
@@ -626,6 +646,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           <span className="ml-1 text-[14px] font-extrabold">{money(b.amount)}</span>
         </div>
       </div>
+
+      {pendingMove && !cancelled && (
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] font-semibold text-[#8a5300]">
+          <span aria-hidden>⏳</span>
+          <span>Change of date requested — pending your provider&rsquo;s approval. Once they approve, the new date is applied automatically.</span>
+        </div>
+      )}
 
       {cancelled && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">

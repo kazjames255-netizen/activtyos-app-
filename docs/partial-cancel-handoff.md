@@ -60,14 +60,19 @@ subset of the booking's remaining days) plus a **`resolution`**:
    - **`wallet`**: credit `releasedDays × (amountPaid ÷ totalChildDays)` to the
      family's wallet (full pro-rata value, no policy cut, instant). Ties into the
      wallet backend (§Z). Only valid if `partialAllowWallet`.
-   - **`changedate`**: don't refund. The request carries a structured
-     **`moves: [{ childName, childId?, from, to }]`** — the parent picked a
-     concrete replacement date (from the listing's future sessions with space)
-     for each released day. On **approval, apply the swap automatically**: for
-     each move, remove `from` and add `to` to the child's dates (and shift the
-     block/session capacity `from → to`). No free text to interpret. Only valid
-     if `partialAllowChangeDate`; reject a `to` that isn't a running date with
-     space (re-validate server-side — don't trust the client).
+   - **`changedate`** is NOT sent to `/cancel` — it's a MOVE. The front-end posts
+     it to **`POST /api/my/bookings/:ref/amend`** with structured
+     **`moves: [{ childName, childId?, from, to }]`** (a concrete replacement
+     date the parent picked from the listing's future sessions with space).
+     **The booking must stay `Confirmed`, NOT cancelled** — record a pending
+     request `dateChangeRequest: { moves, requestedAt, status: "pending" }`. On
+     **approval, apply the swap automatically**: for each move remove `from` /
+     add `to` on the child's dates and shift the block/session capacity
+     `from → to`, then clear `dateChangeRequest`. Re-validate every `to`
+     server-side (a running date with space); reject if `partialAllowChangeDate`
+     is off. The parent card shows a "Date change pending" badge + note off
+     `dateChangeRequest.status` (front-end also keeps a local `aos.pendingMove.{ref}`
+     marker only until this endpoint exists — remove reliance once it's live).
 3. **Capacity.** Free the block/session places for **only** the released days
    (reuse the per-date freeing you already do on a full cancel).
 4. **Validation.** Reject dates not in the booking / already cancelled / past;
