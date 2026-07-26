@@ -115,22 +115,31 @@ function ChildPicker({ value, onPick }: { value: string; onPick: (childName: str
 
 function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<MedDraft>(emptyMed());
-  const [freq, setFreq] = useState<"daily" | "asneeded">("daily");
-  const [times, setTimes] = useState("");
+  const [freq, setFreq] = useState<"everyday" | "chosen" | "asneeded">("everyday");
+  const [pickedDays, setPickedDays] = useState<string[]>([]);
+  const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<MedDraft>) => setD((p) => ({ ...p, ...patch }));
+  // The picked child's upcoming booked days, from this tenant's bookings — the
+  // same list the parent sees, so "Only on the days I pick" matches both ends.
+  useEffect(() => { apiGet<{ child?: string; days?: string[] }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
+  const bookedDays = [...new Set(bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (d.childName ?? "").trim().toLowerCase()).flatMap((b) => b.days ?? []))].filter((x) => x >= todayIso()).sort();
 
   async function save() {
     if (!d.childName?.trim() || !d.name?.trim() || !d.dose?.trim()) {
       setError("Child, medicine and dose are required.");
       return;
     }
+    if (freq === "chosen" && pickedDays.length === 0) { setError("Tick the days from their bookings, or pick a different option."); return; }
     setBusy(true);
     setError(null);
-    // Regular (repeat) meds store their daily time(s) in `schedule`; as-needed
-    // meds flip `asNeeded` so the list flags them and they aren't a daily dose.
-    const schedule = freq === "daily" ? (times.trim() ? `Every day · ${times.trim()}` : "Every day") : "As needed";
+    // Same schedule strings as the parent form (so "On these days: …" reads and
+    // flags the same on both ends). "Every day" isn't date-bound, so it covers
+    // any new days the parent books later.
+    const schedule = freq === "everyday" ? "Every day my child is at camp"
+      : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
+      : "Only when needed";
     try {
       await apiPost("/api/medications", { ...d, asNeeded: freq === "asneeded", schedule });
       onSaved();
@@ -147,18 +156,45 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
         <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
         <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-        <div>
-          <FieldLabel>Frequency</FieldLabel>
-          <div className="flex gap-1.5">
-            {(["daily", "asneeded"] as const).map((f) => (
-              <button key={f} type="button" onClick={() => setFreq(f)} className="flex-1 rounded-lg border px-2 py-2 text-[11.5px] font-bold transition-colors" style={freq === f ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{f === "daily" ? "🔁 Every day" : "As needed"}</button>
-            ))}
-          </div>
-          {freq === "daily" && <Input value={times} onChange={(e) => setTimes(e.target.value)} placeholder="time(s) e.g. 12:00" className="mt-1.5 w-full" />}
-        </div>
         <div><FieldLabel>Expiry date</FieldLabel><Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" /></div>
         <div className="sm:col-span-3"><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
         <div className="sm:col-span-3"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
+      </div>
+
+      {/* When to give — same three options as the parent form. */}
+      <div className="mt-3">
+        <FieldLabel>When should staff give it?</FieldLabel>
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {([["everyday", "🏕️ Every day at camp"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["everyday" | "chosen" | "asneeded", string][]).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
+              style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
+          ))}
+        </div>
+        {freq === "everyday" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Every day they attend — automatically covers any new days the parent books.</p>}
+        {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
+        {freq === "chosen" && (
+          <div className="mt-2">
+            {!d.childName?.trim() ? (
+              <p className="text-[11.5px] text-[var(--ink-3)]">Pick the child above to see their booked days.</p>
+            ) : bookedDays.length === 0 ? (
+              <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — use &ldquo;Every day at camp&rdquo;, or they may not be booked yet.</p>
+            ) : (
+              <>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <button type="button" onClick={() => setPickedDays(pickedDays.length === bookedDays.length ? [] : [...bookedDays])} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{pickedDays.length === bookedDays.length ? "Clear all" : "Select all"}</button>
+                  <span className="text-[11px] text-[var(--ink-3)]">their upcoming booked days</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {bookedDays.map((day) => {
+                    const on = pickedDays.includes(day);
+                    return <button key={day} type="button" onClick={() => setPickedDays(on ? pickedDays.filter((x) => x !== day) : [...pickedDays, day].sort())} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
+                      style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{dayLabel(day)}</button>;
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
       <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
         <div><FieldLabel>Parent giving consent</FieldLabel><Input value={d.consentBy ?? ""} onChange={(e) => set({ consentBy: e.target.value })} className="w-full" /></div>
