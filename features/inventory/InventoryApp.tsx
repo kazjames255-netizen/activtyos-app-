@@ -15,7 +15,8 @@ import { Badge, Button, Card } from "@/components/ui";
 // live in tenant settings.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface Item { id: string; name: string; category?: string; location?: string; quantity: number; unit?: string; minQty?: number; season?: string; notes?: string; lastCheckedAt?: string | null; lastCheckedBy?: string | null; createdByName?: string; carriedFrom?: string }
+interface Check { quantity: number; at: string; by?: string }
+interface Item { id: string; name: string; category?: string; location?: string; quantity: number; unit?: string; minQty?: number; season?: string; notes?: string; lastCheckedAt?: string | null; lastCheckedBy?: string | null; checks?: Check[]; createdByName?: string; carriedFrom?: string }
 
 const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc", "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1" } as CSSProperties;
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
@@ -23,6 +24,7 @@ const BLUE = "#1d3a8f", GREEN = "#0f7a43", AMBER = "#9a5a00", RED = "#c02636";
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
 const STALE_DAYS = 30;
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : Infinity);
 const lowStock = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
 
@@ -43,6 +45,7 @@ export function InventoryApp() {
   const [uncheckedOnly, setUncheckedOnly] = useState(false);
   const [checkMode, setCheckMode] = useState(false);
   const [checkVals, setCheckVals] = useState<Record<string, string>>({});
+  const [histId, setHistId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Item | null>(null);
   const [adding, setAdding] = useState(false);
   const [carry, setCarry] = useState(false);
@@ -133,36 +136,57 @@ export function InventoryApp() {
                   {list.map((i) => {
                     const stale = dayssince(i.lastCheckedAt) >= STALE_DAYS, checking = checkMode;
                     const val = checkVals[i.id] ?? String(i.quantity);
+                    const nChecks = i.checks?.length ?? 0, histOpen = histId === i.id || checking;
                     return (
-                      <Card key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-3">
-                        <div className="min-w-[160px] flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[13.5px] font-extrabold">{i.name}</span>
-                            {i.location && <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>📍 {i.location}</Badge>}
-                            {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠ Low</Badge>}
-                            {i.carriedFrom && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>↪ {i.carriedFrom}</Badge>}
-                          </div>
-                          <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">
-                            {i.lastCheckedAt ? <span style={stale ? { color: AMBER, fontWeight: 700 } : undefined}>Last checked {fmtDate(i.lastCheckedAt)}{i.lastCheckedBy ? ` · ${i.lastCheckedBy}` : ""}{stale ? " · due a check" : ""}</span> : <span style={{ color: AMBER, fontWeight: 700 }}>Never checked</span>}
-                            {i.notes ? ` · ${i.notes}` : ""}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {checking ? (
-                            <div className="flex items-center gap-1.5">
-                              <input type="number" min={0} value={val} onChange={(e) => setCheckVals((v) => ({ ...v, [i.id]: e.target.value }))} className="w-20 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold" />
-                              {i.unit && <span className="text-[11.5px] text-[var(--ink-3)]">{i.unit}</span>}
-                              <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>✓ Count</Button>
+                      <Card key={i.id} className="p-3">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                          <div className="min-w-[160px] flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[13.5px] font-extrabold">{i.name}</span>
+                              {i.location && <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>📍 {i.location}</Badge>}
+                              {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠ Low</Badge>}
+                              {i.carriedFrom && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>↪ {i.carriedFrom}</Badge>}
                             </div>
-                          ) : (
-                            <div className="text-right"><div className="text-[17px] font-extrabold tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[12px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>{i.minQty != null && <div className="text-[10px] text-[var(--ink-3)]">min {i.minQty}</div>}</div>
-                          )}
-                          <div className="flex gap-1.5">
-                            {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setCheckMode(true); }}>Check</Button>}
-                            <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
-                            {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
+                            <button type="button" onClick={() => setHistId(histId === i.id ? null : i.id)} className="mt-1 text-left text-[11.5px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Show count history">
+                              {i.lastCheckedAt ? <span style={stale ? { color: AMBER, fontWeight: 700 } : undefined}>Last checked {fmtDate(i.lastCheckedAt)}{i.lastCheckedBy ? ` · ${i.lastCheckedBy}` : ""}{stale ? " · due a check" : ""}</span> : <span style={{ color: AMBER, fontWeight: 700 }}>Never checked</span>}
+                              {nChecks > 0 && <span className="font-semibold"> · {histOpen ? "hide history ▴" : `history (${nChecks}) ▾`}</span>}
+                            </button>
+                            {i.notes && <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{i.notes}</div>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {checking ? (
+                              <div className="flex items-center gap-1.5">
+                                <input type="number" min={0} value={val} onChange={(e) => setCheckVals((v) => ({ ...v, [i.id]: e.target.value }))} className="w-20 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold" />
+                                {i.unit && <span className="text-[11.5px] text-[var(--ink-3)]">{i.unit}</span>}
+                                <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>✓ Count</Button>
+                              </div>
+                            ) : (
+                              <div className="text-right"><div className="text-[17px] font-extrabold tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[12px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>{i.minQty != null && <div className="text-[10px] text-[var(--ink-3)]">min {i.minQty}</div>}</div>
+                            )}
+                            <div className="flex gap-1.5">
+                              {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>Check</Button>}
+                              <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
+                              {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
+                            </div>
                           </div>
                         </div>
+                        {histOpen && (
+                          <div className="mt-2.5 border-t border-[var(--line)] pt-2">
+                            <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Recent counts · last 5</div>
+                            {nChecks ? (
+                              <div className="flex flex-wrap gap-2">
+                                {(i.checks ?? []).slice(0, 5).map((c, idx) => (
+                                  <div key={idx} className="flex flex-none flex-col rounded-lg border px-2.5 py-1.5" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+                                    <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}{i.unit ? <span className="text-[10px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</span>
+                                    <span className="mt-1 text-[10px] text-[var(--ink-3)]">{fmtStamp(c.at)}</span>
+                                    {c.by && <span className="text-[10px] text-[var(--ink-3)]">{c.by}</span>}
+                                    {idx === 0 && <span className="mt-1 self-start rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white" style={{ background: GREEN }}>most recent</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : <div className="text-[11.5px] text-[var(--ink-3)]">No counts recorded yet — enter a figure and press ✓ Count.</div>}
+                          </div>
+                        )}
                       </Card>
                     );
                   })}
@@ -269,7 +293,7 @@ function CarryOverModal({ seasons, fromDefault, settings, save, onClose, onDone 
         <p className="mb-3 text-[12px] text-[var(--ink-2)]">Copies every item (kit + current counts) from one season into a new one, so you don&rsquo;t re-enter everything. The new season starts unchecked.</p>
         <div className="flex flex-col gap-2.5">
           <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Copy from</span><select value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-full`}>{seasons.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
-          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Into new season (name)</span><input value={to} onChange={(e) => setTo(e.target.value)} placeholder="e.g. Summer 2027" className={`${inputCls} w-full`} /></label>
+          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Into season — pick one or type a new name</span><input list="carry-into-seasons" value={to} onChange={(e) => setTo(e.target.value)} placeholder="e.g. Summer 2027" className={`${inputCls} w-full`} /><datalist id="carry-into-seasons">{seasons.filter((s) => s !== from).map((s) => <option key={s} value={s} />)}</datalist></label>
         </div>
         {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
         {result != null && <div className="mt-2.5 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-bold" style={{ color: GREEN }}>✓ Carried over {result} item{result === 1 ? "" : "s"} into “{to}”.</div>}

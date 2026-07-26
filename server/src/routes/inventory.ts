@@ -67,7 +67,13 @@ inventory.post("/:id/check", async (req, res) => {
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Item not found" }); return; }
   const parsed = checkSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  await o.snap.ref.set({ quantity: parsed.data.quantity, lastCheckedAt: new Date().toISOString(), lastCheckedBy: req.user?.name ?? req.user?.email ?? "Staff", updatedAt: new Date().toISOString() }, { merge: true });
+  const now = new Date().toISOString();
+  const by = req.user?.name ?? req.user?.email ?? "Staff";
+  const prev = o.snap.data() ?? {};
+  const history = Array.isArray(prev.checks) ? (prev.checks as unknown[]) : [];
+  // newest-first, keep the last 20
+  const checks = [{ quantity: parsed.data.quantity, at: now, by }, ...history].slice(0, 20);
+  await o.snap.ref.set({ quantity: parsed.data.quantity, lastCheckedAt: now, lastCheckedBy: by, checks, updatedAt: now }, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
 });
