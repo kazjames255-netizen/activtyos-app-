@@ -474,6 +474,44 @@ function CancelPanel({ booking }: { booking: Booking }) {
   );
 }
 
+// Full date-change request, repeated clearly in the opened booking so the
+// provider can read every From→To and approve/deny (with an optional reason).
+function DateChangePanel({ booking }: { booking: Booking }) {
+  const resolveMove = useBookingsStore((s) => s.resolveMove);
+  const [reason, setReason] = useState("");
+  const [denying, setDenying] = useState(false);
+  const req = booking.dateChangeRequest;
+  if (req?.status !== "pending") return null;
+  const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
+  return (
+    <div className="mb-3 rounded-xl border-2 border-[#f0c96b] bg-[#fffaf0] p-3.5">
+      <div className="text-[13px] font-extrabold text-[#8a5300]">📅 Date change requested by the family</div>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {req.moves.map((m, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-white px-3 py-2 text-[13px]">
+            {m.childName && <span className="font-bold text-[var(--ink)]">{m.childName}</span>}
+            <span className="text-[var(--ink-3)]">From</span> <b className="text-[var(--ink)]">{fmt(m.from)}</b>
+            <span className="text-[var(--ink-3)]">→ To</span> <b className="text-[#1d3a8f]">{fmt(m.to)}</b>
+          </div>
+        ))}
+      </div>
+      {denying && (
+        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for declining (optional) — the family sees this"
+          className="mt-2.5 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+      )}
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        <Button variant="primary" onClick={() => resolveMove(booking.ref, true)} title="Apply the swap — dates move on the family's schedule and they're told">Approve &amp; move dates</Button>
+        {denying ? (
+          <Button variant="danger" onClick={() => resolveMove(booking.ref, false, reason)}>Confirm decline</Button>
+        ) : (
+          <Button onClick={() => setDenying(true)}>Deny…</Button>
+        )}
+      </div>
+      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">On approve, the family&rsquo;s schedule + booking update automatically and they&rsquo;re emailed and notified. Deny leaves the booking unchanged and tells them (with your reason).</div>
+    </div>
+  );
+}
+
 export function BookingDetail({ booking }: { booking: Booking }) {
   const close = useBookingsStore((s) => s.close);
   const act = useBookingsStore((s) => s.act);
@@ -633,6 +671,8 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           <Tile big={String(sessionCount(b))} small="Sessions" />
           <Tile big={money(b.amount)} small="Total" />
         </div>
+
+        <DateChangePanel booking={b} />
 
         {b._cancelling && <CancelPanel booking={b} />}
 

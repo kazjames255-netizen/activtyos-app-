@@ -120,6 +120,7 @@ const PUBLIC_SETTINGS_KEYS = [
   "collectSendPlan",
   "collectionCheck",
   "charLimits",
+  "allowDateChanges",
   "amendSelfService",
   "amendNoticeHours",
   "amendLimit",

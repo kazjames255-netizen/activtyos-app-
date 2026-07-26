@@ -534,6 +534,9 @@ export interface TenantSettings {
   /** Let a family release individual days of a multi-day pass (not just cancel
    *  the whole booking). What they can do with a released day is set by the
    *  three flags below — at least one must be on for the option to appear. */
+  /** Whether families can change/move their booked dates at all. Off = the
+   *  "Change dates" flow tells them up front it isn't offered for this listing. */
+  allowDateChanges: boolean;
   allowPartialCancel: boolean;
   /** A released day's pro-rata value can be REFUNDED (cash, per the cancellation
    *  policy). The only option that lets a block discount leak — off by choice. */
@@ -639,6 +642,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   allowCardRefund: true,
   refundLetCustomerChoose: true,
   noRefundCredit: false,
+  allowDateChanges: true,
   allowPartialCancel: true,
   partialAllowRefund: true,
   partialAllowWallet: true,

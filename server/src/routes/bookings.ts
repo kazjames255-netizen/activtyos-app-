@@ -60,13 +60,16 @@ const actionSchema = z.discriminatedUnion("type", [
       "offer",
       "refund-approve",
       "refund-decline",
-      // Approve / deny a parent's pending date-change request (applyRowAction
-      // rewrites the day swaps on approve).
+      // Approve a parent's pending date-change request (applyRowAction rewrites
+      // the day swaps). Deny is its own branch below — it carries a reason.
       "move-approve",
-      "move-deny",
       // resend mutates nothing — it re-sends the payment-link email
       "resend",
     ]),
+  }),
+  z.object({
+    type: z.literal("move-deny"),
+    reason: z.string().max(300).optional(),
   }),
   z.object({
     type: z.literal("cancel"),
@@ -396,9 +399,18 @@ bookings.post("/:ref/actions", async (req, res) => {
         case "note":
           applyNote(b, action.text);
           break;
+        case "move-deny":
+          if (b.dateChangeRequest) {
+            b.dateChangeRequest.status = "denied";
+            b.dateChangeRequest.reason = action.reason;
+            b.dateChangeRequest.resolvedAt = new Date().toISOString();
+            b.note = "Date change declined.";
+          }
+          break;
         default:
           // "resend" returned early above, so only real row actions reach here.
           applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
+          if (action.type === "move-approve" && b.dateChangeRequest) b.dateChangeRequest.resolvedAt = new Date().toISOString();
       }
 
       // Keep the block's place counts — total AND per day — in step with

@@ -103,4 +103,23 @@ operator (a different session) sees it; the parent side currently bridges with a
 local `aos.pendingMove.{ref}` marker that the operator can't read. Once you store
 it, both sides light up with no further front-end work.
 
+## Approve / deny + notify (front-end built, notify is yours)
+- Operator can **Approve move** / **Deny** a `dateChangeRequest` from the bookings
+  row AND the opened booking (BookingDetail `DateChangePanel`, with an optional
+  **deny reason**). Actions: `move-approve` (applies the swap via applyRowAction,
+  status→approved) and `move-deny` (status→denied, stores `reason`, `resolvedAt`).
+  Both accepted by `POST /api/bookings/:ref/actions`.
+- The parent card then shows **✓ approved (moved to X)** / **✗ declined (+reason)**
+  off `dateChangeRequest.status`.
+- **Notify (yours):** email + bell the **parent** when a request is approved
+  ("your dates were moved to X") or denied ("…declined" + reason). And bell the
+  **operator** when a new request arrives. Respect the usual mute.
+
+## Provider setting: offer date changes at all
+`settings.allowDateChanges` (default **true**), Setup → Amending dates, public-
+whitelisted. When **off**, the parent "Change dates" modal says up front
+*"{listing} doesn't offer date changes"* — they never pick dates to find out.
+The standalone amend modal also now sends a structured **`preferredDate`** for
+undated bookings instead of free text (with `moves` for dated ones).
+
 Nothing changes for a whole-booking cancel (no `days`/`resolution`/`moves`).

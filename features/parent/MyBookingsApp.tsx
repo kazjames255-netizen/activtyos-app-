@@ -356,6 +356,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
 }
 
 type AmendPolicy = {
+  allowDateChanges: boolean;
   amendSelfService: boolean;
   amendNoticeHours: number;
   amendFee: number;
@@ -364,7 +365,7 @@ type AmendPolicy = {
   refundLetCustomerChoose: boolean;
 };
 
-const AMEND_FALLBACK: AmendPolicy = { amendSelfService: true, amendNoticeHours: 48, amendFee: 0, amendAllowCheaper: true, allowCardRefund: true, refundLetCustomerChoose: true };
+const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: true, amendNoticeHours: 48, amendFee: 0, amendAllowCheaper: true, allowCardRefund: true, refundLetCustomerChoose: true };
 const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
 const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -398,6 +399,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
   const [refundTo, setRefundTo] = useState<"card" | "wallet">("card");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -414,7 +416,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
 
   const selfService = policy.amendSelfService;
-  const hasChanges = Object.keys(moves).length > 0 || !!msg.trim();
+  const hasChanges = Object.keys(moves).length > 0 || !!preferredDate || !!msg.trim();
   // Where any money back goes, mirroring the provider's Money-back settings.
   const letChoose = policy.amendAllowCheaper && policy.allowCardRefund && policy.refundLetCustomerChoose;
   const cheaper = policy.amendAllowCheaper
@@ -431,6 +433,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     try {
       await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, {
         moves,
+        preferredDate: preferredDate || undefined,
         message: msg.trim() || undefined,
         ...(letChoose ? { refundTo } : {}),
       });
@@ -487,6 +490,17 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="text-[12px] text-[var(--ink-3)]">{booking.listing} · {booking.child} · {booking.pass}</div>
 
+          {!policy.allowDateChanges ? (
+            <>
+              <div className="rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
+                <b>{booking.listing}</b> doesn&rsquo;t offer date changes. To move your dates, please <b>message your provider</b> or cancel and rebook.
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => onDone(false)}>Close</Button>
+              </div>
+            </>
+          ) : (
+          <>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[11.5px] leading-[1.6] text-[var(--ink-2)]">
             <div>• A date can be moved up to <b>{noticeLabel(policy.amendNoticeHours)}</b> before it — closer than that it&rsquo;s locked.</div>
             <div>• A move only goes to another running date with space.</div>
@@ -532,9 +546,18 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             </div>
           ) : (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">What change would you like?</div>
-              <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} placeholder="e.g. move the Wednesday session to the following Monday"
-                className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)] outline-none" />
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Which date would you like?</div>
+              {available.length > 0 ? (
+                <select value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label="Preferred date">
+                  <option value="">Pick a date…</option>
+                  {available.map((dt) => <option key={dt} value={dt}>{fmtIso(dt)}</option>)}
+                </select>
+              ) : (
+                <input type="date" min={todayIso} value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" />
+              )}
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the date you&rsquo;d like — your provider confirms it. {available.length > 0 ? "Only dates with a space are shown." : "This booking&rsquo;s dates aren&rsquo;t set yet, so pick your preferred day."}</div>
             </div>
           )}
 
@@ -560,6 +583,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             {busy ? "Sending…" : selfService ? "Confirm change" : "Send request"}
           </Button>
           <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">Applied once the backend is built (§U)</div>
+          </>
+          )}
         </div>
       </div>
     </div>
@@ -608,21 +633,27 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
     setOfferBusy(false);
   };
   const cancelled = b.status === "Cancelled" || b.status === "Declined";
-  // A pending change-of-date request — from the backend once it stores one, or
-  // the local marker set on submit while that endpoint is being built (§U).
-  // Returns the requested moves so the card can show the actual date swaps.
+  // The date-change request — pending / approved / denied. Backend is
+  // authoritative; a local marker bridges "pending" only while that endpoint is
+  // being built (§U). Returns the moves so the card shows the actual swaps.
   type Move = { childName?: string; from: string; to: string };
-  const pendingMove = useMemo<{ moves: Move[] } | null>(() => {
-    const be = (b as Booking & { dateChangeRequest?: { status?: string; moves?: Move[] } }).dateChangeRequest;
-    if (be?.status === "pending") return { moves: be.moves ?? [] };
+  const dateChange = useMemo<{ moves: Move[]; status: "pending" | "approved" | "denied"; reason?: string } | null>(() => {
+    const be = (b as Booking & { dateChangeRequest?: { status?: "pending" | "approved" | "denied"; moves?: Move[]; reason?: string } }).dateChangeRequest;
+    if (be?.status) return { moves: be.moves ?? [], status: be.status, reason: be.reason };
     if (typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem(`aos.pendingMove.${b.ref}`);
-        if (raw) return { moves: (JSON.parse(raw).moves ?? []) as Move[] };
+        if (raw) return { moves: (JSON.parse(raw).moves ?? []) as Move[], status: "pending" };
       } catch { /* ignore */ }
     }
     return null;
   }, [b]);
+  // Once the provider has resolved it, drop the local optimistic marker.
+  useEffect(() => {
+    const st = (b as Booking & { dateChangeRequest?: { status?: string } }).dateChangeRequest?.status;
+    if (st && st !== "pending") { try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ } }
+  }, [b]);
+  const pendingMove = dateChange?.status === "pending";
   // Refund state, so a cancelled booking tells the family what came back.
   const refundAmt = b.cancel?.amount ?? 0;
   const refundIssued = b.pay === "Refunded" || b.pay === "Partially refunded" || b.cancel?.refund === "approved";
@@ -653,17 +684,37 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         </div>
       </div>
 
-      {pendingMove && (
+      {dateChange?.status === "pending" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
           <div className="font-bold">⏳ Change of date requested — pending your provider&rsquo;s approval.</div>
-          {pendingMove.moves.length > 0 && (
+          {dateChange.moves.length > 0 && (
             <ul className="mt-1 flex flex-col gap-0.5">
-              {pendingMove.moves.map((m, i) => (
+              {dateChange.moves.map((m, i) => (
+                <li key={i} className="font-semibold">{m.childName ? `${m.childName}: ` : ""}From {fmtIso(m.from)} → To <b>{fmtIso(m.to)}</b></li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-1 text-[11px] text-[#8a5300]/80">Once they approve, the new date{dateChange.moves.length > 1 ? "s are" : " is"} applied automatically.</div>
+        </div>
+      )}
+
+      {dateChange?.status === "approved" && (
+        <div className="mt-2 rounded-lg border border-[#cfe9d8] bg-[#eef8f1] px-3 py-2 text-[12px] text-[#0f7a43]">
+          <div className="font-bold">✓ Date change approved — your booking has been moved.</div>
+          {dateChange.moves.length > 0 && (
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {dateChange.moves.map((m, i) => (
                 <li key={i} className="font-semibold">{m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} → <b>{fmtIso(m.to)}</b></li>
               ))}
             </ul>
           )}
-          <div className="mt-1 text-[11px] text-[#8a5300]/80">Once they approve, the new date{pendingMove.moves.length > 1 ? "s are" : " is"} applied automatically.</div>
+        </div>
+      )}
+
+      {dateChange?.status === "denied" && (
+        <div className="mt-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c0392b]">
+          <div className="font-bold">✗ Your date-change request was declined — the booking is unchanged.</div>
+          {dateChange.reason && <div className="mt-0.5 text-[11.5px] text-[#8a3a3a]">Reason: {dateChange.reason}</div>}
         </div>
       )}
 

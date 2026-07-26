@@ -1436,9 +1436,14 @@ export function SetupApp() {
             title="Amending dates"
             lede="Whether a parent can move their own session dates, and the rules for it. A move only ever goes to another running date of the same listing that still has space — never onto a full day or across the age caps."
           >
+            <Row label="Offer date changes at all" hint="Off: the 'Change dates' flow tells families up front it isn't offered for your listings — they never pick dates only to be turned away. On: the rules below apply.">
+              <Toggle on={settings.allowDateChanges} onChange={(v) => set("allowDateChanges", v)} />
+            </Row>
+            {settings.allowDateChanges && (
             <Row label="Let parents move their own dates" hint="On: they reschedule themselves, within the rules below. Off: they send a request and you approve it, like a cancellation.">
               <Toggle on={settings.amendSelfService} onChange={(v) => set("amendSelfService", v)} />
             </Row>
+            )}
             <Row label="How close to a session it can still move" hint="Inside this window it's locked — a place can't be juggled the night before. Enter it in hours or days, whichever reads better for you.">
               <NoticeInput hours={settings.amendNoticeHours} onChange={(h) => set("amendNoticeHours", h)} />
             </Row>
