@@ -365,6 +365,11 @@ export interface TenantSettings {
     reminderMinutes?: number; // how many minutes before (default 30)
   };
 
+  /** Moments — the reusable activity tags a shared moment can carry. */
+  moments?: {
+    activities?: { k: string; n: string; e: string; c: string }[];
+  };
+
   /** Inventory — reusable categories, storage locations and seasons. */
   inventory?: {
     categories?: string[];
@@ -663,6 +668,14 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     reminderOn: true,
     reminderMinutes: 30,
   },
+  moments: {
+    activities: [
+      { k: "art", n: "Arts & crafts", e: "🎨", c: "#be1259" }, { k: "sport", n: "Sports", e: "⚽", c: "#047857" },
+      { k: "swim", n: "Swimming", e: "🏊", c: "#0369a1" }, { k: "food", n: "Lunch & snack", e: "🍎", c: "#b45309" },
+      { k: "nature", n: "Outdoors", e: "🌳", c: "#0e7490" }, { k: "science", n: "Science", e: "🔬", c: "#6d28d9" },
+      { k: "drama", n: "Drama", e: "🎭", c: "#c2410c" }, { k: "play", n: "Free play", e: "🧩", c: "#4338ca" },
+    ],
+  },
   inventory: {
     categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
     locations: ["Main store", "Van", "Shed", "Office"],
@@ -727,6 +740,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}) },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
+    moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled

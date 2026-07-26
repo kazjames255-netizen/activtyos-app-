@@ -133,10 +133,11 @@ moments.get("/taggable", async (req, res) => {
     return;
   }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
+  const listingId = typeof req.query.listingId === "string" ? req.query.listingId : "";
   const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
   const todays = blocks.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
-    .filter(({ block }) => block.sessions.some((s) => s.date === date));
+    .filter(({ block }) => (!listingId || block.listingId === listingId) && block.sessions.some((s) => s.date === date));
   if (!todays.length) {
     res.json([]);
     return;

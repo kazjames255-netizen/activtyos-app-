@@ -78,6 +78,12 @@ any scheduler.
   `remindMode` ("default"/"on"/"off") + `remindMinutes`. Needs a scheduler that
   scans upcoming starts and fires once (idempotent). Manual events are in the
   `calendarEvents` collection (CRUD built).
+- **Moments** — when a moment is posted, **notify + email the tagged children's
+  parents with a direct deep link** to view it in their area (the front-end
+  already shows "parents are notified & emailed"). The parent feed
+  (`GET /api/moments` for role=parent) already works; only the outbound
+  notification/email + link is owed. Consent is enforced server-side (child
+  photos require `photoConsent`; work photos don't).
 - **Inventory low-stock** (optional) — `settings.inventory.lowStockAlert`. When an
   item's `quantity ≤ minQty`, email/bell the operator. (The ⚠ Low badge is live;
   only the notify is yours.)
