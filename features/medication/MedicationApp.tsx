@@ -368,13 +368,14 @@ export function MedicationApp() {
     return `✓ ${given ? "Administration logged" : "Logged as not given"}${informed ? " — parent informed" : ""}`;
   };
 
-  const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
+  const [bkgs, setBkgs] = useState<{ child?: string; days?: string[]; listing?: string }[]>([]);
+  const [listingFilter, setListingFilter] = useState("");
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
     apiGet<Med[]>("/api/medications?includeArchived=1").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<AdminEvent[]>("/api/medications/administrations").then(setAdmins).catch(() => {});
     // Bookings power the dynamic "On every booked day" approval check.
-    apiGet<{ child?: string; days?: string[] }[]>("/api/bookings").then(setBkgs).catch(() => {});
+    apiGet<{ child?: string; days?: string[]; listing?: string }[]>("/api/bookings").then(setBkgs).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => { setRole(me.role); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
@@ -405,7 +406,11 @@ export function MedicationApp() {
   const dosesToday = admins.filter((a) => a.date === todayIso()).length;
   const tiles: [string, string | number][] = [["On file", active.length], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
   const ql = q.trim().toLowerCase();
-  const shown = (showArchived ? archivedMeds : active).filter((m) => !ql || m.childName.toLowerCase().includes(ql) || m.name.toLowerCase().includes(ql));
+  const listingsFor = (name: string) => bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (name ?? "").trim().toLowerCase()).map((b) => b.listing).filter(Boolean) as string[];
+  const allListings = [...new Set(bkgs.map((b) => b.listing).filter(Boolean) as string[])].sort();
+  const shown = (showArchived ? archivedMeds : active)
+    .filter((m) => !ql || m.childName.toLowerCase().includes(ql) || m.name.toLowerCase().includes(ql))
+    .filter((m) => !listingFilter || listingsFor(m.childName).includes(listingFilter));
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -450,8 +455,15 @@ export function MedicationApp() {
               {label} <span className={showArchived === arch ? "text-white/70" : "text-[var(--ink-3)]"}>{n}</span>
             </button>
           ))}
+          {allListings.length > 0 && (
+            <select value={listingFilter} onChange={(e) => setListingFilter(e.target.value)}
+              className="ml-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]">
+              <option value="">All listings</option>
+              {allListings.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          )}
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or medicine…"
-            className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+            className={`${allListings.length > 0 ? "" : "ml-auto "}w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]`} />
         </div>
       )}
 
@@ -463,6 +475,7 @@ export function MedicationApp() {
         <div className="flex flex-col gap-2.5">
           {shown.map((m) => {
             const doses = dosesFor(m.id);
+            const givenToday = doses.filter((a) => a.date === todayIso() && a.given !== false && a.doseGiven !== "Not given");
             return (
               <Card key={m.id} className="p-4">
                 {/* Header — identity on the left, status on the right */}
@@ -483,7 +496,10 @@ export function MedicationApp() {
                       <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                     )}
                     {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
-                    <span className="text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
+                    {givenToday.length > 0 && <Badge tone={{ bg: "#0f7a43", fg: "#ffffff" }}>✓ Given today{givenToday[0].time ? ` · ${givenToday[0].time}` : ""}</Badge>}
+                    {doses.length > 0
+                      ? <span className="text-[11.5px] font-bold text-[#0f7a43]">✓ {doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
+                      : <span className="text-[11.5px] text-[var(--ink-3)]">no doses recorded yet</span>}
                   </div>
                 </div>
 
