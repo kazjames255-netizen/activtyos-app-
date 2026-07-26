@@ -127,6 +127,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   const [d, setD] = useState<MedDraft>(emptyMed());
   const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
+  const [timeOfDay, setTimeOfDay] = useState("");
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,9 +152,10 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     // Same schedule strings as the parent form (so "On these days: …" reads and
     // flags the same on both ends). "Every day" isn't date-bound, so it covers
     // any new days the parent books later.
-    const schedule = freq === "booked" ? BOOKED_SCHEDULE
+    const base = freq === "booked" ? BOOKED_SCHEDULE
       : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
       : "Only when needed";
+    const schedule = timeOfDay ? `${base} · at ${timeOfDay}` : base;
     try {
       await apiPost("/api/medications", { ...d, childId: linkedChildId ?? d.childId, asNeeded: freq === "asneeded", schedule });
       onSaved();
@@ -209,6 +211,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
             )}
           </div>
         )}
+        <div className="mt-3"><FieldLabel>Give at a set time? (optional)</FieldLabel><Input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} className="w-auto" /><span className="ml-2 text-[11px] text-[var(--ink-3)]">a bell reminds staff at this time on days it&rsquo;s due</span></div>
       </div>
       <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
         <div><FieldLabel>Parent giving consent</FieldLabel><Input value={d.consentBy ?? ""} onChange={(e) => set({ consentBy: e.target.value })} className="w-full" /></div>

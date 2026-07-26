@@ -336,6 +336,8 @@ export interface TenantSettings {
     informParentGiven?: boolean;   // notify the parent when a dose is logged
     informParentMissed?: boolean;  // …and when a dose is missed / refused
     notifyParentNote?: boolean;    // email + bell the provider when a parent adds a note
+    notifyParentAuthorise?: boolean; // email + bell the provider when a parent authorises a med
+    remindWhenDue?: boolean;       // bell staff when a timed dose is due
     requireWitness?: boolean;      // a second person must witness each dose
     leadsOnly?: boolean;           // only leads/managers can record doses, not all staff
   };
@@ -591,7 +593,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emergencyContacts: 1,
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
-  medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, requireWitness: false, leadsOnly: false },
+  medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,

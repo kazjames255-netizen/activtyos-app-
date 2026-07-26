@@ -51,6 +51,22 @@ UNLESS the tenant's `settings.medication.notifyParentNote` is false (a Setup →
 Medication toggle, default on). So it's the mirror of the parent-dose notify,
 in the other direction.
 
+## Provider notifications — full set (all gated by Setup → Medication toggles)
+Make the **in-app bell prominent** in the operator header (a clear unread count),
+plus **email**, on each of these — each gated by a `settings.medication.*` flag:
+- Parent **authorises** a new med → `notifyParentAuthorise` (default on). Fire from
+  `POST /api/medications/authorise`. (So a self-serve authorisation isn't missed.)
+- Parent **adds/edits a note** → `notifyParentNote` (from `POST /:id/note`).
+- Parent-side: dose given/missed → `informParentGiven` / `informParentMissed`
+  (respect the parent's own mute — see above).
+
+## Due-time reminders
+Meds can carry a set time — the forms append `· at HH:MM` to `schedule` (e.g.
+"On every booked day · at 12:00"). When `settings.medication.remindWhenDue` is on
+(default), ring the staff bell at that time on a day the med is due (a scheduled
+job / cron). A dedicated `timeOfDay` field would be cleaner than parsing the
+string — add it to `medSchema`/`authoriseSchema` if you prefer.
+
 ## Not doing on the front end
 Per Kaz's rule, I stopped at the UI + the tiny `instructions` schema add. The
 child-id resolution, the parent-view wiring, and the notification are yours.

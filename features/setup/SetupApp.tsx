@@ -1196,6 +1196,12 @@ export function SetupApp() {
           <Row label="Notify me when a parent adds a note" hint="Email + a bell here whenever a parent adds or edits a note on their child's medication.">
             <Toggle on={settings.medication?.notifyParentNote ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentNote: v })} labels={["Yes", "No"]} />
           </Row>
+          <Row label="Notify me when a parent authorises a medication" hint="Email + a bell here when a parent adds a new medication themselves — so it's not missed.">
+            <Toggle on={settings.medication?.notifyParentAuthorise ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentAuthorise: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Remind staff when a dose is due" hint="If a medicine has a set time, ring a bell here when that time comes on a day it's due.">
+            <Toggle on={settings.medication?.remindWhenDue ?? true} onChange={(v) => set("medication", { ...settings.medication, remindWhenDue: v })} labels={["Yes", "No"]} />
+          </Row>
           <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
             <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
           </Row>
