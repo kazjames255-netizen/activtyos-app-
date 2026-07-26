@@ -1559,17 +1559,27 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   const dates = useMemo(() => genDates(d.runFrom, d.runTo, d.days), [d.runFrom, d.runTo, d.days]);
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
   const live = dates.filter((x) => !d.datesOff.includes(x)).length;
+  const hadRules = Object.keys(d.bookRules ?? {}).length > 0;
+  // Changing the run length / weekly days can make a pass's booking option
+  // (Step 6) impossible — so a structural change clears them, and the note
+  // tells the operator to set them again.
+  const updRun = (patch: Partial<WizardDraft>) => upd({ ...patch, ...(hadRules ? { bookRules: {} } : {}) });
   return (
     <div className="max-w-[720px]">
       <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — including weekends. The calendar builds itself." />
+      {hadRules && (
+        <div className="mb-3 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
+          ⚠️ Changing the dates or weekly days here resets <b>“How parents can book each pass”</b> (Step 6) — pop back there and set it again after.
+        </div>
+      )}
       <div className="mb-3 flex gap-3">
-        <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Camp runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
-        <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Camp runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
+        <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Camp runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => updRun({ runFrom: e.target.value })} className="w-full" /></div>
+        <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Camp runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => updRun({ runTo: e.target.value })} className="w-full" /></div>
       </div>
       <SectionHead icon="▥">Block size</SectionHead>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
-          <button key={k} type="button" onClick={() => upd({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
+          <button key={k} type="button" onClick={() => updRun({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
             style={d.blockMode === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{label}</button>
         ))}
       </div>
@@ -1578,7 +1588,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
         {WEEKDAYS.map(([n, label]) => {
           const on = d.days.includes(n);
           return (
-            <button key={n} type="button" disabled={weekly} onClick={() => upd({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
+            <button key={n} type="button" disabled={weekly} onClick={() => updRun({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
               style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{label}</button>
           );
         })}
@@ -1736,7 +1746,15 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             // Days a single week offers, and the total days the whole run offers.
             const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
             const totalRun = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length;
-            return multiDay.map((t) => {
+            const validFor = (days: number, k: BookRule) => k === "week" ? days <= weekLen : k === "blocks" ? (days === weekLen || days === totalRun) : true;
+            const anyReset = multiDay.some((t) => { const s = (d.bookRules ?? {})[t.name]; return s && !validFor(t.days, s); });
+            return (<>
+            {anyReset && (
+              <div className="mb-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
+                ⚠️ Your dates changed, so some options no longer fit and were reset — please confirm each pass below.
+              </div>
+            )}
+            {multiDay.map((t) => {
               const weekOk = t.days <= weekLen;                        // fits inside one week
               const blockOk = t.days === weekLen || t.days === totalRun; // a whole week, or the whole run
               const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : true);
@@ -1767,7 +1785,8 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}</div>
                 </div>
               );
-            });
+            })}
+            </>);
           })()}
         </div>
       )}
