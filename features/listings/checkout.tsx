@@ -1820,8 +1820,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           // Paying by voucher happens on the scheme's website, not here — so
           // the button confirms the booking, it doesn't take a payment.
           : parentMode && method === "voucher" ? "Confirm booking"
-          : parentMode ? `Confirm & pay ${money(grandTotal)}`
-          : `Send payment link & create · ${money(grandTotal)}`}
+          : parentMode ? `Confirm & pay ${money(amountDue)}`
+          : `Send payment link & create · ${money(amountDue)}`}
       </button>}
 
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
