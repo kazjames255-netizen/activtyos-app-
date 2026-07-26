@@ -213,6 +213,8 @@ export function MomentsApp() {
   const [galWhen, setGalWhen] = useState<"all" | "today" | "week">("all");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [replyVals, setReplyVals] = useState<Record<string, string>>({});
+  const [dlFor, setDlFor] = useState<string | null>(null);
+  const [dlRatio, setDlRatio] = useState<"square" | "portrait" | "story">("square");
 
   const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -223,6 +225,35 @@ export function MomentsApp() {
   async function remove(m: Moment) { if (!confirm("Delete this moment?")) return; try { await api(`/api/moments/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }
   async function reply(m: Moment) { const t = (replyVals[m.id] ?? "").trim(); if (!t) return; try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment`, { text: t }); setReplyVals((v) => ({ ...v, [m.id]: "" })); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function toggleMarketing(m: Moment, idx: number) { try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+
+  // Compose the photo (+ optional caption & starred quote) into a chosen format and download it.
+  async function downloadComposite(m: Moment, ratio: "square" | "portrait" | "story", withText: boolean) {
+    if (!m.photoUrl) return;
+    const sizes = { square: [1080, 1080], portrait: [1080, 1350], story: [1080, 1920] } as const;
+    const [W, H] = sizes[ratio];
+    try {
+      const img = new Image(); img.crossOrigin = "anonymous";
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("load")); img.src = m.photoUrl!; });
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      const ctx = c.getContext("2d")!; ctx.fillStyle = "#0b1020"; ctx.fillRect(0, 0, W, H);
+      const s = Math.max(W / img.naturalWidth, H / img.naturalHeight), dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      if (withText) {
+        const quote = (m.comments ?? []).find((x) => x.marketing) ?? (m.comments ?? []).find((x) => x.role === "parent");
+        const band = Math.round(H * (quote ? 0.44 : 0.3));
+        const g = ctx.createLinearGradient(0, H - band, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.4, "rgba(0,0,0,.55)"); g.addColorStop(1, "rgba(0,0,0,.92)");
+        ctx.fillStyle = g; ctx.fillRect(0, H - band, W, band);
+        const pad = 56; let y = H - band + 66;
+        const wrap = (text: string, font: string) => { ctx.font = font; const words = text.split(/\s+/); const lines: string[] = []; let cur = ""; for (const w of words) { const t = cur ? `${cur} ${w}` : w; if (ctx.measureText(t).width > W - pad * 2 && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur); return lines; };
+        if (m.caption) { ctx.fillStyle = "#fff"; const f = "700 46px system-ui, sans-serif"; for (const ln of wrap(m.caption, f).slice(0, 3)) { ctx.fillText(ln, pad, y); y += 58; } y += 10; }
+        if (quote) { ctx.fillStyle = "rgba(255,255,255,.94)"; const f = "italic 500 36px system-ui, sans-serif"; for (const ln of wrap(`“${quote.text}”`, f).slice(0, 3)) { ctx.fillText(ln, pad, y); y += 46; } ctx.font = "700 30px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,.72)"; ctx.fillText(`— ${quote.byName || "a parent"}`, pad, y + 4); }
+        ctx.font = "600 28px system-ui, sans-serif"; ctx.fillStyle = "rgba(255,255,255,.75)";
+        ctx.fillText([m.postedByName, m.childNames?.filter(Boolean).join(", ")].filter(Boolean).join(" · "), pad, H - 40);
+      }
+      const a = document.createElement("a"); a.href = c.toDataURL("image/jpeg", 0.92); a.download = `${(m.childNames?.filter(Boolean)[0] ?? "moment").replace(/\s+/g, "-")}-${m.date}-${ratio}.jpg`; a.click();
+    } catch { const a = document.createElement("a"); a.href = m.photoUrl!; a.download = "moment.jpg"; a.target = "_blank"; a.click(); setError("Couldn’t add text to the image — downloaded the plain photo instead."); }
+    setDlFor(null);
+  }
 
   const all = useMemo(() => moments ?? [], [moments]);
   const listingName = useMemo(() => new Map(listings.map((l) => [l.id, l.title])), [listings]);
@@ -331,14 +362,23 @@ export function MomentsApp() {
                   {m.childNames?.filter(Boolean).length > 0 && <div className="mb-1.5 text-[12.5px] font-extrabold">{m.childNames.filter(Boolean).join(", ")}</div>}
                   {m.caption && <div className="text-[13px] leading-[1.5] text-[var(--ink-2)]">{m.caption}</div>}
                   {m.listingId && listingName.get(m.listingId) && <div className="mt-1 text-[11px] text-[var(--ink-3)]">📁 {listingName.get(m.listingId)}</div>}
-                  <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-[var(--ink-3)]"><span className="truncate">👤 {m.postedByName} · {when(m.createdAt)}</span><span className="flex flex-none gap-2">{m.photoUrl && <a href={m.photoUrl} download={`${(m.childNames?.filter(Boolean)[0] ?? "moment")}-${m.date}.jpg`} className="font-bold" style={{ color: BLUE }}>⬇ Download</a>}{canManage && <button type="button" onClick={() => remove(m)} className="font-bold" style={{ color: RED }}>Delete</button>}</span></div>
+                  <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-[var(--ink-3)]"><span className="truncate">👤 {m.postedByName} · {when(m.createdAt)}</span><span className="flex flex-none gap-2">{m.photoUrl && <button type="button" onClick={() => setDlFor(dlFor === m.id ? null : m.id)} className="font-bold" style={{ color: BLUE }}>⬇ Download</button>}{canManage && <button type="button" onClick={() => remove(m)} className="font-bold" style={{ color: RED }}>Delete</button>}</span></div>
+                  {dlFor === m.id && m.photoUrl && (
+                    <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[11.5px]">
+                      <div className="mb-1 font-bold">Download as</div>
+                      <div className="mb-2 flex gap-1.5">{([["square", "Square 1:1"], ["portrait", "Portrait 4:5"], ["story", "Story 9:16"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDlRatio(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={dlRatio === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l}</button>)}</div>
+                      <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, false)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, true)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>＋ Caption &amp; starred quote</button></div>
+                    </div>
+                  )}
                   {((m.comments?.length ?? 0) > 0 || canManage) && (
                     <div className="mt-2 border-t border-[var(--line)] pt-2">
                       {(m.comments ?? []).map((c, idx) => (
-                        <div key={idx} className="mb-1 flex items-start gap-1.5 text-[11.5px] leading-[1.5]">
-                          <span className="flex-none font-bold" style={{ color: c.role === "parent" ? BLUE : "var(--ink)" }}>{c.byName}{c.role === "parent" ? "" : " (you)"}:</span>
-                          <span className="flex-1 text-[var(--ink-2)]">{c.text}</span>
-                          {canManage && <button type="button" onClick={() => toggleMarketing(m, idx)} title={c.marketing ? "Starred for marketing" : "Use as marketing"} className="flex-none text-[14px] leading-none" style={{ color: c.marketing ? "#f0b100" : "var(--ink-3)" }}>{c.marketing ? "★" : "☆"}</button>}
+                        <div key={idx} className="mb-1.5 text-[11.5px] leading-[1.5]">
+                          <div className="flex items-start gap-1.5">
+                            <span className="flex-none font-bold" style={{ color: c.role === "parent" ? BLUE : "var(--ink)" }}>{c.byName}{c.role === "parent" ? "" : " (you)"}:</span>
+                            <span className="flex-1 text-[var(--ink-2)]">{c.text}</span>
+                          </div>
+                          {canManage && c.role === "parent" && <button type="button" onClick={() => toggleMarketing(m, idx)} className="mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-extrabold" style={c.marketing ? { borderColor: "#f0b100", background: "#fffdf3", color: "#9a5a00" } : { borderColor: "var(--line)", color: "var(--ink-3)" }} title="Marketing quotes appear in the strip at the top of this page and can be baked into a download.">{c.marketing ? "★ Marketing quote — tap to remove" : "☆ Use as a marketing quote"}</button>}
                         </div>
                       ))}
                       {canManage && <div className="mt-1 flex gap-1.5"><input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder="Reply…" className="flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" /><button type="button" onClick={() => reply(m)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" style={{ color: BLUE }}>Send</button></div>}
