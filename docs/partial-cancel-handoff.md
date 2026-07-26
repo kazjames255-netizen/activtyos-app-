@@ -60,11 +60,14 @@ subset of the booking's remaining days) plus a **`resolution`**:
    - **`wallet`**: credit `releasedDays × (amountPaid ÷ totalChildDays)` to the
      family's wallet (full pro-rata value, no policy cut, instant). Ties into the
      wallet backend (§Z). Only valid if `partialAllowWallet`.
-   - **`changedate`**: don't refund — the family is moving those days. Either
-     free them and let the family rebook the replacement date(s) through the
-     amend flow, or accept new dates alongside (your call). Only valid if
-     `partialAllowChangeDate`; front-end still needs a "pick the new date" step
-     (see note below).
+   - **`changedate`**: don't refund. The request carries a structured
+     **`moves: [{ childName, childId?, from, to }]`** — the parent picked a
+     concrete replacement date (from the listing's future sessions with space)
+     for each released day. On **approval, apply the swap automatically**: for
+     each move, remove `from` and add `to` to the child's dates (and shift the
+     block/session capacity `from → to`). No free text to interpret. Only valid
+     if `partialAllowChangeDate`; reject a `to` that isn't a running date with
+     space (re-validate server-side — don't trust the client).
 3. **Capacity.** Free the block/session places for **only** the released days
    (reuse the per-date freeing you already do on a full cancel).
 4. **Validation.** Reject dates not in the booking / already cancelled / past;
@@ -73,9 +76,9 @@ subset of the booking's remaining days) plus a **`resolution`**:
 5. **Notify** the provider — which days, which child(ren), and the resolution
    (refund £, wallet £, or move).
 
-**Front-end still to do once you're ready:** the `changedate` path currently
-sends `resolution:"changedate"` but doesn't yet collect the *replacement* dates —
-that wants a small "pick new date(s)" step (can reuse the AmendModal's available-
-date picker). Flagged so it's not mistaken for done.
+**Note — the standalone "Change dates…" modal (AmendModal) is still FREE TEXT**
+(`msg`), unlike this new structured picker. Kaz wants that converted to the same
+concrete calendar pick (structured `from→to`) so an approval auto-applies there
+too. Front-end follow-up; its endpoint is `/api/my/bookings/:ref/amend`.
 
-Nothing changes for a whole-booking cancel (no `days`/`resolution`).
+Nothing changes for a whole-booking cancel (no `days`/`resolution`/`moves`).

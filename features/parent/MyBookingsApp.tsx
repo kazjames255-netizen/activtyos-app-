@@ -35,6 +35,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   const [scope, setScope] = useState<"all" | "days">("all");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [resolution, setResolution] = useState<"refund" | "wallet" | "changedate" | null>(null);
+  const [moveTo, setMoveTo] = useState<Record<string, string>>({}); // slot key → replacement ISO date
 
   useEffect(() => {
     if (!booking.tenantId) return;
@@ -99,6 +100,13 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   const pickedWallet = pickedSlots.length * perSlotPaid;
   const res = resolution && resOptions.includes(resolution) ? resolution : resOptions[0] ?? null;
   const multiKid = !!kidsList && kidsList.length > 1;
+  // Dates a released day could move TO — the listing's future sessions with
+  // space that the child isn't already booked on.
+  const bookedSet = new Set(allDays);
+  const moveDates = [...new Set((listing?.blocks ?? []).flatMap((b) => (b.sessions ?? []).filter((se) => se.spotsLeft > 0).map((se) => se.date)))]
+    .filter((d) => d >= localToday && !bookedSet.has(d)).sort();
+  const moveTargets = pickedSlots.map((s) => moveTo[s.key]);
+  const movesReady = res !== "changedate" || (pickedSlots.every((s) => moveTo[s.key] && moveDates.includes(moveTo[s.key])) && new Set(moveTargets).size === moveTargets.length);
   const partialMode = scope === "days";
   const effRefund = partialMode ? (res === "refund" ? pickedRefund : 0) : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
@@ -134,12 +142,18 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           partial = { days: pickedSlots.map((s) => s.date) };
         }
       }
+      // Change-date: a concrete from→to per released day, so approval applies
+      // it automatically. Sent instead of a refund/wallet resolution.
+      const moves = partialMode && res === "changedate"
+        ? pickedSlots.map((s) => ({ childName: s.childName, childId: s.childId, from: s.date, to: moveTo[s.key] }))
+        : undefined;
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
         // Partial only: what to do with the released day(s).
         resolution: partialMode ? res ?? undefined : undefined,
+        moves,
         ...partial,
       });
       onDone();
@@ -165,6 +179,9 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           {partialMode && (
             <div className="mt-2">
               <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to release{multiKid ? ", per child" : ""}.</div>
+              <div className="mb-1.5 rounded-md bg-[var(--panel)] px-2.5 py-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+                Each day is worth <b className="text-[var(--ink-2)]">{money(perSlotPaid)}</b> — that&rsquo;s 1⁄{totalPaidSlots} of the {money(booking.amount)} you paid ({totalPaidSlots} days). For a refund, each day then follows your provider&rsquo;s notice policy, so a day too close may come back as less or nothing.
+              </div>
               {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
                 const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
                 if (rows.length === 0) return null;
@@ -174,10 +191,12 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                     <div className="flex flex-col gap-1">
                       {rows.map((s) => {
                         const on = pickedDays.includes(s.key);
+                        const r = slotRefund(s.date);
                         return (
-                          <label key={s.key} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
+                          <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
                             style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
-                            <input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b>
+                            <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
+                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · no cash refund (too close)" : perSlotPaid - r > 0.005 ? ` · ${money(r)} if refunded` : ""}</span>
                           </label>
                         );
                       })}
@@ -195,11 +214,11 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                       const on = res === o;
                       const label = o === "refund" ? "Refund" : o === "wallet" ? "Wallet credit" : "Move to another date";
                       const detail = o === "refund"
-                        ? (pickedRefund > 0 ? `${money(pickedRefund)} back, per the cancellation policy` : "no refund this close to the day")
-                        : o === "wallet" ? `${money(pickedWallet)} added to your wallet to spend later`
-                        : "pick the replacement date(s) next — the provider confirms the swap";
+                        ? (pickedRefund > 0 ? `${money(pickedRefund)} back — the ${money(perSlotPaid)}/day pro-rata, less any day inside its notice window` : "no cash refund — every selected day is inside the no-refund window")
+                        : o === "wallet" ? `${money(pickedWallet)} to your wallet — the full ${money(perSlotPaid)}/day, no notice deadline`
+                        : moveDates.length ? "pick the replacement date for each day below" : "no other dates with space to move to";
                       return (
-                        <button key={o} type="button" onClick={() => setResolution(o)} className="rounded-lg border p-2 text-left"
+                        <button key={o} type="button" onClick={() => setResolution(o)} disabled={o === "changedate" && moveDates.length === 0} className="rounded-lg border p-2 text-left disabled:opacity-50"
                           style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
                           <div className="text-[12.5px] font-extrabold" style={{ color: on ? "var(--brand-ink)" : "var(--ink)" }}>{on ? "◉ " : "○ "}{label}</div>
                           <div className="text-[11px] text-[var(--ink-3)]">{detail}</div>
@@ -207,6 +226,36 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                       );
                     })}
                   </div>
+
+                  {/* Structured calendar pick — a concrete from→to per day, so a
+                      provider approval applies the move automatically (no free
+                      text to interpret). */}
+                  {res === "changedate" && (
+                    <div className="mt-2 rounded-lg border border-[var(--line)] p-2">
+                      <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Pick the new date for each day from the calendar (must be a date this activity runs with space):</div>
+                      <div className="flex flex-col gap-1.5">
+                        {pickedSlots.map((s) => {
+                          const taken = pickedSlots.filter((ps) => ps.key !== s.key).map((ps) => moveTo[ps.key]).filter(Boolean);
+                          const chosen = moveTo[s.key];
+                          const bad = chosen && (!moveDates.includes(chosen) || taken.includes(chosen));
+                          return (
+                            <div key={s.key} className="flex flex-wrap items-center gap-2 text-[12px]">
+                              {multiKid && <span className="text-[var(--ink-3)]">{s.childName}:</span>}
+                              <b>{fmtIso(s.date)}</b><span className="text-[var(--ink-3)]">→</span>
+                              <input type="date" min={moveDates[0] ?? localToday} max={moveDates[moveDates.length - 1] || undefined} value={chosen ?? ""}
+                                onChange={(e) => setMoveTo((m) => ({ ...m, [s.key]: e.target.value }))}
+                                className="rounded-md border bg-[var(--surface)] px-2 py-1 text-[12px]"
+                                style={{ borderColor: bad ? "#c0392b" : chosen ? "var(--brand-2)" : "var(--line)" }} />
+                              {bad && <span className="text-[11px] font-bold text-[#c0392b]">{taken.includes(chosen!) ? "already picked for another day" : "no space on that date"}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">Dates with space: {moveDates.length ? moveDates.map(fmtIso).join(", ") : "none"}.</div>
+                      {!movesReady && <div className="mt-1 text-[11px] font-bold text-[#c0392b]">Pick a valid new date for every day to continue.</div>}
+                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">✓ Once your provider approves, the swap is applied automatically.</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -280,7 +329,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
-        <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && pickedSlots.length === 0)}>
+        <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && (pickedSlots.length === 0 || !movesReady))}>
           {busy ? "Sending…" : !partialMode ? "Send cancellation request"
             : !pickedSlots.length ? "Choose days above"
             : res === "changedate" ? `Request to move ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}`
