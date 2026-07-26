@@ -24,4 +24,15 @@ filters by it — the operator flow now populates it.
    If you have a canonical child-match, prefer that (a walk-in with no booking
    won't resolve — those stay unlinked, like meds).
 
+4. **Re-notify on edit.** Operators can now edit a logged record (front-end uses
+   the existing `PUT /api/incidents/:id`, which already writes `updatedAt`). When
+   an edit changes a record that has a `childId`, send the parent a fresh
+   notification — **email + bell** — worded as an *update* ("An accident record
+   for {child} was updated"), gated by the same `notifyParentAccident` /
+   `notifyParentIncident` settings and the parent mute. The parent view already
+   shows an "✏️ Updated · {updatedAt}" badge off the `updatedAt` field; the
+   notification is the push side of that. (Don't fire on no-op saves — only when
+   fields actually changed.) The original `parentNotifiedAt` is preserved by the
+   client, so keep it; `updatedAt` is the edit stamp.
+
 Everything else (fields, access rules, delete) is unchanged and already yours.

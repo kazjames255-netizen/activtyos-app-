@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
@@ -22,7 +22,7 @@ interface Log {
   location?: string; description: string; injury?: string; treatment?: string; firstAider?: string;
   incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
   parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string;
-  recordedByName?: string; createdAt?: string;
+  recordedByName?: string; createdAt?: string; updatedAt?: string;
 }
 
 const LIGHT_PALETTE = {
@@ -41,14 +41,16 @@ const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDa
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
 const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
 
-function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: boolean; onSaved: () => void; onCancel: () => void }) {
-  const [d, setD] = useState<Draft>(emptyDraft(kind));
+function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; notifies: boolean; existing?: Log; onSaved: () => void; onCancel: () => void }) {
+  const isEdit = !!existing;
+  const [d, setD] = useState<Draft>(existing ? { ...existing } : emptyDraft(kind));
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
-  const [treatSel, setTreatSel] = useState<string[]>([]);
-  const [treatOther, setTreatOther] = useState("");
+  const treatParts = (existing?.treatment ?? "").split(";").map((s) => s.trim()).filter(Boolean);
+  const [treatSel, setTreatSel] = useState<string[]>(() => treatParts.filter((s) => TREATMENT_BANK.includes(s)));
+  const [treatOther, setTreatOther] = useState(() => treatParts.filter((s) => !TREATMENT_BANK.includes(s)).join("; "));
   const [showAllTreat, setShowAllTreat] = useState(false);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
   const toggleTreat = (t: string) => setTreatSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
@@ -60,7 +62,16 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
     setBusy(true); setError(null);
     const treatment = kind === "accident" ? ([...treatSel, treatOther.trim()].filter(Boolean).join("; ") || undefined) : d.treatment;
     try {
-      await apiPost("/api/incidents", { ...d, treatment, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
+      if (isEdit) {
+        // Keep the original "informed" stamp; the edit itself re-notifies the
+        // parent (backend writes updatedAt → parent sees an "Updated" alert).
+        await apiPut(`/api/incidents/${encodeURIComponent(existing!.id)}`, {
+          ...d, treatment,
+          parentNotifiedAt: d.parentNotified ? (existing!.parentNotifiedAt ?? new Date().toISOString()) : existing!.parentNotifiedAt,
+        });
+      } else {
+        await apiPost("/api/incidents", { ...d, treatment, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
+      }
       onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
@@ -71,7 +82,7 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
 
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-3 text-[13.5px] font-extrabold">{COPY[kind].add}</div>
+      <div className="mb-3 text-[13.5px] font-extrabold">{isEdit ? `Edit this ${COPY[kind].one}` : COPY[kind].add}</div>
       <div className="mb-4 flex items-center">
         {STEPS.map(([n, label], i) => (
           <div key={n} className={`flex items-center gap-2 ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
@@ -186,7 +197,7 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
           </div>
           <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />I&rsquo;ve also told the parent in person / by phone</label>
           <div className="mt-2.5"><FieldLabel>Follow-up (optional)</FieldLabel><Input value={d.followUp ?? ""} onChange={(e) => set({ followUp: e.target.value })} placeholder="e.g. monitor overnight; parent to check tomorrow" className="w-full" /></div>
-          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be emailed and notified in their area with a timestamp when you save{d.childId ? "" : " (once this child is matched to a booking)"}.</div>}
+          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be {isEdit ? "sent an updated notification" : "emailed and notified"} in their area with a timestamp when you save{d.childId ? "" : " (once this child is matched to a booking)"}.</div>}
         </>
       )}
 
@@ -209,6 +220,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Log | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [q, setQ] = useState("");
@@ -263,6 +275,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {adding && <LogForm kind={kind} notifies={notifies} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
+      {editing && <LogForm key={editing.id} kind={kind} notifies={notifies} existing={editing} onSaved={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />}
 
       {logs && all.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -298,10 +311,12 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                       <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>
                       <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
                       {l.parentNotified || l.parentNotifiedAt ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ parent informed</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>}
+                      {l.updatedAt && <Badge tone={{ bg: "#eef4fd", fg: "#1d3a8f" }}>✏️ Updated {new Date(l.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</Badge>}
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
                     <Button sm onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide details" : "Details"}</Button>
+                    <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button>
                     {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
                   </div>
                   {openId === l.id && (

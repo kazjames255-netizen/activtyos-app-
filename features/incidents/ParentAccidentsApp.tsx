@@ -9,7 +9,7 @@ import { Badge, Card } from "@/components/ui";
 interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
   description?: string; injury?: string; treatment?: string; firstAider?: string; severity?: string;
-  parentNotified?: boolean; parentNotifiedAt?: string; followUp?: string; createdAt?: string;
+  parentNotified?: boolean; parentNotifiedAt?: string; followUp?: string; createdAt?: string; updatedAt?: string;
 }
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -74,6 +74,7 @@ export function ParentAccidentsApp() {
                       <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>
                       <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{fmtDate(r.date, r.time)}</span>
                       {(r.parentNotified || r.parentNotifiedAt) && <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>you were notified{r.parentNotifiedAt ? ` · ${stamp(r.parentNotifiedAt)}` : ""}</Badge>}
+                      {r.updatedAt && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>✏️ Updated by the provider · {stamp(r.updatedAt)}</Badge>}
                     </div>
                   </div>
                   {(r.location || r.treatment || r.firstAider || r.followUp) && (
