@@ -22,7 +22,7 @@ interface Log {
   location?: string; description: string; injury?: string; treatment?: string; firstAider?: string;
   incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
   parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string;
-  recordedByName?: string; createdAt?: string; updatedAt?: string;
+  recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
 }
 
 const LIGHT_PALETTE = {
@@ -312,6 +312,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                       <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
                       {l.parentNotified || l.parentNotifiedAt ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ parent informed</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>}
                       {l.updatedAt && <Badge tone={{ bg: "#eef4fd", fg: "#1d3a8f" }}>✏️ Updated {new Date(l.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</Badge>}
+                      {l.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ Parent acknowledged</Badge>}
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
@@ -329,6 +330,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                       {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span><b>{l.actionTaken}</b></div>}
                       {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
                       {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</b></div>}
+                      {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString("en-GB")}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
                       {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
                       {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
                     </div>

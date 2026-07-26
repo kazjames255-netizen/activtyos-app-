@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 
@@ -10,6 +10,7 @@ interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
   description?: string; injury?: string; treatment?: string; firstAider?: string; severity?: string;
   parentNotified?: boolean; parentNotifiedAt?: string; followUp?: string; createdAt?: string; updatedAt?: string;
+  acknowledgedAt?: string; acknowledgedBy?: string;
 }
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -25,6 +26,7 @@ export function ParentAccidentsApp() {
   const [records, setRecords] = useState<Rec[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [acking, setAcking] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => typeof window !== "undefined" && localStorage.getItem("aos.accidentNotifyMuted") === "1");
   const toggleMute = () => setMuted((m) => { const n = !m; try { localStorage.setItem("aos.accidentNotifyMuted", n ? "1" : "0"); } catch { /* ignore */ } return n; });
 
@@ -33,6 +35,13 @@ export function ParentAccidentsApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["children", "incidents"], refresh);
+
+  async function acknowledge(id: string) {
+    setAcking(id); setError(null);
+    try { await apiPost(`/api/incidents/${encodeURIComponent(id)}/acknowledge`, {}); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
+    finally { setAcking(null); }
+  }
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -75,6 +84,7 @@ export function ParentAccidentsApp() {
                       <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{fmtDate(r.date, r.time)}</span>
                       {(r.parentNotified || r.parentNotifiedAt) && <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>you were notified{r.parentNotifiedAt ? ` · ${stamp(r.parentNotifiedAt)}` : ""}</Badge>}
                       {r.updatedAt && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>✏️ Updated by the provider · {stamp(r.updatedAt)}</Badge>}
+                      {r.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ You acknowledged · {stamp(r.acknowledgedAt)}</Badge>}
                     </div>
                   </div>
                   {(r.location || r.treatment || r.firstAider || r.followUp) && (
@@ -90,6 +100,19 @@ export function ParentAccidentsApp() {
                         </div>
                       )}
                     </>
+                  )}
+                  {r.acknowledgedAt ? (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#cfe9d8] bg-[#eef8f1] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#0f7a43]">
+                      ✓ You confirmed you&rsquo;ve seen this on {stamp(r.acknowledgedAt)} — the team has been told.
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#cfe0f7] bg-[#f4f8ff] px-3.5 py-2.5">
+                      <span className="text-[12.5px] font-semibold text-[var(--ink-2)]">Please confirm you&rsquo;ve seen this so staff know you&rsquo;re aware.</span>
+                      <button type="button" disabled={acking === r.id} onClick={() => acknowledge(r.id)}
+                        className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px disabled:opacity-60">
+                        {acking === r.id ? "Saving…" : "✓ I acknowledge this"}
+                      </button>
+                    </div>
                   )}
                 </div>
               </Card>

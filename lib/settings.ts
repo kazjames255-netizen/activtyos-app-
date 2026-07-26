@@ -347,6 +347,7 @@ export interface TenantSettings {
   safeguarding?: {
     notifyParentAccident?: boolean;  // email + bell the parent when an accident is logged
     notifyParentIncident?: boolean;  // …and for incidents (usually off — often internal)
+    notifyStaffAcknowledged?: boolean; // email + bell staff when a parent acknowledges a record
   };
 
   /**
@@ -601,7 +602,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
-  safeguarding: { notifyParentAccident: true, notifyParentIncident: false },
+  safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,

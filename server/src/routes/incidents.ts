@@ -155,6 +155,26 @@ incidents.put("/:id", async (req, res) => {
   res.json({ id: after.id, ...after.data() });
 });
 
+// POST /api/incidents/:id/acknowledge — a parent confirms they've seen the
+// accident/incident for their child, so staff know it landed. Parent-only,
+// scoped to their own child (like the medication note endpoint). Idempotent:
+// re-acknowledging just refreshes the stamp.
+incidents.post("/:id/acknowledge", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "parent") { res.status(403).json({ error: "Only a parent can acknowledge this" }); return; }
+  const snap = await col.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Record not found" }); return; }
+  const childId = snap.data()!.childId as string | undefined;
+  if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
+  const child = await db.collection("children").doc(childId).get();
+  if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+  await snap.ref.set({
+    acknowledgedAt: new Date().toISOString(),
+    acknowledgedBy: req.user?.name ?? req.user?.email ?? "Parent",
+  }, { merge: true });
+  res.json({ ok: true });
+});
+
 // DELETE /api/incidents/:id — operators only. A safeguarding record isn't
 // something whoever's on shift should be able to remove.
 incidents.delete("/:id", async (req, res) => {

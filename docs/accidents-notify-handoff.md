@@ -35,4 +35,15 @@ filters by it — the operator flow now populates it.
    fields actually changed.) The original `parentNotifiedAt` is preserved by the
    client, so keep it; `updatedAt` is the edit stamp.
 
+5. **Parent acknowledgement → notify staff.** New parent-only endpoint
+   `POST /api/incidents/:id/acknowledge` is built (front-end + route): a parent
+   confirms they've seen the record for their child; it sets `acknowledgedAt` +
+   `acknowledgedBy`. When that happens, **email + bell the operator/staff** so
+   they know the parent is aware — gated by `settings.safeguarding.
+   notifyStaffAcknowledged` (Setup → Safeguarding toggle, **default on**).
+   The parent UI already nudges them to acknowledge and shows the confirmed
+   state; the operator card shows a "✓ Parent acknowledged" badge. Your side is
+   just the outbound staff notification (respect the toggle; don't spam on
+   re-acknowledge — notify on the first ack, or on a state change to acknowledged).
+
 Everything else (fields, access rules, delete) is unchanged and already yours.

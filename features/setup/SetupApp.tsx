@@ -1225,6 +1225,9 @@ export function SetupApp() {
           <Row label="Notify the parent for incidents too" hint="Incidents are often internal (behaviour, near-misses) — leave off to keep them staff-only, or on to share them.">
             <Toggle on={settings.safeguarding?.notifyParentIncident ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentIncident: v })} labels={["Yes", "No"]} />
           </Row>
+          <Row label="Tell staff when a parent acknowledges" hint="Parents can confirm they've seen a logged accident. When they do, email + ring the bell for your staff so you know it landed. Turn off if you don't need the confirmation.">
+            <Toggle on={settings.safeguarding?.notifyStaffAcknowledged ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyStaffAcknowledged: v })} labels={["Yes", "No"]} />
+          </Row>
         </Section>
       )}
 
