@@ -6,6 +6,8 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
+import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
+import { INJURY_BANK, TREATMENT_BANK, suggestedTreatment } from "./firstAid";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents — the safeguarding log. One component, `kind` picks
@@ -36,35 +38,6 @@ const todayIso = () => { const t = new Date(); const p = (n: number) => String(n
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
 const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 
-// Search the operator's own families/children so Child is picked, not typed.
-interface Fam { id: string; name: string; email?: string; children?: { name: string }[] }
-function ChildPicker({ value, onPick }: { value: string; onPick: (name: string) => void }) {
-  const [families, setFamilies] = useState<Fam[]>([]);
-  const [q, setQ] = useState(value);
-  const [open, setOpen] = useState(false);
-  useEffect(() => { apiGet<Fam[]>("/api/customers").then(setFamilies).catch(() => {}); }, []);
-  const ql = q.trim().toLowerCase();
-  const opts: { child: string; sub: string }[] = [];
-  for (const f of families) { const kids = f.children ?? []; if (!kids.length) opts.push({ child: f.name, sub: f.email ?? "family" }); for (const k of kids) opts.push({ child: k.name, sub: f.name }); }
-  const matches = opts.filter((o) => !ql || o.child.toLowerCase().includes(ql) || o.sub.toLowerCase().includes(ql)).slice(0, 8);
-  return (
-    <div className="relative">
-      <Input value={q} placeholder="Search child or family…" className="w-full"
-        onChange={(e) => { setQ(e.target.value); onPick(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
-      {open && matches.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
-          {matches.map((o, i) => (
-            <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(o.child); onPick(o.child); setOpen(false); }}
-              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-[var(--panel)]">
-              <span className="font-semibold">{o.child}</span><span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
 const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
 
@@ -76,13 +49,13 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
   const [step, setStep] = useState(1);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
   useEffect(() => { apiGet<{ child?: string; childId?: string }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
-  const linkedChildId = bkgs.find((b) => (b.child ?? "").trim().toLowerCase() === (d.childName ?? "").trim().toLowerCase())?.childId;
+  const childOptions: ChildOption[] = [...new Map(bkgs.filter((b) => b.child).map((b) => [b.child!.trim().toLowerCase(), { name: b.child!, childId: b.childId }])).values()];
 
   async function save() {
     if (!d.childName.trim() || !d.description.trim()) { setError("Add the child and what happened."); return; }
     setBusy(true); setError(null);
     try {
-      await apiPost("/api/incidents", { ...d, childId: linkedChildId ?? d.childId, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
+      await apiPost("/api/incidents", { ...d, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
       onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
@@ -108,7 +81,7 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
 
       {step === 1 && (
         <div className="grid gap-2.5 sm:grid-cols-2">
-          <div className="sm:col-span-2"><FieldLabel>Child / family</FieldLabel><ChildPicker value={d.childName} onPick={(name) => set({ childName: name })} /></div>
+          <div className="sm:col-span-2"><FieldLabel>Child (booked)</FieldLabel><ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} /></div>
           <div><FieldLabel>Date</FieldLabel><Input type="date" max={todayIso()} value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
           <div><FieldLabel>Time</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
           <div className="sm:col-span-2"><FieldLabel>Where did it happen?</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. the main hall" className="w-full" /></div>
@@ -120,9 +93,23 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
           <div><FieldLabel>What happened?</FieldLabel><textarea value={d.description} onChange={(e) => set({ description: e.target.value })} rows={3} placeholder="Describe it clearly and factually…" className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></div>
           {kind === "accident" ? (
             <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-              <div><FieldLabel>Injury / body part</FieldLabel><Input value={d.injury ?? ""} onChange={(e) => set({ injury: e.target.value })} placeholder="e.g. grazed left knee" className="w-full" /></div>
+              <div>
+                <FieldLabel>Injury / body part</FieldLabel>
+                <Input list="injuryBank" value={d.injury ?? ""} onChange={(e) => set({ injury: e.target.value })} placeholder="Search e.g. sprained ankle — or type your own" className="w-full" />
+                <datalist id="injuryBank">{INJURY_BANK.map((i) => <option key={i} value={i} />)}</datalist>
+              </div>
               <div><FieldLabel>First aider</FieldLabel><Input value={d.firstAider ?? ""} onChange={(e) => set({ firstAider: e.target.value })} placeholder="who gave first aid" className="w-full" /></div>
-              <div className="sm:col-span-2"><FieldLabel>First aid / treatment given</FieldLabel><Input value={d.treatment ?? ""} onChange={(e) => set({ treatment: e.target.value })} placeholder="e.g. cleaned and plaster applied" className="w-full" /></div>
+              <div className="sm:col-span-2">
+                <FieldLabel>First aid / treatment given</FieldLabel>
+                <Input list="treatmentBank" value={d.treatment ?? ""} onChange={(e) => set({ treatment: e.target.value })} placeholder="Search common treatments — or type your own" className="w-full" />
+                <datalist id="treatmentBank">{TREATMENT_BANK.map((t) => <option key={t} value={t} />)}</datalist>
+                {(() => { const sug = suggestedTreatment(d.injury); return sug && d.treatment !== sug ? (
+                  <button type="button" onClick={() => set({ treatment: sug })} className="mt-1.5 rounded-lg border border-[#cfe0f7] bg-[#eef4fd] px-2.5 py-1.5 text-left text-[11.5px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">
+                    💡 Suggested (UK first aid): <span className="font-normal">{sug}</span> — tap to use
+                  </button>
+                ) : null; })()}
+                <p className="mt-1 text-[10.5px] leading-snug text-[var(--ink-3)]">Suggestions follow NHS / St John Ambulance guidance — always use your trained first aider&rsquo;s judgement and edit as needed.</p>
+              </div>
             </div>
           ) : (
             <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
@@ -145,7 +132,7 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
           </div>
           <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />I&rsquo;ve also told the parent in person / by phone</label>
           <div className="mt-2.5"><FieldLabel>Follow-up (optional)</FieldLabel><Input value={d.followUp ?? ""} onChange={(e) => set({ followUp: e.target.value })} placeholder="e.g. monitor overnight; parent to check tomorrow" className="w-full" /></div>
-          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be emailed and notified in their area with a timestamp when you save{linkedChildId ? "" : " (once this child is matched to a booking)"}.</div>}
+          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be emailed and notified in their area with a timestamp when you save{d.childId ? "" : " (once this child is matched to a booking)"}.</div>}
         </>
       )}
 
