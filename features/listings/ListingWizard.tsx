@@ -2917,7 +2917,8 @@ const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // near-black (Sport) or portal navy (Navy). Accents stay electric-blue + lime.
 type Surf = { bg: string; panel: string; line: string; cell: string; cellOff: string };
 const SPORT_BLACK: Surf = { bg: "#0b0d12", panel: "#12161f", line: "#1e2430", cell: "#0e131c", cellOff: "#0c0f16" };
-const SPORT_NAVY: Surf = { bg: "#16307a", panel: "#20408f", line: "#3457a8", cell: "#1b3a86", cellOff: "#132a63" };
+// Matches the app sidebar / title-bar blue (navy → card-blue).
+const SPORT_NAVY: Surf = { bg: "#16306e", panel: "#213f92", line: "#3457a8", cell: "#1c3a86", cellOff: "#142c66" };
 // Rolling hero carousel — auto-advances + arrows/dots when there's >1 photo.
 function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string }) {
   const [i, setI] = useState(0);
@@ -3171,6 +3172,9 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, topRight }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#adb8ca";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
+  const isNavy = surf === SPORT_NAVY;
+  // A hint of the app's blue/white title bars on the blue theme's header.
+  const headerBg = isNavy ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 68%,#5b8af0 100%)" : undefined;
   const cond = "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-2" : "grid-cols-1";
   const heroH = full ? 340 : 240;
@@ -3183,7 +3187,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const passesExtra = passSummary.length - PASS_LIMIT;
   return (
     <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}`} style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs }}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs, background: headerBg }}>
         <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
         <span className="flex items-center gap-4 [&_a]:text-white">
           {topRight}
