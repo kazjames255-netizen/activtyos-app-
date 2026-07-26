@@ -532,12 +532,16 @@ export interface TenantSettings {
    *  simply nothing back. */
   noRefundCredit: boolean;
   /** Let a family cancel individual days of a multi-day pass (not just the whole
-   *  booking). Each cancelled day is refunded on its own notice window. */
+   *  booking). Each cancelled day is refunded pro-rata (amount ÷ days) on its
+   *  own notice window. */
   allowPartialCancel: boolean;
-  /** How a single day is valued before the policy % is applied:
-   *  "prorata" = amount ÷ days (simple, default); "reprice" = amount minus the
-   *  single-day price of the days kept (protects the bundle discount). */
-  perDayRefundMode: "prorata" | "reprice";
+  /** Penalty for breaking a multi-day pass by cancelling only part of it —
+   *  protects a bundle discount without needing a single-day price. Applied
+   *  once per partial cancel, deducted from the pro-rata refund. 0 = none. */
+  partialCancelPenalty: number;
+  /** Whether the penalty is a flat cash amount or a % of the cancelled days'
+   *  value. */
+  partialCancelPenaltyUnit: "flat" | "percent";
 
   // ── Listings ──
   defaultCapacity: number;
@@ -633,7 +637,8 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   refundLetCustomerChoose: true,
   noRefundCredit: false,
   allowPartialCancel: true,
-  perDayRefundMode: "prorata",
+  partialCancelPenalty: 0,
+  partialCancelPenaltyUnit: "flat",
 
   defaultCapacity: 60,
   defaultRunningDays: [1, 2, 3, 4, 5],

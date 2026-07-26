@@ -136,7 +136,8 @@ const PUBLIC_SETTINGS_KEYS = [
   // and how a single day is valued for the refund. Parent cancel modal reads
   // these to offer the day-picker and preview the per-day refund.
   "allowPartialCancel",
-  "perDayRefundMode",
+  "partialCancelPenalty",
+  "partialCancelPenaltyUnit",
   "voucherProviders",
   "voucherHoldDays",
   "voucherClearDays",

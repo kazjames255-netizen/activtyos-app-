@@ -24,7 +24,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     letChoose: boolean;
     noRefundCredit: boolean;
     allowPartial: boolean;
-    perDayMode: "prorata" | "reprice";
+    penalty: number;
+    penaltyUnit: "flat" | "percent";
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; perDayRefundMode?: "prorata" | "reprice" } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialCancelPenalty?: number; partialCancelPenaltyUnit?: "flat" | "percent" } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -45,7 +46,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           letChoose: allowCard && !!s.refundLetCustomerChoose,
           noRefundCredit: !!s.noRefundCredit,
           allowPartial: s.allowPartialCancel ?? true,
-          perDayMode: s.perDayRefundMode ?? "prorata",
+          penalty: s.partialCancelPenalty ?? 0,
+          penaltyUnit: s.partialCancelPenaltyUnit ?? "flat",
         });
       })
       .catch(() => {});
@@ -81,7 +83,13 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   const slotRefund = (d: string) => (policy ? refundFor(policy, d, perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
   const togglePick = (key: string) => setPickedDays((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
   const pickedSlots = slots.filter((s) => pickedDays.includes(s.key));
-  const pickedRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
+  const grossRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
+  // Penalty for breaking the pass — a flat £ or a % of the cancelled days'
+  // value — deducted once from the pro-rata refund. Never turns it negative.
+  const cancelledValue = pickedSlots.length * perSlotPaid;
+  const penaltyAmt = !cfg?.penalty || pickedSlots.length === 0 ? 0
+    : cfg.penaltyUnit === "percent" ? (cfg.penalty / 100) * cancelledValue : cfg.penalty;
+  const pickedRefund = Math.max(0, grossRefund - penaltyAmt);
   const multiKid = !!kidsList && kidsList.length > 1;
   const partialMode = scope === "days";
   const effRefund = partialMode ? pickedRefund : advice?.amount ?? 0;
@@ -169,11 +177,14 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                   </div>
                 );
               })}
-              {cfg?.perDayMode === "reprice" && (
-                <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your provider reprices the days you keep at the single-day rate, so the final refund may differ from this estimate.</p>
+              {pickedSlots.length > 0 && penaltyAmt > 0 && (
+                <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[11.5px] text-[var(--ink-2)]">
+                  <div className="flex justify-between"><span>Days&rsquo; refund</span><span>{money(grossRefund)}</span></div>
+                  <div className="flex justify-between text-[var(--ink-3)]"><span>Part-cancel penalty{cfg?.penaltyUnit === "percent" ? ` (${cfg.penalty}%)` : ""}</span><span>−{money(Math.min(penaltyAmt, grossRefund))}</span></div>
+                </div>
               )}
               <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[12px] font-extrabold" style={{ color: pickedRefund > 0 ? "#1d3a8f" : "#c0392b" }}>
-                {pickedSlots.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedSlots.length} day${pickedSlots.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : `No refund for the ${pickedSlots.length} selected day${pickedSlots.length > 1 ? "s" : ""} — inside the no-refund window.`}
+                {pickedSlots.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedSlots.length} day${pickedSlots.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : penaltyAmt > 0 && grossRefund > 0 ? `No refund — the penalty covers it.` : `No refund for the ${pickedSlots.length} selected day${pickedSlots.length > 1 ? "s" : ""} — inside the no-refund window.`}
               </div>
             </div>
           )}

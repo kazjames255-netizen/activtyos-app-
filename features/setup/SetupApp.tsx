@@ -1399,12 +1399,19 @@ export function SetupApp() {
                 <Toggle on={settings.allowPartialCancel} onChange={(v) => set("allowPartialCancel", v)} />
               </Row>
               {settings.allowPartialCancel && (
-                <Row
-                  label="How to value one cancelled day"
-                  hint="Pro-rata splits what they paid evenly across the days (simplest). Reprice keeps the days they're not cancelling at the single-day price and refunds the rest — protects any multi-day discount, but can give smaller/odd figures."
-                >
-                  <Toggle on={settings.perDayRefundMode === "reprice"} onChange={(v) => set("perDayRefundMode", v ? "reprice" : "prorata")} labels={["Reprice", "Pro-rata"]} />
-                </Row>
+                <>
+                  <Row
+                    label="Penalty for cancelling part of a pass"
+                    hint="Cancelled days are refunded pro-rata (what they paid ÷ days). This optional penalty is then deducted once — so breaking a multi-day pass costs something even with good notice, protecting your bundle discount. 0 = no penalty."
+                  >
+                    <NumberBox value={settings.partialCancelPenalty} onChange={(n) => set("partialCancelPenalty", n)} min={0} max={settings.partialCancelPenaltyUnit === "percent" ? 100 : 500} suffix={settings.partialCancelPenaltyUnit === "percent" ? "%" : "£"} />
+                  </Row>
+                  {settings.partialCancelPenalty > 0 && (
+                    <Row label="Penalty is" hint="A flat cash amount, or a percentage of the value of the days being cancelled.">
+                      <Toggle on={settings.partialCancelPenaltyUnit === "percent"} onChange={(v) => set("partialCancelPenaltyUnit", v ? "percent" : "flat")} labels={["% of days", "Flat £"]} />
+                    </Row>
+                  )}
+                </>
               )}
             </div>
           </Section>

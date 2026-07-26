@@ -26,12 +26,19 @@ the whole booking. Front-end is built (`features/parent/MyBookingsApp.tsx`,
 ## Settings (done, exposed publicly)
 `lib/settings.ts` + Setup → Cancellations & refunds:
 - **`allowPartialCancel`** (bool, default **true**) — gates the whole feature.
-- **`perDayRefundMode`** (`"prorata"` default | `"reprice"`) — how one day is
-  valued *before* the policy % applies. `prorata` = `amount ÷ days`.
-  `reprice` = `amount − (single-day price × days kept)` (protects a multi-day
-  discount). The front-end preview always shows the pro-rata figure and, in
-  reprice mode, tells the parent the provider sets the final number.
-Both are whitelisted in `GET /api/public/library/:tenantId`.
+- **`partialCancelPenalty`** (number, default **0**) + **`partialCancelPenaltyUnit`**
+  (`"flat"` default | `"percent"`) — an optional penalty for breaking a
+  multi-day pass, deducted **once** from the pro-rata refund (never below £0).
+  Flat = £X; percent = X% of the cancelled days' pro-rata value. This replaces
+  the earlier "reprice" idea, which needed a single-day price that a listing may
+  not have and can't be reliably derived.
+All whitelisted in `GET /api/public/library/:tenantId`.
+
+**Refund maths (authoritative on your side):**
+`grossRefund = Σ policyRefund(day, amountPaid ÷ totalChildDays)` over the
+cancelled slots; `penalty = unit==="percent" ? partialCancelPenalty% × Σ(perSlotPaid) : partialCancelPenalty`;
+`netRefund = max(0, grossRefund − penalty)`. The front-end previews exactly this;
+recompute server-side (don't trust the client figure).
 
 ## What's yours (backend)
 When `POST /api/my/bookings/:ref/cancel` arrives **with `days`** (a strict
@@ -41,13 +48,9 @@ subset of the booking's remaining days):
    `kids[].cancelledDays` (match by `childId` then `name`). Keep
    `status: "Confirmed"` for what remains. If the request cancels *all*
    remaining child-days, treat it as a normal full cancellation (existing path).
-2. **Refund.** Compute the refund for the cancelled days only, honouring
-   `perDayRefundMode`:
-   - `prorata`: `Σ policyRefund(day, amountPaid ÷ totalDays)` — same
-     `refundFor` you already use, once per day, each on that day's start.
-   - `reprice`: refund = `amountPaid − (singleDayPrice × daysKept)`, floored at
-     0, then still subject to the policy per remaining-cancelled day. Needs the
-     listing's single-day price.
+2. **Refund.** Compute per the "Refund maths" above: pro-rata over the cancelled
+   slots (same `refundFor` you already use, once per day on that day's start),
+   then subtract the single `partialCancelPenalty` (flat or %), floored at £0.
    Record it as a partial refund request (pending your approval / Stripe), the
    same shape as a full cancel's `cancel.amount` / `cancel.refund`.
 3. **Capacity.** Free the block/session places for **only** the cancelled days
