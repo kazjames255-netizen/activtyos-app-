@@ -134,22 +134,23 @@ moments.get("/taggable", async (req, res) => {
   }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
   const listingId = typeof req.query.listingId === "string" ? req.query.listingId : "";
+  const byListing = !!listingId; // a listing shows EVERYONE ever booked on it; no listing = that date's children
   const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
-  const todays = blocks.docs
+  const relevant = blocks.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
-    .filter(({ block }) => (!listingId || block.listingId === listingId) && block.sessions.some((s) => s.date === date));
-  if (!todays.length) {
+    .filter(({ block }) => (byListing ? block.listingId === listingId : block.sessions.some((s) => s.date === date)));
+  if (!relevant.length) {
     res.json([]);
     return;
   }
   const bookingSnaps = await Promise.all(
-    todays.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()),
+    relevant.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()),
   );
   const childIds = new Set<string>();
   for (const snap of bookingSnaps)
     for (const d of snap.docs) {
       const b = fromDoc(d.data() as BookingDoc);
-      if (b.childId && countsTowardCapacity(b.status) && b.status !== "Offered" && (!b.days || b.days.includes(date)))
+      if (b.childId && countsTowardCapacity(b.status) && b.status !== "Offered" && (byListing || !b.days || b.days.includes(date)))
         childIds.add(b.childId);
     }
   const docs = childIds.size ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid))) : [];

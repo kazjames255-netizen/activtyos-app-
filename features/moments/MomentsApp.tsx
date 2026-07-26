@@ -159,8 +159,8 @@ function PostForm({ activities, settings, save, listings, onPosted, onCancel }: 
         <div className="mb-3 flex flex-wrap gap-1.5">{activities.map((a) => <button key={a.k} type="button" onClick={() => setActivity(a.n)} className="rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-colors" style={activity === a.n ? { borderColor: a.c, background: `color-mix(in srgb,${a.c} 12%,var(--surface))`, color: a.c } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{a.e} {a.n}</button>)}</div>
       )}
 
-      {lbl("Which children?")}
-      {taggable.length === 0 ? <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">No children booked on this {listingId ? "listing/" : ""}date.</div> : (
+      {lbl(listingId ? "Which children? (everyone booked on this listing)" : "Which children? (booked on this date)")}
+      {taggable.length === 0 ? <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">No children found {listingId ? "booked on this listing" : "booked on this date"} — {listingId ? "check the listing has bookings" : "pick a listing above, or a date with bookings"}.</div> : (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {taggable.map((c) => { const on = tagged.includes(c.childId), allowed = canTag(c); return (
             <button key={c.childId} type="button" disabled={!allowed} onClick={() => setTagged((t) => t.includes(c.childId) ? t.filter((x) => x !== c.childId) : [...t, c.childId])}
