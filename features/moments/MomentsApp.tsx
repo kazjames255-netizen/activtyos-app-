@@ -14,8 +14,9 @@ import { useSettings } from "@/lib/settings";
 // (the parent-side email/notification + deep link is Amir's).
 // ─────────────────────────────────────────────────────────────────────────
 
-interface Moment { id: string; photoUrl?: string; caption?: string; activity?: string; photoType?: "child" | "work"; date: string; listingId?: string; childIds: string[]; childNames: string[]; postedByName?: string; createdAt?: string }
-interface Taggable { childId: string; name: string; photoConsent: boolean }
+interface Comment { by: string; byName: string; role: "parent" | "staff"; text: string; at: string; marketing?: boolean }
+interface Moment { id: string; photoUrl?: string; caption?: string; activity?: string; photoType?: "child" | "work"; date: string; listingId?: string; childIds: string[]; childNames: string[]; postedByName?: string; createdAt?: string; comments?: Comment[] }
+interface Taggable { childId: string; name: string; photoConsent: boolean; parentName?: string; email?: string; listing?: string; postcode?: string }
 interface Act { k: string; n: string; e: string; c: string }
 type SettingsShape = ReturnType<typeof useSettings>["settings"];
 type SaveFn = ReturnType<typeof useSettings>["save"];
@@ -98,10 +99,12 @@ function PostForm({ activities, settings, save, listings, onPosted, onCancel }: 
   const [tagged, setTagged] = useState<string[]>([]);
   const [newAct, setNewAct] = useState(false);
   const [actName, setActName] = useState(""), [actEmoji, setActEmoji] = useState("🎉");
+  const [childQuery, setChildQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { apiGet<Taggable[]>(`/api/moments/taggable?date=${date}${listingId ? `&listingId=${encodeURIComponent(listingId)}` : ""}`).then((t) => { setTaggable(t); setTagged([]); }).catch(() => setTaggable([])); }, [date, listingId]);
+  useEffect(() => { apiGet<Taggable[]>(`/api/moments/taggable${listingId ? `?listingId=${encodeURIComponent(listingId)}` : ""}`).then((t) => { setTaggable(t); setTagged([]); }).catch(() => setTaggable([])); }, [listingId]);
 
   const canTag = (c: Taggable) => photoType === "work" || c.photoConsent;
   const noConsentTagged = tagged.map((id) => taggable.find((c) => c.childId === id)).filter((c): c is Taggable => !!c && !c.photoConsent);
@@ -159,18 +162,32 @@ function PostForm({ activities, settings, save, listings, onPosted, onCancel }: 
         <div className="mb-3 flex flex-wrap gap-1.5">{activities.map((a) => <button key={a.k} type="button" onClick={() => setActivity(a.n)} className="rounded-full border-2 px-2.5 py-1 text-[12px] font-bold transition-colors" style={activity === a.n ? { borderColor: a.c, background: `color-mix(in srgb,${a.c} 12%,var(--surface))`, color: a.c } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{a.e} {a.n}</button>)}</div>
       )}
 
-      {lbl(listingId ? "Which children? (everyone booked on this listing)" : "Which children? (booked on this date)")}
-      {taggable.length === 0 ? <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">No children found {listingId ? "booked on this listing" : "booked on this date"} — {listingId ? "check the listing has bookings" : "pick a listing above, or a date with bookings"}.</div> : (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {taggable.map((c) => { const on = tagged.includes(c.childId), allowed = canTag(c); return (
-            <button key={c.childId} type="button" disabled={!allowed} onClick={() => setTagged((t) => t.includes(c.childId) ? t.filter((x) => x !== c.childId) : [...t, c.childId])}
-              className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-55"
-              style={on ? { borderColor: "transparent", background: BLUE, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }} title={allowed ? undefined : "No photo consent — use “their work”"}>
-              {c.name}<span className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-white" style={{ background: c.photoConsent ? GREEN : RED }}>{c.photoConsent ? "✓" : "no photos"}</span>
-            </button>
-          ); })}
-        </div>
-      )}
+      {lbl(listingId ? "Which children? (search everyone on this listing)" : "Which children? (search everyone you've booked)")}
+      {/* selected */}
+      {tagged.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{tagged.map((id) => { const c = taggable.find((x) => x.childId === id); return (
+        <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[12px] font-bold" style={{ color: BLUE }}>{c?.name ?? id}<button type="button" onClick={() => setTagged((t) => t.filter((x) => x !== id))} className="text-[#1d3a8f]/60 hover:text-[#1d3a8f]">✕</button></span>
+      ); })}</div>}
+      {/* search dropdown */}
+      <div className="relative mb-3">
+        <input value={childQuery} onChange={(e) => { setChildQuery(e.target.value); setMenuOpen(true); }} onFocus={() => setMenuOpen(true)} onBlur={() => setTimeout(() => setMenuOpen(false), 150)} placeholder="Search child, parent or email…" className={`${inputCls} w-full`} disabled={taggable.length === 0} />
+        {taggable.length === 0 && <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">No booked children found{listingId ? " on this listing" : ""} yet.</div>}
+        {menuOpen && taggable.length > 0 && (() => {
+          const q = childQuery.trim().toLowerCase();
+          const rows = taggable.filter((c) => !q || `${c.name} ${c.parentName ?? ""} ${c.email ?? ""} ${c.postcode ?? ""}`.toLowerCase().includes(q)).slice(0, 12);
+          if (!rows.length) return <div className="absolute z-30 mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px] text-[var(--ink-3)] shadow-lg">No match.</div>;
+          return (
+            <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[0_12px_28px_-12px_rgba(23,21,52,.4)]">
+              {rows.map((c) => { const on = tagged.includes(c.childId), allowed = canTag(c); return (
+                <button key={c.childId} type="button" disabled={!allowed} onMouseDown={(e) => { e.preventDefault(); if (allowed) setTagged((t) => t.includes(c.childId) ? t.filter((x) => x !== c.childId) : [...t, c.childId]); }}
+                  className="flex w-full items-center gap-2 border-b border-[var(--line)] px-3 py-2 text-left last:border-b-0 hover:bg-[#eef4fd] disabled:cursor-not-allowed disabled:opacity-55" style={on ? { background: "#eef4fd" } : undefined}>
+                  <span className="flex-1 min-w-0"><span className="text-[12.5px] font-extrabold">{on ? "✓ " : ""}{c.name}</span><span className="block truncate text-[11px] text-[var(--ink-3)]">{[c.parentName, c.postcode, c.listing].filter(Boolean).join(" · ") || c.email || "—"}</span></span>
+                  <span className="flex-none rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-white" style={{ background: c.photoConsent ? GREEN : RED }}>{c.photoConsent ? "consent ✓" : "no photos"}</span>
+                </button>
+              ); })}
+            </div>
+          );
+        })()}
+      </div>
 
       <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">What happened?</span><button type="button" onClick={writeAi} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: `linear-gradient(90deg,${PINK},#7c5cff)` }}>✨ Write for me</button></div>
       <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={2} placeholder="A quick highlight for the parents…" className={`${inputCls} w-full resize-y leading-[1.5] [field-sizing:content]`} />
@@ -195,6 +212,7 @@ export function MomentsApp() {
   const [galFolder, setGalFolder] = useState<string | null>(null);
   const [galWhen, setGalWhen] = useState<"all" | "today" | "week">("all");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [replyVals, setReplyVals] = useState<Record<string, string>>({});
 
   const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -203,11 +221,14 @@ export function MomentsApp() {
   useRealtime(["moments"], refresh);
 
   async function remove(m: Moment) { if (!confirm("Delete this moment?")) return; try { await api(`/api/moments/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }
+  async function reply(m: Moment) { const t = (replyVals[m.id] ?? "").trim(); if (!t) return; try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment`, { text: t }); setReplyVals((v) => ({ ...v, [m.id]: "" })); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function toggleMarketing(m: Moment, idx: number) { try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
   const all = useMemo(() => moments ?? [], [moments]);
   const listingName = useMemo(() => new Map(listings.map((l) => [l.id, l.title])), [listings]);
   const featured = useMemo(() => { const m = new Map<string, string>(); for (const mo of all) mo.childIds.forEach((id, i) => { const n = mo.childNames?.[i]; if (n && !m.has(id)) m.set(id, n); }); return [...m.entries()]; }, [all]);
   const photos = useMemo(() => all.filter((m) => m.photoUrl), [all]);
+  const marketingQuotes = useMemo(() => all.flatMap((m) => (m.comments ?? []).filter((c) => c.marketing).map((c) => ({ m, c }))), [all]);
   const tiles: [string, number][] = [["Today", all.filter((m) => m.date === todayIso()).length], ["This week", all.filter((m) => (m.date ?? "") >= weekStartIso()).length], ["Photos", photos.length], ["Children featured", featured.length]];
 
   const inWhen = (m: Moment) => galWhen === "all" || (galWhen === "today" ? m.date === todayIso() : (m.date ?? "") >= weekStartIso());
@@ -236,6 +257,16 @@ export function MomentsApp() {
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
       {posting && <PostForm activities={activities} settings={settings} save={save} listings={listings} onPosted={() => { setPosting(false); refresh(); }} onCancel={() => setPosting(false)} />}
+
+      {/* marketing quotes — parent comments the operator starred */}
+      {marketingQuotes.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
+          <div className="mb-2 text-[13px] font-extrabold" style={{ color: "#9a5a00", fontFamily: "var(--ff-display)" }}>⭐ Marketing quotes <span className="text-[11px] font-semibold text-[var(--ink-3)]">— starred parent comments you can reuse</span></div>
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">{marketingQuotes.map(({ m, c }, i) => (
+            <blockquote key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[12.5px] italic leading-[1.5] text-[var(--ink-2)]">“{c.text}”<div className="mt-1.5 text-[11px] not-italic text-[var(--ink-3)]">— {c.byName}{m.childNames?.filter(Boolean)[0] ? `, parent of ${m.childNames.filter(Boolean)[0]}` : ""}</div></blockquote>
+          ))}</div>
+        </div>
+      )}
 
       {/* gallery with folders */}
       {photos.length > 0 && (
@@ -300,7 +331,19 @@ export function MomentsApp() {
                   {m.childNames?.filter(Boolean).length > 0 && <div className="mb-1.5 text-[12.5px] font-extrabold">{m.childNames.filter(Boolean).join(", ")}</div>}
                   {m.caption && <div className="text-[13px] leading-[1.5] text-[var(--ink-2)]">{m.caption}</div>}
                   {m.listingId && listingName.get(m.listingId) && <div className="mt-1 text-[11px] text-[var(--ink-3)]">📁 {listingName.get(m.listingId)}</div>}
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]"><span>👤 {m.postedByName} · {when(m.createdAt)}</span>{canManage && <button type="button" onClick={() => remove(m)} className="font-bold" style={{ color: RED }}>Delete</button>}</div>
+                  <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-[var(--ink-3)]"><span className="truncate">👤 {m.postedByName} · {when(m.createdAt)}</span><span className="flex flex-none gap-2">{m.photoUrl && <a href={m.photoUrl} download={`${(m.childNames?.filter(Boolean)[0] ?? "moment")}-${m.date}.jpg`} className="font-bold" style={{ color: BLUE }}>⬇ Download</a>}{canManage && <button type="button" onClick={() => remove(m)} className="font-bold" style={{ color: RED }}>Delete</button>}</span></div>
+                  {((m.comments?.length ?? 0) > 0 || canManage) && (
+                    <div className="mt-2 border-t border-[var(--line)] pt-2">
+                      {(m.comments ?? []).map((c, idx) => (
+                        <div key={idx} className="mb-1 flex items-start gap-1.5 text-[11.5px] leading-[1.5]">
+                          <span className="flex-none font-bold" style={{ color: c.role === "parent" ? BLUE : "var(--ink)" }}>{c.byName}{c.role === "parent" ? "" : " (you)"}:</span>
+                          <span className="flex-1 text-[var(--ink-2)]">{c.text}</span>
+                          {canManage && <button type="button" onClick={() => toggleMarketing(m, idx)} title={c.marketing ? "Starred for marketing" : "Use as marketing"} className="flex-none text-[14px] leading-none" style={{ color: c.marketing ? "#f0b100" : "var(--ink-3)" }}>{c.marketing ? "★" : "☆"}</button>}
+                        </div>
+                      ))}
+                      {canManage && <div className="mt-1 flex gap-1.5"><input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder="Reply…" className="flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" /><button type="button" onClick={() => reply(m)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" style={{ color: BLUE }}>Send</button></div>}
+                    </div>
+                  )}
                 </div>
               </div>
             ); })}

@@ -83,7 +83,14 @@ any scheduler.
   already shows "parents are notified & emailed"). The parent feed
   (`GET /api/moments` for role=parent) already works; only the outbound
   notification/email + link is owed. Consent is enforced server-side (child
-  photos require `photoConsent`; work photos don't).
+  photos require `photoConsent`; work photos don't). **Built by me** (FYI):
+  parent↔provider **comments** (`POST /:id/comment`), operator **marketing-star**
+  on a comment (`POST /:id/comment/:idx/marketing`), parent folders (photos /
+  their work), and a plain photo **download**. **Future/nice-to-have (noted for
+  later):** a "download **with comments**" composite (photo + caption + the
+  starred parent quote baked in) for marketing, and **surfacing the
+  marketing-starred quotes into the Email/Marketing area** as ready-made
+  testimonials.
 - **Inventory low-stock** (optional) — `settings.inventory.lowStockAlert`. When an
   item's `quantity ≤ minQty`, email/bell the operator. (The ⚠ Low badge is live;
   only the notify is yours.)

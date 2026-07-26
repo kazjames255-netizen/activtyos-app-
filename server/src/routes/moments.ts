@@ -132,13 +132,14 @@ moments.get("/taggable", async (req, res) => {
     res.status(403).json({ error: "Requires an operator or staff account" });
     return;
   }
-  const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
   const listingId = typeof req.query.listingId === "string" ? req.query.listingId : "";
-  const byListing = !!listingId; // a listing shows EVERYONE ever booked on it; no listing = that date's children
+  // A listing shows everyone ever booked on it; "All my bookings" shows every
+  // child booked anywhere. Not date-filtered — you can share a moment about any
+  // child you run sessions for.
   const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
   const relevant = blocks.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
-    .filter(({ block }) => (byListing ? block.listingId === listingId : block.sessions.some((s) => s.date === date)));
+    .filter(({ block }) => (!listingId || block.listingId === listingId));
   if (!relevant.length) {
     res.json([]);
     return;
@@ -147,19 +148,27 @@ moments.get("/taggable", async (req, res) => {
     relevant.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()),
   );
   const childIds = new Set<string>();
+  const parentOf = new Map<string, { parentName: string; email: string; listing: string }>();
   for (const snap of bookingSnaps)
     for (const d of snap.docs) {
       const b = fromDoc(d.data() as BookingDoc);
-      if (b.childId && countsTowardCapacity(b.status) && b.status !== "Offered" && (byListing || !b.days || b.days.includes(date)))
+      if (b.childId && countsTowardCapacity(b.status) && b.status !== "Offered") {
         childIds.add(b.childId);
+        if (!parentOf.has(b.childId)) parentOf.set(b.childId, { parentName: b.booker ?? "", email: b.email ?? "", listing: b.listing ?? "" });
+      }
     }
   const docs = childIds.size ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid))) : [];
-  // Return every booked child WITH their consent flag — a child photo can only
-  // tag consented children, but a work photo can tag anyone (the client gates it
-  // and the server enforces it on create).
+  // the parent's postcode (captured at signup) lives on their user doc
+  const parentUids = [...new Set(docs.filter((d) => d.exists).map((d) => (d.data() as { parentUid?: string }).parentUid).filter((u): u is string => !!u))];
+  const userDocs = parentUids.length ? await db.getAll(...parentUids.map((u) => db.collection("users").doc(u))) : [];
+  const postcodeOf = new Map<string, string>();
+  userDocs.forEach((u) => { if (u.exists) postcodeOf.set(u.id, ((u.data() as { postcode?: string }).postcode ?? "")); });
+  // Every booked child + consent flag + who to find them by (parent name, where
+  // they live, email, listing). A child photo can only tag consented children;
+  // a work photo can tag anyone (client gates it, server enforces it on create).
   const taggable = docs
     .filter((d) => d.exists)
-    .map((d) => ({ childId: d.id, name: (d.data() as { name?: string }).name ?? "", photoConsent: (d.data() as { photoConsent?: boolean }).photoConsent === true }))
+    .map((d) => { const cd = d.data() as { name?: string; photoConsent?: boolean; parentUid?: string }; const p = parentOf.get(d.id) ?? { parentName: "", email: "", listing: "" }; return { childId: d.id, name: cd.name ?? "", photoConsent: cd.photoConsent === true, ...p, postcode: cd.parentUid ? (postcodeOf.get(cd.parentUid) ?? "") : "" }; })
     .sort((a, b) => (a.name < b.name ? -1 : 1));
   res.json(taggable);
 });
@@ -218,4 +227,46 @@ moments.delete("/:id", async (req, res) => {
   }
   await own.snap.ref.delete();
   res.json({ ok: true });
+});
+
+// POST /api/moments/:id/comment — a parent whose child is in the moment (or the
+// operator/staff) replies. Comments show in the photo area; the operator can
+// mark a nice one to use as marketing.
+const commentSchema = z.object({ text: z.string().trim().min(1).max(1000) });
+moments.post("/:id/comment", async (req, res) => {
+  const auth = req.auth!;
+  const snap = await col.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Moment not found" }); return; }
+  const m = snap.data()!;
+  let allowed = false;
+  if (auth.role === "parent") {
+    const kids = await db.collection("children").where("parentUid", "==", req.user!.uid).get();
+    const ids = new Set(kids.docs.map((d) => d.id));
+    allowed = ((m.childIds as string[]) ?? []).some((id) => ids.has(id));
+  } else {
+    allowed = canPost(auth.role) && m.tenantId === auth.tenantId;
+  }
+  if (!allowed) { res.status(403).json({ error: "You can't comment on this moment" }); return; }
+  const parsed = commentSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const comment = { by: req.user?.uid ?? req.user?.email ?? "unknown", byName: req.user?.name ?? (auth.role === "parent" ? "Parent" : "Staff"), role: auth.role === "parent" ? "parent" : "staff", text: parsed.data.text, at: new Date().toISOString(), marketing: false };
+  const comments = Array.isArray(m.comments) ? m.comments : [];
+  await snap.ref.set({ comments: [...comments, comment] }, { merge: true });
+  const after = await snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+// POST /api/moments/:id/comment/:idx/marketing — operator flips whether a
+// comment can be used as marketing (a testimonial).
+moments.post("/:id/comment/:idx/marketing", async (req, res) => {
+  const own = await ownMoment(req, req.params.id);
+  if (own.status !== 200) { res.status(own.status).json({ error: own.status === 403 ? "Requires an operator account" : "Moment not found" }); return; }
+  if (!canManage(req.auth!.role)) { res.status(403).json({ error: "Only the provider can do this" }); return; }
+  const idx = parseInt(req.params.idx, 10);
+  const comments = Array.isArray(own.snap.data()!.comments) ? [...(own.snap.data()!.comments as { marketing?: boolean }[])] : [];
+  if (!comments[idx]) { res.status(404).json({ error: "Comment not found" }); return; }
+  comments[idx] = { ...comments[idx], marketing: !comments[idx].marketing };
+  await own.snap.ref.set({ comments }, { merge: true });
+  const after = await own.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
 });
