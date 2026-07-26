@@ -1268,11 +1268,6 @@ export function SetupApp() {
           <Row label="When a reorder is logged to Expenses, mark it as" hint="Placing an order on the Inventory page creates a matching expense. Choose whether it lands already Paid, or Owed (pending) so you can pay it later.">
             <Toggle on={(settings.inventory?.orderExpenseStatus ?? "paid") === "paid"} onChange={(v) => set("inventory", { ...settings.inventory, orderExpenseStatus: v ? "paid" : "pending" })} labels={["Paid", "Owed"]} />
           </Row>
-          <Row label="File reorders under this expense category" hint="The default Expenses category a stock reorder is filed against.">
-            <select value={settings.inventory?.orderCategory ?? "Equipment"} onChange={(e) => set("inventory", { ...settings.inventory, orderCategory: e.target.value })} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]">
-              {["Equipment", "Supplies", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Training", "Software", "Utilities", "Other"].map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Row>
           <Row label="Flag an item for a stock check after" hint="An item not counted within this many days shows as 'due a check' and counts toward the 'To check' tile.">
             <NumberBox value={settings.inventory?.checkEveryDays ?? 30} onChange={(n) => set("inventory", { ...settings.inventory, checkEveryDays: Math.max(1, n) })} min={1} max={365} suffix=" days" />
           </Row>
