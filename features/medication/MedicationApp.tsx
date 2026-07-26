@@ -65,6 +65,11 @@ const todayIso = () => {
   return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
 };
 const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
+// The parent-approved day labels live in `schedule` ("On these days: Mon 27 Jul,
+// …"). A dose on a day not in that list is flagged but still allowed — the day
+// label here must match how the parent's form formats them.
+const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const approvedForDay = (m: { schedule?: string }, iso: string) => !m.schedule?.startsWith("On these days") || m.schedule.includes(dayLabel(iso));
 
 type MedDraft = Partial<Med> & { childName: string; name: string; dose: string };
 const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded: false, heldOnSite: false, consentGranted: false });
@@ -170,7 +175,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
       {!d.consentGranted && <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">Without consent, a dose can’t be recorded against this medicine.</div>}
       {error && <div className="mt-2 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
       <div className="mt-3 flex gap-2">
-        <Button variant="primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</Button>
+        <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</Button>
         <Button onClick={onCancel}>Cancel</Button>
       </div>
     </Card>
@@ -218,8 +223,9 @@ function AdministerForm({ med, onDone, requireWitness }: { med: Med; onDone: (re
         <div><FieldLabel>Witnessed by{requireWitness ? " *" : ""}</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} placeholder={requireWitness ? "required" : ""} className="w-full" /></div>
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
       </div>
+      {!approvedForDay(med, date) && <div className="mt-1.5 rounded-lg bg-[#fbeede] px-3 py-1.5 text-[11.5px] font-bold text-[#a9660a]">⚠️ {fmt(date)} isn&rsquo;t on the parent&rsquo;s approved days — you can still record it.</div>}
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-2 flex gap-2"><Button sm variant={given ? "primary" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={() => onDone(false)}>Cancel</Button></div>
+      <div className="mt-2 flex gap-2"><Button sm variant={given ? "solid" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={() => onDone(false)}>Cancel</Button></div>
     </div>
   );
 }
@@ -356,19 +362,20 @@ export function MedicationApp() {
                       <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Only leads can record doses.</span>
                     ) : med.requireWitness ? (
                       <>
-                        <Button sm variant="primary" onClick={() => setAdministering(administering === m.id ? null : m.id)}>{administering === m.id ? "Close" : "＋ Record a dose"}</Button>
+                        <Button sm variant="solid" onClick={() => setAdministering(administering === m.id ? null : m.id)}>{administering === m.id ? "Close" : "＋ Record a dose"}</Button>
                         <span className="text-[11px] text-[var(--ink-3)]">a witness is required</span>
                       </>
                     ) : confirm?.id === m.id ? (
                       <>
                         <span className="text-[11.5px] font-bold text-[var(--ink)]">Confirm: {m.name} for {m.childName} — <span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? "GIVEN" : "NOT given"}</span> now?</span>
-                        <Button sm variant={confirm.given ? "primary" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
+                        {!approvedForDay(m, todayIso()) && <span className="rounded-full bg-[#fbeede] px-2 py-0.5 text-[10.5px] font-bold text-[#a9660a]">⚠️ not on parent&rsquo;s approved days</span>}
+                        <Button sm variant={confirm.given ? "solid" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
                         <Button sm onClick={() => setConfirm(null)}>Cancel</Button>
                       </>
                     ) : (
                       <>
                         <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
-                        <Button sm variant="primary" onClick={() => setConfirm({ id: m.id, given: true })}>✓ Yes</Button>
+                        <Button sm variant="solid" onClick={() => setConfirm({ id: m.id, given: true })}>✓ Yes</Button>
                         <Button sm variant="danger" onClick={() => setConfirm({ id: m.id, given: false })}>✕ No</Button>
                         <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? "Close" : "＋ with time / notes"}</button>
                       </>
@@ -378,7 +385,7 @@ export function MedicationApp() {
                   )}
                   <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? "Hide" : `History (${doses.length})`}</Button>
                   {canManage && (m.archived
-                    ? <Button sm variant="primary" onClick={() => setArchived(m, false)}>Restore</Button>
+                    ? <Button sm variant="solid" onClick={() => setArchived(m, false)}>Restore</Button>
                     : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
                 {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}
