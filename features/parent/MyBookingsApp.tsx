@@ -369,11 +369,11 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean }) {
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean }) {
   const [expanded, setExpanded] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const [cancelling, setCancelling] = useState(!!autoCancel);
   const [amending, setAmending] = useState(!!autoAmend);
-  useEffect(() => { if (autoAmend) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, b.ref]);
+  useEffect(() => { if (autoAmend || autoCancel) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, autoCancel, b.ref]);
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -630,6 +630,7 @@ export function MyBookingsApp() {
   const params = useSearchParams();
   const payRef = params.get("pay");
   const amendRef = params.get("amend");
+  const cancelRef = params.get("cancel");
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
@@ -724,7 +725,7 @@ export function MyBookingsApp() {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} />
                     ))}
                   </div>
                 )}

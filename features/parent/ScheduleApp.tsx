@@ -165,6 +165,7 @@ function SessionRow({ s, detail }: { s: Session; detail?: ListingDetail }) {
         {detail && detail.staff.length > 0 && <span>👤 {detail.staff.map((x) => x.name).join(", ")}</span>}
         <button type="button" onClick={() => setOpen((v) => !v)} className="font-bold text-[var(--brand-2)] hover:underline">{open ? "Less" : "Details"}</button>
         <Link href={`/custdash/bookings?amend=${encodeURIComponent(s.ref)}`} className="font-bold text-[var(--brand-2)] hover:underline">Edit booking ✎</Link>
+        <Link href={`/custdash/bookings?cancel=${encodeURIComponent(s.ref)}`} className="font-bold text-[var(--red,#e21d27)] hover:underline">Cancel ✕</Link>
       </div>
       {open && (
         <div className="mt-1.5 grid gap-x-6 gap-y-1 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)] sm:grid-cols-2">
@@ -238,6 +239,7 @@ export function ScheduleApp() {
   const [details, setDetails] = useState<Record<string, ListingDetail>>({});
   const [kids, setKids] = useState<Record<string, string>>({}); // child name → sex
   const [childTab, setChildTab] = useState<string>("all");
+  const [dateQuery, setDateQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
 
@@ -360,6 +362,10 @@ export function ScheduleApp() {
 
   const nothing = upcoming.length === 0 && past.length === 0 && undated.length === 0;
   const pastCount = past.reduce((n, g) => n + g.sessions.length, 0);
+  // Date search: when a date is picked, show only that day (from upcoming or
+  // past) and hide the undated / past-toggle machinery.
+  const searching = !!dateQuery;
+  const searchGroups = searching ? [...upcoming, ...past].filter((g) => g.date === dateQuery) : [];
 
   return (
     <div className="text-[var(--ink)]">
@@ -396,6 +402,15 @@ export function ScheduleApp() {
         </div>
       )}
 
+      {!nothing && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="text-[12px] font-bold text-[var(--ink-3)]">🔎 Jump to a date</label>
+          <input type="date" value={dateQuery} onChange={(e) => setDateQuery(e.target.value)}
+            className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--ink-2)] outline-none focus:border-[var(--brand)]" />
+          {searching && <button type="button" onClick={() => setDateQuery("")} className="text-[12px] font-bold text-[var(--brand-2)] underline">Clear</button>}
+        </div>
+      )}
+
       {nothing ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
           Nothing booked yet —{" "}
@@ -404,6 +419,18 @@ export function ScheduleApp() {
           </Link>{" "}
           to fill your calendar.
         </Card>
+      ) : searching ? (
+        <div className="flex flex-col gap-3">
+          {searchGroups.length === 0 ? (
+            <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
+              No sessions on {fmtLongDay(dateQuery)}{childTab !== "all" ? ` for ${childTab}` : ""}.
+            </Card>
+          ) : (
+            searchGroups.map((g) => (
+              <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} detailByRef={detailByRef} />
+            ))
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {undated.length > 0 && (
@@ -421,6 +448,7 @@ export function ScheduleApp() {
                     <span className="text-[var(--ink-3)]">· {b.pass}</span>
                     <Badge tone={statusTone(b.status)}>{b.status}</Badge>
                     <Link href={`/custdash/bookings?amend=${encodeURIComponent(b.ref)}`} className="ml-auto font-bold text-[var(--brand-2)] hover:underline">Edit booking ✎</Link>
+                    <Link href={`/custdash/bookings?cancel=${encodeURIComponent(b.ref)}`} className="font-bold text-[var(--red,#e21d27)] hover:underline">Cancel ✕</Link>
                   </div>
                 ))}
               </div>
