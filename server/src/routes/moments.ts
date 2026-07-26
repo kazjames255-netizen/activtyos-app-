@@ -25,18 +25,23 @@ const canPost = (role: Role) =>
   role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
-const momentSchema = z.object({
-  photoUrl: z.string().min(1).max(500), // uploaded via /api/uploads first
+const momentBase = z.object({
+  photoUrl: z.string().max(500).optional(), // uploaded via /api/uploads first; optional so a text-only highlight can be shared
   caption: z.string().trim().max(500).optional(),
+  activity: z.string().trim().max(60).optional(), // e.g. "Arts & crafts", "Swimming"
+  photoType: z.enum(["child", "work"]).default("child"), // "work" = a photo of their work (no faces → no consent needed)
   date: z.string().max(10).optional(),
   blockId: z.string().max(60).optional(),
   listingId: z.string().max(60).optional(),
   childIds: z.array(z.string().max(60)).max(30).default([]),
 });
+const momentSchema = momentBase.refine((d) => d.photoUrl || d.caption, { message: "Add a photo or a highlight" });
 
-// Resolve tagged children → names, and REJECT any without photo consent.
-async function resolveConsentedChildren(
+// Resolve tagged children → names. A CHILD photo requires photo consent for
+// every tagged child; a WORK photo (no faces in shot) does not.
+async function resolveChildren(
   childIds: string[],
+  requireConsent: boolean,
 ): Promise<{ ok: true; names: Record<string, string> } | { ok: false; blocked: string }> {
   if (!childIds.length) return { ok: true, names: {} };
   const docs = await db.getAll(...childIds.map((id) => db.collection("children").doc(id)));
@@ -44,7 +49,7 @@ async function resolveConsentedChildren(
   for (const d of docs) {
     if (!d.exists) return { ok: false, blocked: "a child who no longer exists" };
     const c = d.data() as { name?: string; photoConsent?: boolean };
-    if (c.photoConsent !== true) return { ok: false, blocked: c.name ?? "a child" };
+    if (requireConsent && c.photoConsent !== true) return { ok: false, blocked: c.name ?? "a child" };
     names[d.id] = c.name ?? "";
   }
   return { ok: true, names };
@@ -64,9 +69,9 @@ moments.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const consent = await resolveConsentedChildren(parsed.data.childIds);
+  const consent = await resolveChildren(parsed.data.childIds, parsed.data.photoType !== "work");
   if (!consent.ok) {
-    res.status(409).json({ error: `${consent.blocked} can't be tagged — no photo consent on file for them.` });
+    res.status(409).json({ error: `${consent.blocked} can't be tagged in a child photo — no photo consent on file. Use “their work” instead.` });
     return;
   }
   const doc = {
@@ -147,9 +152,12 @@ moments.get("/taggable", async (req, res) => {
         childIds.add(b.childId);
     }
   const docs = childIds.size ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid))) : [];
+  // Return every booked child WITH their consent flag — a child photo can only
+  // tag consented children, but a work photo can tag anyone (the client gates it
+  // and the server enforces it on create).
   const taggable = docs
-    .filter((d) => d.exists && (d.data() as { photoConsent?: boolean }).photoConsent === true)
-    .map((d) => ({ childId: d.id, name: (d.data() as { name?: string }).name ?? "" }))
+    .filter((d) => d.exists)
+    .map((d) => ({ childId: d.id, name: (d.data() as { name?: string }).name ?? "", photoConsent: (d.data() as { photoConsent?: boolean }).photoConsent === true }))
     .sort((a, b) => (a.name < b.name ? -1 : 1));
   res.json(taggable);
 });
@@ -175,19 +183,20 @@ moments.put("/:id", async (req, res) => {
     res.status(403).json({ error: "Only the provider or whoever posted it can edit this" });
     return;
   }
-  const parsed = momentSchema.partial().safeParse(req.body);
+  const parsed = momentBase.partial().safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
   const patch: Record<string, unknown> = { ...parsed.data, updatedAt: new Date().toISOString() };
   if (parsed.data.childIds) {
-    const consent = await resolveConsentedChildren(parsed.data.childIds);
+    const requireConsent = (parsed.data.photoType ?? (own.snap.data()!.photoType as string | undefined)) !== "work";
+    const consent = await resolveChildren(parsed.data.childIds, requireConsent);
     if (!consent.ok) {
-      res.status(409).json({ error: `${consent.blocked} can't be tagged — no photo consent on file.` });
+      res.status(409).json({ error: `${consent.blocked} can't be tagged in a child photo — no photo consent on file.` });
       return;
     }
-    patch.childNames = parsed.data.childIds.map((id) => consent.names[id] ?? "");
+    patch.childNames = parsed.data.childIds.map((id: string) => consent.names[id] ?? "");
   }
   await own.snap.ref.set(patch, { merge: true });
   const after = await own.snap.ref.get();
