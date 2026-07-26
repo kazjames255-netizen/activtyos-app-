@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
@@ -915,7 +916,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           back to their dashboard from every step, not just the top of the page. */}
       {parentMode && (
         <div className="mb-3">
-          <a href="/custdash" className="inline-flex items-center gap-1 text-[12px] font-extrabold underline" style={{ color: tk.accent }}>← Back to my dashboard</a>
+          <Link href="/custdash" className="inline-flex items-center gap-1 text-[12px] font-extrabold underline" style={{ color: tk.accent }}>← Back to my dashboard</Link>
         </div>
       )}
       {/* The whole route, named and walkable. A single "Change lunches &
