@@ -2917,7 +2917,7 @@ const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // near-black (Sport) or portal navy (Navy). Accents stay electric-blue + lime.
 type Surf = { bg: string; panel: string; line: string; cell: string; cellOff: string };
 const SPORT_BLACK: Surf = { bg: "#0b0d12", panel: "#12161f", line: "#1e2430", cell: "#0e131c", cellOff: "#0c0f16" };
-const SPORT_NAVY: Surf = { bg: "#101d42", panel: "#1a2c5e", line: "#2b3d74", cell: "#152552", cellOff: "#0e1a3c" };
+const SPORT_NAVY: Surf = { bg: "#16307a", panel: "#20408f", line: "#3457a8", cell: "#1b3a86", cellOff: "#132a63" };
 // Rolling hero carousel — auto-advances + arrows/dots when there's >1 photo.
 function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string }) {
   const [i, setI] = useState(0);
