@@ -464,25 +464,44 @@ export function MedicationApp() {
           {shown.map((m) => {
             const doses = dosesFor(m.id);
             return (
-              <Card key={m.id} className="p-3.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[13.5px] font-extrabold">{m.childName}</span>
-                  <span className="text-[13px]">— {m.name} <span className="text-[var(--ink-3)]">({m.dose})</span></span>
-                  {m.condition && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge>}
-                  {m.consentGranted ? (
-                    <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent on file</Badge>
-                  ) : m.consentWithdrawnAt ? (
-                    <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>⚠️ parent removed consent</Badge>
-                  ) : (
-                    <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
-                  )}
-                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
-                  {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
-                  <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
+              <Card key={m.id} className="p-4">
+                {/* Header — identity on the left, status on the right */}
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{m.childName}</span>
+                      <span className="text-[13.5px] text-[var(--ink-2)]">{m.name} <span className="text-[var(--ink-3)]">· {m.dose}</span></span>
+                    </div>
+                    {m.condition && <div className="mt-1"><Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge></div>}
+                  </div>
+                  <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                    {m.consentGranted ? (
+                      <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent on file</Badge>
+                    ) : m.consentWithdrawnAt ? (
+                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>⚠️ parent removed consent</Badge>
+                    ) : (
+                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
+                    )}
+                    {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
+                    <span className="text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
+                  </div>
                 </div>
-                {m.instructions && <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}
-                {m.parentNote && <div className="mt-1.5 rounded-lg bg-[#f4f8ff] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📝 <b>Parent note:</b> {m.parentNote}</div>}
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+
+                {/* When */}
+                <div className="mt-3">
+                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
+                </div>
+
+                {/* Details */}
+                {(m.instructions || m.parentNote) && (
+                  <div className="mt-2.5 flex flex-col gap-1.5">
+                    {m.instructions && <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}
+                    {m.parentNote && <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📝 <b>Parent note:</b> {m.parentNote}</div>}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
                   {m.archived ? (
                     <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>
                   ) : m.consentGranted ? (
