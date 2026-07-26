@@ -13,8 +13,17 @@ export const FILTER_TABS: [BookingFilter, string][] = [
   ["waitlisted", "Waitlisted"],
   ["unpaid", "Unpaid / invoiced"],
   ["cancelled", "Cancelled"],
+  ["requests", "Requests"],
   ["refunds", "Refunds"],
 ];
+
+/** A booking awaiting the operator's decision — a refund not yet approved, or a
+ *  pending date-change request. Powers the "Requests" tab + the row badges. */
+export function needsDecision(b: Booking): boolean {
+  const refundReq = !!(b.cancel && ["full", "partial", "pending"].includes(b.cancel.refund ?? ""));
+  const moveReq = b.dateChangeRequest?.status === "pending";
+  return refundReq || moveReq;
+}
 
 // ── Export ────────────────────────────────────────────────────────────────
 
@@ -256,6 +265,8 @@ export function matchesFilter(b: Booking, f: BookingFilter): boolean {
       return b.pay === "Unpaid" || b.pay === "Invoice sent" || b.pay === "Awaiting voucher payment";
     case "cancelled":
       return b.status === "Cancelled" || b.status === "Declined";
+    case "requests":
+      return needsDecision(b);
     case "refunds":
       return !!(b.cancel && b.cancel.refund);
     default:

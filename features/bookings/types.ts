@@ -144,4 +144,5 @@ export type BookingFilter =
   | "waitlisted"
   | "unpaid"
   | "cancelled"
+  | "requests"
   | "refunds";

@@ -60,6 +60,10 @@ const actionSchema = z.discriminatedUnion("type", [
       "offer",
       "refund-approve",
       "refund-decline",
+      // Approve / deny a parent's pending date-change request (applyRowAction
+      // rewrites the day swaps on approve).
+      "move-approve",
+      "move-deny",
       // resend mutates nothing — it re-sends the payment-link email
       "resend",
     ]),
