@@ -38,6 +38,7 @@ export function ParentMedicationApp() {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(1);
   const [openMed, setOpenMed] = useState<string | null>(null);
   const [noteEdit, setNoteEdit] = useState<{ id: string; text: string } | null>(null);
   const [f, setF] = useState({ tenantId: "", name: "", dose: "", condition: "", storage: "", notes: "", consent: false });
@@ -78,6 +79,7 @@ export function ParentMedicationApp() {
       .flatMap((b) => b.days ?? []),
   )].filter((d) => d >= todayStr).sort();
   const selectedNames = childIds.map((id) => children.find((c) => c.id === id)?.name).filter(Boolean).join(" & ") || "your child";
+  const canNext1 = childIds.length > 0 && !!f.tenantId && !!f.name.trim() && !!f.dose.trim();
 
   const toggleChild = (id: string) => setChildIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const toggleDay = (d: string) => setDates((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort()));
@@ -132,7 +134,7 @@ export function ParentMedicationApp() {
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Authorise medicines for your child, and see every dose the staff record.</p>
           </div>
           {providers.length > 0 && children.length > 0 && !open && (
-            <button type="button" onClick={() => setOpen(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Authorise a medication</button>
+            <button type="button" onClick={() => { setStep(1); setOpen(true); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Authorise a medication</button>
           )}
         </div>
       </div>
@@ -162,8 +164,22 @@ export function ParentMedicationApp() {
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Add a child and book an activity first — then you can authorise medication.</Card>
       ) : open && (
         <Card className="mb-3.5 p-4">
-          <div className="mb-2 text-[13.5px] font-extrabold">Authorise a medication</div>
+          <div className="mb-3 text-[13.5px] font-extrabold">Authorise a medication</div>
 
+          {/* Step indicator */}
+          <div className="mb-4 flex items-center">
+            {([[1, "Medicine"], [2, "When & how"], [3, "Consent"]] as [number, string][]).map(([n, label], i, arr) => (
+              <div key={n} className={`flex items-center gap-2 ${i < arr.length - 1 ? "flex-1" : ""}`}>
+                <button type="button" onClick={() => { if (n === 1 || canNext1) setStep(n); }} className="flex items-center gap-2">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full text-[15px] font-extrabold transition-colors" style={step === n ? { background: "#1d3a8f", color: "#fff" } : step > n ? { background: "#e7f6ee", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{step > n ? "✓" : n}</span>
+                  <span className="hidden text-[13px] font-extrabold sm:inline" style={{ color: step === n ? "var(--ink)" : "var(--ink-3)" }}>{label}</span>
+                </button>
+                {i < arr.length - 1 && <span className="mx-2 h-1 flex-1 rounded-full" style={{ background: step > n ? "#0f7a43" : "var(--line)" }} />}
+              </div>
+            ))}
+          </div>
+
+          {step === 1 && (<>
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div><FieldLabel>Provider</FieldLabel><Select value={f.tenantId} onChange={(e) => set({ tenantId: e.target.value })} className="w-full">{providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}</Select></div>
           </div>
@@ -194,7 +210,9 @@ export function ParentMedicationApp() {
             <div><FieldLabel>For (condition)</FieldLabel><Input value={f.condition} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
             <div><FieldLabel>Where it&rsquo;s kept</FieldLabel><Input value={f.storage} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in their bag" className="w-full" /></div>
           </div>
+          </>)}
 
+          {step === 2 && (<>
           {/* When to give — plain-English options. */}
           <div className="mt-3">
             <FieldLabel>When should staff give it?</FieldLabel>
@@ -242,8 +260,20 @@ export function ParentMedicationApp() {
             )}
           </div>
           <div className="mt-3"><FieldLabel>Instructions for staff</FieldLabel><Input value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. dab on affected area; wash hands after" className="w-full" /></div>
-          <label className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12.5px]"><input type="checkbox" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} className="mt-0.5" /><span>I, the parent/carer of <b>{selectedNames}</b>, give <b>{providerName(f.tenantId)}</b> permission to administer the medication above as described.</span></label>
-          <div className="mt-3 flex gap-2"><Button variant="solid" onClick={authorise}>Authorise</Button><Button onClick={() => setOpen(false)}>Cancel</Button></div>
+          </>)}
+
+          {step === 3 && (
+            <label className="flex items-start gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-[13px]"><input type="checkbox" checked={f.consent} onChange={(e) => set({ consent: e.target.checked })} className="mt-0.5" /><span>I, the parent/carer of <b>{selectedNames}</b>, give <b>{providerName(f.tenantId)}</b> permission to administer the medication above as described.</span></label>
+          )}
+
+          <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <div className="flex gap-2">
+              {step > 1 && <Button onClick={() => setStep(step - 1)}>← Back</Button>}
+              {step < 3 && <Button variant="solid" disabled={step === 1 && !canNext1} onClick={() => setStep(step + 1)}>Next →</Button>}
+              {step === 3 && <Button variant="solid" onClick={authorise}>Authorise</Button>}
+            </div>
+          </div>
         </Card>
       )}
 
