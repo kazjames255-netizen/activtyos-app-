@@ -138,53 +138,46 @@ export function InventoryApp() {
                     const val = checkVals[i.id] ?? String(i.quantity);
                     const nChecks = i.checks?.length ?? 0, histOpen = histId === i.id || checking;
                     return (
-                      <Card key={i.id} className="p-3">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                          <div className="min-w-[160px] flex-1">
+                      <Card key={i.id} className="p-2.5">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                          <div className="min-w-[150px] flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-[13.5px] font-extrabold">{i.name}</span>
                               {i.location && <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>📍 {i.location}</Badge>}
                               {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠ Low</Badge>}
                               {i.carriedFrom && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>↪ {i.carriedFrom}</Badge>}
                             </div>
-                            <button type="button" onClick={() => setHistId(histId === i.id ? null : i.id)} className="mt-1 text-left text-[11.5px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Show count history">
-                              {i.lastCheckedAt ? <span style={stale ? { color: AMBER, fontWeight: 700 } : undefined}>Last checked {fmtDate(i.lastCheckedAt)}{i.lastCheckedBy ? ` · ${i.lastCheckedBy}` : ""}{stale ? " · due a check" : ""}</span> : <span style={{ color: AMBER, fontWeight: 700 }}>Never checked</span>}
-                              {nChecks > 0 && <span className="font-semibold"> · {histOpen ? "hide history ▴" : `history (${nChecks}) ▾`}</span>}
-                            </button>
-                            {i.notes && <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{i.notes}</div>}
+                            {i.notes && <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{i.notes}</div>}
                           </div>
-                          <div className="flex items-center gap-2">
-                            {checking ? (
-                              <div className="flex items-center gap-1.5">
-                                <input type="number" min={0} value={val} onChange={(e) => setCheckVals((v) => ({ ...v, [i.id]: e.target.value }))} className="w-20 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold" />
-                                {i.unit && <span className="text-[11.5px] text-[var(--ink-3)]">{i.unit}</span>}
-                                <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>✓ Count</Button>
-                              </div>
-                            ) : (
-                              <div className="text-right"><div className="text-[17px] font-extrabold tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[12px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>{i.minQty != null && <div className="text-[10px] text-[var(--ink-3)]">min {i.minQty}</div>}</div>
-                            )}
-                            <div className="flex gap-1.5">
-                              {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>Check</Button>}
-                              <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
-                              {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
+                          {checking ? (
+                            <div className="flex items-center gap-1.5">
+                              <input type="number" min={0} value={val} onChange={(e) => setCheckVals((v) => ({ ...v, [i.id]: e.target.value }))} className="w-20 rounded-md border border-[var(--line)] px-2 py-1 text-center text-[13px] font-extrabold" />
+                              {i.unit && <span className="text-[11.5px] text-[var(--ink-3)]">{i.unit}</span>}
+                              <Button sm variant="solid" onClick={() => doCheck(i, Math.max(0, parseInt(val, 10) || 0))}>✓ Count</Button>
                             </div>
+                          ) : (
+                            // most recent count, inline in the header — click to see the last 5
+                            <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-right" title={nChecks ? "Count history" : undefined}>
+                              <div className="text-[17px] font-extrabold leading-none tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[11px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>
+                              <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: AMBER, fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
+                            </button>
+                          )}
+                          <div className="flex gap-1.5">
+                            {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>Check</Button>}
+                            <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
+                            {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
                           </div>
                         </div>
-                        {histOpen && (
-                          <div className="mt-2.5 border-t border-[var(--line)] pt-2">
-                            <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Recent counts · last 5</div>
-                            {nChecks ? (
-                              <div className="flex flex-wrap gap-2">
-                                {(i.checks ?? []).slice(0, 5).map((c, idx) => (
-                                  <div key={idx} className="flex flex-none flex-col rounded-lg border px-2.5 py-1.5" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
-                                    <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}{i.unit ? <span className="text-[10px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</span>
-                                    <span className="mt-1 text-[10px] text-[var(--ink-3)]">{fmtStamp(c.at)}</span>
-                                    {c.by && <span className="text-[10px] text-[var(--ink-3)]">{c.by}</span>}
-                                    {idx === 0 && <span className="mt-1 self-start rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white" style={{ background: GREEN }}>most recent</span>}
-                                  </div>
-                                ))}
+                        {histOpen && nChecks > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Last 5:</span>
+                            {(i.checks ?? []).slice(0, 5).map((c, idx) => (
+                              <div key={idx} className="flex flex-none items-center gap-1.5 rounded-lg border px-2 py-1" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+                                <span className="text-[13px] font-extrabold tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}</span>
+                                <span className="text-[10px] text-[var(--ink-3)]">{fmtStamp(c.at)}{c.by ? ` · ${c.by.split(" ")[0]}` : ""}</span>
+                                {idx === 0 && <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase text-white" style={{ background: GREEN }}>latest</span>}
                               </div>
-                            ) : <div className="text-[11.5px] text-[var(--ink-3)]">No counts recorded yet — enter a figure and press ✓ Count.</div>}
+                            ))}
                           </div>
                         )}
                       </Card>
