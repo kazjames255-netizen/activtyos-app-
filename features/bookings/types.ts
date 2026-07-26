@@ -128,6 +128,9 @@ export interface Booking {
     moves: { childName?: string; childId?: string; from: string; to: string }[];
     requestedAt?: string;
     status: "pending" | "approved" | "denied";
+    /** Optional reason the provider gave when denying. */
+    reason?: string;
+    resolvedAt?: string;
   } | null;
 
   // Transient UI state (kept on the record to match the legacy flows).

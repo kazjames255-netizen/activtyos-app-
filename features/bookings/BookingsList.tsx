@@ -63,6 +63,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const setQuery = useBookingsStore((s) => s.setQuery);
   const toggleSel = useBookingsStore((s) => s.toggleSel);
   const clearSel = useBookingsStore((s) => s.clearSel);
+  const selectMany = useBookingsStore((s) => s.selectMany);
   const bulk = useBookingsStore((s) => s.bulk);
   const open = useBookingsStore((s) => s.open);
   const openRef = useBookingsStore((s) => s.openRef);
@@ -331,6 +332,20 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
         // what a row says depends on where the booking has got to — an unpaid
         // one offers a chase, a cancelled one steps back out of the way.
         <div className="flex flex-col gap-2">
+          {/* Select-all for the visible list, so a whole filter can be bulk-actioned. */}
+          {(() => {
+            const allOn = list.length > 0 && list.every((b) => selected[b.ref]);
+            const someOn = list.some((b) => selected[b.ref]);
+            return (
+              <label className="flex items-center gap-2.5 px-1 text-[12.5px] font-bold text-[var(--ink-2)]">
+                <span
+                  onClick={() => (allOn ? clearSel() : selectMany(list.map((b) => b.ref)))}
+                  className={"flex h-4 w-4 flex-none items-center justify-center rounded border-[1.5px] text-[10px] text-white " + (allOn || someOn ? "border-[var(--brand-2)] bg-[var(--brand-2)]" : "border-[var(--line)]")}
+                >{allOn ? "✓" : someOn ? "–" : ""}</span>
+                {allOn ? `All ${list.length} selected` : someOn ? `${selCount} selected — tick to select all ${list.length}` : `Select all ${list.length}`}
+              </label>
+            );
+          })()}
           {list.map((b) => {
             const on = !!selected[b.ref];
             const kids = bookingKids(b);

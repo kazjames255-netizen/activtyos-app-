@@ -41,6 +41,7 @@ interface BookingsState {
   setQuery: (q: string) => void;
   toggleSel: (ref: string) => void;
   clearSel: () => void;
+  selectMany: (refs: string[]) => void;
   bulk: (action: UiBulkAction) => void;
   emailClose: () => void;
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
@@ -131,6 +132,9 @@ export const useBookingsStore = create<BookingsState>()(
       setQuery: (q) => set((s) => void (s.query = q)),
       toggleSel: (ref) => set((s) => void (s.selected[ref] = !s.selected[ref])),
       clearSel: () => set((s) => void (s.selected = {})),
+      // Tick every ref passed (the currently-visible/filtered rows) so a whole
+      // list can be bulk-actioned in one go.
+      selectMany: (refs) => set((s) => { for (const r of refs) s.selected[r] = true; }),
 
       bulk: (action) => {
         const refs = selectedRefs(get().selected);

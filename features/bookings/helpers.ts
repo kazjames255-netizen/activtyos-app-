@@ -8,7 +8,7 @@ export const PAY_METHODS = ["Card", "Tax-Free Childcare", "HAF (funded £0)", "P
 
 export const FILTER_TABS: [BookingFilter, string][] = [
   ["all", "All"],
-  ["approval", "Approval needed"],
+  ["approval", "Booking approvals"],
   ["confirmed", "Confirmed"],
   ["waitlisted", "Waitlisted"],
   ["unpaid", "Unpaid / invoiced"],
