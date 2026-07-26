@@ -60,12 +60,16 @@ const actionSchema = z.discriminatedUnion("type", [
       "offer",
       "refund-approve",
       "refund-decline",
-      // Approve a parent's pending date-change request (applyRowAction rewrites
-      // the day swaps). Deny is its own branch below — it carries a reason.
-      "move-approve",
       // resend mutates nothing — it re-sends the payment-link email
       "resend",
     ]),
+  }),
+  // Approve a parent's date-change request. approveIndexes lets the operator
+  // approve only SOME swaps (omit = all); reason explains any declined ones.
+  z.object({
+    type: z.literal("move-approve"),
+    approveIndexes: z.array(z.number().int().nonnegative()).optional(),
+    reason: z.string().max(300).optional(),
   }),
   z.object({
     type: z.literal("move-deny"),
@@ -399,6 +403,25 @@ bookings.post("/:ref/actions", async (req, res) => {
         case "note":
           applyNote(b, action.text);
           break;
+        case "move-approve":
+          if (b.dateChangeRequest) {
+            const req = b.dateChangeRequest;
+            const idxs = action.approveIndexes ?? req.moves.map((_, i) => i);
+            req.moves.forEach((m, i) => {
+              const ok = idxs.includes(i);
+              m.approved = ok;
+              if (ok && m.from && m.to) {
+                const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
+                if (kid?.dates?.length) kid.dates = kid.dates.map((d) => (d === m.from ? m.to! : d));
+                else if (b.days) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
+              }
+            });
+            req.status = "approved";
+            req.resolvedAt = new Date().toISOString();
+            if (action.reason) req.reason = action.reason;
+            b.note = idxs.length === req.moves.length ? "Date change approved." : "Date change partly approved.";
+          }
+          break;
         case "move-deny":
           if (b.dateChangeRequest) {
             b.dateChangeRequest.status = "denied";
@@ -410,7 +433,6 @@ bookings.post("/:ref/actions", async (req, res) => {
         default:
           // "resend" returned early above, so only real row actions reach here.
           applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
-          if (action.type === "move-approve" && b.dateChangeRequest) b.dateChangeRequest.resolvedAt = new Date().toISOString();
       }
 
       // Keep the block's place counts — total AND per day — in step with

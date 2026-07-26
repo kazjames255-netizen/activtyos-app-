@@ -478,36 +478,59 @@ function CancelPanel({ booking }: { booking: Booking }) {
 // provider can read every From→To and approve/deny (with an optional reason).
 function DateChangePanel({ booking }: { booking: Booking }) {
   const resolveMove = useBookingsStore((s) => s.resolveMove);
-  const [reason, setReason] = useState("");
-  const [denying, setDenying] = useState(false);
   const req = booking.dateChangeRequest;
+  // Every swap starts ticked (bulk-approve). Untick any you won't allow.
+  const [picked, setPicked] = useState<number[]>(() => (req?.moves ?? []).map((_, i) => i));
+  const [reason, setReason] = useState("");
   if (req?.status !== "pending") return null;
   const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); };
+  const toggle = (i: number) => setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]));
+  const multiChild = new Set(req.moves.map((m) => m.childName).filter(Boolean)).size > 1;
+  const approveN = picked.length;
+  const declineN = req.moves.length - approveN;
+  // Row index within req.moves (grouping is display-only; checkboxes act on the
+  // real index).
+  let idx = -1;
+  const byChild = new Map<string, { m: typeof req.moves[number]; i: number }[]>();
+  for (const m of req.moves) { idx++; const k = m.childName ?? ""; byChild.set(k, [...(byChild.get(k) ?? []), { m, i: idx }]); }
   return (
     <div className="mb-3 rounded-xl border-2 border-[#f0c96b] bg-[#fffaf0] p-3.5">
       <div className="text-[13px] font-extrabold text-[#8a5300]">📅 Date change requested by the family</div>
-      <div className="mt-2 flex flex-col gap-1.5">
-        {req.moves.map((m, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-white px-3 py-2 text-[13px]">
-            {m.childName && <span className="font-bold text-[var(--ink)]">{m.childName}</span>}
-            <span className="text-[var(--ink-3)]">From</span> <b className="text-[var(--ink)]">{fmt(m.from)}</b>
-            <span className="text-[var(--ink-3)]">→ To</span> <b className="text-[#1d3a8f]">{fmt(m.to)}</b>
+      <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Tick the ones to approve — untick any you won&rsquo;t allow.</div>
+      <div className="mt-2 flex flex-col gap-2">
+        {[...byChild.entries()].map(([child, rows]) => (
+          <div key={child || "one"}>
+            {multiChild && child && <div className="mb-1 text-[12px] font-extrabold text-[var(--ink)]">{child}</div>}
+            <div className="flex flex-col gap-1">
+              {rows.map(({ m, i }) => {
+                const on = picked.includes(i);
+                return (
+                  <label key={i} className="flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border bg-white px-3 py-2 text-[13px]" style={{ borderColor: on ? "#0f7a43" : "#f0d9a8", opacity: on ? 1 : 0.65 }}>
+                    <input type="checkbox" checked={on} onChange={() => toggle(i)} className="mr-1" />
+                    <span className="text-[var(--ink-3)]">From</span> <b className="text-[var(--ink)]">{fmt(m.from)}</b>
+                    <span className="text-[var(--ink-3)]">→ To</span> <b className="text-[#1d3a8f]">{fmt(m.to)}</b>
+                    {!on && <span className="ml-auto text-[11px] font-bold text-[#c0392b]">won&rsquo;t approve</span>}
+                  </label>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
-      {denying && (
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for declining (optional) — the family sees this"
+      {declineN > 0 && (
+        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={`Why ${declineN === 1 ? "that date isn't" : "those dates aren't"} approved (optional) — the family sees this`}
           className="mt-2.5 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
       )}
       <div className="mt-2.5 flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => resolveMove(booking.ref, true)} title="Apply the swap — dates move on the family's schedule and they're told">Approve &amp; move dates</Button>
-        {denying ? (
-          <Button variant="danger" onClick={() => resolveMove(booking.ref, false, reason)}>Confirm decline</Button>
-        ) : (
-          <Button onClick={() => setDenying(true)}>Deny…</Button>
+        {approveN > 0 && (
+          <Button variant="primary" onClick={() => resolveMove(booking.ref, true, reason, declineN > 0 ? picked : undefined)}
+            title="Move the ticked dates — the family's schedule updates and they're told">
+            {declineN > 0 ? `Approve ${approveN}, decline ${declineN}` : "Approve & move dates"}
+          </Button>
         )}
+        <Button variant="danger" onClick={() => resolveMove(booking.ref, false, reason)}>Decline all</Button>
       </div>
-      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">On approve, the family&rsquo;s schedule + booking update automatically and they&rsquo;re emailed and notified. Deny leaves the booking unchanged and tells them (with your reason).</div>
+      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Approved dates move on the family&rsquo;s schedule automatically and they&rsquo;re emailed &amp; notified; declined ones stay put (with your reason).</div>
     </div>
   );
 }

@@ -125,7 +125,7 @@ export interface Booking {
   /** A parent's pending request to move day(s) to other dates — surfaced to the
    *  operator to approve/deny from the row. On approve the swaps are applied. */
   dateChangeRequest?: {
-    moves: { childName?: string; childId?: string; from: string; to: string }[];
+    moves: { childName?: string; childId?: string; from: string; to: string; approved?: boolean }[];
     requestedAt?: string;
     status: "pending" | "approved" | "denied";
     /** Optional reason the provider gave when denying. */

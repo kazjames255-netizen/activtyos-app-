@@ -465,14 +465,13 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               {moveReq && (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5">
                   <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    {moveReq.moves.map((m, i) => (
-                      <span key={i} className="text-[12.5px] text-[var(--ink)]">
-                        {m.childName ? <span className="text-[var(--ink-3)]">{m.childName}: </span> : null}
-                        <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(m.from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(m.to)}</b>
-                      </span>
-                    ))}
-                  </span>
+                  {moveReq.moves.length === 1 ? (
+                    <span className="text-[12.5px] text-[var(--ink)]">
+                      <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
+                    </span>
+                  ) : (
+                    <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
+                  )}
                   <span className="ml-auto flex items-center gap-1.5">
                     <button onClick={() => act(b.ref, "move-approve")} title="Approve — the day is moved and the family is told"
                       className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve move</button>

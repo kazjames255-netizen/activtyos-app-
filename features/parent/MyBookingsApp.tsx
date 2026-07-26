@@ -695,7 +695,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
   // The date-change request — pending / approved / denied. Backend is
   // authoritative; a local marker bridges "pending" only while that endpoint is
   // being built (§U). Returns the moves so the card shows the actual swaps.
-  type Move = { childName?: string; from: string; to: string };
+  type Move = { childName?: string; from: string; to: string; approved?: boolean };
   const dateChange = useMemo<{ moves: Move[]; status: "pending" | "approved" | "denied"; reason?: string } | null>(() => {
     const be = (b as Booking & { dateChangeRequest?: { status?: "pending" | "approved" | "denied"; moves?: Move[]; reason?: string } }).dateChangeRequest;
     if (be?.status) return { moves: be.moves ?? [], status: be.status, reason: be.reason };
@@ -713,6 +713,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
     if (st && st !== "pending") { try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ } }
   }, [b]);
   const pendingMove = dateChange?.status === "pending";
+  // Only prefix the child name on each swap line when the booking has more than
+  // one child (otherwise it's the same name repeated).
+  const dcMultiChild = !!dateChange && new Set(dateChange.moves.map((m) => m.childName).filter(Boolean)).size > 1;
   // Refund state, so a cancelled booking tells the family what came back.
   const refundAmt = b.cancel?.amount ?? 0;
   const refundIssued = b.pay === "Refunded" || b.pay === "Partially refunded" || b.cancel?.refund === "approved";
@@ -749,7 +752,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           {dateChange.moves.length > 0 && (
             <ul className="mt-1 flex flex-col gap-0.5">
               {dateChange.moves.map((m, i) => (
-                <li key={i} className="font-semibold">{m.childName ? `${m.childName}: ` : ""}From {fmtIso(m.from)} → To <b>{fmtIso(m.to)}</b></li>
+                <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}From {fmtIso(m.from)} → To <b>{fmtIso(m.to)}</b></li>
               ))}
             </ul>
           )}
@@ -757,18 +760,32 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         </div>
       )}
 
-      {dateChange?.status === "approved" && (
-        <div className="mt-2 rounded-lg border border-[#cfe9d8] bg-[#eef8f1] px-3 py-2 text-[12px] text-[#0f7a43]">
-          <div className="font-bold">✓ Date change approved — your booking has been moved.</div>
-          {dateChange.moves.length > 0 && (
-            <ul className="mt-1 flex flex-col gap-0.5">
-              {dateChange.moves.map((m, i) => (
-                <li key={i} className="font-semibold">{m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} → <b>{fmtIso(m.to)}</b></li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {dateChange?.status === "approved" && (() => {
+        // A request can be partly approved — some dates moved, some declined.
+        const approved = dateChange.moves.filter((m) => m.approved !== false);
+        const declined = dateChange.moves.filter((m) => m.approved === false);
+        return (
+          <div className="mt-2 rounded-lg border border-[#cfe9d8] bg-[#eef8f1] px-3 py-2 text-[12px] text-[#0f7a43]">
+            <div className="font-bold">✓ {declined.length ? "Some dates were moved" : "Date change approved — your booking has been moved."}</div>
+            {approved.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-0.5">
+                {approved.map((m, i) => (
+                  <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} → <b>{fmtIso(m.to)}</b></li>
+                ))}
+              </ul>
+            )}
+            {declined.length > 0 && (
+              <div className="mt-1.5 border-t border-[#cfe9d8] pt-1.5 text-[#8a5300]">
+                <div className="font-bold">Not moved:</div>
+                <ul className="flex flex-col gap-0.5">
+                  {declined.map((m, i) => <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} (kept)</li>)}
+                </ul>
+                {dateChange.reason && <div className="mt-0.5 text-[11.5px]">Reason: {dateChange.reason}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {dateChange?.status === "denied" && (
         <div className="mt-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c0392b]">

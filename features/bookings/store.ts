@@ -42,7 +42,7 @@ interface BookingsState {
   toggleSel: (ref: string) => void;
   clearSel: () => void;
   selectMany: (refs: string[]) => void;
-  resolveMove: (ref: string, approve: boolean, reason?: string) => void;
+  resolveMove: (ref: string, approve: boolean, reason?: string, approveIndexes?: number[]) => void;
   bulk: (action: UiBulkAction) => void;
   emailClose: () => void;
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
@@ -208,9 +208,11 @@ export const useBookingsStore = create<BookingsState>()(
       },
       close: () => set((s) => void (s.openRef = null)),
 
-      resolveMove: (ref, approve, reason) => {
+      resolveMove: (ref, approve, reason, approveIndexes) => {
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), approve ? { type: "move-approve" } : { type: "move-deny", reason: reason?.trim() || undefined }));
+          applyServer(await apiPost<Booking>(actionsUrl(ref), approve
+            ? { type: "move-approve", ...(approveIndexes ? { approveIndexes } : {}), reason: reason?.trim() || undefined }
+            : { type: "move-deny", reason: reason?.trim() || undefined }));
         });
       },
 
