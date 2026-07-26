@@ -16,13 +16,16 @@ import { Badge, Button, Card } from "@/components/ui";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface Check { quantity: number; at: string; by?: string }
-interface Item { id: string; name: string; category?: string; location?: string; quantity: number; unit?: string; minQty?: number; season?: string; notes?: string; lastCheckedAt?: string | null; lastCheckedBy?: string | null; checks?: Check[]; createdByName?: string; carriedFrom?: string }
+interface Item { id: string; name: string; category?: string; location?: string; quantity: number; unit?: string; minQty?: number; season?: string; notes?: string; lastCheckedAt?: string | null; lastCheckedBy?: string | null; checks?: Check[]; createdByName?: string; carriedFrom?: string; ordered?: boolean; orderQty?: number; orderCost?: number; orderCategory?: string; orderSupplier?: string; orderStatus?: "pending" | "paid"; orderedAt?: string }
+
+// Kept in step with the Expenses page so a reorder logs under the same category.
+const EXPENSE_CATEGORIES = ["Equipment", "Supplies", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Training", "Software", "Utilities", "Other"];
+const money = (n?: number) => `£${(n ?? 0).toFixed(2)}`;
 
 const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc", "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1" } as CSSProperties;
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 const BLUE = "#1d3a8f", GREEN = "#0f7a43", AMBER = "#9a5a00", RED = "#c02636";
 const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
-const STALE_DAYS = 30;
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : Infinity);
@@ -34,6 +37,7 @@ export function InventoryApp() {
   const categories = useMemo(() => inv.categories ?? [], [inv.categories]);
   const locations = useMemo(() => inv.locations ?? [], [inv.locations]);
   const seasons = useMemo(() => (inv.seasons?.length ? inv.seasons : ["This season"]), [inv.seasons]);
+  const STALE_DAYS = inv.checkEveryDays ?? 30;
 
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +53,7 @@ export function InventoryApp() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [adding, setAdding] = useState(false);
   const [carry, setCarry] = useState(false);
+  const [ordering, setOrdering] = useState<Item | null>(null);
   const [canManage, setCanManage] = useState(false);
 
   const refresh = useCallback(() => { apiGet<Item[]>("/api/inventory").then((l) => { setItems(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
@@ -65,7 +70,7 @@ export function InventoryApp() {
     (!ql || `${i.name} ${i.category ?? ""} ${i.location ?? ""} ${i.notes ?? ""}`.toLowerCase().includes(ql)) &&
     (!catFilter || (i.category ?? "") === catFilter) && (!locFilter || (i.location ?? "") === locFilter) &&
     (!lowOnly || lowStock(i)) && (!uncheckedOnly || dayssince(i.lastCheckedAt) >= STALE_DAYS)
-  ), [seasonItems, ql, catFilter, locFilter, lowOnly, uncheckedOnly]);
+  ), [seasonItems, ql, catFilter, locFilter, lowOnly, uncheckedOnly, STALE_DAYS]);
 
   // group shown items by category
   const groups = useMemo(() => {
@@ -81,6 +86,7 @@ export function InventoryApp() {
 
   async function remove(i: Item) { if (!confirm(`Delete “${i.name}”?`)) return; try { await api(`/api/inventory/${encodeURIComponent(i.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function doCheck(i: Item, qty: number) { try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/check`, { quantity: qty }); setCheckVals((v) => { const n = { ...v }; delete n[i.id]; return n; }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function markReceived(i: Item) { if (!confirm(`Mark ${i.orderQty ?? 0} ${i.name} as received? They'll be added to stock.`)) return; try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/received`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -103,6 +109,7 @@ export function InventoryApp() {
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
       {(adding || editing) && <ItemForm existing={editing ?? undefined} categories={categories} locations={locations} seasons={seasons} defaultSeason={sel} settings={settings} save={save} onClose={() => { setAdding(false); setEditing(null); }} onSaved={() => { setAdding(false); setEditing(null); refresh(); }} onDelete={editing && canManage ? () => remove(editing) : undefined} />}
       {carry && <CarryOverModal seasons={seasons} fromDefault={sel} settings={settings} save={save} onClose={() => setCarry(false)} onDone={(to) => { setCarry(false); setSeason(to); refresh(); }} />}
+      {ordering && <OrderModal item={ordering} defaultStatus={inv.orderExpenseStatus ?? "paid"} defaultCategory={inv.orderCategory ?? "Equipment"} onClose={() => setOrdering(null)} onDone={() => { setOrdering(null); refresh(); }} />}
 
       {/* season bar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -145,6 +152,7 @@ export function InventoryApp() {
                               <span className="text-[13.5px] font-extrabold">{i.name}</span>
                               {i.location && <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>📍 {i.location}</Badge>}
                               {lowStock(i) && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠ Low</Badge>}
+                              {i.ordered && <Badge tone={{ bg: "#fdf3d8", fg: AMBER }}>🛒 On order · {i.orderQty} · {money(i.orderCost)}{i.orderStatus === "pending" ? " (owed)" : " (paid)"}</Badge>}
                               {i.carriedFrom && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>↪ {i.carriedFrom}</Badge>}
                             </div>
                             {i.notes && <div className="mt-0.5 truncate text-[11px] text-[var(--ink-3)]">{i.notes}</div>}
@@ -162,8 +170,9 @@ export function InventoryApp() {
                               <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: AMBER, fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
                             </button>
                           )}
-                          <div className="flex gap-1.5">
+                          <div className="flex flex-wrap gap-1.5">
                             {!checking && <Button sm onClick={() => { setCheckVals((v) => ({ ...v, [i.id]: String(i.quantity) })); setHistId(i.id); setCheckMode(true); }}>Check</Button>}
+                            {canManage && (i.ordered ? <Button sm variant="solid" onClick={() => markReceived(i)}>✓ Received</Button> : <Button sm onClick={() => setOrdering(i)}>🛒 Order</Button>)}
                             <Button sm onClick={() => { setEditing(i); setAdding(false); }}>Edit</Button>
                             {canManage && <Button sm variant="danger" onClick={() => remove(i)}>Delete</Button>}
                           </div>
@@ -252,6 +261,47 @@ function ItemForm({ existing, categories, locations, seasons, defaultSeason, set
           {onDelete ? <button type="button" onClick={onDelete} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: RED }}>Delete</button> : <span />}
           <div className="flex gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? "Saving…" : "Save item"}</button></div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Order more ───────────────────────────────────────────────────────────────
+function OrderModal({ item, defaultStatus, defaultCategory, onClose, onDone }: { item: Item; defaultStatus: "paid" | "pending"; defaultCategory: string; onClose: () => void; onDone: () => void }) {
+  const suggested = item.minQty != null ? Math.max(1, (item.minQty * 2) - item.quantity) : 1;
+  const [quantity, setQuantity] = useState(String(suggested > 0 ? suggested : 1));
+  const [cost, setCost] = useState("");
+  const [supplier, setSupplier] = useState(item.orderSupplier ?? "");
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES.includes(item.orderCategory ?? "") ? item.orderCategory! : (EXPENSE_CATEGORIES.includes(defaultCategory) ? defaultCategory : "Equipment"));
+  const [status, setStatus] = useState<"pending" | "paid">(defaultStatus);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lbl = (s: string) => <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{s}</span>;
+
+  async function submit() {
+    const qty = Math.max(0, parseInt(quantity, 10) || 0), amt = Math.max(0, parseFloat(cost) || 0);
+    if (!qty) { setError("How many are you ordering?"); return; }
+    setBusy(true); setError(null);
+    try { await apiPost(`/api/inventory/${encodeURIComponent(item.id)}/order`, { quantity: qty, cost: amt, category, supplier: supplier.trim() || undefined, status }); onDone(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t place order"); setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4" onClick={onClose}>
+      <div className="mt-[7vh] w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-1 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Order more — {item.name}</div>
+        <p className="mb-3 text-[12px] text-[var(--ink-2)]">Records the order on this item and logs it to <b>Expenses</b> under the category you pick.</p>
+        <div className="flex flex-col gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1">{lbl("How many")}<input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} className={`${inputCls} w-full`} /></label>
+            <label className="flex flex-col gap-1">{lbl("Total cost (£)")}<input type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className={`${inputCls} w-full`} /></label>
+          </div>
+          <label className="flex flex-col gap-1">{lbl("Supplier (optional)")}<input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Who from" className={`${inputCls} w-full`} /></label>
+          <label className="flex flex-col gap-1">{lbl("Expense category")}<select value={category} onChange={(e) => setCategory(e.target.value)} className={`${inputCls} w-full`}>{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
+          <div>{lbl("Payment")}<div className="mt-1 flex gap-1.5">{(["pending", "paid"] as const).map((s) => <button key={s} type="button" onClick={() => setStatus(s)} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold" style={status === s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{s === "pending" ? "Owed (unpaid)" : "Already paid"}</button>)}</div></div>
+        </div>
+        {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
+        <div className="mt-4 flex justify-end gap-2 border-t border-[var(--line)] pt-3"><button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" disabled={busy} onClick={submit} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{busy ? "Ordering…" : "Place order → Expenses"}</button></div>
       </div>
     </div>
   );

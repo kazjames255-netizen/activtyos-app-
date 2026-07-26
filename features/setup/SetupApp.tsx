@@ -68,7 +68,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "calendar" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1105,7 +1105,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "calendar", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1147,6 +1147,7 @@ export function SetupApp() {
     ["safeguarding", "Safeguarding"],
     ["trips", "Trips & visits"],
     ["calendar", "Calendar"],
+    ["inventory", "Inventory"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
@@ -1259,6 +1260,25 @@ export function SetupApp() {
             <NumberBox value={settings.calendar?.reminderMinutes ?? 30} onChange={(n) => set("calendar", { ...settings.calendar, reminderMinutes: Math.max(0, n) })} min={0} max={1440} suffix=" min" />
           </Row>
           <NotWired>Sending the reminder (email + in-app bell) is wired up by the backend.</NotWired>
+        </Section>
+      )}
+
+      {tab === "inventory" && (
+        <Section title="Inventory" lede="How stock checks and reorders behave. Categories, storage locations and seasons are managed on the Inventory page itself.">
+          <Row label="When a reorder is logged to Expenses, mark it as" hint="Placing an order on the Inventory page creates a matching expense. Choose whether it lands already Paid, or Owed (pending) so you can pay it later.">
+            <Toggle on={(settings.inventory?.orderExpenseStatus ?? "paid") === "paid"} onChange={(v) => set("inventory", { ...settings.inventory, orderExpenseStatus: v ? "paid" : "pending" })} labels={["Paid", "Owed"]} />
+          </Row>
+          <Row label="File reorders under this expense category" hint="The default Expenses category a stock reorder is filed against.">
+            <select value={settings.inventory?.orderCategory ?? "Equipment"} onChange={(e) => set("inventory", { ...settings.inventory, orderCategory: e.target.value })} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]">
+              {["Equipment", "Supplies", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Training", "Software", "Utilities", "Other"].map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </Row>
+          <Row label="Flag an item for a stock check after" hint="An item not counted within this many days shows as 'due a check' and counts toward the 'To check' tile.">
+            <NumberBox value={settings.inventory?.checkEveryDays ?? 30} onChange={(n) => set("inventory", { ...settings.inventory, checkEveryDays: Math.max(1, n) })} min={1} max={365} suffix=" days" />
+          </Row>
+          <Row label="Warn when an item hits its reorder level" hint="Show a Low badge (and, once wired, notify) when stock drops to or below an item's reorder level.">
+            <Toggle on={settings.inventory?.lowStockAlert ?? true} onChange={(v) => set("inventory", { ...settings.inventory, lowStockAlert: v })} labels={["On", "Off"]} />
+          </Row>
         </Section>
       )}
 

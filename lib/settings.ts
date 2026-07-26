@@ -371,6 +371,14 @@ export interface TenantSettings {
     locations?: string[];
     seasons?: string[];
     currentSeason?: string;
+    /** When a reorder is logged to Expenses, is it "paid" already or "pending" (owed). */
+    orderExpenseStatus?: "paid" | "pending";
+    /** Default Expenses category a reorder is filed under. */
+    orderCategory?: string;
+    /** Flag an item for a stock check if it hasn't been counted in this many days. */
+    checkEveryDays?: number;
+    /** Warn (and, later, notify) when an item hits its reorder level. */
+    lowStockAlert?: boolean;
   };
 
   /**
@@ -660,6 +668,10 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     locations: ["Main store", "Van", "Shed", "Office"],
     seasons: ["Summer 2026"],
     currentSeason: "Summer 2026",
+    orderExpenseStatus: "paid",
+    orderCategory: "Equipment",
+    checkEveryDays: 30,
+    lowStockAlert: true,
   },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],

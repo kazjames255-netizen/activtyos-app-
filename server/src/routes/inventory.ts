@@ -78,6 +78,45 @@ inventory.post("/:id/check", async (req, res) => {
   res.json({ id: after.id, ...after.data() });
 });
 
+// Order more of an item — records the order on the item AND creates a matching
+// expense in the Expenses ledger (same categories), so a reorder shows as
+// money out. status "pending" = owed, "paid" = already paid.
+const orderSchema = z.object({ quantity: z.number().nonnegative().max(1_000_000), cost: z.number().nonnegative().max(10_000_000), category: z.string().trim().min(1).max(60), supplier: z.string().trim().max(120).optional(), status: z.enum(["pending", "paid"]).default("pending") });
+inventory.post("/:id/order", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role)) { res.status(403).json({ error: "Only the provider can place an order" }); return; }
+  const o = await own(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Item not found" }); return; }
+  const parsed = orderSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const { quantity, cost, category, supplier, status } = parsed.data;
+  const now = new Date().toISOString();
+  const item = o.snap.data()!;
+  const meta = { tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: now };
+  // create the expense (mirrors the expenses route's doc shape)
+  const expRef = await db.collection("expenses").add({ date: now.slice(0, 10), category, amount: Math.round(cost * 100) / 100, supplier: supplier || undefined, notes: `Stock order — ${quantity} × ${item.name}`, status, ...meta });
+  await o.snap.ref.set({ ordered: true, orderQty: quantity, orderCost: cost, orderCategory: category, orderSupplier: supplier ?? null, orderStatus: status, orderedAt: now, orderExpenseId: expRef.id, updatedAt: now }, { merge: true });
+  const after = await o.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+// Mark an order received — adds the ordered quantity into stock, stamps a
+// check, and clears the order flags.
+inventory.post("/:id/received", async (req, res) => {
+  const o = await own(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Item not found" }); return; }
+  const item = o.snap.data()!;
+  if (!item.ordered) { res.status(400).json({ error: "Nothing on order for this item" }); return; }
+  const now = new Date().toISOString();
+  const by = req.user?.name ?? req.user?.email ?? "Staff";
+  const newQty = (item.quantity ?? 0) + (item.orderQty ?? 0);
+  const history = Array.isArray(item.checks) ? (item.checks as unknown[]) : [];
+  const checks = [{ quantity: newQty, at: now, by }, ...history].slice(0, 20);
+  await o.snap.ref.set({ quantity: newQty, lastCheckedAt: now, lastCheckedBy: by, checks, ordered: false, orderQty: null, orderCost: null, orderCategory: null, orderSupplier: null, orderStatus: null, orderedAt: null, orderExpenseId: null, receivedAt: now, updatedAt: now }, { merge: true });
+  const after = await o.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
 inventory.delete("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Item not found" }); return; }
