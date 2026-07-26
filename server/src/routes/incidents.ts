@@ -49,6 +49,9 @@ const logSchema = z.object({
   parentNotified: z.boolean().default(false),
   parentNotifiedAt: z.string().max(25).optional(),
   parentNotifiedHow: z.string().max(60).optional(),
+  // On an edit, whether staff chose to alert the parent (email + bell) or to
+  // just update the record on their profile silently. Read by the notify layer.
+  notifyParentOfEdit: z.boolean().optional(),
   photoUrl: z.string().max(500).optional(),
   followUp: z.string().trim().max(2_000).optional(),
 });
@@ -173,6 +176,38 @@ incidents.post("/:id/acknowledge", async (req, res) => {
     acknowledgedBy: req.user?.name ?? req.user?.email ?? "Parent",
   }, { merge: true });
   res.json({ ok: true });
+});
+
+// POST /api/incidents/:id/note — append a note to the record's thread. Both a
+// parent (on their own child) and staff/operators (on their tenant) can add
+// one, so an accident can be discussed in one place. Notes are append-only.
+const noteSchema = z.object({ text: z.string().trim().min(1).max(2_000) });
+incidents.post("/:id/note", async (req, res) => {
+  const auth = req.auth!;
+  const parsed = noteSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const snap = await col.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Record not found" }); return; }
+  const data = snap.data()!;
+  let role: "parent" | "staff";
+  if (auth.role === "parent") {
+    const childId = data.childId as string | undefined;
+    if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
+    const child = await db.collection("children").doc(childId).get();
+    if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
+    role = "parent";
+  } else if (canRecord(auth.role) && auth.tenantId && data.tenantId === auth.tenantId) {
+    role = "staff";
+  } else {
+    res.status(403).json({ error: "You can't add a note here" }); return;
+  }
+  const note = {
+    by: req.user?.name ?? req.user?.email ?? (role === "parent" ? "Parent" : "Staff"),
+    role, text: parsed.data.text, at: new Date().toISOString(),
+  };
+  const notes = Array.isArray(data.notes) ? data.notes : [];
+  await snap.ref.set({ notes: [...notes, note] }, { merge: true });
+  res.status(201).json({ ok: true, note });
 });
 
 // DELETE /api/incidents/:id — operators only. A safeguarding record isn't

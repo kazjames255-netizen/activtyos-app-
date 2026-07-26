@@ -46,4 +46,19 @@ filters by it — the operator flow now populates it.
    just the outbound staff notification (respect the toggle; don't spam on
    re-acknowledge — notify on the first ack, or on a state change to acknowledged).
 
+6. **Edit → staff choose the channel.** On an edit the operator picks *alert the
+   parent* vs *just update their profile*; the client sends `notifyParentOfEdit`
+   (boolean) on the PUT. Only send the edit email/bell when `notifyParentOfEdit`
+   is true (and settings/mute allow). Either way `updatedAt` changes and the
+   parent's profile shows the "Updated" stamp — the flag only governs the push.
+7. **Notes thread.** New endpoint `POST /api/incidents/:id/note` (built) appends
+   `{by, role, text, at}` to `notes[]`; a parent (own child) or staff/operator
+   (own tenant) can post. Wire notifications to taste later (e.g. bell the other
+   side when a note is added) — not required for launch, but note it.
+8. **Enforce acknowledgement.** `settings.safeguarding.requireAcknowledgement`
+   (default off). The parent UI already shows a persistent reminder while any
+   accident is un-acknowledged. When this is on, drive the **reminder cadence**
+   (chase emails until acknowledged); when off, a single notification is enough.
+   Nothing is blocked either way.
+
 Everything else (fields, access rules, delete) is unchanged and already yours.

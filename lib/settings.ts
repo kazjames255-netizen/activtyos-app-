@@ -348,6 +348,7 @@ export interface TenantSettings {
     notifyParentAccident?: boolean;  // email + bell the parent when an accident is logged
     notifyParentIncident?: boolean;  // …and for incidents (usually off — often internal)
     notifyStaffAcknowledged?: boolean; // email + bell staff when a parent acknowledges a record
+    requireAcknowledgement?: boolean;  // enforce: nag the parent until they acknowledge (off = optional)
   };
 
   /**

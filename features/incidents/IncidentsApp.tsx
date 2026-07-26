@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
+import { NotesThread } from "./NotesThread";
 import { INJURY_BANK, TREATMENT_BANK, treatmentsFor } from "./firstAid";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -23,7 +24,9 @@ interface Log {
   incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
   parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string;
   recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
+  notes?: Note[]; notifyParentOfEdit?: boolean;
 }
+interface Note { by: string; role: string; text: string; at: string }
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -67,6 +70,7 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
         // parent (backend writes updatedAt → parent sees an "Updated" alert).
         await apiPut(`/api/incidents/${encodeURIComponent(existing!.id)}`, {
           ...d, treatment,
+          notifyParentOfEdit: d.notifyParentOfEdit ?? true,
           parentNotifiedAt: d.parentNotified ? (existing!.parentNotifiedAt ?? new Date().toISOString()) : existing!.parentNotifiedAt,
         });
       } else {
@@ -197,7 +201,23 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
           </div>
           <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />I&rsquo;ve also told the parent in person / by phone</label>
           <div className="mt-2.5"><FieldLabel>Follow-up (optional)</FieldLabel><Input value={d.followUp ?? ""} onChange={(e) => set({ followUp: e.target.value })} placeholder="e.g. monitor overnight; parent to check tomorrow" className="w-full" /></div>
-          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be {isEdit ? "sent an updated notification" : "emailed and notified"} in their area with a timestamp when you save{d.childId ? "" : " (once this child is matched to a booking)"}.</div>}
+          {isEdit ? (
+            <div className="mt-3">
+              <FieldLabel>This is an edit — how should the parent see it?</FieldLabel>
+              <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
+                {([[true, "🔔 Alert the parent", "Email + bell them about the change"], [false, "🙈 Just update their profile", "Change quietly, no alert sent"]] as [boolean, string, string][]).map(([v, t, sub]) => (
+                  <button key={String(v)} type="button" onClick={() => set({ notifyParentOfEdit: v })} className="rounded-xl border-2 px-3 py-2.5 text-left transition-colors"
+                    style={(d.notifyParentOfEdit ?? true) === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                    <div className="text-[12.5px] font-extrabold" style={{ color: (d.notifyParentOfEdit ?? true) === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Either way the change is tracked on their profile with an “Updated” stamp.</p>
+            </div>
+          ) : (
+            notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be emailed and notified in their area with a timestamp when you save{d.childId ? "" : " (once this child is matched to a booking)"}.</div>
+          )}
         </>
       )}
 
@@ -225,6 +245,9 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
   const [canManage, setCanManage] = useState(false);
   const [q, setQ] = useState("");
   const [sevFilter, setSevFilter] = useState("");
+  const [injuryFilter, setInjuryFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [ackFilter, setAckFilter] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<Log[]>(`/api/incidents?kind=${kind}`).then((l) => { setLogs(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -246,7 +269,13 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
   const serious = all.filter((l) => l.severity === "serious").length;
   const informed = all.filter((l) => l.parentNotified || l.parentNotifiedAt).length;
   const tiles: [string, number][] = [["This month", thisMonth], ["Serious", serious], ["Parent informed", informed], ["Total", all.length]];
-  const shown = all.filter((l) => (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql)) && (!sevFilter || l.severity === sevFilter));
+  const injuries = [...new Set(all.map((l) => l.injury?.trim()).filter(Boolean) as string[])].sort();
+  const shown = all.filter((l) =>
+    (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql)) &&
+    (!sevFilter || l.severity === sevFilter) &&
+    (!injuryFilter || l.injury === injuryFilter) &&
+    (!dateFilter || l.date === dateFilter) &&
+    (ackFilter === "" || (ackFilter === "yes" ? !!l.acknowledgedAt : !l.acknowledgedAt)));
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -277,15 +306,36 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
       {adding && <LogForm kind={kind} notifies={notifies} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
       {editing && <LogForm key={editing.id} kind={kind} notifies={notifies} existing={editing} onSaved={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />}
 
-      {logs && all.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {([["", "All"], ["minor", "Minor"], ["moderate", "Moderate"], ["serious", "Serious"]] as [string, string][]).map(([id, label]) => (
-            <button key={label} type="button" onClick={() => setSevFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
-              style={sevFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
-          ))}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or details…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-        </div>
-      )}
+      {logs && all.length > 0 && (() => {
+        const anyFilter = !!(sevFilter || injuryFilter || dateFilter || ackFilter || q);
+        const selCls = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--ink-2)] outline-none focus:border-[#1d3a8f]";
+        return (
+          <div className="mb-3 flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {([["", "All"], ["minor", "Minor"], ["moderate", "Moderate"], ["serious", "Serious"]] as [string, string][]).map(([id, label]) => (
+                <button key={label} type="button" onClick={() => setSevFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+                  style={sevFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
+              ))}
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or details…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {kind === "accident" && injuries.length > 0 && (
+                <select value={injuryFilter} onChange={(e) => setInjuryFilter(e.target.value)} className={selCls} aria-label="Filter by injury">
+                  <option value="">All injuries</option>
+                  {injuries.map((i) => <option key={i} value={i}>{i}</option>)}
+                </select>
+              )}
+              <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={selCls} aria-label="Filter by date of incident" />
+              {([["", "Any"], ["yes", "✓ Acknowledged"], ["no", "Awaiting"]] as [string, string][]).map(([id, label]) => (
+                <button key={label} type="button" onClick={() => setAckFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition-colors"
+                  style={ackFilter === id ? { borderColor: "#0f7a43", background: "#e7f6ee", color: "#0f7a43" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
+              ))}
+              {anyFilter && <button type="button" onClick={() => { setSevFilter(""); setInjuryFilter(""); setDateFilter(""); setAckFilter(""); setQ(""); }} className="text-[12px] font-bold text-[#1d3a8f] underline">Clear filters</button>}
+              <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{shown.length} of {all.length}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {!logs ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
@@ -321,19 +371,22 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                     {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
                   </div>
                   {openId === l.id && (
-                    <div className="mt-2.5 grid gap-x-6 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] sm:grid-cols-2">
-                      {l.location && <div><span className="text-[var(--ink-3)]">Where: </span><b>{l.location}</b></div>}
-                      {l.injury && <div><span className="text-[var(--ink-3)]">Injury: </span><b>{l.injury}</b></div>}
-                      {l.treatment && <div><span className="text-[var(--ink-3)]">First aid: </span><b>{l.treatment}</b></div>}
-                      {l.firstAider && <div><span className="text-[var(--ink-3)]">First aider: </span><b>{l.firstAider}</b></div>}
-                      {l.incidentType && <div><span className="text-[var(--ink-3)]">Type: </span><b>{l.incidentType}</b></div>}
-                      {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span><b>{l.actionTaken}</b></div>}
-                      {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
-                      {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</b></div>}
-                      {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString("en-GB")}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
-                      {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
-                      {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
-                    </div>
+                    <>
+                      <div className="mt-2.5 grid gap-x-6 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] sm:grid-cols-2">
+                        {l.location && <div><span className="text-[var(--ink-3)]">Where: </span><b>{l.location}</b></div>}
+                        {l.injury && <div><span className="text-[var(--ink-3)]">Injury: </span><b>{l.injury}</b></div>}
+                        {l.treatment && <div><span className="text-[var(--ink-3)]">First aid: </span><b>{l.treatment}</b></div>}
+                        {l.firstAider ? <div><span className="text-[var(--ink-3)]">First aid given by: </span><b>{l.firstAider}</b></div> : <div><span className="text-[var(--ink-3)]">First aid given by: </span><b className="text-[var(--ink-3)]">not recorded</b></div>}
+                        {l.incidentType && <div><span className="text-[var(--ink-3)]">Type: </span><b>{l.incidentType}</b></div>}
+                        {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span><b>{l.actionTaken}</b></div>}
+                        {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
+                        {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</b></div>}
+                        {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString("en-GB")}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
+                        {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
+                        {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
+                      </div>
+                      <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
+                    </>
                   )}
                 </div>
               </Card>

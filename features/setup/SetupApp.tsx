@@ -1228,6 +1228,9 @@ export function SetupApp() {
           <Row label="Tell staff when a parent acknowledges" hint="Parents can confirm they've seen a logged accident. When they do, email + ring the bell for your staff so you know it landed. Turn off if you don't need the confirmation.">
             <Toggle on={settings.safeguarding?.notifyStaffAcknowledged ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyStaffAcknowledged: v })} labels={["Yes", "No"]} />
           </Row>
+          <Row label="Require parents to acknowledge" hint="On: un-acknowledged accidents show a persistent reminder in the parent's area until they confirm (nothing is blocked). Off: acknowledging is optional.">
+            <Toggle on={settings.safeguarding?.requireAcknowledgement ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, requireAcknowledgement: v })} labels={["Yes", "No"]} />
+          </Row>
         </Section>
       )}
 

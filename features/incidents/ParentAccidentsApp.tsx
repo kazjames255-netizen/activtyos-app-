@@ -5,12 +5,14 @@ import type { CSSProperties } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
+import { NotesThread } from "./NotesThread";
 
 interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
   description?: string; injury?: string; treatment?: string; firstAider?: string; severity?: string;
   parentNotified?: boolean; parentNotifiedAt?: string; followUp?: string; createdAt?: string; updatedAt?: string;
   acknowledgedAt?: string; acknowledgedBy?: string;
+  notes?: { by: string; role: string; text: string; at: string }[];
 }
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -35,6 +37,7 @@ export function ParentAccidentsApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["children", "incidents"], refresh);
+  const outstanding = (records ?? []).filter((r) => !r.acknowledgedAt);
 
   async function acknowledge(id: string) {
     setAcking(id); setError(null);
@@ -52,6 +55,13 @@ export function ParentAccidentsApp() {
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Every accident the provider logs for your child appears here, with the time it happened and the first aid given.</p>
       </div>
 
+      {records && outstanding.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-[#f0b100] bg-[#fff8e6] px-4 py-3">
+          <span className="text-[13px] font-bold text-[#8a5a00]">⚠️ Please confirm you&rsquo;ve seen {outstanding.length === 1 ? "an accident record" : `${outstanding.length} accident records`} for your child, so staff know you&rsquo;re aware.</span>
+          <button type="button" onClick={() => { setOpenId(outstanding[0].id); document.getElementById(`rec-${outstanding[0].id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">Review &amp; acknowledge →</button>
+        </div>
+      )}
+
       {records && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
           <span className="text-[12.5px] text-[var(--ink-2)]">{muted ? "🔕 Accident alerts are off — you're checking here yourself." : "🔔 We'll email you and ring the bell here whenever an accident is logged."}</span>
@@ -68,7 +78,7 @@ export function ParentAccidentsApp() {
           {records.map((r) => {
             const sev = SEV[r.severity ?? "minor"] ?? SEV.minor;
             return (
-              <Card key={r.id} className="overflow-hidden p-0">
+              <Card key={r.id} id={`rec-${r.id}`} className="overflow-hidden p-0">
                 <div className="h-1.5 w-full" style={{ background: sev.fg }} />
                 <div className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -87,18 +97,18 @@ export function ParentAccidentsApp() {
                       {r.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ You acknowledged · {stamp(r.acknowledgedAt)}</Badge>}
                     </div>
                   </div>
-                  {(r.location || r.treatment || r.firstAider || r.followUp) && (
+                  <div className="mt-3 border-t border-[var(--line)] pt-2.5">
+                    <button type="button" onClick={() => setOpenId(openId === r.id ? null : r.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{openId === r.id ? "Hide details" : "See details & notes"}{r.notes && r.notes.length > 0 ? ` (${r.notes.length})` : ""}</button>
+                  </div>
+                  {openId === r.id && (
                     <>
-                      <div className="mt-3 border-t border-[var(--line)] pt-2.5">
-                        <button type="button" onClick={() => setOpenId(openId === r.id ? null : r.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{openId === r.id ? "Hide details" : "See details"}</button>
+                      <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12.5px] text-[var(--ink-2)]">
+                        {r.location && <div><b className="text-[var(--ink)]">Where:</b> {r.location}</div>}
+                        {r.treatment && <div><b className="text-[var(--ink)]">First aid:</b> {r.treatment}</div>}
+                        <div><b className="text-[var(--ink)]">First aid given by:</b> {r.firstAider ? r.firstAider : "not recorded"}</div>
+                        {r.followUp && <div><b className="text-[var(--ink)]">Follow-up:</b> {r.followUp}</div>}
                       </div>
-                      {openId === r.id && (
-                        <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12.5px] text-[var(--ink-2)]">
-                          {r.location && <div><b className="text-[var(--ink)]">Where:</b> {r.location}</div>}
-                          {(r.treatment || r.firstAider) && <div><b className="text-[var(--ink)]">First aid:</b> {r.treatment}{r.firstAider ? ` (by ${r.firstAider})` : ""}</div>}
-                          {r.followUp && <div><b className="text-[var(--ink)]">Follow-up:</b> {r.followUp}</div>}
-                        </div>
-                      )}
+                      <NotesThread id={r.id} notes={r.notes} side="parent" onAdded={refresh} />
                     </>
                   )}
                   {r.acknowledgedAt ? (
