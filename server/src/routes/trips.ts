@@ -13,6 +13,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 
 const tripSchema = z.object({
   destination: z.string().trim().min(1).max(160),
+  address: z.string().trim().max(240).optional(),
   date: z.string().max(10),
   departTime: z.string().max(8).optional(),
   returnTime: z.string().max(8).optional(),
@@ -27,12 +28,14 @@ const tripSchema = z.object({
   // whether the controls are confirmed in place. Signed off by an assessor.
   hazards: z.array(z.object({
     h: z.string().max(200),
-    who: z.string().max(200).optional(),
-    controls: z.string().max(1_000).optional(),
+    who: z.string().max(400).optional(),
+    controls: z.string().max(4_000).optional(),
     initial: z.enum(["L", "M", "H", ""]).optional(),
     residual: z.enum(["L", "M", "H", ""]).optional(),
     done: z.boolean().optional(),
-  })).max(60).optional(),
+    amendedOn: z.string().max(40).optional(),
+    amendedBy: z.string().max(120).optional(),
+  })).max(80).optional(),
   raSigned: z.boolean().optional(),
   raAssessor: z.string().max(120).optional(),
   raDate: z.string().max(40).optional(),

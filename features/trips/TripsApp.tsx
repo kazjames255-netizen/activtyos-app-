@@ -19,14 +19,14 @@ import { bankByCategory, HAZARD_BANK } from "./hazardBank";
 type Status = "planned" | "completed" | "cancelled";
 type RiskLevel = "" | "L" | "M" | "H";
 type Consent = "granted" | "pending" | "declined";
-interface Hazard { h: string; who?: string; controls?: string; initial?: RiskLevel; residual?: RiskLevel; done?: boolean }
+interface Hazard { h: string; who?: string; controls?: string; initial?: RiskLevel; residual?: RiskLevel; done?: boolean; amendedOn?: string; amendedBy?: string }
 interface ItinItem { t?: string; a?: string; k?: string }
 interface RosterMember { n: string; r?: string; fa?: boolean }
 interface Attendee { n: string; age?: number; consent?: Consent; paid?: boolean; em?: boolean; med?: string }
 interface Checkpoint { n: string; counted?: number | null; time?: string }
 interface Signoff { approvedBy?: string; approvedAt?: string; submitted?: boolean }
 interface Trip {
-  id: string; destination: string; date: string; departTime?: string; returnTime?: string;
+  id: string; destination: string; address?: string; date: string; departTime?: string; returnTime?: string;
   listingId?: string; transport?: string; lead?: string; leadPhone?: string; evc?: string; cost?: string; offsiteRatio?: number;
   itinerary?: ItinItem[]; kit?: string;
   hazards?: Hazard[]; raSigned?: boolean; raAssessor?: string; raDate?: string; raRef?: string; raReview?: string;
@@ -58,6 +58,20 @@ const DEFAULT_CHECKPOINTS: Checkpoint[] = [
   { n: "Depart base", counted: null }, { n: "Arrive venue", counted: null }, { n: "Lunch / midpoint", counted: null }, { n: "Before return", counted: null }, { n: "Back at base", counted: null },
 ];
 const TITLES = ["", "Trip details & itinerary", "Risk assessment", "Staffing & off-site ratio", "Parent permissions", "Line-manager sign-off", "On the day — head counts", "Return & debrief"];
+// Extensive, editable pick-lists for the itinerary (offered as datalists).
+const ITIN_ACTIVITIES = [
+  "Depart base", "Board coach / minibus", "Travel to venue", "Arrive at venue", "Meet venue staff / guide",
+  "Registration & head count", "Welcome & safety briefing", "Toilet & handwash break", "Morning activity session",
+  "Guided tour", "Workshop / led session", "Snack break", "Free time / supervised play", "Lunch",
+  "Afternoon activity session", "Group photo", "Gift shop / souvenirs", "Wash hands", "Final head count & register",
+  "Board coach for return", "Depart venue", "Travel back to base", "Arrive back at base", "Handover to parents / carers",
+];
+const ITIN_ACTIONS = [
+  "Head-count on", "Head-count off", "Seatbelts checked", "Register taken", "Toilet & handwash",
+  "Apply sun cream / hats", "Water / hydration break", "First-aid kit to hand", "Medication check", "Inhalers to hand",
+  "Emergency contacts reviewed", "Buddy-up in pairs", "Meeting-point reminder", "Hi-vis on", "Wash hands after animals",
+  "Count in and out of water", "Collect belongings", "Confirm collection / password", "Weather check", "Phone tree ready",
+];
 
 const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
@@ -122,7 +136,7 @@ interface Change { key: string; label: string; old: string; next: string; who: s
 
 function blankTrip(ratioTarget: number): Trip {
   return {
-    id: "", destination: "", date: todayIso(), transport: "", offsiteRatio: ratioTarget, cost: "0.00",
+    id: "", destination: "", address: "", date: todayIso(), transport: "", offsiteRatio: ratioTarget, cost: "0.00",
     lead: "", leadPhone: "", evc: "", kit: "Packed lunch, water, sun cream, weather-appropriate clothing.",
     itinerary: [{ t: "09:00", a: "Depart base", k: "Head-count on" }, { t: "", a: "", k: "" }],
     hazards: DEFAULT_HAZARDS.map((h) => ({ ...h })), raRef: "", raAssessor: "", raDate: todayIso(), raReview: "Reviewed before each run",
@@ -162,22 +176,13 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
   const [bkgs, setBkgs] = useState<Booking[]>([]);
   const [listingStaff, setListingStaff] = useState<string[]>([]);
   const [team, setTeam] = useState<string[]>([]);
+  const [venues, setVenues] = useState<{ name: string; address?: string; city?: string }[]>([]);
   const [me, setMe] = useState("You");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remindStamp, setRemindStamp] = useState<string | null>(null);
   const [bankOpen, setBankOpen] = useState(false);
   const [bankQ, setBankQ] = useState("");
-  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.area, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false }); d.raSigned = false; }); };
-
-  useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ staff?: { first?: string; last?: string }[] } | null>("/api/library").then((l) => setTeam((l?.staff ?? []).map((s) => `${s.first ?? ""} ${s.last ?? ""}`.trim()).filter(Boolean))).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ name?: string; email?: string }>("/api/me").then((m) => setMe(m.name || m.email || "You")).catch(() => {}); }, []);
-  useEffect(() => {
-    let alive = true; const lid = t.listingId;
-    const p: Promise<string[]> = lid ? apiGet<{ library?: { staff?: { name?: string }[] } }>(`/api/listings/${encodeURIComponent(lid)}`).then((r) => (r.library?.staff ?? []).map((s) => (s.name ?? "").trim()).filter(Boolean)).catch(() => []) : Promise.resolve([]);
-    p.then((n) => { if (alive) setListingStaff(n); }); return () => { alive = false; };
-  }, [t.listingId]);
 
   // edit a field by path; records old→new when track-changes is on
   const edit = (key: string, value: unknown, label: string) => {
@@ -191,6 +196,21 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
     });
   };
   const mut = (fn: (d: Trip) => void) => setT((prev) => { const next = structuredClone(prev) as Trip; fn(next); return next; });
+  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.area, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
+  // edit a hazard text field and stamp "last amended" with today + assessor
+  const hazText = (i: number, field: "h" | "who" | "controls", value: string, label: string) => { edit(`hazards.${i}.${field}`, value, label); mut((d) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } }); };
+  // look up a saved venue's address when the destination matches one by name
+  const venueFor = (name: string) => venues.find((v) => v.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+  useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ staff?: { first?: string; last?: string }[]; venues?: { name?: string; address?: string; city?: string }[] } | null>("/api/library").then((l) => { setTeam((l?.staff ?? []).map((s) => `${s.first ?? ""} ${s.last ?? ""}`.trim()).filter(Boolean)); setVenues((l?.venues ?? []).filter((v) => v.name).map((v) => ({ name: v.name!, address: v.address, city: v.city }))); }).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ name?: string; email?: string }>("/api/me").then((m) => setMe(m.name || m.email || "You")).catch(() => {}); }, []);
+  useEffect(() => {
+    let alive = true; const lid = t.listingId;
+    const p = lid ? apiGet<{ library?: { staff?: { name?: string }[]; venue?: { name?: string; address?: string } | null } }>(`/api/listings/${encodeURIComponent(lid)}`).then((r) => ({ staff: (r.library?.staff ?? []).map((s) => (s.name ?? "").trim()).filter(Boolean), venue: r.library?.venue ?? null })).catch(() => ({ staff: [] as string[], venue: null })) : Promise.resolve({ staff: [] as string[], venue: null });
+    p.then((r) => { if (!alive) return; setListingStaff(r.staff); if (r.venue) mut((d) => { if (!d.destination.trim() && r.venue!.name) d.destination = r.venue!.name; if (!d.address?.trim() && r.venue!.address) d.address = r.venue!.address; }); });
+    return () => { alive = false; };
+  }, [t.listingId]);
 
   const booked = useMemo(() => bookedOnDate(bkgs, t.listingId, t.date), [bkgs, t.listingId, t.date]);
   const listings = useMemo(() => [...new Map(bkgs.filter((b) => b.listingId && b.listing).map((b) => [b.listingId!, b.listing!])).entries()], [bkgs]);
@@ -204,7 +224,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
     setBusy(true); setError(null);
     const childNames = attendingOf(t).map((c) => c.n);
     const body = {
-      destination: t.destination, date: t.date, departTime: t.departTime || undefined, returnTime: t.returnTime || undefined,
+      destination: t.destination, address: t.address || undefined, date: t.date, departTime: t.departTime || undefined, returnTime: t.returnTime || undefined,
       listingId: t.listingId || undefined, transport: t.transport || undefined, lead: t.lead || undefined, leadPhone: t.leadPhone || undefined,
       evc: t.evc || undefined, cost: t.cost || undefined, offsiteRatio: t.offsiteRatio ?? ratioTarget, itinerary: (t.itinerary ?? []).filter((r) => r.a?.trim() || r.t?.trim()),
       kit: t.kit || undefined, hazards: (t.hazards ?? []).filter((h) => h.h.trim()), raSigned: !!t.raSigned, raAssessor: t.raAssessor || undefined, raDate: t.raDate || undefined, raRef: t.raRef || undefined, raReview: t.raReview || undefined,
@@ -293,9 +313,12 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
               {isOpen && <div className="border-t border-[var(--line)] bg-[var(--panel)] p-3.5">
                 {/* ── Step 1 ── */}
                 {n === 1 && <div className="flex flex-col gap-3">
+                  <datalist id="trip-venues">{venues.map((v) => <option key={v.name} value={v.name} />)}</datalist>
+                  <datalist id="trip-addresses">{venues.filter((v) => v.address).map((v) => <option key={v.name} value={v.address}>{v.name}</option>)}</datalist>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1">{fl("Where are you going?")}{fieldInput("destination", "Destination", { placeholder: "e.g. ZSL Whipsnade Zoo" })}</label>
-                    {listings.length > 0 && <label className="flex flex-col gap-1">{fl("For which camp/club? (pulls booked children + staff)")}<select value={t.listingId ?? ""} onChange={(e) => edit("listingId", e.target.value || "", "Listing")} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
+                    <label className="flex flex-col gap-1">{fl("Where are you going?")}<input list="trip-venues" value={t.destination ?? ""} onChange={(e) => { const v = e.target.value; edit("destination", v, "Destination"); const m = venueFor(v); if (m?.address && !t.address?.trim()) edit("address", m.address, "Address"); }} placeholder="Search your venues, or type a place" className={inputCls} /></label>
+                    <label className="flex flex-col gap-1">{fl("Address")}<input list="trip-addresses" value={t.address ?? ""} onChange={(e) => edit("address", e.target.value, "Address")} placeholder="Postcode or full address" className={inputCls} /></label>
+                    {listings.length > 0 && <label className="flex flex-col gap-1 sm:col-span-2">{fl("For which camp/club? (pulls booked children, staff & venue)")}<select value={t.listingId ?? ""} onChange={(e) => edit("listingId", e.target.value || "", "Listing")} className={inputCls}><option value="">All my bookings</option>{listings.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
                     <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("date", "Date", { type: "date" })}</label>
                     <label className="flex flex-col gap-1">{fl("Cost per child (£)")}{fieldInput("cost", "Cost per child")}</label>
                     <label className="flex flex-col gap-1">{fl("Depart")}{fieldInput("departTime", "Depart", { type: "time" })}</label>
@@ -305,23 +328,26 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                     <div className="mb-1.5 flex items-center gap-2 text-[12.5px] font-extrabold">Main trip lead & contact</div>
                     <div className="grid gap-2 sm:grid-cols-3">
-                      <label className="flex flex-col gap-1">{fl("Trip lead")}<select value={t.lead ?? ""} onChange={(e) => edit("lead", e.target.value, "Trip lead")} className={inputCls}><option value="">— pick from roster —</option>{(t.roster ?? []).map((s) => <option key={s.n} value={s.n}>{s.n}</option>)}</select>{(t.roster ?? []).length === 0 && <span className="text-[10.5px] text-[var(--ink-3)]">Add staff in Step 3 first.</span>}</label>
+                      <label className="flex flex-col gap-1">{fl("Trip lead")}<input list="trip-leads" value={t.lead ?? ""} onChange={(e) => edit("lead", e.target.value, "Trip lead")} placeholder="Type or pick a name" className={inputCls} /><datalist id="trip-leads">{[...new Set([...(t.roster ?? []).map((s) => s.n), ...listingStaff, ...team])].filter(Boolean).map((nm) => <option key={nm} value={nm} />)}</datalist></label>
                       <label className="flex flex-col gap-1">{fl("Lead phone")}{fieldInput("leadPhone", "Lead phone", { placeholder: "07700 900000" })}</label>
                       <label className="flex flex-col gap-1">{fl("EVC (visit coordinator)")}{fieldInput("evc", "EVC")}</label>
                     </div>
                   </div>
                   <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                     <div className="mb-1.5 flex items-center justify-between"><span className="text-[12.5px] font-extrabold">Itinerary & key actions</span><button type="button" onClick={() => mut((d) => { (d.itinerary ??= []).push({ t: "", a: "", k: "" }); })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Add stop</button></div>
+                    <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={a} />)}</datalist>
+                    <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={a} />)}</datalist>
                     <div className="flex flex-col gap-1.5">{(t.itinerary ?? []).map((r, i) => (
                       <div key={i} className="grid grid-cols-[64px_1fr_1fr_auto] items-center gap-1.5">
                         <input value={r.t ?? ""} onChange={(e) => edit(`itinerary.${i}.t`, e.target.value, "Itinerary time")} placeholder="09:00" className={inputCls} />
-                        <input value={r.a ?? ""} onChange={(e) => edit(`itinerary.${i}.a`, e.target.value, "Activity")} placeholder="Activity" className={inputCls} />
-                        <input value={r.k ?? ""} onChange={(e) => edit(`itinerary.${i}.k`, e.target.value, "Key action")} placeholder="Key action" className={inputCls} />
+                        <input list="itin-activities" value={r.a ?? ""} onChange={(e) => edit(`itinerary.${i}.a`, e.target.value, "Activity")} placeholder="Pick or type an activity" className={inputCls} />
+                        <input list="itin-actions" value={r.k ?? ""} onChange={(e) => edit(`itinerary.${i}.k`, e.target.value, "Key action")} placeholder="Pick or type a key action" className={inputCls} />
                         <button type="button" onClick={() => mut((d) => { d.itinerary = (d.itinerary ?? []).filter((_, j) => j !== i); })} className="px-1 text-[var(--ink-3)] hover:text-[#c02636]">✕</button>
                       </div>
                     ))}</div>
+                    <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Start typing to search the list, or write your own — every field is editable.</div>
                   </div>
-                  <label className="flex flex-col gap-1">{fl("Emergency & kit")}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, "Kit")} rows={2} className={`${inputCls} resize-y`} /><span className="text-[11px] text-[var(--ink-2)]"><b>Emergency:</b> trip lead {t.leadPhone || "—"} · office · 999.</span></label>
+                  <label className="flex flex-col gap-1">{fl("Kit to take")}<textarea value={t.kit ?? ""} onChange={(e) => edit("kit", e.target.value, "Kit")} rows={2} placeholder="Packed lunch, water, sun cream, weather-appropriate clothing, medication, first-aid kit…" className={`${inputCls} resize-y`} /><span className="text-[11px] text-[var(--ink-2)]"><b>Emergency on the day:</b> trip lead {t.leadPhone || "—"} · office · 999.</span></label>
                 </div>}
 
                 {/* ── Step 2: Risk assessment ── */}
@@ -370,17 +396,38 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                       </div>
                     );
                   })()}
-                  <div className="flex flex-col gap-2">{(t.hazards ?? []).map((h, i) => (
+                  {(t.hazards ?? []).length > 0 && <div className="hidden grid-cols-[1.1fr_1fr_1.6fr_auto] gap-2 px-2.5 text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:grid"><span>Hazard description</span><span>Who might be harmed &amp; how</span><span>Control measures</span><span>Risk rating</span></div>}
+                  <div className="flex flex-col gap-2">{(t.hazards ?? []).map((h, i) => {
+                    const stamp = (d: Trip) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } };
+                    return (
                     <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
-                      <div className="flex items-center gap-2"><input value={h.h} onChange={(e) => { edit(`hazards.${i}.h`, e.target.value, "Hazard"); }} placeholder="Hazard" className={`${inputCls} font-bold`} /><button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="px-1 text-[var(--ink-3)] hover:text-[#c02636]">✕</button></div>
-                      <div className="mt-1.5 flex flex-col gap-1.5"><input value={h.who ?? ""} onChange={(e) => edit(`hazards.${i}.who`, e.target.value, "Who at risk")} placeholder="Who's at risk & how" className={inputCls} /><textarea value={h.controls ?? ""} onChange={(e) => edit(`hazards.${i}.controls`, e.target.value, "Controls")} placeholder="Control measures — one statement per line" rows={Math.min(8, Math.max(2, (h.controls ?? "").split("\n").length))} className={`${inputCls} resize-y leading-[1.55]`} /></div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-3)]">Initial{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.initial, (x) => { mut((d) => { d.hazards![i].initial = x; }); })}</span>)}</span>
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--ink-3)]">Residual{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.residual, (x) => { mut((d) => { d.hazards![i].residual = x; if (d.raSigned) d.raSigned = false; }); })}</span>)}</span>
-                        <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-[12px] font-bold" style={{ color: h.done ? GREEN : "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => mut((d) => { d.hazards![i].done = e.target.checked; if (d.raSigned) d.raSigned = false; })} />Controls in place</label>
+                      <div className="grid gap-2 sm:grid-cols-[1.1fr_1fr_1.6fr_auto]">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Hazard description</span>
+                          <textarea value={h.h} onChange={(e) => hazText(i, "h", e.target.value, "Hazard")} placeholder="Hazard description" rows={2} className={`${inputCls} resize-y font-bold leading-[1.4]`} />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Who might be harmed &amp; how</span>
+                          <textarea value={h.who ?? ""} onChange={(e) => hazText(i, "who", e.target.value, "Who at risk")} placeholder="Who might be harmed and how" rows={2} className={`${inputCls} resize-y leading-[1.4]`} />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Control measures</span>
+                          <textarea value={h.controls ?? ""} onChange={(e) => hazText(i, "controls", e.target.value, "Controls")} placeholder="Control measures — one statement per line" rows={Math.min(9, Math.max(2, (h.controls ?? "").split("\n").length))} className={`${inputCls} resize-y leading-[1.55]`} />
+                        </div>
+                        <div className="flex min-w-[92px] flex-col gap-1.5">
+                          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)] sm:hidden">Risk rating</span>
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--ink-3)]">Initial{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.initial, (x) => mut((d) => { d.hazards![i].initial = x; stamp(d); }))}</span>)}</span>
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[var(--ink-3)]">Residual{(["L", "M", "H"] as const).map((v) => <span key={v}>{seg(v, h.residual, (x) => mut((d) => { d.hazards![i].residual = x; stamp(d); }))}</span>)}</span>
+                          <button type="button" onClick={() => mut((d) => { d.hazards = (d.hazards ?? []).filter((_, j) => j !== i); d.raSigned = false; })} className="mt-0.5 self-start text-[11px] font-semibold text-[var(--ink-3)] hover:text-[#c02636]">✕ Remove</button>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
+                        <label className="flex cursor-pointer items-center gap-1.5 text-[12px] font-bold" style={{ color: h.done ? GREEN : "var(--ink-2)" }}><input type="checkbox" checked={!!h.done} onChange={(e) => mut((d) => { d.hazards![i].done = e.target.checked; stamp(d); })} />Controls in place &amp; actions taken</label>
+                        <span className="text-[10.5px] text-[var(--ink-3)]">Last amended: {h.amendedBy ? `${h.amendedBy} · ` : ""}{h.amendedOn ? fmtDate(h.amendedOn) : "—"}</span>
                       </div>
                     </div>
-                  ))}</div>
+                    );
+                  })}</div>
                   {t.raSigned ? <div className="flex items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Signed off by {t.raAssessor || me} ({fmtDate(t.raDate)}).<button type="button" onClick={() => mut((d) => { d.raSigned = false; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Re-open</button></div>
                     : <div><Button variant="solid" disabled={!raReady(t.hazards ?? [])} onClick={() => mut((d) => { d.raSigned = true; d.raAssessor = d.raAssessor || me; d.raDate = d.raDate || todayIso(); })}>Sign off risk assessment</Button>{!raReady(t.hazards ?? []) && <div className="mt-1.5 rounded-lg bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold" style={{ color: AMBER }}>For every hazard: set a residual risk and tick “controls in place”.</div>}</div>}
                 </div>}
