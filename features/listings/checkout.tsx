@@ -911,6 +911,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         : "p-5"}
       style={{ background: tk.bg }}>
       <div className={parentMode ? "mx-auto w-full max-w-[900px]" : ""}>
+      {/* Signed-in parents book inside a full-screen overlay — give them a way
+          back to their dashboard from every step, not just the top of the page. */}
+      {parentMode && (
+        <div className="mb-3">
+          <a href="/custdash" className="inline-flex items-center gap-1 text-[12px] font-extrabold underline" style={{ color: tk.accent }}>← Back to my dashboard</a>
+        </div>
+      )}
       {/* The whole route, named and walkable. A single "Change lunches &
           extras" meant a parent who wanted the t-shirt had to re-walk the
           lunches to reach it. */}
