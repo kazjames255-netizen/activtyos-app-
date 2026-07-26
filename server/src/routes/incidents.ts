@@ -72,8 +72,18 @@ incidents.get("/", async (req, res) => {
     const ids = kids.docs.map((d) => d.id).slice(0, 10);
     if (!ids.length) { res.json([]); return; }
     const snap = await col.where("childId", "in", ids).get();
-    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string })[];
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string; tenantId?: string })[];
     if (req.query.kind === "accident" || req.query.kind === "incident") list = list.filter((x) => x.kind === req.query.kind);
+    // Attach the owning provider's "require acknowledgement" flag so the parent
+    // UI only nags on records from providers who ask for it.
+    const tenantIds = [...new Set(list.map((x) => x.tenantId).filter(Boolean) as string[])];
+    const requireByTenant: Record<string, boolean> = {};
+    await Promise.all(tenantIds.map(async (tid) => {
+      const lib = await db.collection("libraries").doc(tid).get();
+      const sg = (lib.data()?.settings as { safeguarding?: { requireAcknowledgement?: boolean } } | undefined)?.safeguarding;
+      requireByTenant[tid] = sg?.requireAcknowledgement === true;
+    }));
+    list = list.map((x) => ({ ...x, requireAck: x.tenantId ? (requireByTenant[x.tenantId] ?? false) : false }));
     list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
     res.json(list);
     return;

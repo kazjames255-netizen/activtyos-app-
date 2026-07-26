@@ -11,7 +11,7 @@ interface Rec {
   id: string; kind: string; childName: string; date?: string; time?: string; location?: string;
   description?: string; injury?: string; treatment?: string; firstAider?: string; severity?: string;
   parentNotified?: boolean; parentNotifiedAt?: string; followUp?: string; createdAt?: string; updatedAt?: string;
-  acknowledgedAt?: string; acknowledgedBy?: string;
+  acknowledgedAt?: string; acknowledgedBy?: string; requireAck?: boolean;
   notes?: { by: string; role: string; text: string; at: string }[];
 }
 const LIGHT_PALETTE = {
@@ -19,7 +19,7 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 const SEV: Record<string, { label: string; bg: string; fg: string }> = {
-  minor: { label: "Minor", bg: "#e7f6ee", fg: "#0f7a43" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" },
+  minor: { label: "Minor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" },
 };
 const fmtDate = (d?: string, t?: string) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) + (t ? ` · ${t}` : "") : "");
 const stamp = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
@@ -37,7 +37,8 @@ export function ParentAccidentsApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["children", "incidents"], refresh);
-  const outstanding = (records ?? []).filter((r) => !r.acknowledgedAt);
+  // Only nag for records whose provider requires acknowledgement.
+  const outstanding = (records ?? []).filter((r) => !r.acknowledgedAt && r.requireAck);
 
   async function acknowledge(id: string) {
     setAcking(id); setError(null);

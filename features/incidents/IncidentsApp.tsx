@@ -36,7 +36,7 @@ const COPY = {
   accident: { title: "Accidents", one: "accident", add: "Log an accident", icon: "⛑️", lede: "Every bump and graze — logged on the day, kept for your records, and sent to the parent." },
   incident: { title: "Incidents", one: "incident", add: "Log an incident", icon: "⚑", lede: "Behaviour, near-misses and concerns — recorded on the day and kept for your records." },
 } as const;
-const SEV = { minor: { label: "Minor", bg: "#e7f6ee", fg: "#0f7a43" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
+const SEV = { minor: { label: "Minor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
 const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
