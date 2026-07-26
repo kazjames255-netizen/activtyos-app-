@@ -1000,6 +1000,18 @@ my.post("/bookings/:ref/amend", async (req, res) => {
   res.status(201).json(fromDoc(after.data() as BookingDoc));
 });
 
+// POST /api/my/bookings/:ref/amend/withdraw — the family withdraws their own
+// pending date-change request (before the provider has actioned it).
+my.post("/bookings/:ref/amend/withdraw", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", req.params.ref).limit(1).get();
+  if (matches.empty) { res.status(404).json({ error: "Booking not found" }); return; }
+  await matches.docs[0].ref.set({ dateChangeRequest: null }, { merge: true });
+  const after = await matches.docs[0].ref.get();
+  res.json(fromDoc(after.data() as BookingDoc));
+});
+
 // ——— Waiting-list offers (§E): a place is held for 2 hours; the family
 // accepts (→ Confirmed, then pays) or declines (→ back to the queue's next).
 

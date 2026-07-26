@@ -659,6 +659,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(!!autoCancel);
+  const [withdrawing, setWithdrawing] = useState(false);
   const [amending, setAmending] = useState(!!autoAmend);
   useEffect(() => { if (autoAmend || autoCancel) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, autoCancel, b.ref]);
   // The payment-link email lands on ?pay=REF — open that card's payment.
@@ -687,6 +688,15 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
       })
       .catch(() => {});
   }, [expanded, vScheme, isVoucher, b.tenantId, b.voucherScheme, b.method]);
+  async function withdrawMove() {
+    setWithdrawing(true);
+    try {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/amend/withdraw`, {});
+      try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ }
+      refresh();
+    } catch (e) { alert(e instanceof Error ? e.message : "Couldn’t cancel the date change"); }
+    finally { setWithdrawing(false); }
+  }
   const answerOffer = async (action: "accept-offer" | "decline-offer") => {
     setOfferBusy(true);
     try {
@@ -830,6 +840,11 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
             Change dates…
           </Button>
         )}
+        {pendingMove && (
+          <Button sm disabled={withdrawing} onClick={withdrawMove}>
+            {withdrawing ? "Cancelling…" : "Cancel date change"}
+          </Button>
+        )}
         {!cancelled && (
           <Button sm variant="cta" onClick={() => setCancelling((x) => !x)}>
             Cancel booking…
@@ -837,7 +852,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         )}
       </div>
       {pendingMove && !cancelling && (
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">You&rsquo;ve got a date change pending — you can&rsquo;t request another until your provider responds. You can still cancel if you need to.</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">You&rsquo;ve got a date change pending. Cancel it to request different dates, or leave it for your provider to approve.</div>
       )}
 
       {amending && <AmendModal booking={b} listing={info} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
