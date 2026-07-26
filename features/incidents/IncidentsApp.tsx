@@ -110,7 +110,30 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
                     💡 Suggested for {d.injury} (UK first aid): <span className="font-normal">{sug}</span> — tap to add
                   </button>
                 ) : null; })()}
-                <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] p-1.5">
+                {(treatSel.length > 0 || !!treatOther.trim()) && (
+                  <div className="mb-1.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2">
+                    <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#1d3a8f]">Selected · what will be recorded</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {treatSel.map((t) => (
+                        <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">
+                          {t}
+                          <button type="button" onClick={() => toggleTreat(t)} className="text-white/80 hover:text-white" aria-label="remove">✕</button>
+                        </span>
+                      ))}
+                      {treatOther.trim() && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[#1d3a8f] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1d3a8f]">
+                          {treatOther.trim()}
+                          <button type="button" onClick={() => setTreatOther("")} className="text-[#1d3a8f]/70 hover:text-[#1d3a8f]" aria-label="remove">✕</button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="mb-1 flex items-center justify-between px-0.5">
+                  <span className="text-[10.5px] font-semibold text-[var(--ink-3)]">{treatSel.length} ticked · scroll for more ↓</span>
+                  {treatSel.length > 0 && <button type="button" onClick={() => setTreatSel([])} className="text-[10.5px] font-semibold text-[#1d3a8f] underline">Clear</button>}
+                </div>
+                <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
                   {TREATMENT_BANK.map((t) => {
                     const on = treatSel.includes(t);
                     return (
