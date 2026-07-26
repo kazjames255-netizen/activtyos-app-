@@ -1,147 +1,183 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
+import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents — the safeguarding log. One component, `kind` picks
-// the flavour (the fields, wording and slug differ; the record and API are
-// shared). Staff can record; operators can edit or delete. Deliberately
-// simple — Kaz can restyle; the record and its access rules are the point.
+// the flavour (fields, wording, hero). The record and API are shared. Logged
+// against a booked child so the accident reaches the parent's own area with a
+// timestamp + notification. Themed + stepped to match the Medication page.
 // ─────────────────────────────────────────────────────────────────────────
 
 type Kind = "accident" | "incident";
-
 interface Log {
-  id: string;
-  kind: Kind;
-  date: string;
-  time?: string;
-  childName: string;
-  childId?: string;
-  location?: string;
-  description: string;
-  bodyPart?: string;
-  injury?: string;
-  treatment?: string;
-  firstAider?: string;
-  incidentType?: string;
-  actionTaken?: string;
-  witnesses?: string;
-  severity: "minor" | "moderate" | "serious";
-  parentNotified: boolean;
-  parentNotifiedAt?: string;
-  parentNotifiedHow?: string;
-  followUp?: string;
-  recordedByName?: string;
-  createdAt?: string;
+  id: string; kind: Kind; date: string; time?: string; childName: string; childId?: string;
+  location?: string; description: string; injury?: string; treatment?: string; firstAider?: string;
+  incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
+  parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string;
+  recordedByName?: string; createdAt?: string;
 }
 
+const LIGHT_PALETTE = {
+  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
+  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
+} as CSSProperties;
 const COPY = {
-  accident: { title: "Accidents", one: "accident", add: "Log an accident" },
-  incident: { title: "Incidents", one: "incident", add: "Log an incident" },
+  accident: { title: "Accidents", one: "accident", add: "Log an accident", icon: "⛑️", lede: "Every bump and graze — logged on the day, kept for your records, and sent to the parent." },
+  incident: { title: "Incidents", one: "incident", add: "Log an incident", icon: "⚑", lede: "Behaviour, near-misses and concerns — recorded on the day and kept for your records." },
 } as const;
+const SEV = { minor: { label: "Minor", bg: "#e7f6ee", fg: "#0f7a43" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
+const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
+const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
+const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 
-const sevTone: Record<string, { bg: string; fg: string }> = {
-  minor: { bg: "var(--panel)", fg: "var(--ink-2)" },
-  moderate: { bg: "#fdf3d8", fg: "#9a5a00" },
-  serious: { bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" },
-};
-const todayIso = () => {
-  const t = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
-};
-const fmtDate = (iso: string) =>
-  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "";
+// Search the operator's own families/children so Child is picked, not typed.
+interface Fam { id: string; name: string; email?: string; children?: { name: string }[] }
+function ChildPicker({ value, onPick }: { value: string; onPick: (name: string) => void }) {
+  const [families, setFamilies] = useState<Fam[]>([]);
+  const [q, setQ] = useState(value);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { apiGet<Fam[]>("/api/customers").then(setFamilies).catch(() => {}); }, []);
+  const ql = q.trim().toLowerCase();
+  const opts: { child: string; sub: string }[] = [];
+  for (const f of families) { const kids = f.children ?? []; if (!kids.length) opts.push({ child: f.name, sub: f.email ?? "family" }); for (const k of kids) opts.push({ child: k.name, sub: f.name }); }
+  const matches = opts.filter((o) => !ql || o.child.toLowerCase().includes(ql) || o.sub.toLowerCase().includes(ql)).slice(0, 8);
+  return (
+    <div className="relative">
+      <Input value={q} placeholder="Search child or family…" className="w-full"
+        onChange={(e) => { setQ(e.target.value); onPick(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+      {open && matches.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
+          {matches.map((o, i) => (
+            <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(o.child); onPick(o.child); setOpen(false); }}
+              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[12.5px] hover:bg-[var(--panel)]">
+              <span className="font-semibold">{o.child}</span><span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
-const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: "", childName: "", description: "", severity: "minor", parentNotified: false });
+const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
 
-function LogForm({ kind, onSaved, onCancel }: { kind: Kind; onSaved: () => void; onCancel: () => void }) {
+function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: boolean; onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<Draft>(emptyDraft(kind));
+  const [bkgs, setBkgs] = useState<{ child?: string; childId?: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
+  useEffect(() => { apiGet<{ child?: string; childId?: string }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
+  const linkedChildId = bkgs.find((b) => (b.child ?? "").trim().toLowerCase() === (d.childName ?? "").trim().toLowerCase())?.childId;
 
   async function save() {
-    if (!d.childName.trim() || !d.description.trim()) {
-      setError("Add the child's name and what happened.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
+    if (!d.childName.trim() || !d.description.trim()) { setError("Add the child and what happened."); return; }
+    setBusy(true); setError(null);
     try {
-      await apiPost("/api/incidents", d);
+      await apiPost("/api/incidents", { ...d, childId: linkedChildId ?? d.childId, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
       onSaved();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn’t save");
-      setBusy(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
+
+  const canNext1 = !!d.childName?.trim();
+  const canNext2 = !!d.description?.trim();
+  const STEPS: [number, string][] = [[1, "Child & when"], [2, "What happened"], [3, "Severity & parent"]];
 
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-2 text-[13.5px] font-extrabold">{COPY[kind].add}</div>
-      <div className="grid gap-2.5 sm:grid-cols-3">
-        <div><FieldLabel>Child</FieldLabel><Input value={d.childName} onChange={(e) => set({ childName: e.target.value })} className="w-full" /></div>
-        <div><FieldLabel>Date</FieldLabel><Input type="date" value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
-        <div><FieldLabel>Time</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
-        <div className="sm:col-span-2"><FieldLabel>Where</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. the main hall" className="w-full" /></div>
-        <div>
-          <FieldLabel>Severity</FieldLabel>
-          <Select value={d.severity} onChange={(e) => set({ severity: e.target.value as Draft["severity"] })} className="w-full">
-            <option value="minor">Minor</option><option value="moderate">Moderate</option><option value="serious">Serious</option>
-          </Select>
-        </div>
+      <div className="mb-3 text-[13.5px] font-extrabold">{COPY[kind].add}</div>
+      <div className="mb-4 flex items-center">
+        {STEPS.map(([n, label], i) => (
+          <div key={n} className={`flex items-center gap-2 ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
+            <button type="button" onClick={() => { if (n === 1 || (n === 2 && canNext1) || (n === 3 && canNext1 && canNext2)) setStep(n); }} className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-[15px] font-extrabold transition-colors" style={step === n ? { background: "#1d3a8f", color: "#fff" } : step > n ? { background: "#e7f6ee", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{step > n ? "✓" : n}</span>
+              <span className="hidden text-[13px] font-extrabold sm:inline" style={{ color: step === n ? "var(--ink)" : "var(--ink-3)" }}>{label}</span>
+            </button>
+            {i < STEPS.length - 1 && <span className="mx-2 h-1 flex-1 rounded-full" style={{ background: step > n ? "#0f7a43" : "var(--line)" }} />}
+          </div>
+        ))}
       </div>
-      <div className="mt-2.5"><FieldLabel>What happened</FieldLabel>
-        <textarea value={d.description} onChange={(e) => set({ description: e.target.value })} rows={3} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" />
-      </div>
-      {kind === "accident" ? (
-        <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
-          <div><FieldLabel>Injury / body part</FieldLabel><Input value={d.injury ?? ""} onChange={(e) => set({ injury: e.target.value })} placeholder="e.g. grazed left knee" className="w-full" /></div>
-          <div><FieldLabel>First aider</FieldLabel><Input value={d.firstAider ?? ""} onChange={(e) => set({ firstAider: e.target.value })} className="w-full" /></div>
-          <div className="sm:col-span-2"><FieldLabel>Treatment given</FieldLabel><Input value={d.treatment ?? ""} onChange={(e) => set({ treatment: e.target.value })} placeholder="e.g. cleaned and plaster applied" className="w-full" /></div>
-        </div>
-      ) : (
-        <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
-          <div><FieldLabel>Type</FieldLabel><Input value={d.incidentType ?? ""} onChange={(e) => set({ incidentType: e.target.value })} placeholder="e.g. behaviour, near-miss" className="w-full" /></div>
-          <div><FieldLabel>Witnesses</FieldLabel><Input value={d.witnesses ?? ""} onChange={(e) => set({ witnesses: e.target.value })} className="w-full" /></div>
-          <div className="sm:col-span-2"><FieldLabel>Action taken</FieldLabel><Input value={d.actionTaken ?? ""} onChange={(e) => set({ actionTaken: e.target.value })} className="w-full" /></div>
+
+      {step === 1 && (
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="sm:col-span-2"><FieldLabel>Child / family</FieldLabel><ChildPicker value={d.childName} onPick={(name) => set({ childName: name })} /></div>
+          <div><FieldLabel>Date</FieldLabel><Input type="date" max={todayIso()} value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
+          <div><FieldLabel>Time</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
+          <div className="sm:col-span-2"><FieldLabel>Where did it happen?</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. the main hall" className="w-full" /></div>
         </div>
       )}
-      <label className="mt-2.5 flex items-center gap-2 text-[12.5px]">
-        <input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked, parentNotifiedAt: e.target.checked ? new Date().toISOString() : undefined })} />
-        Parent / carer has been informed
-      </label>
-      {error && <div className="mt-2 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-3 flex gap-2">
-        <Button variant="primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</Button>
+
+      {step === 2 && (
+        <>
+          <div><FieldLabel>What happened?</FieldLabel><textarea value={d.description} onChange={(e) => set({ description: e.target.value })} rows={3} placeholder="Describe it clearly and factually…" className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[#1d3a8f]" /></div>
+          {kind === "accident" ? (
+            <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+              <div><FieldLabel>Injury / body part</FieldLabel><Input value={d.injury ?? ""} onChange={(e) => set({ injury: e.target.value })} placeholder="e.g. grazed left knee" className="w-full" /></div>
+              <div><FieldLabel>First aider</FieldLabel><Input value={d.firstAider ?? ""} onChange={(e) => set({ firstAider: e.target.value })} placeholder="who gave first aid" className="w-full" /></div>
+              <div className="sm:col-span-2"><FieldLabel>First aid / treatment given</FieldLabel><Input value={d.treatment ?? ""} onChange={(e) => set({ treatment: e.target.value })} placeholder="e.g. cleaned and plaster applied" className="w-full" /></div>
+            </div>
+          ) : (
+            <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+              <div><FieldLabel>Type</FieldLabel><Input value={d.incidentType ?? ""} onChange={(e) => set({ incidentType: e.target.value })} placeholder="e.g. behaviour, near-miss" className="w-full" /></div>
+              <div><FieldLabel>Witnesses</FieldLabel><Input value={d.witnesses ?? ""} onChange={(e) => set({ witnesses: e.target.value })} className="w-full" /></div>
+              <div className="sm:col-span-2"><FieldLabel>Action taken</FieldLabel><Input value={d.actionTaken ?? ""} onChange={(e) => set({ actionTaken: e.target.value })} className="w-full" /></div>
+            </div>
+          )}
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <FieldLabel>How serious?</FieldLabel>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {(["minor", "moderate", "serious"] as const).map((s) => (
+              <button key={s} type="button" onClick={() => set({ severity: s })} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
+                style={d.severity === s ? { borderColor: SEV[s].fg, background: SEV[s].fg, color: "#fff" } : { borderColor: SEV[s].bg, background: SEV[s].bg, color: SEV[s].fg }}>{SEV[s].label}</button>
+            ))}
+          </div>
+          <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />I&rsquo;ve also told the parent in person / by phone</label>
+          <div className="mt-2.5"><FieldLabel>Follow-up (optional)</FieldLabel><Input value={d.followUp ?? ""} onChange={(e) => set({ followUp: e.target.value })} placeholder="e.g. monitor overnight; parent to check tomorrow" className="w-full" /></div>
+          {notifies && <div className="mt-2.5 rounded-lg bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">📨 The parent will be emailed and notified in their area with a timestamp when you save{linkedChildId ? "" : " (once this child is matched to a booking)"}.</div>}
+        </>
+      )}
+
+      {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
         <Button onClick={onCancel}>Cancel</Button>
+        <div className="flex gap-2">
+          {step > 1 && <Button onClick={() => setStep(step - 1)}>← Back</Button>}
+          {step < 3 && <Button variant="solid" disabled={(step === 1 && !canNext1) || (step === 2 && !canNext2)} onClick={() => setStep(step + 1)}>Next →</Button>}
+          {step === 3 && <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</Button>}
+        </div>
       </div>
     </Card>
   );
 }
 
 export function IncidentsApp({ kind }: { kind: Kind }) {
+  const { settings } = useSettings();
+  const notifies = kind === "accident" ? (settings.safeguarding?.notifyParentAccident ?? true) : (settings.safeguarding?.notifyParentIncident ?? false);
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [q, setQ] = useState("");
+  const [sevFilter, setSevFilter] = useState("");
 
   const refresh = useCallback(() => {
-    apiGet<Log[]>(`/api/incidents?kind=${kind}`)
-      .then((l) => { setLogs(l); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Log[]>(`/api/incidents?kind=${kind}`).then((l) => { setLogs(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, [kind]);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => {
-    apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {});
-  }, []);
+  useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useRealtime(["incidents"], refresh);
 
   async function remove(l: Log) {
@@ -150,56 +186,101 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
     catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
   }
 
+  const c = COPY[kind];
+  const ql = q.trim().toLowerCase();
+  const all = logs ?? [];
+  const thisMonth = all.filter((l) => (l.date ?? "").slice(0, 7) === todayIso().slice(0, 7)).length;
+  const serious = all.filter((l) => l.severity === "serious").length;
+  const informed = all.filter((l) => l.parentNotified || l.parentNotifiedAt).length;
+  const tiles: [string, number][] = [["This month", thisMonth], ["Serious", serious], ["Parent informed", informed], ["Total", all.length]];
+  const shown = all.filter((l) => (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql)) && (!sevFilter || l.severity === sevFilter));
+
   return (
-    <div className="text-[var(--ink)]">
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{COPY[kind].title}</h2>
-        {!adding && <Button variant="primary" onClick={() => setAdding(true)}>＋ {COPY[kind].add}</Button>}
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {/* Hero */}
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">{c.icon}</span>{c.title}
+            </div>
+            <p className="mt-1.5 max-w-[600px] text-[12.5px] leading-[1.5] text-white/85">{c.lede}</p>
+          </div>
+          {!adding && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ {c.add}</button>}
+        </div>
+        {logs && (
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            {tiles.map(([label, v]) => (
+              <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
+                <div className="text-[20px] font-extrabold leading-none">{v}</div>
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">The safeguarding log — recorded on the day, kept for your records.</p>
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {adding && <LogForm kind={kind} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
+      {adding && <LogForm kind={kind} notifies={notifies} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
+
+      {logs && all.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {([["", "All"], ["minor", "Minor"], ["moderate", "Moderate"], ["serious", "Serious"]] as [string, string][]).map(([id, label]) => (
+            <button key={label} type="button" onClick={() => setSevFilter(id)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+              style={sevFilter === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{label}</button>
+          ))}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or details…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+        </div>
+      )}
 
       {!logs ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      ) : logs.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No {COPY[kind].one} records — hopefully it stays that way.</Card>
+      ) : shown.length === 0 ? (
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? `No ${c.one} records — hopefully it stays that way.` : "No records match."}</Card>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {logs.map((l) => (
-            <Card key={l.id} className="p-3.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13.5px] font-extrabold">{l.childName}</span>
-                <Badge tone={sevTone[l.severity] ?? sevTone.minor}>{l.severity}</Badge>
-                {l.parentNotified ? (
-                  <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>parent informed</Badge>
-                ) : (
-                  <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>
-                )}
-                <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
-              </div>
-              <div className="mt-1 text-[12.5px] text-[var(--ink-2)]">{l.description}</div>
-              <div className="mt-1.5 flex gap-2">
-                <Button sm onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide" : "Details"}</Button>
-                {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
-              </div>
-              {openId === l.id && (
-                <div className="mt-2 grid gap-x-6 gap-y-1 border-t border-[var(--line)] pt-2 text-[12px] sm:grid-cols-2">
-                  {l.location && <div><span className="text-[var(--ink-3)]">Where: </span>{l.location}</div>}
-                  {l.injury && <div><span className="text-[var(--ink-3)]">Injury: </span>{l.injury}</div>}
-                  {l.treatment && <div><span className="text-[var(--ink-3)]">Treatment: </span>{l.treatment}</div>}
-                  {l.firstAider && <div><span className="text-[var(--ink-3)]">First aider: </span>{l.firstAider}</div>}
-                  {l.incidentType && <div><span className="text-[var(--ink-3)]">Type: </span>{l.incidentType}</div>}
-                  {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span>{l.actionTaken}</div>}
-                  {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span>{l.witnesses}</div>}
-                  {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</div>}
-                  {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span>{l.recordedByName}</div>}
-                  {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span>{l.followUp}</div>}
+          {shown.map((l) => {
+            const sev = SEV[l.severity] ?? SEV.minor;
+            return (
+              <Card key={l.id} className="overflow-hidden p-0">
+                <div className="h-1.5 w-full" style={{ background: sev.fg }} />
+                <div className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <span className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{l.childName}</span>
+                        {l.injury && <span className="text-[13px] text-[var(--ink-2)]">{l.injury}</span>}
+                      </div>
+                      <p className="mt-1 max-w-[640px] text-[13px] leading-snug text-[var(--ink-2)]">{l.description}</p>
+                    </div>
+                    <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                      <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>
+                      <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
+                      {l.parentNotified || l.parentNotifiedAt ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ parent informed</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
+                    <Button sm onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide details" : "Details"}</Button>
+                    {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
+                  </div>
+                  {openId === l.id && (
+                    <div className="mt-2.5 grid gap-x-6 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] sm:grid-cols-2">
+                      {l.location && <div><span className="text-[var(--ink-3)]">Where: </span><b>{l.location}</b></div>}
+                      {l.injury && <div><span className="text-[var(--ink-3)]">Injury: </span><b>{l.injury}</b></div>}
+                      {l.treatment && <div><span className="text-[var(--ink-3)]">First aid: </span><b>{l.treatment}</b></div>}
+                      {l.firstAider && <div><span className="text-[var(--ink-3)]">First aider: </span><b>{l.firstAider}</b></div>}
+                      {l.incidentType && <div><span className="text-[var(--ink-3)]">Type: </span><b>{l.incidentType}</b></div>}
+                      {l.actionTaken && <div><span className="text-[var(--ink-3)]">Action: </span><b>{l.actionTaken}</b></div>}
+                      {l.witnesses && <div><span className="text-[var(--ink-3)]">Witnesses: </span><b>{l.witnesses}</b></div>}
+                      {l.parentNotifiedAt && <div><span className="text-[var(--ink-3)]">Parent informed: </span><b>{new Date(l.parentNotifiedAt).toLocaleString("en-GB")}</b></div>}
+                      {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
+                      {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
+                    </div>
+                  )}
                 </div>
-              )}
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

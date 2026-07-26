@@ -68,7 +68,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "safeguarding" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1105,7 +1105,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1144,6 +1144,7 @@ export function SetupApp() {
     ["features", "Features"],
     ["people", "Child questions"],
     ["medication", "Medication"],
+    ["safeguarding", "Safeguarding"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
@@ -1210,6 +1211,20 @@ export function SetupApp() {
               <Toggle on={settings.medication?.leadsOnly ?? false} onChange={(v) => set("medication", { ...settings.medication, leadsOnly: v })} labels={["Yes", "No"]} />
             </Row>
           )}
+        </Section>
+      )}
+
+      {tab === "safeguarding" && (
+        <Section
+          title="Safeguarding"
+          lede="Accidents and incidents. How parents are kept informed when something is logged for their child."
+        >
+          <Row label="Notify the parent when an accident is logged" hint="Email + a bell in their area, with a timestamp, each time an accident is recorded for their child.">
+            <Toggle on={settings.safeguarding?.notifyParentAccident ?? true} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentAccident: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Notify the parent for incidents too" hint="Incidents are often internal (behaviour, near-misses) — leave off to keep them staff-only, or on to share them.">
+            <Toggle on={settings.safeguarding?.notifyParentIncident ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, notifyParentIncident: v })} labels={["Yes", "No"]} />
+          </Row>
         </Section>
       )}
 
