@@ -130,6 +130,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   const [times, setTimes] = useState<string[]>([]);
   const [timeInput, setTimeInput] = useState("");
   const [expiryNA, setExpiryNA] = useState(false);
+  const [step, setStep] = useState(1);
   const addTime = () => { if (timeInput && !times.includes(timeInput)) { setTimes([...times, timeInput].sort()); setTimeInput(""); } };
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -167,95 +168,129 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
       setBusy(false);
     }
   }
+  const canNext1 = !!d.childName?.trim() && !!d.name?.trim() && !!d.dose?.trim();
+  const STEPS: [number, string][] = [[1, "Medicine"], [2, "When & how"], [3, "Consent"]];
+
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-2 text-[13.5px] font-extrabold">Administer a medication</div>
-      <div className="grid gap-2.5 sm:grid-cols-3">
-        <div><FieldLabel>Child / family</FieldLabel><ChildPicker value={d.childName} onPick={(name) => set({ childName: name })} /></div>
-        <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
-        <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
-        <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-        <div>
-          <div className="flex items-center justify-between">
-            <FieldLabel>Expiry date</FieldLabel>
-            <button type="button" onClick={() => { const n = !expiryNA; setExpiryNA(n); if (n) set({ expiryDate: "" }); }} className="text-[11px] font-bold" style={{ color: expiryNA ? "#1d3a8f" : "var(--ink-3)" }}>{expiryNA ? "✓ Not applicable" : "N/A"}</button>
+      <div className="mb-3 text-[13.5px] font-extrabold">Administer a medication</div>
+
+      {/* Big step indicator */}
+      <div className="mb-4 flex items-center">
+        {STEPS.map(([n, label], i) => (
+          <div key={n} className={`flex items-center gap-2 ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
+            <button type="button" onClick={() => { if (n === 1 || canNext1) setStep(n); }} className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full text-[15px] font-extrabold transition-colors" style={step === n ? { background: "#1d3a8f", color: "#fff" } : step > n ? { background: "#e7f6ee", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{step > n ? "✓" : n}</span>
+              <span className="hidden text-[13px] font-extrabold sm:inline" style={{ color: step === n ? "var(--ink)" : "var(--ink-3)" }}>{label}</span>
+            </button>
+            {i < STEPS.length - 1 && <span className="mx-2 h-1 flex-1 rounded-full" style={{ background: step > n ? "#0f7a43" : "var(--line)" }} />}
           </div>
-          {expiryNA ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] text-[var(--ink-3)]">Not applicable</div>
-          ) : (
-            <>
-              <Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />
-              {d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}
-            </>
-          )}
-        </div>
-        <div className="sm:col-span-3"><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
-        <div className="sm:col-span-3"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
+        ))}
       </div>
 
-      {/* When to give — same three options as the parent form. */}
-      <div className="mt-3">
-        <FieldLabel>When should staff give it?</FieldLabel>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
-            <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
-              style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "#cfe0f7", background: "#eef4fd", color: "#1d3a8f" }}>{label}</button>
-          ))}
+      {step === 1 && (
+        <div className="grid gap-2.5 sm:grid-cols-3">
+          <div className="sm:col-span-3"><FieldLabel>Child / family</FieldLabel><ChildPicker value={d.childName} onPick={(name) => set({ childName: name })} /></div>
+          <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
+          <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
+          <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
         </div>
-        {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
-        {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
-        {freq === "chosen" && (
-          <div className="mt-2">
-            {!d.childName?.trim() ? (
-              <p className="text-[11.5px] text-[var(--ink-3)]">Pick the child above to see their booked days.</p>
-            ) : bookedDays.length === 0 ? (
-              <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — they may not be booked yet.</p>
-            ) : (
-              <>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <button type="button" onClick={() => setPickedDays(pickedDays.length === bookedDays.length ? [] : [...bookedDays])} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{pickedDays.length === bookedDays.length ? "Clear all" : "Select all"}</button>
-                  <span className="text-[11px] text-[var(--ink-3)]">their upcoming booked days</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {bookedDays.map((day) => {
-                    const on = pickedDays.includes(day);
-                    return <button key={day} type="button" onClick={() => setPickedDays(on ? pickedDays.filter((x) => x !== day) : [...pickedDays, day].sort())} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
-                      style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{dayLabel(day)}</button>;
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        <div className="mt-3">
-          <FieldLabel>Set times? (optional — add one or more)</FieldLabel>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className="w-auto" />
-            <Button sm onClick={addTime}>＋ Add time</Button>
-            <span className="text-[11px] text-[var(--ink-3)]">e.g. twice a day — a bell reminds staff at each time on days it&rsquo;s due</span>
-          </div>
-          {times.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {times.map((t) => (
-                <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {t}<button type="button" onClick={() => setTimes(times.filter((x) => x !== t))} aria-label="Remove time" className="text-[#1d3a8f]">✕</button></span>
+      )}
+
+      {step === 2 && (
+        <>
+          <div>
+            <FieldLabel>When should staff give it?</FieldLabel>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
+                  style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "#cfe0f7", background: "#eef4fd", color: "#1d3a8f" }}>{label}</button>
               ))}
             </div>
-          )}
-        </div>
-      </div>
-      <label className="mt-2.5 flex items-center gap-2 text-[12.5px] font-bold">
-        <input type="checkbox" checked={!!d.consentGranted} onChange={(e) => set({ consentGranted: e.target.checked })} />
-        The parent / carer has given written consent to administer this
-      </label>
-      <label className="mt-1.5 flex items-center gap-2 text-[12.5px]">
-        <input type="checkbox" checked={!!d.heldOnSite} onChange={(e) => set({ heldOnSite: e.target.checked })} />
-        The medicine is held on site
-      </label>
-      {!d.consentGranted && <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">Without consent, a dose can’t be recorded against this medicine.</div>}
-      {error && <div className="mt-2 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-3 flex gap-2">
-        <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</Button>
+            {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
+            {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
+            {freq === "chosen" && (
+              <div className="mt-2">
+                {!d.childName?.trim() ? (
+                  <p className="text-[11.5px] text-[var(--ink-3)]">Pick the child in step 1 to see their booked days.</p>
+                ) : bookedDays.length === 0 ? (
+                  <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — they may not be booked yet.</p>
+                ) : (
+                  <>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <button type="button" onClick={() => setPickedDays(pickedDays.length === bookedDays.length ? [] : [...bookedDays])} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{pickedDays.length === bookedDays.length ? "Clear all" : "Select all"}</button>
+                      <span className="text-[11px] text-[var(--ink-3)]">their upcoming booked days</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {bookedDays.map((day) => {
+                        const on = pickedDays.includes(day);
+                        return <button key={day} type="button" onClick={() => setPickedDays(on ? pickedDays.filter((x) => x !== day) : [...pickedDays, day].sort())} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors"
+                          style={on ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{dayLabel(day)}</button>;
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="mt-3">
+              <FieldLabel>Set times? (optional — add one or more)</FieldLabel>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className="w-auto" />
+                <Button sm onClick={addTime}>＋ Add time</Button>
+                <span className="text-[11px] text-[var(--ink-3)]">e.g. twice a day — a bell reminds staff at each time on days it&rsquo;s due</span>
+              </div>
+              {times.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {times.map((t) => (
+                    <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {t}<button type="button" onClick={() => setTimes(times.filter((x) => x !== t))} aria-label="Remove time" className="text-[#1d3a8f]">✕</button></span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            <div><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
+            <div>
+              <div className="flex items-center justify-between">
+                <FieldLabel>Expiry date</FieldLabel>
+                <button type="button" onClick={() => { const n = !expiryNA; setExpiryNA(n); if (n) set({ expiryDate: "" }); }} className="text-[11px] font-bold" style={{ color: expiryNA ? "#1d3a8f" : "var(--ink-3)" }}>{expiryNA ? "✓ Not applicable" : "N/A"}</button>
+              </div>
+              {expiryNA ? (
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] text-[var(--ink-3)]">Not applicable</div>
+              ) : (
+                <>
+                  <Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />
+                  {d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}
+                </>
+              )}
+            </div>
+          </div>
+          <div className="mt-2.5"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <label className="flex items-center gap-2 text-[13px] font-bold">
+            <input type="checkbox" checked={!!d.consentGranted} onChange={(e) => set({ consentGranted: e.target.checked })} />
+            The parent / carer has given written consent to administer this
+          </label>
+          <label className="mt-2 flex items-center gap-2 text-[12.5px]">
+            <input type="checkbox" checked={!!d.heldOnSite} onChange={(e) => set({ heldOnSite: e.target.checked })} />
+            The medicine is held on site
+          </label>
+          {!d.consentGranted && <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">Without consent, a dose can’t be recorded against this medicine.</div>}
+        </>
+      )}
+
+      {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
         <Button onClick={onCancel}>Cancel</Button>
+        <div className="flex gap-2">
+          {step > 1 && <Button onClick={() => setStep(step - 1)}>← Back</Button>}
+          {step < 3 && <Button variant="solid" disabled={step === 1 && !canNext1} onClick={() => setStep(step + 1)}>Next →</Button>}
+          {step === 3 && <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save medication"}</Button>}
+        </div>
       </div>
     </Card>
   );
