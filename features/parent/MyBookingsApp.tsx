@@ -835,9 +835,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? "Hide details" : "Details"}
         </Button>
-        {b.status === "Confirmed" && !pendingMove && (
+        {b.status === "Confirmed" && (
           <Button sm onClick={() => setAmending(true)}>
-            Change dates…
+            {pendingMove ? "Edit date change…" : "Change dates…"}
           </Button>
         )}
         {pendingMove && (
@@ -852,7 +852,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         )}
       </div>
       {pendingMove && !cancelling && (
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">You&rsquo;ve got a date change pending. Cancel it to request different dates, or leave it for your provider to approve.</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Your date change is pending. You can still edit the dates (a new request replaces this one), cancel the request, or wait for your provider to approve.</div>
       )}
 
       {amending && <AmendModal booking={b} listing={info} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
