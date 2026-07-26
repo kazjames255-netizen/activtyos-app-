@@ -22,6 +22,20 @@ const tripSchema = z.object({
   staff: z.array(z.string().max(80)).max(50).default([]),
   headcount: z.number().int().nonnegative().optional(),
   riskAssessment: z.string().trim().max(4_000).optional(),
+  // Structured risk assessment (the manual's hazard table): each hazard names
+  // who's at risk, the controls, an initial and residual risk (L/M/H) and
+  // whether the controls are confirmed in place. Signed off by an assessor.
+  hazards: z.array(z.object({
+    h: z.string().max(200),
+    who: z.string().max(200).optional(),
+    controls: z.string().max(1_000).optional(),
+    initial: z.enum(["L", "M", "H", ""]).optional(),
+    residual: z.enum(["L", "M", "H", ""]).optional(),
+    done: z.boolean().optional(),
+  })).max(60).optional(),
+  raSigned: z.boolean().optional(),
+  raAssessor: z.string().max(120).optional(),
+  raDate: z.string().max(40).optional(),
   consentObtained: z.boolean().default(false),
   notes: z.string().trim().max(2_000).optional(),
   status: z.enum(["planned", "completed", "cancelled"]).default("planned"),

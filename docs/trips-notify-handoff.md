@@ -10,6 +10,22 @@ assessment, consent, status (planned/completed/cancelled), edit, search +
 status filters. Backed by the existing `/api/trips` (GET/POST/PUT/DELETE) — no
 schema change needed for the core.
 
+## Update (26 Jul) — richer form, pulled from live data
+- **Who's going is now day-scoped.** The child picker offers only the children
+  **booked on the trip's date** (resolved from each booking's `days` / `kids[].dates`,
+  cancelled days excluded), optionally within one listing. A **Select-all** bulk
+  toggle picks everyone booked that day.
+- **Staff pulled from the listing.** When a listing is chosen the form fetches
+  `/api/listings/:id` → `library.staff` and offers those names (plus the tenant
+  team from `/api/library` → `staff`) as one-tap chips. Manual entry still works.
+- **Structured risk assessment (the manual's hazard table).** Replaces the free-text
+  box: hazards — `{ h, who, controls, initial (L/M/H), residual (L/M/H), done }` —
+  seeded from a default template, editable/addable, with a **sign-off** (`raSigned` +
+  `raAssessor` + `raDate`) that only unlocks once every hazard has a residual risk and
+  its controls ticked. Cards show an **RA signed / RA draft** badge. I **added these to
+  `tripSchema`** (server/src/routes/trips.ts) — additive & optional: `hazards[]`,
+  `raSigned`, `raAssessor`, `raDate`. Nothing else in the route changed.
+
 ## Settings (done, persist via the library settings)
 Setup → **Trips & visits** (`settings.trips`):
 - **`notifyParent`** (default true) — ask parents to consent when their child is
