@@ -129,6 +129,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [times, setTimes] = useState<string[]>([]);
   const [timeInput, setTimeInput] = useState("");
+  const [expiryNA, setExpiryNA] = useState(false);
   const addTime = () => { if (timeInput && !times.includes(timeInput)) { setTimes([...times, timeInput].sort()); setTimeInput(""); } };
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -174,7 +175,20 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
         <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
         <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-        <div><FieldLabel>Expiry date</FieldLabel><Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />{d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}</div>
+        <div>
+          <div className="flex items-center justify-between">
+            <FieldLabel>Expiry date</FieldLabel>
+            <button type="button" onClick={() => { const n = !expiryNA; setExpiryNA(n); if (n) set({ expiryDate: "" }); }} className="text-[11px] font-bold" style={{ color: expiryNA ? "#1d3a8f" : "var(--ink-3)" }}>{expiryNA ? "✓ Not applicable" : "N/A"}</button>
+          </div>
+          {expiryNA ? (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] text-[var(--ink-3)]">Not applicable</div>
+          ) : (
+            <>
+              <Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />
+              {d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}
+            </>
+          )}
+        </div>
         <div className="sm:col-span-3"><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
         <div className="sm:col-span-3"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
       </div>
@@ -184,8 +198,8 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
         <FieldLabel>When should staff give it?</FieldLabel>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
-            <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
-              style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
+            <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
+              style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "#cfe0f7", background: "#eef4fd", color: "#1d3a8f" }}>{label}</button>
           ))}
         </div>
         {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
