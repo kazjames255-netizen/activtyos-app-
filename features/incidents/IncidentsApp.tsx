@@ -47,15 +47,19 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
+  const [treatSel, setTreatSel] = useState<string[]>([]);
+  const [treatOther, setTreatOther] = useState("");
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
+  const toggleTreat = (t: string) => setTreatSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
   useEffect(() => { apiGet<{ child?: string; childId?: string }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
   const childOptions: ChildOption[] = [...new Map(bkgs.filter((b) => b.child).map((b) => [b.child!.trim().toLowerCase(), { name: b.child!, childId: b.childId }])).values()];
 
   async function save() {
     if (!d.childName.trim() || !d.description.trim()) { setError("Add the child and what happened."); return; }
     setBusy(true); setError(null);
+    const treatment = kind === "accident" ? ([...treatSel, treatOther.trim()].filter(Boolean).join("; ") || undefined) : d.treatment;
     try {
-      await apiPost("/api/incidents", { ...d, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
+      await apiPost("/api/incidents", { ...d, treatment, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
       onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
@@ -100,15 +104,25 @@ function LogForm({ kind, notifies, onSaved, onCancel }: { kind: Kind; notifies: 
               </div>
               <div><FieldLabel>First aider</FieldLabel><Input value={d.firstAider ?? ""} onChange={(e) => set({ firstAider: e.target.value })} placeholder="who gave first aid" className="w-full" /></div>
               <div className="sm:col-span-2">
-                <FieldLabel>First aid / treatment given</FieldLabel>
-                <Input list="treatmentBank" value={d.treatment ?? ""} onChange={(e) => set({ treatment: e.target.value })} placeholder="Search common treatments — or type your own" className="w-full" />
-                <datalist id="treatmentBank">{TREATMENT_BANK.map((t) => <option key={t} value={t} />)}</datalist>
-                {(() => { const sug = suggestedTreatment(d.injury); return sug && d.treatment !== sug ? (
-                  <button type="button" onClick={() => set({ treatment: sug })} className="mt-1.5 rounded-lg border border-[#cfe0f7] bg-[#eef4fd] px-2.5 py-1.5 text-left text-[11.5px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">
-                    💡 Suggested (UK first aid): <span className="font-normal">{sug}</span> — tap to use
+                <FieldLabel>First aid / treatment given — tick all that apply</FieldLabel>
+                {(() => { const sug = suggestedTreatment(d.injury); return sug && !treatSel.includes(sug) ? (
+                  <button type="button" onClick={() => toggleTreat(sug)} className="mb-1.5 w-full rounded-lg border border-[#cfe0f7] bg-[#eef4fd] px-2.5 py-1.5 text-left text-[11.5px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">
+                    💡 Suggested for {d.injury} (UK first aid): <span className="font-normal">{sug}</span> — tap to add
                   </button>
                 ) : null; })()}
-                <p className="mt-1 text-[10.5px] leading-snug text-[var(--ink-3)]">Suggestions follow NHS / St John Ambulance guidance — always use your trained first aider&rsquo;s judgement and edit as needed.</p>
+                <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] p-1.5">
+                  {TREATMENT_BANK.map((t) => {
+                    const on = treatSel.includes(t);
+                    return (
+                      <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
+                        <input type="checkbox" checked={on} onChange={() => toggleTreat(t)} className="mt-0.5 shrink-0" />
+                        <span>{t}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <Input value={treatOther} onChange={(e) => setTreatOther(e.target.value)} placeholder="Add your own / extra detail…" className="mt-2 w-full" />
+                <p className="mt-1 text-[10.5px] leading-snug text-[var(--ink-3)]">Tick what was done (one or more) and add anything else. Suggestions follow NHS / St John Ambulance guidance — always use your trained first aider&rsquo;s judgement.</p>
               </div>
             </div>
           ) : (
