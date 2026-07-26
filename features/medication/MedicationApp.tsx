@@ -123,7 +123,7 @@ function ChildPicker({ value, onPick }: { value: string; onPick: (childName: str
 
 function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<MedDraft>(emptyMed());
-  const [freq, setFreq] = useState<"everyday" | "booked" | "chosen" | "asneeded">("everyday");
+  const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -145,8 +145,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     // Same schedule strings as the parent form (so "On these days: …" reads and
     // flags the same on both ends). "Every day" isn't date-bound, so it covers
     // any new days the parent books later.
-    const schedule = freq === "everyday" ? "Every day my child is at camp"
-      : freq === "booked" ? BOOKED_SCHEDULE
+    const schedule = freq === "booked" ? BOOKED_SCHEDULE
       : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
       : "Only when needed";
     try {
@@ -165,7 +164,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
         <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
         <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
         <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
-        <div><FieldLabel>Expiry date</FieldLabel><Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" /></div>
+        <div><FieldLabel>Expiry date</FieldLabel><Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />{d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}</div>
         <div className="sm:col-span-3"><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
         <div className="sm:col-span-3"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
       </div>
@@ -174,12 +173,11 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
       <div className="mt-3">
         <FieldLabel>When should staff give it?</FieldLabel>
         <div className="mt-1 flex flex-wrap gap-1.5">
-          {([["everyday", "🏕️ Every day at camp"], ["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["everyday" | "booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
+          {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
             <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
               style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
           ))}
         </div>
-        {freq === "everyday" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Every day they attend — automatically covers any new days the parent books.</p>}
         {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
         {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
         {freq === "chosen" && (
@@ -187,7 +185,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
             {!d.childName?.trim() ? (
               <p className="text-[11.5px] text-[var(--ink-3)]">Pick the child above to see their booked days.</p>
             ) : bookedDays.length === 0 ? (
-              <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — use &ldquo;Every day at camp&rdquo;, or they may not be booked yet.</p>
+              <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — they may not be booked yet.</p>
             ) : (
               <>
                 <div className="mb-1.5 flex items-center gap-2">
@@ -403,6 +401,7 @@ export function MedicationApp() {
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
                   )}
                   {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
+                  {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
                 </div>
                 {m.instructions && <div className="mt-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12px] text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}

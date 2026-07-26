@@ -13,7 +13,7 @@ interface Dose { id: string; medicationId?: string; date?: string; time?: string
 
 const when = (d?: string, t?: string) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) + (t ? ` · ${t}` : "") : "");
 const fmtDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-type Freq = "everyday" | "booked" | "chosen" | "asneeded";
+type Freq = "booked" | "chosen" | "asneeded";
 
 // Blue for a boy, pink for a girl (matches the manual), neutral otherwise.
 function genderStyle(sex?: string): { bg: string; fg: string; ring: string } {
@@ -36,7 +36,7 @@ export function ParentMedicationApp() {
   const [f, setF] = useState({ tenantId: "", name: "", dose: "", condition: "", storage: "", notes: "", consent: false });
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }));
   const [childIds, setChildIds] = useState<string[]>([]);
-  const [freq, setFreq] = useState<Freq>("everyday");
+  const [freq, setFreq] = useState<Freq>("booked");
   const [dates, setDates] = useState<string[]>([]);
   const [todayStr] = useState(() => new Date().toISOString().slice(0, 10));
 
@@ -72,8 +72,7 @@ export function ParentMedicationApp() {
     if (!f.name.trim() || !f.dose.trim()) { setError("The medicine name and dose are required."); return; }
     if (freq === "chosen" && dates.length === 0) { setError("Tick the days the medicine is needed, or pick a different option."); return; }
     if (!f.consent) { setError("Please tick the consent box to authorise staff to administer."); return; }
-    const schedule = freq === "everyday" ? "Every day my child is at camp"
-      : freq === "booked" ? "On every booked day"
+    const schedule = freq === "booked" ? "On every booked day"
       : freq === "chosen" ? `On these days: ${dates.map(fmtDay).join(", ")}`
       : "Only when needed";
     setError(null); setOk(null);
@@ -88,7 +87,7 @@ export function ParentMedicationApp() {
         });
       }
       setF((p) => ({ ...p, name: "", dose: "", condition: "", storage: "", notes: "", consent: false }));
-      setFreq("everyday"); setDates([]);
+      setFreq("booked"); setDates([]);
       setOpen(false); setOk(`Medication authorised for ${childIds.length > 1 ? `${childIds.length} children` : selectedNames} — staff can now administer it.`); load();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t authorise"); }
   }
@@ -150,12 +149,11 @@ export function ParentMedicationApp() {
           <div className="mt-3">
             <FieldLabel>When should staff give it?</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {([["everyday", "🏕️ Every day at camp"], ["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as [Freq, string][]).map(([id, label]) => (
+              {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as [Freq, string][]).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
                   style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
               ))}
             </div>
-            {freq === "everyday" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Staff will give it each day your child attends.</p>}
             {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — this stays up to date automatically if you book more days.</p>}
             {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Staff will give it only if your child needs it (e.g. a flare-up) — never routinely.</p>}
             {freq === "chosen" && (
