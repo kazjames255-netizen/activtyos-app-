@@ -1732,26 +1732,39 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
       {multiDay.length > 0 && (
         <div className="mt-3">
           <SectionHead icon="🧭">How parents can book each pass</SectionHead>
-          {multiDay.map((t) => {
-            const rule = (d.bookRules ?? {})[t.name] ?? "week";
-            return (
-              <div key={t.name} className="border-b border-dashed border-[var(--line)] py-2 last:border-0">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <b className="text-[13px]">{t.name}</b>
-                  <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} days</span>
+          {(() => {
+            // How many days a single week of this run actually offers — a pass
+            // longer than that can't be booked "in one week".
+            const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
+            return multiDay.map((t) => {
+              const weekOk = t.days <= weekLen;
+              const stored = (d.bookRules ?? {})[t.name];
+              // Never show/keep an impossible "in one week" pick.
+              const rule: BookRule = stored && !(stored === "week" && !weekOk) ? stored : (weekOk ? "week" : "listing");
+              return (
+                <div key={t.name} className="border-b border-dashed border-[var(--line)] py-2 last:border-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <b className="text-[13px]">{t.name}</b>
+                    <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} days</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {BOOK_RULES.map(([k, label]) => {
+                      const disabled = k === "week" && !weekOk;
+                      return (
+                        <button key={k} type="button" disabled={disabled} onClick={() => setBookRule(t.name, k)}
+                          title={disabled ? `A ${t.days}-day pass can't fit in one week (this run offers ${weekLen} days a week)` : undefined}
+                          className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
+                          style={rule === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                          {label(t.days)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}{!weekOk ? " · “in one week” isn’t possible for a pass this long." : ""}</div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {BOOK_RULES.map(([k, label]) => (
-                    <button key={k} type="button" onClick={() => setBookRule(t.name, k)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold"
-                      style={rule === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-                      {label(t.days)}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-1 text-[11px] text-[var(--ink-2)]">{bookRuleDesc(rule, t.days)}</div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       )}
     </div>

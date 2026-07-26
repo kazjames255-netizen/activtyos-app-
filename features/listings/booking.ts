@@ -97,8 +97,13 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [totalOverride, setTotalOverride] = useState<number | null>(null);
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
-  const rule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
   const need = pass?.days ?? 0;
+  // Most days any single week of this run actually offers.
+  const weekMax = weeks.reduce((m, w) => Math.max(m, w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length), 0);
+  const rawRule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
+  // "Any N days in one week" is impossible when the pass is longer than a week
+  // runs (a 17-day pass, 5-day week) — fall back to picking across the listing.
+  const rule: BookRule = rawRule === "week" && weekMax > 0 && need > weekMax ? "listing" : rawRule;
   // A single-day pass isn't a fixed block: parents can pick as many days as they
   // like, and each selected day becomes its own 1-day pass in the basket.
   const isSingle = need === 1;
