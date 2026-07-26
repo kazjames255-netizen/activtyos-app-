@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
@@ -8,6 +9,11 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import type { ListingSummary } from "./types";
 import { CroppedImage } from "@/features/listings/ListingWizard";
+
+const LIGHT_PALETTE = {
+  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
+  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
+} as CSSProperties;
 
 // The distinct categories across the live listings on show, as a natural phrase
 // for the header — "Breakfast Clubs, Holiday Camps and After-School Clubs". So
@@ -228,15 +234,17 @@ export function BrowseApp() {
     q.trim() || catFilter || locFilter || childAge.trim() || maxPrice.trim() ||
     availOnly || duration || whenF || (radius > 0 && myCoords)
   );
-  const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--ink-2)]";
+  const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--ink-2)] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors hover:border-[#1d3a8f] focus:border-[#1d3a8f]";
 
   if (!visible.length) {
     return (
-      <div className="text-[var(--ink)]">
-        <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          Browse activities
-        </h2>
-        <Card className="mt-3 p-6 text-center text-[13px] text-[var(--ink-3)]">
+      <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+        <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🔎</span>Browse activities
+          </div>
+        </div>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
           No activities to show right now. New providers appear here as they join the marketplace &mdash; or open a
           booking link a provider shared with you to get started.
         </Card>
@@ -245,13 +253,16 @@ export function BrowseApp() {
   }
 
   return (
-    <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-        Browse activities
-      </h2>
-      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">
-        {providerName ? `${providerName} — ` : ""}{liveCategories(visible)} with places available — book directly from here.
-      </p>
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {/* Hero — same blue/white bar as the rest of the app. */}
+      <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🔎</span>Browse activities
+        </div>
+        <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">
+          {providerName ? `${providerName} — ` : ""}{liveCategories(visible)} with places available — book directly from here.
+        </p>
+      </div>
 
       {/* Search + category + location, matching the manual's customer browse.
           Each dropdown only appears once there's something to filter by. */}
@@ -260,7 +271,7 @@ export function BrowseApp() {
           <div className="relative min-w-[190px] flex-1">
             <span aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or venue…"
-              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3.5 text-[12.5px]" />
+              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3.5 text-[12.5px] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors focus:border-[#1d3a8f]" />
           </div>
           {allCats.length > 0 && (
             <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={pill} aria-label="Filter by category">
