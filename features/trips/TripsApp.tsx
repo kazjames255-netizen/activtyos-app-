@@ -22,7 +22,7 @@ type Consent = "granted" | "pending" | "declined";
 interface Hazard { h: string; who?: string; controls?: string; initial?: RiskLevel; residual?: RiskLevel; done?: boolean; amendedOn?: string; amendedBy?: string }
 interface ItinItem { t?: string; a?: string; k?: string }
 interface RosterMember { n: string; r?: string; fa?: boolean }
-interface Attendee { n: string; age?: number; consent?: Consent; paid?: boolean; em?: boolean; med?: string }
+interface Attendee { n: string; age?: number; consent?: Consent; paid?: boolean; em?: boolean; med?: string; sent?: boolean }
 interface Checkpoint { n: string; counted?: number | null; time?: string }
 interface Signoff { approvedBy?: string; approvedAt?: string; submitted?: boolean }
 interface Trip {
@@ -240,7 +240,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
     });
   };
   const mut = (fn: (d: Trip) => void) => setT((prev) => { const next = structuredClone(prev) as Trip; fn(next); return next; });
-  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.area, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
+  const addBankHazard = (id: string) => { const e = HAZARD_BANK.find((x) => x.id === id); if (!e) return; mut((d) => { (d.hazards ??= []).push({ h: e.desc, who: e.who, controls: e.controls.map((c) => `• ${c}`).join("\n"), initial: e.initial, residual: e.residual, done: false, amendedOn: todayIso(), amendedBy: me }); d.raSigned = false; }); };
   // edit a hazard text field and stamp "last amended" with today + assessor
   const hazText = (i: number, field: "h" | "who" | "controls", value: string, label: string) => { edit(`hazards.${i}.${field}`, value, label); mut((d) => { if (d.hazards?.[i]) { d.hazards[i].amendedOn = todayIso(); d.hazards[i].amendedBy = me; if (d.raSigned) d.raSigned = false; } }); };
   // look up a saved venue's address when the destination matches one by name
@@ -428,16 +428,23 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("raDate", "RA date", { type: "date" })}</label>
                     <label className="flex flex-col gap-1">{fl("Review")}{fieldInput("raReview", "Review")}</label>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{bankOpen ? "✕ Close hazard bank" : "📚 Add from hazard bank"}</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex flex-wrap gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{bankOpen ? "✕ Close hazard bank" : "📚 Add from hazard bank"}</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
+                  {(t.hazards ?? []).length > 0 && (() => { const allDone = (t.hazards ?? []).every((h) => h.done); const n = (t.hazards ?? []).filter((h) => h.done).length; return (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface)] px-3 py-2">
+                      <span className="text-[12px] font-semibold" style={{ color: allDone ? GREEN : "var(--ink-2)" }}>{allDone ? "✓ " : ""}{n}/{(t.hazards ?? []).length} hazards have controls in place</span>
+                      <button type="button" onClick={() => mut((d) => { const target = !allDone; (d.hazards ?? []).forEach((h) => { h.done = target; h.amendedOn = todayIso(); h.amendedBy = me; }); d.raSigned = false; })} className="rounded-md border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={allDone ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: GREEN, color: GREEN }}>{allDone ? "Untick all" : "✓ Tick all controls in place"}</button>
+                    </div>
+                  ); })()}
                   {bankOpen && (() => {
                     const have = new Set((t.hazards ?? []).map((h) => h.h.trim().toLowerCase()));
+                    const isAdded = (e: (typeof HAZARD_BANK)[number]) => have.has(e.desc.trim().toLowerCase());
                     const bq = bankQ.trim().toLowerCase();
-                    const groups = bankByCategory().map((g) => ({ ...g, entries: g.entries.filter((e) => !bq || `${e.area} ${e.who} ${e.controls.join(" ")}`.toLowerCase().includes(bq)) })).filter((g) => g.entries.length > 0);
+                    const groups = bankByCategory().map((g) => ({ ...g, entries: g.entries.filter((e) => !bq || `${e.area} ${e.desc} ${e.who} ${e.controls.join(" ")}`.toLowerCase().includes(bq)) })).filter((g) => g.entries.length > 0);
                     return (
                       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
                         <div className="mb-2 flex items-center gap-2">
                           <input value={bankQ} onChange={(e) => setBankQ(e.target.value)} placeholder={`Search ${HAZARD_BANK.length} hazards — travel, water, allergy, safeguarding…`} className={`${inputCls} flex-1`} />
-                          <button type="button" onClick={() => { const ids = groups.flatMap((g) => g.entries).filter((e) => !have.has(e.area.trim().toLowerCase())).map((e) => e.id); ids.forEach(addBankHazard); }} className="whitespace-nowrap rounded-md border border-[var(--line)] px-2 py-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Add all shown</button>
+                          <button type="button" onClick={() => { const ids = groups.flatMap((g) => g.entries).filter((e) => !isAdded(e)).map((e) => e.id); ids.forEach(addBankHazard); }} className="whitespace-nowrap rounded-md border border-[var(--line)] px-2 py-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Add all shown</button>
                         </div>
                         <div className="flex max-h-[320px] flex-col gap-2.5 overflow-y-auto [scrollbar-width:thin]">
                           {groups.map((g) => (
@@ -445,13 +452,14 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                               <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g.cat}</div>
                               <div className="flex flex-col gap-1.5">
                                 {g.entries.map((e) => {
-                                  const added = have.has(e.area.trim().toLowerCase());
+                                  const added = isAdded(e);
                                   return (
-                                    <div key={e.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
+                                    <div key={e.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
                                       <div className="flex items-start gap-2">
                                         <div className="min-w-0 flex-1">
                                           <div className="flex flex-wrap items-center gap-1.5"><span className="text-[12.5px] font-extrabold">{e.area}</span><Badge tone={{ bg: RISK[e.initial].bg, fg: RISK[e.initial].fg }}>{RISK[e.initial].lbl}→{RISK[e.residual].lbl}</Badge><span className="text-[10.5px] text-[var(--ink-3)]">{e.controls.length} controls</span></div>
-                                          <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{e.who}</div>
+                                          <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">{e.desc}</div>
+                                          <div className="mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]"><b className="text-[var(--ink-2)]">Risk:</b> {e.who}</div>
                                         </div>
                                         <button type="button" disabled={added} onClick={() => addBankHazard(e.id)} className="flex-none rounded-md border px-2.5 py-1 text-[11px] font-bold" style={added ? { borderColor: "var(--line)", color: "var(--ink-3)" } : { borderColor: BLUE, color: BLUE }}>{added ? "✓ Added" : "＋ Add"}</button>
                                       </div>
@@ -603,8 +611,36 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                           <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>💳 Pay £{t.cost || "0.00"} for {t.destination || "the trip"}{t.payBy ? ` · by ${fmtDate(t.payBy)}` : ""}</div>
                         </div>
                       </div>
-                      {t.parentMsgSentAt ? <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Sent to {attendingOf(t).length + pendingOf(t).length} parent{attendingOf(t).length + pendingOf(t).length === 1 ? "" : "s"} on {t.parentMsgSentAt}. Payment shows on this trip and in each parent&rsquo;s profile.<button type="button" onClick={() => mut((d) => { d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="ml-auto text-[11.5px] font-bold underline" style={{ color: GREEN }}>Resend</button></div>
-                        : <div><Button variant="solid" onClick={() => mut((d) => { d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })}>Send to parents & generate pay link</Button><div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Sends the message + a secure pay link to the parents on this trip (Step 4) and adds it to their profile — the emailing, link and profile entry are wired up by your backend.</div></div>}
+                      {(() => {
+                        const recips = (t.attendees ?? []).filter((a) => a.consent !== "declined");
+                        const sentN = recips.filter((a) => a.sent).length;
+                        const sendAll = () => mut((d) => { (d.attendees ?? []).forEach((a) => { if (a.consent !== "declined") a.sent = true; }); d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; });
+                        return (
+                          <div>
+                            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Who this goes to")}<span className="text-[11px] font-semibold" style={{ color: sentN === recips.length && recips.length > 0 ? GREEN : "var(--ink-3)" }}>{sentN}/{recips.length} sent</span></div>
+                            {recips.length === 0 ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">No children on the trip yet — add them in Step 4 (Parent permissions).</div>
+                              : <div className="flex flex-col gap-1">
+                                {recips.map((a, i) => {
+                                  const idx = (t.attendees ?? []).indexOf(a);
+                                  return (
+                                    <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5">
+                                      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[10.5px] font-extrabold" style={{ color: BLUE }}>{ini(a.n)}</span>
+                                      <span className="flex-1 text-[12.5px] font-semibold">{a.n}<span className="font-normal text-[var(--ink-3)]"> · parent</span></span>
+                                      {a.sent ? <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#e7f6ee", color: GREEN }}>✓ Sent</span> : <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "#fdf3d8", color: AMBER }}>Not sent</span>}
+                                      <button type="button" onClick={() => mut((d) => { if (d.attendees?.[idx]) d.attendees[idx].sent = true; d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold" style={{ color: BLUE }}>{a.sent ? "Resend" : "Send"}</button>
+                                    </div>
+                                  );
+                                })}
+                              </div>}
+                            {recips.length > 0 && <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                              <Button variant="solid" onClick={sendAll}>{sentN > 0 ? "Resend to all" : "Send to all parents & generate pay links"}</Button>
+                              {sentN < recips.length && sentN > 0 && <button type="button" onClick={() => mut((d) => { (d.attendees ?? []).forEach((a) => { if (a.consent !== "declined" && !a.sent) a.sent = true; }); d.parentMsgSentAt = `${fmtDate(todayIso())}, ${nowLabel()}`; })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold" style={{ color: BLUE }}>Send to {recips.length - sentN} not-yet-sent</button>}
+                              {t.parentMsgSentAt && <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>✓ last sent {t.parentMsgSentAt}</span>}
+                            </div>}
+                            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Emails the message + a secure pay link to each parent and adds it to their profile — the sending, link and profile entry are wired up by your backend.</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}

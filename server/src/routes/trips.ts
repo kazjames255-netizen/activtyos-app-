@@ -53,7 +53,7 @@ const tripSchema = z.object({
   itinerary: z.array(z.object({ t: z.string().max(20).optional(), a: z.string().max(200).optional(), k: z.string().max(300).optional() })).max(40).optional(),
   kit: z.string().max(1_000).optional(),
   roster: z.array(z.object({ n: z.string().max(80), r: z.string().max(80).optional(), fa: z.boolean().optional() })).max(50).optional(),
-  attendees: z.array(z.object({ n: z.string().max(80), age: z.number().nonnegative().optional(), consent: z.enum(["granted", "pending", "declined"]).optional(), paid: z.boolean().optional(), em: z.boolean().optional(), med: z.string().max(160).optional() })).max(200).optional(),
+  attendees: z.array(z.object({ n: z.string().max(80), age: z.number().nonnegative().optional(), consent: z.enum(["granted", "pending", "declined"]).optional(), paid: z.boolean().optional(), em: z.boolean().optional(), med: z.string().max(160).optional(), sent: z.boolean().optional() })).max(200).optional(),
   checkpoints: z.array(z.object({ n: z.string().max(80), counted: z.number().int().nonnegative().nullable().optional(), time: z.string().max(40).optional() })).max(30).optional(),
   signoff: z.object({ approvedBy: z.string().max(120).optional(), approvedAt: z.string().max(60).optional(), submitted: z.boolean().optional() }).optional(),
   returned: z.boolean().optional(),
