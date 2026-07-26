@@ -12,6 +12,62 @@ import { filledDetails, type VoucherProvider } from "@/lib/settings";
 import { refundFor, policyById, policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
+// A month calendar that shows, at a glance, which dates a booking can move to:
+// green = a running date with space (clickable), blue = the one chosen, faint =
+// nothing on / already taken. Beats a native date input, which looks identical
+// whether a date is bookable or not.
+const monthKey = (iso: string) => { const [y, m] = iso.split("-").map(Number); return y * 12 + (m - 1); };
+function AvailabilityCalendar({ available, taken, value, onPick }: { available: string[]; taken?: string[]; value?: string; onPick: (iso: string) => void }) {
+  const avail = new Set(available);
+  const blocked = new Set(taken ?? []);
+  const anchor = value || available[0] || new Date().toISOString().slice(0, 10);
+  const [ym, setYm] = useState(() => { const [y, m] = anchor.split("-").map(Number); return { y, m: m - 1 }; });
+  const curKey = ym.y * 12 + ym.m;
+  const canPrev = available.some((s) => monthKey(s) < curKey);
+  const canNext = available.some((s) => monthKey(s) > curKey);
+  const step = (dir: number) => setYm((v) => { let m = v.m + dir, y = v.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } return { y, m }; });
+  const daysIn = new Date(Date.UTC(ym.y, ym.m + 1, 0)).getUTCDate();
+  const lead = (new Date(Date.UTC(ym.y, ym.m, 1)).getUTCDay() + 6) % 7; // Mon = 0
+  const label = new Date(Date.UTC(ym.y, ym.m, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const iso = (d: number) => `${ym.y}-${String(ym.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const cells: (number | null)[] = [...Array(lead).fill(null), ...Array.from({ length: daysIn }, (_, i) => i + 1)];
+  return (
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <button type="button" disabled={!canPrev} onClick={() => step(-1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25">‹</button>
+        <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
+        <button type="button" disabled={!canNext} onClick={() => step(1)} className="rounded-md px-2 py-0.5 text-[15px] font-bold text-[var(--brand-2)] disabled:opacity-25">›</button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-[var(--ink-3)]">
+        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => <div key={i}>{d}</div>)}
+      </div>
+      <div className="mt-0.5 grid grid-cols-7 gap-0.5">
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} />;
+          const s = iso(d);
+          const sel = value === s;
+          const isTaken = blocked.has(s);
+          const free = avail.has(s) && !isTaken;
+          return (
+            <button key={i} type="button" disabled={!free} onClick={() => onPick(s)}
+              className="flex h-8 items-center justify-center rounded-md text-[12px] font-bold transition-transform enabled:hover:-translate-y-px"
+              title={free ? "Available — pick this day" : isTaken ? "Already picked for another day" : "Not running / full"}
+              style={sel ? { background: "#1d3a8f", color: "#fff", boxShadow: "0 2px 6px -1px rgba(29,58,143,.5)" }
+                : free ? { background: "#e7f6ee", color: "#0f7a43" }
+                : isTaken ? { background: "#fdebec", color: "#c0392b" }
+                : { color: "var(--ink-3)", opacity: 0.35 }}>{d}</button>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--ink-3)]">
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#e7f6ee" }} /> Available</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#1d3a8f" }} /> Chosen</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#fdebec" }} /> Taken</span>
+      </div>
+    </div>
+  );
+}
+
 function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
@@ -243,28 +299,25 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
                       text to interpret). */}
                   {res === "changedate" && (
                     <div className="mt-2 rounded-lg border border-[var(--line)] p-2">
-                      <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Pick the new date for each day from the calendar (must be a date this activity runs with space):</div>
-                      <div className="flex flex-col gap-1.5">
+                      <div className="mb-1.5 text-[11px] font-bold text-[var(--ink-2)]">Pick the new date for each day — green days are running with space:</div>
+                      <div className="flex flex-col gap-2.5">
                         {pickedSlots.map((s) => {
-                          const taken = pickedSlots.filter((ps) => ps.key !== s.key).map((ps) => moveTo[ps.key]).filter(Boolean);
+                          const taken = pickedSlots.filter((ps) => ps.key !== s.key).map((ps) => moveTo[ps.key]).filter(Boolean) as string[];
                           const chosen = moveTo[s.key];
-                          const bad = chosen && (!moveDates.includes(chosen) || taken.includes(chosen));
                           return (
-                            <div key={s.key} className="flex flex-wrap items-center gap-2 text-[12px]">
-                              {multiKid && <span className="text-[var(--ink-3)]">{s.childName}:</span>}
-                              <b>{fmtIso(s.date)}</b><span className="text-[var(--ink-3)]">→</span>
-                              <input type="date" min={moveDates[0] ?? localToday} max={moveDates[moveDates.length - 1] || undefined} value={chosen ?? ""}
-                                onChange={(e) => setMoveTo((m) => ({ ...m, [s.key]: e.target.value }))}
-                                className="rounded-md border bg-[var(--surface)] px-2 py-1 text-[12px]"
-                                style={{ borderColor: bad ? "#c0392b" : chosen ? "var(--brand-2)" : "var(--line)" }} />
-                              {bad && <span className="text-[11px] font-bold text-[#c0392b]">{taken.includes(chosen!) ? "already picked for another day" : "no space on that date"}</span>}
+                            <div key={s.key}>
+                              <div className="mb-1 text-[12px] font-semibold">
+                                {multiKid && <span className="text-[var(--ink-3)]">{s.childName}: </span>}
+                                Move <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[#1d3a8f]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → choose below</span>}
+                              </div>
+                              <AvailabilityCalendar available={moveDates} taken={taken} value={chosen} onPick={(iso) => setMoveTo((m) => ({ ...m, [s.key]: iso }))} />
                             </div>
                           );
                         })}
                       </div>
-                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">Dates with space: {moveDates.length ? moveDates.map(fmtIso).join(", ") : "none"}.</div>
-                      {!movesReady && <div className="mt-1 text-[11px] font-bold text-[#c0392b]">Pick a valid new date for every day to continue.</div>}
-                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">✓ Once your provider approves, the swap is applied automatically.</div>
+                      {moveDates.length === 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">No other dates with space to move to right now.</div>}
+                      {!movesReady && moveDates.length > 0 && <div className="mt-1.5 text-[11px] font-bold text-[#c0392b]">Pick a new date for every day to continue.</div>}
+                      <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">✓ Once your provider approves, the swap is applied automatically.</div>
                     </div>
                   )}
                 </div>
