@@ -69,7 +69,15 @@ const fmt = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateSt
 // …"). A dose on a day not in that list is flagged but still allowed — the day
 // label here must match how the parent's form formats them.
 const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-const approvedForDay = (m: { schedule?: string }, iso: string) => !m.schedule?.startsWith("On these days") || m.schedule.includes(dayLabel(iso));
+const BOOKED_SCHEDULE = "On every booked day"; // dynamic — approved = the child's current bookings
+// `booked` is the child's live set of booked ISO days (recomputed from bookings)
+// — only needed for the dynamic BOOKED_SCHEDULE. A fixed "On these days: …" list
+// is parsed from the schedule string. Everything else is always approved.
+const approvedForDay = (m: { schedule?: string }, iso: string, booked?: Set<string>) => {
+  if (m.schedule === BOOKED_SCHEDULE) return booked ? booked.has(iso) : true;
+  if (m.schedule?.startsWith("On these days")) return m.schedule.includes(dayLabel(iso));
+  return true;
+};
 
 type MedDraft = Partial<Med> & { childName: string; name: string; dose: string };
 const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded: false, heldOnSite: false, consentGranted: false });
@@ -115,7 +123,7 @@ function ChildPicker({ value, onPick }: { value: string; onPick: (childName: str
 
 function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [d, setD] = useState<MedDraft>(emptyMed());
-  const [freq, setFreq] = useState<"everyday" | "chosen" | "asneeded">("everyday");
+  const [freq, setFreq] = useState<"everyday" | "booked" | "chosen" | "asneeded">("everyday");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -138,6 +146,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
     // flags the same on both ends). "Every day" isn't date-bound, so it covers
     // any new days the parent books later.
     const schedule = freq === "everyday" ? "Every day my child is at camp"
+      : freq === "booked" ? BOOKED_SCHEDULE
       : freq === "chosen" ? `On these days: ${pickedDays.map(dayLabel).join(", ")}`
       : "Only when needed";
     try {
@@ -165,12 +174,13 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
       <div className="mt-3">
         <FieldLabel>When should staff give it?</FieldLabel>
         <div className="mt-1 flex flex-wrap gap-1.5">
-          {([["everyday", "🏕️ Every day at camp"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["everyday" | "chosen" | "asneeded", string][]).map(([id, label]) => (
+          {([["everyday", "🏕️ Every day at camp"], ["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["everyday" | "booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
             <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
               style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
           ))}
         </div>
         {freq === "everyday" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Every day they attend — automatically covers any new days the parent books.</p>}
+        {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
         {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
         {freq === "chosen" && (
           <div className="mt-2">
@@ -218,7 +228,7 @@ function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => v
   );
 }
 
-function AdministerForm({ med, onDone, requireWitness }: { med: Med; onDone: (recorded: boolean, given?: boolean) => void; requireWitness?: boolean }) {
+function AdministerForm({ med, onDone, requireWitness, booked }: { med: Med; onDone: (recorded: boolean, given?: boolean) => void; requireWitness?: boolean; booked?: Set<string> }) {
   const [dose, setDose] = useState(med.dose);
   const [given, setGiven] = useState(true);
   const [date, setDate] = useState(todayIso());
@@ -259,7 +269,7 @@ function AdministerForm({ med, onDone, requireWitness }: { med: Med; onDone: (re
         <div><FieldLabel>Witnessed by{requireWitness ? " *" : ""}</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} placeholder={requireWitness ? "required" : ""} className="w-full" /></div>
         <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
       </div>
-      {!approvedForDay(med, date) && <div className="mt-1.5 rounded-lg bg-[#fbeede] px-3 py-1.5 text-[11.5px] font-bold text-[#a9660a]">⚠️ {fmt(date)} isn&rsquo;t on the parent&rsquo;s approved days — you can still record it.</div>}
+      {!approvedForDay(med, date, booked) && <div className="mt-1.5 rounded-lg bg-[#fbeede] px-3 py-1.5 text-[11.5px] font-bold text-[#a9660a]">⚠️ {fmt(date)} isn&rsquo;t {med.schedule === BOOKED_SCHEDULE ? "a day they're booked in" : "on the parent's approved days"} — you can still record it.</div>}
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2"><Button sm variant={given ? "solid" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={() => onDone(false)}>Cancel</Button></div>
     </div>
@@ -289,14 +299,20 @@ export function MedicationApp() {
     return `✓ ${given ? "Administration logged" : "Logged as not given"}${informed ? " — parent informed" : ""}`;
   };
 
+  const [bkgs, setBkgs] = useState<{ child?: string; days?: string[] }[]>([]);
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
     apiGet<Med[]>("/api/medications?includeArchived=1").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<AdminEvent[]>("/api/medications/administrations").then(setAdmins).catch(() => {});
+    // Bookings power the dynamic "On every booked day" approval check.
+    apiGet<{ child?: string; days?: string[] }[]>("/api/bookings").then(setBkgs).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => { setRole(me.role); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
-  useRealtime(["medications", "medicationAdmin"], refresh);
+  useRealtime(["medications", "medicationAdmin", "bookings"], refresh);
+  // The child's live set of booked ISO days — recomputed each render, so a new
+  // booking immediately widens what "On every booked day" approves.
+  const bookedDaysFor = (name: string) => new Set(bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (name ?? "").trim().toLowerCase()).flatMap((b) => b.days ?? []));
 
   async function setArchived(m: Med, archived: boolean) {
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived }) }); refresh(); }
@@ -404,7 +420,7 @@ export function MedicationApp() {
                     ) : confirm?.id === m.id ? (
                       <>
                         <span className="text-[11.5px] font-bold text-[var(--ink)]">Confirm: {m.name} for {m.childName} — <span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? "GIVEN" : "NOT given"}</span> now?</span>
-                        {!approvedForDay(m, todayIso()) && <span className="rounded-full bg-[#fbeede] px-2 py-0.5 text-[10.5px] font-bold text-[#a9660a]">⚠️ not on parent&rsquo;s approved days</span>}
+                        {!approvedForDay(m, todayIso(), bookedDaysFor(m.childName)) && <span className="rounded-full bg-[#fbeede] px-2 py-0.5 text-[10.5px] font-bold text-[#a9660a]">⚠️ {m.schedule === BOOKED_SCHEDULE ? "not booked in today" : "not on parent's approved days"}</span>}
                         <Button sm variant={confirm.given ? "solid" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
                         <Button sm onClick={() => setConfirm(null)}>Cancel</Button>
                       </>
@@ -424,7 +440,7 @@ export function MedicationApp() {
                     ? <Button sm variant="solid" onClick={() => setArchived(m, false)}>Restore</Button>
                     : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
-                {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}
+                {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} booked={bookedDaysFor(m.childName)} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}
                 {openId === m.id && (
                   <div className="mt-2 border-t border-[var(--line)] pt-2">
                     {doses.length === 0 ? (

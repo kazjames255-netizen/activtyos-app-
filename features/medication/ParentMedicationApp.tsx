@@ -13,7 +13,7 @@ interface Dose { id: string; medicationId?: string; date?: string; time?: string
 
 const when = (d?: string, t?: string) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) + (t ? ` · ${t}` : "") : "");
 const fmtDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-type Freq = "everyday" | "chosen" | "asneeded";
+type Freq = "everyday" | "booked" | "chosen" | "asneeded";
 
 // Blue for a boy, pink for a girl (matches the manual), neutral otherwise.
 function genderStyle(sex?: string): { bg: string; fg: string; ring: string } {
@@ -73,6 +73,7 @@ export function ParentMedicationApp() {
     if (freq === "chosen" && dates.length === 0) { setError("Tick the days the medicine is needed, or pick a different option."); return; }
     if (!f.consent) { setError("Please tick the consent box to authorise staff to administer."); return; }
     const schedule = freq === "everyday" ? "Every day my child is at camp"
+      : freq === "booked" ? "On every booked day"
       : freq === "chosen" ? `On these days: ${dates.map(fmtDay).join(", ")}`
       : "Only when needed";
     setError(null); setOk(null);
@@ -149,12 +150,13 @@ export function ParentMedicationApp() {
           <div className="mt-3">
             <FieldLabel>When should staff give it?</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {([["everyday", "🏕️ Every day at camp"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as [Freq, string][]).map(([id, label]) => (
+              {([["everyday", "🏕️ Every day at camp"], ["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as [Freq, string][]).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
                   style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
               ))}
             </div>
             {freq === "everyday" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Staff will give it each day your child attends.</p>}
+            {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — this stays up to date automatically if you book more days.</p>}
             {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Staff will give it only if your child needs it (e.g. a flare-up) — never routinely.</p>}
             {freq === "chosen" && (
               <div className="mt-2">
