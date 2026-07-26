@@ -169,7 +169,7 @@ function Ring({ pct }: { pct: number }) {
 function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: Trip; ratioTarget: number; onSaved: () => void; onClose: () => void }) {
   const isEdit = !!existing;
   const [t, setT] = useState<Trip>(() => existing ? { ...blankTrip(ratioTarget), ...existing, hazards: existing.hazards?.length ? existing.hazards : DEFAULT_HAZARDS.map((h) => ({ ...h })), checkpoints: existing.checkpoints?.length ? existing.checkpoints : DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), roster: existing.roster ?? [], attendees: existing.attendees ?? [], itinerary: existing.itinerary?.length ? existing.itinerary : [{ t: "", a: "", k: "" }], signoff: existing.signoff ?? {} } : blankTrip(ratioTarget));
-  const [open, setOpen] = useState<number>(existing ? activeStepOf(existing) : 1);
+  const [open, setOpen] = useState<number>(existing ? Math.min(7, activeStepOf(existing)) : 1);
   const [track, setTrack] = useState(false);
   const [review, setReview] = useState(false);
   const [changes, setChanges] = useState<Change[]>([]);
@@ -297,20 +297,33 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
         </div>
       </div>
 
-      {/* steps */}
-      <div className="flex flex-col gap-2">
+      {/* step rail — jump to any step */}
+      <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
         {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-          const dn = stepDone(t, n), locked = n === 6 && !s5Ok(t), isOpen = open === n;
+          const dn = stepDone(t, n), cur = open === n;
+          return (
+            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex flex-none items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
+              <span className="hidden text-[11.5px] font-bold lg:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* current step — one at a time (slideshow) */}
+      <div className="overflow-hidden rounded-2xl border" style={{ borderColor: `color-mix(in srgb,${SIG} 40%,var(--line))` }}>
+        {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+          if (n !== open) return null;
+          const dn = stepDone(t, n), locked = n === 6 && !s5Ok(t);
           const pillTone = dn ? { t: "Complete", c: GREEN } : locked ? { t: "Locked", c: "#8a86a3" } : n === act ? { t: "Action needed", c: SIG } : { t: "To do", c: "#8a86a3" };
           return (
-            <div key={n} className="overflow-hidden rounded-xl border" style={{ borderColor: isOpen ? `color-mix(in srgb,${SIG} 40%,var(--line))` : "var(--line)" }}>
-              <button type="button" onClick={() => setOpen(isOpen ? 0 : n)} className="flex w-full items-center gap-3 bg-[var(--surface)] px-3.5 py-3 text-left">
-                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[13px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : n === act ? { background: "#eef4fd", color: BLUE, boxShadow: `0 0 0 3px color-mix(in srgb,${SIG} 16%,transparent)` } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : n}</span>
-                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n}</span><div className="text-[14px] font-extrabold leading-tight">{TITLES[n]}</div></span>
+            <div key={n}>
+              <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[15px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : { background: "#eef4fd", color: BLUE }}>{dn ? "✓" : n}</span>
+                <span className="flex-1 min-w-0"><span className="text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step {n} of 7</span><div className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{TITLES[n]}</div></span>
                 <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={{ background: `color-mix(in srgb,${pillTone.c} 14%,transparent)`, color: `color-mix(in srgb,${pillTone.c} 74%,#000)` }}>{pillTone.t}</span>
-                <span className="text-[13px] text-[var(--ink-3)] transition-transform" style={{ transform: isOpen ? "rotate(90deg)" : "" }}>›</span>
-              </button>
-              {isOpen && <div className="border-t border-[var(--line)] bg-[var(--panel)] p-3.5">
+              </div>
+              <div className="bg-[var(--panel)] p-4">
                 {/* ── Step 1 ── */}
                 {n === 1 && <div className="flex flex-col gap-3">
                   <datalist id="trip-venues">{venues.map((v) => <option key={v.name} value={v.name} />)}</datalist>
@@ -358,7 +371,7 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                     <label className="flex flex-col gap-1">{fl("Date")}{fieldInput("raDate", "RA date", { type: "date" })}</label>
                     <label className="flex flex-col gap-1">{fl("Review")}{fieldInput("raReview", "Review")}</label>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>📚 Add from hazard bank</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11.5px] text-[var(--ink-3)]">Set the residual risk and tick “controls in place” for every hazard, then sign off.</span><span className="flex gap-1.5"><button type="button" onClick={() => setBankOpen((v) => !v)} className="rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors" style={bankOpen ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{bankOpen ? "✕ Close hazard bank" : "📚 Add from hazard bank"}</button><button type="button" onClick={() => mut((d) => { (d.hazards ??= []).push({ h: "", who: "", controls: "", initial: "M", residual: "", done: false }); if (d.raSigned) d.raSigned = false; })} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold">+ Blank hazard</button></span></div>
                   {bankOpen && (() => {
                     const have = new Set((t.hazards ?? []).map((h) => h.h.trim().toLowerCase()));
                     const bq = bankQ.trim().toLowerCase();
@@ -392,6 +405,10 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
                             </div>
                           ))}
                           {groups.length === 0 && <div className="px-1 py-3 text-center text-[12px] text-[var(--ink-3)]">No hazards match “{bankQ}”.</div>}
+                        </div>
+                        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2.5">
+                          <span className="text-[11.5px] font-semibold" style={{ color: GREEN }}>{(t.hazards ?? []).length} hazard{(t.hazards ?? []).length === 1 ? "" : "s"} on your assessment</span>
+                          <Button sm variant="solid" onClick={() => setBankOpen(false)}>Done — view my hazards ↓</Button>
                         </div>
                       </div>
                     );
@@ -511,10 +528,16 @@ function TripPlanner({ existing, ratioTarget, onSaved, onClose }: { existing?: T
 
                 {/* ── Step 7: Return & debrief ── */}
                 {n === 7 && (!s6Ok(t) ? <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Complete every head-count checkpoint to close the trip.</div> : t.returned ? <div className="rounded-lg bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold" style={{ color: GREEN }}>✓ Trip returned and closed. All children accounted for and handed back.</div> : <div className="flex flex-col gap-2"><textarea value={t.notes ?? ""} onChange={(e) => edit("notes", e.target.value, "Debrief notes")} rows={2} placeholder="Debrief — what went well, anything to change next time…" className={`${inputCls} resize-y`} /><Button variant="solid" onClick={() => mut((d) => { d.returned = true; d.status = "completed"; })}>Mark trip returned & complete</Button></div>)}
-              </div>}
+              </div>
             </div>
           );
         })}
+      </div>
+      {/* slideshow nav */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <Button disabled={open <= 1} onClick={() => setOpen(Math.max(1, open - 1))}>← Previous</Button>
+        <span className="hidden text-[11.5px] font-semibold text-[var(--ink-3)] sm:block">Step {open} of 7 · {TITLES[open]}</span>
+        <Button variant="solid" disabled={open >= 7} onClick={() => setOpen(Math.min(7, open + 1))}>Next →</Button>
       </div>
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
