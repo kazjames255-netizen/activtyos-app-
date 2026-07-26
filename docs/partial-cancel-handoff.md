@@ -14,9 +14,14 @@ the whole booking. Front-end is built (`features/parent/MyBookingsApp.tsx`,
   (`amount ÷ total days`) and run through the provider's cancellation policy
   using **that day's own start date**, so a later day can refund while
   tomorrow's doesn't. The preview sums the ticked days.
-- On submit it POSTs the existing `/api/my/bookings/:ref/cancel` with a new
-  optional field **`days: string[]`** (ISO dates). Omitted / empty = whole
-  booking (unchanged behaviour).
+- On submit it POSTs the existing `/api/my/bookings/:ref/cancel` with:
+  - **`days: string[]`** (ISO dates) for a **single-child** booking, OR
+  - **`kids: [{ name, childId?, days: string[] }]`** for a **multi-child**
+    booking (each child on their own dates — the picker groups the day
+    checkboxes per child, and only the ticked child-days for each child are
+    sent). Omitted / empty = whole booking (unchanged behaviour).
+- Slots are valued at a share of `amount ÷ (total booked child-days)`, so the
+  pro-rata denominator already accounts for every child's days.
 
 ## Settings (done, exposed publicly)
 `lib/settings.ts` + Setup → Cancellations & refunds:
@@ -31,10 +36,11 @@ Both are whitelisted in `GET /api/public/library/:tenantId`.
 ## What's yours (backend)
 When `POST /api/my/bookings/:ref/cancel` arrives **with `days`** (a strict
 subset of the booking's remaining days):
-1. **Partial, not full.** Add those dates to the booking's `cancelledDays`
-   (or the right child's `kids[].cancelledDays`), keep `status: "Confirmed"`
-   for the days that remain. If `days` covers *all* remaining days, treat it as
-   a normal full cancellation (existing path).
+1. **Partial, not full.** For `days` (single child), add them to the booking's
+   `cancelledDays`. For `kids` (multi-child), add each child's days to *that*
+   `kids[].cancelledDays` (match by `childId` then `name`). Keep
+   `status: "Confirmed"` for what remains. If the request cancels *all*
+   remaining child-days, treat it as a normal full cancellation (existing path).
 2. **Refund.** Compute the refund for the cancelled days only, honouring
    `perDayRefundMode`:
    - `prorata`: `Σ policyRefund(day, amountPaid ÷ totalDays)` — same

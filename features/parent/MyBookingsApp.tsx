@@ -59,16 +59,30 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
   const firstDay = allDays[0];
   const advice = policy ? refundFor(policy, firstDay, booking.amount, new Date().toISOString(), "parent") : null;
 
-  // Per-day (partial) cancellation. Each day is valued at a pro-rata share and
-  // judged on ITS OWN start date, so a later day may refund while tomorrow's
-  // doesn't. Only offered on a multi-day pass when the provider allows it.
+  // Per-day (partial) cancellation. We work in SLOTS = one (child, day) pair, so
+  // a booking with several children (each on their own dates) can be cancelled
+  // a child-day at a time. Each slot is valued at a pro-rata share of the total
+  // paid and judged on ITS OWN start date, so a later day may refund while
+  // tomorrow's doesn't. Only offered on a multi-day pass the provider allows.
   const localToday = (() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; })();
-  const cancellableDays = allDays.filter((d) => d >= localToday);
-  const canPartial = !!cfg?.allowPartial && allDays.length > 1 && cancellableDays.length > 0;
-  const perDayPaid = allDays.length ? (booking.amount ?? 0) / allDays.length : 0;
-  const perDayRefund = (d: string) => (policy ? refundFor(policy, d, perDayPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
-  const togglePick = (d: string) => setPickedDays((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p, d]));
-  const pickedRefund = pickedDays.reduce((s, d) => s + perDayRefund(d), 0);
+  const kidsList = booking.kids && booking.kids.length ? booking.kids.filter((k) => !k.cancelled) : null;
+  const daysForKid = (k: { dates?: string[] }) => (k.dates && k.dates.length ? k.dates : booking.days ?? []);
+  // Total booked child-days (the denominator for a fair per-slot share).
+  const totalPaidSlots = kidsList ? kidsList.reduce((n, k) => n + daysForKid(k).length, 0) : allDays.length;
+  const perSlotPaid = totalPaidSlots ? (booking.amount ?? 0) / totalPaidSlots : 0;
+  // The cancellable (future, not-already-cancelled) slots.
+  const slots: { key: string; childName: string; childId?: string; date: string }[] = [];
+  const addSlots = (name: string, childId: string | undefined, dates: string[], cancelled: string[]) => {
+    for (const d of [...dates].sort()) if (d >= localToday && !cancelled.includes(d)) slots.push({ key: `${childId ?? name}|${d}`, childName: name, childId, date: d });
+  };
+  if (kidsList) kidsList.forEach((k) => addSlots(k.name, k.childId, daysForKid(k), k.cancelledDays ?? []));
+  else addSlots(booking.child, booking.childId, allDays, []);
+  const canPartial = !!cfg?.allowPartial && totalPaidSlots > 1 && slots.length > 0;
+  const slotRefund = (d: string) => (policy ? refundFor(policy, d, perSlotPaid, new Date().toISOString(), "parent")?.amount ?? 0 : 0);
+  const togglePick = (key: string) => setPickedDays((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
+  const pickedSlots = slots.filter((s) => pickedDays.includes(s.key));
+  const pickedRefund = pickedSlots.reduce((sum, s) => sum + slotRefund(s.date), 0);
+  const multiKid = !!kidsList && kidsList.length > 1;
   const partialMode = scope === "days";
   const effRefund = partialMode ? pickedRefund : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
@@ -86,12 +100,29 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
     setError(null);
     try {
       const effReason = reason === "__other__" ? otherReason.trim() : reason;
+      // Partial cancel: the specific days to drop. For a multi-child booking we
+      // send them grouped per child; for one child, a flat days[]. Omitted =
+      // whole booking.
+      let partial: { days?: string[]; kids?: { name: string; childId?: string; days: string[] }[] } = {};
+      if (partialMode) {
+        if (kidsList) {
+          const byChild = new Map<string, { name: string; childId?: string; days: string[] }>();
+          for (const s of pickedSlots) {
+            const k = s.childId ?? s.childName;
+            const g = byChild.get(k) ?? { name: s.childName, childId: s.childId, days: [] };
+            g.days.push(s.date);
+            byChild.set(k, g);
+          }
+          partial = { kids: [...byChild.values()] };
+        } else {
+          partial = { days: pickedSlots.map((s) => s.date) };
+        }
+      }
       await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
-        // Partial cancel: the specific days to drop. Omitted = whole booking.
-        days: partialMode ? pickedDays : undefined,
+        ...partial,
       });
       onDone();
     } catch (e) {
@@ -115,25 +146,34 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
           </div>
           {partialMode && (
             <div className="mt-2">
-              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to cancel — each is refunded on its own notice.</div>
-              <div className="flex flex-col gap-1">
-                {cancellableDays.map((d) => {
-                  const on = pickedDays.includes(d);
-                  const r = perDayRefund(d);
-                  return (
-                    <label key={d} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
-                      style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
-                      <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(d)} /><b>{fmtIso(d)}</b></span>
-                      <span className="text-[11.5px] font-bold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{r > 0 ? `refund ${money(r)}` : "no refund"}</span>
-                    </label>
-                  );
-                })}
-              </div>
+              <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Tick the day(s) to cancel — each is refunded on its own notice{multiKid ? ", per child" : ""}.</div>
+              {(multiKid ? kidsList!.map((k) => k.name) : [null]).map((childName) => {
+                const rows = slots.filter((s) => (childName === null ? true : s.childName === childName));
+                if (rows.length === 0) return null;
+                return (
+                  <div key={childName ?? "single"} className="mb-1.5">
+                    {multiKid && <div className="mb-0.5 mt-1 text-[11px] font-extrabold text-[var(--brand-ink)]">{childName}</div>}
+                    <div className="flex flex-col gap-1">
+                      {rows.map((s) => {
+                        const on = pickedDays.includes(s.key);
+                        const r = slotRefund(s.date);
+                        return (
+                          <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
+                            style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
+                            <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
+                            <span className="text-[11.5px] font-bold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{r > 0 ? `refund ${money(r)}` : "no refund"}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
               {cfg?.perDayMode === "reprice" && (
                 <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your provider reprices the days you keep at the single-day rate, so the final refund may differ from this estimate.</p>
               )}
               <div className="mt-1.5 border-t border-[var(--line)] pt-1.5 text-[12px] font-extrabold" style={{ color: pickedRefund > 0 ? "#1d3a8f" : "#c0392b" }}>
-                {pickedDays.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedDays.length} day${pickedDays.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : `No refund for the ${pickedDays.length} selected day${pickedDays.length > 1 ? "s" : ""} — inside the no-refund window.`}
+                {pickedSlots.length === 0 ? "Pick at least one day above." : pickedRefund > 0 ? `Refund for ${pickedSlots.length} day${pickedSlots.length > 1 ? "s" : ""}: ${money(pickedRefund)}` : `No refund for the ${pickedSlots.length} selected day${pickedSlots.length > 1 ? "s" : ""} — inside the no-refund window.`}
               </div>
             </div>
           )}
@@ -206,8 +246,8 @@ function CancelRequest({ booking, listing, onDone }: { booking: Booking; listing
 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
-        <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && pickedDays.length === 0)}>
-          {busy ? "Sending…" : partialMode ? (pickedDays.length ? `Cancel ${pickedDays.length} day${pickedDays.length === 1 ? "" : "s"}` : "Cancel selected days") : "Send cancellation request"}
+        <Button variant="danger" sm onClick={submit} disabled={busy || (partialMode && pickedSlots.length === 0)}>
+          {busy ? "Sending…" : partialMode ? (pickedSlots.length ? `Cancel ${pickedSlots.length} day${pickedSlots.length === 1 ? "" : "s"}` : "Cancel selected days") : "Send cancellation request"}
         </Button>
       </div>
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">
