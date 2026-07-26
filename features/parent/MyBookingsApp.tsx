@@ -366,6 +366,11 @@ type AmendPolicy = {
 };
 
 const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: true, amendNoticeHours: 48, amendFee: 0, amendAllowCheaper: true, allowCardRefund: true, refundLetCustomerChoose: true };
+
+// The amend endpoint isn't built yet (handoff §U). While false, the modal tells
+// families up front rather than letting them pick dates then fail on submit.
+// Flip to true (or delete this gate) once POST /api/my/bookings/:ref/amend ships.
+const DATE_CHANGES_LIVE = false;
 const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
 const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -490,10 +495,12 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="text-[12px] text-[var(--ink-3)]">{booking.listing} · {booking.child} · {booking.pass}</div>
 
-          {!policy.allowDateChanges ? (
+          {!policy.allowDateChanges || !DATE_CHANGES_LIVE ? (
             <>
               <div className="rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
-                <b>{booking.listing}</b> doesn&rsquo;t offer date changes. To move your dates, please <b>message your provider</b> or cancel and rebook.
+                {!policy.allowDateChanges
+                  ? <><b>{booking.listing}</b> doesn&rsquo;t offer date changes. To move your dates, please <b>message your provider</b> or cancel and rebook.</>
+                  : <>Date changes aren&rsquo;t available online for <b>{booking.listing}</b> yet. To move a date, please <b>message your provider</b> and they&rsquo;ll sort it.</>}
               </div>
               <div className="flex justify-end">
                 <Button onClick={() => onDone(false)}>Close</Button>
