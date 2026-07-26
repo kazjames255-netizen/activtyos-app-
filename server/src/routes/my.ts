@@ -955,6 +955,51 @@ my.post("/bookings", async (req, res) => {
   }
 });
 
+// POST /api/my/bookings/:ref/amend — a family requests a date change. We record
+// it as a pending `dateChangeRequest` on the booking (booking stays Confirmed)
+// so the operator sees it and can approve (applies the swap) or deny. Accepts
+// two shapes of `moves`: an array of {from,to,child…} (release-a-day flow) or a
+// map of oldISO→newISO (the amend modal); plus an optional preferredDate for an
+// undated booking. Actual date-swapping happens on the operator's approve.
+const amendSchema = z.object({
+  moves: z.union([
+    z.array(z.object({ childName: z.string().max(80).optional(), childId: z.string().max(60).optional(), from: z.string().max(10), to: z.string().max(10) })),
+    z.record(z.string().max(10)),
+  ]).optional(),
+  preferredDate: z.string().max(10).optional(),
+  message: z.string().max(500).optional(),
+  msg: z.string().max(500).optional(),
+});
+my.post("/bookings/:ref/amend", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const parsed = amendSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", req.params.ref).limit(1).get();
+  if (matches.empty) { res.status(404).json({ error: "Booking not found" }); return; }
+  const snap = matches.docs[0];
+  const booking = fromDoc(snap.data() as BookingDoc);
+
+  const m = parsed.data.moves;
+  const moves: { childName?: string; childId?: string; from: string; to: string }[] =
+    Array.isArray(m) ? m
+      : m && typeof m === "object" ? Object.entries(m).map(([from, to]) => ({ from, to, childName: booking.child }))
+        : [];
+  if (parsed.data.preferredDate) moves.push({ from: "", to: parsed.data.preferredDate, childName: booking.child });
+  if (moves.length === 0) { res.status(400).json({ error: "No date change was specified" }); return; }
+
+  await snap.ref.set({
+    dateChangeRequest: {
+      moves,
+      status: "pending",
+      requestedAt: new Date().toISOString(),
+      ...(parsed.data.message || parsed.data.msg ? { note: (parsed.data.message || parsed.data.msg)!.trim() } : {}),
+    },
+  }, { merge: true });
+  const after = await snap.ref.get();
+  res.status(201).json(fromDoc(after.data() as BookingDoc));
+});
+
 // ——— Waiting-list offers (§E): a place is held for 2 hours; the family
 // accepts (→ Confirmed, then pays) or declines (→ back to the queue's next).
 

@@ -420,10 +420,9 @@ type AmendPolicy = {
 
 const AMEND_FALLBACK: AmendPolicy = { allowDateChanges: true, amendSelfService: true, amendNoticeHours: 48, amendFee: 0, amendAllowCheaper: true, allowCardRefund: true, refundLetCustomerChoose: true };
 
-// The amend endpoint isn't built yet (handoff §U). While false, the modal tells
-// families up front rather than letting them pick dates then fail on submit.
-// Flip to true (or delete this gate) once POST /api/my/bookings/:ref/amend ships.
-const DATE_CHANGES_LIVE = false;
+// POST /api/my/bookings/:ref/amend is live — it records the request on the
+// booking so the operator sees it and can approve (applies the swap) or deny.
+const DATE_CHANGES_LIVE = true;
 const noticeLabel = (h: number) => (h % 24 === 0 && h >= 24 ? `${h / 24} day${h / 24 === 1 ? "" : "s"}` : `${h} hours`);
 const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
