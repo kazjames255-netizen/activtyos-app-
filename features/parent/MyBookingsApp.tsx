@@ -369,10 +369,11 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void; autoPay?: boolean }) {
+function BookingCard({ b, refresh, autoPay, autoAmend }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [amending, setAmending] = useState(false);
+  const [amending, setAmending] = useState(!!autoAmend);
+  useEffect(() => { if (autoAmend) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, b.ref]);
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -422,7 +423,7 @@ function BookingCard({ b, refresh, autoPay }: { b: Booking; refresh: () => void;
     (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
 
   return (
-    <Card className="p-4">
+    <Card id={`booking-${b.ref}`} className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="text-[14.5px] font-extrabold">{b.listing}</div>
@@ -624,8 +625,11 @@ export function MyBookingsApp() {
 
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
-  // The payment-link email deep-links here as ?pay=REF.
-  const payRef = useSearchParams().get("pay");
+  // The payment-link email deep-links here as ?pay=REF; the schedule's
+  // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
+  const params = useSearchParams();
+  const payRef = params.get("pay");
+  const amendRef = params.get("amend");
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
@@ -720,7 +724,7 @@ export function MyBookingsApp() {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} />
                     ))}
                   </div>
                 )}

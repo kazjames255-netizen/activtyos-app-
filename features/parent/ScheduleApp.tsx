@@ -24,11 +24,22 @@ interface Session {
   date: string; // ISO "YYYY-MM-DD"
   child: string;
   listing: string;
+  listingId?: string;
   timing?: string;
   pass: string;
   status: Booking["status"];
   ref: string;
   key: string;
+}
+
+// The venue + staff + times we pull from each booking's listing (public
+// GET /api/listings/:id) so the schedule tells a parent where to be, when,
+// and who's running it — not just what was booked.
+interface ListingDetail {
+  location?: string | null;
+  address?: string | null;
+  staff: { name: string }[];
+  periods: { title: string; start?: string; finish?: string }[];
 }
 
 // ── Date helpers (ISO "YYYY-MM-DD", parsed as local to avoid TZ drift) ──────
@@ -77,6 +88,7 @@ function toSessions(bookings: Booking[]): Session[] {
           date,
           child: row.child,
           listing: b.listing,
+          listingId: b.listingId,
           timing: b.timing,
           pass: b.pass,
           status: b.status,
@@ -109,20 +121,41 @@ function sortSessions(a: Session, b: Session): number {
   );
 }
 
-function SessionRow({ s }: { s: Session }) {
+function SessionRow({ s, detail }: { s: Session; detail?: ListingDetail }) {
+  const [open, setOpen] = useState(false);
+  // Match the booked timing to a concrete start–finish from the listing.
+  const period = detail?.periods.find((p) => p.title === s.timing) ?? (detail?.periods.length === 1 ? detail.periods[0] : undefined);
+  const times = period?.start && period?.finish ? `${period.start}–${period.finish}` : null;
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
-      <span className="text-[13px] font-extrabold text-[var(--ink)]">{s.child}</span>
-      <span className="text-[12.5px] text-[var(--ink-2)]">{s.listing}</span>
-      {s.timing && (
-        <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-[2px] text-[11px] font-bold text-[var(--ink-2)]">
-          {s.timing}
+    <div className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-[13px] font-extrabold text-[var(--ink)]">{s.child}</span>
+        <span className="text-[12.5px] text-[var(--ink-2)]">{s.listing}</span>
+        {s.timing && (
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 py-[2px] text-[11px] font-bold text-[var(--ink-2)]">
+            {s.timing}{times ? ` · ${times}` : ""}
+          </span>
+        )}
+        <span className="ml-auto flex items-center gap-1.5">
+          <span className="text-[11px] text-[var(--ink-3)]">Ref {s.ref}</span>
+          <Badge tone={statusTone(s.status)}>{s.status}</Badge>
         </span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[var(--ink-3)]">
+        {detail?.location && <span>📍 {detail.location}</span>}
+        {times && <span>🕒 {times}</span>}
+        {detail && detail.staff.length > 0 && <span>👤 {detail.staff.map((x) => x.name).join(", ")}</span>}
+        <button type="button" onClick={() => setOpen((v) => !v)} className="font-bold text-[var(--brand-2)] hover:underline">{open ? "Less" : "Details"}</button>
+        <Link href={`/custdash/bookings?amend=${encodeURIComponent(s.ref)}`} className="font-bold text-[var(--brand-2)] hover:underline">Edit booking ✎</Link>
+      </div>
+      {open && (
+        <div className="mt-1.5 grid gap-x-6 gap-y-1 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)] sm:grid-cols-2">
+          <div><span className="text-[var(--ink-3)]">Location: </span><b>{detail?.location ?? "—"}</b></div>
+          <div><span className="text-[var(--ink-3)]">Address: </span><b>{detail?.address ?? "—"}</b></div>
+          <div><span className="text-[var(--ink-3)]">Timings: </span><b>{times ?? s.timing ?? "—"}</b></div>
+          <div><span className="text-[var(--ink-3)]">Staff onsite: </span><b>{detail && detail.staff.length ? detail.staff.map((x) => x.name).join(", ") : "confirmed nearer the day"}</b></div>
+        </div>
       )}
-      <span className="ml-auto flex items-center gap-1.5">
-        <span className="text-[11px] text-[var(--ink-3)]">Ref {s.ref}</span>
-        <Badge tone={statusTone(s.status)}>{s.status}</Badge>
-      </span>
     </div>
   );
 }
@@ -135,7 +168,7 @@ interface DayPlan {
   dayLabel: string;
 }
 
-function DayGroup({ date, sessions, today, plan }: { date: string; sessions: Session[]; today: string; plan?: DayPlan }) {
+function DayGroup({ date, sessions, today, plan, details }: { date: string; sessions: Session[]; today: string; plan?: DayPlan; details: Record<string, ListingDetail> }) {
   const rel = date === today ? "Today" : date === addDaysISO(today, 1) ? "Tomorrow" : null;
   const [showPlan, setShowPlan] = useState(false);
   return (
@@ -163,7 +196,7 @@ function DayGroup({ date, sessions, today, plan }: { date: string; sessions: Ses
         )}
       </div>
       {[...sessions].sort(sortSessions).map((s) => (
-        <SessionRow key={s.key} s={s} />
+        <SessionRow key={s.key} s={s} detail={s.listingId ? details[s.listingId] : undefined} />
       ))}
       {plan && showPlan && (
         <div className="mt-3">
@@ -183,6 +216,7 @@ function DayGroup({ date, sessions, today, plan }: { date: string; sessions: Ses
 export function ScheduleApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [plans, setPlans] = useState<PublishedWeek[]>([]);
+  const [details, setDetails] = useState<Record<string, ListingDetail>>({});
   const [error, setError] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
 
@@ -199,6 +233,22 @@ export function ScheduleApp() {
 
   useEffect(refresh, [refresh]);
   useRealtime(["bookings", "timetables"], refresh);
+
+  // Pull each booked listing's venue, staff and session times (public listing
+  // detail) so we can show where to be / who's on / when. Best-effort per id.
+  useEffect(() => {
+    const ids = [...new Set((bookings ?? []).map((b) => b.listingId).filter(Boolean) as string[])];
+    ids.filter((id) => !details[id]).forEach((id) => {
+      apiGet<{ library?: { venue?: { name?: string; address?: string } | null; staff?: { name: string }[] }; bundle?: { periods?: { title: string; start?: string; finish?: string }[] } }>(`/api/listings/${encodeURIComponent(id)}`)
+        .then((l) => setDetails((m) => ({ ...m, [id]: {
+          location: l.library?.venue?.name ?? null,
+          address: l.library?.venue?.address ?? null,
+          staff: (l.library?.staff ?? []).map((s) => ({ name: s.name })),
+          periods: l.bundle?.periods ?? [],
+        } })))
+        .catch(() => {});
+    });
+  }, [bookings, details]);
 
   // iso date → that day's published plan (first provider wins on a clash).
   const planByDate = useMemo(() => {
@@ -280,6 +330,7 @@ export function ScheduleApp() {
                     <span className="text-[var(--ink-2)]">{b.listing}</span>
                     <span className="text-[var(--ink-3)]">· {b.pass}</span>
                     <Badge tone={statusTone(b.status)}>{b.status}</Badge>
+                    <Link href={`/custdash/bookings?amend=${encodeURIComponent(b.ref)}`} className="ml-auto font-bold text-[var(--brand-2)] hover:underline">Edit booking ✎</Link>
                   </div>
                 ))}
               </div>
@@ -293,7 +344,7 @@ export function ScheduleApp() {
           )}
 
           {upcoming.map((g) => (
-            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} />
+            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} details={details} />
           ))}
 
           {past.length > 0 && (
@@ -308,7 +359,7 @@ export function ScheduleApp() {
               {showPast && (
                 <div className="mt-2 flex flex-col gap-3 opacity-80">
                   {past.map((g) => (
-                    <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} />
+                    <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} details={details} />
                   ))}
                 </div>
               )}
