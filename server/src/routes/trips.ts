@@ -62,6 +62,8 @@ const tripSchema = z.object({
   parentMsg: z.string().max(4_000).optional(),
   payBy: z.string().max(40).optional(),
   parentMsgSentAt: z.string().max(60).optional(),
+  askPay: z.boolean().optional(),
+  askConsent: z.boolean().optional(),
   consentObtained: z.boolean().default(false),
   notes: z.string().trim().max(2_000).optional(),
   status: z.enum(["planned", "completed", "cancelled"]).default("planned"),

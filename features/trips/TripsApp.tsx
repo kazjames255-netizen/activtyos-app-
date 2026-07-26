@@ -31,7 +31,7 @@ interface Trip {
   itinerary?: ItinItem[]; kit?: string;
   hazards?: Hazard[]; raSigned?: boolean; raAssessor?: string; raDate?: string; raRef?: string; raReview?: string;
   roster?: RosterMember[]; attendees?: Attendee[]; checkpoints?: Checkpoint[]; signoff?: Signoff; returned?: boolean;
-  parentMsg?: string; payBy?: string; parentMsgSentAt?: string;
+  parentMsg?: string; payBy?: string; parentMsgSentAt?: string; askPay?: boolean; askConsent?: boolean;
   childNames: string[]; staff: string[]; headcount?: number; consentObtained: boolean; notes?: string; status: Status; createdByName?: string;
 }
 
@@ -156,6 +156,7 @@ function blankTrip(ratioTarget: number): Trip {
     itinerary: [{ t: "09:00", a: "Depart base", k: "Head-count on" }, { t: "", a: "", k: "" }],
     hazards: DEFAULT_HAZARDS.map((h) => ({ ...h })), raRef: "", raAssessor: "", raDate: todayIso(), raReview: "Reviewed before each run",
     roster: [], attendees: [], checkpoints: DEFAULT_CHECKPOINTS.map((c) => ({ ...c })), signoff: {}, returned: false,
+    askPay: true, askConsent: true,
     childNames: [], staff: [], consentObtained: false, notes: "", status: "planned",
   };
 }
@@ -196,21 +197,28 @@ function Ring({ pct }: { pct: number }) {
 }
 
 // ── the 7-step planner ────────────────────────────────────────────────────
-const defaultParentMsg = (t: Trip, provider: string) => `Hi,
+const defaultParentMsg = (t: Trip, provider: string) => {
+  const pay = t.askPay !== false, consent = t.askConsent !== false;
+  const ask = pay && consent ? "give your permission and pay £{Cost} by {PayBy}"
+    : pay ? "pay £{Cost} by {PayBy}"
+    : consent ? "give your permission by {PayBy}"
+    : "let us know by {PayBy}";
+  const action = [consent ? "[ ✓ I give permission for my child to attend ]" : "", pay ? "[ Pay £{Cost} for this trip → ]" : ""].filter(Boolean).join("\n");
+  return `Hi,
 
 We're excited to offer your child a place on our trip to {Destination} on {Date}, departing {Depart} and back by {Return}.
 
-Getting there: {Transport}
-Cost: £{Cost} per child
+Getting there: {Transport}${pay ? "\nCost: £{Cost} per child" : ""}
 
-To confirm your child's place, please pay £{Cost} by {PayBy} using the secure link below. If we don't receive payment by then, we may offer the place to another family.
+To confirm your child's place, please ${ask} using the link below. If we don't hear from you by then, we may offer the place to another family.
 
-[ Pay for this trip → ]
+${action}
 
 Any questions, please contact {Lead} on {LeadPhone}.
 
 Thank you,
 ${provider}`;
+};
 const resolveMsg = (msg: string, t: Trip, provider: string) => msg
   .replace(/{Destination}/g, t.destination || "the venue")
   .replace(/{Address}/g, t.address || "")
@@ -289,7 +297,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
       evc: t.evc || undefined, cost: t.cost || undefined, offsiteRatio: t.offsiteRatio ?? ratioTarget, itinerary: (t.itinerary ?? []).filter((r) => r.a?.trim() || r.t?.trim()),
       kit: t.kit || undefined, hazards: (t.hazards ?? []).filter((h) => h.h.trim()), raSigned: !!t.raSigned, raAssessor: t.raAssessor || undefined, raDate: t.raDate || undefined, raRef: t.raRef || undefined, raReview: t.raReview || undefined,
       roster: t.roster ?? [], attendees: t.attendees ?? [], checkpoints: t.checkpoints ?? [], signoff: t.signoff ?? {}, returned: !!t.returned,
-      parentMsg: t.parentMsg || undefined, payBy: t.payBy || undefined, parentMsgSentAt: t.parentMsgSentAt || undefined,
+      parentMsg: t.parentMsg || undefined, payBy: t.payBy || undefined, parentMsgSentAt: t.parentMsgSentAt || undefined, askPay: t.askPay !== false, askConsent: t.askConsent !== false,
       childNames, staff: (t.roster ?? []).map((s) => s.n), consentObtained: permsOk(t), notes: t.notes || undefined, status: t.returned ? "completed" : (t.status ?? "planned"),
     };
     try {
@@ -355,14 +363,14 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
         </div>
       </div>
 
-      {/* step rail — jump to any step */}
-      <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      {/* step rail — jump to any step (wraps so every tab is visible) */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
         {STEP_NUMS.map((n) => {
           const dn = n <= 7 ? stepDone(t, n) : !!t.parentMsgSentAt, cur = open === n, opt = n === 8;
           return (
-            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex flex-none items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+            <button key={n} type="button" onClick={() => setOpen(n)} title={`Step ${n} — ${TITLES[n]}`} className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left transition-colors" style={cur ? { borderColor: BLUE, background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
               <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-extrabold" style={dn ? { background: GREEN, color: "#fff" } : cur ? { background: BLUE, color: "#fff" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{dn ? "✓" : opt ? "✚" : n}</span>
-              <span className="hidden text-[11.5px] font-bold lg:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}{opt ? " (optional)" : ""}</span>
+              <span className="hidden text-[11.5px] font-bold sm:block" style={{ color: cur ? BLUE : "var(--ink-2)" }}>{TITLES[n]}{opt ? " (optional)" : ""}</span>
             </button>
           );
         })}
@@ -628,10 +636,16 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                   const msg = t.parentMsg && t.parentMsg.trim() ? t.parentMsg : defaultParentMsg(t, providerName);
                   return (
                     <div className="flex flex-col gap-3">
-                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>Optional.</b> Skip this if parents pay when they book. Use it to invite parents to pay for an added trip — the details below pull from this trip.</div>
+                      <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>Optional.</b> Skip this if parents consent/pay when they book. Choose what to ask for below — the letter and its buttons adapt.</div>
+                      <div>{fl("What is this letter asking parents to do?")}
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => mut((d) => { d.askConsent = d.askConsent === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askConsent !== false ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askConsent !== false ? "✓" : "○"} Ask for consent (permission tick)</button>
+                          <button type="button" onClick={() => mut((d) => { d.askPay = d.askPay === false; })} className="flex items-center gap-2 rounded-lg border-2 px-3 py-1.5 text-[12px] font-bold transition-colors" style={t.askPay !== false ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.askPay !== false ? "✓" : "○"} Ask for payment</button>
+                        </div>
+                      </div>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1">{fl("Ask parents to pay by")}<input type="date" value={t.payBy ?? ""} min={todayIso()} max={t.date} onChange={(e) => edit("payBy", e.target.value, "Pay-by date")} className={inputCls} /></label>
-                        <div className="flex flex-col gap-1">{fl("Cost per child")}<div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-bold">£{t.cost || "0.00"} <span className="font-normal text-[var(--ink-3)]">· set in Step 1</span></div></div>
+                        <label className="flex flex-col gap-1">{fl(t.askPay !== false ? "Ask parents to pay by" : "Ask parents to respond by")}<input type="date" value={t.payBy ?? ""} min={todayIso()} max={t.date} onChange={(e) => edit("payBy", e.target.value, "Pay-by date")} className={inputCls} /></label>
+                        {t.askPay !== false && <div className="flex flex-col gap-1">{fl("Cost per child")}<div className="rounded-md border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[12.5px] font-bold">£{t.cost || "0.00"} <span className="font-normal text-[var(--ink-3)]">· set in Step 1</span></div></div>}
                       </div>
                       <div>
                         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">{fl("Message to parents (editable)")}<button type="button" onClick={() => edit("parentMsg", defaultParentMsg(t, providerName), "Parent message")} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">↺ Reset to template</button></div>
@@ -642,7 +656,11 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                         {fl("Preview — what parents receive")}
                         <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                           <div className="whitespace-pre-line text-[12.5px] leading-[1.6] text-[var(--ink-2)]">{resolveMsg(msg, t, providerName)}</div>
-                          <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>💳 Pay £{t.cost || "0.00"} for {t.destination || "the trip"}{t.payBy ? ` · by ${fmtDate(t.payBy)}` : ""}</div>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {t.askConsent !== false && <div className="inline-flex items-center gap-2 rounded-lg border-2 border-[#0f7a43]/30 bg-[#e7f6ee] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: GREEN }}>☑ I give permission for my child to attend {t.destination || "the trip"}</div>}
+                            {t.askPay !== false && <div className="inline-flex items-center gap-2 rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[12px] font-extrabold" style={{ color: BLUE }}>💳 Pay £{t.cost || "0.00"}{t.payBy ? ` · by ${fmtDate(t.payBy)}` : ""}</div>}
+                            {t.askConsent === false && t.askPay === false && <div className="text-[11.5px] text-[var(--ink-3)]">Nothing is being requested — turn on consent and/or payment above.</div>}
+                          </div>
                         </div>
                       </div>
                       {(() => {
@@ -785,7 +803,10 @@ export function TripsApp() {
                       <Badge tone={{ bg: "#eef4fd", fg: BLUE }}>{kids} children</Badge>
                       <Badge tone={staffOk(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdebec", fg: RED }}>{staffN} staff · 1:{ratioOf(t)}</Badge>
                       <Badge tone={raDone(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{raDone(t) ? "✓ RA signed" : "RA draft"}</Badge>
-                      <Badge tone={permsOk(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{permsOk(t) ? "✓ consents in" : `${pendingOf(t).length} consent pending`}</Badge>
+                      {(() => { const tot = (t.attendees ?? []).length - declinedOf(t).length, con = attendingOf(t).length, paid = paidCountOf(t); return <>
+                        <Badge tone={con >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>✍️ Consent {con}/{tot || 0}</Badge>
+                        {t.askPay !== false && (paid > 0 || tot > 0) && <Badge tone={paid >= tot && tot > 0 ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#eef4fd", fg: BLUE }}>💳 Paid {paid}/{tot || 0}</Badge>}
+                      </>; })()}
                       <Badge tone={s5Ok(t) ? { bg: "#e7f6ee", fg: GREEN } : { bg: "#fdf3d8", fg: AMBER }}>{s5Ok(t) ? "✓ signed off" : "sign-off pending"}</Badge>
                       {under && <Badge tone={{ bg: "#fdebec", fg: RED }}>⚠️ over 1:{ratioOf(t)}</Badge>}
                     </div>
