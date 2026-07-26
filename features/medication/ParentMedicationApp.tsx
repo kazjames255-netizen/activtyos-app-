@@ -1,9 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+
+const LIGHT_PALETTE = {
+  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
+  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
+} as CSSProperties;
 
 interface Provider { tenantId: string; name: string }
 interface Child { id: string; name: string; sex?: string }
@@ -39,6 +45,11 @@ export function ParentMedicationApp() {
   const [freq, setFreq] = useState<Freq>("booked");
   const [dates, setDates] = useState<string[]>([]);
   const [todayStr] = useState(() => new Date().toISOString().slice(0, 10));
+  // Notify preference — parents are emailed + get a bell for every dose until
+  // they mute it here. (Stored per-device now; the real email/bell + a
+  // server-side mute is Amir's — see docs/medication-parent-notify-handoff.md.)
+  const [muted, setMuted] = useState(() => typeof window !== "undefined" && localStorage.getItem("aos.medNotifyMuted") === "1");
+  const toggleMute = () => setMuted((m) => { const n = !m; try { localStorage.setItem("aos.medNotifyMuted", n ? "1" : "0"); } catch { /* ignore */ } return n; });
 
   const load = useCallback(() => {
     apiGet<Med[]>("/api/medications").then(setMeds).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -98,13 +109,43 @@ export function ParentMedicationApp() {
   }
 
   return (
-    <div className="text-[var(--ink)]">
+    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <style>{`@keyframes medGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--glow,#1d3a8f) 55%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--glow,#1d3a8f) 0%,transparent)}}.med-flicker{animation:medGlow 1.7s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.med-flicker{animation:none}}`}</style>
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Medication</h2>
-        {providers.length > 0 && children.length > 0 && !open && <Button variant="solid" onClick={() => setOpen(true)}>＋ Authorise a medication</Button>}
+
+      {/* Hero — matches the other portal pages (blue → white). */}
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💊</span>
+              Medication
+            </div>
+            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Authorise medicines for your child, and see every dose the staff record.</p>
+          </div>
+          {providers.length > 0 && children.length > 0 && !open && (
+            <button type="button" onClick={() => setOpen(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Authorise a medication</button>
+          )}
+        </div>
       </div>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Authorise medicines for your child, and see every dose the staff record.</p>
+
+      {/* How it works — clear, simple. */}
+      {providers.length > 0 && children.length > 0 && (
+        <div className="mb-3 rounded-xl border border-[var(--line)] bg-[#f4f8ff] px-3.5 py-2.5 text-[12.5px] leading-[1.55] text-[var(--ink-2)]">
+          <b className="text-[var(--ink)]">How this works:</b> authorise a medicine here in advance and staff can give it without asking again. Haven&rsquo;t added it? Just tell staff on the day and they&rsquo;ll enter it for you. Either way, every dose appears here with a notification — and you can withdraw consent at any time.
+        </div>
+      )}
+
+      {/* Notify preference bar. */}
+      {providers.length > 0 && children.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
+          <span className="text-[12.5px] text-[var(--ink-2)]">{muted ? "🔕 Dose alerts are off — you're checking here yourself." : "🔔 We'll email you and ring the bell here every time a dose is given."}</span>
+          <button type="button" onClick={toggleMute} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition-colors"
+            style={muted ? { borderColor: "#1d3a8f", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+            {muted ? "🔔 Turn dose alerts back on" : "🔕 Stop notifying me — I'll check here"}
+          </button>
+        </div>
+      )}
+
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
@@ -193,7 +234,7 @@ export function ParentMedicationApp() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[13.5px] font-extrabold">{m.name}</span>
                   <span className="text-[12px] text-[var(--ink-2)]">{m.dose}{m.route ? ` · ${m.route}` : ""}</span>
-                  {m.asNeeded && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>as needed</Badge>}
+                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
                   {m.consentGranted ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent given</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>consent withdrawn</Badge>}
                   <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{m.childName}{m.tenantId ? ` · ${providerName(m.tenantId)}` : ""}{m.condition ? ` · ${m.condition}` : ""}</span>
                 </div>

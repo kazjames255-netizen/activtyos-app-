@@ -36,6 +36,14 @@ customer area, and ideally **notify** them.
 - `administerSchema`: currently strips **`given`** (boolean) — add it so the
   Given/Not-given outcome is stored first-class, not just inferred from `doseGiven`.
 
+## Notify preference (parent can mute)
+The parent page has a **"🔕 Stop notifying me — I'll check here"** toggle (and
+its inverse). It's stored in `localStorage` (`aos.medNotifyMuted`) for now.
+Please persist it server-side as a parent preference and **gate the email + bell
+on it**: on each dose, email the parent AND raise an in-app bell notification —
+UNLESS muted. (Muted = they'll just read the Medication page themselves.)
+Withdrawing consent is already wired (`POST /:id/withdraw`).
+
 ## Not doing on the front end
 Per Kaz's rule, I stopped at the UI + the tiny `instructions` schema add. The
 child-id resolution, the parent-view wiring, and the notification are yours.
