@@ -89,9 +89,14 @@ export function BookPage({ id }: { id: string }) {
         ) : signedIn && !embedded ? (
           // Not shown in embeds — navigating a provider's iframe into the
           // ActivityOS dashboard would trap the parent page's visitor.
-          <Link href="/custdash/bookings" className="font-bold text-[#2f6bd8] underline">
-            My bookings
-          </Link>
+          <span className="flex items-center gap-3">
+            <Link href="/custdash" className="font-bold text-[#2f6bd8] underline">
+              ← My home page
+            </Link>
+            <Link href="/custdash/bookings" className="font-bold text-[#2f6bd8] underline">
+              My bookings
+            </Link>
+          </span>
         ) : null}
       </div>
       <div className="mx-auto max-w-[1040px] px-4">
