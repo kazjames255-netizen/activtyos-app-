@@ -585,7 +585,7 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
 /** The customer page a PARENT sees — rendered purely from the API's
  * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
  * "Preview as a parent" (same ParentPreview component, same data shape). */
-export function CustomerPage({ listing }: { listing: ServerListing }) {
+export function CustomerPage({ listing, topRight }: { listing: ServerListing; topRight?: React.ReactNode }) {
   const d = draftFromListing(listing);
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string } | null>(null);
@@ -754,6 +754,7 @@ export function CustomerPage({ listing }: { listing: ServerListing }) {
       mode="parent"
       bookState={bookState}
       onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes)}
+      topRight={topRight}
       full
     />
   );
@@ -2828,7 +2829,8 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   );
 }
 
-function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, tenantId }: {
+function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, tenantId, topRight }: {
+  topRight?: React.ReactNode;
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
   mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
@@ -2862,7 +2864,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
   const opens = useOpensAt(d.opensAt);
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand() };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), topRight };
 
   const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
@@ -2896,6 +2898,9 @@ interface PageProps {
   opens: { locked: boolean; countdown: string; opensLabel: string };
   blocks?: RunBlock[];
   brand: string;
+  /** Optional links rendered in the storefront header (e.g. the signed-in
+   *  parent's "My home page / My bookings" on the real booking page). */
+  topRight?: React.ReactNode;
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
 // Dark surfaces for the Sport-style pages — swappable so the same design can be
@@ -2954,14 +2959,14 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand }: PageProps) {
+function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand, topRight }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   const heroH = full ? 320 : 220;
   // Show the first few passes, then a "+N more" toggle so a long block list
   // doesn't run down the whole hero.
   const [morePasses, setMorePasses] = useState(false);
   const [openPass, setOpenPass] = useState<string | null>(null);
-  const PASS_LIMIT = 5;
+  const PASS_LIMIT = 3;
   const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
   const passesExtra = passSummary.length - PASS_LIMIT;
   const chip = (o: string, fb: string, i: number) => (
@@ -2974,10 +2979,13 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
   return (
-    <div className="overflow-hidden rounded-[26px] border border-[#e8edf7]" style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? "0 40px 90px -60px rgba(30,50,90,.4)" : undefined }}>
-      <div className="flex items-center justify-between bg-white px-6 py-4">
+    <div className={`overflow-hidden ${full ? "" : "rounded-[26px] border border-[#e8edf7]"}`} style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? undefined : undefined }}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-white px-6 py-4">
         <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{brand}</span>
-        <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
+        <span className="flex items-center gap-4">
+          {topRight}
+          <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
+        </span>
       </div>
       <div className={full ? "p-6 lg:p-7" : "p-5"}>
         {/* title above the image */}
@@ -3150,7 +3158,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, topRight }: PageProps & { surf: Surf }) {
   const EL = "#0047ff", LIME = "#c6ff00", CY = "#00c2ff", MUTs = "#adb8ca";
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const cond = "italic uppercase tracking-[-0.01em]";
@@ -3160,14 +3168,17 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const [whereOpen, setWhereOpen] = useState(false);
   const [morePasses, setMorePasses] = useState(false);
   const [openPass, setOpenPass] = useState<string | null>(null);
-  const PASS_LIMIT = 5;
+  const PASS_LIMIT = 3;
   const passesShown = morePasses ? passSummary : passSummary.slice(0, PASS_LIMIT);
   const passesExtra = passSummary.length - PASS_LIMIT;
   return (
-    <div className="overflow-hidden rounded-[18px] border" style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: LINEs }}>
+    <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}`} style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs }}>
         <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
-        <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
+        <span className="flex items-center gap-4">
+          {topRight}
+          <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
+        </span>
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
       <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">

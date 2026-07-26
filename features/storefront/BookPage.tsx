@@ -66,43 +66,29 @@ export function BookPage({ id }: { id: string }) {
       </div>
     );
 
+  // Header links live INSIDE the storefront's own (black/branded) header bar, so
+  // the page is full-bleed with no light edge around it.
+  const topRight = signedIn === false ? (
+    // Inside an embed, keep ?embed=1 through the sign-in round trip.
+    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} className="text-[12.5px] font-bold text-[#5b9bff] underline">Sign in</Link>
+  ) : signedIn && !embedded ? (
+    // Not shown in embeds — navigating a provider's iframe into the dashboard
+    // would trap the parent page's visitor.
+    <span className="flex items-center gap-3 text-[12.5px]">
+      <Link href="/custdash" className="font-bold text-[#5b9bff] underline">← My home page</Link>
+      <Link href="/custdash/bookings" className="font-bold text-[#5b9bff] underline">My bookings</Link>
+    </span>
+  ) : null;
+
   return (
-    <div className="min-h-screen bg-[#f4f7ff] pb-16">
-      <div className="mx-auto flex max-w-[1040px] items-center justify-between px-4 pb-1 pt-4 text-[12.5px]">
-        <span className="font-bold text-[#4a4763]">
-          {embedded && fromStore && (
-            <button type="button" onClick={() => window.history.back()} className="mr-2 font-bold text-[#2f6bd8] underline">
-              ← All activities
-            </button>
-          )}
-          {listing.tenantName}
-        </span>
-        {signedIn === false ? (
-          // Inside an embed, keep ?embed=1 through the sign-in round trip so
-          // we come back still chromeless in the provider's iframe.
-          <Link
-            href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`}
-            className="font-bold text-[#2f6bd8] underline"
-          >
-            Sign in
-          </Link>
-        ) : signedIn && !embedded ? (
-          // Not shown in embeds — navigating a provider's iframe into the
-          // ActivityOS dashboard would trap the parent page's visitor.
-          <span className="flex items-center gap-3">
-            <Link href="/custdash" className="font-bold text-[#2f6bd8] underline">
-              ← My home page
-            </Link>
-            <Link href="/custdash/bookings" className="font-bold text-[#2f6bd8] underline">
-              My bookings
-            </Link>
-          </span>
-        ) : null}
-      </div>
-      <div className="mx-auto max-w-[1040px] px-4">
-        <CustomerPage listing={listing} />
-        <div className="mt-5" id="book"></div>
-      </div>
+    <div className="min-h-screen pb-16">
+      {embedded && fromStore && (
+        <div className="px-4 pt-3 text-[12.5px]">
+          <button type="button" onClick={() => window.history.back()} className="font-bold text-[#2f6bd8] underline">← All activities</button>
+        </div>
+      )}
+      <CustomerPage listing={listing} topRight={topRight} />
+      <div id="book"></div>
     </div>
   );
 }
