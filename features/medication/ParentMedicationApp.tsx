@@ -7,7 +7,7 @@ import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui"
 
 interface Provider { tenantId: string; name: string }
 interface Child { id: string; name: string; sex?: string }
-interface Booking { childId?: string; childName?: string; tenantId?: string; dates?: string[] }
+interface Booking { childId?: string; childName?: string; tenantId?: string; days?: string[] }
 interface Med { id: string; tenantId?: string; childId?: string; childName: string; name: string; dose: string; route?: string; condition?: string; schedule?: string; asNeeded?: boolean; archived?: boolean; consentGranted?: boolean; source?: string }
 interface Dose { id: string; medicationId?: string; date?: string; time?: string; doseGiven?: string; administeredByName?: string; notes?: string }
 
@@ -60,7 +60,7 @@ export function ParentMedicationApp() {
   const bookedDays = [...new Set(
     bookings
       .filter((b) => b.tenantId === f.tenantId && (childIds.length === 0 || childIds.includes(b.childId ?? "")))
-      .flatMap((b) => b.dates ?? []),
+      .flatMap((b) => b.days ?? []),
   )].filter((d) => d >= todayStr).sort();
   const selectedNames = childIds.map((id) => children.find((c) => c.id === id)?.name).filter(Boolean).join(" & ") || "your child";
 
