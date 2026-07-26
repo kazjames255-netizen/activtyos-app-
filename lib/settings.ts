@@ -358,6 +358,13 @@ export interface TenantSettings {
     ratioTarget?: number;     // target children-per-staff; the trip flags when it's exceeded
   };
 
+  /** Calendar — reusable event categories + start-time reminders. */
+  calendar?: {
+    categories?: { id: string; name: string; color: string }[];
+    reminderOn?: boolean;     // email + in-app reminder before an event starts
+    reminderMinutes?: number; // how many minutes before (default 30)
+  };
+
   /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
@@ -629,6 +636,17 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
+  calendar: {
+    categories: [
+      { id: "general", name: "General", color: "#7A5AF8" },
+      { id: "meeting", name: "Staff meeting", color: "#2AACE2" },
+      { id: "training", name: "Training / INSET", color: "#0f9d58" },
+      { id: "openday", name: "Open day", color: "#f0b100" },
+      { id: "closure", name: "Closure / holiday", color: "#e07a5f" },
+    ],
+    reminderOn: true,
+    reminderMinutes: 30,
+  },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
@@ -682,6 +700,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}) },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
+    calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

@@ -68,7 +68,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "calendar" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1105,7 +1105,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "calendar", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1146,6 +1146,7 @@ export function SetupApp() {
     ["medication", "Medication"],
     ["safeguarding", "Safeguarding"],
     ["trips", "Trips & visits"],
+    ["calendar", "Calendar"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
@@ -1246,6 +1247,18 @@ export function SetupApp() {
           <Row label="Target staff-to-child ratio" hint="The most children per staff member you're happy with on a trip. A trip over this is flagged so you can add staff or split it.">
             <NumberBox value={settings.trips?.ratioTarget ?? 8} onChange={(n) => set("trips", { ...settings.trips, ratioTarget: Math.max(1, n) })} min={1} max={30} suffix=":1" />
           </Row>
+        </Section>
+      )}
+
+      {tab === "calendar" && (
+        <Section title="Calendar" lede="Event reminders and how your calendar behaves. Event categories & colours are managed on the Calendar itself.">
+          <Row label="Remind before an event starts" hint="Sends an email + an in-app bell to the staff on an event before it begins, so nothing gets missed.">
+            <Toggle on={settings.calendar?.reminderOn ?? true} onChange={(v) => set("calendar", { ...settings.calendar, reminderOn: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="How long before" hint="Minutes before the start time to send the reminder.">
+            <NumberBox value={settings.calendar?.reminderMinutes ?? 30} onChange={(n) => set("calendar", { ...settings.calendar, reminderMinutes: Math.max(0, n) })} min={0} max={1440} suffix=" min" />
+          </Row>
+          <NotWired>Sending the reminder (email + in-app bell) is wired up by the backend.</NotWired>
         </Section>
       )}
 
