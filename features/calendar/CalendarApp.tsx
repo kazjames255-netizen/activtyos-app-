@@ -18,7 +18,7 @@ import { useSettings } from "@/lib/settings";
 interface Session { date: string; start?: string; end?: string }
 interface Block { open?: boolean; capacity?: number; bookedCount?: number; dayCounts?: Record<string, number>; sessions?: Session[] }
 interface Listing { id: string; title: string; venue?: { name?: string } | null; venueName?: string; blocks?: Block[] }
-interface CalEvent { id: string; title: string; date: string; endDate?: string; start?: string; end?: string; allDay?: boolean; category?: string; color?: string; notes?: string }
+interface CalEvent { id: string; title: string; date: string; endDate?: string; start?: string; end?: string; allDay?: boolean; category?: string; color?: string; notes?: string; remindMode?: "default" | "on" | "off"; remindMinutes?: number }
 interface Item { kind: "session" | "event"; date: string; start: string; end: string; title: string; color: string; booked?: number; cap?: number; venue?: string; open?: boolean; listingId?: string; event?: CalEvent }
 
 type Mode = "month" | "week" | "day";
@@ -54,6 +54,7 @@ export function CalendarApp() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());  // hidden listingIds
   const [showBooking, setShowBooking] = useState(true);
   const [showEvents, setShowEvents] = useState(true);
+  const [fullMonth, setFullMonth] = useState(false);
   const [editing, setEditing] = useState<CalEvent | null>(null);
   const [adding, setAdding] = useState(false);
   const jumped = useRef(false);
@@ -100,6 +101,15 @@ export function CalendarApp() {
   }, [listings, events, hidden, showEvents, colorFor, categories]);
 
   const hasAnything = (listings?.some((l) => (l.blocks ?? []).some((b) => (b.sessions ?? []).length)) ?? false) || events.length > 0;
+  // every date that has something on it (respecting filters) — powers the
+  // "next event" hint when the current period is empty.
+  const allDates = useMemo(() => {
+    const s = new Set<string>();
+    for (const l of listings ?? []) if (!hidden.has(l.id)) for (const b of l.blocks ?? []) for (const ss of b.sessions ?? []) s.add(ss.date);
+    if (showEvents) for (const ev of events) s.add(ev.date);
+    return [...s].sort();
+  }, [listings, events, hidden, showEvents]);
+  const fmtLong = (s: string) => fromIso(s).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   const step = (dir: number) => setCursor((c) => { const x = new Date(c); if (mode === "month") x.setMonth(x.getMonth() + dir); else if (mode === "week") x.setDate(x.getDate() + 7 * dir); else x.setDate(x.getDate() + dir); return x; });
   const goToday = () => { const d = new Date(); setCursor(new Date(d.getFullYear(), d.getMonth(), d.getDate())); };
@@ -114,7 +124,11 @@ export function CalendarApp() {
 
   // ── views ────────────────────────────────────────────────────────────────
   function itemChip(it: Item, i: number) {
-    return <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`flex w-full items-center gap-1 truncate rounded px-1 py-[1.5px] text-left text-[10px] font-bold leading-tight ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ color: "#fff", background: it.color }} title={`${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "• " : ""}{it.title}</span></button>;
+    // Sessions (from listings) = solid filled. Events (meetings you add) =
+    // outlined with a 📌 marker + dashed border, so the two never look alike.
+    const evStyle = { color: it.color, background: "var(--surface)", border: `1.5px dashed ${it.color}` } as CSSProperties;
+    const sessStyle = { color: "#fff", background: it.color } as CSSProperties;
+    return <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : (setMode("day"), setCursor(fromIso(it.date)))} className="flex w-full items-center gap-1 truncate rounded px-1 py-[1.5px] text-left text-[10px] font-bold leading-tight cursor-pointer" style={it.kind === "event" ? evStyle : sessStyle} title={`${it.kind === "event" ? "Event: " : ""}${it.title}${it.start ? ` · ${it.start}–${it.end}` : ""}`}><span className="truncate">{it.kind === "event" ? "📌 " : ""}{it.title}</span></button>;
   }
 
   function monthView() {
@@ -122,17 +136,19 @@ export function CalendarApp() {
     const gridStart = startOfWeek(new Date(y, mo, 1));
     const gridEnd = addDays(startOfWeek(new Date(y, mo + 1, 0)), 6); // end of week containing the last day
     const cells: Date[] = []; for (let d = new Date(gridStart); d <= gridEnd; d = addDays(d, 1)) cells.push(new Date(d));
+    const cap = fullMonth ? 6 : 2;
+    const minH = fullMonth ? "min-h-[104px] sm:min-h-[124px]" : "min-h-[58px] sm:min-h-[74px]";
     return (
       <div className="grid grid-cols-7 gap-1">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="pb-1 text-center text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{d}</div>)}
         {cells.map((d) => {
           const its = itemsOn(iso(d)), inMonth = d.getMonth() === mo, isToday = sameDay(d, today);
           return (
-            <div key={iso(d)} className="flex min-h-[58px] flex-col rounded-lg border p-1 sm:min-h-[74px]" style={{ borderColor: isToday ? BLUE : "var(--line)", background: inMonth ? "var(--surface)" : "var(--panel)", opacity: inMonth ? 1 : 0.5, boxShadow: isToday ? `inset 0 0 0 1.5px ${BLUE}` : undefined }}>
-              <div className="text-[11.5px] font-extrabold leading-none" style={{ color: isToday ? BLUE : its.length ? "var(--ink)" : "var(--ink-3)" }}>{d.getDate()}</div>
+            <div key={iso(d)} className={`flex ${minH} flex-col rounded-lg border p-1`} style={{ borderColor: isToday ? BLUE : "var(--line)", background: inMonth ? "var(--surface)" : "var(--panel)", opacity: inMonth ? 1 : 0.5, boxShadow: isToday ? `inset 0 0 0 1.5px ${BLUE}` : undefined }}>
+              <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="self-start text-[11.5px] font-extrabold leading-none hover:underline" style={{ color: isToday ? BLUE : its.length ? "var(--ink)" : "var(--ink-3)" }} title="Open this day">{d.getDate()}</button>
               <div className="mt-0.5 flex flex-col gap-0.5">
-                {its.slice(0, 2).map((it, i) => itemChip(it, i))}
-                {its.length > 2 && <div className="pl-0.5 text-[9.5px] font-bold text-[var(--ink-3)]">+{its.length - 2} more</div>}
+                {its.slice(0, cap).map((it, i) => itemChip(it, i))}
+                {its.length > cap && <button type="button" onClick={() => { setMode("day"); setCursor(new Date(d)); }} className="pl-0.5 text-left text-[9.5px] font-bold text-[#1d3a8f] hover:underline">+{its.length - cap} more</button>}
               </div>
             </div>
           );
@@ -154,8 +170,8 @@ export function CalendarApp() {
               <div className="mb-2.5 rounded-lg border py-2 text-center text-[13px] font-extrabold" style={{ borderColor: "var(--line)", background: isToday ? "#eef4fd" : "var(--panel)", color: BLUE }}>{DOW[d.getDay()].slice(0, 3)} {d.getDate()}</div>
               <div className="flex flex-col gap-2">
                 {its.length ? its.map((it, i) => { const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0; return (
-                  <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`rounded-xl border bg-[var(--panel)] p-2.5 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px solid ${it.color}` }}>
-                    <div className="text-[12.5px] font-extrabold leading-tight">{it.kind === "event" ? "• " : ""}{it.title}</div>
+                  <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`rounded-xl border bg-[var(--panel)] p-2.5 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
+                    <div className="text-[12.5px] font-extrabold leading-tight">{it.kind === "event" ? "📌 " : ""}{it.title}</div>
                     {it.start && <div className="mt-1 text-[11.5px] text-[var(--ink-2)]">{it.start}–{it.end}</div>}
                     {it.kind === "session" && showBooking && <div className="mt-1 text-[11px] font-bold" style={{ color: it.color }}>{it.booked} / {it.cap} booked · {pct}%</div>}
                   </button>
@@ -168,22 +184,51 @@ export function CalendarApp() {
     );
   }
 
+  function dayCard(it: Item, i: number) {
+    const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0;
+    return (
+      <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`w-full rounded-xl border bg-[var(--surface)] p-2.5 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px ${it.kind === "event" ? "dashed" : "solid"} ${it.color}` }}>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="text-[13.5px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{it.kind === "event" ? "📌 " : ""}{it.title}</span>
+          {it.start && <span className="text-[11.5px] font-bold" style={{ color: it.color }}>{it.start}–{it.end}</span>}
+        </div>
+        {it.kind === "session" ? <div className="mt-0.5 text-[11.5px] text-[var(--ink-2)]">{[it.venue, showBooking ? `${it.booked} / ${it.cap} booked · ${pct}%` : "", it.open ? "" : "closed"].filter(Boolean).join(" · ")}</div>
+          : <div className="mt-0.5 text-[11.5px] text-[var(--ink-2)]">{[it.event?.category ? categories.find((c) => c.id === it.event?.category)?.name : "Event", it.event?.notes].filter(Boolean).join(" · ")}</div>}
+        {it.kind === "session" && showBooking && <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: it.color }} /></div>}
+      </button>
+    );
+  }
+
+  // Day view — an hourly timeline down the left so you can see what's on at 9am
   function dayView() {
     const its = itemsOn(iso(cursor));
     if (!its.length) return <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">No sessions or events on this day.</div>;
+    const hourOf = (t: string) => { const n = parseInt(t.slice(0, 2), 10); return isNaN(n) ? null : n; };
+    const timed = its.filter((it) => it.start && hourOf(it.start) != null);
+    const allDay = its.filter((it) => !it.start || hourOf(it.start) == null);
+    const startHrs = timed.map((it) => hourOf(it.start)!);
+    const endHrs = timed.map((it) => hourOf(it.end) ?? hourOf(it.start)!);
+    const lo = startHrs.length ? Math.max(0, Math.min(...startHrs)) : 9;
+    const hi = timed.length ? Math.min(23, Math.max(lo + 1, ...endHrs)) : 17;
+    const hours = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k);
     return (
-      <div className="flex flex-col gap-2.5">
-        {its.map((it, i) => { const pct = it.cap ? Math.round((it.booked ?? 0) / it.cap * 100) : 0; return (
-          <button key={i} type="button" onClick={() => it.kind === "event" && it.event ? setEditing(it.event) : undefined} className={`flex flex-wrap items-start gap-4 rounded-2xl border bg-[var(--surface)] p-4 text-left ${it.kind === "event" ? "cursor-pointer" : "cursor-default"}`} style={{ borderColor: "var(--line)", borderLeft: `4px solid ${it.color}` }}>
-            <div className="min-w-[92px] text-[14px] font-extrabold" style={{ color: it.color }}>{it.start ? `${it.start}–${it.end}` : "All day"}</div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{it.kind === "event" ? "• " : ""}{it.title}</div>
-              {it.kind === "session" ? <div className="mt-1 text-[12px] text-[var(--ink-2)]">{[it.venue, showBooking ? `${it.booked} / ${it.cap} booked · ${pct}%` : "", it.open ? "" : "closed"].filter(Boolean).join(" · ")}</div>
-                : <div className="mt-1 text-[12px] text-[var(--ink-2)]">{[it.event?.category ? categories.find((c) => c.id === it.event?.category)?.name : "Event", it.event?.notes].filter(Boolean).join(" · ")}</div>}
-              {it.kind === "session" && showBooking && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: it.color }} /></div>}
+      <div className="flex flex-col gap-2">
+        {allDay.length > 0 && (
+          <div className="flex gap-3">
+            <div className="w-14 flex-none pt-1 text-right text-[11px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">All day</div>
+            <div className="flex flex-1 flex-col gap-2">{allDay.map((it, i) => dayCard(it, i))}</div>
+          </div>
+        )}
+        {hours.map((h) => {
+          const at = timed.filter((it) => hourOf(it.start) === h);
+          const isNowHour = sameDay(cursor, today) && new Date().getHours() === h;
+          return (
+            <div key={h} className="flex gap-3 border-t border-[var(--line)] pt-2 first:border-t-0">
+              <div className="w-14 flex-none pt-0.5 text-right text-[12px] font-extrabold tabular-nums" style={{ color: isNowHour ? BLUE : "var(--ink-3)" }}>{pad(h)}:00</div>
+              <div className="flex min-h-[26px] flex-1 flex-col gap-2">{at.length ? at.map((it, i) => dayCard(it, i)) : <div className="h-[1px]" />}</div>
             </div>
-          </button>
-        ); })}
+          );
+        })}
       </div>
     );
   }
@@ -220,7 +265,7 @@ export function CalendarApp() {
       </details>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
-      {(adding || editing) && <EventForm existing={editing ?? undefined} categories={categories} settings={settings} save={save} onClose={() => { setAdding(false); setEditing(null); }} onSaved={() => { setAdding(false); setEditing(null); refresh(); }} onDelete={editing ? () => removeEvent(editing.id) : undefined} />}
+      {(adding || editing) && <EventForm existing={editing ?? undefined} categories={categories} settings={settings} save={save} defReminderOn={reminderOn} defReminderMinutes={reminderMinutes} onClose={() => { setAdding(false); setEditing(null); }} onSaved={() => { setAdding(false); setEditing(null); refresh(); }} onDelete={editing ? () => removeEvent(editing.id) : undefined} />}
 
       {/* mode tabs (visible) */}
       <div className="mb-3 inline-flex gap-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">{modePill("month", "Month")}{modePill("week", "Week")}{modePill("day", "Day")}</div>
@@ -244,6 +289,7 @@ export function CalendarApp() {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {mode !== "month" && <button type="button" onClick={() => setShowBooking((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold transition-colors" style={showBooking ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{showBooking ? "✓ " : ""}Booking info</button>}
         <button type="button" onClick={() => setShowEvents((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold transition-colors" style={showEvents ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{showEvents ? "✓ " : ""}My events</button>
+        {mode === "month" && <button type="button" onClick={() => setFullMonth((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold transition-colors" style={fullMonth ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{fullMonth ? "✓ " : ""}Full month</button>}
         {legend.length > 0 && <span className="mx-1 text-[11px] text-[var(--ink-3)]">·</span>}
         {legend.length > 1 && <button type="button" onClick={() => setHidden(new Set())} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">All listings</button>}
       </div>
@@ -259,6 +305,21 @@ export function CalendarApp() {
         </div>
       )}
 
+      {/* empty-period hint — jump to where the next thing is */}
+      {listings && hasAnything && (() => {
+        const rs = mode === "month" ? iso(new Date(cursor.getFullYear(), cursor.getMonth(), 1)) : mode === "week" ? iso(startOfWeek(cursor)) : iso(cursor);
+        const re = mode === "month" ? iso(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0)) : mode === "week" ? iso(addDays(startOfWeek(cursor), 6)) : iso(cursor);
+        if (allDates.some((d) => d >= rs && d <= re)) return null;
+        const next = allDates.find((d) => d > re) ?? allDates.find((d) => d >= rs) ?? allDates[allDates.length - 1];
+        if (!next) return null;
+        return (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[#eef4fd] px-3.5 py-2.5 text-[12.5px]" style={{ color: BLUE }}>
+            <span>Nothing on this {mode} — the {next > re ? "next" : "first"} is <b>{fmtLong(next)}</b>.</span>
+            <button type="button" onClick={() => setCursor(fromIso(next))} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-white">Jump to it →</button>
+          </div>
+        );
+      })()}
+
       {/* body */}
       {!listings ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
         : !hasAnything ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing dated yet — add a listing with a run, or ＋ Add event.</div>
@@ -270,7 +331,7 @@ export function CalendarApp() {
 // ── Add / edit event ───────────────────────────────────────────────────────
 type SettingsShape = ReturnType<typeof useSettings>["settings"];
 type SaveFn = ReturnType<typeof useSettings>["save"];
-function EventForm({ existing, categories, settings, save, onClose, onSaved, onDelete }: { existing?: CalEvent; categories: { id: string; name: string; color: string }[]; settings: SettingsShape; save: SaveFn; onClose: () => void; onSaved: () => void; onDelete?: () => void }) {
+function EventForm({ existing, categories, settings, save, defReminderOn, defReminderMinutes, onClose, onSaved, onDelete }: { existing?: CalEvent; categories: { id: string; name: string; color: string }[]; settings: SettingsShape; save: SaveFn; defReminderOn: boolean; defReminderMinutes: number; onClose: () => void; onSaved: () => void; onDelete?: () => void }) {
   const isEdit = !!existing;
   const todayIso = iso(new Date());
   const [title, setTitle] = useState(existing?.title ?? "");
@@ -281,6 +342,8 @@ function EventForm({ existing, categories, settings, save, onClose, onSaved, onD
   const [end, setEnd] = useState(existing?.end ?? "10:00");
   const [category, setCategory] = useState(existing?.category ?? (categories[0]?.id ?? ""));
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [remindMode, setRemindMode] = useState<"default" | "on" | "off">(existing?.remindMode ?? "default");
+  const [remindMinutes, setRemindMinutes] = useState<number>(existing?.remindMinutes ?? defReminderMinutes);
   const [newCat, setNewCat] = useState(false);
   const [catName, setCatName] = useState("");
   const [catColor, setCatColor] = useState(PALETTE[0]);
@@ -299,7 +362,7 @@ function EventForm({ existing, categories, settings, save, onClose, onSaved, onD
     if (!title.trim() || !date) { setError("Add a title and date."); return; }
     setBusy(true); setError(null);
     const color = categories.find((c) => c.id === category)?.color;
-    const body = { title: title.trim(), date, endDate: endDate && endDate > date ? endDate : undefined, allDay, start: allDay ? undefined : start, end: allDay ? undefined : end, category: category || undefined, color, notes: notes.trim() || undefined };
+    const body = { title: title.trim(), date, endDate: endDate && endDate > date ? endDate : undefined, allDay, start: allDay ? undefined : start, end: allDay ? undefined : end, category: category || undefined, color, notes: notes.trim() || undefined, remindMode, remindMinutes: remindMode === "on" ? remindMinutes : undefined };
     try { if (isEdit) await apiPut(`/api/calendar-events/${encodeURIComponent(existing!.id)}`, body); else await apiPost("/api/calendar-events", body); onSaved(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }
@@ -334,7 +397,17 @@ function EventForm({ existing, categories, settings, save, onClose, onSaved, onD
               </div>
             )}
           </div>
-          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Notes (optional)</span><input value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputCls} w-full`} /></label>
+          <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Notes (optional)</span><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Agenda, who's invited, links, anything to remember…" className={`${inputCls} w-full resize-y leading-[1.5] [field-sizing:content]`} /></label>
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Reminder</span>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {([["default", `Use default (${defReminderOn ? `${defReminderMinutes} min before` : "off"})`], ["on", "On"], ["off", "Off"]] as [typeof remindMode, string][]).map(([m, lbl]) => (
+                <button key={m} type="button" onClick={() => setRemindMode(m)} className="rounded-full border-2 px-3 py-1 text-[12px] font-bold transition-colors" style={remindMode === m ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{lbl}</button>
+              ))}
+              {remindMode === "on" && <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--ink-2)]"><input type="number" min={0} max={1440} value={remindMinutes} onChange={(e) => setRemindMinutes(Math.max(0, parseInt(e.target.value, 10) || 0))} className="w-16 rounded-md border border-[var(--line)] px-2 py-1 text-center" />min before</span>}
+            </div>
+            <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">Email + in-app bell before the event — sending is wired up by the backend.</div>
+          </div>
         </div>
         {error && <div className="mt-2.5 text-[12px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">

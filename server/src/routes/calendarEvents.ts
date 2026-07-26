@@ -22,6 +22,11 @@ const eventSchema = z.object({
   category: z.string().max(60).optional(),
   color: z.string().max(20).optional(),
   notes: z.string().trim().max(2_000).optional(),
+  // Per-event reminder override: "default" follows the tenant's calendar
+  // setting; "on"/"off" force it. remindMinutes overrides how long before.
+  // The actual email + in-app bell delivery is wired server-side.
+  remindMode: z.enum(["default", "on", "off"]).optional(),
+  remindMinutes: z.number().int().nonnegative().max(1440).optional(),
 });
 
 calendarEvents.get("/", async (req, res) => {

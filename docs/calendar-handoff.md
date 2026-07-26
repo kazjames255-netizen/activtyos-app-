@@ -27,3 +27,8 @@ want, to **listing sessions** too. Needs a scheduler/cron that scans upcoming
 start times and fires once per event (idempotent — don't double-send). The
 minutes-before and on/off come from `settings.calendar`. Nothing else on the
 front-end is blocked on this — it's a pure delivery/scheduling job.
+
+**Per-event override.** Each event can override the tenant default:
+`remindMode` = `"default"` (follow settings) / `"on"` / `"off"`, and
+`remindMinutes` (only when `on`). Resolve per event: `off` → no reminder;
+`on` → send `remindMinutes` before; `default` → use `settings.calendar`.
