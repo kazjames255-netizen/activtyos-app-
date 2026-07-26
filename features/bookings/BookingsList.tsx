@@ -345,13 +345,15 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             return (
               <div
                 key={b.ref}
-                onClick={() => open(b.ref)}
                 className={
-                  "flex cursor-pointer items-center gap-3.5 rounded-2xl border bg-[var(--surface)] px-4 py-3 transition-all " +
-                  "hover:-translate-y-px hover:shadow-[0_8px_20px_-14px_rgba(9,20,44,.55)] " +
+                  "overflow-hidden rounded-2xl border bg-[var(--surface)] transition-all " +
                   (on ? "border-[var(--brand-2)]" : "border-[var(--line)]") +
                   (off ? " opacity-65" : "")
                 }
+              >
+              <div
+                onClick={() => open(b.ref)}
+                className="flex cursor-pointer items-center gap-3.5 px-4 py-3 hover:-translate-y-px hover:shadow-[0_8px_20px_-14px_rgba(9,20,44,.55)]"
               >
                 <span
                   onClick={(e) => {
@@ -401,7 +403,6 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   {refundPending && (
                     <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
                   )}
-                  {moveReq && <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change requested</Badge>}
                 </span>
 
                 {/* Voucher money arrives outside the app — reconcile it right
@@ -414,20 +415,6 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   >
                     Mark voucher received
                   </button>
-                )}
-
-                {/* Parent asked to move day(s) — approve/deny from the row, with
-                    the exact swap shown so it's decided without opening. */}
-                {moveReq && (
-                  <span className="flex flex-none items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    <span className="hidden whitespace-nowrap rounded-full bg-[#fdf3d8] px-2.5 py-[3px] text-[11px] font-bold text-[#8a5300] lg:inline" title="Requested date change">
-                      {moveReq.moves.map((m) => `${fmtRowDate(m.from)} → ${fmtRowDate(m.to)}`).join(", ")}
-                    </span>
-                    <button onClick={() => act(b.ref, "move-approve")} title="Approve the date change — the swap is applied and the family is told"
-                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Approve move</button>
-                    <button onClick={() => act(b.ref, "move-deny")} title="Decline the date change — the booking is unchanged and the family is told"
-                      className="whitespace-nowrap rounded-full bg-[#fdebec] px-3 py-[5px] text-[11px] font-bold text-[#c0392b] hover:brightness-105">Deny</button>
-                  </span>
                 )}
 
                 {/* Refund owed on a cancellation — action it from the row. For a
@@ -456,6 +443,29 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 <b className="flex-none text-right text-[16px] tabular-nums text-[var(--ink)]">
                   {money(b.amount)}
                 </b>
+              </div>
+
+              {/* Date-change request on its own full-width line so nothing is
+                  cramped — the exact swap, then approve/deny without opening. */}
+              {moveReq && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5">
+                  <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {moveReq.moves.map((m, i) => (
+                      <span key={i} className="text-[12.5px] text-[var(--ink)]">
+                        {m.childName ? <span className="text-[var(--ink-3)]">{m.childName}: </span> : null}
+                        <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(m.from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(m.to)}</b>
+                      </span>
+                    ))}
+                  </span>
+                  <span className="ml-auto flex items-center gap-1.5">
+                    <button onClick={() => act(b.ref, "move-approve")} title="Approve — the day is moved and the family is told"
+                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve move</button>
+                    <button onClick={() => act(b.ref, "move-deny")} title="Decline — the booking is unchanged and the family is told"
+                      className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
+                  </span>
+                </div>
+              )}
               </div>
             );
           })}
