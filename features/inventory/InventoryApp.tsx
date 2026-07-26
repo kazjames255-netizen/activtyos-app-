@@ -21,6 +21,9 @@ interface Item { id: string; name: string; category?: string; location?: string;
 // Kept in step with the Expenses page so a reorder logs under the same category.
 const EXPENSE_CATEGORIES = ["Equipment", "Supplies", "Venue hire", "Staff", "Travel", "Marketing", "Insurance", "Training", "Software", "Utilities", "Other"];
 const money = (n?: number) => `£${(n ?? 0).toFixed(2)}`;
+// a stable colour per category name, for the group headings
+const CAT_PALETTE = ["#6d28d9", "#0369a1", "#be1259", "#047857", "#b45309", "#c2410c", "#4338ca", "#0e7490", "#b91c1c", "#7c3aed"];
+const catColor = (name: string) => { let h = 0; for (let k = 0; k < name.length; k++) h = (h * 31 + name.charCodeAt(k)) >>> 0; return CAT_PALETTE[h % CAT_PALETTE.length]; };
 
 const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc", "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1" } as CSSProperties;
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
@@ -138,7 +141,7 @@ export function InventoryApp() {
           <div className="flex flex-col gap-4">
             {groups.map(([cat, list]) => (
               <div key={cat}>
-                <div className="mb-1.5 flex items-center gap-2"><span className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{cat}</span><span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
+                <div className="mb-1.5 flex items-center gap-2"><span className="h-3.5 w-[5px] rounded-full" style={{ background: catColor(cat) }} /><span className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: catColor(cat) }}>{cat}</span><span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: `color-mix(in srgb,${catColor(cat)} 14%,var(--surface))`, color: catColor(cat) }}>{list.length}</span></div>
                 <div className="flex flex-col gap-2">
                   {list.map((i) => {
                     const stale = dayssince(i.lastCheckedAt) >= STALE_DAYS, checking = checkMode;
@@ -178,8 +181,8 @@ export function InventoryApp() {
                           </div>
                         </div>
                         {histOpen && nChecks > 0 && (
-                          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Last 5:</span>
+                          <div className="mt-2 flex items-center gap-2 overflow-x-auto border-t border-[var(--line)] pt-2 [scrollbar-width:thin]">
+                            <span className="flex-none text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Last 5:</span>
                             {(i.checks ?? []).slice(0, 5).map((c, idx) => (
                               <div key={idx} className="flex flex-none items-center gap-1.5 rounded-lg border px-2 py-1" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
                                 <span className="text-[13px] font-extrabold tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}</span>
