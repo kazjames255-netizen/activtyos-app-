@@ -68,7 +68,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "safeguarding" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1105,7 +1105,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1145,6 +1145,7 @@ export function SetupApp() {
     ["people", "Child questions"],
     ["medication", "Medication"],
     ["safeguarding", "Safeguarding"],
+    ["trips", "Trips & visits"],
     ["groups", "Age groups & rooms"],
     ["cancel", "Cancellations & refunds"],
     ["defaults", "New listing defaults"],
@@ -1230,6 +1231,20 @@ export function SetupApp() {
           </Row>
           <Row label="Require parents to acknowledge" hint="On: un-acknowledged accidents show a persistent reminder in the parent's area until they confirm (nothing is blocked). Off: acknowledging is optional.">
             <Toggle on={settings.safeguarding?.requireAcknowledgement ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, requireAcknowledgement: v })} labels={["Yes", "No"]} />
+          </Row>
+        </Section>
+      )}
+
+      {tab === "trips" && (
+        <Section title="Trips & visits" lede="Off-site trips — how parents are kept informed and the safety guardrails.">
+          <Row label="Ask parents to consent when their child is on a trip" hint="Email + a bell in their area with the trip details (destination, times, transport), and a consent request — reminded until they give it.">
+            <Toggle on={settings.trips?.notifyParent ?? true} onChange={(v) => set("trips", { ...settings.trips, notifyParent: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Require parental consent before a trip runs" hint="A trip can't be marked ready/completed until every child on it has consent. Off = consent is tracked but not enforced.">
+            <Toggle on={settings.trips?.requireConsent ?? true} onChange={(v) => set("trips", { ...settings.trips, requireConsent: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Target staff-to-child ratio" hint="The most children per staff member you're happy with on a trip. A trip over this is flagged so you can add staff or split it.">
+            <NumberBox value={settings.trips?.ratioTarget ?? 8} onChange={(n) => set("trips", { ...settings.trips, ratioTarget: Math.max(1, n) })} min={1} max={30} suffix=":1" />
           </Row>
         </Section>
       )}

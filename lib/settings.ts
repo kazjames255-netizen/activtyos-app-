@@ -351,6 +351,13 @@ export interface TenantSettings {
     requireAcknowledgement?: boolean;  // enforce: nag the parent until they acknowledge (off = optional)
   };
 
+  /** Trips & visits. */
+  trips?: {
+    notifyParent?: boolean;   // email + bell + ask consent when a child is on a trip
+    requireConsent?: boolean; // a trip can't be marked ready/completed until every child has consent
+    ratioTarget?: number;     // target children-per-staff; the trip flags when it's exceeded
+  };
+
   /**
    * Which dashboard modules this operator uses, keyed by nav view. A view is
    * hidden only when explicitly set `false` (absent = shown), so switching one
@@ -621,6 +628,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true },
+  trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
 
   payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
@@ -673,6 +681,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}) },
+    trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not
