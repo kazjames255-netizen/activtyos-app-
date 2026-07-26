@@ -912,17 +912,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         : "p-5"}
       style={{ background: tk.bg }}>
       <div className={parentMode ? "mx-auto w-full max-w-[900px]" : ""}>
-      {/* Signed-in parents book inside a full-screen overlay — give them a way
-          back to their dashboard from every step, not just the top of the page. */}
-      {parentMode && (
-        <div className="mb-3">
-          <Link href="/custdash" className="inline-flex items-center gap-1 text-[12px] font-extrabold underline" style={{ color: tk.accent }}>← Back to my dashboard</Link>
-        </div>
-      )}
       {/* The whole route, named and walkable. A single "Change lunches &
           extras" meant a parent who wanted the t-shirt had to re-walk the
-          lunches to reach it. */}
-      {steps.length > 0 && (
+          lunches to reach it. Signed-in parents also get their dashboard links
+          to the right of the steps, reachable from every step. */}
+      {(steps.length > 0 || parentMode) && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           {steps.map((name, i) => {
             const done = i < stepNow, now = i === stepNow;
@@ -939,6 +933,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               </button>
             );
           })}
+          {parentMode && (
+            <span className="ml-auto flex items-center gap-3 text-[12px] font-extrabold">
+              <Link href="/custdash" className="underline" style={{ color: tk.accent }}>← My home page</Link>
+              <Link href="/custdash/bookings" className="underline" style={{ color: tk.accent }}>My bookings</Link>
+            </span>
+          )}
         </div>
       )}
       {/* What's being booked. For a parent this is already spelled out on each

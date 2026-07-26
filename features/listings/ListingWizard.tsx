@@ -3069,10 +3069,10 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff"], ["📆", "When", runLabel, "#e4f8ee"], ["👧👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5"]] as const).map(([e, k, v, tint], i) => (
+          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff", venue?.address || null], ["📆", "When", runLabel, "#e4f8ee", null], ["👧👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-l sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
-              <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div></div>
+              <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div>{sub && <div className="truncate text-[11px] font-medium text-[#7a8194]">{sub}</div>}</div>
             </div>
           ))}
         </div>
@@ -3216,11 +3216,14 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
-        {([["📍", venue?.name || town || "Venue TBC"], ["📆", runLabel], ["👧👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages"]] as const).map(([e, v], i) => (
+        {([["📍", venue?.name || town || "Venue TBC", venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages", null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-l sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
-            <span className="truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
-            <span className="ml-auto h-2 w-2 flex-none" style={{ background: LIME }} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12px] font-bold uppercase tracking-[0.05em] text-white">{v}</span>
+              {sub && <span className="block truncate text-[10.5px] font-medium normal-case text-white/60">{sub}</span>}
+            </span>
+            <span className="h-2 w-2 flex-none" style={{ background: LIME }} />
           </div>
         ))}
       </div>
