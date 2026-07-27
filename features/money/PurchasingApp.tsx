@@ -352,7 +352,7 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
             return (
               <Card className="p-4">
                 <div className="mb-3 flex items-baseline justify-between"><div className="text-[13.5px] font-extrabold">Last 6 months</div><div className="text-[11px] text-[var(--ink-3)]">ordered per month (excl. cancelled)</div></div>
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-3 overflow-x-auto">
                   {monthly.map((m) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} order${m.count === 1 ? "" : "s"}`}>
                       <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>

@@ -936,7 +936,7 @@ export function ListingWizard({
           <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create listing"}</div>
           <div className="text-[11.5px] text-[var(--ink-3)]">Listing → Tickets · tickets are the bookable products</div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {msg && <span className="mr-1 text-[12px] text-[var(--red)]">{msg}</span>}
           {(() => {
             const label = { idle: "", dirty: "Unsaved changes", saving: "Saving…", saved: "Saved", error: "Couldn't save" }[saveState];
@@ -1348,7 +1348,7 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 
       <SectionHead icon="👧👦">Capacity</SectionHead>
       <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
-      <div className="my-2 flex items-end gap-2">
+      <div className="my-2 flex flex-wrap items-end gap-2">
         <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
         <div className="flex gap-1 pb-[3px]">
           {[["day", "Per day"], ["listing", "Whole listing"]].map(([k, l]) => (
@@ -1511,7 +1511,7 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   return (
     <div className="max-w-[720px]">
       <StepHead n={2} kicker="STEP 2 · CONTENT" title="Describe your activity" lede="A clear description helps parents choose. Add sections and learning outcomes." />
-      <div className="mb-1 flex items-end gap-2">
+      <div className="mb-1 flex flex-wrap items-end gap-2">
         <div className="flex-1"><FieldLabel>Section title — editable</FieldLabel>
           <Input value={d.descriptionSection} onChange={(e) => upd({ descriptionSection: e.target.value })} placeholder="e.g. Summary, When you arrive, Our curriculum" className="w-full max-w-[300px]" />
         </div>
@@ -2007,7 +2007,7 @@ function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDra
       {open && (
         <div className="mt-3 flex flex-col gap-2.5">
           {SECTION_KEYS.map((s) => (
-            <div key={s.key} className="grid grid-cols-[130px_1fr_1fr] items-center gap-2">
+            <div key={s.key} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[130px_1fr_1fr]">
               <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{s.label}</span>
               <Input value={d.headings?.[`${s.key}.eyebrow`] ?? ""} onChange={(e) => set(`${s.key}.eyebrow`, e.target.value)} placeholder={s.eyebrow} className="w-full text-[12px]" />
               <Input value={d.headings?.[`${s.key}.title`] ?? ""} onChange={(e) => set(`${s.key}.title`, e.target.value)} placeholder={s.key === "about" ? d.descriptionSection || s.title : s.title} className="w-full text-[12px]" />
@@ -2217,7 +2217,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
           const on = d.staffIds.includes(m.id);
           return (
             <div key={m.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[var(--brand-soft)] font-extrabold text-[var(--brand-ink)]">{(m.first[0] || "?").toUpperCase()}</span>
                 <Input value={m.first} onChange={(e) => updMember(m.id, { first: e.target.value })} placeholder="First name" className="w-[130px]" />
                 <Input value={m.last} onChange={(e) => updMember(m.id, { last: e.target.value })} placeholder="Surname" className="w-[130px]" />
@@ -2992,7 +2992,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
       <b className="text-[13px]" style={{ color: INKp }}>{o}</b>
     </div>
   );
-  const grid2 = full ? "grid-cols-2" : "grid-cols-1";
+  const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
   return (
@@ -3159,7 +3159,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             ) : (
               <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: a.emoji ? "#e4f8ee" : "#06d6a0", color: a.emoji ? undefined : "#fff" }}>{a.emoji || "＋"}</span>
             )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
-            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
+            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
@@ -3187,7 +3187,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   // A hint of the app's blue/white title bars on the blue theme's header.
   const headerBg = isNavy ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 68%,#5b8af0 100%)" : undefined;
   const cond = "italic uppercase tracking-[-0.01em]";
-  const grid2 = full ? "grid-cols-2" : "grid-cols-1";
+  const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
   const heroH = full ? 340 : 240;
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
@@ -3516,7 +3516,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
             ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
-            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
+            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>

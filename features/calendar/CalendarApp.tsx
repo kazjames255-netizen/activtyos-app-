@@ -394,12 +394,12 @@ function EventForm({ existing, categories, settings, save, defReminderOn, defRem
         <div className="mb-3 flex items-center justify-between"><div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{isEdit ? "Edit event" : "Add event"}</div><button type="button" onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button></div>
         <div className="flex flex-col gap-2.5">
           <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Title</span><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Staff meeting" className={`${inputCls} w-full`} /></label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Date</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} w-full`} /></label>
             <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">End date (optional)</span><input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} className={`${inputCls} w-full`} /></label>
           </div>
           <label className="flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />All day</label>
-          {!allDay && <div className="grid grid-cols-2 gap-2">
+          {!allDay && <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Start</span><input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={`${inputCls} w-full`} /></label>
             <label className="flex flex-col gap-1"><span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">End</span><input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={`${inputCls} w-full`} /></label>
           </div>}

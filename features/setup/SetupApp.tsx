@@ -390,7 +390,7 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
       </div>
       <div className="mb-2 flex flex-col gap-1.5">
         {items.map((r, i) => (
-          <div key={r.id} className="flex items-center gap-2">
+          <div key={r.id} className="flex flex-wrap items-center gap-2">
             <Input
               value={r.label}
               onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
@@ -492,7 +492,7 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                 </div>
                 <div className="flex flex-col gap-1.5">
                   {v.details.map((d, k) => (
-                    <div key={d.id} className="flex items-center gap-2">
+                    <div key={d.id} className="flex flex-wrap items-center gap-2">
                       <Input
                         value={d.label}
                         onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, label: e.target.value } : y)) }))}

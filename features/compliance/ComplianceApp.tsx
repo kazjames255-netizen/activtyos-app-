@@ -66,7 +66,7 @@ export function ComplianceApp() {
 
       {!data ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div> : (
         <>
-          <div className="mb-3 grid grid-cols-3 gap-2.5">
+          <div className="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-3">
             <Card className="p-3.5"><div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Expired</div><div className="mt-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: data.summary.expired ? "var(--red,#e21d27)" : "var(--ink)" }}>{data.summary.expired}</div></Card>
             <Card className="p-3.5"><div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Expiring soon</div><div className="mt-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: data.summary.expiring ? "#9a5a00" : "var(--ink)" }}>{data.summary.expiring}</div></Card>
             <Card className="p-3.5"><div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Valid</div><div className="mt-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{data.summary.valid}</div></Card>

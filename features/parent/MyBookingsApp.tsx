@@ -826,7 +826,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
         </div>
       )}
 
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         {payable && (
           <Button sm variant="primary" onClick={() => setPaying(true)}>
             Pay {money(b.amount)}

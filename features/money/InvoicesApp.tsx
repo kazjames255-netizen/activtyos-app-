@@ -293,7 +293,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
             return (
               <Card className="p-4">
                 <div className="mb-3 flex items-baseline justify-between"><div className="text-[13.5px] font-extrabold">Last 6 months</div><div className="text-[11px] text-[var(--ink-3)]">invoiced per month</div></div>
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-3 overflow-x-auto">
                   {monthly.map((m) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} invoice${m.count === 1 ? "" : "s"}`}>
                       <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>

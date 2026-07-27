@@ -189,7 +189,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
               className={`${field} mb-3`}
             />
 
-            <div className="mb-3 grid grid-cols-2 gap-2">
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
                 <label className={lab}>Runs on or after</label>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={field} />
@@ -200,7 +200,7 @@ export function ExportWizard({ bookings, onClose }: { bookings: Booking[]; onClo
               </div>
             </div>
 
-            <div className="mb-3 grid grid-cols-2 gap-2">
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
                 <label className={lab}>Price from £</label>
                 <input type="number" min={0} step="0.01" value={min} onChange={(e) => setMin(e.target.value)} placeholder="0" className={field} />

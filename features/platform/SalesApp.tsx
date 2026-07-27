@@ -95,7 +95,7 @@ export function SalesApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>💼 Sales pipeline</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Track every prospect from first touch to paying provider — outreach, demos, and who&rsquo;s converting.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
               {([["pipeline", "Pipeline"], ["dashboard", "Dashboard"]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setTab(v)} className="rounded-full px-3 py-1 transition-colors" style={tab === v ? { background: "#fff", color: "#1d3a8f" } : { color: "rgba(255,255,255,.8)" }}>{l}</button>

@@ -215,7 +215,7 @@ function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; 
   }
   return (
     <Card className="p-4">
-      <div className="mb-1.5 flex items-baseline gap-2">
+      <div className="mb-1.5 flex flex-wrap items-baseline gap-2">
         {rel && (
           <span className="rounded-md px-2 py-[2px] text-[11px] font-extrabold uppercase tracking-[0.04em] text-white" style={{ background: "var(--brand)" }}>
             {rel}

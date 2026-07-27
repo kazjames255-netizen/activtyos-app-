@@ -358,7 +358,7 @@ function SignupForm() {
           <div className="flex flex-col gap-4">
             <div>
               <FieldLabel>What should parents see you as?</FieldLabel>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {([["business", "My business name", businessName.trim() || "Your business name"], ["person", "My own name", name.trim() || "Your name"]] as const).map(([mode, heading, preview]) => {
                   const on = providerNameMode === mode;
                   return (

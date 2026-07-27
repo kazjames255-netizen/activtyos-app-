@@ -390,7 +390,7 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover 
             </div>
             <button type="button" onClick={() => onDay(1)} aria-label="Next day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">›</button>
           </div>
-          <div className="flex items-center gap-4" style={{ fontVariantNumeric: "tabular-nums" }}>
+          <div className="flex flex-wrap items-center gap-4" style={{ fontVariantNumeric: "tabular-nums" }}>
             <div className="text-center leading-none">
               <div className="text-[18px] font-extrabold">{totalChildren}</div>
               <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.06em] opacity-80">children</div>

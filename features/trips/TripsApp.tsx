@@ -442,7 +442,7 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
                     <datalist id="itin-activities">{ITIN_ACTIVITIES.map((a) => <option key={a} value={a} />)}</datalist>
                     <datalist id="itin-actions">{ITIN_ACTIONS.map((a) => <option key={a} value={a} />)}</datalist>
                     <div className="flex flex-col gap-1.5">{(t.itinerary ?? []).map((r, i) => (
-                      <div key={i} className="grid grid-cols-[64px_1fr_1fr_auto] items-center gap-1.5">
+                      <div key={i} className="grid grid-cols-[64px_1fr_1fr_auto] items-center gap-1.5 max-sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)_auto]">
                         <input value={r.t ?? ""} onChange={(e) => edit(`itinerary.${i}.t`, e.target.value, "Itinerary time")} placeholder="09:00" className={inputCls} />
                         <input list="itin-activities" value={r.a ?? ""} onChange={(e) => edit(`itinerary.${i}.a`, e.target.value, "Activity")} placeholder="Pick or type an activity" className={inputCls} />
                         <input list="itin-actions" value={r.k ?? ""} onChange={(e) => edit(`itinerary.${i}.k`, e.target.value, "Key action")} placeholder="Pick or type a key action" className={inputCls} />

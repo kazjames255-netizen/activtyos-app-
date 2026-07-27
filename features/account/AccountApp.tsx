@@ -133,7 +133,7 @@ export function AccountApp() {
           <div className="mt-3"><Button onClick={changePassword} disabled={!pw.current || !pw.next}>Update password</Button></div>
         </Card>
 
-        <Card className="flex items-center justify-between p-4">
+        <Card className="flex flex-wrap items-center justify-between gap-2 p-4">
           <div className="text-[12.5px] text-[var(--ink-3)]">Signed in as {p.email}</div>
           <Button variant="danger" onClick={() => signOutUser()}>Sign out</Button>
         </Card>

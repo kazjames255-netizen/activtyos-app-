@@ -85,7 +85,7 @@ export function PlatformPricingApp() {
             </div>
 
             <div className="flex flex-col gap-3.5 p-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="flex flex-col gap-1"><span className={lbl}>Plan name</span><input className={fld} value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} /></label>
                 <label className="flex flex-col gap-1"><span className={lbl}>Base £/mo</span><input type="number" min="0" className={fld} value={p.price} onChange={(e) => setPlan(i, { price: num(e.target.value) })} /></label>
               </div>

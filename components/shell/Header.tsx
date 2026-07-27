@@ -11,6 +11,7 @@ import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-cust
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 import { Bell } from "./Bell";
+import { Sidebar } from "./Sidebar";
 
 // Lives in the portal layout (not the per-view page) so it persists across
 // view navigation; derives the current view from the URL rather than a prop
@@ -21,6 +22,11 @@ export function Header({ portal }: { portal: PortalKey }) {
   const { user, signOutUser } = useAuth();
   const view = pathname.split("/")[2] ?? "";
   const current = findNavItem(portal, view);
+
+  // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
+  // content. Navigating (pathname change) closes it.
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   // Parents message their provider from the top bar rather than a sidebar tab —
   // it's an action, not a place. Named after the provider when there's just one.
@@ -54,8 +60,23 @@ export function Header({ portal }: { portal: PortalKey }) {
         : [];
 
   return (
-    <header className="flex h-14 flex-none items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-5">
-      <h1 className="m-0 flex-none text-[15px] font-extrabold text-[var(--ink)]">
+    <header className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-3 sm:gap-3 sm:px-5">
+      {/* Hamburger — mobile only; the desktop rail is always visible. */}
+      <button
+        onClick={() => setMenuOpen(true)}
+        aria-label="Open menu"
+        className="inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] lg:hidden"
+      >
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <Sidebar portal={portal} />
+          <div className="flex-1 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
+        </div>
+      )}
+
+      <h1 className="m-0 min-w-0 flex-none truncate text-[15px] font-extrabold text-[var(--ink)] max-sm:flex-1">
         {current?.label ?? view}
       </h1>
 
@@ -73,7 +94,8 @@ export function Header({ portal }: { portal: PortalKey }) {
                   : { color: "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
-                <span className={`truncate ${t.wide ? "max-w-[180px]" : ""}`}>{t.label}</span>
+                {/* Icon-only on phones; the label returns from sm up. */}
+                <span className={`hidden truncate sm:inline ${t.wide ? "max-w-[180px]" : ""}`}>{t.label}</span>
                 {t.badge > 0 && (
                   <span
                     className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
@@ -88,14 +110,16 @@ export function Header({ portal }: { portal: PortalKey }) {
         </nav>
       )}
 
-      <div className="flex flex-none items-center gap-3">
-        {user?.email && portal !== "custdash" && <span className="text-[12px] text-[var(--ink-3)]">{user.email}</span>}
+      <div className="flex flex-none items-center gap-2 sm:gap-3">
+        {user?.email && portal !== "custdash" && <span className="hidden text-[12px] text-[var(--ink-3)] xl:inline">{user.email}</span>}
         {/* Platform accounts have no tenant, so no bell of their own (the API
             would return an empty list anyway). */}
         {portal !== "platform" && <Bell portal={portal} />}
         <PortalSwitcher portal={portal} />
+        {/* On phones the drawer's "Log out" item covers this. */}
         <Button
           sm
+          className="max-sm:hidden"
           onClick={async () => {
             await signOutUser();
             router.replace("/login");

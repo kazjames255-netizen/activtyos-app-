@@ -18,5 +18,5 @@ export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   // registered component 404s.
   const registeredView = getRegisteredView(portalKey, view);
   if (!registeredView) notFound();
-  return <div className="p-5">{createElement(registeredView)}</div>;
+  return <div className="p-3 sm:p-5">{createElement(registeredView)}</div>;
 }

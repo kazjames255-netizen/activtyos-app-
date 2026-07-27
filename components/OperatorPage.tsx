@@ -105,7 +105,7 @@ export function OperatorPage({
   children: ReactNode;
 }) {
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] p-5" style={LIGHT_PALETTE}>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title={title} lede={lede} actions={actions} icon={icon} />
       {children}
     </div>

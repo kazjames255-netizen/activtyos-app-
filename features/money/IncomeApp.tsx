@@ -381,7 +381,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             return (
               <Card className="p-4">
                 {header}
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-3 overflow-x-auto">
                   {trend.map((m) => (
                     <div key={m.key} className="flex flex-1 flex-col items-center" title={`${m.label}: ${money(m.total)} · ${m.count} entr${m.count === 1 ? "y" : "ies"}`}>
                       <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-2)]">{m.total > 0 ? money(m.total) : ""}</div>
@@ -502,7 +502,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
                   <div className="mt-1.5 text-[28px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(yearStats.collected)}</div>
                   <div className="mt-1.5 text-[11px] text-white/70">{yearStats.activeMonths || 0} month{yearStats.activeMonths === 1 ? "" : "s"} active</div>
                 </div>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
                   {([
                     { Ic: IcTrend, big: yearStats.best ? money(yearStats.best[1]) : "—", lab: "Best month", sub: yearStats.best ? monthLabel(yearStats.best[0]) : "—" },
                     { Ic: IcBars, big: money(yearStats.avg), lab: "Avg / month", sub: `${yearStats.activeMonths || 0} mo` },

@@ -175,7 +175,7 @@ export function SupportInboxApp() {
             </button>
           );
         })}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, provider…"
             className="w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
           <button type="button" onClick={() => setComposing(true)}
@@ -341,7 +341,7 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
           </div>
 
           {party === "customer" && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Field label="Customer name"><input value={custName} onChange={(e) => setCustName(e.target.value)} className={inputCls} /></Field>
               <Field label="Customer email"><input value={custEmail} onChange={(e) => setCustEmail(e.target.value)} className={inputCls} /></Field>
             </div>

@@ -106,7 +106,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[42px] z-50 w-[340px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
+        <div className="absolute right-0 top-[42px] z-50 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
             Notifications
           </div>

@@ -37,7 +37,11 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
         <PageTracker portal={portalKey} />
         <SubscriptionGate portal={portalKey}>
         <div className="flex h-screen">
-          <Sidebar portal={portalKey} />
+          {/* Desktop-only rail; on mobile the Header's hamburger opens the same
+              Sidebar as a slide-over drawer. */}
+          <div className="hidden flex-none lg:block">
+            <Sidebar portal={portalKey} />
+          </div>
           {/* Light palette wraps the whole right column for custdash — the
               header included — so the parent shell is one continuous light
               surface rather than a dark header over a light body. */}
