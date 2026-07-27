@@ -143,6 +143,7 @@ export function RegistersApp() {
   const [readOnly, setReadOnly] = useState(false);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"age" | "start" | "name">("age");
+  const [pass, setPass] = useState("");
   const [rollCall, setRollCall] = useState(false);
   const [dlOpen, setDlOpen] = useState(false);
   const [openKid, setOpenKid] = useState<Attendee | null>(null);
@@ -162,10 +163,9 @@ export function RegistersApp() {
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
     setBusyRef(null);
   }
-  async function signAllIn(s: Session) {
-    setBulkBusy(s.blockId); setError(null);
-    const refs = s.attendees.filter((a) => st(a) === "notArrived").map((a) => a.ref);
-    try { for (const r of refs) await apiPost(`/api/registers/${encodeURIComponent(s.blockId)}/${date}/mark`, { ref: r, action: "in" }); refresh(); }
+  async function signAllIn(items: { blockId: string; a: Attendee }[]) {
+    setBulkBusy("all"); setError(null);
+    try { for (const it of items) await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action: "in" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
     setBulkBusy(null);
   }
@@ -185,15 +185,26 @@ export function RegistersApp() {
   const sessionsOn = (d: string) => (days[d] ?? []).filter((s) => s.listingId === active);
   const daySessions = sessionsOn(date);
 
-  const rows = (s: Session) => s.attendees
-    .filter((a) => !q.trim() || a.children.some((c) => c.name.toLowerCase().includes(q.trim().toLowerCase())) || a.booker.toLowerCase().includes(q.trim().toLowerCase()))
-    .slice().sort((x, y) => sort === "name" ? (x.children[0]?.name ?? "").localeCompare(y.children[0]?.name ?? "") : sort === "start" ? (x.children[0]?.age ?? 0) - (y.children[0]?.age ?? 0) : (x.children[0]?.age ?? 999) - (y.children[0]?.age ?? 999));
+  // One flat list of children for the listing on the day, each tagged with its
+  // block (pass) so it can be marked, then filtered by pass and searched.
+  type FlatRow = { a: Attendee; blockId: string; start: string; end: string };
+  const flat: FlatRow[] = daySessions.flatMap((s) => s.attendees.map((a) => ({ a, blockId: s.blockId, start: s.start, end: s.end })));
+  const passes = [...new Set(daySessions.map((s) => `${s.start}–${s.end}`))];
+  const inPass = (r: FlatRow) => !pass || `${r.start}–${r.end}` === pass;
+  const flatShown = flat
+    .filter(inPass)
+    .filter(({ a }) => !q.trim() || a.children.some((c) => c.name.toLowerCase().includes(q.trim().toLowerCase())) || a.booker.toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((x, y) => sort === "name" ? (x.a.children[0]?.name ?? "").localeCompare(y.a.children[0]?.name ?? "") : sort === "start" ? (x.start.localeCompare(y.start) || (x.a.children[0]?.age ?? 0) - (y.a.children[0]?.age ?? 0)) : (x.a.children[0]?.age ?? 999) - (y.a.children[0]?.age ?? 999));
 
   const dayCounts = (d: string) => { const ss = sessionsOn(d); return { booked: ss.reduce((n, s) => n + s.counts.expected, 0), present: ss.reduce((n, s) => n + s.counts.present, 0) }; };
-  const agg = daySessions.reduce((o, s) => ({ expected: o.expected + s.counts.expected, present: o.present + s.counts.present, notArrived: o.notArrived + s.counts.notArrived, absent: o.absent + s.counts.absent }), { expected: 0, present: 0, notArrived: 0, absent: 0 });
+  // Head count / stats aggregate the day (respecting the pass filter).
+  const passBlocks = daySessions.filter((s) => !pass || `${s.start}–${s.end}` === pass);
+  const agg = passBlocks.reduce((o, s) => ({ expected: o.expected + s.counts.expected, present: o.present + s.counts.present, notArrived: o.notArrived + s.counts.notArrived, absent: o.absent + s.counts.absent }), { expected: 0, present: 0, notArrived: 0, absent: 0 });
   const pct = agg.expected ? Math.round((agg.present / agg.expected) * 100) : 0;
-  const presentAll = daySessions.flatMap((s) => s.attendees.filter((a) => st(a) === "present"));
+  const presentAll = passBlocks.flatMap((s) => s.attendees.filter((a) => st(a) === "present"));
   const need = staffNeeded(presentAll.flatMap((a) => a.children), groups);
+  const headTiles = { count: passBlocks.reduce((n, s) => n + s.heads.length, 0), last: passBlocks.flatMap((s) => s.heads).slice().sort((a, b) => a.at.localeCompare(b.at)).at(-1), takenBy: passBlocks.map((s) => s.takenBy).filter(Boolean).sort((a, b) => a!.at.localeCompare(b!.at)).at(-1)?.name };
+  const notInRefs = flat.filter(inPass).filter((r) => st(r.a) === "notArrived");
   const sel = (o: boolean) => ({ borderColor: o ? BLUE : "var(--line)", background: o ? "#eef4fd" : "var(--surface)", color: o ? BLUE : "var(--ink-2)" });
 
   const tiles: [string, string, number, string][] = [
@@ -210,50 +221,57 @@ export function RegistersApp() {
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing runs in the next few days — nothing to register.</div>
       ) : (
         <>
-          {/* Hero */}
+          {/* Hero — compact listing dropdown + day dropdown */}
           <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] border-l-[6px] border-l-[#1d3a8f] bg-[var(--surface)] p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#1d3a8f]">Daily register</div>
-                {listingsAll.length > 1 ? (
-                  <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="mt-0.5 max-w-full appearance-none bg-transparent text-[24px] font-extrabold uppercase leading-tight text-[var(--ink)] outline-none" style={{ fontFamily: "var(--ff-display)" }}>{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
-                ) : <div className="mt-0.5 text-[24px] font-extrabold uppercase leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{activeName}</div>}
-                <div className="mt-1 text-[13px] text-[var(--ink-3)]">📍 {daySessions[0]?.blockName ?? "—"} · {dayLabel(date)}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {listingsAll.length > 1 ? (
+                    <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[15px] font-extrabold text-[var(--ink)] outline-none focus:border-[#1d3a8f]">{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
+                  ) : <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{activeName}</div>}
+                  <select value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] outline-none focus:border-[#1d3a8f]">
+                    {(listingDates.length ? listingDates : [date]).map((d) => { const c = dayCounts(d); return <option key={d} value={d}>{rel(d)} · {dow(d)}{c.booked ? ` — ${c.booked} booked` : ""}</option>; })}
+                  </select>
+                </div>
+                <div className="mt-1.5 text-[12.5px] text-[var(--ink-3)]">📍 {daySessions[0]?.blockName ?? "—"} · {dayLabel(date)}</div>
               </div>
               <button type="button" onClick={() => router.push(incidentHref)} className="rounded-full border border-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">⚑ Log incident</button>
             </div>
           </div>
 
-          {pinRequired && (
-            <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>
-          )}
-
-          {/* Date accordion */}
-          <div className="mb-3 flex flex-col gap-1.5">
-            {listingDates.map((d) => { const open = d === date; const c = dayCounts(d); return (
-              <button key={d} type="button" onClick={() => setDate(d)} className={`flex items-center justify-between gap-2 rounded-2xl border bg-[var(--surface)] px-4 py-3 text-left ${open ? "border-l-[6px] border-l-[#1d3a8f]" : ""}`} style={{ borderColor: open ? "var(--line)" : "var(--line)" }}>
-                <span className="flex items-center gap-2"><span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span><span className="text-[14px] font-extrabold">{rel(d)}</span>{rel(d) !== dow(d) && <span className="text-[12px] text-[var(--ink-3)]">{dow(d)}</span>}</span>
-                <span className="text-[12.5px] font-bold" style={{ color: open ? BLUE : "var(--ink-3)" }}>{c.booked} booked{open ? ` · ${c.present} in` : ""}</span>
-              </button>
-            ); })}
+          {/* Stat tiles — at the top */}
+          <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {tiles.map(([label, sub, v, c]) => (
+              <div key={label} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{label}</div>
+                <div className="mt-1.5 text-[30px] font-extrabold leading-none" style={{ color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{v}</div>
+                <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
+              </div>
+            ))}
           </div>
+
+          {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>}
 
           {daySessions.length === 0 ? (
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">Nothing runs for {activeName} on {dayLabel(date)}.</div>
           ) : (
             <>
-              {/* Stat tiles */}
-              <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                {tiles.map(([label, sub, v, c]) => (
-                  <div key={label} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{label}</div>
-                    <div className="mt-1.5 text-[30px] font-extrabold leading-none" style={{ color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{v}</div>
-                    <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
-                  </div>
-                ))}
+              {/* One head-count band for the day */}
+              <div className="mb-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
+                <HeadBand count={headTiles.count} expected={agg.expected} present={agg.present} last={headTiles.last} takenBy={headTiles.takenBy} readOnly={readOnly} onLog={(n) => passBlocks[0] && logHead(passBlocks[0], n)} />
               </div>
 
-              {/* KEY + toolbar */}
+              {/* Pass (timing) filter */}
+              {passes.length > 1 && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Pass</span>
+                  <button type="button" onClick={() => setPass("")} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(!pass)}>All</button>
+                  {passes.map((p) => <button key={p} type="button" onClick={() => setPass(p)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(pass === p)}>{p}</button>)}
+                </div>
+              )}
+
+              {/* Sort + toolbar */}
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Sort</span>
                 {([["age", "Age"], ["start", "Earliest start"], ["name", "Name"]] as const).map(([id, l]) => <button key={id} type="button" onClick={() => setSort(id)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={sel(sort === id)}>{l}</button>)}
@@ -261,7 +279,6 @@ export function RegistersApp() {
                 <div className="ml-auto flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => setRollCall((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold" style={sel(rollCall)}>🚨 Roll call</button>
                   <button type="button" onClick={() => router.push(`/${portal}/email`)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white">Message all attending {rel(date)}</button>
-                  <button type="button" onClick={() => router.push(`/${portal}/email`)} className="rounded-full border border-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-bold text-[#1d3a8f]">All attending this listing</button>
                   <button type="button" onClick={() => setDlOpen(true)} className="rounded-full border border-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬇ Download</button>
                 </div>
               </div>
@@ -270,7 +287,7 @@ export function RegistersApp() {
                 <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="h-4 w-4 rounded-[5px]" style={{ background: "#fde2e4" }} />Allergy</span>
                 <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="flex h-4 w-4 items-center justify-center rounded-[5px] text-[10px] font-extrabold" style={{ background: "#e0e9ff", color: BLUE }}>✚</span>Medical</span>
                 <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="flex h-4 w-4 items-center justify-center rounded-[5px] text-[10px] font-extrabold" style={{ background: "#f3e8ff", color: "#6d28d9" }}>◆</span>SEND / needs</span>
-                <span className="text-[11.5px] text-[var(--ink-3)]">{staffNeeded.length ? "" : ""}🧑‍🏫 need ≥{need} staff · tap any child for full details</span>
+                <span className="text-[11.5px] text-[var(--ink-3)]">🧑‍🏫 need ≥{need} staff · tap any child for full details</span>
               </div>
 
               {rollCall && (
@@ -280,38 +297,34 @@ export function RegistersApp() {
                 </div>
               )}
 
-              {/* The table(s) */}
-              {daySessions.map((s) => (
-                <div key={s.blockId} className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                  <div className="border-b border-[var(--line)] px-4 py-2 text-[12px] font-bold text-[var(--ink-2)]">{s.blockName} · {s.start}–{s.end}</div>
-                  <div className="border-b border-[var(--line)] p-4"><HeadBand s={s} last={s.heads[s.heads.length - 1]} readOnly={readOnly} onLog={(n) => logHead(s, n)} /></div>
-                  {!readOnly && s.counts.notArrived > 0 && <div className="border-b border-[var(--line)] px-4 py-2"><Button sm disabled={bulkBusy === s.blockId} onClick={() => signAllIn(s)}>{bulkBusy === s.blockId ? "Working…" : `✓ Sign all in (${s.counts.notArrived})`}</Button></div>}
-                  <div className="hidden grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px] gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] md:grid">
-                    <span>Child</span><span>Alerts</span><span>Signed in</span><span>Collected</span><span>Status</span><span>Parent</span>
-                  </div>
-                  {rows(s).length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : rows(s).map((a) => (
-                    <Row key={a.ref} a={a} s={s} showTimes={showTimes} busy={busyRef === a.ref || readOnly} onOpen={() => setOpenKid(a)} onMark={(action) => mark(s.blockId, a.ref, action)} onMsg={() => router.push(`/${portal}/messages`)} />
-                  ))}
+              {/* ONE flat table for the day */}
+              <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+                {!readOnly && notInRefs.length > 0 && <div className="border-b border-[var(--line)] px-4 py-2"><Button sm disabled={bulkBusy === "all"} onClick={() => signAllIn(notInRefs)}>{bulkBusy === "all" ? "Working…" : `✓ Sign all in (${notInRefs.length})`}</Button></div>}
+                <div className="hidden grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px] gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] md:grid">
+                  <span>Child</span><span>Alerts</span><span>Signed in</span><span>Collected</span><span>Status</span><span>Parent</span>
                 </div>
-              ))}
+                {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
+                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} multiPass={passes.length > 1 && !pass} busy={busyRef === a.ref || readOnly} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => router.push(`/${portal}/messages`)} />
+                ))}
+              </div>
             </>
           )}
         </>
       )}
 
       {openKid && <ChildModal a={openKid} showTimes={showTimes} fields={fields} onClose={() => setOpenKid(null)} />}
-      {dlOpen && <DownloadDialog sessions={daySessions} date={date} onClose={() => setDlOpen(false)} />}
+      {dlOpen && <DownloadDialog sessions={passBlocks} date={date} onClose={() => setDlOpen(false)} />}
     </div>
   );
 }
 
-function HeadBand({ s, last, readOnly, onLog }: { s: Session; last?: Head; readOnly: boolean; onLog: (n: number) => Promise<void> }) {
-  const [n, setN] = useState(String(s.counts.present));
+function HeadBand({ count, expected, present, last, takenBy, readOnly, onLog }: { count: number; expected: number; present: number; last?: Head; takenBy?: string; readOnly: boolean; onLog: (n: number) => Promise<void> }) {
+  const [n, setN] = useState(String(present));
   const [busy, setBusy] = useState(false);
   return (
     <div className="flex flex-wrap items-stretch gap-4">
       <div className="flex w-[110px] flex-none flex-col items-center justify-center rounded-xl bg-[var(--panel)] py-3 text-center">
-        <div className="text-[34px] font-extrabold leading-none">{s.heads.length}</div>
+        <div className="text-[34px] font-extrabold leading-none">{count}</div>
         <div className="mt-1 text-[9.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Head counts today</div>
       </div>
       <div className="min-w-[240px] flex-1">
@@ -321,18 +334,18 @@ function HeadBand({ s, last, readOnly, onLog }: { s: Session; last?: Head; readO
           <span className="text-[11.5px] text-[var(--ink-3)]">Heads counted</span>
           <input type="number" value={n} onChange={(e) => setN(e.target.value)} className="w-16 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[13px]" />
           {!readOnly && <Button sm variant="solid" disabled={busy} onClick={async () => { setBusy(true); await onLog(Math.max(0, parseInt(n || "0", 10))); setBusy(false); }}>{busy ? "…" : "Log head count"}</Button>}
-          <span className="text-[11.5px] text-[var(--ink-3)]">expected {s.counts.expected}</span>
+          <span className="text-[11.5px] text-[var(--ink-3)]">expected {expected}</span>
         </div>
-        {last && <div className="mt-1.5 text-[12px] font-semibold" style={{ color: last.n >= s.counts.expected ? GREEN : RED }}>Last: {last.n}/{s.counts.expected} {last.n >= s.counts.expected ? "✓ all present" : `⚠ ${s.counts.expected - last.n} short`} <span className="font-normal text-[var(--ink-3)]">· by {last.by} at {timeOf(last.at)}</span></div>}
+        {last && <div className="mt-1.5 text-[12px] font-semibold" style={{ color: last.n >= expected ? GREEN : RED }}>Last: {last.n}/{expected} {last.n >= expected ? "✓ all present" : `⚠ ${expected - last.n} short`} <span className="font-normal text-[var(--ink-3)]">· by {last.by} at {timeOf(last.at)}</span></div>}
       </div>
       <div className="flex flex-none items-center border-l border-[var(--line)] pl-4">
-        <div><div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Register taken by</div><div className="mt-0.5 text-[15px] font-extrabold">{s.takenBy?.name ?? "— not yet"}</div></div>
+        <div><div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Register taken by</div><div className="mt-0.5 text-[15px] font-extrabold">{takenBy ?? "— not yet"}</div></div>
       </div>
     </div>
   );
 }
 
-function Row({ a, s, showTimes, busy, onOpen, onMark, onMsg }: { a: Attendee; s: Session; showTimes: boolean; busy: boolean; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void }) {
+function Row({ a, start, end, showTimes, multiPass, busy, onOpen, onMark, onMsg }: { a: Attendee; start: string; end: string; showTimes: boolean; multiPass: boolean; busy: boolean; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void }) {
   const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
   return (
     <div className="grid grid-cols-1 items-center gap-2 border-b border-[var(--line)] px-4 py-3 last:border-b-0 md:grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px]">
@@ -341,7 +354,7 @@ function Row({ a, s, showTimes, busy, onOpen, onMark, onMsg }: { a: Attendee; s:
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={c.photo} alt="" className="h-10 w-10 flex-none rounded-full object-cover" />
           : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
-        <div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold">{a.children.map((k) => k.name).join(", ")} <span className="text-[11.5px] font-bold text-[#be1259]">view ›</span></div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{kid?.age != null ? `Age ${kid.age}` : ""}{showTimes ? ` · ${s.start}–${s.end}` : ""}{c?.collectionPassword ? ` · 🔑 ${c.collectionPassword}` : ""}</div></div>
+        <div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold">{a.children.map((k) => k.name).join(", ")} <span className="text-[11.5px] font-bold text-[#be1259]">view ›</span></div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{kid?.age != null ? `Age ${kid.age}` : ""}{multiPass ? ` · ${start}–${end}` : ""}{c?.collectionPassword ? ` · 🔑 ${c.collectionPassword}` : ""}</div></div>
       </button>
       <div className="flex flex-wrap gap-1.5 md:justify-start">
         {c?.allergies && <AlertSq kind="allergy" text={`Allergy: ${c.allergies}`} />}
