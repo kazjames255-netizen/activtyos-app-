@@ -26,6 +26,7 @@ import {
   type RatioGroup,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
+import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -1234,6 +1235,54 @@ export function SetupApp() {
           <Row label="Require parents to acknowledge" hint="On: un-acknowledged accidents show a persistent reminder in the parent's area until they confirm (nothing is blocked). Off: acknowledging is optional.">
             <Toggle on={settings.safeguarding?.requireAcknowledgement ?? false} onChange={(v) => set("safeguarding", { ...settings.safeguarding, requireAcknowledgement: v })} labels={["Yes", "No"]} />
           </Row>
+
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Designated Safeguarding Lead (DSL)</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">As a sole provider you are the DSL — you record a concern and decide the external action yourself. Your name appears on records and the PDF.</p>
+          <Row label="Your name (the DSL)" hint="Shown on records and exports as the safeguarding lead.">
+            <Input value={settings.safeguarding?.dslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslName: e.target.value })} placeholder="e.g. Sam Taylor" className="w-full" />
+          </Row>
+          <Row label="Role title" hint="What you call the role (e.g. DSL, Safeguarding Lead, Welfare Officer).">
+            <Input value={settings.safeguarding?.dslTitle ?? "Designated Safeguarding Lead (DSL)"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslTitle: e.target.value })} className="w-full" />
+          </Row>
+
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Your local safeguarding contacts</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The agencies you actually report to. These show on the concern form and the PDF, ready to call — this is your real safeguarding channel.</p>
+          <Row label="LADO name" hint="Local Authority Designated Officer — for concerns about an adult / member of staff.">
+            <Input value={settings.safeguarding?.contacts?.ladoName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, ladoName: e.target.value } })} placeholder="e.g. your council's LADO" className="w-full" />
+          </Row>
+          <Row label="LADO phone">
+            <Input value={settings.safeguarding?.contacts?.ladoPhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, ladoPhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
+          </Row>
+          <Row label="Children's social care (MASH)" hint="Your local Multi-Agency Safeguarding Hub — a child at risk of harm.">
+            <Input value={settings.safeguarding?.contacts?.socialCarePhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, socialCarePhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
+          </Row>
+          <Row label="Out-of-hours / emergency duty team">
+            <Input value={settings.safeguarding?.contacts?.outOfHoursPhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, outOfHoursPhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
+          </Row>
+          <Row label="NSPCC helpline">
+            <Input value={settings.safeguarding?.contacts?.nspccPhone ?? "0808 800 5000"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, nspccPhone: e.target.value } })} className="w-full" />
+          </Row>
+          <Row label="Police">
+            <Input value={settings.safeguarding?.contacts?.policePhone ?? "999 (emergency) / 101"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, policePhone: e.target.value } })} className="w-full" />
+          </Row>
+          <Row label="Local authority" hint="Optional — the council whose safeguarding threshold you follow.">
+            <Input value={settings.safeguarding?.contacts?.localAuthority ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, localAuthority: e.target.value } })} placeholder="e.g. Milton Keynes Council" className="w-full" />
+          </Row>
+
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Concern categories</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The list staff choose from when logging a concern. Edit, add or remove — the special legal prompts (LADO, FGM, 999) still apply to matching categories.</p>
+          <ListEditor items={settings.safeguarding?.categories ?? [...SG_CATEGORIES]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, categories: next })} placeholder="Add a category…" />
+
+          <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>“What to do now” protocol</div>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The default guidance staff see on the form. Category-specific overrides (LADO, FGM, 999, NRM) are layered on top automatically.</p>
+          <Row label="Timescale" hint="e.g. Same day.">
+            <Input value={settings.safeguarding?.protocol?.due ?? DEFAULT_PROTOCOL.due} onChange={(e) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, due: e.target.value } })} className="w-full" />
+          </Row>
+          <Row label="Reference" hint="The standard you follow, shown as a tag (e.g. KCSIE).">
+            <Input value={settings.safeguarding?.protocol?.ref ?? DEFAULT_PROTOCOL.ref} onChange={(e) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, ref: e.target.value } })} className="w-full" />
+          </Row>
+          <FieldLabel>Steps</FieldLabel>
+          <ListEditor items={settings.safeguarding?.protocol?.steps ?? [...DEFAULT_PROTOCOL.steps]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, steps: next } })} placeholder="Add a step…" />
         </Section>
       )}
 

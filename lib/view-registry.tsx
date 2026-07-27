@@ -5,6 +5,7 @@ import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { CustomersApp } from "@/features/customers/CustomersApp";
 import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { IncidentsApp } from "@/features/incidents/IncidentsApp";
+import { LogConcernApp } from "@/features/incidents/LogConcernApp";
 import { MealsApp } from "@/features/meals/MealsApp";
 import { ParentMealsApp } from "@/features/meals/ParentMealsApp";
 import { MomentsApp } from "@/features/moments/MomentsApp";
@@ -100,7 +101,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     "admin-registers": RegistersApp,
     ratios: RatiosApp,
-    incidents: () => <IncidentsApp kind="incident" />,
+    incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
@@ -155,7 +156,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     staff: TeamApp,
     registers: RegistersApp,
     ratios: RatiosApp,
-    incidents: () => <IncidentsApp kind="incident" />,
+    incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
@@ -198,7 +199,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
-    incidents: () => <IncidentsApp kind="incident" />,
+    incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,
@@ -238,7 +239,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ratios: RatiosApp,
     // Staff nav uses the singular slug — keyed to match, or the real
     // component is unreachable and the legacy iframe shows instead.
-    incident: () => <IncidentsApp kind="incident" />,
+    incident: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
     medication: MedicationApp,
     meals: MealsApp,

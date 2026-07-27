@@ -9,6 +9,23 @@ import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
 import { NotesThread } from "./NotesThread";
 import { INJURY_BANK, TREATMENT_BANK, treatmentsFor } from "./firstAid";
+import { BEHAVIOUR_TYPES, BEHAVIOUR_CONCERNS, BEHAVIOUR_ACTIONS } from "./behaviourBank";
+
+const readAsDataUrl = (f: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("read")); r.readAsDataURL(f); });
+
+// Group records by the child they're about, preserving the incoming order (which
+// is newest-first) — so every record for a child sits together and their history
+// is visible at a glance. Shared with the Safeguarding view.
+export function groupByChild<T extends { childId?: string; childName: string }>(items: T[]): { key: string; name: string; items: T[] }[] {
+  const m = new Map<string, { key: string; name: string; items: T[] }>();
+  for (const it of items) {
+    const key = (it.childId || it.childName || "").trim().toLowerCase() || "unknown";
+    const g = m.get(key) ?? { key, name: it.childName, items: [] };
+    g.items.push(it);
+    m.set(key, g);
+  }
+  return [...m.values()];
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents — the safeguarding log. One component, `kind` picks
@@ -22,9 +39,9 @@ interface Log {
   id: string; kind: Kind; date: string; time?: string; childName: string; childId?: string;
   location?: string; description: string; injury?: string; treatment?: string; firstAider?: string;
   incidentType?: string; actionTaken?: string; witnesses?: string; severity: "minor" | "moderate" | "serious";
-  parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string;
+  parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string; shareWithParent?: boolean;
   recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
-  notes?: Note[]; notifyParentOfEdit?: boolean;
+  notes?: Note[]; notifyParentOfEdit?: boolean; attachments?: string[];
 }
 interface Note { by: string; role: string; text: string; at: string }
 
@@ -34,7 +51,7 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 const COPY = {
   accident: { title: "Accidents", one: "accident", add: "Log an accident", icon: "⛑️", lede: "Every bump and graze — logged on the day, kept for your records, and sent to the parent." },
-  incident: { title: "Incidents", one: "incident", add: "Log an incident", icon: "⚑", lede: "Behaviour, near-misses and concerns — recorded on the day and kept for your records." },
+  incident: { title: "Behaviour", one: "behaviour record", add: "Log a behaviour concern", icon: "🧩", lede: "Behaviour and near-misses — recorded on the day, kept for your records, and shared with the parent when you choose." },
 } as const;
 const SEV = { minor: { label: "Minor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
@@ -55,8 +72,24 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
   const [treatSel, setTreatSel] = useState<string[]>(() => treatParts.filter((s) => TREATMENT_BANK.includes(s)));
   const [treatOther, setTreatOther] = useState(() => treatParts.filter((s) => !TREATMENT_BANK.includes(s)).join("; "));
   const [showAllTreat, setShowAllTreat] = useState(false);
+  const actParts = (existing?.actionTaken ?? "").split(";").map((s) => s.trim()).filter(Boolean);
+  const [actSel, setActSel] = useState<string[]>(() => actParts.filter((s) => (BEHAVIOUR_ACTIONS as readonly string[]).includes(s)));
+  const [actOther, setActOther] = useState(() => actParts.filter((s) => !(BEHAVIOUR_ACTIONS as readonly string[]).includes(s)).join("; "));
+  const [concernPick, setConcernPick] = useState("");
+  const [uploading, setUploading] = useState(false);
   const set = (patch: Partial<Draft>) => setD((p) => ({ ...p, ...patch }));
   const toggleTreat = (t: string) => setTreatSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
+  const toggleAct = (t: string) => setActSel((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]));
+  async function attach(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true); setError(null);
+    try {
+      const urls: string[] = [];
+      for (const f of Array.from(files).slice(0, 10)) { const dataUrl = await readAsDataUrl(f); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); urls.push(url); }
+      set({ attachments: [...(d.attachments ?? []), ...urls] });
+    } catch { setError("Couldn’t upload a file — try a smaller image."); }
+    finally { setUploading(false); }
+  }
   useEffect(() => { apiGet<{ child?: string; childId?: string }[]>("/api/bookings").then(setBkgs).catch(() => {}); }, []);
   const childOptions: ChildOption[] = [...new Map(bkgs.filter((b) => b.child).map((b) => [b.child!.trim().toLowerCase(), { name: b.child!, childId: b.childId }])).values()];
 
@@ -64,17 +97,18 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
     if (!d.childName.trim() || !d.description.trim()) { setError("Add the child and what happened."); return; }
     setBusy(true); setError(null);
     const treatment = kind === "accident" ? ([...treatSel, treatOther.trim()].filter(Boolean).join("; ") || undefined) : d.treatment;
+    const actionTaken = kind === "incident" ? ([...actSel, actOther.trim()].filter(Boolean).join("; ") || undefined) : d.actionTaken;
     try {
       if (isEdit) {
         // Keep the original "informed" stamp; the edit itself re-notifies the
         // parent (backend writes updatedAt → parent sees an "Updated" alert).
         await apiPut(`/api/incidents/${encodeURIComponent(existing!.id)}`, {
-          ...d, treatment,
+          ...d, treatment, actionTaken,
           notifyParentOfEdit: d.notifyParentOfEdit ?? true,
           parentNotifiedAt: d.parentNotified ? (existing!.parentNotifiedAt ?? new Date().toISOString()) : existing!.parentNotifiedAt,
         });
       } else {
-        await apiPost("/api/incidents", { ...d, treatment, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
+        await apiPost("/api/incidents", { ...d, treatment, actionTaken, parentNotifiedAt: d.parentNotified ? new Date().toISOString() : undefined });
       }
       onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
@@ -182,9 +216,38 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
             </div>
           ) : (
             <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-              <div><FieldLabel>Type</FieldLabel><Input value={d.incidentType ?? ""} onChange={(e) => set({ incidentType: e.target.value })} placeholder="e.g. behaviour, near-miss" className="w-full" /></div>
+              <div className="sm:col-span-2">
+                <FieldLabel>Behaviour concern — search 50 common ones or type your own</FieldLabel>
+                <Input list="behaviourConcerns" value={concernPick} onChange={(e) => { const v = e.target.value; setConcernPick(v); if ((BEHAVIOUR_CONCERNS as readonly string[]).includes(v)) { set({ description: d.description?.trim() ? `${d.description.trim()}; ${v}` : v }); setConcernPick(""); } }} placeholder="e.g. Pushing another child…" className="w-full" />
+                <datalist id="behaviourConcerns">{BEHAVIOUR_CONCERNS.map((c) => <option key={c} value={c} />)}</datalist>
+                <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Pick one to add it to &ldquo;What happened&rdquo; above — add several and edit freely.</p>
+              </div>
+              <div>
+                <FieldLabel>Type</FieldLabel>
+                <Input list="behaviourTypes" value={d.incidentType ?? ""} onChange={(e) => set({ incidentType: e.target.value })} placeholder="e.g. Physical — or type your own" className="w-full" />
+                <datalist id="behaviourTypes">{BEHAVIOUR_TYPES.map((t) => <option key={t} value={t} />)}</datalist>
+              </div>
               <div><FieldLabel>Witnesses</FieldLabel><Input value={d.witnesses ?? ""} onChange={(e) => set({ witnesses: e.target.value })} className="w-full" /></div>
-              <div className="sm:col-span-2"><FieldLabel>Action taken</FieldLabel><Input value={d.actionTaken ?? ""} onChange={(e) => set({ actionTaken: e.target.value })} className="w-full" /></div>
+              <div className="sm:col-span-2">
+                <FieldLabel>Action taken — tick all that apply</FieldLabel>
+                {(actSel.length > 0 || !!actOther.trim()) && (
+                  <div className="mb-1.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2">
+                    <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[#1d3a8f]">Selected · what will be recorded</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {actSel.map((t) => <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-semibold text-white">{t}<button type="button" onClick={() => toggleAct(t)} className="text-white/80 hover:text-white" aria-label="remove">✕</button></span>)}
+                      {actOther.trim() && <span className="inline-flex items-center gap-1 rounded-full border border-[#1d3a8f] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#1d3a8f]">{actOther.trim()}<button type="button" onClick={() => setActOther("")} className="text-[#1d3a8f]/70 hover:text-[#1d3a8f]" aria-label="remove">✕</button></span>}
+                    </div>
+                  </div>
+                )}
+                <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5 [scrollbar-width:thin]">
+                  {BEHAVIOUR_ACTIONS.map((t) => { const on = actSel.includes(t); return (
+                    <label key={t} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px] leading-snug transition-colors" style={on ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 700 } : { color: "var(--ink-2)" }}>
+                      <input type="checkbox" checked={on} onChange={() => toggleAct(t)} className="mt-0.5 shrink-0" /><span>{t}</span>
+                    </label>
+                  ); })}
+                </div>
+                <Input value={actOther} onChange={(e) => setActOther(e.target.value)} placeholder="Add your own action / extra detail…" className="mt-2 w-full" />
+              </div>
             </div>
           )}
         </>
@@ -200,6 +263,34 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
             ))}
           </div>
           <label className="mt-3 flex items-center gap-2 text-[12.5px] font-bold"><input type="checkbox" checked={!!d.parentNotified} onChange={(e) => set({ parentNotified: e.target.checked })} />I&rsquo;ve also told the parent in person / by phone</label>
+
+          {kind === "incident" && (
+            <div className="mt-3">
+              <FieldLabel>Share with the parent?</FieldLabel>
+              <div className="mt-1 grid gap-1.5 sm:grid-cols-2">
+                {([[true, "📤 Share with parent", "Emails + shows it in their area"], [false, "🔒 Keep internal", "Stays with the team only"]] as [boolean, string, string][]).map(([v, t, sub]) => (
+                  <button key={String(v)} type="button" onClick={() => set({ shareWithParent: v })} className="rounded-xl border-2 px-3 py-2.5 text-left transition-colors"
+                    style={!!d.shareWithParent === v ? { borderColor: "#1d3a8f", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                    <div className="text-[12.5px] font-extrabold" style={{ color: !!d.shareWithParent === v ? "#1d3a8f" : "var(--ink-2)" }}>{t}</div>
+                    <div className="text-[11px] text-[var(--ink-3)]">{sub}</div>
+                  </button>
+                ))}
+              </div>
+              {d.shareWithParent && (
+                <div className="mt-2.5 rounded-lg border border-[#cfe0f7] bg-[#f5f9ff] p-2.5">
+                  <FieldLabel>Attach a file for the parent (optional)</FieldLabel>
+                  <input type="file" accept="image/*" multiple onChange={(e) => attach(e.target.files)} className="mt-1 block w-full text-[12px] text-[var(--ink-2)] file:mr-2 file:rounded-md file:border-0 file:bg-[#eef4fd] file:px-2.5 file:py-1 file:text-[12px] file:font-bold file:text-[#1d3a8f]" />
+                  {uploading && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Uploading…</div>}
+                  {(d.attachments?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {d.attachments!.map((u, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-2)]">📎 file {i + 1}<button type="button" onClick={() => set({ attachments: d.attachments!.filter((_, j) => j !== i) })} className="text-[var(--ink-3)]">✕</button></span>)}
+                    </div>
+                  )}
+                  <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Only shared because you chose to share with the parent.</p>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-2.5"><FieldLabel>Follow-up (optional)</FieldLabel><Input value={d.followUp ?? ""} onChange={(e) => set({ followUp: e.target.value })} placeholder="e.g. monitor overnight; parent to check tomorrow" className="w-full" /></div>
           {isEdit ? (
             <div className="mt-3">
@@ -234,7 +325,7 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
   );
 }
 
-export function IncidentsApp({ kind }: { kind: Kind }) {
+export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolean }) {
   const { settings } = useSettings();
   const notifies = kind === "accident" ? (settings.safeguarding?.notifyParentAccident ?? true) : (settings.safeguarding?.notifyParentIncident ?? false);
   const [logs, setLogs] = useState<Log[] | null>(null);
@@ -278,29 +369,44 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
     (ackFilter === "" || (ackFilter === "yes" ? !!l.acknowledgedAt : !l.acknowledgedAt)));
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-      {/* Hero */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">{c.icon}</span>{c.title}
-            </div>
-            <p className="mt-1.5 max-w-[600px] text-[12.5px] leading-[1.5] text-white/85">{c.lede}</p>
-          </div>
-          {!adding && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ {c.add}</button>}
-        </div>
-        {logs && (
-          <div className="mt-4 flex flex-wrap gap-2.5">
-            {tiles.map(([label, v]) => (
-              <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
-                <div className="text-[20px] font-extrabold leading-none">{v}</div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div>
+    <div className={bare ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={bare ? undefined : LIGHT_PALETTE}>
+      {bare ? (
+        /* Embedded in Log concern — compact header (the page title bar is provided above) */
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+          <div className="flex flex-wrap gap-2.5">
+            {logs && tiles.map(([label, v]) => (
+              <div key={label} className="rounded-xl bg-[var(--panel)] px-3.5 py-1.5">
+                <div className="text-[18px] font-extrabold leading-none">{v}</div>
+                <div className="mt-0.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{label}</div>
               </div>
             ))}
           </div>
-        )}
-      </div>
+          {!adding && !editing && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px">＋ {c.add}</button>}
+        </div>
+      ) : (
+        /* Hero */
+        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">{c.icon}</span>{c.title}
+              </div>
+              <p className="mt-1.5 max-w-[600px] text-[12.5px] leading-[1.5] text-white/85">{c.lede}</p>
+            </div>
+            {!adding && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ {c.add}</button>}
+          </div>
+          {logs && (
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              {tiles.map(([label, v]) => (
+                <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
+                  <div className="text-[20px] font-extrabold leading-none">{v}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {adding && <LogForm kind={kind} notifies={notifies} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
@@ -342,31 +448,40 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
       ) : shown.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{all.length === 0 ? `No ${c.one} records — hopefully it stays that way.` : "No records match."}</Card>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {shown.map((l) => {
+        <div className="flex flex-col gap-4">
+          {groupByChild(shown).map((g) => (
+            <div key={g.key}>
+              <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                <span className="text-[13.5px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>👤 {g.name}</span>
+                <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">{g.items.length} record{g.items.length === 1 ? "" : "s"}</span>
+              </div>
+              <div className="flex flex-col gap-2.5">
+          {g.items.map((l) => {
             const sev = SEV[l.severity] ?? SEV.minor;
             return (
               <Card key={l.id} className="overflow-hidden p-0">
-                <div className="h-1.5 w-full" style={{ background: sev.fg }} />
-                <div className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="h-1 w-full" style={{ background: sev.fg }} />
+                <div className="p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <span className="text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{l.childName}</span>
-                        {l.injury && <span className="text-[13px] text-[var(--ink-2)]">{l.injury}</span>}
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{l.childName}</span>
+                        {l.injury && <span className="text-[12.5px] text-[var(--ink-2)]">{l.injury}</span>}
+                        <span className="text-[11px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
                       </div>
-                      <p className="mt-1 max-w-[640px] text-[13px] leading-snug text-[var(--ink-2)]">{l.description}</p>
+                      <p className="mt-0.5 line-clamp-2 max-w-[640px] text-[12.5px] leading-snug text-[var(--ink-2)]">{l.description}</p>
+                      {l.followUp && <p className="mt-1 max-w-[640px] line-clamp-1 text-[11.5px] leading-snug"><span className="mr-1 rounded bg-[#fff6df] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#9a5a00]">Follow-up</span><span className="text-[var(--ink-2)]">{l.followUp}</span></p>}
                     </div>
-                    <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                    <div className="flex flex-wrap items-center gap-1 sm:max-w-[46%] sm:justify-end">
                       <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>
-                      <span className="text-[11.5px] text-[var(--ink-3)]">{fmtDate(l.date)}{l.time ? ` · ${l.time}` : ""}</span>
-                      {l.parentNotified || l.parentNotifiedAt ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ parent informed</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>parent not yet informed</Badge>}
-                      {l.updatedAt && <Badge tone={{ bg: "#eef4fd", fg: "#1d3a8f" }}>✏️ Updated {new Date(l.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</Badge>}
-                      {l.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ Parent acknowledged</Badge>}
+                      {kind === "incident" && (l.shareWithParent ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>📤 Shared</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>🔒 Internal</Badge>)}
+                      {(l.notes ?? []).some((n) => n.role === "parent") && <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>💬 Parent replied</Badge>}
+                      {l.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ Acknowledged</Badge>}
+                      {l.updatedAt && <Badge tone={{ bg: "#eef4fd", fg: "#1d3a8f" }}>✏️ Updated</Badge>}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
-                    <Button sm onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide details" : "Details"}</Button>
+                  <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--line)] pt-2">
+                    {(() => { const pr = (l.notes ?? []).filter((n) => n.role === "parent").length; return <Button sm variant={pr > 0 && openId !== l.id ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide" : `💬 Details${(l.notes?.length ?? 0) ? ` & messages (${l.notes!.length})` : ""}`}</Button>; })()}
                     <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button>
                     {canManage && <Button sm variant="danger" onClick={() => remove(l)}>Delete</Button>}
                   </div>
@@ -384,6 +499,7 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
                         {l.acknowledgedAt && <div><span className="text-[var(--ink-3)]">Parent acknowledged: </span><b>{new Date(l.acknowledgedAt).toLocaleString("en-GB")}{l.acknowledgedBy ? ` · ${l.acknowledgedBy}` : ""}</b></div>}
                         {l.recordedByName && <div><span className="text-[var(--ink-3)]">Recorded by: </span><b>{l.recordedByName}</b></div>}
                         {l.followUp && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Follow-up: </span><b>{l.followUp}</b></div>}
+                        {(l.attachments?.length ?? 0) > 0 && <div className="sm:col-span-2"><span className="text-[var(--ink-3)]">Attachments: </span>{l.attachments!.map((u, i) => <a key={i} href={u} target="_blank" rel="noreferrer" className="mr-2 font-bold text-[#1d3a8f] underline">📎 file {i + 1}</a>)}</div>}
                       </div>
                       <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
                     </>
@@ -392,6 +508,9 @@ export function IncidentsApp({ kind }: { kind: Kind }) {
               </Card>
             );
           })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

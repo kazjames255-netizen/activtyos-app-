@@ -26,8 +26,16 @@ const canRecord = (role: Role) =>
   role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
+// A body-map mark — a numbered pin an operator drops on the child silhouette.
+const bodyMarkSchema = z.object({
+  view: z.enum(["front", "back"]).default("front"),
+  x: z.number().min(0).max(100), // percentage of the silhouette box
+  y: z.number().min(0).max(100),
+  note: z.string().trim().max(300).optional(),
+});
+
 const logSchema = z.object({
-  kind: z.enum(["accident", "incident"]),
+  kind: z.enum(["accident", "incident", "safeguarding"]),
   date: z.string().max(10), // ISO date of the event
   time: z.string().max(8).optional(), // "14:30"
   childId: z.string().max(60).optional(),
@@ -46,6 +54,24 @@ const logSchema = z.object({
   incidentType: z.string().trim().max(120).optional(),
   actionTaken: z.string().trim().max(2_000).optional(),
   witnesses: z.string().trim().max(300).optional(),
+  // safeguarding-specific
+  concernCategory: z.string().trim().max(120).optional(),   // physical / emotional / neglect / disclosure …
+  concernType: z.string().trim().max(120).optional(),       // observed / disclosed / told by third party
+  childVoice: z.string().trim().max(2_000).optional(),      // what the child said, verbatim
+  reportedTo: z.string().trim().max(160).optional(),        // DSL / designated safeguarding lead informed
+  reportedToRole: z.string().trim().max(120).optional(),
+  externalReferral: z.string().trim().max(300).optional(),  // MASH / social care / police reference
+  confidential: z.boolean().optional(),                     // keep off the parent's profile
+  subject: z.enum(["child", "staff"]).optional(),           // concern about a child OR a member of staff
+  dslActions: z.array(z.string().max(120)).max(12).optional(), // the decisions the DSL took (KCSIE)
+  dslOutcome: z.string().trim().max(4_000).optional(),      // the DSL's written outcome / rationale
+  dslActionedAt: z.string().max(25).optional(),
+  shareWithReporter: z.boolean().optional(),               // share the DSL decision back to whoever reported it
+  bodyMap: z.array(bodyMarkSchema).max(40).optional(),
+  attachments: z.array(z.string().max(500)).max(10).optional(), // /api/uploads URLs
+  // Whether this record is shared with the parent (the "share with parent"
+  // control). Accidents always inform; behaviour/safeguarding are opt-in per record.
+  shareWithParent: z.boolean().optional(),
   severity: z.enum(["minor", "moderate", "serious"]).default("minor"),
   parentNotified: z.boolean().default(false),
   parentNotifiedAt: z.string().max(25).optional(),
@@ -56,6 +82,8 @@ const logSchema = z.object({
   photoUrl: z.string().max(500).optional(),
   followUp: z.string().trim().max(2_000).optional(),
 });
+const KINDS = ["accident", "incident", "safeguarding"] as const;
+const isKind = (v: unknown): v is (typeof KINDS)[number] => typeof v === "string" && (KINDS as readonly string[]).includes(v);
 
 /** The provider's Safeguarding toggles (Setup → Safeguarding). Accidents are
  *  notified by default because a parent has a right to know their child was
@@ -71,7 +99,15 @@ async function safeguardingSettings(tenantId: string) {
   };
 }
 
-const kindWord = (kind: string) => (kind === "accident" ? "accident" : "incident");
+const kindWord = (kind: string) => (kind === "accident" ? "accident" : kind === "safeguarding" ? "safeguarding concern" : "incident");
+// Whether a record should reach the parent: accidents always (per settings),
+// behaviour when the setting is on OR staff ticked share, safeguarding only
+// when staff explicitly chose to share (it's confidential by default).
+function sharesWithParent(rec: { kind?: string; shareWithParent?: boolean }, gates: { notifyParentAccident: boolean; notifyParentIncident: boolean }) {
+  if (rec.kind === "accident") return gates.notifyParentAccident;
+  if (rec.kind === "safeguarding") return rec.shareWithParent === true;
+  return gates.notifyParentIncident || rec.shareWithParent === true;
+}
 
 function tenantScope(req: Request): { role: Role; tenantId: string | null } | null {
   const auth = req.auth!;
@@ -89,8 +125,14 @@ incidents.get("/", async (req, res) => {
     const ids = kids.docs.map((d) => d.id).slice(0, 10);
     if (!ids.length) { res.json([]); return; }
     const snap = await col.where("childId", "in", ids).get();
-    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string; tenantId?: string })[];
-    if (req.query.kind === "accident" || req.query.kind === "incident") list = list.filter((x) => x.kind === req.query.kind);
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string; tenantId?: string; shareWithParent?: boolean; confidential?: boolean })[];
+    // A parent NEVER sees safeguarding concerns (confidential, DSL-routed) unless
+    // staff explicitly shared them; confidential records stay off their profile.
+    // Behaviour records reach the parent only when staff chose "share with parent".
+    list = list.filter((x) => x.kind !== "safeguarding" || x.shareWithParent === true);
+    list = list.filter((x) => x.kind !== "incident" || x.shareWithParent === true);
+    list = list.filter((x) => !x.confidential || x.shareWithParent === true);
+    if (isKind(req.query.kind)) list = list.filter((x) => x.kind === req.query.kind);
     // Attach the owning provider's "require acknowledgement" flag so the parent
     // UI only nags on records from providers who ask for it.
     const tenantIds = [...new Set(list.map((x) => x.tenantId).filter(Boolean) as string[])];
@@ -118,7 +160,7 @@ incidents.get("/", async (req, res) => {
     return;
   }
   let q = col.where("tenantId", "==", tenantId) as FirebaseFirestore.Query;
-  if (req.query.kind === "accident" || req.query.kind === "incident") q = q.where("kind", "==", req.query.kind);
+  if (isKind(req.query.kind)) q = q.where("kind", "==", req.query.kind);
   if (typeof req.query.childId === "string") q = q.where("childId", "==", req.query.childId);
   const snap = await q.get();
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string })[];
@@ -152,11 +194,14 @@ incidents.post("/", async (req, res) => {
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 
+  // (Solo provider = the DSL: no self-alert on a concern they logged themselves.
+  //  A team model would notify the DSL here — see docs/amir-handover.md.)
+
   // Tell the parent. Only possible when the record is linked to a child — a
   // walk-in with no booking has nobody to reach, and that's not an error.
   void (async () => {
     const gates = await safeguardingSettings(scope.tenantId!);
-    if (!(doc.kind === "accident" ? gates.notifyParentAccident : gates.notifyParentIncident)) return;
+    if (!sharesWithParent(doc, gates)) return;
     const email = await parentEmailForChild(doc.childId);
     if (!email) return;
     const word = kindWord(doc.kind);
@@ -224,7 +269,7 @@ incidents.put("/:id", async (req, res) => {
     const rec = after.data()!;
     const kind = String(rec.kind ?? "incident");
     const gates = await safeguardingSettings(String(rec.tenantId));
-    if (!(kind === "accident" ? gates.notifyParentAccident : gates.notifyParentIncident)) return;
+    if (!sharesWithParent({ kind, shareWithParent: rec.shareWithParent === true }, gates)) return;
     const email = await parentEmailForChild(rec.childId as string | undefined);
     if (!email) return;
     const word = kindWord(kind);
@@ -311,6 +356,36 @@ incidents.post("/:id/note", async (req, res) => {
   const notes = Array.isArray(data.notes) ? data.notes : [];
   await snap.ref.set({ notes: [...notes, note] }, { merge: true });
   res.status(201).json({ ok: true, note });
+
+  // Alert the other side so the conversation flows both ways. A parent's reply
+  // bells the team; the provider's reply emails + bells the parent.
+  void (async () => {
+    const tenantId = data.tenantId as string | undefined;
+    if (!tenantId) return;
+    const word = kindWord(String(data.kind ?? "incident"));
+    if (role === "parent") {
+      await notify({
+        tenantId, to: { kind: "tenant" }, category: data.kind === "accident" ? "accident" : "incident",
+        title: `${note.by} replied about the ${word} for ${data.childName}`,
+        body: parsed.data.text,
+        href: "/company/incidents", ref: snap.id,
+      });
+    } else {
+      // Only email the parent when the record is one they can see.
+      if (data.kind === "safeguarding" && data.shareWithParent !== true) return;
+      if (data.kind === "incident" && data.shareWithParent !== true) return;
+      const email = await parentEmailForChild(data.childId as string | undefined);
+      if (!email) return;
+      await notify({
+        tenantId, to: { kind: "parent", email }, category: data.kind === "accident" ? "accident" : "incident",
+        title: `${data.childName}: the provider replied to your message`,
+        body: parsed.data.text,
+        emailHtml: `<p><b>${note.by}</b> replied about the ${word} for <b>${data.childName}</b>:</p><p>${parsed.data.text}</p>`,
+        subject: `${data.childName}: a reply from your provider`,
+        href: "/custdash/accidents", ref: snap.id,
+      });
+    }
+  })();
 });
 
 // DELETE /api/incidents/:id — operators only. A safeguarding record isn't

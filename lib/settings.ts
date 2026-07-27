@@ -389,6 +389,24 @@ export interface TenantSettings {
     notifyParentIncident?: boolean;  // …and for incidents (usually off — often internal)
     notifyStaffAcknowledged?: boolean; // email + bell staff when a parent acknowledges a record
     requireAcknowledgement?: boolean;  // enforce: nag the parent until they acknowledge (off = optional)
+    /** The safeguarding lead a concern is reported to — title (editable, e.g.
+     *  "DSL") + name, shown to staff. This person is alerted on every concern. */
+    dslTitle?: string;
+    dslName?: string;
+    dslEmail?: string;               // who to email; blank = the account holder
+    /** Editable list of concern categories staff pick from. */
+    categories?: string[];
+    /** The editable default "What to do now" protocol shown on the form. */
+    protocol?: { due?: string; ref?: string; steps?: string[] };
+    /** The external agencies a freelancer actually reports to — their real
+     *  safeguarding channels. Shown on the form + PDF with click-to-call. */
+    contacts?: {
+      ladoName?: string; ladoPhone?: string;      // Local Authority Designated Officer (allegations about adults)
+      socialCarePhone?: string;                    // children's social care / MASH
+      outOfHoursPhone?: string;                    // emergency duty team
+      nspccPhone?: string; policePhone?: string;
+      localAuthority?: string;
+    };
   };
 
   /** Trips & visits. */
@@ -708,7 +726,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
-  safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true },
+  safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
   calendar: {
     categories: [
@@ -791,7 +809,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
-    safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}) },
+    safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}), contacts: { ...DEFAULT_SETTINGS.safeguarding!.contacts, ...(s.safeguarding?.contacts ?? {}) } },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },

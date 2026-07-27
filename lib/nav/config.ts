@@ -84,7 +84,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "incidents", legacyView: "admin-incidents", label: "Incidents", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "incidents", legacyView: "admin-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "admin-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "admin-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
         { view: "moments", legacyView: "admin-moments", label: "Moments", icon: { type: "glyph", value: "📷" }, badge: null },
@@ -246,7 +246,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "franchise-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
-        { view: "incidents", legacyView: "franchise-incidents", label: "Incidents", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "incidents", legacyView: "franchise-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "franchise-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "franchise-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
         { view: "meals", legacyView: "franchise-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
@@ -360,7 +360,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "freelancer-registers", label: "Register", icon: { type: "glyph", value: "✓" }, badge: null },
-        { view: "incidents", legacyView: "freelancer-incidents", label: "Incidents", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "freelancer-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
         { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
@@ -459,7 +459,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "staff-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
-        { view: "incident", legacyView: "staff-incident", label: "Incidents", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "incident", legacyView: "staff-incident", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "staff-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "staff-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
         { view: "meals", legacyView: "staff-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
@@ -494,7 +494,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "newsfeed", legacyView: "custdash-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "medication", legacyView: "custdash-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "meals", legacyView: "custdash-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
-        { view: "accidents", legacyView: "custdash-accidents", label: "Accidents", icon: { type: "glyph", value: "🩹" }, badge: null },
+        { view: "accidents", legacyView: "custdash-accidents", label: "Accidents & incidents", icon: { type: "glyph", value: "🩹" }, badge: null },
       ],
     },
     {
