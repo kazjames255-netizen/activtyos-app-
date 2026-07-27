@@ -90,8 +90,10 @@ new fakes the moment they're spotted.
   the in-app bell and sends the email. `notifications` (per-family by email, or
   per-team) + `notificationPrefs` (a family's mutes; muting silences the email,
   never the bell). `GET /api/notifications` + `/read` + `/prefs`, on the
-  `notifications` SSE channel. **The bell UI is still to build** — the API is
-  live. Wired so far: accidents/incidents (log, edit, parent acknowledgement),
+  `notifications` SSE channel. **The bell UI is built** —
+  `components/shell/Bell.tsx` in the header of every portal except platform
+  (no tenant → no bell): live unread badge, dropdown, opening marks read,
+  entries deep-link. Wired so far: accidents/incidents (log, edit, parent acknowledgement),
   medication (each dose, parent notes, self-serve authorisations), and a
   provider alert when a family releases days. Still owed: trips, calendar
   reminders, low stock — and the acknowledgement chase, all of which need a

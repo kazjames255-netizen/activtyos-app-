@@ -10,6 +10,7 @@ import { useUnreadMessages } from "@/lib/use-unread";
 import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
+import { Bell } from "./Bell";
 
 // Lives in the portal layout (not the per-view page) so it persists across
 // view navigation; derives the current view from the URL rather than a prop
@@ -89,6 +90,9 @@ export function Header({ portal }: { portal: PortalKey }) {
 
       <div className="flex flex-none items-center gap-3">
         {user?.email && portal !== "custdash" && <span className="text-[12px] text-[var(--ink-3)]">{user.email}</span>}
+        {/* Platform accounts have no tenant, so no bell of their own (the API
+            would return an empty list anyway). */}
+        {portal !== "platform" && <Bell portal={portal} />}
         <PortalSwitcher portal={portal} />
         <Button
           sm

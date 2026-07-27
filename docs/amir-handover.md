@@ -86,7 +86,8 @@ whole team) and `notificationPrefs` (a family's per-category mutes). API:
 `GET /api/notifications` (list + unread count, audience decided by role, never
 by a query param), `POST /api/notifications/read`, `GET|PUT
 /api/notifications/prefs`. Wired into the SSE channel `notifications` both
-sides. **The bell UI itself is front-end work — the API is live and waiting.**
+sides. ~~The bell UI itself is front-end work~~ — **DONE (27 Jul)**:
+`components/shell/Bell.tsx`, in the header of every portal except platform.
 Muting silences the EMAIL only; the bell still records it, so a family who
 opted out of being chased isn't kept in the dark.
 Provider Setup toggles are checked by each caller (they already hold the
