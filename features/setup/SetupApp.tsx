@@ -69,7 +69,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "safeguarding" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "people" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1106,7 +1106,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1146,6 +1146,7 @@ export function SetupApp() {
     ["people", "Child questions"],
     ["medication", "Medication"],
     ["safeguarding", "Safeguarding"],
+    ["registers", "Register"],
     ["trips", "Trips & visits"],
     ["calendar", "Calendar"],
     ["inventory", "Inventory"],
@@ -1310,6 +1311,21 @@ export function SetupApp() {
           </Row>
           <FieldLabel>Steps</FieldLabel>
           <ListEditor items={settings.safeguarding?.protocol?.steps ?? [...DEFAULT_PROTOCOL.steps]} onChange={(next) => set("safeguarding", { ...settings.safeguarding, protocol: { ...settings.safeguarding?.protocol, steps: next } })} placeholder="Add a step…" />
+        </Section>
+      )}
+
+      {tab === "registers" && (
+        <Section title="Register" lede="How the daily attendance register behaves — sign-in/out timestamps and which details show when you tap a child.">
+          <Row label="Show sign-in / collection times" hint="On: each ✓ In and ✓ Collected shows the time it was tapped. Off: just the tick.">
+            <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={["On", "Off"]} />
+          </Row>
+          <div className="mt-3 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Show on a child&rsquo;s card</div>
+          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">Allergies, medical and SEND always show for safeguarding. These are the extra details on the tap-through card.</p>
+          {([["password", "Collection password"], ["emergency", "Emergency contact"], ["school", "School"], ["contact", "Booker contact"]] as [("password" | "emergency" | "school" | "contact"), string][]).map(([k, label]) => (
+            <Row key={k} label={label}>
+              <Toggle on={settings.registers?.fields?.[k] ?? true} onChange={(v) => set("registers", { ...settings.registers, fields: { ...settings.registers?.fields, [k]: v } })} labels={["Show", "Hide"]} />
+            </Row>
+          ))}
         </Section>
       )}
 

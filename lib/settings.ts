@@ -432,6 +432,13 @@ export interface TenantSettings {
     activities?: { k: string; n: string; e: string; c: string }[];
   };
 
+  /** Register — sign-in/out timestamps and which profile fields show when you
+   *  tap a child on the register. */
+  registers?: {
+    timestamps?: boolean;   // show the time next to In / Collected
+    fields?: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean };
+  };
+
   /**
    * Marketing library — quotes and images an operator pushed from Moments to the
    * Email area, kept for reuse. Quotes carry their text; images store a snapshot
@@ -752,6 +759,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     ],
   },
   emailAssets: { quotes: [], images: [] },
+  registers: { timestamps: true, fields: { contact: true, emergency: true, password: true, school: true } },
   inventory: {
     categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
     locations: ["Main store", "Van", "Shed", "Office"],
@@ -817,6 +825,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },
+    registers: { timestamps: s.registers?.timestamps ?? true, fields: { ...DEFAULT_SETTINGS.registers!.fields, ...(s.registers?.fields ?? {}) } },
     emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,

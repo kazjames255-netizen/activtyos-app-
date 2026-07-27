@@ -29,20 +29,27 @@ const canMark = (role: Role) =>
 
 const regId = (blockId: string, date: string) => `${blockId}_${date}`;
 
-type MarkStatus = "in" | "out" | "absent";
+// Presence is Present / Absent (no status = Not arrived). Collection is tracked
+// SEPARATELY — a collected child stays "present" for the day's count, matching
+// the manual (Sign in and Collect are independent one-tap toggles).
 interface Entry {
-  status: MarkStatus;
-  inAt: string | null;
-  outAt: string | null;
-  by: string; // who marked it (email or uid)
-  at: string; // when the entry last changed
+  status?: "in" | "absent";
+  inAt?: string | null;
+  collectedAt?: string | null;
+  collectedBy?: string | null;
+  reason?: string | null;   // absent reason (optional)
+  by: string;               // who last marked it (email or uid)
+  at: string;               // when the entry last changed
 }
+interface HeadCount { n: number; by: string; at: string }
 interface RegisterDoc {
   tenantId: string;
   listingId: string;
   blockId: string;
   date: string;
   entries: Record<string, Entry>; // keyed by booking ref
+  heads?: HeadCount[];            // quick head-count tally
+  takenBy?: { name: string; at: string } | null; // who took the register
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -112,18 +119,26 @@ registers.get("/", async (req, res) => {
       const c = d.data() as Record<string, unknown>;
       return [d.id, {
         photo: c.photo as string | undefined,
+        dob: c.dob as string | undefined,
+        school: c.school as string | undefined,
         allergies: c.allergies as string | undefined,
         medical: c.medical as string | undefined,
+        dietary: c.dietary as string | undefined,
         send: c.send as string | undefined,
         sendPlanId: c.sendPlanId as string | undefined,
         sendPlanName: c.sendPlanName as string | undefined,
+        careNotes: c.careNotes as string | undefined,
         collectionPassword: c.collectionPassword as string | undefined,
+        emergencyName: c.emergencyName as string | undefined,
+        emergencyPhone: c.emergencyPhone as string | undefined,
+        photoConsent: c.photoConsent as boolean | undefined,
       }];
     }),
   );
 
   const out = todays.map(({ id, block, session }, i) => {
-    const entries = regSnaps[i].exists ? ((regSnaps[i].data() as RegisterDoc).entries ?? {}) : {};
+    const reg = regSnaps[i].exists ? (regSnaps[i].data() as RegisterDoc) : null;
+    const entries = reg?.entries ?? {};
     const attendees = bookingSnaps[i].docs
       .map((d) => fromDoc(d.data() as BookingDoc))
       // Expected = holds a place AND is booked for THIS day (bookings with
@@ -144,11 +159,14 @@ registers.get("/", async (req, res) => {
         attendance: entries[b.ref] ?? null,
       }))
       .sort((a, b) => (a.children[0].name < b.children[0].name ? -1 : 1));
+    const present = attendees.filter((a) => a.attendance?.status === "in").length;
+    const absent = attendees.filter((a) => a.attendance?.status === "absent").length;
     const counts = {
       expected: attendees.length,
-      in: attendees.filter((a) => a.attendance?.status === "in").length,
-      out: attendees.filter((a) => a.attendance?.status === "out").length,
-      absent: attendees.filter((a) => a.attendance?.status === "absent").length,
+      present,
+      notArrived: attendees.length - present - absent,
+      absent,
+      collected: attendees.filter((a) => a.attendance?.collectedAt).length,
     };
     return {
       blockId: id,
@@ -160,6 +178,8 @@ registers.get("/", async (req, res) => {
       listingName: listingName.get(block.listingId) ?? "",
       attendees,
       counts,
+      heads: reg?.heads ?? [],
+      takenBy: reg?.takenBy ?? null,
     };
   });
   out.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.blockName < b.blockName ? -1 : 1));
@@ -168,8 +188,11 @@ registers.get("/", async (req, res) => {
 
 const markSchema = z.object({
   ref: z.string().min(1),
-  // "expected" = undo: clears the entry so the child is back to expected.
-  status: z.enum(["in", "out", "absent", "expected"]),
+  // in = sign in / present (toggle), absent = absent-ill (toggle), collect =
+  // collected (independent toggle), reset = back to not-arrived.
+  action: z.enum(["in", "absent", "collect", "reset"]),
+  collectedBy: z.string().trim().max(120).optional(),
+  reason: z.string().trim().max(200).optional(),
 });
 
 // POST /api/registers/{blockId}/{date}/mark — check a child in/out or mark
@@ -220,32 +243,60 @@ registers.post("/:blockId/:date/mark", async (req, res) => {
   }
 
   const by = req.user?.email ?? req.user?.uid ?? "unknown";
+  const takenByName = req.user?.name ?? req.user?.email ?? "Staff";
   const now = new Date().toISOString();
+  const { action, collectedBy, reason, ref: bref } = parsed.data;
   const ref = regsCol.doc(regId(blockId, date));
   const entry = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const doc: RegisterDoc = snap.exists
       ? (snap.data() as RegisterDoc)
       : { tenantId: auth.tenantId!, listingId: block.listingId, blockId, date, entries: {} };
-    const prev = doc.entries[parsed.data.ref];
-    if (parsed.data.status === "expected") {
-      delete doc.entries[parsed.data.ref];
-    } else if (parsed.data.status === "in") {
-      doc.entries[parsed.data.ref] = { status: "in", inAt: now, outAt: null, by, at: now };
-    } else if (parsed.data.status === "out") {
-      doc.entries[parsed.data.ref] = {
-        status: "out",
-        inAt: prev?.inAt ?? null, // keep when they arrived
-        outAt: now,
-        by,
-        at: now,
-      };
-    } else {
-      doc.entries[parsed.data.ref] = { status: "absent", inAt: null, outAt: null, by, at: now };
+    const prev = doc.entries[bref];
+    const keepCollect = { collectedAt: prev?.collectedAt ?? null, collectedBy: prev?.collectedBy ?? null };
+    if (action === "reset") {
+      delete doc.entries[bref];
+    } else if (action === "in") {
+      if (prev?.status === "in") delete doc.entries[bref];                    // toggle off → not arrived
+      else doc.entries[bref] = { status: "in", inAt: now, ...keepCollect, by, at: now };
+    } else if (action === "absent") {
+      if (prev?.status === "absent") delete doc.entries[bref];                // toggle off → not arrived
+      else doc.entries[bref] = { status: "absent", inAt: null, collectedAt: null, collectedBy: null, reason: reason ?? null, by, at: now };
+    } else if (action === "collect") {
+      const base: Entry = prev ?? { status: "in", inAt: now, collectedAt: null, collectedBy: null, by, at: now };
+      doc.entries[bref] = prev?.collectedAt
+        ? { ...base, collectedAt: null, collectedBy: null, by, at: now }      // toggle off
+        : { ...base, status: base.status ?? "in", collectedAt: now, collectedBy: collectedBy ?? null, by, at: now };
     }
+    doc.takenBy = { name: takenByName, at: now };
     tx.set(ref, doc);
-    return doc.entries[parsed.data.ref] ?? null;
+    return doc.entries[bref] ?? null;
   });
 
-  res.json({ ref: parsed.data.ref, attendance: entry });
+  res.json({ ref: bref, attendance: entry });
+});
+
+const headSchema = z.object({ n: z.number().int().min(0).max(999) });
+
+// POST /api/registers/{blockId}/{date}/headcount — log a quick head-count tally.
+registers.post("/:blockId/:date/headcount", async (req, res) => {
+  const auth = req.auth!;
+  if (!canMark(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires a staff or operator account" }); return; }
+  const parsed = headSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const { blockId, date } = req.params;
+  const blockSnap = await db.collection("blocks").doc(blockId).get();
+  if (!blockSnap.exists || blockSnap.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Block not found" }); return; }
+  const block = blockSnap.data() as BlockDoc;
+  const ref = regsCol.doc(regId(blockId, date));
+  const by = req.user?.name ?? req.user?.email ?? "Staff";
+  const now = new Date().toISOString();
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const doc: RegisterDoc = snap.exists ? (snap.data() as RegisterDoc) : { tenantId: auth.tenantId!, listingId: block.listingId, blockId, date, entries: {} };
+    doc.heads = [...(doc.heads ?? []), { n: parsed.data.n, by, at: now }].slice(-30);
+    doc.takenBy = { name: by, at: now };
+    tx.set(ref, doc);
+  });
+  res.status(201).json({ ok: true });
 });
