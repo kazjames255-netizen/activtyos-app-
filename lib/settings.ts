@@ -275,6 +275,9 @@ export interface SavedImage {
   include?: { caption: boolean; quote: boolean; comments: boolean };
   /** The moment's caption at save time, so "include caption" can be re-toggled. */
   sourceCaption?: string;
+  /** A custom message typed in the Email area — overrides the moment's caption
+   *  under the photo (empty string = deliberately no message). */
+  customCaption?: string;
   /** The moment's parent comments at save time (with their marketing flag). */
   sourceComments?: { text: string; byName?: string; marketing?: boolean }[];
   /** Attribution line drawn at the foot of the banner. */

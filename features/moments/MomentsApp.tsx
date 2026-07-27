@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import type { SavedImage, SavedQuote } from "@/lib/settings";
+import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, triggerDownload } from "@/lib/momentImage";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -232,46 +232,11 @@ export function MomentsApp() {
 
   async function remove(m: Moment) { if (!confirm("Delete this moment?")) return; try { await api(`/api/moments/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }
   async function reply(m: Moment) { const t = (replyVals[m.id] ?? "").trim(); if (!t) return; try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment`, { text: t }); setReplyVals((v) => ({ ...v, [m.id]: "" })); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  // Star/unstar a parent comment as a marketing quote. Starring auto-pushes it to
-  // the Email marketing area (a folder of testimonials); unstarring pulls it back.
+  // Star/unstar a parent comment as a marketing quote. Starring lets the quote be
+  // shown under this moment's photo in the Email marketing area.
   async function toggleMarketing(m: Moment, idx: number) {
-    const c = m.comments?.[idx];
-    try {
-      await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {});
-      if (c) {
-        const nowMarketing = !c.marketing;
-        const cur = settings.emailAssets ?? {};
-        const child = m.childNames?.filter(Boolean)[0];
-        const has = (cur.quotes ?? []).some((q) => q.text === c.text && q.byName === c.byName);
-        if (nowMarketing && !has) {
-          const savedAt = new Date().toISOString();
-          const q: SavedQuote = { id: `q_${savedAt}`, text: c.text, byName: c.byName, childName: child, momentId: m.id, savedAt };
-          await save({ settings: { ...settings, emailAssets: { ...cur, quotes: [q, ...(cur.quotes ?? [])] } } });
-          setSavedMsg("★ Saved to the Email marketing area");
-        } else if (!nowMarketing && has) {
-          await save({ settings: { ...settings, emailAssets: { ...cur, quotes: (cur.quotes ?? []).filter((q) => !(q.text === c.text && q.byName === c.byName)) } } });
-        }
-      }
-      refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
-  }
-
-  // Sync any already-starred quotes into the Email area (for quotes starred before
-  // auto-push, or after a manual removal).
-  async function moveQuotesToEmail() {
-    const cur = settings.emailAssets ?? {};
-    const have = new Set((cur.quotes ?? []).map((q) => `${q.text}|${q.byName ?? ""}`));
-    const savedAt = new Date().toISOString();
-    const additions: SavedQuote[] = [];
-    for (const m of moments ?? []) for (const c of (m.comments ?? [])) {
-      if (c.role !== "parent" || !c.marketing) continue;
-      const key = `${c.text}|${c.byName ?? ""}`;
-      if (have.has(key)) continue; have.add(key);
-      additions.push({ id: `q_${savedAt}_${additions.length}`, text: c.text, byName: c.byName, childName: m.childNames?.filter(Boolean)[0], momentId: m.id, savedAt });
-    }
-    if (!additions.length) { setSavedMsg("All marketing quotes are already in the Email area"); return; }
-    await save({ settings: { ...settings, emailAssets: { ...cur, quotes: [...additions, ...(cur.quotes ?? [])] } } });
-    setSavedMsg(`Moved ${additions.length} quote${additions.length === 1 ? "" : "s"} to the Email area`);
+    try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {}); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
 
   // Resolve which caption/quotes the include-toggles bake in — shared by download
@@ -347,7 +312,6 @@ export function MomentsApp() {
   const listingName = useMemo(() => new Map(listings.map((l) => [l.id, l.title])), [listings]);
   const featured = useMemo(() => { const m = new Map<string, string>(); for (const mo of all) mo.childIds.forEach((id, i) => { const n = mo.childNames?.[i]; if (n && !m.has(id)) m.set(id, n); }); return [...m.entries()]; }, [all]);
   const photos = useMemo(() => all.filter((m) => m.photoUrl), [all]);
-  const marketingQuoteCount = useMemo(() => all.reduce((n, m) => n + (m.comments ?? []).filter((c) => c.marketing).length, 0), [all]);
   const tiles: [string, number][] = [["Today", all.filter((m) => m.date === todayIso()).length], ["This week", all.filter((m) => (m.date ?? "") >= weekStartIso()).length], ["Photos", photos.length], ["Children featured", featured.length]];
 
   const inWhen = (m: Moment) => galWhen === "all" || (galWhen === "today" ? m.date === todayIso() : (m.date ?? "") >= weekStartIso());
@@ -419,16 +383,13 @@ export function MomentsApp() {
             const savedCount = settings.emailAssets?.images?.length ?? 0;
             const savedIds = new Set((settings.emailAssets?.images ?? []).map((im) => im.momentId));
             const unsaved = (moments ?? []).filter((m) => m.photoUrl && !savedIds.has(m.id)).length;
-            const quoteKeys = new Set((settings.emailAssets?.quotes ?? []).map((q) => `${q.text}|${q.byName ?? ""}`));
-            const quotesUnsaved = marketingQuoteCount - (moments ?? []).flatMap((m) => (m.comments ?? []).filter((c) => c.marketing && quoteKeys.has(`${c.text}|${c.byName ?? ""}`))).length;
             const auto = !!settings.emailAssets?.autoAddPhotos;
             return (
               <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-[#f6e2a8] bg-[#fffdf3] px-3 py-2">
                 <span className="text-[11.5px] font-bold text-[#9a5a00]">📥 Email marketing area</span>
                 <button type="button" onClick={saveAllPhotosToEmail} disabled={unsaved === 0} className="rounded-full px-3 py-0.5 text-[11px] font-extrabold text-white disabled:opacity-45" style={{ background: "#9a5a00" }}>✉ Move all photos{unsaved ? ` (${unsaved})` : ""}</button>
-                <button type="button" onClick={moveQuotesToEmail} disabled={quotesUnsaved <= 0} className="rounded-full border px-3 py-0.5 text-[11px] font-extrabold disabled:opacity-45" style={{ borderColor: "#9a5a00", color: "#9a5a00" }} title="Push starred parent quotes into the Email area's quotes folder. New stars auto-push too.">✉ Move marketing quotes{quotesUnsaved > 0 ? ` (${quotesUnsaved})` : ""}</button>
                 <button type="button" onClick={toggleAutoAdd} className="flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[11px] font-bold" style={auto ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }} title="When on, every new Moments photo is added to the Email area automatically.">{auto ? "✓ Auto-add new photos" : "Auto-add new photos"}</button>
-                <span className="text-[10.5px] text-[var(--ink-3)]">{savedCount} photo{savedCount === 1 ? "" : "s"} in Email · {auto ? "new photos sync automatically" : "manual"}</span>
+                <span className="text-[10.5px] text-[var(--ink-3)]">{savedCount} photo{savedCount === 1 ? "" : "s"} in Email · {auto ? "new photos sync automatically. Each photo carries its own message & starred quote." : "manual. Each photo carries its own message & starred quote."}</span>
               </div>
             );
           })()}
@@ -515,7 +476,7 @@ export function MomentsApp() {
                             <span className="flex-none font-bold" style={{ color: c.role === "parent" ? BLUE : "var(--ink)" }}>{c.byName}{c.role === "parent" ? "" : " (you)"}:</span>
                             <span className="flex-1 text-[var(--ink-2)]">{c.text}</span>
                           </div>
-                          {canManage && c.role === "parent" && <button type="button" onClick={() => toggleMarketing(m, idx)} className="mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-extrabold" style={c.marketing ? { borderColor: "#f0b100", background: "#fffdf3", color: "#9a5a00" } : { borderColor: "var(--line)", color: "var(--ink-3)" }} title="Starring saves this quote to the Email marketing area (quotes folder) and lets it be baked into a photo. Tap again to remove.">{c.marketing ? "★ Marketing quote — in Email area, tap to remove" : "☆ Use as a marketing quote"}</button>}
+                          {canManage && c.role === "parent" && <button type="button" onClick={() => toggleMarketing(m, idx)} className="mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-extrabold" style={c.marketing ? { borderColor: "#f0b100", background: "#fffdf3", color: "#9a5a00" } : { borderColor: "var(--line)", color: "var(--ink-3)" }} title="Starring marks this as a marketing quote — it can then be shown under this moment's photo in the Email area. Tap again to remove.">{c.marketing ? "★ Marketing quote — tap to remove" : "☆ Use as a marketing quote"}</button>}
                         </div>
                       ))}
                       {canManage && <div className="mt-1 flex gap-1.5"><input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder="Reply…" className="flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" /><button type="button" onClick={() => reply(m)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" style={{ color: BLUE }}>Send</button></div>}

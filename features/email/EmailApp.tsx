@@ -4,19 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import type { SavedImage, SavedQuote } from "@/lib/settings";
+import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
+interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const BROWN = "#9a5a00", BLUE = "#1d3a8f", GREEN = "#047857";
 const SWATCHES = ["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"];
 const RATIO_AR: Record<string, string> = { square: "1 / 1", portrait: "4 / 5", story: "9 / 16" };
 
-// One saved Moments photo — the same size/fit/colour/include controls as the
-// Moments download menu, but the primary action drops it into the email/template
-// (a proper visual email builder lands later; for now it stages the content).
+// One saved Moments photo. Its own message (the caption sent to parents) and its
+// own marketing quote sit UNDER the image — so there's never a question of which
+// quote belongs to which photo. Message/Quote are toggled right on the card; the
+// rest (size, crop, colour) live behind Edit. "Add to email" uses what's ticked.
 function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPatch: (p: Partial<SavedImage>) => void; onRemove: () => void; onAdd: () => void }) {
   const [editing, setEditing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -30,11 +32,13 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
   }, [im]);
 
   const inc = im.include ?? { caption: false, quote: false, comments: false };
-  const hasCaption = !!(im.sourceCaption ?? im.caption);
+  const momentCaption = im.sourceCaption ?? im.caption ?? "";
+  const captionValue = im.customCaption !== undefined ? im.customCaption : (inc.caption ? momentCaption : "");
   const nQuotes = (im.sourceComments ?? []).filter((c) => c.marketing).length;
   const nParent = (im.sourceComments ?? []).length;
   const fit = im.fit ?? "contain";
   const chip = (on: boolean) => on ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" } as const;
+  const incBtn = (on: boolean, avail: boolean) => on && avail ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" } as const;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
@@ -45,27 +49,32 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
       <div className="p-2.5">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-[11.5px] font-bold">{im.childName ?? "Moment"}</span>
-          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold" style={editing ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{editing ? "Done" : "Edit"}</button>
+          <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold" style={editing ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{editing ? "Done" : "⚙ Size · crop · colour"}</button>
         </div>
+
+        {/* message you type + the moment's quote — shown under the photo (live preview above) */}
+        <div className="mt-1.5 flex items-center justify-between">
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Message under the photo</span>
+          {momentCaption && captionValue !== momentCaption && <button type="button" onClick={() => onPatch({ customCaption: momentCaption })} className="text-[10px] font-bold text-[#1d3a8f]">↺ parent’s message</button>}
+        </div>
+        <textarea value={captionValue} onChange={(e) => onPatch({ customCaption: e.target.value })} rows={2} placeholder="e.g. Tony is the best player today" className="mt-1 w-full resize-none rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] [field-sizing:content]" />
+        <button type="button" disabled={nQuotes === 0} onClick={() => onPatch({ include: { ...inc, quote: !inc.quote } })} className="mt-1.5 rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold disabled:opacity-45" style={incBtn(inc.quote, nQuotes > 0)}>{inc.quote && nQuotes > 0 ? "✓ " : ""}Show marketing quote{nQuotes ? ` (${nQuotes})` : " (none)"}</button>
 
         {editing && (
           <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 text-[10.5px]">
             <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Size</div>
             <div className="mb-2 flex flex-wrap gap-1">{([["square", "1:1"], ["portrait", "4:5"], ["story", "9:16"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ ratio: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(im.ratio === k)}>{l}</button>)}</div>
-            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Photo fit</div>
-            <div className="mb-2 flex flex-wrap gap-1">{([["contain", "Whole photo"], ["cover", "Fill"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ fit: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(fit === k)}>{l}</button>)}</div>
+            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Crop</div>
+            <div className="mb-2 flex flex-wrap gap-1">{([["contain", "Whole photo"], ["cover", "Fill / crop"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => onPatch({ fit: k })} className="rounded-full border px-2 py-0.5 font-bold" style={chip(fit === k)}>{l}</button>)}</div>
             <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Text colour</div>
             <div className="mb-2 flex flex-wrap items-center gap-1">{SWATCHES.map((sw) => <button key={sw} type="button" onClick={() => onPatch({ color: sw })} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: im.color === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={im.color} onChange={(e) => onPatch({ color: e.target.value })} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" /></div>
-            <div className="mb-1 font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Include in banner</div>
-            <div className="flex flex-wrap gap-1">
-              {([["caption", `Message${hasCaption ? "" : " (none)"}`, hasCaption], ["quote", `Marketing quote${nQuotes ? ` (${nQuotes})` : " (none)"}`, nQuotes > 0], ["comments", `All comments${nParent ? ` (${nParent})` : " (none)"}`, nParent > 0]] as const).map(([k, l, avail]) => <button key={k} type="button" disabled={!avail} onClick={() => onPatch({ include: { ...inc, [k]: !inc[k] } })} className="rounded-full border-2 px-2 py-0.5 font-bold disabled:opacity-45" style={inc[k] && avail ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{inc[k] && avail ? "✓ " : ""}{l}</button>)}
-            </div>
+            {nParent > 0 && <button type="button" onClick={() => onPatch({ include: { ...inc, comments: !inc.comments } })} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold" style={incBtn(inc.comments, true)}>{inc.comments ? "✓ " : ""}All comments ({nParent})</button>}
           </div>
         )}
 
         <div className="mt-2 flex gap-1.5">
           <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: BROWN }}>➕ Add to email</button>
-          <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title="Download this image">⬇</button>
+          <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title="Download this image (with everything shown in the preview)">⬇</button>
           <button type="button" onClick={onRemove} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-3)]" title="Remove from Email area">✕</button>
         </div>
       </div>
@@ -83,22 +92,21 @@ export function EmailApp() {
   const [body, setBody] = useState("");
   const [reach, setReach] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
-  const [qOpen, setQOpen] = useState(true);
-  const [pOpen, setPOpen] = useState(true);
+  const [assetsOpen, setAssetsOpen] = useState(true);
+  const [moments, setMoments] = useState<LiveMoment[] | null>(null);
   const { settings, save } = useSettings();
-  const savedQuotes: SavedQuote[] = settings.emailAssets?.quotes ?? [];
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
+  const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
+  // Read the live moment so a photo carries its own message + marketing quote
+  // (kept associated with the correct image, straight from that moment).
+  const enrich = (im: SavedImage): SavedImage => {
+    const live = momentById.get(im.momentId);
+    if (!live) return im;
+    return { ...im, sourceCaption: live.caption ?? im.sourceCaption, sourceComments: (live.comments ?? []).filter((c) => c.role === "parent").map((c) => ({ text: c.text, byName: c.byName, marketing: c.marketing })) };
+  };
 
   const appendBody = (block: string) => setBody((b) => (b.trim() ? `${b.replace(/\s+$/, "")}\n\n${block}\n` : `${block}\n`));
 
-  function insertQuote(q: SavedQuote) {
-    appendBody(`“${q.text}” — ${q.byName ?? "a parent"}${q.childName ? `, parent of ${q.childName}` : ""}`);
-    setOk("Quote added to your message below.");
-  }
-  function removeQuote(id: string) {
-    if (!confirm("Remove this saved quote?")) return;
-    save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), quotes: savedQuotes.filter((q) => q.id !== id) } } });
-  }
   function patchImage(id: string, partial: Partial<SavedImage>) {
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.map((im) => im.id === id ? { ...im, ...partial } : im) } } });
   }
@@ -106,6 +114,7 @@ export function EmailApp() {
     if (!confirm("Remove this saved image?")) return;
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.filter((im) => im.id !== id) } } });
   }
+  // Add the photo to the email draft, including whatever message/quote is ticked.
   function addImageToEmail(im: SavedImage) {
     const { caption, quotes } = resolveSavedText(im);
     const parts: string[] = [];
@@ -120,7 +129,8 @@ export function EmailApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); }, []);
-  useRealtime(["emails", "bookings"], () => { refresh(); apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); });
+  useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
+  useRealtime(["emails", "bookings", "moments"], () => { refresh(); apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
 
   async function send() {
     if (!subject.trim() || !body.trim()) { setError("A subject and a message are required."); return; }
@@ -162,48 +172,19 @@ export function EmailApp() {
         </div>
       </Card>
 
-      {(savedQuotes.length > 0 || savedImages.length > 0) && (
+      {savedImages.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
-          <div className="mb-2.5 text-[13px] font-extrabold" style={{ color: BROWN, fontFamily: "var(--ff-display)" }}>📥 Saved from Moments <span className="text-[11px] font-semibold text-[var(--ink-3)]">— quotes and photos pushed here from the Moments feed, kept in folders for reuse</span></div>
-
-          {/* Quotes folder — collapsible */}
-          <div className="mb-2.5 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-            <button type="button" onClick={() => setQOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
-              <span className="text-[12px] font-extrabold">📁 Marketing quotes <span className="text-[11px] font-semibold text-[var(--ink-3)]">({savedQuotes.length})</span></span>
-              <span className="text-[12px] text-[var(--ink-3)]">{qOpen ? "▲ Close" : "▼ Open"}</span>
-            </button>
-            {qOpen && (savedQuotes.length === 0
-              ? <div className="border-t border-[var(--line)] px-3 py-3 text-[12px] text-[var(--ink-3)]">Star a comment in Moments to send it here.</div>
-              : <div className="grid gap-2.5 border-t border-[var(--line)] p-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {savedQuotes.map((q) => (
-                    <blockquote key={q.id} className="flex flex-col rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px] italic leading-[1.5] text-[var(--ink-2)]">
-                      “{q.text}”
-                      <div className="mt-1.5 text-[11px] not-italic text-[var(--ink-3)]">— {q.byName ?? "a parent"}{q.childName ? `, parent of ${q.childName}` : ""}</div>
-                      <div className="mt-2 flex gap-1.5">
-                        <button type="button" onClick={() => insertQuote(q)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold not-italic" style={{ borderColor: BLUE, color: BLUE }}>Add to email</button>
-                        <button type="button" onClick={() => removeQuote(q.id)} className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold not-italic text-[var(--ink-3)]">Remove</button>
-                      </div>
-                    </blockquote>
-                  ))}
-                </div>
-            )}
-          </div>
-
-          {/* Photos folder — collapsible */}
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-            <button type="button" onClick={() => setPOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
-              <span className="text-[12px] font-extrabold">📁 Photos <span className="text-[11px] font-semibold text-[var(--ink-3)]">({savedImages.length})</span></span>
-              <span className="text-[12px] text-[var(--ink-3)]">{pOpen ? "▲ Close" : "▼ Open"}</span>
-            </button>
-            {pOpen && (savedImages.length === 0
-              ? <div className="border-t border-[var(--line)] px-3 py-3 text-[12px] text-[var(--ink-3)]">Move photos here from the Moments gallery.</div>
-              : <div className="grid gap-2.5 border-t border-[var(--line)] p-3" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))" }}>
-                  {savedImages.map((im) => (
-                    <SavedImageCard key={im.id} im={im} onPatch={(p) => patchImage(im.id, p)} onRemove={() => removeImage(im.id)} onAdd={() => addImageToEmail(im)} />
-                  ))}
-                </div>
-            )}
-          </div>
+          <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left">
+            <span className="text-[13px] font-extrabold" style={{ color: BROWN, fontFamily: "var(--ff-display)" }}>📷 Photos from Moments <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your own message, add the quote, set size/crop/colour. The preview updates live before you add or download.</span></span>
+            <span className="flex-none text-[12px] text-[var(--ink-3)]">{assetsOpen ? "▲ Close" : "▼ Open"}</span>
+          </button>
+          {assetsOpen && (
+            <div className="mt-2.5 grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))" }}>
+              {savedImages.map((im) => { const e = enrich(im); return (
+                <SavedImageCard key={im.id} im={e} onPatch={(p) => patchImage(im.id, p)} onRemove={() => removeImage(im.id)} onAdd={() => addImageToEmail(e)} />
+              ); })}
+            </div>
+          )}
         </div>
       )}
 

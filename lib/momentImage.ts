@@ -127,23 +127,25 @@ export async function composeMomentImage(o: ComposeOpts): Promise<string | null>
 export interface SavedTextSource {
   include?: { caption: boolean; quote: boolean; comments: boolean };
   sourceCaption?: string;
+  customCaption?: string;
   sourceComments?: MomentQuote[];
   caption?: string;        // legacy baked caption
   quotes?: MomentQuote[];  // legacy baked quotes
 }
 
-/** Resolve which caption + quotes a saved image bakes in, from its include
- *  toggles and source content (falling back to any legacy baked fields). */
+/** Resolve which caption + quotes a saved image bakes in. A custom message wins
+ *  over the moment's caption; otherwise the include toggles pick the moment's
+ *  caption/quotes (falling back to any legacy baked fields). */
 export function resolveSavedText(im: SavedTextSource): { caption?: string; quotes: MomentQuote[] } {
-  if (im.include || im.sourceComments !== undefined || im.sourceCaption !== undefined) {
-    const inc = im.include ?? { caption: false, quote: false, comments: false };
-    const parent = im.sourceComments ?? [];
-    const chosen: MomentQuote[] = [];
-    if (inc.quote) chosen.push(...parent.filter((c) => c.marketing));
-    if (inc.comments) for (const c of parent) if (!chosen.includes(c)) chosen.push(c);
-    return { caption: inc.caption ? im.sourceCaption : undefined, quotes: chosen };
-  }
-  return { caption: im.caption, quotes: im.quotes ?? [] };
+  const hasNew = im.include !== undefined || im.sourceComments !== undefined || im.sourceCaption !== undefined || im.customCaption !== undefined;
+  if (!hasNew) return { caption: im.caption, quotes: im.quotes ?? [] };
+  const inc = im.include ?? { caption: false, quote: false, comments: false };
+  const parent = im.sourceComments ?? [];
+  const chosen: MomentQuote[] = [];
+  if (inc.quote) chosen.push(...parent.filter((c) => c.marketing));
+  if (inc.comments) for (const c of parent) if (!chosen.includes(c)) chosen.push(c);
+  const caption = im.customCaption !== undefined ? (im.customCaption || undefined) : (inc.caption ? im.sourceCaption : undefined);
+  return { caption, quotes: chosen };
 }
 
 /** Kick off a browser download for a data/blob/URL href. */
