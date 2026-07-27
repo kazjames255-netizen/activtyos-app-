@@ -436,6 +436,7 @@ export interface TenantSettings {
    *  tap a child on the register. */
   registers?: {
     timestamps?: boolean;   // show the time next to In / Collected
+    requireCollectionPin?: boolean; // show the "collection PIN required" banner
     fields?: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean };
   };
 

@@ -1319,6 +1319,9 @@ export function SetupApp() {
           <Row label="Show sign-in / collection times" hint="On: each ✓ In and ✓ Collected shows the time it was tapped. Off: just the tick.">
             <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={["On", "Off"]} />
           </Row>
+          <Row label="Show the collection-PIN reminder" hint="On: a banner reminds staff to check the family's collection PIN before releasing a child. (The 4-digit PIN itself is Phase 2 — for now use the collection password.)">
+            <Toggle on={settings.registers?.requireCollectionPin ?? false} onChange={(v) => set("registers", { ...settings.registers, requireCollectionPin: v })} labels={["On", "Off"]} />
+          </Row>
           <div className="mt-3 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Show on a child&rsquo;s card</div>
           <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">Allergies, medical and SEND always show for safeguarding. These are the extra details on the tap-through card.</p>
           {([["password", "Collection password"], ["emergency", "Emergency contact"], ["school", "School"], ["contact", "Booker contact"]] as [("password" | "emergency" | "school" | "contact"), string][]).map(([k, label]) => (
