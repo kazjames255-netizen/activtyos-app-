@@ -148,6 +148,7 @@ registers.get("/", async (req, res) => {
       .map((b) => ({
         ref: b.ref,
         booker: b.booker,
+        email: b.email ?? "",
         bookingStatus: b.status,
         seats: b.seats ?? 1,
         children: b.kids?.length

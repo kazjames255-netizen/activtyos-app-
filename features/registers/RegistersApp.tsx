@@ -21,10 +21,11 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 const BLUE = "#1d3a8f", GREEN = "#0f9d58", RED = "#e11d48", AMBER = "#d97706";
+const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 
 interface Attendance { status?: "in" | "absent"; inAt?: string | null; collectedAt?: string | null; collectedBy?: string | null }
 interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean }
-interface Attendee { ref: string; booker: string; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
+interface Attendee { ref: string; booker: string; email: string; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
 interface Head { n: number; by: string; at: string }
 interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null }
 type Action = "in" | "absent" | "collect" | "reset";
@@ -48,8 +49,8 @@ function staffNeeded(children: { age?: number }[], groups: RatioGroup[]): number
 }
 
 function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: string }) {
-  const m = kind === "allergy" ? { bg: "#fde2e4", fg: RED, g: "" } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, g: "✚" } : { bg: "#f3e8ff", fg: "#6d28d9", g: "◆" };
-  return <span title={text} className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] text-[13px] font-extrabold" style={{ background: m.bg, color: m.fg }}>{m.g}</span>;
+  const m = kind === "allergy" ? { bg: "#fde2e4", fg: "#c02636", label: "Allergy" } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, label: "Medical" } : { bg: "#f3e8ff", fg: "#6d28d9", label: "SEND" };
+  return <span title={text} className="rounded-md px-1.5 py-[2px] text-[9.5px] font-extrabold uppercase tracking-[0.03em]" style={{ background: m.bg, color: m.fg }}>{m.label}</span>;
 }
 
 // ── Child detail card ──────────────────────────────────────────────────────
@@ -85,35 +86,66 @@ function ChildModal({ a, showTimes, fields, onClose }: { a: Attendee; showTimes:
 }
 
 // ── Download picker ─────────────────────────────────────────────────────────
-const DL_COLS = [
-  { key: "age", label: "Age", on: true }, { key: "time", label: "Timing", on: true }, { key: "status", label: "Status", on: true },
-  { key: "arrived", label: "Arrived", on: true }, { key: "collected", label: "Collected", on: true }, { key: "allergies", label: "Allergies", on: true },
-  { key: "medical", label: "Medical", on: true }, { key: "needs", label: "SEND / needs", on: true }, { key: "emergency", label: "Emergency contact", on: true },
-  { key: "emphone", label: "Em. phone", on: true }, { key: "password", label: "Collection password", on: false }, { key: "dob", label: "DOB", on: false }, { key: "school", label: "School", on: false },
+type DlCol = { key: string; label: string; on: boolean; group: string };
+const DL_COLS: DlCol[] = [
+  { key: "age", label: "Age", on: true, group: "Attendance" }, { key: "time", label: "Timing", on: true, group: "Attendance" },
+  { key: "status", label: "Status", on: true, group: "Attendance" }, { key: "arrived", label: "Arrived", on: true, group: "Attendance" },
+  { key: "collected", label: "Collected", on: true, group: "Attendance" }, { key: "collectedby", label: "Collected by", on: false, group: "Attendance" },
+  { key: "seats", label: "Seats", on: false, group: "Attendance" },
+  { key: "allergies", label: "Allergies", on: true, group: "Safeguarding" }, { key: "medical", label: "Medical", on: true, group: "Safeguarding" },
+  { key: "needs", label: "SEND / needs", on: true, group: "Safeguarding" }, { key: "dietary", label: "Dietary", on: false, group: "Safeguarding" },
+  { key: "carenotes", label: "Care notes", on: false, group: "Safeguarding" }, { key: "photo", label: "Photo consent", on: false, group: "Safeguarding" },
+  { key: "emergency", label: "Emergency contact", on: true, group: "Contact" }, { key: "emphone", label: "Em. phone", on: true, group: "Contact" },
+  { key: "booker", label: "Parent / booker", on: false, group: "Contact" }, { key: "email", label: "Contact email", on: false, group: "Contact" },
+  { key: "password", label: "Collection password", on: false, group: "Sensitive" }, { key: "dob", label: "Date of birth", on: false, group: "Sensitive" },
+  { key: "school", label: "School", on: false, group: "Sensitive" },
 ];
+const DL_GROUPS = ["Attendance", "Safeguarding", "Contact", "Sensitive"];
 function cell(key: string, s: Session, a: Attendee): string {
   const c = a.child, k = a.children[0];
   switch (key) {
     case "age": return k?.age != null ? String(k.age) : ""; case "time": return `${s.start}-${s.end}`;
     case "status": return st(a) === "present" ? "Present" : st(a) === "absent" ? "Absent" : "Not arrived";
     case "arrived": return timeOf(a.attendance?.inAt); case "collected": return a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
+    case "collectedby": return a.attendance?.collectedBy ?? ""; case "seats": return String(a.seats ?? 1);
     case "allergies": return c?.allergies ?? ""; case "medical": return c?.medical ?? ""; case "needs": return c?.send || c?.sendPlanName ? "SEND" : "";
-    case "emergency": return c?.emergencyName ?? ""; case "emphone": return c?.emergencyPhone ?? ""; case "password": return c?.collectionPassword ?? "";
+    case "dietary": return c?.dietary ?? ""; case "carenotes": return c?.careNotes ?? ""; case "photo": return c?.photoConsent == null ? "" : c.photoConsent ? "Yes" : "No";
+    case "emergency": return c?.emergencyName ?? ""; case "emphone": return c?.emergencyPhone ?? ""; case "booker": return a.booker ?? ""; case "email": return a.email ?? "";
+    case "password": return c?.collectionPassword ?? "";
     case "dob": return c?.dob ?? ""; case "school": return c?.school ?? ""; default: return "";
   }
 }
 function DownloadDialog({ sessions, date, onClose }: { sessions: Session[]; date: string; onClose: () => void }) {
   const [on, setOn] = useState<Set<string>>(new Set(DL_COLS.filter((c) => c.on).map((c) => c.key)));
   const cols = DL_COLS.filter((c) => on.has(c.key));
+  const total = sessions.reduce((n, s) => n + s.attendees.length, 0);
+  const setAll = (keys: string[], val: boolean) => setOn((x) => { const n = new Set(x); for (const k of keys) { if (val) n.add(k); else n.delete(k); } return n; });
   const esc = (s: string) => s.replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch] as string));
   const csv = () => { const rows = [["Listing", "Session", "Child", ...cols.map((c) => c.label)]]; for (const s of sessions) for (const a of s.attendees) rows.push([s.listingName, s.blockName, a.children.map((k) => k.name).join(" / "), ...cols.map((c) => cell(c.key, s, a))]); const url = URL.createObjectURL(new Blob([rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" })); const l = document.createElement("a"); l.href = url; l.download = `register-${date}.csv`; l.click(); URL.revokeObjectURL(url); onClose(); };
   const pdf = () => { const body = sessions.map((s) => `<h2>${esc(s.listingName)} — ${esc(s.blockName)} · ${s.start}–${s.end}</h2><table><tr><th>Child</th>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}</tr>${s.attendees.map((a) => `<tr><td>${esc(a.children.map((k) => k.name).join(", "))}</td>${cols.map((c) => `<td>${esc(cell(c.key, s, a))}</td>`).join("")}</tr>`).join("")}</table>`).join(""); const w = window.open("", "_blank", "width=900,height=1000"); if (!w) return; w.document.write(`<!doctype html><title>Register ${date}</title><style>body{font:12px/1.4 system-ui,sans-serif;color:#171534;padding:16px}h2{font-size:13px;margin:16px 0 4px;border-top:1px solid #ddd;padding-top:8px}table{border-collapse:collapse;width:100%}th,td{text-align:left;border:1px solid #e5e5e5;padding:4px 6px;font-size:11px}th{background:#f5f5f5}</style><h1>Register — ${dayLabel(date)}</h1>${body}`); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); onClose(); };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-[460px] rounded-2xl bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[86vh] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 text-[15px] font-extrabold">Download register — {dayLabel(date)}</div>
-        <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">The child&rsquo;s name is always included. Tick the columns you want.</p>
-        <div className="flex flex-wrap gap-1.5">{DL_COLS.map((c) => { const s = on.has(c.key); return <button key={c.key} type="button" onClick={() => setOn((x) => { const n = new Set(x); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{s ? "✓ " : ""}{c.label}</button>; })}</div>
+        <p className="mb-2 text-[12px] text-[var(--ink-3)]">{total} {total === 1 ? "child" : "children"} across {sessions.length} {sessions.length === 1 ? "session" : "sessions"}. The child&rsquo;s name is always included — tick any extra columns to include.</p>
+        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Columns · {cols.length}</span>
+          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), true)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Select all</button>
+          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), false)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Clear</button>
+          <button type="button" onClick={() => setOn(new Set(DL_COLS.filter((c) => c.on).map((c) => c.key)))} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Reset</button>
+        </div>
+        <div className="space-y-2.5">
+          {DL_GROUPS.map((g) => { const gc = DL_COLS.filter((c) => c.group === g); const allOn = gc.every((c) => on.has(c.key)); return (
+            <div key={g}>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{g}</span>
+                {g === "Sensitive" && <span className="rounded px-1.5 py-[1px] text-[9px] font-bold uppercase text-[#c02636]" style={{ background: "#fde2e4" }}>handle with care</span>}
+                <button type="button" onClick={() => setAll(gc.map((c) => c.key), !allOn)} className="text-[10.5px] font-bold text-[#1d3a8f]">{allOn ? "clear" : "all"}</button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">{gc.map((c) => { const s = on.has(c.key); return <button key={c.key} type="button" onClick={() => setOn((x) => { const n = new Set(x); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{s ? "✓ " : ""}{c.label}</button>; })}</div>
+            </div>
+          ); })}
+        </div>
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3"><Button sm onClick={onClose}>Cancel</Button><div className="flex gap-2"><Button sm onClick={pdf}>🖨 PDF (printable)</Button><Button sm variant="solid" onClick={csv}>⭳ CSV</Button></div></div>
       </div>
     </div>
@@ -173,6 +205,17 @@ export function RegistersApp() {
     try { await apiPost(`/api/registers/${encodeURIComponent(s.blockId)}/${date}/headcount`, { n }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t log the head count"); }
   }
+  // Messaging deep-links into the Messages composer, pre-addressed. "All
+  // attending" pushes every shown family's email; a single row pushes just that
+  // parent — the composer opens ready to write, recipients already filled in.
+  function messageAttending() {
+    if (attendingEmails.length === 0) return;
+    router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(attendingEmails.join(","))}`);
+  }
+  function messageOne(a: Attendee) {
+    if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; }
+    router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(a.email)}`);
+  }
 
   // Listings that run somewhere in the window; pick the active one.
   const listingsAll = useMemo(() => {
@@ -196,6 +239,9 @@ export function RegistersApp() {
     .filter(({ a }) => !q.trim() || a.children.some((c) => c.name.toLowerCase().includes(q.trim().toLowerCase())) || a.booker.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((x, y) => sort === "name" ? (x.a.children[0]?.name ?? "").localeCompare(y.a.children[0]?.name ?? "") : sort === "start" ? (x.start.localeCompare(y.start) || (x.a.children[0]?.age ?? 0) - (y.a.children[0]?.age ?? 0)) : (x.a.children[0]?.age ?? 999) - (y.a.children[0]?.age ?? 999));
 
+  // Everyone currently shown (respects the pass filter + search) → the audience
+  // for "Message all attending", de-duplicated by email.
+  const attendingEmails = [...new Set(flatShown.map(({ a }) => a.email).filter(Boolean))];
   const dayCounts = (d: string) => { const ss = sessionsOn(d); return { booked: ss.reduce((n, s) => n + s.counts.expected, 0), present: ss.reduce((n, s) => n + s.counts.present, 0) }; };
   // Head count / stats aggregate the day (respecting the pass filter).
   const passBlocks = daySessions.filter((s) => !pass || `${s.start}–${s.end}` === pass);
@@ -221,34 +267,32 @@ export function RegistersApp() {
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing runs in the next few days — nothing to register.</div>
       ) : (
         <>
-          {/* Hero — compact listing dropdown + day dropdown */}
-          <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] border-l-[6px] border-l-[#1d3a8f] bg-[var(--surface)] p-5 shadow-sm">
+          {/* Hero — blue/white gradient tile with controls + stat tiles */}
+          <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#1d3a8f]">Daily register</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {listingsAll.length > 1 ? (
-                    <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[15px] font-extrabold text-[var(--ink)] outline-none focus:border-[#1d3a8f]">{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
-                  ) : <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{activeName}</div>}
-                  <select value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] outline-none focus:border-[#1d3a8f]">
+                <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📋</span>Register</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {listingsAll.length > 1
+                    ? <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="rounded-lg border-0 bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] outline-none">{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
+                    : <span className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName}</span>}
+                  <select value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border-0 bg-white/90 px-2.5 py-1.5 text-[12.5px] font-bold text-[#1d3a8f] outline-none">
                     {(listingDates.length ? listingDates : [date]).map((d) => { const c = dayCounts(d); return <option key={d} value={d}>{rel(d)} · {dow(d)}{c.booked ? ` — ${c.booked} booked` : ""}</option>; })}
                   </select>
+                  <span className="text-[12px] text-white/85">📍 {daySessions[0]?.blockName ?? "—"}</span>
                 </div>
-                <div className="mt-1.5 text-[12.5px] text-[var(--ink-3)]">📍 {daySessions[0]?.blockName ?? "—"} · {dayLabel(date)}</div>
               </div>
-              <button type="button" onClick={() => router.push(incidentHref)} className="rounded-full border border-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">⚑ Log incident</button>
+              <button type="button" onClick={() => router.push(incidentHref)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md">⚑ Log incident</button>
             </div>
-          </div>
-
-          {/* Stat tiles — at the top */}
-          <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {tiles.map(([label, sub, v, c]) => (
-              <div key={label} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{label}</div>
-                <div className="mt-1.5 text-[30px] font-extrabold leading-none" style={{ color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{v}</div>
-                <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
-              </div>
-            ))}
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              {tiles.map(([label, sub, v]) => (
+                <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
+                  <div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums" }}>{v}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div>
+                  <div className="text-[9.5px] text-white/60">{sub}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>}
@@ -257,11 +301,6 @@ export function RegistersApp() {
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">Nothing runs for {activeName} on {dayLabel(date)}.</div>
           ) : (
             <>
-              {/* One head-count band for the day */}
-              <div className="mb-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
-                <HeadBand count={headTiles.count} expected={agg.expected} present={agg.present} last={headTiles.last} takenBy={headTiles.takenBy} readOnly={readOnly} onLog={(n) => passBlocks[0] && logHead(passBlocks[0], n)} />
-              </div>
-
               {/* Pass (timing) filter */}
               {passes.length > 1 && (
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -278,16 +317,15 @@ export function RegistersApp() {
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-40 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" />
                 <div className="ml-auto flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => setRollCall((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold" style={sel(rollCall)}>🚨 Roll call</button>
-                  <button type="button" onClick={() => router.push(`/${portal}/email`)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white">Message all attending {rel(date)}</button>
+                  <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">Message all attending{attendingEmails.length ? ` (${attendingEmails.length})` : ""}</button>
                   <button type="button" onClick={() => setDlOpen(true)} className="rounded-full border border-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬇ Download</button>
                 </div>
               </div>
               <div className="mb-2.5 flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Key</span>
-                <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="h-4 w-4 rounded-[5px]" style={{ background: "#fde2e4" }} />Allergy</span>
-                <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="flex h-4 w-4 items-center justify-center rounded-[5px] text-[10px] font-extrabold" style={{ background: "#e0e9ff", color: BLUE }}>✚</span>Medical</span>
-                <span className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-semibold"><span className="flex h-4 w-4 items-center justify-center rounded-[5px] text-[10px] font-extrabold" style={{ background: "#f3e8ff", color: "#6d28d9" }}>◆</span>SEND / needs</span>
-                <span className="text-[11.5px] text-[var(--ink-3)]">🧑‍🏫 need ≥{need} staff · tap any child for full details</span>
+                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#fde2e4", color: "#c02636" }}>Allergy</span>
+                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#e0e9ff", color: BLUE }}>Medical</span>
+                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#f3e8ff", color: "#6d28d9" }}>SEND</span>
               </div>
 
               {rollCall && (
@@ -299,12 +337,18 @@ export function RegistersApp() {
 
               {/* ONE flat table for the day */}
               <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+                {passBlocks[0] && (
+                  <div className="border-b border-[var(--line)] bg-[var(--panel)]/40 px-4 py-3">
+                    <HeadBand count={headTiles.count} expected={agg.present} present={agg.present} last={headTiles.last} takenBy={headTiles.takenBy} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} />
+                    {need > 0 && <div className="mt-2 text-[11.5px] font-semibold text-[var(--ink-3)]">Ratio guide · {presentAll.length} on site now needs ≥ {need} staff.</div>}
+                  </div>
+                )}
                 {!readOnly && notInRefs.length > 0 && <div className="border-b border-[var(--line)] px-4 py-2"><Button sm disabled={bulkBusy === "all"} onClick={() => signAllIn(notInRefs)}>{bulkBusy === "all" ? "Working…" : `✓ Sign all in (${notInRefs.length})`}</Button></div>}
                 <div className="hidden grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px] gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] md:grid">
                   <span>Child</span><span>Alerts</span><span>Signed in</span><span>Collected</span><span>Status</span><span>Parent</span>
                 </div>
                 {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
-                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} multiPass={passes.length > 1 && !pass} busy={busyRef === a.ref || readOnly} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => router.push(`/${portal}/messages`)} />
+                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} multiPass={passes.length > 1 && !pass} busy={busyRef === a.ref || readOnly} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} />
                 ))}
               </div>
             </>

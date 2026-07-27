@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -78,19 +78,28 @@ function CouponChip({ coupon }: { coupon: { code: string; valueTxt?: string; sco
 }
 
 export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
+  const searchParams = useSearchParams();
+  // Deep-link from the Register (and elsewhere): ?compose=1&emails=a@b,c@d opens
+  // the composer pre-addressed to those families. Operator only — a parent
+  // messages their provider, not a list of families. Read once, at mount, so the
+  // initial state carries it (no setState-in-effect).
+  const preEmails = mode === "operator" && searchParams.get("compose") != null
+    ? Array.from(new Set((searchParams.get("emails") ?? "").split(",").map((e) => e.trim()).filter(Boolean)))
+    : [];
+  const preCompose = preEmails.length > 0;
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [composing, setComposing] = useState(false);
+  const [composing, setComposing] = useState(preCompose);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [target, setTarget] = useState(""); // tenantId (parent) or customer email (operator)
-  const [subject, setSubject] = useState(""); // optional heading for a NEW thread
+  const [subject, setSubject] = useState(preCompose ? (searchParams.get("subject") ?? "") : ""); // optional heading for a NEW thread
   const [familyQuery, setFamilyQuery] = useState("");
-  const [familyTargets, setFamilyTargets] = useState<string[]>([]); // operator: 1+ family emails
-  const [pickerOpen, setPickerOpen] = useState(true); // recipient picker expanded?
+  const [familyTargets, setFamilyTargets] = useState<string[]>(preEmails); // operator: 1+ family emails
+  const [pickerOpen, setPickerOpen] = useState(!preCompose); // recipient picker expanded?
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);
