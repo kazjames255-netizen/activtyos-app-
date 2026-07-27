@@ -401,11 +401,15 @@ export interface TenantSettings {
     /** The external agencies a freelancer actually reports to — their real
      *  safeguarding channels. Shown on the form + PDF with click-to-call. */
     contacts?: {
-      ladoName?: string; ladoPhone?: string;      // Local Authority Designated Officer (allegations about adults)
-      socialCarePhone?: string;                    // children's social care / MASH
-      outOfHoursPhone?: string;                    // emergency duty team
+      /** National emergency numbers shown under "if a child is in danger". */
       nspccPhone?: string; policePhone?: string;
-      localAuthority?: string;
+      /** One entry per council you work in — each with its own LADO + MASH.
+       *  The concern form picks which authority applies. */
+      authorities?: { id: string; name: string; ladoName?: string; ladoPhone?: string; socialCarePhone?: string; outOfHoursPhone?: string }[];
+      /** Any further contacts the provider wants on the form + PDF. */
+      extra?: { label: string; phone: string }[];
+      // ── legacy single fields (pre multi-authority) — still read as a fallback ──
+      ladoName?: string; ladoPhone?: string; socialCarePhone?: string; outOfHoursPhone?: string; localAuthority?: string;
     };
   };
 

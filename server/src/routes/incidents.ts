@@ -63,10 +63,24 @@ const logSchema = z.object({
   externalReferral: z.string().trim().max(300).optional(),  // MASH / social care / police reference
   confidential: z.boolean().optional(),                     // keep off the parent's profile
   subject: z.enum(["child", "staff"]).optional(),           // concern about a child OR a member of staff
-  dslActions: z.array(z.string().max(120)).max(12).optional(), // the decisions the DSL took (KCSIE)
-  dslOutcome: z.string().trim().max(4_000).optional(),      // the DSL's written outcome / rationale
+  dslActions: z.array(z.string().max(120)).max(12).optional(), // legacy flat list of decisions
+  dslOutcome: z.string().trim().max(4_000).optional(),      // legacy written outcome
   dslActionedAt: z.string().max(25).optional(),
-  shareWithReporter: z.boolean().optional(),               // share the DSL decision back to whoever reported it
+  shareWithReporter: z.boolean().optional(),
+  // The DSL's chronological action log — one entry per action taken, each with
+  // its own note (what was said / did), an optional review date, and done flag.
+  dslLog: z.array(z.object({
+    id: z.string().max(40),
+    key: z.string().max(60),
+    label: z.string().max(160),
+    note: z.string().max(4_000).optional(),
+    reviewDate: z.string().max(10).optional(),
+    at: z.string().max(30),
+    by: z.string().max(120).optional(),
+    done: z.boolean().optional(),
+    doneAt: z.string().max(30).optional(),
+  })).max(60).optional(),
+  localAuthority: z.string().trim().max(120).optional(),    // which council this concern sits under
   bodyMap: z.array(bodyMarkSchema).max(40).optional(),
   attachments: z.array(z.string().max(500)).max(10).optional(), // /api/uploads URLs
   // Whether this record is shared with the parent (the "share with parent"
@@ -402,4 +416,63 @@ incidents.delete("/:id", async (req, res) => {
   }
   await own.snap.ref.delete();
   res.json({ ok: true });
+});
+
+// GET /api/incidents/:id/dossier — everything on file about the child a concern
+// is about, pulled together for a safeguarding PDF: profile, parent + emergency
+// contacts, siblings, recent bookings and their incident/behaviour history.
+// Operators/staff of the tenant only (it's sensitive personal data).
+incidents.get("/:id/dossier", async (req, res) => {
+  const scope = tenantScope(req);
+  if (!scope || !scope.tenantId || !canRecord(scope.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
+  const snap = await col.doc(req.params.id).get();
+  if (!snap.exists || snap.data()!.tenantId !== scope.tenantId) { res.status(404).json({ error: "Record not found" }); return; }
+  const rec = snap.data()!;
+  const childName = String(rec.childName ?? "");
+
+  // Recent bookings for this child (also used to resolve the child by name when
+  // the record wasn't linked to a childId).
+  const bsnap = await db.collection("bookings").where("tenantId", "==", scope.tenantId).get();
+  const nameMatch = (b: Record<string, unknown>) => b.child && String(b.child).trim().toLowerCase() === childName.trim().toLowerCase();
+  let childId = (rec.childId as string | undefined) || undefined;
+  if (!childId) { const hit = bsnap.docs.map((d) => d.data() as Record<string, unknown>).find((b) => b.childId && nameMatch(b)); if (hit) childId = hit.childId as string; }
+
+  let child: Record<string, unknown> | null = null;
+  let parent: { name?: string; email?: string; phone?: string; address?: string; postcode?: string } | null = null;
+  let siblings: { name?: string; dob?: string; age?: number }[] = [];
+  if (childId) {
+    const cs = await db.collection("children").doc(childId).get();
+    if (cs.exists) {
+      const c = cs.data()!;
+      child = c;
+      const parentUid = c.parentUid as string | undefined;
+      if (parentUid) {
+        const us = await db.collection("users").doc(parentUid).get();
+        const u = (us.data() ?? {}) as Record<string, string>;
+        parent = { name: u.name, phone: u.phone, address: u.address, postcode: u.postcode, email: u.email };
+        const sib = await db.collection("children").where("parentUid", "==", parentUid).get();
+        siblings = sib.docs.filter((d) => d.id !== childId).map((d) => { const s = d.data(); return { name: s.name as string, dob: s.dob as string, age: s.age as number }; });
+      }
+    }
+  }
+
+  const bookings = bsnap.docs
+    .map((d) => d.data() as Record<string, unknown>)
+    .filter((b) => (childId && b.childId === childId) || nameMatch(b))
+    .map((b) => ({ listing: b.listing as string, dates: (b.dates ?? b.sessionLabel) as string, status: b.status as string, createdAt: b.createdAt as string, booker: b.booker as string, email: b.email as string, phone: b.phone as string }))
+    .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
+    .slice(0, 12);
+  // Fall back to a booking for the parent's name/email/phone if the user doc had none.
+  if (bookings[0]) parent = { name: parent?.name || bookings[0].booker, email: parent?.email || bookings[0].email, phone: parent?.phone || bookings[0].phone, address: parent?.address, postcode: parent?.postcode };
+
+  // This child's incident / accident / behaviour / safeguarding history in the tenant.
+  const isnap = await col.where("tenantId", "==", scope.tenantId).get();
+  const history = isnap.docs
+    .map((d) => { const x = d.data() as Record<string, unknown>; return { id: d.id, childId: x.childId as string | undefined, childName: x.childName as string | undefined, kind: x.kind as string, date: x.date as string, category: (x.concernCategory ?? x.incidentType ?? x.injury) as string, severity: x.severity as string, description: x.description as string }; })
+    .filter((h) => h.id !== req.params.id && ((childId && h.childId === childId) || (h.childName && h.childName.trim().toLowerCase() === childName.trim().toLowerCase())))
+    .map((h) => ({ kind: h.kind, date: h.date, category: h.category, severity: h.severity, description: h.description }))
+    .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))
+    .slice(0, 30);
+
+  res.json({ child, parent, siblings, bookings, history });
 });

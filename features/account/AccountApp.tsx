@@ -9,7 +9,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 
-interface Profile { email: string | null; name: string; phone: string; marketingConsent: boolean; role: string }
+interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string }
 const roleLabel: Record<string, string> = { parent: "Parent", staff: "Staff", company: "Company / head office", franchise: "Franchise", freelancer: "Freelancer", platform: "Platform" };
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -23,6 +23,8 @@ export function AccountApp() {
   const [p, setP] = useState<Profile | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [postcode, setPostcode] = useState("");
   const [marketing, setMarketing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function AccountApp() {
       // A registration bug seeded some accounts' phone with the login email —
       // don't show an email in the phone box (fall back to the onboarding phone).
       setPhone(looksEmail(prof.phone) ? "" : prof.phone);
+      setAddress(prof.address ?? ""); setPostcode(prof.postcode ?? "");
       setMarketing(prof.marketingConsent);
     }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
@@ -42,7 +45,7 @@ export function AccountApp() {
 
   async function saveProfile() {
     setError(null); setOk(null);
-    try { await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, marketingConsent: marketing }) }); setOk("Saved."); load(); }
+    try { await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing }) }); setOk("Saved."); load(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
   }
 
@@ -116,7 +119,10 @@ export function AccountApp() {
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
             <div><FieldLabel>Phone</FieldLabel><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder="Your contact number" /></div>
+            <div className="sm:col-span-2"><FieldLabel>Home address</FieldLabel><Input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder="House, street, town" /></div>
+            <div><FieldLabel>Postcode</FieldLabel><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder="e.g. MK1 1AA" /></div>
           </div>
+          {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your address helps your provider keep accurate records for registers and safeguarding.</p>}
           <label className="mt-2.5 flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />Email me occasional news and offers</label>
           <div className="mt-3"><Button variant="primary" onClick={saveProfile}>Save profile</Button></div>
         </Card>

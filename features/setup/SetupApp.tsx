@@ -1246,28 +1246,55 @@ export function SetupApp() {
           </Row>
 
           <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Your local safeguarding contacts</div>
-          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The agencies you actually report to. These show on the concern form and the PDF, ready to call — this is your real safeguarding channel.</p>
-          <Row label="LADO name" hint="Local Authority Designated Officer — for concerns about an adult / member of staff.">
-            <Input value={settings.safeguarding?.contacts?.ladoName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, ladoName: e.target.value } })} placeholder="e.g. your council's LADO" className="w-full" />
-          </Row>
-          <Row label="LADO phone">
-            <Input value={settings.safeguarding?.contacts?.ladoPhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, ladoPhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
-          </Row>
-          <Row label="Children's social care (MASH)" hint="Your local Multi-Agency Safeguarding Hub — a child at risk of harm.">
-            <Input value={settings.safeguarding?.contacts?.socialCarePhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, socialCarePhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
-          </Row>
-          <Row label="Out-of-hours / emergency duty team">
-            <Input value={settings.safeguarding?.contacts?.outOfHoursPhone ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, outOfHoursPhone: e.target.value } })} placeholder="01234 000000" className="w-full" />
-          </Row>
-          <Row label="NSPCC helpline">
-            <Input value={settings.safeguarding?.contacts?.nspccPhone ?? "0808 800 5000"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, nspccPhone: e.target.value } })} className="w-full" />
-          </Row>
-          <Row label="Police">
-            <Input value={settings.safeguarding?.contacts?.policePhone ?? "999 (emergency) / 101"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, policePhone: e.target.value } })} className="w-full" />
-          </Row>
-          <Row label="Local authority" hint="Optional — the council whose safeguarding threshold you follow.">
-            <Input value={settings.safeguarding?.contacts?.localAuthority ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, contacts: { ...settings.safeguarding?.contacts, localAuthority: e.target.value } })} placeholder="e.g. Milton Keynes Council" className="w-full" />
-          </Row>
+          <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The agencies you actually report to. These show on the concern form (you pick which council applies) and the PDF, ready to call.</p>
+          {(() => {
+            const c = settings.safeguarding?.contacts ?? {};
+            const setC = (patch: Partial<NonNullable<TenantSettings["safeguarding"]>["contacts"]>) => set("safeguarding", { ...settings.safeguarding, contacts: { ...c, ...patch } });
+            const auths = c.authorities ?? [];
+            const setAuths = (next: NonNullable<typeof auths>) => setC({ authorities: next });
+            const extra = c.extra ?? [];
+            return (
+              <>
+                <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">If a child is in immediate danger</div>
+                <Row label="Police"><Input value={c.policePhone ?? "999 (emergency) / 101"} onChange={(e) => setC({ policePhone: e.target.value })} className="w-full" /></Row>
+                <Row label="NSPCC helpline"><Input value={c.nspccPhone ?? "0808 800 5000"} onChange={(e) => setC({ nspccPhone: e.target.value })} className="w-full" /></Row>
+
+                <div className="mt-4 mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Local authorities you work in</div>
+                <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Add each council whose area you run in. When you log a concern you pick the authority, and its LADO &amp; social-care numbers appear.</p>
+                <div className="flex flex-col gap-2.5">
+                  {auths.map((a, i) => (
+                    <div key={a.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <Input value={a.name} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Council name — e.g. Milton Keynes Council" className="flex-1 font-bold" />
+                        <button type="button" aria-label="Remove authority" onClick={() => setAuths(auths.filter((_, j) => j !== i))} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                      </div>
+                      <div className="grid gap-1.5 sm:grid-cols-2">
+                        <Input value={a.ladoName ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoName: e.target.value } : x)))} placeholder="LADO name" />
+                        <Input value={a.ladoPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, ladoPhone: e.target.value } : x)))} placeholder="LADO phone" />
+                        <Input value={a.socialCarePhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, socialCarePhone: e.target.value } : x)))} placeholder="Children's social care (MASH) phone" />
+                        <Input value={a.outOfHoursPhone ?? ""} onChange={(e) => setAuths(auths.map((x, j) => (j === i ? { ...x, outOfHoursPhone: e.target.value } : x)))} placeholder="Out-of-hours / EDT phone" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => setAuths([...auths, { id: `la_${new Date().toISOString()}`, name: "" }])} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">＋ Add a local authority</button>
+
+                <div className="mt-4">
+                  <FieldLabel>More contacts</FieldLabel>
+                  <div className="flex flex-col gap-1.5">
+                    {extra.map((x, i) => (
+                      <div key={i} className="flex flex-wrap items-center gap-1.5">
+                        <Input value={x.label} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, label: e.target.value } : y)) })} placeholder="Label — e.g. Diocese safeguarding" className="min-w-[180px] flex-1" />
+                        <Input value={x.phone} onChange={(e) => setC({ extra: extra.map((y, j) => (j === i ? { ...y, phone: e.target.value } : y)) })} placeholder="Phone" className="w-40" />
+                        <button type="button" aria-label="Remove contact" onClick={() => setC({ extra: extra.filter((_, j) => j !== i) })} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => setC({ extra: [...extra, { label: "", phone: "" }] })} className="mt-1.5 rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">＋ Add a contact</button>
+                </div>
+              </>
+            );
+          })()}
 
           <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Concern categories</div>
           <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">The list staff choose from when logging a concern. Edit, add or remove — the special legal prompts (LADO, FGM, 999) still apply to matching categories.</p>

@@ -185,6 +185,35 @@ async function acknowledgementChase(): Promise<void> {
   }
 }
 
+// ── Safeguarding action reviews ───────────────────────────────────────────
+// A DSL action can carry a review/complete-by date. On/after that day, while
+// it isn't marked done, bell + email the team once a day so nothing is missed.
+async function safeguardingReviews(): Promise<void> {
+  const { date } = ukNow();
+  const snap = await db.collection("incidents").where("kind", "==", "safeguarding").get();
+  if (snap.empty) return;
+  for (const d of snap.docs) {
+    const inc = d.data() as { tenantId?: string; childName?: string; subject?: string; dslLog?: { id: string; label: string; reviewDate?: string; done?: boolean }[] };
+    if (!inc.tenantId || !Array.isArray(inc.dslLog)) continue;
+    const due = inc.dslLog.filter((e) => e.reviewDate && !e.done && e.reviewDate <= date);
+    for (const e of due) {
+      const who = inc.subject === "staff" ? "a member of staff" : (inc.childName ?? "a child");
+      await fireOnce(`sgreview_${d.id}_${e.id}_${date}`, { tenantId: inc.tenantId }, () =>
+        notify({
+          tenantId: inc.tenantId!,
+          to: { kind: "tenant" },
+          category: "incident",
+          title: `🛡️ Safeguarding action due: ${e.label}`,
+          body: `Review "${e.label}" for the concern about ${who} — due ${e.reviewDate}. Mark it done in Log concern → Safeguarding.`,
+          subject: `Safeguarding action due — ${e.label}`,
+          href: "/company/incidents",
+          ref: d.id,
+        }),
+      ).catch((err) => console.error(`[sweeps] sg review ${d.id}/${e.id}:`, (err as Error).message));
+    }
+  }
+}
+
 // ── Subscription sync ─────────────────────────────────────────────────────
 // Backstop for the Stripe webhook: pull every billed tenant's subscription
 // and reconcile status/periods + metered quantities. Keeps dev (no public
@@ -211,6 +240,7 @@ export function startSweeps(): void {
   sweep("calendar-reminders", 60_000, calendarReminders);
   sweep("medication-due", 60_000, medicationDue);
   sweep("ack-chase", 30 * 60_000, acknowledgementChase);
+  sweep("safeguarding-reviews", 30 * 60_000, safeguardingReviews);
   // The waitlist expiry that used to be a bare setInterval in index.ts —
   // unchanged behaviour, but now exactly one instance runs it per interval.
   sweep("waitlist-expiry", 5 * 60_000, expireOffers);
