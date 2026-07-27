@@ -35,6 +35,7 @@ import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
 import { MessagesApp } from "@/features/messages/MessagesApp";
 import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
+import { ParentTripsApp } from "@/features/trips/ParentTripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
 import { CalendarApp } from "@/features/calendar/CalendarApp";
 import { InventoryApp } from "@/features/inventory/InventoryApp";
@@ -298,6 +299,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: ParentMealsApp,
     medication: ParentMedicationApp,
     accidents: ParentAccidentsApp,
+    trips: ParentTripsApp,
     account: AccountApp,
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="parent" />,

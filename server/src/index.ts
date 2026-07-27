@@ -61,6 +61,8 @@ import { me, tenants } from "./routes/tenants";
 import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
 import { enforceSubscription } from "./middleware/subscription";
+import { platformLeads } from "./routes/platformLeads";
+import { platformSupport, supportReport } from "./routes/platformSupport";
 
 const app = express();
 
@@ -178,6 +180,10 @@ app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);
 app.use("/api/tenants", tenants);
 app.use("/api/me", me);
+// Before /api/platform so the general router can't shadow them.
+app.use("/api/platform/leads", platformLeads);
+app.use("/api/platform/support", platformSupport);
+app.use("/api/support/report", supportReport);
 app.use("/api/platform", platform);
 app.use("/api/analytics", analytics);
 app.use("/api/ai", ai);

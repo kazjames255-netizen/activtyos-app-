@@ -102,6 +102,8 @@ events.get("/", async (req, res) => {
     listen(db.collection("bookings"), "bookings");
     listen(db.collection("listings"), "listings");
     listen(db.collection("blocks"), "blocks");
+    listen(db.collection("leads"), "leads"); // HQ sales pipeline
+    listen(db.collection("supportThreads"), "supportThreads"); // HQ inbox
   } else if (tenantId) {
     let bookingsQ: FirebaseFirestore.Query = db
       .collection("bookings")

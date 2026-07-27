@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { del, get, post, put } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 
-// ── Sales CRM (front-end only for now) ──────────────────────────────────────
-// Runs on a localStorage demo store so it fully works and demos; the data model
-// below maps 1:1 to the backend Amir will build (see docs/sales-crm-handoff.md).
-// No rep logins yet — one HQ view.
+// ── Sales CRM ───────────────────────────────────────────────────────────────
+// Backed by the platform Sales CRM API (/api/platform/leads — see
+// docs/sales-crm-handoff.md); live via the "leads" realtime channel. The
+// server stamps timestamps and activity identity. No rep logins yet — one HQ
+// view.
 
 type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
 type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound";
@@ -44,36 +47,15 @@ const money = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
 const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
 const nowIso = () => new Date().toISOString();
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-const KEY = "aos.sales.leads.v2";
-const loadLeads = (): Lead[] => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
-const saveLeads = (l: Lead[]) => { try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { /* ignore */ } };
 
-const SEED: Lead[] = [
-  seed("Riverdale Rugby Camps", "Tom Hale", "tom@riverdale.example", "07700 900111", "Leeds", "cold_call", "Priya", "company", "contacted", "Keen, wants multi-venue.", [["call", "Intro call — interested", "Booking demo"], ["email", "Sent pricing", ""]]),
-  seed("Little Kickers North", "Sara Reyes", "sara@lkn.example", "0161 555 0199", "Manchester", "referral", "Priya", "franchise", "demo", "Franchise of 4 sites.", [["demo", "Demo booked Fri", ""]]),
-  seed("Bounce Gymnastics", "Dan Cole", "dan@bounce.example", "07700 900222", "Bristol", "social", "Jamie", "freelancer", "contacted", "DM'd on Insta.", [["social", "Replied on Instagram", "Sent link"]]),
-  seed("Spark Drama School", "Mia Fox", "mia@spark.example", "0113 400 7788", "Leeds", "email", "Jamie", "company", "new", "", []),
-  seed("Aqua Tots Swim", "Owen Pratt", "owen@aquatots.example", "0151 700 4455", "Liverpool", "cold_call", "Priya", "company", "trial", "On free trial, likes it.", [["call", "Onboarding help", "Happy"]]),
-  seed("Summit Climbing Kids", "Ella Bond", "ella@summit.example", "07700 900333", "Sheffield", "event", "Jamie", "freelancer", "won", "Signed up!", [["demo", "Demo went great", "Won"]]),
-  seed("Melody Music Minis", "Raj Shah", "raj@melody.example", "0121 500 6677", "Birmingham", "inbound", "Priya", "freelancer", "lost", "Went with a competitor.", [["email", "Followed up twice", "No response"]]),
-  seed("Champions Football", "Kate Lynn", "kate@champions.example", "07700 900444", "Newcastle", "cold_call", "Jamie", "company", "new", "", []),
-];
-function seed(business: string, contactName: string, email: string, phone: string, location: string, source: Source, owner: string, plan: Lead["plan"], stage: Stage, notes: string, acts: [Activity["type"], string, string][]): Lead {
-  const createdAt = new Date(Date.now() - Math.round(Math.random() * 40) * 86400000).toISOString();
-  return { id: uid(), business, contactName, email, phone, location, source, owner, plan, estMrr: PLAN_MRR[plan], stage, notes, createdAt, updatedAt: createdAt, activities: acts.map(([type, note, outcome]) => ({ id: uid(), type, note, outcome, at: createdAt, by: owner })) };
-}
+// A touch logged in the modal but not yet saved to the server (the server
+// stamps `at`/`by` itself when it lands).
+type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
 
 export function SalesApp() {
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    if (typeof window === "undefined") return [];
-    const raw = loadLeads();
-    if (!raw.length) { saveLeads(SEED); return SEED; }
-    // Migrate any leads saved with a stage that no longer exists (e.g. old
-    // "interested") so nothing crashes on stageOf().
-    const fixed = raw.map((l) => (VALID_STAGES.has(l.stage) ? l : { ...l, stage: "new" as Stage }));
-    if (fixed.some((l, i) => l !== raw[i])) saveLeads(fixed);
-    return fixed;
-  });
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [detail, setDetail] = useState<Lead | null>(null);
   const [adding, setAdding] = useState(false);
@@ -81,10 +63,41 @@ export function SalesApp() {
   const [query, setQuery] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
 
-  const persist = (next: Lead[]) => { setLeads(next); saveLeads(next); };
-  const upsert = (lead: Lead) => persist(leads.some((x) => x.id === lead.id) ? leads.map((x) => (x.id === lead.id ? lead : x)) : [{ ...lead }, ...leads]);
-  const remove = (id: string) => { persist(leads.filter((x) => x.id !== id)); setDetail(null); };
-  const move = (id: string, stage: Stage) => persist(leads.map((x) => (x.id === id ? { ...x, stage, updatedAt: nowIso() } : x)));
+  // The API may return stages the board no longer shows (e.g. the old
+  // "interested") — fold those into "new" so no lead vanishes between columns.
+  const refresh = useCallback(() => {
+    get<Lead[]>("/api/platform/leads")
+      .then((list) => { setLeads(list.map((l) => (VALID_STAGES.has(l.stage) ? l : { ...l, stage: "new" as Stage }))); setError(null); })
+      .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load leads"))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  useRealtime(["leads"], refresh);
+
+  const upsert = async (lead: Lead, newActs: NewActivity[]) => {
+    try {
+      let id = lead.id;
+      if (leads.some((x) => x.id === lead.id)) await put(`/api/platform/leads/${lead.id}`, lead);
+      else id = (await post<Lead>("/api/platform/leads", lead)).id;
+      for (const a of newActs) await post(`/api/platform/leads/${id}/activities`, a);
+      refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Save failed"); }
+  };
+  const remove = async (id: string) => {
+    try { await del(`/api/platform/leads/${id}`); setDetail(null); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+  };
+  // Drag between columns: optimistic (the card lands instantly), then the
+  // realtime refresh confirms — or a failed PUT reverts via refetch.
+  const move = (id: string, stage: Stage) => {
+    setLeads((cur) => cur.map((x) => (x.id === id ? { ...x, stage, updatedAt: nowIso() } : x)));
+    put(`/api/platform/leads/${id}`, { stage }).catch((e) => { setError(e instanceof Error ? e.message : "Move failed"); refresh(); });
+  };
+  const doImport = async (rows: Lead[]) => {
+    setImporting(false);
+    try { await post("/api/platform/leads/bulk", rows); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Import failed"); }
+  };
 
   return (
     <div className="text-[var(--ink)]">
@@ -107,7 +120,9 @@ export function SalesApp() {
         </div>
       </div>
 
-      {tab === "pipeline" ? (() => {
+      {error && <div className="mt-3 rounded-lg bg-[#fdebec] px-3 py-2 text-[12px] font-bold text-[var(--red)]">{error}</div>}
+
+      {loading ? <div className="py-12 text-center text-[12.5px] text-[var(--ink-3)]">Loading pipeline…</div> : tab === "pipeline" ? (() => {
         const q = query.trim().toLowerCase();
         const qDigits = q.replace(/\D/g, "");
         const filtered = !q ? leads : leads.filter((l) => {
@@ -131,11 +146,11 @@ export function SalesApp() {
         <LeadModal
           lead={detail}
           onClose={() => { setDetail(null); setAdding(false); }}
-          onSave={(l) => { upsert(l); setDetail(null); setAdding(false); }}
-          onDelete={detail ? () => remove(detail.id) : undefined}
+          onSave={(l, acts) => { void upsert(l, acts); setDetail(null); setAdding(false); }}
+          onDelete={detail ? () => void remove(detail.id) : undefined}
         />
       )}
-      {importing && <ImportModal existing={leads} onClose={() => setImporting(false)} onImport={(next) => { persist([...next, ...leads]); setImporting(false); }} />}
+      {importing && <ImportModal existing={leads} onClose={() => setImporting(false)} onImport={(next) => void doImport(next)} />}
     </div>
   );
 }
@@ -322,15 +337,24 @@ function Dashboard({ leads }: { leads: Lead[] }) {
 }
 
 // ── Lead modal (add / edit / activity) ──────────────────────────────────────
-function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead) => void; onDelete?: () => void }) {
+function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead, newActs: NewActivity[]) => void; onDelete?: () => void }) {
   const [f, setF] = useState<Lead>(() => lead ?? {
-    id: uid(), business: "", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
+    id: "", business: "", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
   });
   const [act, setAct] = useState<{ type: Activity["type"]; note: string; outcome: string }>({ type: "call", note: "", outcome: "" });
+  // Touches logged here are sent on Save (POST …/activities — the server
+  // stamps at/by); shown in the list immediately with a local placeholder.
+  const [pending, setPending] = useState<NewActivity[]>([]);
   const set = (patch: Partial<Lead>) => setF((x) => ({ ...x, ...patch }));
   const fld = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]";
   const lbl = "text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]";
-  const logActivity = () => { if (!act.note.trim()) return; set({ activities: [{ id: uid(), type: act.type, note: act.note.trim(), outcome: act.outcome.trim() || undefined, at: nowIso(), by: f.owner || "—" }, ...f.activities], updatedAt: nowIso() }); setAct({ type: "call", note: "", outcome: "" }); };
+  const logActivity = () => {
+    if (!act.note.trim()) return;
+    const entry: NewActivity = { type: act.type, note: act.note.trim(), ...(act.outcome.trim() ? { outcome: act.outcome.trim() } : {}) };
+    setPending((p) => [...p, entry]);
+    set({ activities: [{ id: uid(), ...entry, at: nowIso(), by: f.owner || "—" }, ...f.activities], updatedAt: nowIso() });
+    setAct({ type: "call", note: "", outcome: "" });
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
@@ -376,7 +400,7 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
             {onDelete ? <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--red)] hover:underline">Delete lead</button> : <span />}
             <div className="flex gap-2">
               <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-3)]">Cancel</button>
-              <button type="button" onClick={() => onSave({ ...f, business: f.business.trim() || "Untitled", updatedAt: nowIso() })} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white">{lead ? "Save" : "Add lead"}</button>
+              <button type="button" onClick={() => onSave({ ...f, business: f.business.trim() || "Untitled", updatedAt: nowIso() }, pending)} className="rounded-full bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white">{lead ? "Save" : "Add lead"}</button>
             </div>
           </div>
         </div>

@@ -1528,6 +1528,105 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
 // tenant-scoped: a family exists across providers). Owned strictly by the
 // signed-in account via parentUid.
 
+// ——— Trips: the family's view of off-site trips + the consent action. A
+// trip stores `childIds` (resolved server-side in routes/trips.ts), so the
+// family sees exactly the trips their children are on — nothing else.
+
+const tripsCol = db.collection("trips");
+
+my.get("/trips", async (req, res) => {
+  const kids = await childrenCol.where("parentUid", "==", req.user!.uid).get();
+  const mine = new Map(kids.docs.map((d) => [d.id, (d.data() as { name?: string }).name ?? ""]));
+  if (!mine.size) { res.json([]); return; }
+  // array-contains-any caps at 10 values — families are far smaller, but
+  // chunk anyway so an edge case degrades to an extra query, not an error.
+  const ids = [...mine.keys()];
+  const snaps = await Promise.all(
+    Array.from({ length: Math.ceil(ids.length / 10) }, (_, i) =>
+      tripsCol.where("childIds", "array-contains-any", ids.slice(i * 10, i * 10 + 10)).get(),
+    ),
+  );
+  const seen = new Set<string>();
+  const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const rows: Record<string, unknown>[] = [];
+  const tenantIds = new Set<string>();
+  for (const snap of snaps) {
+    for (const d of snap.docs) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      const t = d.data() as {
+        tenantId?: string; destination?: string; date?: string; departTime?: string; returnTime?: string;
+        transport?: string; cost?: string; payBy?: string; status?: string; askConsent?: boolean;
+        attendees?: { n: string; childId?: string; consent?: string; consentAt?: string }[];
+      };
+      if (t.status === "cancelled" || (t.date ?? "") < cutoff) continue;
+      if (t.tenantId) tenantIds.add(t.tenantId);
+      rows.push({
+        id: d.id, tenantId: t.tenantId, destination: t.destination, date: t.date,
+        departTime: t.departTime ?? null, returnTime: t.returnTime ?? null,
+        transport: t.transport ?? null, cost: t.cost ?? null, payBy: t.payBy ?? null,
+        status: t.status ?? "planned", askConsent: t.askConsent !== false,
+        children: (t.attendees ?? [])
+          .filter((a) => a.childId && mine.has(a.childId))
+          .map((a) => ({ childId: a.childId, name: mine.get(a.childId!) || a.n, consent: a.consent ?? "pending", consentAt: a.consentAt ?? null })),
+      });
+    }
+  }
+  const tenants = tenantIds.size ? await db.getAll(...[...tenantIds].map((id) => db.collection("tenants").doc(id))) : [];
+  const providerName = new Map(tenants.filter((t) => t.exists).map((t) => [t.id, (t.data()!.name as string) ?? "Your provider"]));
+  rows.forEach((r) => { r.provider = providerName.get(String(r.tenantId)) ?? "Your provider"; delete r.tenantId; });
+  rows.sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+  res.json(rows);
+});
+
+const tripConsentSchema = z.object({
+  childId: z.string().max(60),
+  decision: z.enum(["granted", "declined"]),
+});
+
+// POST /my/trips/:id/consent — the timestamped give/decline (the trips
+// handoff's #4, the accidents-acknowledge of trips). Transactional: two
+// parents answering at once must both land.
+my.post("/trips/:id/consent", async (req, res) => {
+  const parsed = tripConsentSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const child = await childrenCol.doc(parsed.data.childId).get();
+  if (!child.exists || child.data()!.parentUid !== req.user!.uid) {
+    res.status(404).json({ error: "Child not found" });
+    return;
+  }
+  const by = req.user?.email ?? "parent";
+  const ref = tripsCol.doc(req.params.id);
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    const t = snap.data()!;
+    const attendees = (t.attendees as { childId?: string; consent?: string; consentAt?: string; consentBy?: string; n: string }[] | undefined) ?? [];
+    const mine = attendees.find((a) => a.childId === parsed.data.childId);
+    if (!mine) return null;
+    mine.consent = parsed.data.decision;
+    mine.consentAt = new Date().toISOString();
+    mine.consentBy = by;
+    const allAnswered = attendees.every((a) => (a.consent ?? "pending") !== "pending");
+    const allGranted = attendees.every((a) => a.consent === "granted");
+    tx.set(ref, { attendees, consentObtained: allGranted, updatedAt: mine.consentAt }, { merge: true });
+    return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered };
+  });
+  if (!result) { res.status(404).json({ error: "That child isn't on this trip" }); return; }
+
+  // Tell the team — and shout when the last answer lands.
+  void notify({
+    tenantId: result.tenantId,
+    to: { kind: "tenant" },
+    category: "trip",
+    title: `${result.childName}: consent ${parsed.data.decision === "granted" ? "given ✓" : "DECLINED"} — ${result.destination}`,
+    body: result.allAnswered ? "Every family has now responded." : "Waiting on the rest of the families.",
+    href: "/company/trips",
+    ref: req.params.id,
+  }).catch(() => {});
+  res.json({ ok: true, decision: parsed.data.decision });
+});
+
 my.get("/children", async (req, res) => {
   const snap = await childrenCol.where("parentUid", "==", req.user!.uid).get();
   const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
 
-// ── HQ Support & messages (front-end only for now) ──────────────────────────
+// ── HQ Support & messages ───────────────────────────────────────────────────
 // One inbox where HQ talks to providers (by tier) and to a provider's customers
 // when they need help with a bug. Reported bugs land here with the details the
-// reporter's device/page pulled over. Runs on a localStorage demo store so it
-// fully works and demos; the data model maps 1:1 to the backend Amir will build
-// (see docs/support-inbox-handoff.md). Platform-role only.
+// reporter's device/page pulled over. Backed by /api/platform/support (threads
+// live in supportThreads, messages embedded — see docs/support-inbox-handoff.md
+// and server/src/routes/platformSupport.ts). Platform-role only.
 
 type Tier = "freelancer" | "company" | "franchise";
 type Party = "provider" | "customer";
@@ -41,56 +42,15 @@ const SEV: Record<Report["severity"], { label: string; bg: string; fg: string }>
 const GRADS = ["linear-gradient(135deg,#1d3a8f,#3f78d8)", "linear-gradient(135deg,#3f78d8,#5aa0f0)", "linear-gradient(135deg,#274ba3,#4f8bf5)", "linear-gradient(135deg,#6d28d9,#a855f7)"];
 const initials = (s: string) => (s.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?");
 const grad = (s: string) => GRADS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % GRADS.length];
-const uid = () => { try { return crypto.randomUUID(); } catch { return `${Date.now()}-${Math.round(Math.random() * 1e6)}`; } };
-const nowIso = () => new Date().toISOString();
 const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 };
-const KEY = "aos.support.threads.v1";
-const loadThreads = (): Thread[] => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
-const saveThreads = (t: Thread[]) => { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch { /* ignore */ } };
 
-const ago = (days: number, mins = 0) => new Date(Date.now() - days * 86400000 - mins * 60000).toISOString();
-function seed(
-  party: Party, name: string, email: string, tier: Tier, providerName: string, subject: string,
-  kind: Thread["kind"], report: Report | undefined, status: Thread["status"], unread: boolean,
-  msgs: [Msg["from"], string, string][],
-): Thread {
-  const messages = msgs.map(([from, body, at]) => ({ id: uid(), from, body, at }));
-  const createdAt = messages[0]?.at ?? nowIso();
-  const updatedAt = messages[messages.length - 1]?.at ?? createdAt;
-  return { id: uid(), party, name, email, tier, providerName, subject, kind, report, status, unread, messages, createdAt, updatedAt };
-}
-const SEED: Thread[] = [
-  seed("provider", "Riverdale Rugby Camps", "tom@riverdale.example", "company", "Riverdale Rugby Camps",
-    "Bookings export throws an error", "bug",
-    { channel: "In-app bug report", page: "Bookings → Export", severity: "high", device: "Chrome 141 · Windows", steps: "Filter to this month, click Export CSV → red error toast, nothing downloads." },
-    "open", true,
-    [["them", "Tried exporting this month's bookings and it just errors. Screenshot attached in the report.", ago(0, 40)]]),
-  seed("customer", "Sara Whitfield", "sara.w@example.com", "company", "Little Kickers North",
-    "Can't complete checkout", "bug",
-    { channel: "In-app bug report", page: "Checkout → Payment", severity: "high", device: "Safari · iPhone", steps: "Add Saturday session to basket, enter card, tap Pay → spinner never stops." },
-    "open", true,
-    [["them", "I'm trying to book my son onto Little Kickers North and the payment just spins forever. Can you help?", ago(0, 95)]]),
-  seed("provider", "Little Kickers North", "sara@lkn.example", "franchise", "Little Kickers North",
-    "Adding a 5th site to our plan", "message", undefined, "open", false,
-    [["them", "We're opening a 5th venue next month — how do we add it and what's the cost?", ago(1, 30)],
-     ["hq", "Great news! On the franchise plan each extra site is +75% of the base. I can add it now — want me to schedule it for the 1st?", ago(1, 10)]]),
-  seed("provider", "Bounce Gymnastics", "dan@bounce.example", "freelancer", "Bounce Gymnastics",
-    "Question about my invoice", "message", undefined, "open", true,
-    [["them", "My last invoice looks higher than usual — is that the extra staff seat?", ago(2, 15)]]),
-  seed("provider", "Spark Drama School", "mia@spark.example", "company", "Spark Drama School",
-    "Calendar showed wrong week", "bug",
-    { channel: "Inbound email", page: "Timetable", severity: "medium", device: "Firefox · Mac", steps: "Timetable opened on last week instead of today after login. Refreshed and it fixed itself." },
-    "resolved", false,
-    [["them", "The timetable kept opening on the wrong week this morning.", ago(4, 0)],
-     ["hq", "Thanks — this was a caching issue we've now patched. Let us know if it comes back.", ago(3, 60)]]),
-  seed("customer", "Owen Pratt", "owen.p@example.com", "company", "Aqua Tots Swim",
-    "Refund not showing", "message", undefined, "open", false,
-    [["them", "Aqua Tots cancelled my Tuesday class and said I'd get wallet credit — I can't see it yet.", ago(3, 20)],
-     ["hq", "Passed this to Aqua Tots to confirm the credit; you should see it within 24h.", ago(3, 5)]]),
-];
+// The API's thread shape — identical to ours except the unread flag carries
+// its server-side name.
+type ApiThread = Omit<Thread, "unread"> & { unreadByHq: boolean };
+const fromApi = ({ unreadByHq, ...t }: ApiThread): Thread => ({ ...t, unread: unreadByHq, messages: t.messages ?? [], providerName: t.providerName ?? "" });
 
 interface Provider { id: string; name: string; type: string; contactEmail: string | null; ownerEmail: string | null; subscription: Record<string, unknown> | null }
 const tierOf = (p: Provider): Tier => ((p.subscription?.plan as string) === "franchise" ? "franchise" : (p.type === "company" ? "company" : "freelancer"));
@@ -102,17 +62,13 @@ const FILTERS: { id: FilterId; label: string }[] = [
 ];
 
 export function SupportInboxApp() {
-  const [threads, setThreads] = useState<Thread[]>(() => {
-    if (typeof window === "undefined") return [];
-    const raw = loadThreads();
-    if (!raw.length) { saveThreads(SEED); return SEED; }
-    return raw;
-  });
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [filter, setFilter] = useState<FilterId>("all");
   const [q, setQ] = useState("");
   const [selId, setSelId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ providers: Provider[] }>("/api/platform/providers")
@@ -120,8 +76,18 @@ export function SupportInboxApp() {
       .catch(() => setProviders([]));
   }, []);
 
-  const update = (next: Thread[]) => { setThreads(next); saveThreads(next); };
-  const patch = (id: string, fn: (t: Thread) => Thread) => update(threads.map((t) => (t.id === id ? fn(t) : t)));
+  const refresh = useCallback(() => {
+    apiGet<{ threads: ApiThread[] }>("/api/platform/support")
+      .then((d) => { setThreads((d.threads ?? []).map(fromApi)); setErr(null); })
+      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  useRealtime(["supportThreads"], refresh);
+
+  // Mutations go through the API; the SSE channel (plus the explicit refresh)
+  // brings the authoritative state back.
+  const run = (p: Promise<unknown>) =>
+    p.then(() => { setErr(null); refresh(); }).catch((e) => { setErr(e instanceof Error ? e.message : String(e)); refresh(); });
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -143,10 +109,17 @@ export function SupportInboxApp() {
   const unreadCount = threads.filter((t) => t.unread).length;
   const bugCount = threads.filter((t) => t.kind === "bug" && t.status === "open").length;
 
-  const openThread = (t: Thread) => { setSelId(t.id); if (t.unread) patch(t.id, (x) => ({ ...x, unread: false })); };
-  const reply = (body: string) => sel && patch(sel.id, (t) => ({ ...t, messages: [...t.messages, { id: uid(), from: "hq", body, at: nowIso() }], updatedAt: nowIso(), status: "open" }));
-  const toggleResolved = () => sel && patch(sel.id, (t) => ({ ...t, status: t.status === "open" ? "resolved" : "open", updatedAt: nowIso() }));
-  const createThread = (t: Thread) => { update([t, ...threads]); setSelId(t.id); setComposing(false); };
+  const openThread = (t: Thread) => {
+    setSelId(t.id);
+    if (t.unread) {
+      // Clear the dot immediately; the PUT persists it for everyone else.
+      setThreads((cur) => cur.map((x) => (x.id === t.id ? { ...x, unread: false } : x)));
+      run(apiPut(`/api/platform/support/${t.id}`, { read: true }));
+    }
+  };
+  const reply = (body: string) => { if (sel) run(apiPost(`/api/platform/support/${sel.id}/messages`, { body })); };
+  const toggleResolved = () => { if (sel) run(apiPut(`/api/platform/support/${sel.id}`, { status: sel.status === "open" ? "resolved" : "open" })); };
+  const created = (id: string) => { setComposing(false); setSelId(id); refresh(); };
 
   return (
     <div className="text-[var(--ink)]">
@@ -182,6 +155,8 @@ export function SupportInboxApp() {
             className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#16306e]">✉️ New message</button>
         </div>
       </div>
+
+      {err && <div className="mt-3 rounded-xl border px-3.5 py-2 text-[12.5px] font-bold" style={{ borderColor: "#c02636", background: "#fdebec", color: "#c02636" }}>{err}</div>}
 
       <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,360px)_1fr]">
         {/* Thread list */}
@@ -230,7 +205,7 @@ export function SupportInboxApp() {
         </div>
       </div>
 
-      {composing && <Composer providers={providers} onClose={() => setComposing(false)} onCreate={createThread} />}
+      {composing && <Composer providers={providers} onClose={() => setComposing(false)} onCreate={created} />}
     </div>
   );
 }
@@ -295,7 +270,7 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
   );
 }
 
-function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onClose: () => void; onCreate: (t: Thread) => void }) {
+function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onClose: () => void; onCreate: (id: string) => void }) {
   const [party, setParty] = useState<Party>("provider");
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [providerId, setProviderId] = useState("");
@@ -304,6 +279,8 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
   const [custEmail, setCustEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const list = useMemo(() => {
     const ql = provQuery.trim().toLowerCase();
@@ -316,12 +293,19 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
 
   const canSend = !!subject.trim() && !!body.trim() && (party === "provider" ? !!chosen : (!!custName.trim() && !!custEmail.trim() && !!chosen));
   const submit = () => {
-    if (!canSend || !chosen) return;
-    const tier = tierOf(chosen);
-    const t: Thread = party === "provider"
-      ? seed("provider", chosen.name, chosen.contactEmail ?? chosen.ownerEmail ?? "", tier, chosen.name, subject.trim(), "message", undefined, "open", false, [["hq", body.trim(), nowIso()]])
-      : seed("customer", custName.trim(), custEmail.trim(), tier, chosen.name, subject.trim(), "message", undefined, "open", false, [["hq", body.trim(), nowIso()]]);
-    onCreate(t);
+    if (!canSend || !chosen || sending) return;
+    setSending(true);
+    setError(null);
+    apiPost<{ id: string }>("/api/platform/support", {
+      party,
+      providerId: chosen.id,
+      name: party === "provider" ? chosen.name : custName.trim(),
+      email: party === "provider" ? (chosen.contactEmail ?? chosen.ownerEmail ?? "") : custEmail.trim(),
+      subject: subject.trim(),
+      body: body.trim(),
+    })
+      .then((d) => onCreate(d.id))
+      .catch((e) => { setError(e instanceof Error ? e.message : String(e)); setSending(false); });
   };
 
   return (
@@ -390,9 +374,10 @@ function Composer({ providers, onClose, onCreate }: { providers: Provider[]; onC
           <Field label="Subject"><input value={subject} onChange={(e) => setSubject(e.target.value)} className={inputCls} placeholder="What's this about?" /></Field>
           <Field label="Message"><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className={inputCls} /></Field>
         </div>
-        <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
+          {error && <span className="mr-auto text-[12px] font-bold text-[#c02636]">{error}</span>}
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <button type="button" onClick={submit} disabled={!canSend} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">Send message</button>
+          <button type="button" onClick={submit} disabled={!canSend || sending} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">{sending ? "Sending…" : "Send message"}</button>
         </div>
       </div>
     </div>

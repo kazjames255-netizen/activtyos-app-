@@ -749,6 +749,8 @@ tags:
   - name: meta
   - name: ai
     description: AI assistant — plain-English Q&A over the caller's own live data (read-only)
+  - name: platform-hq
+    description: Platform (HQ) tools — the sales pipeline and the support inbox (platform role only; bug reports come from any signed-in account)
 
 security:
   - firebaseIdToken: []
@@ -2269,6 +2271,35 @@ paths:
         "200": { description: "{ok, status}" }
         "402": { description: No usable saved card — run /checkout + /start instead }
 
+  /api/platform/leads:
+    get:
+      tags: [platform-hq]
+      summary: All sales leads (embedded activities, newest-updated first)
+      responses: { "200": { description: Array of leads }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      tags: [platform-hq]
+      summary: Create a lead
+      description: "Enums: source cold_call|email|social|referral|event|inbound; plan freelancer|company|franchise; stage new|contacted|interested|demo|trial|won|lost. Server stamps createdAt/updatedAt/createdBy. PUT /api/platform/leads/{id} updates/moves stage; DELETE removes; POST /{id}/activities appends {type,note,outcome?} (server stamps at/by); POST /bulk imports an array, deduped by email, returns {added,skipped}. On signup, register-role auto-converts a matching open lead (email OR phone digits OR business name) to stage won with a \"Signed up 🎉\" activity."
+      responses: { "201": { description: The created lead }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+
+  /api/platform/support:
+    get:
+      tags: [platform-hq]
+      summary: The HQ inbox — provider + customer threads, bugs included
+      responses: { "200": { description: "{threads} — embedded messages, report block on bug threads" }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      tags: [platform-hq]
+      summary: HQ starts a thread with a provider or customer
+      description: "{party, providerId?, name, email, subject, body} — tier/providerName resolved from the tenant (franchise-aware via subscription.plan). POST /{id}/messages appends an HQ reply; PUT /{id} takes {status: open|resolved} and/or {read:true} (clears unreadByHq)."
+      responses: { "201": { description: The created thread }, "403": { $ref: "#/components/responses/Forbidden" } }
+
+  /api/support/report:
+    post:
+      tags: [platform-hq]
+      summary: In-app bug report (any signed-in account — the 🐞 in the header)
+      description: "{page, steps, severity: low|medium|high, device, providerId?}. Operators file as their tenant; parents as customers linked to providerId (or their latest booking's provider). Lands in the HQ inbox as a kind:\"bug\" thread with the report block, unread."
+      responses: { "201": { description: "{id}" }, "400": { $ref: "#/components/responses/BadRequest" } }
+
   /api/stripe/webhook:
     post:
       tags: [subscription]
@@ -2573,6 +2604,62 @@ paths:
         "200": { description: "{ok:true}" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/trips/{id}/send-message:
+    post:
+      tags: [trips]
+      summary: Step 8 — send the parent message to every attending family
+      description: >
+        Emails + bells each attending child's family with the trip's stored
+        parentMsg (or a {message} override). Merge tokens {destination} {date}
+        {depart} {return} {transport} {cost} {payBy} {child} are resolved
+        server-side; {child} personalises per family. Declined children are
+        skipped. Stamps parentMsgSentAt + attendees[].sent.
+        Consent requests themselves are automatic: saving a trip with newly
+        added children notifies their families (Setup → Trips notifyParent),
+        childNames are resolved to childId server-side, and the
+        trip-consent-chase sweep re-nudges pending families daily until the
+        trip date. With Setup → requireConsent on, PUT status:"completed" is
+        refused (409) while any attending child's consent is pending.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { message: { type: string, maxLength: 4000 } }
+      responses:
+        "200": { description: "{ok, sent}" }
+        "400": { description: No parent message written yet }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/my/trips:
+    get:
+      tags: [my]
+      summary: The family's trips — every trip a child of theirs is on
+      description: Upcoming + the last 30 days, with per-child consent state. Cancelled trips are hidden.
+      responses:
+        "200": { description: "Array of {id, provider, destination, date, times, transport, cost, payBy, status, askConsent, children:[{childId,name,consent,consentAt}]}" }
+
+  /api/my/trips/{id}/consent:
+    post:
+      tags: [my]
+      summary: Give or decline consent for one of their children (timestamped)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId, decision]
+              properties:
+                childId: { type: string }
+                decision: { type: string, enum: [granted, declined] }
+      responses:
+        "200": { description: "{ok, decision} — the provider team is notified; the trip's consentObtained flips when every child has granted" }
+        "404": { description: Child not owned by the caller, or not on this trip }
 
   /api/shifts:
     get:

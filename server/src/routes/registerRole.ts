@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
 
@@ -128,5 +129,47 @@ registerRole.post("/", async (req, res) => {
       },
     });
   });
+  // Sales CRM auto-convert: if HQ had this signup in the pipeline, jump the
+  // lead to "won" the instant the tenant exists — no manual board move.
+  // Fire-and-forget: the CRM must never be able to block or fail a signup.
+  convertMatchingLead(tenantRef.id, businessName, contactEmail || user.email || null, phone ?? null).catch(console.error);
   res.status(201).json({ role, tenantId: tenantRef.id, tenantName: businessName });
 });
+
+// Match an OPEN lead (not already won/lost) to a fresh signup by email OR
+// phone OR business name. Phones compare as digits only, and only when both
+// sides have at least 7 of them (short fragments would false-positive);
+// names compare case-insensitively after trimming. Full-collection scan is
+// fine — the pipeline is hundreds of leads, and this runs once per signup.
+const phoneDigits = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
+async function convertMatchingLead(tenantId: string, tenantName: string, email: string | null, phone: string | null) {
+  const wantEmail = (email ?? "").trim().toLowerCase();
+  const wantPhone = phoneDigits(phone);
+  const wantName = tenantName.trim().toLowerCase();
+  const snap = await db.collection("leads").get();
+  for (const d of snap.docs) {
+    const l = d.data() as { stage?: string; email?: string; phone?: string; business?: string; activities?: unknown[] };
+    if (l.stage === "won" || l.stage === "lost") continue;
+    const leadPhone = phoneDigits(l.phone);
+    const hit =
+      (!!wantEmail && (l.email ?? "").trim().toLowerCase() === wantEmail) ||
+      (wantPhone.length >= 7 && leadPhone.length >= 7 && leadPhone === wantPhone) ||
+      (!!wantName && (l.business ?? "").trim().toLowerCase() === wantName);
+    if (!hit) continue;
+    const now = new Date().toISOString();
+    await d.ref.set(
+      {
+        tenantId,
+        stage: "won",
+        updatedAt: now,
+        // Newest-first, matching how the API appends activities.
+        activities: [
+          { id: randomUUID(), type: "note", note: "Signed up 🎉", at: now, by: "system" },
+          ...(Array.isArray(l.activities) ? l.activities : []),
+        ],
+      },
+      { merge: true },
+    );
+    return; // one signup converts one lead
+  }
+}

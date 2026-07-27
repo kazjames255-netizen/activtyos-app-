@@ -214,6 +214,46 @@ async function safeguardingReviews(): Promise<void> {
   }
 }
 
+// ── Trip consent chase ────────────────────────────────────────────────────
+// "Remind until they respond": while a planned trip is still ahead and a
+// child's consent is pending, re-nudge that family once a day (skipping the
+// day the original request went out). Naturally bounded by the trip date.
+async function tripConsentChase(): Promise<void> {
+  const { date } = ukNow();
+  const snap = await db.collection("trips").where("status", "==", "planned").get();
+  if (snap.empty) return;
+  const settingsFor = settingsLoader();
+
+  for (const d of snap.docs) {
+    const t = d.data() as {
+      tenantId?: string; destination?: string; date?: string; askConsent?: boolean;
+      attendees?: { n: string; childId?: string; consent?: string; consentRequestedAt?: string }[];
+    };
+    if (!t.tenantId || t.askConsent === false || !t.date || t.date < date) continue;
+    const trips = (await settingsFor(t.tenantId)).trips ?? {};
+    if (trips.notifyParent === false) continue;
+
+    for (const a of t.attendees ?? []) {
+      if (!a.childId || (a.consent ?? "pending") !== "pending") continue;
+      if (!a.consentRequestedAt || a.consentRequestedAt.slice(0, 10) >= date) continue; // first ask covers today
+      const email = await parentEmailForChild(a.childId);
+      if (!email) continue;
+      await fireOnce(`tripconsent_${d.id}_${a.childId}_${date}`, { tenantId: t.tenantId }, () =>
+        notify({
+          tenantId: t.tenantId!,
+          to: { kind: "parent", email },
+          category: "trip",
+          title: `Still needed: consent for ${a.n} — trip to ${t.destination}`,
+          body: `The trip on ${t.date} is coming up and ${a.n}'s consent is still pending. Give or decline it in your Trips area — one tap.`,
+          subject: `Reminder: ${a.n}'s trip consent is still needed`,
+          href: "/custdash/trips",
+          ref: d.id,
+        }),
+      ).catch((err) => console.error(`[sweeps] trip consent chase ${d.id}:`, (err as Error).message));
+    }
+  }
+}
+
 // ── Subscription sync ─────────────────────────────────────────────────────
 // Backstop for the Stripe webhook: pull every billed tenant's subscription
 // and reconcile status/periods + metered quantities. Keeps dev (no public
@@ -245,4 +285,5 @@ export function startSweeps(): void {
   // unchanged behaviour, but now exactly one instance runs it per interval.
   sweep("waitlist-expiry", 5 * 60_000, expireOffers);
   sweep("subscription-sync", 6 * 60 * 60_000, subscriptionSync);
+  sweep("trip-consent-chase", 6 * 60 * 60_000, tripConsentChase);
 }

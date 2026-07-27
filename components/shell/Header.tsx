@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUnreadMessages } from "@/lib/use-unread";
 import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
@@ -113,7 +113,9 @@ export function Header({ portal }: { portal: PortalKey }) {
       <div className="flex flex-none items-center gap-2 sm:gap-3">
         {user?.email && portal !== "custdash" && <span className="hidden text-[12px] text-[var(--ink-3)] xl:inline">{user.email}</span>}
         {/* Platform accounts have no tenant, so no bell of their own (the API
-            would return an empty list anyway). */}
+            would return an empty list anyway). HQ triages bug reports rather
+            than filing them, so no bug button either. */}
+        {portal !== "platform" && <BugReport />}
         {portal !== "platform" && <Bell portal={portal} />}
         <PortalSwitcher portal={portal} />
         {/* On phones the drawer's "Log out" item covers this. */}
@@ -129,6 +131,112 @@ export function Header({ portal }: { portal: PortalKey }) {
         </Button>
       </div>
     </header>
+  );
+}
+
+// "Report a bug" — a tiny intake next to the bell that opens a bug thread in
+// the HQ support inbox (POST /api/support/report). The page and device are
+// captured automatically from the route and user agent; the reporter only
+// says what happened and how bad it felt.
+function BugReport() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [severity, setSeverity] = useState<"low" | "medium" | "high">("medium");
+  const [steps, setSteps] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setSeverity("medium");
+    setSteps("");
+    setBusy(false);
+    setSent(false);
+    setError(null);
+  };
+
+  const submit = () => {
+    if (!steps.trim() || busy || sent) return;
+    setBusy(true);
+    setError(null);
+    apiPost("/api/support/report", {
+      page: pathname,
+      steps: steps.trim(),
+      severity,
+      device: navigator.userAgent,
+    })
+      .then(() => {
+        setSent(true);
+        setTimeout(close, 1500);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Couldn't send the report");
+        setBusy(false);
+      });
+  };
+
+  const inputCls =
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-2,#2f6bd8)]";
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Report a bug"
+        title="Report a bug"
+        className="relative inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)]"
+      >
+        <span className="text-[15px] leading-none" aria-hidden>🐞</span>
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={close}>
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
+              <span className="text-[13.5px] font-extrabold text-[var(--ink)]">🐞 Report a bug</span>
+              <button onClick={close} aria-label="Close" className="cursor-pointer text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button>
+            </div>
+            {sent ? (
+              <p className="px-4 py-8 text-center text-[13px] font-bold text-[var(--ink)]">Thanks — we&apos;re on it.</p>
+            ) : (
+              <div className="flex flex-col gap-3 px-4 py-4">
+                <label className="block">
+                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">How bad is it?</span>
+                  <select value={severity} onChange={(e) => setSeverity(e.target.value as "low" | "medium" | "high")} className={inputCls}>
+                    <option value="low">Low — a niggle</option>
+                    <option value="medium">Medium — it&apos;s in the way</option>
+                    <option value="high">High — I&apos;m stuck</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11.5px] font-bold text-[var(--ink-3)]">What happened?</span>
+                  <textarea
+                    value={steps}
+                    onChange={(e) => setSteps(e.target.value)}
+                    rows={4}
+                    autoFocus
+                    placeholder="What were you doing, and what went wrong?"
+                    className={`${inputCls} resize-none`}
+                  />
+                </label>
+                <p className="m-0 text-[11px] text-[var(--ink-3)]">The page you&apos;re on and your device details are included automatically.</p>
+                {error && <p className="m-0 text-[12px] font-bold" style={{ color: "var(--sem-crit, #ef4444)" }}>{error}</p>}
+                <div className="flex justify-end gap-2">
+                  <Button sm onClick={close}>Cancel</Button>
+                  <Button sm variant="primary" disabled={!steps.trim() || busy} onClick={submit}>
+                    {busy ? "Sending…" : "Send report"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

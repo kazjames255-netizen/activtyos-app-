@@ -113,15 +113,22 @@ settings); the parent mute is enforced centrally so no caller can forget it.
   (`notifyParentNote`) and a self-serve authorisation (`notifyParentAuthorise`).
   Note the name→booking match is a per-tenant collection scan — fine now, wants an
   index if medication volume grows.
-- **Trips & visits** — `docs/trips-notify-handoff.md`. Now the **full 7-step
-  planner**. Owed: notify + **per-child consent** collection (resolve
-  `childNames`→`childId`, store a per-child consent map), enforce `requireConsent`
-  (block "completed" until all consented), a **parent-side "upcoming trips → Give
-  consent"** view, and **paid consent** — Step 4 "Take payment" and the Step-4
-  letter's pay link/consent-tick are front-end stubs; real payment runs through
-  Stripe Connect and must show in the parent's profile. Persisted fields on the
-  trip incl. `roster/attendees[]/checkpoints/signoff/hazards/parentMsg/payBy/
-  askPay/askConsent/attendees[].sent`.
+- ~~**Trips & visits**~~ — **DONE (28 Jul) except paid consent.** Server
+  resolves `childNames`→`childId` on every save (attendees carry
+  childId/consent/consentAt/consentBy; `childIds` top-level; em/med filled
+  from the child profile). Saving with new children emails + bells each
+  family a consent request; the `trip-consent-chase` sweep re-nudges daily
+  until the trip date; `requireConsent` blocks `status:"completed"` with a
+  409 while any attending child is pending (declined = not coming, doesn't
+  block). Parent side: custdash **Trips & consent** view
+  (`features/trips/ParentTripsApp.tsx`, `GET /api/my/trips` +
+  `POST /api/my/trips/:id/consent`) — give/decline per child, timestamped,
+  team bell on each answer and on the last one. Step 8:
+  `POST /api/trips/:id/send-message` sends the parentMsg with merge tokens
+  resolved ({child} per family). **Still owed: paid consent** — a real
+  Stripe Connect pay link in the Step-8 message showing in the parent's
+  profile; the message can carry payment instructions meanwhile and the
+  operator records payment on the trip.
 - ~~**Calendar reminders**~~ — **DONE (27 Jul).** The scheduler exists now
   (`server/src/lib/scheduler.ts` — Firestore-locked sweeps, exactly-once
   firing, UK wall clock) and `lib/sweeps.ts` delivers: calendar reminders
@@ -149,13 +156,20 @@ settings); the parent mute is enforced centrally so no caller can forget it.
   item's `quantity ≤ minQty`, email/bell the operator. (The ⚠ Low badge is live;
   only the notify is yours.)
 
-## 4. CRM / support / HQ (front-end built, backend spec'd)
-- **Sales pipeline** — `docs/sales-crm-handoff.md`. Leads + activities collections,
-  platform-only CRUD, convert-to-signup hook, future `sales` role. (Runs on a
-  localStorage demo store now.)
-- **Support & messages inbox** — `docs/support-inbox-handoff.md`.
-  `supportThreads` collection + platform CRUD, and the **bug-report intake**
-  (in-app capture of route/UA + inbound-email piping). (localStorage demo now.)
+## 4. CRM / support / HQ — **DONE (28 Jul)**
+- ~~**Sales pipeline**~~ — real backend: `routes/platformLeads.ts`
+  (platform-only CRUD + activities + `/bulk` CSV import deduped by email),
+  live over the `leads` realtime channel; SalesApp is off localStorage.
+  **Auto-convert works**: register-role matches a new signup against open
+  leads by email / phone digits / business name and jumps it to "won" with a
+  "Signed up 🎉" activity. Future `sales` role still later.
+- ~~**Support & messages inbox**~~ — real backend: `routes/platformSupport.ts`
+  (threads + messages + resolve/reopen/read, tier resolved franchise-aware),
+  live over `supportThreads`; SupportInboxApp is off localStorage. The
+  **in-app bug-report intake is live**: a 🐞 button in every operator/parent
+  header auto-captures route + UA, POSTs `/api/support/report`, and lands in
+  the HQ inbox as an unread bug thread. Still owed: the inbound-EMAIL pipe
+  (needs a support mailbox to exist first).
 
 ## 5. New areas I built end-to-end (FYI — nothing owed unless noted)
 - **Calendar** — `calendarEvents.ts` CRUD (manual events). Only the reminder
