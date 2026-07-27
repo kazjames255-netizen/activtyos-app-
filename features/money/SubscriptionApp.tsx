@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
@@ -88,7 +88,11 @@ function SetupForm({ plan, band, cadence, cta, onDone, onError }: {
 function CardCapture(props: { plan: string; band?: string; cadence: string; cta: string; onDone: () => void; onError: (msg: string) => void }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { onError } = props;
+  const requested = useRef(false);
   useEffect(() => {
+    // StrictMode double-mounts effects in dev — one SetupIntent is plenty.
+    if (requested.current) return;
+    requested.current = true;
     apiPost<{ clientSecret: string }>("/api/subscription/checkout", {})
       .then((r) => setClientSecret(r.clientSecret))
       .catch((e) => onError(e instanceof Error ? e.message : "Couldn't start card capture"));

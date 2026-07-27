@@ -190,8 +190,17 @@ subscription.post("/start", async (req, res) => {
     res.status(400).json({ error: "Your card wasn't confirmed — try again." });
     return;
   }
-  const customer = await ensureCustomer(tenantId, req.user?.email);
-  if (si.customer !== customer) { res.status(403).json({ error: "That card capture belongs to a different account." }); return; }
+  // The SetupIntent was minted by /checkout with this tenant stamped on it —
+  // that stamp is the ownership check. The subscription is then created on
+  // the SI's own customer (the one actually holding the card), and that id
+  // becomes the tenant's customer of record — so a concurrent /checkout
+  // race can never strand the card on a different customer than we bill.
+  if (si.metadata?.tenantId !== tenantId || !si.customer) {
+    res.status(403).json({ error: "That card capture belongs to a different account." });
+    return;
+  }
+  const customer = typeof si.customer === "string" ? si.customer : si.customer.id;
+  await saveSub(tenantId, { stripeCustomerId: customer });
   const pmId = typeof si.payment_method === "string" ? si.payment_method : si.payment_method.id;
   await stripe.customers.update(customer, { invoice_settings: { default_payment_method: pmId } });
   const pm = await stripe.paymentMethods.retrieve(pmId);

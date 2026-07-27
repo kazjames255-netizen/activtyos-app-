@@ -66,18 +66,28 @@ export function priceData(monthly: number, cadence: string): Stripe.Subscription
   };
 }
 
-/** Get or create the tenant's Stripe Customer, persisting the id. */
+/** Get or create the tenant's Stripe Customer, persisting the id. Safe
+ *  under concurrent calls (React StrictMode double-fires /checkout in dev):
+ *  the Firestore transaction picks one winner; a losing duplicate Customer
+ *  is deleted rather than left to split the tenant's billing history. */
 export async function ensureCustomer(tenantId: string, email?: string | null): Promise<string> {
   const sub = await subOf(tenantId);
   if (sub?.stripeCustomerId) return sub.stripeCustomerId;
   const t = await tenants().doc(tenantId).get();
-  const customer = await stripe!.customers.create({
+  const created = await stripe!.customers.create({
     name: (t.get("name") as string) || tenantId,
     ...(email ? { email } : {}),
     metadata: { tenantId },
   });
-  await saveSub(tenantId, { stripeCustomerId: customer.id });
-  return customer.id;
+  const winner = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(tenants().doc(tenantId));
+    const existing = (snap.get("subscription") as SubRecord | undefined)?.stripeCustomerId;
+    if (existing) return existing; // someone else won the race
+    tx.set(tenants().doc(tenantId), { subscription: { stripeCustomerId: created.id } }, { merge: true });
+    return created.id;
+  });
+  if (winner !== created.id) await stripe!.customers.del(created.id).catch(() => {});
+  return winner;
 }
 
 /** Team size that counts against the band cap (staff + franchise members). */
