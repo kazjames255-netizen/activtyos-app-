@@ -747,11 +747,60 @@ tags:
     description: GDPR — what we hold, export, deletion request (every role)
   - name: tenants
   - name: meta
+  - name: ai
+    description: AI assistant — plain-English Q&A over the caller's own live data (read-only)
 
 security:
   - firebaseIdToken: []
 
 paths:
+  /api/ai/chat:
+    post:
+      tags: [ai]
+      summary: Ask the AI assistant about the account's live data
+      description: >
+        Answers plain-English questions from a role-scoped snapshot of what the
+        caller may already read — operators (company/franchise/freelancer/staff)
+        get their tenant's operational picture (today's sessions, expected
+        children, occupancy, money owed, open tasks), parents get their own
+        family (bookings, children, store credit), platform gets platform-wide
+        aggregates. Strictly read-only: the model has no tools and no write
+        access, and can never see data outside the caller's scope. The client
+        keeps the conversation and sends the last few turns each call; the
+        server holds no chat state. Requires GROQ_API_KEY on the server (503
+        when unset).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                messages:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  description: The conversation so far, oldest first, ending with the user's question.
+                  items:
+                    type: object
+                    required: [role, content]
+                    properties:
+                      role: { type: string, enum: [user, assistant] }
+                      content: { type: string, maxLength: 4000 }
+      responses:
+        "200":
+          description: The assistant's answer (plain text).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply: { type: string }
+        "400": { description: Malformed body, or the account has no email address (parents). }
+        "502": { description: The model upstream failed or returned nothing — retryable. }
+        "503": { description: GROQ_API_KEY is not configured on this server. }
+
   /health:
     get:
       tags: [meta]

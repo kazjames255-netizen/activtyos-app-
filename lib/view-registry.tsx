@@ -60,16 +60,11 @@ import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
 import { planned } from "@/features/planned/PlannedApp";
+import { AiAssistant } from "@/features/ai/AiApp";
 
 // Roadmap areas — honest "Planned" pages until the real feature lands
 // (never the old prototype's canned data). Swap for a real component here
 // when built; the nav item needs no change.
-const AiPlanned = (portal: string) =>
-  planned({
-    title: "AI assistant",
-    blurb: "Ask questions about your day in plain English — bookings, spaces, who's in, what's owed — and get answers from your live data.",
-    links: [{ href: `/${portal}/messages`, label: "Messages", hint: "a human answers today" }],
-  });
 const PayrollPlanned = (portal: string, scheduleView: string) =>
   planned({
     title: "Payroll",
@@ -136,7 +131,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
-    ai: AiPlanned("company"),
+    ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollPlanned("company", "staff"),
     "ho-framework": planned({
       title: "Franchise Support Framework",
@@ -190,7 +185,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
-    ai: AiPlanned("franchise"),
+    ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollPlanned("franchise", "schedule"),
     moments2: MomentsApp,
   },
@@ -233,7 +228,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
-    ai: AiPlanned("freelancer"),
+    ai: () => <AiAssistant kind="operator" />,
     moments2: MomentsApp,
   },
   staff: {
@@ -257,7 +252,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     compliance: ComplianceApp,
     account: AccountApp,
     privacy: PrivacyApp,
-    ai: AiPlanned("staff"),
+    ai: () => <AiAssistant kind="staff" />,
     availability: planned({
       title: "My availability",
       blurb: "Tell your organiser which days and hours you can work; the rota builds around it.",
@@ -304,7 +299,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     accidents: ParentAccidentsApp,
     account: AccountApp,
     privacy: PrivacyApp,
-    ai: AiPlanned("custdash"),
+    ai: () => <AiAssistant kind="parent" />,
     memberships: planned({
       title: "Memberships",
       blurb: "Recurring plans from your providers — a term of Tuesdays, a monthly pass — managed and paid from here.",
@@ -342,11 +337,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
       title: "Data & privacy",
       blurb: "Platform-wide data-subject requests, retention rules and audit trail.",
     }),
-    ai: planned({
-      title: "AI assistant",
-      blurb: "Ask questions across the whole platform — growth, churn, capacity — answered from live data.",
-      links: [{ href: "/platform/analytics", label: "Analytics", hint: "the live numbers today" }],
-    }),
+    ai: () => <AiAssistant kind="platform" />,
   },
 };
 

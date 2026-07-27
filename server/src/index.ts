@@ -42,6 +42,8 @@ import { compliance } from "./routes/compliance";
 import { expenses } from "./routes/expenses";
 import { purchasing } from "./routes/purchasing";
 import { subscription } from "./routes/subscription";
+import { wallet } from "./routes/wallet";
+import { notifications } from "./routes/notifications";
 import { posts } from "./routes/posts";
 import { messages } from "./routes/messages";
 import { shifts } from "./routes/shifts";
@@ -56,6 +58,7 @@ import { ratios } from "./routes/ratios";
 import { registers } from "./routes/registers";
 import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
+import { ai } from "./routes/ai";
 
 const app = express();
 
@@ -150,6 +153,8 @@ app.use("/api/suppliers", suppliers);
 app.use("/api/purchasing", purchasing);
 app.use("/api/invoices", invoices);
 app.use("/api/subscription", subscription);
+app.use("/api/wallet", wallet);
+app.use("/api/notifications", notifications);
 app.use("/api/posts", posts);
 app.use("/api/messages", messages);
 app.use("/api/geo", geo);
@@ -165,6 +170,7 @@ app.use("/api/tenants", tenants);
 app.use("/api/me", me);
 app.use("/api/platform", platform);
 app.use("/api/analytics", analytics);
+app.use("/api/ai", ai);
 
 // Surface async route errors as JSON 500s rather than hanging the request.
 // (Express identifies error middleware by its 4-arg signature, so the unused
