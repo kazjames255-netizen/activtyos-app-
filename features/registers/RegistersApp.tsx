@@ -224,11 +224,6 @@ export function RegistersApp() {
             </div>
           </div>
 
-          {/* Quick head-count band (per session on the day) */}
-          {daySessions.map((s) => { const last = s.heads[s.heads.length - 1]; return (
-            <HeadBand key={s.blockId} s={s} last={last} readOnly={readOnly} onLog={(n) => logHead(s, n)} />
-          ); })}
-
           {pinRequired && (
             <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>
           )}
@@ -237,7 +232,7 @@ export function RegistersApp() {
           <div className="mb-3 flex flex-col gap-1.5">
             {listingDates.map((d) => { const open = d === date; const c = dayCounts(d); return (
               <button key={d} type="button" onClick={() => setDate(d)} className={`flex items-center justify-between gap-2 rounded-2xl border bg-[var(--surface)] px-4 py-3 text-left ${open ? "border-l-[6px] border-l-[#1d3a8f]" : ""}`} style={{ borderColor: open ? "var(--line)" : "var(--line)" }}>
-                <span className="flex items-center gap-2"><span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span><span className="text-[14px] font-extrabold">{rel(d)}</span><span className="text-[12px] text-[var(--ink-3)]">{dow(d)}</span></span>
+                <span className="flex items-center gap-2"><span className="text-[13px] text-[var(--ink-3)]">{open ? "▾" : "▸"}</span><span className="text-[14px] font-extrabold">{rel(d)}</span>{rel(d) !== dow(d) && <span className="text-[12px] text-[var(--ink-3)]">{dow(d)}</span>}</span>
                 <span className="text-[12.5px] font-bold" style={{ color: open ? BLUE : "var(--ink-3)" }}>{c.booked} booked{open ? ` · ${c.present} in` : ""}</span>
               </button>
             ); })}
@@ -288,7 +283,8 @@ export function RegistersApp() {
               {/* The table(s) */}
               {daySessions.map((s) => (
                 <div key={s.blockId} className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                  {daySessions.length > 1 && <div className="border-b border-[var(--line)] px-4 py-2 text-[12px] font-bold text-[var(--ink-2)]">{s.blockName} · {s.start}–{s.end}</div>}
+                  <div className="border-b border-[var(--line)] px-4 py-2 text-[12px] font-bold text-[var(--ink-2)]">{s.blockName} · {s.start}–{s.end}</div>
+                  <div className="border-b border-[var(--line)] p-4"><HeadBand s={s} last={s.heads[s.heads.length - 1]} readOnly={readOnly} onLog={(n) => logHead(s, n)} /></div>
                   {!readOnly && s.counts.notArrived > 0 && <div className="border-b border-[var(--line)] px-4 py-2"><Button sm disabled={bulkBusy === s.blockId} onClick={() => signAllIn(s)}>{bulkBusy === s.blockId ? "Working…" : `✓ Sign all in (${s.counts.notArrived})`}</Button></div>}
                   <div className="hidden grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px] gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] md:grid">
                     <span>Child</span><span>Alerts</span><span>Signed in</span><span>Collected</span><span>Status</span><span>Parent</span>
@@ -313,7 +309,7 @@ function HeadBand({ s, last, readOnly, onLog }: { s: Session; last?: Head; readO
   const [n, setN] = useState(String(s.counts.present));
   const [busy, setBusy] = useState(false);
   return (
-    <div className="mb-3 flex flex-wrap items-stretch gap-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
+    <div className="flex flex-wrap items-stretch gap-4">
       <div className="flex w-[110px] flex-none flex-col items-center justify-center rounded-xl bg-[var(--panel)] py-3 text-center">
         <div className="text-[34px] font-extrabold leading-none">{s.heads.length}</div>
         <div className="mt-1 text-[9.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Head counts today</div>

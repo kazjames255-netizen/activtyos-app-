@@ -59,6 +59,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "ratios", legacyView: "admin-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "admin-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
         { view: "admin-registers", legacyView: "admin-registers", label: "Registers", icon: { type: "glyph", value: "☰" }, badge: null },
+        { view: "groupings", legacyView: "admin-groupings", label: "Groups", icon: { type: "glyph", value: "🧩" }, badge: null },
       ],
     },
     {
@@ -246,6 +247,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "franchise-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "groupings", legacyView: "franchise-groupings", label: "Groups", icon: { type: "glyph", value: "🧩" }, badge: null },
         { view: "incidents", legacyView: "franchise-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "franchise-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "franchise-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
@@ -360,6 +362,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "freelancer-registers", label: "Register", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "groupings", legacyView: "freelancer-groupings", label: "Groups", icon: { type: "glyph", value: "🧩" }, badge: null },
         { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "freelancer-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
@@ -459,6 +462,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "registers", legacyView: "staff-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "groupings", legacyView: "staff-groupings", label: "Groups", icon: { type: "glyph", value: "🧩" }, badge: null },
         { view: "incident", legacyView: "staff-incident", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "staff-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "staff-accidents", label: "Accidents", icon: { type: "glyph", value: "⛑" }, badge: null },
