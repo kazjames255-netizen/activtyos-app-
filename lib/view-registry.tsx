@@ -40,7 +40,6 @@ import { CalendarApp } from "@/features/calendar/CalendarApp";
 import { InventoryApp } from "@/features/inventory/InventoryApp";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { RegistersApp } from "@/features/registers/RegistersApp";
-import { GroupingsApp } from "@/features/registers/GroupingsApp";
 import { SetupApp } from "@/features/setup/SetupApp";
 import { SupportApp } from "@/features/support/SupportApp";
 import { TemplatesApp } from "@/features/templates/TemplatesApp";
@@ -101,7 +100,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     staff: TeamApp,
     "admin-registers": RegistersApp,
-    groupings: GroupingsApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
@@ -157,7 +155,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     timetable: TimetableApp,
     staff: TeamApp,
     registers: RegistersApp,
-    groupings: GroupingsApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
@@ -201,7 +198,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     blocks: BlocksApp,
     timetable: TimetableApp,
     registers: RegistersApp,
-    groupings: GroupingsApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
     accidents: () => <IncidentsApp kind="accident" />,
@@ -240,7 +236,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: StaffDashApp,
     timetable: StaffTimetableApp,
     registers: RegistersApp,
-    groupings: GroupingsApp,
     ratios: RatiosApp,
     // Staff nav uses the singular slug — keyed to match, or the real
     // component is unreachable and the legacy iframe shows instead.
