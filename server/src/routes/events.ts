@@ -82,6 +82,8 @@ events.get("/", async (req, res) => {
       listen(db.collection("threads").where("parentEmail", "==", em), "threads");
       listen(db.collection("messages").where("parentEmail", "==", em), "messages");
       listen(db.collection("mealOrders").where("parentEmail", "==", em), "mealOrders");
+      listen(db.collection("wallet").where("email", "==", em), "wallet"); // store credit
+      listen(db.collection("notifications").where("email", "==", em), "notifications");
       // The family's provider library — so Setup → Features/Customer area toggles
       // show up live in their app (only attached if the client is watching it).
       if (wanted === null || wanted.has("library") || wanted.has("timetables")) {
@@ -140,6 +142,8 @@ events.get("/", async (req, res) => {
     listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications");
     listen(db.collection("discountCodes").where("tenantId", "==", tenantId), "discountCodes");
     listen(db.collection("emails").where("tenantId", "==", tenantId), "emails");
+    listen(db.collection("wallet").where("tenantId", "==", tenantId), "wallet");
+    listen(db.collection("notifications").where("tenantId", "==", tenantId), "notifications");
     listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions");
     listen(db.collection("mealOrders").where("tenantId", "==", tenantId), "mealOrders");
   }

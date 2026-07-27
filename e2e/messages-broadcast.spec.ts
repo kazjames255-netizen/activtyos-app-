@@ -30,7 +30,13 @@ test.describe("listing broadcast", () => {
     const body = `Broadcast: session update! (${stamp})`;
     await page.getByPlaceholder(/Write a message/).fill(body);
     await page.getByRole("button", { name: "Send", exact: true }).click();
-    await expect(page.getByText(/Sent to 1 famil/).first()).toBeVisible({ timeout: 15_000 });
+    // The full success notice — a bare /Sent to 1 famil/ also matches the
+    // permanent "📣 Sent to N families" group rows left by earlier runs.
+    await expect(page.getByText(/Sent to 1 family across 1 listing/)).toBeVisible({ timeout: 15_000 });
+
+    // The design promise: the broadcast never appears as an individual thread
+    // in the operator inbox (the composer has closed, so any hit is a thread).
+    await expect(page.getByText(body)).toBeHidden();
 
     // Parent got it.
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });

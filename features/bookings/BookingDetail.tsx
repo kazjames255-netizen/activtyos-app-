@@ -867,7 +867,7 @@ function RefundSummary({ booking }: { booking: Booking }) {
       <SectionHead>Cancellation &amp; refund</SectionHead>
       <div className="rounded-[9px] border border-[#FAD4D0] bg-[#FFF3F2] px-3 py-2.5 text-[12px]">
         <div className="mb-1 font-bold text-[var(--red)]">
-          {c.refundOnly ? "Refund issued" : "Cancelled"}
+          {!c.refundOnly ? "Cancelled" : c.refund === "pending" ? "Refund requested" : "Refund issued"}
         </div>
         <div className="text-[var(--ink-2)]">
           On {c.on} · by {c.by}

@@ -55,13 +55,20 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
   // Accounts from a previous run still alive (cleanup not run yet)? Reuse —
-  // creating + logging in 6 accounts costs ~a minute.
+  // creating + logging in 6 accounts costs ~a minute. Their DATA is wiped
+  // either way: leftover bookings/listings/children from earlier runs are how
+  // stale-matching assertions false-pass, and they slow every list page.
   const existing = manifestIsReusable();
   if (existing) {
     const alive = await Promise.all(
       Object.values(existing.accounts).map((a) => fbTrySignIn(a.email, existing.password)),
     );
-    if (alive.every(Boolean)) return;
+    if (alive.every(Boolean)) {
+      execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-cleanup", "--", "--data-only"], {
+        stdio: "pipe",
+      });
+      return;
+    }
   }
 
   const runId = Date.now().toString(36);

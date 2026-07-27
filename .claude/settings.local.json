@@ -33,7 +33,31 @@
       "Bash(npm -v)",
       "Bash(tee /private/tmp/claude-501/-Users-amir-WebstormProjects-activtyos-app-/5bc95bd2-8472-4f0d-9129-ca8f0bcc6536/scratchpad/dev-output.log)",
       "Bash(grep -n 'function esc\\(\\\\|function \\\\$\\(\\\\|function toast\\\\|function modal\\\\|function openModal\\\\|class=\"modal\"\\\\|function fmtMoney\\\\|function fmtDate' public/legacy/prototype.html)",
-      "Bash(awk '/^function renderStaff\\\\\\(/{print NR}' public/legacy/prototype.html)"
+      "Bash(awk '/^function renderStaff\\\\\\(/{print NR}' public/legacy/prototype.html)",
+      "Bash(lsof -i :4000 -sTCP:LISTEN)",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)",
+      "Bash(ps -p 30964 -o pid,ppid,command)",
+      "Bash(ps -p 75078 -o command)",
+      "Bash(lsof -i :3001 -sTCP:LISTEN)",
+      "Bash(awk '{print $2, $3\"%cpu\", $11, $12, $13, $14}')",
+      "Bash(kill 75076 75078)",
+      "Bash(lsof -ti :3000 -sTCP:LISTEN)",
+      "Bash(node /private/tmp/claude-501/-Users-amir-WebstormProjects-activtyos-app-/931ae2d4-9c61-43ea-821a-18fd11141190/scratchpad/inspect-listing.mjs)",
+      "Bash(lsof -nP -iTCP:3000 -iTCP:3001 -iTCP:4000 -sTCP:LISTEN)",
+      "Bash(cp /private/tmp/claude-501/-Users-amir-WebstormProjects-activtyos-app-/931ae2d4-9c61-43ea-821a-18fd11141190/scratchpad/inspect-blocks.mjs ./inspect-blocks.tmp.mjs)",
+      "Bash(node ./inspect-blocks.tmp.mjs)",
+      "Bash(rm -f ./inspect-blocks.tmp.mjs)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({'passes': d.get\\('passes'\\), 'bundlePasses': \\(d.get\\('bundle'\\) or {}\\).get\\('passes'\\), 'bookingType': d.get\\('bookingType'\\), 'bookRules': d.get\\('bookRules'\\), 'blocks': [{'id': b['id'], 'name': b['name'], 'spotsLeft': b['spotsLeft'], 'capacityScope': b.get\\('capacityScope'\\)} for b in d.get\\('blocks', []\\)]}, indent=1\\)\\)\")",
+      "Bash(node *)",
+      "Bash(grep -rnoE \"\\(apiGet|apiPost|apiPut|apiDel|apiPublic|get|post|put|del\\)<[^>]*>\\\\\\(\\\\`?\\\\\"?/api/[^\\\\\"\\\\`,\\)]*\" features --include='*.tsx' --include='*.ts')",
+      "Bash(grep -n \"const .* = \\\\[$\" features/blocks/BlocksApp.tsx features/customers/CustomersApp.tsx features/messages/MessagesApp.tsx features/parent/MyBookingsApp.tsx features/setup/SetupApp.tsx)",
+      "Bash(python3 -)",
+      "Bash(lsof -nP -iTCP:4000 -sTCP:LISTEN)",
+      "Bash(awk '{print $2, $9}')",
+      "Bash(PORT=4100 npx tsx src/index.ts)",
+      "Bash(sed -i '' 's|http://localhost:4000|http://localhost:4100|' /private/tmp/claude-501/-Users-amir-WebstormProjects-activtyos-app-/931ae2d4-9c61-43ea-821a-18fd11141190/scratchpad/e2e-timetable.mjs)",
+      "Bash(lsof -nP -iTCP:4100 -sTCP:LISTEN -t)",
+      "Bash(xargs kill)"
     ]
   }
 }

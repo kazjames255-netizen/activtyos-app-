@@ -46,6 +46,10 @@ export interface CancelInfo {
   refund?: RefundKind;
   amount?: number;
   refundOnly?: boolean;
+  /** Where the family asked for the money to go. "wallet" keeps it in-house as
+   *  store credit with this provider; "card" (the default) refunds the payment
+   *  method. Honoured when the operator approves the refund. */
+  refundTo?: "card" | "wallet";
 }
 
 export interface RefundLogEntry {
@@ -112,6 +116,9 @@ export interface Booking {
   /** How much has actually been received (reconciliation). Absent = 0 for
    *  Unpaid, treated as `amount` for Paid. Partial payments track it. */
   amountPaid?: number;
+  /** Store credit taken off this booking at checkout. `amount` is already net
+   *  of it — this is here so the money trail shows where the difference went. */
+  walletApplied?: number;
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];

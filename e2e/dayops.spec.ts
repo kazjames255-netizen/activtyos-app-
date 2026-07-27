@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp } from "./helpers/accounts";
 import { bookViaApi, provisionLiveListing, type ProvisionedListing } from "./helpers/tenantData";
+import { cardWith } from "./helpers/ui";
 
 // Day-to-day operations: the register for a session day, newsfeed posts
 // reaching booked families, and the team task list. One API-arranged booking
@@ -44,7 +46,19 @@ test.describe("operator day ops", () => {
       .last()
       .getByRole("button", { name: "In", exact: true })
       .click();
-    await expect(page.getByText(/In · \d{2}:\d{2}/).first()).toBeVisible({ timeout: 15_000 });
+    // The In-time must land in OUR listing's register section — other runs'
+    // listings share the same session date and may hold checked-in children.
+    await expect(cardWith(page, `${childName} (8)`, /In · \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
+
+    // Check them out again — the row keeps the in-time for the day's audit trail.
+    await page
+      .locator("div")
+      .filter({ has: attendee })
+      .filter({ has: page.getByRole("button", { name: "Out", exact: true }) })
+      .last()
+      .getByRole("button", { name: "Out", exact: true })
+      .click();
+    await expect(cardWith(page, `${childName} (8)`, /Out · \d{2}:\d{2} \(in \d{2}:\d{2}\)/)).toBeVisible({ timeout: 15_000 });
   });
 
   test("newsfeed post reaches the booked family", async ({ page, browser }) => {
@@ -59,6 +73,23 @@ test.describe("operator day ops", () => {
     await parentPage.goto("/custdash/newsfeed");
     await expect(parentPage.getByText(body)).toBeVisible({ timeout: 15_000 });
     await parentCtx.close();
+
+    // …and ONLY the booked family: a parent with no booking at this provider
+    // must never see the post (the feed is scoped to booked tenants).
+    const outsider = `e2e-outsider-${stamp}@${TEST_EMAIL_DOMAIN}`;
+    const s = await fbSignUp(outsider);
+    await apiPost("/api/register-role", s.idToken, { role: "parent", postcode: "NN5 7EA" });
+    const outCtx = await browser.newContext();
+    const outPage = await outCtx.newPage();
+    await outPage.goto("/login");
+    await outPage.getByPlaceholder("you@example.com").fill(outsider);
+    await outPage.locator('input[type="password"]').fill(TEST_PASSWORD);
+    await outPage.getByRole("button", { name: "Sign in", exact: true }).click();
+    await outPage.waitForURL("**/custdash/browse", { timeout: 30_000 });
+    await outPage.goto("/custdash/newsfeed");
+    await expect(outPage.getByText("No updates yet.")).toBeVisible({ timeout: 15_000 });
+    await expect(outPage.getByText(body)).toBeHidden();
+    await outCtx.close();
   });
 
   test("task can be added, completed and lands in Done", async ({ page }) => {
@@ -71,7 +102,9 @@ test.describe("operator day ops", () => {
     await expect(row).toBeVisible({ timeout: 15_000 });
     // click(), not check(): the checkbox is React-controlled and only flips
     // once the PUT round-trips, which check()'s immediate verification fails.
+    // The checked state IS the round-trip proof — a "Done (n)" section header
+    // shows for any old completed task and proves nothing about this one.
     await row.locator('input[type="checkbox"]').click();
-    await expect(page.getByText(/Done \(\d+\)/)).toBeVisible({ timeout: 15_000 });
+    await expect(row.locator('input[type="checkbox"]')).toBeChecked({ timeout: 15_000 });
   });
 });

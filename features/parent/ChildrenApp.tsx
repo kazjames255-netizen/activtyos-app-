@@ -455,6 +455,7 @@ export function ChildrenApp() {
             return (
               <div
                 key={c.id}
+                data-ui="card"
                 className="group relative flex overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(20,30,60,.4)]"
               >
                 {/* accent spine */}

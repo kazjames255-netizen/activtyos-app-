@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
 import { provisionLiveListing } from "./helpers/tenantData";
+import { cardWith } from "./helpers/ui";
 
 // Discount codes end to end: operator creates a percent-off code in the UI,
 // a parent applies it at checkout on a priced listing, and it shows in their
@@ -27,8 +28,9 @@ test.describe("discount codes", () => {
     await page.locator('input[type="number"]').first().fill("10");
     await page.getByRole("button", { name: "Create code" }).click();
 
-    await expect(page.getByText(CODE).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("10% off").first()).toBeVisible();
+    // OUR code's row carries the 10% value — older runs' rows also say
+    // "10% off", so the value must be read off this row.
+    await expect(cardWith(page, CODE, "10% off")).toBeVisible({ timeout: 15_000 });
     await ctx.close();
   });
 
@@ -57,8 +59,14 @@ test.describe("discount codes", () => {
     await page.getByRole("button", { name: "Add child", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    // Pay stage: apply the code — £20 drops by 10%.
+    // Pay stage. A made-up code is rejected server-side and changes nothing.
     await expect(page.getByText("Have discount codes?")).toBeVisible({ timeout: 15_000 });
+    await page.getByPlaceholder("Type a code…").fill(`NOPE${stamp}`);
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.getByText("That code isn’t recognised")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("£20.00").first()).toBeVisible();
+
+    // The real code — £20 drops by 10%.
     await page.getByPlaceholder("Type a code…").fill(CODE);
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByText(`Code ${CODE}`)).toBeVisible({ timeout: 15_000 });

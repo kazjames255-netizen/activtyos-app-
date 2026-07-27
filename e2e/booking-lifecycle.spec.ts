@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiPost, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith } from "./helpers/ui";
 
 // The booking lifecycle beyond the happy path: a parent-initiated
 // cancellation, and the waitlist loop (full day → queued → operator offers →
@@ -37,8 +38,9 @@ test.describe("parent cancellation", () => {
     await expect(page.getByText("Request cancellation")).toBeVisible();
     await page.getByRole("button", { name: "Send cancellation request" }).click();
 
-    // The card flips to Cancelled (badge) once the request lands.
-    await expect(page.getByText("Cancelled", { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+    // THIS booking's card flips to Cancelled once the request lands — never
+    // assert the badge alone, older runs' cancelled cards would satisfy it.
+    await expect(cardWith(page, title, "Cancelled")).toBeVisible({ timeout: 20_000 });
 
     // Operator sees it under the Cancelled filter.
     const opCtx = await browser.newContext({ storageState: statePath("company") });
@@ -47,6 +49,45 @@ test.describe("parent cancellation", () => {
     await opPage.getByRole("button", { name: /^Cancelled/ }).click();
     await expect(opPage.getByText(child).first()).toBeVisible({ timeout: 20_000 });
     await opCtx.close();
+  });
+});
+
+test.describe("approval flow", () => {
+  test.use({ storageState: statePath("parent") });
+
+  test("approval-needed bookings: operator approves one, declines another; parent sees both outcomes", async ({ page, browser }) => {
+    test.setTimeout(120_000);
+    const title = `E2E Approval Camp ${stamp}`;
+    const approveKid = `E2E Approve Kid ${stamp}`;
+    const declineKid = `E2E Decline Kid ${stamp}`;
+    const listing = await provisionLiveListing(accounts.company, { title, price: 0, approval: true });
+    const b1 = await bookViaApi(accounts.parent, listing, { child: approveKid });
+    const b2 = await bookViaApi(accounts.parent, listing, { child: declineKid });
+    // The server rule under test: no bookingType on the listing ⇒ places are
+    // only held pending the operator's say-so.
+    expect(b1.status).toBe("Approval needed");
+    expect(b2.status).toBe("Approval needed");
+
+    // Parent sees both waiting on approval.
+    await page.goto("/custdash/bookings");
+    await expect(cardWith(page, approveKid, "Approval needed")).toBeVisible({ timeout: 15_000 });
+    await expect(cardWith(page, declineKid, "Approval needed")).toBeVisible();
+
+    // Operator decides from the booking detail.
+    const opCtx = await browser.newContext({ storageState: statePath("company") });
+    const opPage = await opCtx.newPage();
+    await opPage.goto("/company/bookings");
+    await opPage.getByText(approveKid).first().click();
+    await opPage.getByRole("button", { name: "Approve", exact: true }).click();
+    await opPage.goto("/company/bookings");
+    await opPage.getByText(declineKid).first().click();
+    await opPage.getByRole("button", { name: "Decline", exact: true }).click();
+    await opCtx.close();
+
+    // Parent's cards flip to the two outcomes.
+    await page.goto("/custdash/bookings");
+    await expect(cardWith(page, approveKid, "Confirmed")).toBeVisible({ timeout: 20_000 });
+    await expect(cardWith(page, declineKid, "Declined")).toBeVisible({ timeout: 20_000 });
   });
 });
 
@@ -67,10 +108,10 @@ test.describe("waitlist loop", () => {
     const queued = await bookViaApi(accounts.parent, listing, { child: `E2E Queue Kid ${stamp}` });
     expect(queued.status).toBe("Waitlisted");
 
-    // Parent sees the queue card.
+    // Parent sees the queue card — OUR child's, not a leftover one.
     await page.goto("/custdash/bookings");
     await expect(page.getByText("My waiting list")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("On the waiting list").first()).toBeVisible();
+    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "On the waiting list")).toBeVisible();
 
     // A place must free up before it can be offered ("That date is still
     // full — free a place first") — the seat-holder cancels.
@@ -87,11 +128,13 @@ test.describe("waitlist loop", () => {
     await expect(opPage.getByText(/Held until \d{2}:\d{2}/)).toBeVisible({ timeout: 20_000 });
     await opCtx.close();
 
-    // Parent accepts the offer — booking confirms.
+    // Parent accepts the offer — booking confirms. All scoped to OUR child's
+    // card: an unexpired offer left by an earlier run renders the same banner.
     await page.goto("/custdash/bookings");
-    await expect(page.getByText("A place has opened up!")).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: "Accept the place" }).click();
-    await expect(page.getByText("A place has opened up!")).toBeHidden({ timeout: 20_000 });
-    await expect(page.getByText("Confirmed").first()).toBeVisible();
+    const offerCard = cardWith(page, `E2E Queue Kid ${stamp}`, "A place has opened up!");
+    await expect(offerCard).toBeVisible({ timeout: 20_000 });
+    await offerCard.getByRole("button", { name: "Accept the place" }).click();
+    await expect(offerCard).toBeHidden({ timeout: 20_000 });
+    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "Confirmed")).toBeVisible({ timeout: 20_000 });
   });
 });

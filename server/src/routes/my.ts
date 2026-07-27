@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
-import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
+import { consumeDiscountCodes, releaseDiscountCodes } from "../lib/discountRedemptions";
+import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
+import { notify } from "../lib/notify";
 import { rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
+import { money } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
-import { applyParentCancel, buildBooking } from "../../../features/bookings/mutations";
+import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
 import {
   resolveBundlePricing,
@@ -19,6 +22,7 @@ import {
   blockCountDelta,
   bookingDays,
   bookingSeats,
+  countsTowardCapacity,
   countsUpdate,
   daysHaveSpace,
   sessionLabel,
@@ -117,11 +121,33 @@ const legacySchema = z.object({
   method: z.string().min(1),
 });
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected an ISO date (YYYY-MM-DD)");
+
 const cancelSchema = z.object({
   msg: z.string().max(500).optional(),
   // A provider-defined cancellation reason (Illness / Weather / …) for
   // reporting, stored alongside the free-text message.
   reason: z.string().max(120).optional(),
+  // Where the family wants any refund to land. Recorded on the request; the
+  // money only moves when the provider approves it.
+  refundPref: z.enum(["card", "wallet"]).optional(),
+  // ── Partial (per-day) cancellation ──────────────────────────────────────
+  // A strict subset of the booking's remaining days, released rather than the
+  // whole booking. Single-child bookings send `days`, multi-child ones send
+  // `kids` (each child on their own dates). `resolution` says what happens to
+  // the released days' value; "changedate" is a MOVE and goes to /amend.
+  resolution: z.enum(["refund", "wallet"]).optional(),
+  days: z.array(isoDate).max(120).optional(),
+  kids: z
+    .array(
+      z.object({
+        name: z.string().trim().max(80),
+        childId: z.string().max(60).optional(),
+        days: z.array(isoDate).max(120),
+      }),
+    )
+    .max(20)
+    .optional(),
 });
 
 const childSchema = z.object({
@@ -219,6 +245,16 @@ my.get("/providers", async (req, res) => {
   if (!ids.length) { res.json([]); return; }
   const tenants = await db.getAll(...ids.map((id) => db.collection("tenants").doc(id)));
   res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
+});
+
+// GET /api/my/wallet — the family's store credit, per provider, with the
+// ledger behind each balance. Read-only: credit is only ever created by a
+// cancellation/credit-note settling to the wallet, and only ever spent by
+// checkout, both server-side (it's money — the client isn't trusted for it).
+my.get("/wallet", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  res.json({ balances: await walletsForFamily(email) });
 });
 
 // GET /api/my/coupons — discount codes a parent can actually use: the PUBLIC
@@ -637,6 +673,10 @@ my.post("/bookings", async (req, res) => {
   // A referral code in the basket → reward the referrer AFTER the booking is
   // written (so we can link the booking). Captured here, fired after the tx.
   let referralHit: { referrerEmail: string; code: string; friendDiscount: number } | null = null;
+  // Codes are only CONSUMED once the booking actually exists — a basket that
+  // fails capacity must not burn a single-use code. Captured here, written
+  // after the tx with the refs, so a later cancel can hand the code back.
+  let codesToConsume: { codeId: string; code: string }[] = [];
   const rawCodes = [...(input.discountCode ? [input.discountCode] : []), ...(input.discountCodes ?? [])];
   const wantedCodes = [...new Set(rawCodes.map((c) => normaliseCode(c)).filter(Boolean))];
   if (wantedCodes.length) {
@@ -681,11 +721,7 @@ my.post("/bookings", async (req, res) => {
     const codeDrift = round2(codeTarget - amounts.reduce((s, a) => round2(s + a), 0));
     if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + codeDrift);
     discountCodes = loaded.map((l) => l.code);
-    // Record each redemption (best-effort — the hard cap is re-checked next time).
-    for (const l of loaded) {
-      void l.doc.ref.update({ usedCount: FieldValue.increment(1) });
-      if (l.data.perCustomerLimit && familyEmail) void db.collection("discountRedemptions").add({ codeId: l.doc.id, tenantId: listing.tenantId, email: familyEmail.toLowerCase(), at: new Date().toISOString() });
-    }
+    codesToConsume = loaded.map((l) => ({ codeId: l.doc.id, code: l.code }));
   }
 
   const bookerName = familyName;
@@ -698,12 +734,22 @@ my.post("/bookings", async (req, res) => {
   // approval — Confirmed straight away, invoiced. Unpaid until paid.
   const placedStatus = onBehalf ? "Confirmed" : listing.bookingType === "auto" ? "Confirmed" : "Approval needed";
 
+  // Store credit the family holds with this provider is spent automatically,
+  // after every discount, and only on places actually taken (a waitlisted line
+  // hasn't cost them anything yet). Read inside the transaction and written
+  // with the bookings, so two baskets can't spend the same pound. An operator
+  // booking on a family's behalf leaves their credit alone — it's the family's
+  // to spend, and the checkout preview never offered it.
+  const useWallet = !onBehalf && Boolean(familyEmail);
+
   try {
     const bookings = await db.runTransaction(async (tx) => {
       const [tenantSnap, ...blockSnaps] = await Promise.all([
         tx.get(tenantRef),
         ...blockIds.map((id) => tx.get(db.collection("blocks").doc(id))),
       ]);
+      const walletSnap = useWallet ? await tx.get(walletRef(listing.tenantId, familyEmail)) : null;
+      const walletHeld = walletSnap?.exists ? Number(walletSnap.get("balance") ?? 0) : 0;
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
       const blockById = new Map<string, BlockDoc>();
       for (const snap of blockSnaps) {
@@ -791,6 +837,10 @@ my.post("/bookings", async (req, res) => {
       const queuePos = new Map<string, Record<string, number>>();
       for (const [id, depth] of queueDepth) queuePos.set(id, { ...depth });
       const created: Booking[] = [];
+      // Credit is drawn down as the bookings are built, so it lands on the
+      // earliest places taken and never on a waitlisted one.
+      let walletLeft = walletHeld;
+      const walletSpends: { ref: string; amount: number; reason: string }[] = [];
       priced.forEach((p, i) => {
         const rc = resolveChild(p.item);
         // The line's money, spread over its blocks by day count. The LAST
@@ -817,7 +867,12 @@ my.post("/bookings", async (req, res) => {
             si === p.segments.length - 1
               ? round2(amounts[i] - paidSoFar)
               : round2((p.days.length ? passPortion * (seg.days.length / p.days.length) : 0) + segAddonsTotal);
+          // The split maths above stays on gross figures; store credit comes
+          // off afterwards so the segments still sum to the previewed total.
           paidSoFar = round2(paidSoFar + amount);
+          const fromWallet = placed && walletLeft > 0 && amount > 0 ? Math.min(walletLeft, amount) : 0;
+          walletLeft = round2(walletLeft - fromWallet);
+          const due = round2(amount - fromWallet);
           let note = "";
           if (!placed) {
             const pos = queuePos.get(seg.blockId)!;
@@ -840,12 +895,13 @@ my.post("/bookings", async (req, res) => {
                 listing: listing.name,
                 pass: p.timing ? `${p.item.pass} · ${p.timing}` : p.item.pass,
                 dates: block.name,
-                amount,
+                amount: due,
                 method: input.method,
               },
               nextBid + created.length,
             ),
             ...(rc.childId ? { childId: rc.childId } : {}),
+            ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
             tenantId: listing.tenantId,
             blockId: seg.blockId,
@@ -855,18 +911,19 @@ my.post("/bookings", async (req, res) => {
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
             sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
             status: placed ? placedStatus : "Waitlisted",
-            // Judged on the total, not the method: a HAF/free £0 place is Funded,
-            // never Unpaid. A voucher booking waits on the scheme's money, not
-            // the parent — a distinct state so the two chase lists don't mix.
+            // Judged on what's left to pay, not the method: a HAF/free £0 place
+            // — or one fully covered by store credit — is Funded, never Unpaid.
+            // A voucher booking waits on the scheme's money, not the parent — a
+            // distinct state so the two chase lists don't mix.
             pay:
-              amount <= 0
+              due <= 0
                 ? "Funded"
                 : placed && voucher
                   ? "Awaiting voucher payment"
                   : placed && onBehalf
                     ? "Invoice sent"
                     : "Unpaid",
-            ...(placed && voucher && amount > 0
+            ...(placed && voucher && due > 0
               ? {
                   voucherScheme: voucher.name,
                   ...(voucherWin?.sendBy ? { voucherSendBy: voucherWin.sendBy } : {}),
@@ -875,8 +932,15 @@ my.post("/bookings", async (req, res) => {
               : {}),
             note,
           });
+          if (fromWallet)
+            walletSpends.push({
+              ref: created[created.length - 1].ref,
+              amount: fromWallet,
+              reason: `Spent on ${listing.name}`,
+            });
         });
       });
+      if (walletSpends.length) spendWalletInTx(tx, listing.tenantId, familyEmail, walletHeld, walletSpends);
       tx.update(tenantRef, { nextBid: nextBid + created.length });
       for (const id of changed) {
         const blk = working.get(id)!;
@@ -885,6 +949,14 @@ my.post("/bookings", async (req, res) => {
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
+
+    // The booking exists, so the codes are genuinely spent.
+    void consumeDiscountCodes(
+      listing.tenantId,
+      codesToConsume,
+      bookings.map((b) => b.ref),
+      familyEmail,
+    );
 
     // Refer-a-friend: now the friend's booking exists, reward the referrer —
     // capped to what the friend paid — and link the booking for the dashboard.
@@ -987,6 +1059,35 @@ my.post("/bookings/:ref/amend", async (req, res) => {
         : [];
   if (parsed.data.preferredDate) moves.push({ from: "", to: parsed.data.preferredDate, childName: booking.child });
   if (moves.length === 0) { res.status(400).json({ error: "No date change was specified" }); return; }
+
+  // Validate before recording, so the operator is never shown a move they
+  // couldn't approve. A `from` of "" is the undated "preferred date" shape —
+  // there's nothing to move off, so only the target is checked.
+  if (booking.status === "Cancelled") { res.status(400).json({ error: "This booking is cancelled" }); return; }
+  const { block, settings } = await bookingContext(booking);
+  if (!enabled(settings, "allowDateChanges")) {
+    res.status(400).json({ error: "This provider doesn't offer date changes" });
+    return;
+  }
+  const onBooking = new Set(booking.days ?? []);
+  for (const k of booking.kids ?? []) for (const d of k.dates ?? []) onBooking.add(d);
+  for (const mv of moves) {
+    if (mv.from && !onBooking.has(mv.from)) {
+      res.status(400).json({ error: `${prettyDay(mv.from)} isn't on this booking` });
+      return;
+    }
+    if (mv.from === mv.to) { res.status(400).json({ error: "That's the same date" }); return; }
+    // The target must be a session this block actually runs, with room left.
+    // Re-checked on approval too — availability moves while a request waits.
+    if (block) {
+      const session = block.sessions.find((s) => s.date === mv.to);
+      if (!session) { res.status(400).json({ error: `This activity doesn't run on ${prettyDay(mv.to)}` }); return; }
+      if ((block.capacityScope ?? "listing") === "day" && !daysHaveSpace(block, { [mv.to]: 1 }).fits) {
+        res.status(400).json({ error: `${prettyDay(mv.to)} is full` });
+        return;
+      }
+    }
+  }
 
   await snap.ref.set({
     dateChangeRequest: {
@@ -1096,6 +1197,209 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
   }
 });
 
+/** Everything the cancel and amend flows need to judge a family's request: the
+ *  block it sits on (real session dates + capacity), the listing's cancellation
+ *  policy, and the provider's Setup toggles. One read path, so the two flows
+ *  can never disagree about what a provider allows. */
+async function bookingContext(b: Booking): Promise<{
+  tenantId: string | undefined;
+  block: BlockDoc | null;
+  settings: Record<string, unknown>;
+  policy: NamedPolicy | typeof DEFAULT_POLICY;
+}> {
+  let tenantId: string | undefined = b.tenantId;
+  let block: BlockDoc | null = null;
+  let policyId: string | undefined;
+  if (b.blockId) {
+    const blk = await db.collection("blocks").doc(b.blockId).get();
+    if (blk.exists) {
+      block = blk.data() as BlockDoc;
+      const lst = await db.collection("listings").doc(block.listingId).get();
+      if (lst.exists) {
+        policyId = lst.data()?.cancellationPolicyId as string | undefined;
+        tenantId = (lst.data()?.tenantId as string | undefined) ?? tenantId;
+      }
+    }
+  }
+  const settings = tenantId
+    ? ((await db.collection("libraries").doc(tenantId).get()).data()?.settings as Record<string, unknown>) ?? {}
+    : {};
+  const policies = (settings.cancellationPolicies ?? []) as NamedPolicy[];
+  return { tenantId, block, settings, policy: policyById(policies, policyId) ?? DEFAULT_POLICY };
+}
+
+/** Setup toggles default to ON unless the provider turned them off — the same
+ *  reading the parent UI applies, so what it offers is what we accept. */
+const enabled = (settings: Record<string, unknown>, key: string, dflt = true) =>
+  settings[key] === undefined ? dflt : settings[key] !== false;
+
+/** A single-child booking has no `kids[]`, and the array `bookingKids` makes up
+ *  on the fly dates itself from the SESSION LABELS ("Mon 27 Jul 2026"). Partial
+ *  cancellation works in ISO throughout, so materialise the child properly —
+ *  from `days` — before touching anything. */
+function materialiseKids(b: Booking): NonNullable<Booking["kids"]> {
+  if (b.kids?.length) return b.kids;
+  b.kids = [
+    {
+      name: b.child,
+      ...(b.childId ? { childId: b.childId } : {}),
+      ...(b.age != null ? { age: b.age } : {}),
+      dates: [...(b.days ?? [])].sort(),
+    },
+  ];
+  return b.kids;
+}
+
+/** Release individual days of a multi-day pass. The booking stays Confirmed for
+ *  whatever remains; the released days' pro-rata value is either refunded (cash,
+ *  per the cancellation policy, pending the provider's approval) or credited to
+ *  the family's wallet (full value, no policy cut, instantly). */
+async function partialCancel(
+  ref: FirebaseFirestore.DocumentReference,
+  existing: Booking,
+  email: string,
+  input: z.infer<typeof cancelSchema>,
+): Promise<Booking> {
+  if (existing.status === "Cancelled") throw new HttpError(400, "This booking is already cancelled");
+
+  const { tenantId, settings, policy } = await bookingContext(existing);
+  if (!enabled(settings, "allowPartialCancel"))
+    throw new HttpError(400, "This provider doesn't offer cancelling individual days");
+
+  const resolution = input.resolution ?? "refund";
+  const allowed = { refund: enabled(settings, "partialAllowRefund"), wallet: enabled(settings, "partialAllowWallet") };
+  if (!allowed[resolution])
+    throw new HttpError(400, `This provider doesn't offer ${resolution === "wallet" ? "wallet credit" : "a refund"} for released days`);
+
+  // Which child gives up which days. The parent groups by childId when it has
+  // one and by name otherwise — match the same way round.
+  const kids = materialiseKids(existing);
+  const wanted: { childKey: string; days: string[] }[] = input.kids?.length
+    ? input.kids.map((k) => ({ childKey: k.childId ?? k.name, days: k.days }))
+    : [{ childKey: kids[0].childId ?? kids[0].name, days: input.days ?? [] }];
+
+  // Validate every released day BEFORE anything moves: on that child, still
+  // standing, and not already gone or in the past.
+  const today = new Date().toISOString().slice(0, 10);
+  let releasedCount = 0;
+  for (const w of wanted) {
+    const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
+    if (!kid) throw new HttpError(400, `${w.childKey} isn't on this booking`);
+    if (kid.cancelled) throw new HttpError(400, `${kid.name}'s place is already cancelled`);
+    const booked = new Set(kid.dates ?? []);
+    const gone = new Set(kid.cancelledDays ?? []);
+    for (const d of w.days) {
+      if (!booked.has(d)) throw new HttpError(400, `${kid.name} isn't booked on ${prettyDay(d)}`);
+      if (gone.has(d)) throw new HttpError(400, `${kid.name}'s place on ${prettyDay(d)} is already cancelled`);
+      if (d < today) throw new HttpError(400, `${prettyDay(d)} has already passed`);
+      releasedCount += 1;
+    }
+  }
+  if (!releasedCount) throw new HttpError(400, "No days were selected");
+
+  // Releasing everything that's left is just a cancellation — say so rather
+  // than leaving a booking with no days on it.
+  const activeTotal = kids.reduce((n, k) => n + (k.cancelled ? 0 : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)).length), 0);
+  if (releasedCount >= activeTotal)
+    throw new HttpError(400, "That's every day left — cancel the whole booking instead");
+
+  // Pro-rata over every child-day BOOKED (the same denominator the parent's
+  // preview uses), against money actually received.
+  const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
+  const paid = existing.amountPaid ?? (existing.pay === "Paid" ? existing.amount : 0);
+  const perSlotPaid = round2(paid / bookedChildDays);
+
+  // Refund runs each released day through the policy on ITS OWN date, so a day
+  // three weeks out can refund while tomorrow's can't. Wallet takes the full
+  // pro-rata value — that's the trade for keeping it in the business.
+  const now = new Date().toISOString();
+  const releasedDays = wanted.flatMap((w) => w.days);
+  const value =
+    resolution === "wallet"
+      ? round2(releasedCount * perSlotPaid)
+      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, d, perSlotPaid, now, "parent")?.amount ?? 0), 0));
+
+  const updated = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpError(404, "Booking not found");
+    const b = fromDoc(snap.data() as BookingDoc);
+    if (b.email !== email) throw new HttpError(403, "Not your booking");
+    if (b.status === "Cancelled") throw new HttpError(400, "This booking is already cancelled");
+    materialiseKids(b);
+    const before = new Set(b.days ?? []);
+    applyPartialCancel(b, wanted);
+    // Only days NO child is left on free a place, and only that day's count —
+    // the seat itself stays until the whole booking goes.
+    const freedDays = [...before].filter((d) => !(b.days ?? []).includes(d));
+    let blockUpdate: { ref: FirebaseFirestore.DocumentReference; dayCounts: Record<string, number> } | null = null;
+    if (b.blockId && freedDays.length && countsTowardCapacity(b.status)) {
+      const blockSnap = await tx.get(db.collection("blocks").doc(b.blockId));
+      if (blockSnap.exists) {
+        const blk = blockSnap.data() as BlockDoc;
+        blockUpdate = { ref: blockSnap.ref, dayCounts: countsUpdate(blk, -(b.seats ?? 1), freedDays).dayCounts };
+      }
+    }
+
+    const label = releasedCount === 1 ? "1 day" : `${releasedCount} days`;
+    if (resolution === "wallet") {
+      // Instant and final — nothing for the provider to approve.
+      (b.refundLog = b.refundLog ?? []).push({
+        label: `${label} released — wallet credit`,
+        amount: value,
+        on: new Date().toISOString().slice(0, 10),
+        by: "Booker",
+        source: "Wallet",
+      });
+      if (value > 0) b.pay = "Partially refunded";
+      b.note = `${label} released to wallet credit.`;
+    } else {
+      // A request: the money only moves when the provider approves it, exactly
+      // like a whole-booking cancel.
+      b.cancel = {
+        on: new Date().toISOString().slice(0, 10),
+        by: "Booker",
+        refund: value > 0 ? "pending" : "none",
+        amount: value,
+        refundOnly: true, // days released, the booking itself stands
+        msg: input.msg || `${label} released by the parent.`,
+        ...(input.reason ? { reason: input.reason } : {}),
+        ...(input.refundPref ? { refundTo: input.refundPref } : {}),
+      };
+      b.note = `${label} released — ${value > 0 ? `${money(value)} refund requested` : "no refund due"}.`;
+    }
+
+    tx.set(ref, toDoc(b));
+    if (blockUpdate) tx.update(blockUpdate.ref, { dayCounts: blockUpdate.dayCounts });
+    return b;
+  });
+
+  // Wallet credit is instant, so it lands after the release has committed.
+  if (resolution === "wallet" && value > 0 && tenantId)
+    await creditWallet(tenantId, email, value, `Days released from ${existing.listing}`, existing.ref);
+
+  // The provider needs to know places came back and what it cost them —
+  // a refund resolution is also sitting there waiting for their approval.
+  if (tenantId) {
+    const who = releasedDays.length === 1 ? "1 day" : `${releasedDays.length} days`;
+    void notify({
+      tenantId,
+      to: { kind: "tenant" },
+      category: "booking",
+      title: `${existing.booker} released ${who} on ${existing.ref}`,
+      body:
+        resolution === "wallet"
+          ? `${money(value)} credited to their wallet. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`
+          : `${money(value)} refund requested — needs your approval. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`,
+      subject: `${existing.ref}: ${who} released by ${existing.booker}`,
+      href: "/company/bookings",
+      ref: existing.ref,
+    });
+  }
+  // Freed days go to whoever is queued for them.
+  if (updated.blockId) void triggerWaitlist(updated.blockId);
+  return updated;
+}
+
 // POST /api/my/bookings/:ref/cancel — cancellation request (refund pending,
 // for the provider to approve/decline). Only the booking's own family can.
 my.post("/bookings/:ref/cancel", async (req, res) => {
@@ -1123,6 +1427,23 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   }
   const ref = matches.docs[0].ref;
   const existing = fromDoc(matches.docs[0].data() as BookingDoc);
+
+  // ── Partial (per-day) cancellation ──────────────────────────────────────
+  // Released days are valued pro-rata over every child-day the family BOOKED,
+  // against what they actually PAID — never against `amount`, or an unpaid
+  // booking would hand back money that never arrived.
+  // Presence, not length, picks this path: an empty selection is a bad partial
+  // request, and must never fall through to cancelling the whole booking.
+  if (parsed.data.days !== undefined || parsed.data.kids !== undefined) {
+    try {
+      const out = await partialCancel(ref, existing, email, parsed.data);
+      res.json(out);
+    } catch (e) {
+      if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
+      else throw e;
+    }
+    return;
+  }
 
   // §O — the refund is worked out by the SERVER from the listing's policy, not
   // in the browser (it's money; the client isn't trusted for it). Same pure
@@ -1173,6 +1494,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         b.cancel.refund = policyAmount >= (paid || 0) && paid > 0 ? "full" : policyAmount > 0 ? "partial" : "none";
         if (policyReason) b.cancel.msg = `${b.cancel.msg} (${policyReason})`;
       }
+      if (parsed.data.refundPref && b.cancel) b.cancel.refundTo = parsed.data.refundPref;
       // Free the block places the booking held — total AND its days
       // (all reads before writes).
       const delta = b.blockId ? blockCountDelta(oldStatus, b.status, bookingSeats(b)) : 0;
@@ -1193,6 +1515,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     });
     // A cancellation frees seats — the queue gets first refusal (auto mode).
     if (updated.blockId) void triggerWaitlist(updated.blockId);
+    // …and frees the discount code it was booked with.
+    if (updated.tenantId) void releaseDiscountCodes(updated.tenantId, updated.ref);
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

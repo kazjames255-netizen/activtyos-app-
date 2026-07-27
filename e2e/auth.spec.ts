@@ -83,10 +83,29 @@ test.describe("signup", () => {
 });
 
 test.describe("portal guard", () => {
-  test.use({ storageState: statePath("parent") });
+  test("a signed-out visitor deep-linking a portal view is sent to login with a return path", async ({ page }) => {
+    await page.goto("/company/bookings");
+    // RequireAuth sends cold arrivals to login carrying ?next= so they land
+    // back on the deep link after signing in.
+    await page.waitForURL(/\/login\?next=%2Fcompany%2Fbookings/, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  });
 
-  test("a parent deep-linking into an operator portal is bounced home", async ({ page }) => {
-    await page.goto("/freelancer/listings");
-    await page.waitForURL("**/custdash/browse", { timeout: 20_000 });
+  test.describe("parent → operator", () => {
+    test.use({ storageState: statePath("parent") });
+
+    test("a parent deep-linking into an operator portal is bounced home", async ({ page }) => {
+      await page.goto("/freelancer/listings");
+      await page.waitForURL("**/custdash/browse", { timeout: 20_000 });
+    });
+  });
+
+  test.describe("operator → parent", () => {
+    test.use({ storageState: statePath("freelancer") });
+
+    test("an operator deep-linking into the parent dashboard is bounced home", async ({ page }) => {
+      await page.goto("/custdash/browse");
+      await page.waitForURL("**/freelancer/bookings", { timeout: 20_000 });
+    });
   });
 });

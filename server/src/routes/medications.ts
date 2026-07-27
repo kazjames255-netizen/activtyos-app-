@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { notify, parentEmailForChild } from "../lib/notify";
 import type { Role } from "../middleware/role";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -47,6 +48,35 @@ const medSchema = z.object({
   notes: z.string().trim().max(1_000).optional(),
   archived: z.boolean().default(false),
 });
+
+/** The provider's Medication toggles (Setup → Medication), all default-on. */
+async function medSettings(tenantId: string) {
+  const lib = await db.collection("libraries").doc(tenantId).get();
+  const m = (lib.data()?.settings as { medication?: Record<string, boolean> } | undefined)?.medication ?? {};
+  return {
+    informParentGiven: m.informParentGiven !== false,
+    informParentMissed: m.informParentMissed !== false,
+    notifyParentNote: m.notifyParentNote !== false,
+    notifyParentAuthorise: m.notifyParentAuthorise !== false,
+  };
+}
+
+/** The operator's medication form picks a child by NAME out of the customer
+ *  list, which carries no canonical id — so a dose has nothing to reach the
+ *  parent by. Resolve the name against this tenant's bookings, which DO carry
+ *  `childId`. A walk-in with no booking stays unlinked, which is correct: there
+ *  is no account to notify. */
+async function resolveChildId(tenantId: string, childName: string): Promise<string | undefined> {
+  const want = childName.trim().toLowerCase();
+  if (!want) return undefined;
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  for (const d of snap.docs) {
+    const b = d.data() as { child?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
+    if (b.childId && (b.child ?? "").trim().toLowerCase() === want) return b.childId;
+    for (const k of b.kids ?? []) if (k.childId && (k.name ?? "").trim().toLowerCase() === want) return k.childId;
+  }
+  return undefined;
+}
 
 const tenantOf = (req: Request) => {
   const auth = req.auth!;
@@ -113,6 +143,9 @@ medications.post("/", async (req, res) => {
   }
   const doc = {
     ...parsed.data,
+    // Stamped here, not by the client: without it the medication and every
+    // dose against it are invisible to the parent.
+    childId: parsed.data.childId || (await resolveChildId(auth.tenantId, parsed.data.childName)) || null,
     tenantId: auth.tenantId,
     recordedBy: req.user?.email ?? req.user?.uid ?? "unknown",
     recordedByName: req.user?.name ?? req.user?.email ?? "Staff",
@@ -181,6 +214,10 @@ const administerSchema = z.object({
   date: z.string().max(10),
   time: z.string().max(8).optional(),
   doseGiven: z.string().trim().min(1).max(120),
+  /** The outcome, first-class. `doseGiven` is free text ("5ml", "Not given"),
+   *  which is no basis for deciding whether to tell a parent their child
+   *  missed a dose. */
+  given: z.boolean().optional(),
   witnessedBy: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(), // reaction, refused, etc.
 });
@@ -212,12 +249,20 @@ medications.post("/:id/administer", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  // A medication authorised before the child-link existed carries no childId,
+  // and the parent's MAR is queried by it — so resolve now and backfill, or
+  // this dose would never appear on their side.
+  let childId = (med.childId as string | undefined) || undefined;
+  if (!childId) {
+    childId = await resolveChildId(auth.tenantId, String(med.childName));
+    if (childId) void own.snap.ref.set({ childId }, { merge: true });
+  }
   const doc = {
     ...parsed.data,
     tenantId: auth.tenantId,
     medicationId: req.params.id,
     medName: med.name,
-    childId: med.childId ?? null,
+    childId: childId ?? null,
     childName: med.childName,
     administeredBy: req.user?.email ?? req.user?.uid ?? "unknown",
     administeredByName: req.user?.name ?? req.user?.email ?? "Staff",
@@ -225,6 +270,35 @@ medications.post("/:id/administer", async (req, res) => {
   };
   const ref = await adminCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+
+  // Tell the parent their child was given (or missed) their medicine.
+  void (async () => {
+    const given = parsed.data.given ?? !/^\s*not\s+given/i.test(parsed.data.doseGiven);
+    const gates = await medSettings(auth.tenantId!);
+    if (!(given ? gates.informParentGiven : gates.informParentMissed)) return;
+    const email = await parentEmailForChild(childId);
+    if (!email) return;
+    const when = `${parsed.data.date}${parsed.data.time ? ` at ${parsed.data.time}` : ""}`;
+    await notify({
+      tenantId: auth.tenantId!,
+      to: { kind: "parent", email },
+      category: "medication",
+      title: given
+        ? `${med.childName} was given ${med.name}`
+        : `${med.childName} did NOT have their ${med.name}`,
+      body: `${parsed.data.doseGiven} · ${when}${parsed.data.notes ? ` — ${parsed.data.notes}` : ""}`,
+      subject: given
+        ? `${med.childName} had their ${med.name}`
+        : `${med.childName} missed a dose of ${med.name}`,
+      emailHtml:
+        `<p><b>${med.childName}</b> ${given ? "was given" : "did <b>not</b> have"} <b>${med.name}</b> on <b>${when}</b>.</p>` +
+        `<p><b>Dose:</b> ${parsed.data.doseGiven}</p>` +
+        (parsed.data.notes ? `<p><b>Notes:</b> ${parsed.data.notes}</p>` : "") +
+        `<p>Recorded by ${doc.administeredByName}.</p>`,
+      href: "/custdash/medication",
+      ref: ref.id,
+    });
+  })();
 });
 
 // GET /api/medications/administrations?date=&childId=&medicationId= — the MAR.
@@ -306,6 +380,29 @@ medications.post("/authorise", async (req, res) => {
   };
   const ref = await medsCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+
+  // A self-serve authorisation is easy for a provider to miss — it arrives
+  // with no conversation attached, and staff can't give the medicine until
+  // they know it's there.
+  void (async () => {
+    if (!(await medSettings(input.tenantId)).notifyParentAuthorise) return;
+    await notify({
+      tenantId: input.tenantId,
+      to: { kind: "tenant" },
+      category: "medication",
+      title: `${parentName} authorised ${input.name} for ${input.childName}`,
+      body: `${input.dose}${input.schedule ? ` · ${input.schedule}` : ""}${input.condition ? ` · for ${input.condition}` : ""}`,
+      subject: `New medication consent: ${input.name} for ${input.childName}`,
+      emailHtml:
+        `<p><b>${parentName}</b> has authorised <b>${input.name}</b> for <b>${input.childName}</b>.</p>` +
+        `<p><b>Dose:</b> ${input.dose}${input.route ? ` (${input.route})` : ""}</p>` +
+        (input.schedule ? `<p><b>When:</b> ${input.schedule}</p>` : "") +
+        (input.notes ? `<p><b>From the parent:</b> ${input.notes}</p>` : "") +
+        `<p>Consent is on file, so your team can record doses against it.</p>`,
+      href: "/company/medication",
+      ref: ref.id,
+    });
+  })();
 });
 
 // POST /api/medications/:id/withdraw — a parent withdraws consent (archives).
@@ -335,4 +432,27 @@ medications.post("/:id/note", async (req, res) => {
   if (!childId || !(await ownsChild(req.user!.uid, childId))) { res.status(404).json({ error: "Medication not found" }); return; }
   await snap.ref.set({ parentNote: parsed.data.note, parentNoteAt: new Date().toISOString() }, { merge: true });
   res.json({ ok: true });
+
+  // The mirror of the dose notification, pointing the other way: a parent
+  // adding "she's had a reaction to this before" needs to reach staff before
+  // the next dose, not sit on a record nobody reopens.
+  void (async () => {
+    const med = snap.data()!;
+    if (!med.tenantId || !parsed.data.note) return;
+    if (!(await medSettings(String(med.tenantId))).notifyParentNote) return;
+    const who = req.user?.name ?? req.user?.email ?? "A parent";
+    await notify({
+      tenantId: String(med.tenantId),
+      to: { kind: "tenant" },
+      category: "medication",
+      title: `${who} left a note on ${med.childName}'s ${med.name}`,
+      body: parsed.data.note,
+      subject: `Note from ${who} about ${med.childName}'s medication`,
+      emailHtml:
+        `<p><b>${who}</b> added a note to <b>${med.childName}</b>'s <b>${med.name}</b>:</p>` +
+        `<blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763">${parsed.data.note}</blockquote>`,
+      href: "/company/medication",
+      ref: snap.id,
+    });
+  })();
 });

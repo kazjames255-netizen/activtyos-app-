@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { get as apiGet } from "@/lib/api";
+import { ApiError, get as apiGet } from "@/lib/api";
 import { PORTAL_ACCESS, ROLE_HOME, type Me } from "@/lib/roles";
 
 /**
@@ -26,9 +26,12 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
         if (ok) setAllowed(true);
         else router.replace(ROLE_HOME[me.role] ?? "/login");
       })
-      .catch(() => {
+      .catch((e) => {
+        if (cancelled) return;
+        // Signed out entirely → the login page, not a shell full of 403s.
+        if (e instanceof ApiError && e.status === 401) router.replace("/login");
         // API unreachable — don't lock the user out of the UI shell.
-        if (!cancelled) setAllowed(true);
+        else setAllowed(true);
       });
     return () => {
       cancelled = true;

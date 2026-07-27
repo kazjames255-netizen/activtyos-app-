@@ -965,7 +965,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
     }
   };
   return (
-    <div className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3.5">
+    <div data-ui="card" className="rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="text-[14px] font-extrabold text-[#9a3412]">{b.listing}</div>

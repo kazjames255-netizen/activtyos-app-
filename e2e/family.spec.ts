@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { statePath } from "./helpers/env";
+import { loadAccounts, statePath } from "./helpers/env";
+import { bookViaApi, createParentChild, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith } from "./helpers/ui";
 
 // Parent child-profile management: the 4-step modal, required fields, and
 // the saved card. (All four steps are in the DOM at once, slid off-screen —
@@ -34,9 +36,10 @@ test.describe("children profiles", () => {
     await page.getByPlaceholder("e.g. Bluebell").fill("Sunflower");
     await page.getByRole("button", { name: "Save child" }).click();
 
-    // The card renders with the flags we set.
+    // THIS child's card renders with the flags we set (other children may
+    // carry the same allergy — read it off our card).
     await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("⚠ Allergy: Peanuts").first()).toBeVisible();
+    await expect(cardWith(page, name, "⚠ Allergy: Peanuts")).toBeVisible();
 
     // Remove it again (cleanup + covers the confirm dialog).
     page.on("dialog", (d) => d.accept());
@@ -48,5 +51,21 @@ test.describe("children profiles", () => {
       .getByRole("button", { name: "Remove" })
       .click();
     await expect(page.getByText(name)).toBeHidden({ timeout: 15_000 });
+  });
+
+  test("a child with bookings can't be removed", async ({ page }) => {
+    const accounts = loadAccounts().accounts;
+    const stamp = Date.now().toString(36);
+    const name = `E2E Locked Child ${stamp}`;
+    await createParentChild(accounts.parent, { name });
+    const listing = await provisionLiveListing(accounts.company, { title: `E2E Lock Camp ${stamp}`, price: 0 });
+    await bookViaApi(accounts.parent, listing, { child: name });
+
+    await page.goto("/custdash/children");
+    const card = cardWith(page, name);
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    // The Remove action is replaced by the locked hint — no live button.
+    await expect(card.getByText("🔒 Remove")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Remove", exact: true })).toBeHidden();
   });
 });

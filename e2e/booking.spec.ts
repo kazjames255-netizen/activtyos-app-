@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
 import { ensureVenue, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith } from "./helpers/ui";
 
 // The platform's core journey. Two halves:
 //   1. Operator builds a block and publishes a listing entirely through the UI.
@@ -70,9 +71,9 @@ test.describe("operator publishes a listing via the wizard", () => {
     await expect(page.getByText("Everything’s ready to publish")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Publish", exact: true }).click();
 
-    // Back on the list: the new listing shows as Published.
-    await expect(page.getByText(title).first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("Published").first()).toBeVisible();
+    // Back on the list: THIS listing's card shows Published (any old listing
+    // would satisfy an unscoped badge check).
+    await expect(cardWith(page, title, "Published")).toBeVisible({ timeout: 20_000 });
   });
 });
 
@@ -124,7 +125,10 @@ test.describe("parent books; operator sees it live", () => {
     await expect(page.getByText("Nothing to pay.")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Confirm booking" }).click();
     await expect(page.getByRole("heading", { name: /Congratulations/ })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/Reference[s]? APF-\d+/)).toBeVisible();
+    // Capture OUR reference — the operator-side check must look for exactly it.
+    const refLine = await page.getByText(/Reference[s]? APF-\d+/).textContent();
+    const ref = refLine?.match(/APF-\d+/)?.[0];
+    expect(ref, "confirmation should show a booking reference").toBeTruthy();
 
     // Parent's own bookings list shows it.
     await page.getByRole("link", { name: "See my bookings" }).click();
@@ -133,7 +137,7 @@ test.describe("parent books; operator sees it live", () => {
 
     // The operator's already-open Bookings view received it via SSE — no reload.
     await expect(opPage.getByText(childName).first()).toBeVisible({ timeout: 25_000 });
-    await expect(opPage.getByText(/Ref APF-\d+/).first()).toBeVisible();
+    await expect(opPage.getByText(`Ref ${ref}`).first()).toBeVisible();
     await opCtx.close();
   });
 });

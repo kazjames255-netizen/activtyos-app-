@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
 import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn } from "./helpers/accounts";
+import { cardWith } from "./helpers/ui";
 
 // Cross-account journeys beyond booking: staff invite → join, operator ↔
 // parent messaging, and invoicing. Each flow uses the UI end to end; only
@@ -15,10 +16,11 @@ test.describe("team invites", () => {
 
     // Link-only invite: leave the email blank.
     await page.getByRole("button", { name: "+ Invite staff" }).click();
-    const row = page.locator("div", { has: page.getByRole("button", { name: /Copy link|Copied!/ }) }).last();
     await page.getByRole("button", { name: "Copy link" }).first().click();
     const inviteUrl = await page.evaluate(() => navigator.clipboard.readText());
     expect(inviteUrl).toContain("/signup?invite=");
+    // The row renders the token's tail — the anchor that identifies OUR invite.
+    const tokenTail = inviteUrl.split("invite=")[1].slice(-8);
 
     // A fresh browser profile (signed out) follows the link and joins.
     const invitee = `e2e-invitee-${Date.now().toString(36)}@${TEST_EMAIL_DOMAIN}`;
@@ -33,12 +35,22 @@ test.describe("team invites", () => {
     await joinPage.waitForURL("**/staff/dash", { timeout: 30_000 });
     await ctx.close();
 
-    // The invite row flips to Used (live via SSE — poll with a reload as backstop).
+    // OUR invite's row flips to Used (live via SSE — poll with a reload as
+    // backstop). Earlier runs leave Used rows behind, so never match the
+    // badge alone.
     await expect(async () => {
       await page.goto("/company/staff");
-      await expect(page.getByText("Used").first()).toBeVisible({ timeout: 5_000 });
+      await expect(cardWith(page, tokenTail, "Used")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 30_000 });
-    void row; // row locator kept for debugging traces
+
+    // A used invite is dead: following the same link again must hit the
+    // invite-problem card, never the join form.
+    const reuseCtx = await browser.newContext();
+    const reusePage = await reuseCtx.newPage();
+    await reusePage.goto(inviteUrl);
+    await expect(reusePage.getByRole("heading", { name: "Invite problem" })).toBeVisible({ timeout: 15_000 });
+    await expect(reusePage.getByRole("heading", { name: /^Join / })).toBeHidden();
+    await reuseCtx.close();
   });
 });
 
@@ -77,12 +89,14 @@ test.describe("messages", () => {
     await expect(page.getByPlaceholder(/Write a message/)).toHaveValue("", { timeout: 15_000 });
     await expect(page.getByText(msgText).first()).toBeVisible({ timeout: 15_000 });
 
-    // Parent side: thread appears with the message; reply.
+    // Parent side: open OUR thread by its unique preview — the provider's
+    // name is ambiguous (it also titles broadcast threads and the "start a
+    // new conversation" row).
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/messages");
-    await parentPage.getByText(accounts.company.tenantName!).first().click();
-    await expect(parentPage.getByText(msgText)).toBeVisible({ timeout: 15_000 });
+    await parentPage.getByText(msgText).first().click();
+    await expect(parentPage.getByPlaceholder(/Write a message/)).toBeVisible({ timeout: 15_000 });
 
     const reply = `Thanks, see you then! (${stamp})`;
     await parentPage.getByPlaceholder(/Write a message/).fill(reply);
@@ -117,16 +131,18 @@ test.describe("invoices", () => {
     await page.locator('input[type="number"]').nth(1).fill("25");
     await page.getByRole("button", { name: /Save & view/ }).click();
 
-    // Saving opens the printable preview as a draft.
-    await expect(page.getByText("Saved as a draft", { exact: false })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("INVOICE", { exact: true })).toBeVisible();
-    await expect(page.getByText("Total £25.00").first()).toBeVisible();
+    // Saving opens the printable preview as a draft — assert inside the
+    // preview card (the ledger behind it can hold old £25 invoices).
+    const preview = cardWith(page, customer, "Saved as a draft");
+    await expect(preview).toBeVisible({ timeout: 15_000 });
+    await expect(preview.getByText("INVOICE", { exact: true })).toBeVisible();
+    await expect(preview.getByText("Total £25.00").first()).toBeVisible();
     await page.getByRole("button", { name: /Close/ }).click();
 
-    // Ledger row: customer name + Draft status.
+    // Ledger: OUR invoice's row holds the status select, set to Draft.
     await page.getByRole("button", { name: /All invoices/ }).click();
-    const ledgerRow = page.locator("div", { hasText: customer }).last();
+    const ledgerRow = cardWith(page, customer);
     await expect(ledgerRow).toBeVisible();
-    await expect(page.locator("select").filter({ hasText: "Draft" }).first()).toBeVisible();
+    await expect(ledgerRow.locator("select")).toHaveValue("draft");
   });
 });

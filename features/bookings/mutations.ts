@@ -4,7 +4,7 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundedTotal } from "./helpers";
+import { bookingKids, kidActiveDays, nowStr, refundedTotal, sessionDayLabel } from "./helpers";
 
 export type RowAction =
   | "approve"
@@ -178,6 +178,50 @@ export function applyParentCancel(b: Booking, msg?: string, reason?: string): vo
     msg: msg || "Cancelled by the parent.",
     ...(reason ? { reason } : {}),
   };
+}
+
+/** A family releases individual days of a multi-day pass (partial cancel).
+ *
+ *  Releases are per child, in ISO dates. The booking stays Confirmed for
+ *  whatever is left standing — a child who has released every one of their days
+ *  is marked cancelled, and only when every child is does the booking itself
+ *  become Cancelled.
+ *
+ *  What each field means afterwards matters, because the parent's per-day price
+ *  is `amount ÷ total booked child-days`:
+ *    · `kids[].dates`      — what was BOOKED. Never shrinks, or the per-day
+ *                            price would inflate with every release.
+ *    · `kids[].cancelledDays` — what has been released. Grows.
+ *    · `days` / `sessions` — what is still ON. Shrinks, so registers, capacity
+ *                            and the parent's session list stop showing it.
+ *  `amount` is left alone for the same reason: it is the price of what was
+ *  booked, and any money going back is tracked separately.
+ */
+export function applyPartialCancel(b: Booking, releases: { childKey: string; days: string[] }[]): void {
+  const kids = bookingKids(b);
+  const released = new Set<string>();
+  for (const r of releases) {
+    const k = kids.find((x) => (x.childId ?? x.name) === r.childKey);
+    if (!k) continue;
+    k.cancelledDays = k.cancelledDays || [];
+    for (const d of r.days) {
+      if (k.cancelledDays.indexOf(d) > -1) continue;
+      k.cancelledDays.push(d);
+      released.add(d);
+    }
+    if (kidActiveDays(k).length === 0) k.cancelled = true;
+  }
+  b.kids = kids;
+  // A day only leaves the booking once NO child is still on it.
+  const stillOn = new Set(kids.flatMap((k) => (k.cancelled ? [] : kidActiveDays(k))));
+  const gone = [...released].filter((d) => !stillOn.has(d));
+  if (gone.length) {
+    if (b.days) b.days = b.days.filter((d) => !gone.includes(d));
+    // `sessions` are display labels ("Mon 27 Jul 2026 · 09:00 – 15:00").
+    const goneLabels = new Set(gone.map(sessionDayLabel));
+    if (b.sessions) b.sessions = b.sessions.filter((s) => !goneLabels.has(s.split(" · ")[0]));
+  }
+  if (kids.length > 0 && kids.every((k) => k.cancelled)) b.status = "Cancelled";
 }
 
 export function buildBooking(input: CreateBookingInput, bid: number): Booking {

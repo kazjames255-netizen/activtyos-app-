@@ -61,12 +61,53 @@ new fakes the moment they're spotted.
   - **PageHero rendered titles as divs** — pages migrated to it lost their
     headings (a11y); now a real `<h2>`.
 
+- [x] **Customer wallet is real** (§Z) — `server/src/lib/wallet.ts` + the
+  `wallet` (balance per tenant+family) and `walletEntries` (ledger)
+  collections. `GET /api/my/wallet` feeds the parent Wallet page and the
+  checkout preview; `GET /api/wallet/summary` gives the provider its unspent-
+  credit liability. Credit is spent automatically at checkout **inside the
+  booking transaction** (so two baskets can't spend the same pound) and only
+  against places actually taken, never a waitlisted line; the booking records
+  `walletApplied` and its `pay` state is judged on what's left to pay. A
+  parent's cancel can ask for `refundPref: "wallet"` — recorded on the request
+  and honoured on operator approval (credit instead of a Stripe refund).
+- [x] **Partial (per-day) cancellation is real** — `/api/my/bookings/:ref/cancel`
+  takes `days[]`/`kids[]` + `resolution` ("wallet" credits full pro-rata
+  instantly; "refund" judges each day on its own date against the policy and
+  files a pending request). The booking stays Confirmed for what remains, only
+  fully-released days free capacity, and the seat is held until the whole
+  booking goes. `/amend` now validates the target date against the block
+  instead of accepting anything. Notifying the provider is still owed (see the
+  notifications gap below).
+- [x] **Single-use discount codes are released on cancel** — redemptions are
+  now written once per BASKET with the refs they paid for
+  (`server/src/lib/discountRedemptions.ts`), and handed back when every
+  booking they paid for is cancelled. Codes are also only consumed once the
+  booking transaction has committed, so a basket that fails on capacity no
+  longer burns the code.
+
+- [x] **Notifications are real** — `server/src/lib/notify.ts`: one call raises
+  the in-app bell and sends the email. `notifications` (per-family by email, or
+  per-team) + `notificationPrefs` (a family's mutes; muting silences the email,
+  never the bell). `GET /api/notifications` + `/read` + `/prefs`, on the
+  `notifications` SSE channel. **The bell UI is still to build** — the API is
+  live. Wired so far: accidents/incidents (log, edit, parent acknowledgement),
+  medication (each dose, parent notes, self-serve authorisations), and a
+  provider alert when a family releases days. Still owed: trips, calendar
+  reminders, low stock — and the acknowledgement chase, all of which need a
+  scheduler that doesn't exist yet.
+- [x] **Operator-logged accidents/medication reach the parent** — the forms
+  carry a booked-child picker, and medication additionally resolves `childId`
+  server-side from the tenant's bookings (and backfills it onto older
+  medications when a dose is logged). safeguarding.spec drives the whole path
+  through the UI and asserts the parent's bell.
+
 ## Known gaps the tests can't paper over
 
-- [ ] **Operator-logged accidents/medication never reach the parent** — the
-  operator forms are free-text with no child link, but the parent views match
-  on `childId`. Needs a booked-child picker on the incident/medication forms
-  (safeguarding.spec covers the API-level record a picker would create).
+- [ ] **No scheduler.** The only background job is the 5-minute `setInterval`
+  for waitlist expiry (`server/src/index.ts`). Anything time-based — calendar
+  reminders, medication due-times, the acknowledgement chase — has nothing to
+  run it, and the in-process interval isn't safe across multiple instances.
 - [ ] Setup → "Ask about dietary needs" is read by nothing outside Setup
   (the parent child form shows Dietary unconditionally).
 
@@ -108,7 +149,9 @@ company/franchise/freelancer.
 **Honest "Planned" pages** (`features/planned/PlannedApp.tsx` — a clearly
 labelled roadmap page with "use this today" links; swap the `planned()`
 entry in `lib/view-registry.tsx` for the real component when each lands):
-- `ai` ×6 — an AI assistant is a product decision, not a stub.
+- ~~`ai` ×6~~ — **built (July 2026)**: real chat over live, role-scoped data
+  (`features/ai/AiApp.tsx` + `POST /api/ai/chat`, Groq server-side). Needs
+  `GROQ_API_KEY` in `server/.env` — unset, the view surfaces a clear 503.
 - `payroll` (company, franchise), staff `pay` — payroll domain not built.
 - staff `availability`, `holiday` — no shifts-backend support yet.
 - staff `expenses` — staff expense *claims* don't exist server-side.

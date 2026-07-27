@@ -84,9 +84,12 @@ test.describe("timetable publish reaches staff", () => {
     await page.getByRole("button", { name: /7?\s*Build/ }).click();
     await page.getByRole("button", { name: /Manual →/ }).click();
 
-    // Type one activity into the first empty cell (a clickable div, not a button).
+    // Type one activity into the first empty cell (a clickable div, not a
+    // button). Stamp-unique: it's the proof on the staff side that THIS
+    // publish arrived, not a week left by an earlier run.
+    const activity = `E2E Dodgeball ${stamp}`;
     await page.getByText("+", { exact: true }).first().click();
-    await page.getByPlaceholder("Type activity…").fill("E2E Dodgeball");
+    await page.getByPlaceholder("Type activity…").fill(activity);
     await page.getByRole("button", { name: "Done", exact: true }).click();
 
     // Publish. The audience rows are TOGGLES with no readable state, and a
@@ -105,12 +108,13 @@ test.describe("timetable publish reaches staff", () => {
       await expect(staffVisible).toBeVisible({ timeout: 45_000 });
     }
 
-    // Staff portal sees the published plan.
+    // Staff portal sees THIS run's published plan — the unique activity name,
+    // not just "some published week" (an old run's week also renders a grid).
     const staffCtx = await browser.newContext({ storageState: statePath("staff") });
     const sp = await staffCtx.newPage();
     await sp.goto("/staff/timetable");
     await expect(sp.getByText("Nothing published yet", { exact: false })).toBeHidden({ timeout: 15_000 });
-    await expect(sp.getByText(/Sign-in/).first()).toBeVisible({ timeout: 15_000 });
+    await expect(sp.getByText(activity).first()).toBeVisible({ timeout: 15_000 });
     await staffCtx.close();
   });
 });

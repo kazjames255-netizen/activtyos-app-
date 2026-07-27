@@ -4,10 +4,16 @@
 // time; it only ever touches the test-email domain.
 //
 //   npm --prefix server run e2e-cleanup
+//
+// With --data-only the accounts, tenants and library docs survive and only the
+// data they own (bookings, listings, children, threads…) is wiped. The e2e
+// global setup runs this before every suite run so tests start on clean pages —
+// stale rows from earlier runs are how weak assertions false-pass.
 import "dotenv/config";
 import { auth, db } from "./firebase";
 
 const DOMAIN = "@activityos-test.com";
+const DATA_ONLY = process.argv.includes("--data-only");
 
 // Every collection whose docs carry a tenantId field (from a grep of
 // server/src). recursiveDelete also clears subcollections (childFiles chunks).
@@ -20,7 +26,9 @@ const TENANT_SCOPED = [
   "menus", "medicationAdmin", "invoices", "invites", "incidents", "expenses",
   "emails", "documents", "deletionRequests", "certifications",
   "supportMessages", "messageTemplates", "messageFolders", "images",
-  "customerGroups", "childFiles", "broadcasts",
+  "customerGroups", "childFiles", "broadcasts", "wallet", "walletEntries",
+  "notifications",
+  "calendarEvents", "inventory",
 ];
 
 // Collections owned by a USER (parents have no tenant): field → collection.
@@ -87,9 +95,11 @@ async function main() {
       const snap = await db.collection(col).where("tenantId", "==", tid).get();
       await deleteSnap(col, snap.docs);
     }
-    await db.recursiveDelete(db.collection("libraries").doc(tid));
-    await db.recursiveDelete(db.collection("tenants").doc(tid));
-    console.log(`  tenant + libraries doc deleted`);
+    if (!DATA_ONLY) {
+      await db.recursiveDelete(db.collection("libraries").doc(tid));
+      await db.recursiveDelete(db.collection("tenants").doc(tid));
+      console.log(`  tenant + libraries doc deleted`);
+    }
   }
 
   // 4. User-scoped data (parents' children etc.).
@@ -101,12 +111,24 @@ async function main() {
     }
   }
 
-  // 5. users docs + auth accounts.
-  for (const uid of uids) await db.recursiveDelete(db.collection("users").doc(uid));
-  for (const uidChunk of chunk(uids, 1000)) {
-    if (!uidChunk.length) continue;
-    const res = await auth.deleteUsers(uidChunk);
-    console.log(`auth users deleted: ${res.successCount}, failed: ${res.failureCount}`);
+  // 4b. Docs keyed by the account's EMAIL rather than a uid or tenant.
+  for (const u of users) {
+    const em = u.email.toLowerCase();
+    await db.collection("notificationPrefs").doc(em).delete();
+    for (const col of ["wallet", "walletEntries", "notifications"]) {
+      const snap = await db.collection(col).where("email", "==", em).get();
+      await deleteSnap(`${col} (${em})`, snap.docs);
+    }
+  }
+
+  // 5. users docs + auth accounts (kept in --data-only mode).
+  if (!DATA_ONLY) {
+    for (const uid of uids) await db.recursiveDelete(db.collection("users").doc(uid));
+    for (const uidChunk of chunk(uids, 1000)) {
+      if (!uidChunk.length) continue;
+      const res = await auth.deleteUsers(uidChunk);
+      console.log(`auth users deleted: ${res.successCount}, failed: ${res.failureCount}`);
+    }
   }
   console.log("done");
 }

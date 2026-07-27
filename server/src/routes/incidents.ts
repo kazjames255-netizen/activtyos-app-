@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { notify, parentEmailForChild } from "../lib/notify";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -55,6 +56,22 @@ const logSchema = z.object({
   photoUrl: z.string().max(500).optional(),
   followUp: z.string().trim().max(2_000).optional(),
 });
+
+/** The provider's Safeguarding toggles (Setup → Safeguarding). Accidents are
+ *  notified by default because a parent has a right to know their child was
+ *  hurt; other incidents are opt-in, since "incident" covers everything from a
+ *  near-miss to a behaviour note and not every one warrants an email home. */
+async function safeguardingSettings(tenantId: string) {
+  const lib = await db.collection("libraries").doc(tenantId).get();
+  const sg = (lib.data()?.settings as { safeguarding?: Record<string, boolean> } | undefined)?.safeguarding ?? {};
+  return {
+    notifyParentAccident: sg.notifyParentAccident !== false,
+    notifyParentIncident: sg.notifyParentIncident === true,
+    notifyStaffAcknowledged: sg.notifyStaffAcknowledged !== false,
+  };
+}
+
+const kindWord = (kind: string) => (kind === "accident" ? "accident" : "incident");
 
 function tenantScope(req: Request): { role: Role; tenantId: string | null } | null {
   const auth = req.auth!;
@@ -134,6 +151,33 @@ incidents.post("/", async (req, res) => {
   };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+
+  // Tell the parent. Only possible when the record is linked to a child — a
+  // walk-in with no booking has nobody to reach, and that's not an error.
+  void (async () => {
+    const gates = await safeguardingSettings(scope.tenantId!);
+    if (!(doc.kind === "accident" ? gates.notifyParentAccident : gates.notifyParentIncident)) return;
+    const email = await parentEmailForChild(doc.childId);
+    if (!email) return;
+    const word = kindWord(doc.kind);
+    const when = `${doc.date}${doc.time ? ` at ${doc.time}` : ""}`;
+    await notify({
+      tenantId: scope.tenantId!,
+      to: { kind: "parent", email },
+      category: doc.kind === "accident" ? "accident" : "incident",
+      title: `An ${word} was recorded for ${doc.childName}`,
+      body: `${doc.description}${doc.treatment ? ` Treatment: ${doc.treatment}.` : ""}`,
+      subject: `${doc.childName}: ${word} recorded on ${doc.date}`,
+      emailHtml:
+        `<p>An ${word} involving <b>${doc.childName}</b> was recorded on <b>${when}</b>.</p>` +
+        `<p>${doc.description}</p>` +
+        (doc.injury ? `<p><b>Injury:</b> ${doc.injury}${doc.bodyPart ? ` (${doc.bodyPart})` : ""}</p>` : "") +
+        (doc.treatment ? `<p><b>Treatment given:</b> ${doc.treatment}${doc.firstAider ? ` — by ${doc.firstAider}` : ""}</p>` : "") +
+        (doc.actionTaken ? `<p><b>Action taken:</b> ${doc.actionTaken}</p>` : ""),
+      href: "/custdash/accidents",
+      ref: ref.id,
+    });
+  })();
 });
 
 async function ownLog(req: Request, id: string) {
@@ -163,9 +207,41 @@ incidents.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  // Only a real change is an edit. Re-saving an unchanged form must not send
+  // the family a second "this was updated" email.
+  const before = own.snap.data()!;
+  const changed = Object.entries(parsed.data).filter(
+    ([k, v]) => k !== "notifyParentOfEdit" && JSON.stringify(before[k]) !== JSON.stringify(v),
+  );
   await own.snap.ref.set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
   const after = await own.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
+
+  // Staff choose per edit whether the family is alerted or the record is just
+  // quietly corrected on their profile — the stamp updates either way.
+  void (async () => {
+    if (!changed.length || parsed.data.notifyParentOfEdit !== true) return;
+    const rec = after.data()!;
+    const kind = String(rec.kind ?? "incident");
+    const gates = await safeguardingSettings(String(rec.tenantId));
+    if (!(kind === "accident" ? gates.notifyParentAccident : gates.notifyParentIncident)) return;
+    const email = await parentEmailForChild(rec.childId as string | undefined);
+    if (!email) return;
+    const word = kindWord(kind);
+    await notify({
+      tenantId: String(rec.tenantId),
+      to: { kind: "parent", email },
+      category: kind === "accident" ? "accident" : "incident",
+      title: `An ${word} record for ${rec.childName} was updated`,
+      body: String(rec.description ?? ""),
+      subject: `${rec.childName}: ${word} record updated`,
+      emailHtml:
+        `<p>The ${word} record for <b>${rec.childName}</b> from <b>${rec.date}</b> has been updated by the provider.</p>` +
+        `<p>${rec.description ?? ""}</p>`,
+      href: "/custdash/accidents",
+      ref: after.id,
+    });
+  })();
 });
 
 // POST /api/incidents/:id/acknowledge — a parent confirms they've seen the
@@ -181,11 +257,28 @@ incidents.post("/:id/acknowledge", async (req, res) => {
   if (!childId) { res.status(404).json({ error: "Record not found" }); return; }
   const child = await db.collection("children").doc(childId).get();
   if (!child.exists || child.data()!.parentUid !== req.user!.uid) { res.status(404).json({ error: "Record not found" }); return; }
-  await snap.ref.set({
-    acknowledgedAt: new Date().toISOString(),
-    acknowledgedBy: req.user?.name ?? req.user?.email ?? "Parent",
-  }, { merge: true });
+  const firstAck = !snap.data()!.acknowledgedAt;
+  const who = req.user?.name ?? req.user?.email ?? "Parent";
+  await snap.ref.set({ acknowledgedAt: new Date().toISOString(), acknowledgedBy: who }, { merge: true });
   res.json({ ok: true });
+
+  // Tell the team the family has seen it — once. Re-acknowledging refreshes
+  // the stamp but must not nag staff again.
+  void (async () => {
+    const rec = snap.data()!;
+    if (!firstAck || !rec.tenantId) return;
+    if (!(await safeguardingSettings(String(rec.tenantId))).notifyStaffAcknowledged) return;
+    const word = kindWord(String(rec.kind ?? "incident"));
+    await notify({
+      tenantId: String(rec.tenantId),
+      to: { kind: "tenant" },
+      category: rec.kind === "accident" ? "accident" : "incident",
+      title: `${who} acknowledged the ${word} for ${rec.childName}`,
+      body: `The ${word} recorded on ${rec.date} has been seen by the parent.`,
+      href: "/company/accidents",
+      ref: snap.id,
+    });
+  })();
 });
 
 // POST /api/incidents/:id/note — append a note to the record's thread. Both a

@@ -122,7 +122,7 @@ export function PrintableDoc({ kind, doc, billing, payUrl, actions, note, onClos
   const copy = async () => { if (!payUrl) return; try { await navigator.clipboard.writeText(payUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* noop */ } };
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4" onClick={onClose}>
-      <div className="my-6 w-[min(720px,96vw)]" onClick={(e) => e.stopPropagation()}>
+      <div data-ui="card" className="my-6 w-[min(720px,96vw)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
           <button type="button" onClick={print} className="rounded-full bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm hover:brightness-110" title="In the print dialog, choose ‘Save as PDF’ as the destination">🖨️ Print / Save PDF</button>
           {actions?.map((a) => <button key={a.key} type="button" onClick={a.onClick} disabled={a.disabled} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink)] hover:border-[var(--ink-3)] disabled:opacity-50">{a.label}</button>)}

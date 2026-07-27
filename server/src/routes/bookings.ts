@@ -6,6 +6,8 @@ import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { stripe, toPence } from "../lib/stripe";
 import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
+import { releaseDiscountCodes } from "../lib/discountRedemptions";
+import { creditWallet } from "../lib/wallet";
 import {
   blockCountDelta,
   bookingDays,
@@ -460,12 +462,22 @@ bookings.post("/:ref/actions", async (req, res) => {
       return b;
     });
 
-    // Approving a refund on a Stripe-paid booking issues the REAL refund on
-    // the provider's connected account (the amount the cancel flow agreed —
-    // full or partial). Failures are logged and recorded, never swallowed
-    // into a fake "Refunded" without money moving... the record shows it.
-    if (action.type === "refund-approve" && updated.paymentIntentId) {
-      void refundStripePayment(updated);
+    // Approving a refund sends the money where the family asked for it. Store
+    // credit stays in-house and lands instantly; anything else is a REAL Stripe
+    // refund on the provider's connected account (the amount the cancel flow
+    // agreed — full or partial). Failures are logged and recorded, never
+    // swallowed into a fake "Refunded" without money moving.
+    if (action.type === "refund-approve") {
+      const owed = updated.cancel?.amount ?? updated.amount;
+      if (updated.cancel?.refundTo === "wallet" && owed > 0)
+        void creditWallet(
+          updated.tenantId ?? scope.tenantId!,
+          updated.email,
+          owed,
+          `Credit from ${updated.listing}`,
+          updated.ref,
+        );
+      else if (updated.paymentIntentId) void refundStripePayment(updated);
     }
 
     // Status-change emails to the booker (fire-and-forget).
@@ -498,6 +510,10 @@ bookings.post("/:ref/actions", async (req, res) => {
     // still waiting so the UI can warn about overbooking.
     if (updated.blockId && (action.type === "decline" || action.type === "cancel"))
       void triggerWaitlist(updated.blockId);
+    // A cancelled booking gives its discount code back (single-use codes
+    // become usable again once nothing in the basket is standing). Safe to
+    // repeat — the redemption record is gone after the first release.
+    if (updated.status === "Cancelled") void releaseDiscountCodes(scope.tenantId!, updated.ref);
     if (action.type === "promote" && updated.blockId) {
       const waiting = await waitingCount(updated.blockId, updated.days ?? []);
       res.json({ ...updated, ...(waiting ? { waiting } : {}) });

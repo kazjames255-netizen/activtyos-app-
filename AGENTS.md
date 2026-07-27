@@ -67,8 +67,13 @@ Non-negotiables shared by all views:
   the waitlist loop, the Stripe pay-link (real test-card payment), discount
   codes, child profiles, registers, newsfeed, tasks, invites, messages,
   invoices. It provisions throwaway `@activityos-test.com` accounts on the
-  live dev stack (reused across runs); `npm run e2e:cleanup` deletes them and
-  everything they own. New views/flows should get a spec here.
+  live dev stack (reused across runs, but their DATA is wiped at the start of
+  every run); `npm run e2e:cleanup` deletes them and everything they own. New
+  views/flows should get a spec here.
+- E2e assertion rule: every state assertion must be anchored to THIS run's
+  entity — use `cardWith(page, runUniqueName, "StateText")` from
+  `e2e/helpers/ui.ts` (list rows carry `data-ui="card"`). A bare
+  `getByText("Cancelled").first()` passes on any stale row and proves nothing.
 - Create throwaway accounts at `/signup` (Freelancer/Company provision a
   tenant; Parent for the customer side; franchise/staff join via invite
   links from Team & invites).

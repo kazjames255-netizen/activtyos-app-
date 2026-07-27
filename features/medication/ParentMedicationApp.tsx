@@ -284,7 +284,7 @@ export function ParentMedicationApp() {
           {meds.map((m) => {
             const md = dosesFor(m.id);
             return (
-              <div key={m.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_6px_20px_-8px_rgba(16,24,40,.18)]">
+              <div key={m.id} data-ui="card" className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_6px_20px_-8px_rgba(16,24,40,.18)]">
                 {/* Gradient header — matches the family cards. */}
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#4f8bf5 0%,#7aa9f0 100%)" }}>
                   <span className="flex items-baseline gap-2">

@@ -14,6 +14,7 @@ export function Card({
   return (
     <div
       id={id}
+      data-ui="card"
       className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)] ${className}`}
       style={style}
     >

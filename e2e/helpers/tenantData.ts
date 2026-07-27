@@ -51,6 +51,12 @@ export async function provisionLiveListing(
     waitlist?: boolean;
     /** Run every day starting today (moments/registers need a session TODAY). */
     startToday?: boolean;
+    /** Omit bookingType so bookings land as "Approval needed" (the server's
+     * default when the wizard doesn't send "auto"). */
+    approval?: boolean;
+    /** Publish state — default live/public like the wizard's Publish. */
+    status?: "draft" | "live";
+    visibility?: "public" | "hidden";
   },
 ): Promise<ProvisionedListing> {
   const s = await fbSignIn(operator.email);
@@ -96,9 +102,10 @@ export async function provisionLiveListing(
     ageTo: "12",
     blockId: bundle.id,
     passes: [{ name: "Day pass", price: opts.price ?? 0, days: 1 }],
-    bookingType: "auto", // the wizard's default — omitting it books as "Approval needed"
-    status: "live",
-    visibility: "public",
+    // The wizard's default — omitting bookingType books as "Approval needed".
+    ...(opts.approval ? {} : { bookingType: "auto" as const }),
+    status: opts.status ?? "live",
+    visibility: opts.visibility ?? "public",
   });
   // "Send to listings": snapshots the bundle's resolved pass prices onto the
   // listing, exactly like the Blocks builder does.
