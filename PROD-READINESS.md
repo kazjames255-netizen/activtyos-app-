@@ -106,10 +106,15 @@ new fakes the moment they're spotted.
 
 ## Known gaps the tests can't paper over
 
-- [ ] **No scheduler.** The only background job is the 5-minute `setInterval`
-  for waitlist expiry (`server/src/index.ts`). Anything time-based — calendar
-  reminders, medication due-times, the acknowledgement chase — has nothing to
-  run it, and the in-process interval isn't safe across multiple instances.
+- [x] **Scheduler is real** (27 Jul) — `server/src/lib/scheduler.ts`:
+  `sweep()` (recurring scans; a Firestore-transaction lock on
+  `schedulerLocks` means exactly one instance runs each interval) +
+  `fireOnce()` (exactly-once delivery via `schedulerFired` markers with
+  lease-based crash recovery). Wall clock is Europe/London. Running sweeps
+  (`lib/sweeps.ts`): calendar reminders (Setup → Calendar + per-event
+  override), medication due-times ("· at HH:MM", only on days the child is
+  booked), the acknowledgement chase (daily while unacknowledged, capped at
+  a week), and waitlist expiry (migrated off the old unsafe `setInterval`).
 - [ ] Setup → "Ask about dietary needs" is read by nothing outside Setup
   (the parent child form shows Dietary unconditionally).
 

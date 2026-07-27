@@ -97,8 +97,8 @@ settings); the parent mute is enforced centrally so no caller can forget it.
   default off) and on edit — but only when staff tick `notifyParentOfEdit` AND a
   field actually changed, so re-saving a form doesn't email the family again.
   Staff are told on the parent's FIRST acknowledgement only
-  (`notifyStaffAcknowledged`). **Still owed:** the reminder-chase for
-  `requireAcknowledgement`, which needs the scheduler below.
+  (`notifyStaffAcknowledged`). ~~Still owed: the reminder-chase~~ — **DONE
+  (27 Jul)** on the scheduler (daily nudge while unacknowledged, one week cap).
 - ~~**Medication**~~ — **DONE (27 Jul).** `given` is on `administerSchema` and
   persisted (the old inference from the free-text `doseGiven` is only a fallback).
   `childId` is resolved SERVER-side by matching the child's name against this
@@ -118,12 +118,16 @@ settings); the parent mute is enforced centrally so no caller can forget it.
   Stripe Connect and must show in the parent's profile. Persisted fields on the
   trip incl. `roster/attendees[]/checkpoints/signoff/hazards/parentMsg/payBy/
   askPay/askConsent/attendees[].sent`.
-- **Calendar reminders** — `docs/calendar-handoff.md`. `reminderMinutes` before an
-  event/session starts, email + bell the assigned staff. Reads
-  `settings.calendar.reminderOn/reminderMinutes`; per-event override
-  `remindMode` ("default"/"on"/"off") + `remindMinutes`. Needs a scheduler that
-  scans upcoming starts and fires once (idempotent). Manual events are in the
-  `calendarEvents` collection (CRUD built).
+- ~~**Calendar reminders**~~ — **DONE (27 Jul).** The scheduler exists now
+  (`server/src/lib/scheduler.ts` — Firestore-locked sweeps, exactly-once
+  firing, UK wall clock) and `lib/sweeps.ts` delivers: calendar reminders
+  (settings + per-event override honoured, fires from the reminder point up
+  to start, never after), medication due-times ("· at HH:MM" on days the
+  child is booked, `remindWhenDue` honoured), the acknowledgement chase
+  (daily while `requireAcknowledgement` and unacknowledged, capped at a
+  week), and waitlist expiry (migrated off the raw `setInterval`). Reminders
+  go to the team bell + provider email; per-assignee delivery would need
+  staff-level notifications, which don't exist yet.
 - **Moments** — when a moment is posted, **notify + email the tagged children's
   parents with a direct deep link** to view it in their area (the front-end
   already shows "parents are notified & emailed"). The parent feed

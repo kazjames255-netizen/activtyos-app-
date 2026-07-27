@@ -27,7 +27,7 @@ const TENANT_SCOPED = [
   "emails", "documents", "deletionRequests", "certifications",
   "supportMessages", "messageTemplates", "messageFolders", "images",
   "customerGroups", "childFiles", "broadcasts", "wallet", "walletEntries",
-  "notifications",
+  "notifications", "schedulerFired",
   "calendarEvents", "inventory",
 ];
 
