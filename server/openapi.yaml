@@ -2196,11 +2196,11 @@ paths:
       summary: The tenant's current plan + the catalogue
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
-        "200": { description: "{current, plans[], billingConfigured:false}" }
+        "200": { description: "{current (incl. card + snapshot price/limits), plans[], billingConfigured}" }
         "403": { $ref: "#/components/responses/Forbidden" }
     put:
       tags: [subscription]
-      summary: Choose a plan (records intent — does not charge)
+      summary: Choose or change a plan (live Stripe sub → prorated price swap)
       requestBody:
         required: true
         content:
@@ -2208,11 +2208,82 @@ paths:
             schema:
               type: object
               required: [plan]
-              properties: { plan: { type: string, enum: [starter, pro, premium] } }
+              properties:
+                plan: { type: string, enum: [freelancer, company, franchise] }
+                band: { type: string }
+                cadence: { type: string, enum: [month, year] }
       responses:
-        "200": { description: "{current, plans[], billingConfigured:false}" }
+        "200": { description: "{current, plans[], billingConfigured}" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/subscription/checkout:
+    post:
+      tags: [subscription]
+      summary: Card capture — a Stripe SetupIntent for the client's PaymentElement
+      description: No charge here; the card attaches to the tenant's Stripe Customer. 503 when Stripe isn't configured.
+      responses:
+        "200": { description: "{clientSecret}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/subscription/start:
+    post:
+      tags: [subscription]
+      summary: Create the real Stripe subscription off the captured card
+      description: >
+        First-ever start gets the 7-day trial (card auto-charged on day 7);
+        a lapsed tenant restarting is charged immediately, no second trial.
+        Price, limits and metering rates are snapshotted from the live
+        catalogue onto the tenant (grandfathering — later HQ pricing edits
+        never move an existing subscriber). Annual cadence bills 10 months.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan, setupIntentId]
+              properties:
+                plan: { type: string, enum: [freelancer, company, franchise] }
+                band: { type: string }
+                cadence: { type: string, enum: [month, year] }
+                setupIntentId: { type: string }
+      responses:
+        "200": { description: "{ok, status, current}" }
+        "400": { description: Card not confirmed, or malformed body }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/subscription/cancel:
+    post:
+      tags: [subscription]
+      summary: Cancel at period end — access continues until then, no refund
+      responses:
+        "200": { description: "{ok, status:'canceling', cancelAt}" }
+        "400": { description: No active subscription }
+
+  /api/subscription/reactivate:
+    post:
+      tags: [subscription]
+      summary: Un-cancel (still in period), or re-subscribe off the saved card
+      responses:
+        "200": { description: "{ok, status}" }
+        "402": { description: No usable saved card — run /checkout + /start instead }
+
+  /api/stripe/webhook:
+    post:
+      tags: [subscription]
+      summary: Stripe Billing webhook (signature-verified, raw body)
+      description: >
+        Keeps tenant records in lock-step with Stripe — subscription
+        updates/deletion, invoice payment success/failure (→ past_due +
+        team notification), trial-ending notice. The 6-hourly
+        subscription-sync sweep backstops missed deliveries. Requires
+        STRIPE_WEBHOOK_SECRET. Note for the lapsed: the API enforces the
+        wall server-side — canceled/past_due tenants get 402 on everything
+        except the subscription/account endpoints that let them fix it.
+      responses:
+        "200": { description: "{received:true}" }
+        "400": { description: Bad signature }
 
   /api/posts:
     get:

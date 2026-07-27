@@ -136,8 +136,18 @@ new fakes the moment they're spotted.
 - [ ] Setup → "Issue refunds automatically" persists but nothing reads it;
   same for "credit note when no cash refund due".
   (`features/setup/SetupApp.tsx:1291-1313`)
-- [ ] Subscription: plan choice is recorded (PUT `/api/subscription`) but
-  no billing is taken. (`features/money/SubscriptionApp.tsx:43`)
+- [x] **Subscription billing is real** (27 Jul) — Stripe SetupIntent card
+  capture (PaymentElement in the gate + an in-portal modal), real
+  subscription with a 7-day trial on first start (auto-charge day 7),
+  cancel = `cancel_at_period_end`, reactivate resumes or re-subscribes off
+  the saved card (no second trial), plan switch prorates. Price/limits/
+  metering snapshotted at start (grandfathering). Server-side wall:
+  `middleware/subscription.ts` 402s canceled/past_due owner tenants on
+  everything but the fix-it endpoints. Staff caps enforced on invites; 76+
+  staff and franchise locations meter as extra subscription items. Webhook
+  `/api/stripe/webhook` (needs `STRIPE_WEBHOOK_SECRET`) + a 6-hourly sync
+  sweep backstop. Remaining: annual VAT/invoice niceties and the HQ
+  "what have they purchased" rollup reads live tenant records already.
 
 ## Legacy prototype iframes — GONE (July 2026)
 

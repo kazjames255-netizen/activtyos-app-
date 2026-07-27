@@ -30,7 +30,8 @@ export type NotifyCategory =
   | "trip"
   | "calendar"
   | "message"
-  | "moment";
+  | "moment"
+  | "billing";
 
 export interface NotificationDoc {
   tenantId: string;

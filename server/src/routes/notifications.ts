@@ -15,7 +15,7 @@ import {
 
 export const notifications = Router();
 
-const CATEGORIES = ["accident", "incident", "medication", "booking", "trip", "calendar", "message", "moment"] as const;
+const CATEGORIES = ["accident", "incident", "medication", "booking", "trip", "calendar", "message", "moment", "billing"] as const;
 
 /** Who is asking, and therefore which bell they get. Operators without a
  *  tenant (platform admins) have no bell of their own. */

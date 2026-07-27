@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { emailTeamInvite } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
+import { staffHeadroom, updateMeteredQuantities } from "../lib/billing";
 
 // Invite links — how franchises and staff join a tenant. With an `email`
 // the invite is delivered directly; without one the operator copies the
@@ -40,6 +41,15 @@ invites.post("/", async (req, res) => {
     ((auth.role === "franchise" || auth.role === "freelancer") && invitedRole === "staff");
   if (!allowed || !auth.tenantId) {
     res.status(403).json({ error: "Your account cannot create this invite" });
+    return;
+  }
+
+  // Plan enforcement (decision #4): a banded plan hard-caps team size — over
+  // it, block with an upgrade prompt. The metered 76+ band has no cap (extra
+  // heads bill +£1/staff on acceptance).
+  const cap = await staffHeadroom(auth.tenantId);
+  if (!cap.ok) {
+    res.status(403).json({ error: cap.reason });
     return;
   }
 
@@ -125,6 +135,13 @@ invites.post("/:token/accept", async (req, res) => {
       tx.update(inviteRef, { usedBy: user.uid, usedAt: new Date().toISOString() });
       return { role: invite.role, tenantId: invite.tenantId };
     });
+    // The authoritative cap check ran at invite creation; acceptance updates
+    // the metered quantities (76+ staff overage, franchise locations) so the
+    // next invoice reflects the new head-count. Fire-and-forget: billing
+    // must never block someone joining a team.
+    void updateMeteredQuantities(result.tenantId).catch((e) =>
+      console.error("[invites] metered update failed:", (e as Error).message),
+    );
     res.json(result);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });

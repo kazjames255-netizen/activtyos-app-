@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { api, get as apiGet } from "@/lib/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
+
+// The platform's own Stripe account (plan fees) — NOT a provider's connected
+// account (those live in PayPage/PayModal for parents paying providers).
+const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+const stripePromise = STRIPE_PK ? loadStripe(STRIPE_PK) : null;
 
 // The gate renders as a full-screen replacement for the portal shell, so it
 // carries its own light palette (matching the operator portals) rather than
@@ -27,6 +34,7 @@ interface Current {
   plan: string; status: string; band?: string | null; cadence?: string;
   since: string | null; trialEndsAt?: string | null; currentPeriodEnd?: string | null; cancelAt?: string | null;
   price?: number; staffLimit?: number | null; locationLimit?: number | null; staffUsed?: number | null;
+  cardLast4?: string | null; cardBrand?: string | null;
   details: Plan;
 }
 interface Payload { current: Current; plans: Plan[]; billingConfigured: boolean; trialDays?: number }
@@ -35,6 +43,65 @@ const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, tr
 const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
 const fmtDay = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 const daysLeft = (iso?: string | null) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)) : 0);
+
+/** Stripe's PaymentElement + confirm + POST /start, inside <Elements>. The
+ *  card is captured as a SetupIntent (no charge); /start creates the real
+ *  subscription — trial for a first-timer, charged now for a win-back. */
+function SetupForm({ plan, band, cadence, cta, onDone, onError }: {
+  plan: string; band?: string; cadence: string; cta: string;
+  onDone: () => void; onError: (msg: string) => void;
+}) {
+  const stripeJs = useStripe();
+  const elements = useElements();
+  const [busy, setBusy] = useState(false);
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!stripeJs || !elements || busy) return;
+        setBusy(true);
+        const { error, setupIntent } = await stripeJs.confirmSetup({ elements, redirect: "if_required" });
+        if (error || !setupIntent) {
+          onError(error?.message ?? "Your card wasn't confirmed — try again.");
+          setBusy(false);
+          return;
+        }
+        try {
+          await apiPost("/api/subscription/start", { plan, band, cadence, setupIntentId: setupIntent.id });
+          onDone();
+        } catch (err) {
+          onError(err instanceof Error ? err.message : "Couldn't start the subscription");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <PaymentElement />
+      <Button variant="primary" className="mt-3 h-11 w-full justify-center text-[14px]" disabled={busy}>
+        {busy ? "Confirming…" : cta}
+      </Button>
+    </form>
+  );
+}
+
+/** Fetches the SetupIntent and mounts Stripe Elements around SetupForm. */
+function CardCapture(props: { plan: string; band?: string; cadence: string; cta: string; onDone: () => void; onError: (msg: string) => void }) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const { onError } = props;
+  useEffect(() => {
+    apiPost<{ clientSecret: string }>("/api/subscription/checkout", {})
+      .then((r) => setClientSecret(r.clientSecret))
+      .catch((e) => onError(e instanceof Error ? e.message : "Couldn't start card capture"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!stripePromise) return <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[11px] text-[var(--ink-3)]">Card billing isn't configured (missing publishable key).</div>;
+  if (!clientSecret) return <div className="py-4 text-center text-[12px] text-[var(--ink-3)]">Loading secure card form…</div>;
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <SetupForm {...props} />
+    </Elements>
+  );
+}
 
 const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
   trialing: { label: "Free trial", bg: "#eaf0fc", fg: "#1d3a8f" },
@@ -62,6 +129,9 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   const [annual, setAnnual] = useState(false);
   const [band, setBand] = useState<Record<string, string>>({});
   const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
+  // In-portal card-capture modal: set to the plan being started when the
+  // tenant has no card on file yet (fresh start or a lapsed win-back).
+  const [payFor, setPayFor] = useState<Plan | null>(null);
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/subscription").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -72,6 +142,13 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   const monthlyPrice = useCallback((p: Plan) => (!p.bands ? p.price : (p.bands.find((b) => b.id === bandFor(p))?.price ?? p.price)), [bandFor]);
 
   async function start(p: Plan) {
+    // With Stripe live, a tenant with no card on file goes through the
+    // card-capture flow (gate panel or the in-portal modal); a tenant whose
+    // card is already attached just switches plan (Stripe prorates).
+    if (data?.billingConfigured && !data.current.cardLast4) {
+      setPayFor(p);
+      return;
+    }
     setSaving(p.id);
     try {
       await api("/api/subscription", { method: "PUT", body: JSON.stringify({ plan: p.id, cadence: annual ? "year" : "month", ...(p.bands ? { band: bandFor(p) } : {}) }) });
@@ -82,7 +159,15 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   async function act(path: string, key: string) {
     setActing(key);
     try { await api(`/api/subscription/${path}`, { method: "POST", body: "{}" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Action failed"); }
+    catch (e) {
+      // Reactivating with no usable saved card → capture one, then /start
+      // takes over (no second trial server-side).
+      if (path === "reactivate" && e instanceof Error && /card/i.test(e.message) && data) {
+        setPayFor(data.current.details);
+        return;
+      }
+      setError(e instanceof Error ? e.message : "Action failed");
+    }
     finally { setActing(null); }
   }
 
@@ -158,18 +243,33 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         <span className="rounded-full bg-[#eaf0fc] px-2.5 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">🔒 Secured by Stripe</span>
       </div>
       <p className="mt-1 text-[12px] text-[var(--ink-3)]">Free for {data.trialDays ?? 7} days — we won’t charge you until then, and you can cancel anytime.</p>
-      <div className="mt-3 flex flex-col gap-2.5">
-        <input className={cardField} placeholder="Name on card" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
-        <input className={cardField} placeholder="Card number" inputMode="numeric" value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value })} />
-        <div className="flex gap-2.5">
-          <input className={cardField} placeholder="MM / YY" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} />
-          <input className={cardField} placeholder="CVC" inputMode="numeric" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value })} />
+      {data.billingConfigured ? (
+        <div className="mt-3">
+          <CardCapture
+            plan={chosen.id}
+            band={bandFor(chosen)}
+            cadence={annual ? "year" : "month"}
+            cta={`Start ${data.trialDays ?? 7}-day free trial`}
+            onDone={() => { if (gate) onStarted?.(); else refresh(); }}
+            onError={setError}
+          />
         </div>
-      </div>
-      {!data.billingConfigured && <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11px] text-[var(--ink-3)]">Card billing is being connected — your trial starts now and you’ll confirm your card before it ends.</div>}
-      <Button variant="primary" className="mt-3 h-11 w-full justify-center text-[14px]" onClick={() => start(chosen)} disabled={!!saving}>
-        {saving ? "Starting…" : `Start ${data.trialDays ?? 7}-day free trial`}
-      </Button>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-col gap-2.5">
+            <input className={cardField} placeholder="Name on card" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
+            <input className={cardField} placeholder="Card number" inputMode="numeric" value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value })} />
+            <div className="flex gap-2.5">
+              <input className={cardField} placeholder="MM / YY" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} />
+              <input className={cardField} placeholder="CVC" inputMode="numeric" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value })} />
+            </div>
+          </div>
+          <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11px] text-[var(--ink-3)]">Card billing is being connected — your trial starts now and you’ll confirm your card before it ends.</div>
+          <Button variant="primary" className="mt-3 h-11 w-full justify-center text-[14px]" onClick={() => start(chosen)} disabled={!!saving}>
+            {saving ? "Starting…" : `Start ${data.trialDays ?? 7}-day free trial`}
+          </Button>
+        </>
+      )}
       <p className="mt-2 text-center text-[11px] text-[var(--ink-3)]">Then {gbp(monthlyPrice(chosen))}/mo{chosen.bands ? " +" : ""} after your trial. Cancel anytime.</p>
     </div>
   );
@@ -223,6 +323,9 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
             <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{sm.label}</span>
             <span className="ml-auto text-[13px] font-bold">{c.price != null ? `${gbp(c.price)}/${c.cadence === "year" ? "yr" : "mo"}` : ""}</span>
           </div>
+          {c.cardLast4 && (
+            <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">💳 {c.cardBrand ? c.cardBrand[0].toUpperCase() + c.cardBrand.slice(1) : "Card"} ···· {c.cardLast4}</div>
+          )}
           <div className="mt-2 text-[12.5px] text-[var(--ink-3)]">
             {c.status === "trialing" && c.trialEndsAt && <>Free trial — <b className="text-[var(--ink)]">{daysLeft(c.trialEndsAt)} days left</b>, then billed from {fmtDay(c.trialEndsAt)}.</>}
             {c.status === "active" && c.currentPeriodEnd && <>Renews {fmtDay(c.currentPeriodEnd)}.</>}
@@ -254,6 +357,29 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         <span className="text-[15px]">🔒</span>
         <div>Every plan settles parents’ payments to <b className="text-[var(--ink-2)]">your own account</b> — this fee is what you pay ActivityOS, never a cut of your bookings.{!data.billingConfigured && " Card billing is being connected."}</div>
       </div>
+
+      {/* Card capture for a start/reactivation with no card on file. */}
+      {payFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPayFor(null)}>
+          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Add your card — {payFor.name}</div>
+              <button type="button" className="text-[12px] font-bold text-[var(--ink-3)]" onClick={() => setPayFor(null)}>✕ Close</button>
+            </div>
+            <p className="mb-3 mt-1 text-[12px] text-[var(--ink-3)]">
+              {c.status === "none" ? `Free for ${data.trialDays ?? 7} days, then ${gbp(monthlyPrice(payFor))}/mo. Cancel anytime.` : `You'll be charged ${gbp(monthlyPrice(payFor))}/${annual ? "yr — annual billing" : "mo"} now.`}
+            </p>
+            <CardCapture
+              plan={payFor.id}
+              band={bandFor(payFor)}
+              cadence={annual ? "year" : "month"}
+              cta={c.status === "none" ? `Start ${data.trialDays ?? 7}-day free trial` : "Subscribe & pay now"}
+              onDone={() => { setPayFor(null); refresh(); }}
+              onError={(m) => { setPayFor(null); setError(m); }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

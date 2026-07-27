@@ -2,6 +2,9 @@ import { db } from "../firebase";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
 import { notify, parentEmailForChild } from "./notify";
 import { expireOffers } from "./waitlist";
+import { stripe } from "./stripe";
+import { syncFromStripe, updateMeteredQuantities } from "./billing";
+import { clearSubscriptionCache } from "../middleware/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -182,6 +185,27 @@ async function acknowledgementChase(): Promise<void> {
   }
 }
 
+// ── Subscription sync ─────────────────────────────────────────────────────
+// Backstop for the Stripe webhook: pull every billed tenant's subscription
+// and reconcile status/periods + metered quantities. Keeps dev (no public
+// webhook URL) truthful and heals missed deliveries in production.
+async function subscriptionSync(): Promise<void> {
+  if (!stripe) return;
+  const snap = await db.collection("tenants").get();
+  for (const t of snap.docs) {
+    const sub = t.get("subscription") as { stripeSubscriptionId?: string; status?: string } | undefined;
+    if (!sub?.stripeSubscriptionId || sub.status === "canceled") continue;
+    try {
+      const s = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+      await syncFromStripe(t.id, s);
+      await updateMeteredQuantities(t.id);
+      clearSubscriptionCache(t.id);
+    } catch (e) {
+      console.error(`[sweeps] subscription sync ${t.id}:`, (e as Error).message);
+    }
+  }
+}
+
 /** Called once from index.ts at startup. Safe on every instance. */
 export function startSweeps(): void {
   sweep("calendar-reminders", 60_000, calendarReminders);
@@ -190,4 +214,5 @@ export function startSweeps(): void {
   // The waitlist expiry that used to be a bare setInterval in index.ts —
   // unchanged behaviour, but now exactly one instance runs it per interval.
   sweep("waitlist-expiry", 5 * 60_000, expireOffers);
+  sweep("subscription-sync", 6 * 60 * 60_000, subscriptionSync);
 }

@@ -59,6 +59,8 @@ import { registers } from "./routes/registers";
 import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
 import { ai } from "./routes/ai";
+import { stripeWebhook } from "./routes/stripeWebhook";
+import { enforceSubscription } from "./middleware/subscription";
 
 const app = express();
 
@@ -71,6 +73,10 @@ app.use(
     ],
   }),
 );
+// Stripe Billing webhook — must see the RAW body for signature verification,
+// so it mounts before the JSON parser (its router does its own raw parsing).
+app.use("/api/stripe/webhook", stripeWebhook);
+
 // Listings now store the operator's whole draft, so the 100kb default was
 // nowhere near enough — a listing with any real content 500'd on save.
 // Firestore caps a document at 1MB, so anything past this can't be stored
@@ -114,6 +120,10 @@ app.use("/api/public/library", optionalAuth, libraryPublic);
 app.use("/api/public/invoice", invoicePublic);
 
 app.use("/api", requireAuth, attachRole);
+// The subscription wall: a lapsed owner tenant (canceled / past_due / past
+// its cancel date) gets 402 on everything except the endpoints that let them
+// see and fix their subscription. See middleware/subscription.ts.
+app.use("/api", enforceSubscription);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
 app.use("/api/bookings", bookings);

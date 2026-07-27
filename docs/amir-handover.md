@@ -68,13 +68,17 @@ detailed spec doc where one exists. Ordered roughly by priority.
   transaction commits, so a basket that fails on capacity no longer burns one.
   Note: redemption docs written before this date have no `refs` and so can't be
   released — only new bookings are covered.
-- **Subscription billing (Stripe)** — `docs/subscription-billing-handoff.md`.
-  Real card capture (SetupIntent on the gate), subscription create with
-  `trial_period_days: 7`, day-7 auto-charge + fail webhooks → past_due, swap the
-  lightweight cancel/reactivate for Stripe (cancel_at_period_end, proration),
-  **server-side access enforcement** (the client gate is UX only), staff/
-  franchise-location metering + hard caps. `billingConfigured` is hard-false
-  until done.
+- ~~**Subscription billing (Stripe)**~~ — **DONE (27 Jul).** All of it:
+  SetupIntent card capture (PaymentElement in the gate + in-portal modal),
+  real subscriptions with the 7-day trial (first start only — win-backs pay
+  immediately), cancel_at_period_end / reactivate / prorated plan switch,
+  grandfathered snapshots, server-side 402 wall (canceled/past_due; "none"
+  stays client-gated so fresh signups and e2e keep working), staff hard caps
+  on invites, 76+ +£1/staff and franchise +75%/location as metered
+  subscription items, webhook + 6-hourly sync sweep (dev works without the
+  webhook). `billingConfigured` now reflects whether STRIPE_SECRET_KEY is
+  set. Open questions from the handoff (freelancer staff cap, franchise
+  band scope) resolved as the defaults you proposed.
 - **Setup stubs**: "Issue refunds automatically" / "credit note when no cash due"
   persist but nothing reads them.
 
