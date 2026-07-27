@@ -217,6 +217,7 @@ export function MomentsApp() {
   const [dlFor, setDlFor] = useState<string | null>(null);
   const [dlRatio, setDlRatio] = useState<"square" | "portrait" | "story">("square");
   const [dlInc, setDlInc] = useState({ caption: true, quote: true, comments: false });
+  const [dlColor, setDlColor] = useState("#171534");
 
   const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -229,7 +230,7 @@ export function MomentsApp() {
   async function toggleMarketing(m: Moment, idx: number) { try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
   // Compose the photo with a clean caption/quote BANNER beneath it, then download.
-  async function downloadComposite(m: Moment, ratio: "square" | "portrait" | "story", inc: { caption: boolean; quote: boolean; comments: boolean }) {
+  async function downloadComposite(m: Moment, ratio: "square" | "portrait" | "story", inc: { caption: boolean; quote: boolean; comments: boolean }, color: string) {
     if (!m.photoUrl) return;
     const W = 1080, imgH = { square: 1080, portrait: 1350, story: 1920 }[ratio];
     const parentComments = (m.comments ?? []).filter((c) => c.role === "parent");
@@ -247,7 +248,7 @@ export function MomentsApp() {
       const capLines = cap ? wrap(cap, capF) : [];
       const qBlocks = quotes.map((c) => ({ lines: wrap(`“${c.text}”`, qF), by: c.byName, marketing: c.marketing }));
       let bannerH = 0;
-      if (hasText) { bannerH = 60; if (capLines.length) bannerH += capLines.length * capLH + 20; for (const qb of qBlocks) bannerH += qb.lines.length * qLH + 34 + 24; bannerH += 60 + 34; }
+      if (hasText) { bannerH = 92; if (capLines.length) bannerH += capLines.length * capLH + 20; for (const qb of qBlocks) bannerH += qb.lines.length * qLH + 34 + 24; bannerH += 60 + 34; }
       const H = imgH + bannerH;
       const c = document.createElement("canvas"); c.width = W; c.height = H; const ctx = c.getContext("2d")!;
       ctx.fillStyle = "#0b1020"; ctx.fillRect(0, 0, W, imgH);
@@ -255,10 +256,10 @@ export function MomentsApp() {
       ctx.drawImage(img, (W - dw) / 2, (imgH - dh) / 2, dw, dh);
       if (hasText) {
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0, imgH, W, bannerH);
-        ctx.fillStyle = "#3f78d8"; ctx.fillRect(0, imgH, W, 8); // accent
-        let y = imgH + 64;
-        if (capLines.length) { ctx.fillStyle = "#171534"; ctx.font = capF; for (const ln of capLines) { ctx.fillText(ln, pad, y); y += capLH; } y += 20; }
-        for (const qb of qBlocks) { ctx.fillStyle = "#4a4763"; ctx.font = qF; for (const ln of qb.lines) { ctx.fillText(ln, pad, y); y += qLH; } ctx.font = "700 28px system-ui, sans-serif"; ctx.fillStyle = qb.marketing ? "#9a5a00" : "#8a86a3"; ctx.fillText(`— ${qb.by || "a parent"}${qb.marketing ? "  ★" : ""}`, pad, y + 2); y += 34 + 24; }
+        ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.fillRect(0, imgH, W, 8); ctx.globalAlpha = 1; // accent matches the text colour
+        let y = imgH + 92;
+        if (capLines.length) { ctx.fillStyle = color; ctx.font = capF; for (const ln of capLines) { ctx.fillText(ln, pad, y); y += capLH; } y += 20; }
+        for (const qb of qBlocks) { ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.font = qF; for (const ln of qb.lines) { ctx.fillText(ln, pad, y); y += qLH; } ctx.globalAlpha = 1; ctx.font = "700 28px system-ui, sans-serif"; ctx.fillStyle = qb.marketing ? "#9a5a00" : "#8a86a3"; ctx.fillText(`— ${qb.by || "a parent"}${qb.marketing ? "  ★" : ""}`, pad, y + 2); y += 34 + 24; }
         ctx.font = "600 27px system-ui, sans-serif"; ctx.fillStyle = "#8a86a3";
         ctx.fillText([m.postedByName, m.childNames?.filter(Boolean).join(", "), fmtNice(m.date)].filter(Boolean).join(" · "), pad, imgH + bannerH - 40);
       }
@@ -387,7 +388,8 @@ export function MomentsApp() {
                         <div className="mb-2 flex flex-wrap gap-1.5">
                           {([["caption", `Caption${m.caption ? "" : " (none)"}`, !!m.caption], ["quote", `Starred quote${nQuotes ? ` (${nQuotes})` : " (none)"}`, nQuotes > 0], ["comments", `All parent comments${nParent ? ` (${nParent})` : " (none)"}`, nParent > 0]] as const).map(([k, l, avail]) => <button key={k} type="button" disabled={!avail} onClick={() => inc(k)} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold transition-colors disabled:opacity-45" style={dlInc[k] && avail ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{dlInc[k] && avail ? "✓ " : ""}{l}</button>)}
                         </div>
-                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false })} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>⬇ Download with banner</button></div>
+                        <div className="mb-2 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Text colour</span>{["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"].map((sw) => <button key={sw} type="button" onClick={() => setDlColor(sw)} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: dlColor === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={dlColor} onChange={(e) => setDlColor(e.target.value)} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" /></div>
+                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc, dlColor)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>⬇ Download with banner</button></div>
                       </div>
                     );
                   })()}
