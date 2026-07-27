@@ -250,6 +250,43 @@ export const DEFAULT_RATIO_GROUPS: RatioGroup[] = [
 export const groupForAge = (groups: RatioGroup[], age: number): RatioGroup | null =>
   groups.find((g) => age >= g.ageFrom && age <= g.ageTo) ?? null;
 
+/** A parent testimonial an operator saved from Moments into the Email area. */
+export interface SavedQuote {
+  id: string;
+  text: string;
+  byName?: string;
+  /** The child the commenting parent belongs to, for context. */
+  childName?: string;
+  momentId?: string;
+  savedAt: string;
+}
+
+/** A Moments photo an operator pushed to the Email area — a self-contained
+ *  snapshot that re-renders identically (with or without its baked text). */
+export interface SavedImage {
+  id: string;
+  momentId: string;
+  photoUrl: string;
+  ratio: "square" | "portrait" | "story";
+  /** How the photo fills a non-square frame — "contain" shows the whole image. */
+  fit?: "cover" | "contain";
+  color: string;
+  /** Which text the banner shows — re-editable in the Email area. */
+  include?: { caption: boolean; quote: boolean; comments: boolean };
+  /** The moment's caption at save time, so "include caption" can be re-toggled. */
+  sourceCaption?: string;
+  /** The moment's parent comments at save time (with their marketing flag). */
+  sourceComments?: { text: string; byName?: string; marketing?: boolean }[];
+  /** Attribution line drawn at the foot of the banner. */
+  footer?: string;
+  childName?: string;
+  activity?: string;
+  savedAt: string;
+  /** @deprecated legacy baked fields (pre-editor snapshots). */
+  caption?: string;
+  quotes?: { text: string; byName?: string; marketing?: boolean }[];
+}
+
 export interface TenantSettings {
   // ── Public identity ──
   /**
@@ -368,6 +405,19 @@ export interface TenantSettings {
   /** Moments — the reusable activity tags a shared moment can carry. */
   moments?: {
     activities?: { k: string; n: string; e: string; c: string }[];
+  };
+
+  /**
+   * Marketing library — quotes and images an operator pushed from Moments to the
+   * Email area, kept for reuse. Quotes carry their text; images store a snapshot
+   * of exactly what to re-render (photo + baked caption/quotes/colour) so the
+   * download matches the Moments preview without re-reading the live moment.
+   */
+  emailAssets?: {
+    quotes?: SavedQuote[];
+    images?: SavedImage[];
+    /** Mirror every Moments photo into the Email area automatically as they're posted. */
+    autoAddPhotos?: boolean;
   };
 
   /** Inventory — reusable categories, storage locations and seasons. */
@@ -676,6 +726,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
       { k: "drama", n: "Drama", e: "🎭", c: "#c2410c" }, { k: "play", n: "Free play", e: "🧩", c: "#4338ca" },
     ],
   },
+  emailAssets: { quotes: [], images: [] },
   inventory: {
     categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
     locations: ["Main store", "Van", "Shed", "Office"],
@@ -741,6 +792,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },
+    emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
     // Schemes held a single `reference` string before they held labelled

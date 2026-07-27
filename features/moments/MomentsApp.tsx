@@ -5,6 +5,8 @@ import type { CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
+import type { SavedImage, SavedQuote } from "@/lib/settings";
+import { composeMomentImage, triggerDownload } from "@/lib/momentImage";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (operator/staff) — share the day with parents: a square-cropped photo
@@ -218,61 +220,134 @@ export function MomentsApp() {
   const [dlRatio, setDlRatio] = useState<"square" | "portrait" | "story">("square");
   const [dlInc, setDlInc] = useState({ caption: true, quote: true, comments: false });
   const [dlColor, setDlColor] = useState("#171534");
+  const [dlFit, setDlFit] = useState<"cover" | "contain">("contain");
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title })))).catch(() => {}); }, []);
   useRealtime(["moments"], refresh);
+  useEffect(() => { if (!savedMsg) return; const t = setTimeout(() => setSavedMsg(null), 3800); return () => clearTimeout(t); }, [savedMsg]);
 
   async function remove(m: Moment) { if (!confirm("Delete this moment?")) return; try { await api(`/api/moments/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }
   async function reply(m: Moment) { const t = (replyVals[m.id] ?? "").trim(); if (!t) return; try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment`, { text: t }); setReplyVals((v) => ({ ...v, [m.id]: "" })); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function toggleMarketing(m: Moment, idx: number) { try { await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  // Star/unstar a parent comment as a marketing quote. Starring auto-pushes it to
+  // the Email marketing area (a folder of testimonials); unstarring pulls it back.
+  async function toggleMarketing(m: Moment, idx: number) {
+    const c = m.comments?.[idx];
+    try {
+      await apiPost(`/api/moments/${encodeURIComponent(m.id)}/comment/${idx}/marketing`, {});
+      if (c) {
+        const nowMarketing = !c.marketing;
+        const cur = settings.emailAssets ?? {};
+        const child = m.childNames?.filter(Boolean)[0];
+        const has = (cur.quotes ?? []).some((q) => q.text === c.text && q.byName === c.byName);
+        if (nowMarketing && !has) {
+          const savedAt = new Date().toISOString();
+          const q: SavedQuote = { id: `q_${savedAt}`, text: c.text, byName: c.byName, childName: child, momentId: m.id, savedAt };
+          await save({ settings: { ...settings, emailAssets: { ...cur, quotes: [q, ...(cur.quotes ?? [])] } } });
+          setSavedMsg("★ Saved to the Email marketing area");
+        } else if (!nowMarketing && has) {
+          await save({ settings: { ...settings, emailAssets: { ...cur, quotes: (cur.quotes ?? []).filter((q) => !(q.text === c.text && q.byName === c.byName)) } } });
+        }
+      }
+      refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
+
+  // Sync any already-starred quotes into the Email area (for quotes starred before
+  // auto-push, or after a manual removal).
+  async function moveQuotesToEmail() {
+    const cur = settings.emailAssets ?? {};
+    const have = new Set((cur.quotes ?? []).map((q) => `${q.text}|${q.byName ?? ""}`));
+    const savedAt = new Date().toISOString();
+    const additions: SavedQuote[] = [];
+    for (const m of moments ?? []) for (const c of (m.comments ?? [])) {
+      if (c.role !== "parent" || !c.marketing) continue;
+      const key = `${c.text}|${c.byName ?? ""}`;
+      if (have.has(key)) continue; have.add(key);
+      additions.push({ id: `q_${savedAt}_${additions.length}`, text: c.text, byName: c.byName, childName: m.childNames?.filter(Boolean)[0], momentId: m.id, savedAt });
+    }
+    if (!additions.length) { setSavedMsg("All marketing quotes are already in the Email area"); return; }
+    await save({ settings: { ...settings, emailAssets: { ...cur, quotes: [...additions, ...(cur.quotes ?? [])] } } });
+    setSavedMsg(`Moved ${additions.length} quote${additions.length === 1 ? "" : "s"} to the Email area`);
+  }
+
+  // Resolve which caption/quotes the include-toggles bake in — shared by download
+  // and "save to Email" so both produce the same banner.
+  function resolveInc(m: Moment, inc: { caption: boolean; quote: boolean; comments: boolean }) {
+    const parentComments = (m.comments ?? []).filter((c) => c.role === "parent");
+    const chosen: Comment[] = [];
+    if (inc.quote) chosen.push(...parentComments.filter((c) => c.marketing));
+    if (inc.comments) for (const c of parentComments) if (!chosen.includes(c)) chosen.push(c);
+    return {
+      caption: inc.caption ? (m.caption ?? "") : "",
+      quotes: chosen.map((c) => ({ text: c.text, byName: c.byName, marketing: c.marketing })),
+    };
+  }
+  const momentFooter = (m: Moment) => [m.postedByName, m.childNames?.filter(Boolean).join(", "), fmtNice(m.date)].filter(Boolean).join(" · ");
 
   // Compose the photo with a clean caption/quote BANNER beneath it, then download.
-  async function downloadComposite(m: Moment, ratio: "square" | "portrait" | "story", inc: { caption: boolean; quote: boolean; comments: boolean }, color: string) {
+  async function downloadComposite(m: Moment, ratio: "square" | "portrait" | "story", inc: { caption: boolean; quote: boolean; comments: boolean }, color: string, fit: "cover" | "contain") {
     if (!m.photoUrl) return;
-    const W = 1080, imgH = { square: 1080, portrait: 1350, story: 1920 }[ratio];
-    const parentComments = (m.comments ?? []).filter((c) => c.role === "parent");
-    const quotes: Comment[] = [];
-    if (inc.quote) quotes.push(...parentComments.filter((c) => c.marketing));
-    if (inc.comments) for (const c of parentComments) if (!quotes.includes(c)) quotes.push(c);
-    const cap = inc.caption ? (m.caption ?? "") : "";
-    const hasText = !!cap || quotes.length > 0;
-    const pad = 64, capF = "700 46px system-ui, sans-serif", capLH = 58, qF = "italic 500 38px system-ui, sans-serif", qLH = 48;
-    try {
-      const img = new Image(); img.crossOrigin = "anonymous";
-      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("load")); img.src = m.photoUrl!; });
-      const mc = document.createElement("canvas").getContext("2d")!;
-      const wrap = (text: string, font: string) => { mc.font = font; const words = text.split(/\s+/); const lines: string[] = []; let cur = ""; for (const w of words) { const t = cur ? `${cur} ${w}` : w; if (mc.measureText(t).width > W - pad * 2 && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur); return lines; };
-      const capLines = cap ? wrap(cap, capF) : [];
-      const qBlocks = quotes.map((c) => ({ lines: wrap(`“${c.text}”`, qF), by: c.byName, marketing: c.marketing }));
-      let bannerH = 0;
-      if (hasText) { bannerH = 92; if (capLines.length) bannerH += capLines.length * capLH + 20; for (const qb of qBlocks) bannerH += qb.lines.length * qLH + 34 + 24; bannerH += 60 + 34; }
-      const H = imgH + bannerH;
-      const c = document.createElement("canvas"); c.width = W; c.height = H; const ctx = c.getContext("2d")!;
-      ctx.fillStyle = "#0b1020"; ctx.fillRect(0, 0, W, imgH);
-      const s = Math.max(W / img.naturalWidth, imgH / img.naturalHeight), dw = img.naturalWidth * s, dh = img.naturalHeight * s;
-      ctx.drawImage(img, (W - dw) / 2, (imgH - dh) / 2, dw, dh);
-      if (hasText) {
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, imgH, W, bannerH);
-        ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.fillRect(0, imgH, W, 8); ctx.globalAlpha = 1; // accent matches the text colour
-        let y = imgH + 92;
-        if (capLines.length) { ctx.fillStyle = color; ctx.font = capF; for (const ln of capLines) { ctx.fillText(ln, pad, y); y += capLH; } y += 20; }
-        for (const qb of qBlocks) { ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.font = qF; for (const ln of qb.lines) { ctx.fillText(ln, pad, y); y += qLH; } ctx.globalAlpha = 1; ctx.font = "700 28px system-ui, sans-serif"; ctx.fillStyle = qb.marketing ? "#9a5a00" : "#8a86a3"; ctx.fillText(`— ${qb.by || "a parent"}${qb.marketing ? "  ★" : ""}`, pad, y + 2); y += 34 + 24; }
-        ctx.font = "600 27px system-ui, sans-serif"; ctx.fillStyle = "#8a86a3";
-        ctx.fillText([m.postedByName, m.childNames?.filter(Boolean).join(", "), fmtNice(m.date)].filter(Boolean).join(" · "), pad, imgH + bannerH - 40);
-      }
-      const a = document.createElement("a"); a.href = c.toDataURL("image/jpeg", 0.92); a.download = `${(m.childNames?.filter(Boolean)[0] ?? "moment").replace(/\s+/g, "-")}-${m.date}-${ratio}.jpg`; a.click();
-    } catch { const a = document.createElement("a"); a.href = m.photoUrl!; a.download = "moment.jpg"; a.target = "_blank"; a.click(); setError("Couldn’t compose the image — downloaded the plain photo instead."); }
+    const { caption, quotes } = resolveInc(m, inc);
+    const dataUrl = await composeMomentImage({ photoUrl: m.photoUrl, ratio, color, caption, quotes, footer: momentFooter(m), fit });
+    if (dataUrl) triggerDownload(dataUrl, `${(m.childNames?.filter(Boolean)[0] ?? "moment").replace(/\s+/g, "-")}-${m.date}-${ratio}.jpg`);
+    else { triggerDownload(m.photoUrl, "moment.jpg"); setError("Couldn’t compose the image — downloaded the plain photo instead."); }
     setDlFor(null);
+  }
+
+  // The moment's parent comments, snapshotted so the Email editor can re-toggle quotes.
+  const srcComments = (m: Moment) => (m.comments ?? []).filter((c) => c.role === "parent").map((c) => ({ text: c.text, byName: c.byName, marketing: c.marketing }));
+
+  // Build a plain photo-only saved asset (no banner) — used by "move all". Carries
+  // the source caption/comments so it's still fully editable in the Email area.
+  const photoOnlyAsset = (m: Moment, savedAt: string): SavedImage => ({
+    id: `img_${m.id}_${savedAt}`, momentId: m.id, photoUrl: m.photoUrl!, ratio: "square", fit: "contain", color: dlColor,
+    include: { caption: false, quote: false, comments: false }, sourceCaption: m.caption || undefined, sourceComments: srcComments(m),
+    footer: momentFooter(m), childName: m.childNames?.filter(Boolean)[0], activity: m.activity, savedAt,
+  });
+
+  // Push a Moments image into the Email area as a re-editable snapshot.
+  async function saveImageToEmail(m: Moment, ratio: "square" | "portrait" | "story", inc: { caption: boolean; quote: boolean; comments: boolean }, color: string, fit: "cover" | "contain") {
+    if (!m.photoUrl) return;
+    const savedAt = new Date().toISOString();
+    const asset: SavedImage = {
+      id: `img_${m.id}_${savedAt}`, momentId: m.id, photoUrl: m.photoUrl, ratio, fit, color,
+      include: inc, sourceCaption: m.caption || undefined, sourceComments: srcComments(m), footer: momentFooter(m),
+      childName: m.childNames?.filter(Boolean)[0], activity: m.activity, savedAt,
+    };
+    const cur = settings.emailAssets ?? {};
+    await save({ settings: { ...settings, emailAssets: { ...cur, images: [asset, ...(cur.images ?? [])] } } });
+    setDlFor(null); setSavedMsg("Saved to Email → find it in the Email area");
+  }
+
+  // Move EVERY current photo into the Email area (photo-only, skipping any already there).
+  async function saveAllPhotosToEmail() {
+    const savedIds = new Set((settings.emailAssets?.images ?? []).map((im) => im.momentId));
+    const missing = (moments ?? []).filter((m) => m.photoUrl && !savedIds.has(m.id));
+    if (!missing.length) { setSavedMsg("Every photo is already in the Email area"); return; }
+    const savedAt = new Date().toISOString();
+    const additions = missing.map((m) => photoOnlyAsset(m, savedAt));
+    const cur = settings.emailAssets ?? {};
+    await save({ settings: { ...settings, emailAssets: { ...cur, images: [...additions, ...(cur.images ?? [])] } } });
+    setSavedMsg(`Moved ${additions.length} photo${additions.length === 1 ? "" : "s"} to the Email area`);
+  }
+
+  // Toggle the "keep new photos flowing to Email" mirror.
+  async function toggleAutoAdd() {
+    const cur = settings.emailAssets ?? {};
+    const next = !cur.autoAddPhotos;
+    await save({ settings: { ...settings, emailAssets: { ...cur, autoAddPhotos: next } } });
+    setSavedMsg(next ? "Auto-add on — new Moments photos appear in the Email area automatically" : "Auto-add off");
   }
 
   const all = useMemo(() => moments ?? [], [moments]);
   const listingName = useMemo(() => new Map(listings.map((l) => [l.id, l.title])), [listings]);
   const featured = useMemo(() => { const m = new Map<string, string>(); for (const mo of all) mo.childIds.forEach((id, i) => { const n = mo.childNames?.[i]; if (n && !m.has(id)) m.set(id, n); }); return [...m.entries()]; }, [all]);
   const photos = useMemo(() => all.filter((m) => m.photoUrl), [all]);
-  const marketingQuotes = useMemo(() => all.flatMap((m) => (m.comments ?? []).filter((c) => c.marketing).map((c) => ({ m, c }))), [all]);
+  const marketingQuoteCount = useMemo(() => all.reduce((n, m) => n + (m.comments ?? []).filter((c) => c.marketing).length, 0), [all]);
   const tiles: [string, number][] = [["Today", all.filter((m) => m.date === todayIso()).length], ["This week", all.filter((m) => (m.date ?? "") >= weekStartIso()).length], ["Photos", photos.length], ["Children featured", featured.length]];
 
   const inWhen = (m: Moment) => galWhen === "all" || (galWhen === "today" ? m.date === todayIso() : (m.date ?? "") >= weekStartIso());
@@ -285,6 +360,32 @@ export function MomentsApp() {
     return [...m.entries()].map(([k, items]) => ({ id: k, label: k === "_none" ? "No listing" : (listingName.get(k) ?? "Listing"), items }));
   }, [galBase, listingName]);
   const openFolder = galFolder ? (galMode === "child" ? childFolders.find((f) => f.id === galFolder) : listingFolders.find((f) => f.id === galFolder)) : null;
+  // The big feed below tracks the open folder — pick a child and you see only
+  // that child's moments; otherwise the whole feed.
+  const feed = openFolder ? openFolder.items : all;
+
+  // Auto-add mirror: when on, any newly-posted photo not yet in the Email area
+  // is pushed there (photo-only). The empty-diff guard stops it looping on its
+  // own optimistic write.
+  useEffect(() => {
+    const ea = settings.emailAssets;
+    if (!ea?.autoAddPhotos) return;
+    const savedIds = new Set((ea.images ?? []).map((im) => im.momentId));
+    const missing = (moments ?? []).filter((m) => m.photoUrl && !savedIds.has(m.id));
+    if (!missing.length) return;
+    const t = setTimeout(() => {
+      const savedAt = new Date().toISOString();
+      const additions: SavedImage[] = missing.map((m) => ({
+        id: `img_${m.id}_${savedAt}`, momentId: m.id, photoUrl: m.photoUrl!, ratio: "square", fit: "contain", color: "#171534",
+        include: { caption: false, quote: false, comments: false }, sourceCaption: m.caption || undefined,
+        sourceComments: (m.comments ?? []).filter((c) => c.role === "parent").map((c) => ({ text: c.text, byName: c.byName, marketing: c.marketing })),
+        footer: [m.postedByName, m.childNames?.filter(Boolean).join(", "), fmtNice(m.date)].filter(Boolean).join(" · "),
+        childName: m.childNames?.filter(Boolean)[0], activity: m.activity, savedAt,
+      }));
+      save({ settings: { ...settings, emailAssets: { ...ea, images: [...additions, ...(ea.images ?? [])] } } });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [moments, settings, save]);
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -300,17 +401,8 @@ export function MomentsApp() {
       </div>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
+      {savedMsg && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]">✉️ {savedMsg}</div>}
       {posting && <PostForm activities={activities} settings={settings} save={save} listings={listings} onPosted={() => { setPosting(false); refresh(); }} onCancel={() => setPosting(false)} />}
-
-      {/* marketing quotes — parent comments the operator starred */}
-      {marketingQuotes.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
-          <div className="mb-2 text-[13px] font-extrabold" style={{ color: "#9a5a00", fontFamily: "var(--ff-display)" }}>⭐ Marketing quotes <span className="text-[11px] font-semibold text-[var(--ink-3)]">— starred parent comments you can reuse</span></div>
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">{marketingQuotes.map(({ m, c }, i) => (
-            <blockquote key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[12.5px] italic leading-[1.5] text-[var(--ink-2)]">“{c.text}”<div className="mt-1.5 text-[11px] not-italic text-[var(--ink-3)]">— {c.byName}{m.childNames?.filter(Boolean)[0] ? `, parent of ${m.childNames.filter(Boolean)[0]}` : ""}</div></blockquote>
-          ))}</div>
-        </div>
-      )}
 
       {/* gallery with folders */}
       {photos.length > 0 && (
@@ -323,6 +415,23 @@ export function MomentsApp() {
               {([["all", "All dates"], ["today", "Today"], ["week", "This week"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setGalWhen(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={galWhen === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l}</button>)}
             </div>
           </div>
+          {canManage && (() => {
+            const savedCount = settings.emailAssets?.images?.length ?? 0;
+            const savedIds = new Set((settings.emailAssets?.images ?? []).map((im) => im.momentId));
+            const unsaved = (moments ?? []).filter((m) => m.photoUrl && !savedIds.has(m.id)).length;
+            const quoteKeys = new Set((settings.emailAssets?.quotes ?? []).map((q) => `${q.text}|${q.byName ?? ""}`));
+            const quotesUnsaved = marketingQuoteCount - (moments ?? []).flatMap((m) => (m.comments ?? []).filter((c) => c.marketing && quoteKeys.has(`${c.text}|${c.byName ?? ""}`))).length;
+            const auto = !!settings.emailAssets?.autoAddPhotos;
+            return (
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-[#f6e2a8] bg-[#fffdf3] px-3 py-2">
+                <span className="text-[11.5px] font-bold text-[#9a5a00]">📥 Email marketing area</span>
+                <button type="button" onClick={saveAllPhotosToEmail} disabled={unsaved === 0} className="rounded-full px-3 py-0.5 text-[11px] font-extrabold text-white disabled:opacity-45" style={{ background: "#9a5a00" }}>✉ Move all photos{unsaved ? ` (${unsaved})` : ""}</button>
+                <button type="button" onClick={moveQuotesToEmail} disabled={quotesUnsaved <= 0} className="rounded-full border px-3 py-0.5 text-[11px] font-extrabold disabled:opacity-45" style={{ borderColor: "#9a5a00", color: "#9a5a00" }} title="Push starred parent quotes into the Email area's quotes folder. New stars auto-push too.">✉ Move marketing quotes{quotesUnsaved > 0 ? ` (${quotesUnsaved})` : ""}</button>
+                <button type="button" onClick={toggleAutoAdd} className="flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[11px] font-bold" style={auto ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }} title="When on, every new Moments photo is added to the Email area automatically.">{auto ? "✓ Auto-add new photos" : "Auto-add new photos"}</button>
+                <span className="text-[10.5px] text-[var(--ink-3)]">{savedCount} photo{savedCount === 1 ? "" : "s"} in Email · {auto ? "new photos sync automatically" : "manual"}</span>
+              </div>
+            );
+          })()}
           {galMode !== "all" && !openFolder ? (
             <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))" }}>
               {(galMode === "child" ? childFolders : listingFolders).map((f) => (
@@ -355,11 +464,13 @@ export function MomentsApp() {
       )}
 
       {/* feed */}
+      {openFolder && <div className="mb-2.5 flex items-center gap-2 text-[12.5px]"><span className="rounded-full bg-[#eef4fd] px-3 py-1 font-bold text-[#1d3a8f]">Showing 📁 {openFolder.label} · {feed.length} moment{feed.length === 1 ? "" : "s"}</span><button type="button" onClick={() => setGalFolder(null)} className="font-bold text-[var(--ink-3)] underline">Show all</button></div>}
       {!moments ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
         : all.length === 0 ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">No moments yet — share the first one.</div>
+        : feed.length === 0 ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">No moments in this folder.</div>
         : (
           <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-            {all.map((m) => { const a = actByName(m.activity), col = a?.c ?? PINK; return (
+            {feed.map((m) => { const a = actByName(m.activity), col = a?.c ?? PINK; return (
               <div key={m.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
                 {m.photoUrl ? (
                   <button type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative block aspect-square w-full bg-black">
@@ -384,12 +495,15 @@ export function MomentsApp() {
                       <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[11.5px]">
                         <div className="mb-1 font-bold text-[var(--ink-3)] uppercase tracking-[0.04em] text-[10px]">Format</div>
                         <div className="mb-2 flex flex-wrap gap-1.5">{([["square", "Square 1:1"], ["portrait", "Portrait 4:5"], ["story", "Story 9:16"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDlRatio(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={dlRatio === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l}</button>)}</div>
+                        <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Photo fit</div>
+                        <div className="mb-2 flex flex-wrap gap-1.5">{([["contain", "Whole photo (no crop)"], ["cover", "Fill the frame"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDlFit(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={dlFit === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l}</button>)}<span className="self-center text-[10.5px] text-[var(--ink-3)]">{dlFit === "contain" ? "Portrait/Story keep the full image over a soft blur." : "Portrait/Story crop to fill."}</span></div>
                         <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Add a banner below the photo with…</div>
                         <div className="mb-2 flex flex-wrap gap-1.5">
                           {([["caption", `Caption${m.caption ? "" : " (none)"}`, !!m.caption], ["quote", `Starred quote${nQuotes ? ` (${nQuotes})` : " (none)"}`, nQuotes > 0], ["comments", `All parent comments${nParent ? ` (${nParent})` : " (none)"}`, nParent > 0]] as const).map(([k, l, avail]) => <button key={k} type="button" disabled={!avail} onClick={() => inc(k)} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold transition-colors disabled:opacity-45" style={dlInc[k] && avail ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{dlInc[k] && avail ? "✓ " : ""}{l}</button>)}
                         </div>
                         <div className="mb-2 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Text colour</span>{["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"].map((sw) => <button key={sw} type="button" onClick={() => setDlColor(sw)} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: dlColor === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={dlColor} onChange={(e) => setDlColor(e.target.value)} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" /></div>
-                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc, dlColor)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>⬇ Download with banner</button></div>
+                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor, dlFit)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc, dlColor, dlFit)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>⬇ Download with banner</button></div>
+                        {canManage && <div className="mt-2 border-t border-[var(--line)] pt-2"><div className="mb-1 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Or keep it in the Email area</div><div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => saveImageToEmail(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor, dlFit)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">✉ Save photo only</button><button type="button" onClick={() => saveImageToEmail(m, dlRatio, dlInc, dlColor, dlFit)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: "#9a5a00" }}>✉ Save with banner</button></div></div>}
                       </div>
                     );
                   })()}
@@ -401,7 +515,7 @@ export function MomentsApp() {
                             <span className="flex-none font-bold" style={{ color: c.role === "parent" ? BLUE : "var(--ink)" }}>{c.byName}{c.role === "parent" ? "" : " (you)"}:</span>
                             <span className="flex-1 text-[var(--ink-2)]">{c.text}</span>
                           </div>
-                          {canManage && c.role === "parent" && <button type="button" onClick={() => toggleMarketing(m, idx)} className="mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-extrabold" style={c.marketing ? { borderColor: "#f0b100", background: "#fffdf3", color: "#9a5a00" } : { borderColor: "var(--line)", color: "var(--ink-3)" }} title="Marketing quotes appear in the strip at the top of this page and can be baked into a download.">{c.marketing ? "★ Marketing quote — tap to remove" : "☆ Use as a marketing quote"}</button>}
+                          {canManage && c.role === "parent" && <button type="button" onClick={() => toggleMarketing(m, idx)} className="mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-extrabold" style={c.marketing ? { borderColor: "#f0b100", background: "#fffdf3", color: "#9a5a00" } : { borderColor: "var(--line)", color: "var(--ink-3)" }} title="Starring saves this quote to the Email marketing area (quotes folder) and lets it be baked into a photo. Tap again to remove.">{c.marketing ? "★ Marketing quote — in Email area, tap to remove" : "☆ Use as a marketing quote"}</button>}
                         </div>
                       ))}
                       {canManage && <div className="mt-1 flex gap-1.5"><input value={replyVals[m.id] ?? ""} onChange={(e) => setReplyVals((v) => ({ ...v, [m.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") reply(m); }} placeholder="Reply…" className="flex-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" /><button type="button" onClick={() => reply(m)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" style={{ color: BLUE }}>Send</button></div>}
