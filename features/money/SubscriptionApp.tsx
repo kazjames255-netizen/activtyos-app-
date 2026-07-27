@@ -47,8 +47,10 @@ const daysLeft = (iso?: string | null) => (iso ? Math.max(0, Math.ceil((new Date
 /** Stripe's PaymentElement + confirm + POST /start, inside <Elements>. The
  *  card is captured as a SetupIntent (no charge); /start creates the real
  *  subscription — trial for a first-timer, charged now for a win-back. */
-function SetupForm({ plan, band, cadence, cta, onDone, onError }: {
+function SetupForm({ plan, band, cadence, cta, cardOnly, onDone, onError }: {
   plan: string; band?: string; cadence: string; cta: string;
+  /** Just swap the card on file (POST /card) — don't start a subscription. */
+  cardOnly?: boolean;
   onDone: () => void; onError: (msg: string) => void;
 }) {
   const stripeJs = useStripe();
@@ -67,7 +69,8 @@ function SetupForm({ plan, band, cadence, cta, onDone, onError }: {
           return;
         }
         try {
-          await apiPost("/api/subscription/start", { plan, band, cadence, setupIntentId: setupIntent.id });
+          if (cardOnly) await apiPost("/api/subscription/card", { setupIntentId: setupIntent.id });
+          else await apiPost("/api/subscription/start", { plan, band, cadence, setupIntentId: setupIntent.id });
           onDone();
         } catch (err) {
           onError(err instanceof Error ? err.message : "Couldn't start the subscription");
@@ -85,7 +88,7 @@ function SetupForm({ plan, band, cadence, cta, onDone, onError }: {
 }
 
 /** Fetches the SetupIntent and mounts Stripe Elements around SetupForm. */
-function CardCapture(props: { plan: string; band?: string; cadence: string; cta: string; onDone: () => void; onError: (msg: string) => void }) {
+function CardCapture(props: { plan: string; band?: string; cadence: string; cta: string; cardOnly?: boolean; onDone: () => void; onError: (msg: string) => void }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { onError } = props;
   const requested = useRef(false);
@@ -136,6 +139,8 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   // In-portal card-capture modal: set to the plan being started when the
   // tenant has no card on file yet (fresh start or a lapsed win-back).
   const [payFor, setPayFor] = useState<Plan | null>(null);
+  // "Update card" modal — swaps the card on file without touching the plan.
+  const [updatingCard, setUpdatingCard] = useState(false);
 
   const refresh = useCallback(() => {
     apiGet<Payload>("/api/subscription").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -328,7 +333,25 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
             <span className="ml-auto text-[13px] font-bold">{c.price != null ? `${gbp(c.price)}/${c.cadence === "year" ? "yr" : "mo"}` : ""}</span>
           </div>
           {c.cardLast4 && (
-            <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">💳 {c.cardBrand ? c.cardBrand[0].toUpperCase() + c.cardBrand.slice(1) : "Card"} ···· {c.cardLast4}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
+              <span>💳 {c.cardBrand ? c.cardBrand[0].toUpperCase() + c.cardBrand.slice(1) : "Card"} ···· {c.cardLast4}</span>
+              <button type="button" className="font-bold text-[var(--brand-2,#2f6bd8)] hover:underline" onClick={() => setUpdatingCard(true)}>Update card</button>
+              {(c.status === "canceled" || c.status === "none") && (
+                <button
+                  type="button"
+                  className="font-bold text-[var(--red,#c02636)] hover:underline"
+                  disabled={acting === "unlink"}
+                  onClick={async () => {
+                    setActing("unlink");
+                    try { await api("/api/subscription/card", { method: "DELETE" }); refresh(); }
+                    catch (e) { setError(e instanceof Error ? e.message : "Couldn't remove the card"); }
+                    finally { setActing(null); }
+                  }}
+                >
+                  {acting === "unlink" ? "Removing…" : "Remove card"}
+                </button>
+              )}
+            </div>
           )}
           <div className="mt-2 text-[12.5px] text-[var(--ink-3)]">
             {c.status === "trialing" && c.trialEndsAt && <>Free trial — <b className="text-[var(--ink)]">{daysLeft(c.trialEndsAt)} days left</b>, then billed from {fmtDay(c.trialEndsAt)}.</>}
@@ -361,6 +384,24 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
         <span className="text-[15px]">🔒</span>
         <div>Every plan settles parents’ payments to <b className="text-[var(--ink-2)]">your own account</b> — this fee is what you pay ActivityOS, never a cut of your bookings.{!data.billingConfigured && " Card billing is being connected."}</div>
       </div>
+
+      {/* Swap the card on file — plan and billing dates untouched. */}
+      {updatingCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setUpdatingCard(false)}>
+          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Update your card</div>
+              <button type="button" className="text-[12px] font-bold text-[var(--ink-3)]" onClick={() => setUpdatingCard(false)}>✕ Close</button>
+            </div>
+            <p className="mb-3 mt-1 text-[12px] text-[var(--ink-3)]">Future payments use the new card. Your plan and billing dates don't change.</p>
+            <CardCapture
+              plan={c.plan} cadence={c.cadence ?? "month"} cardOnly cta="Save card"
+              onDone={() => { setUpdatingCard(false); refresh(); }}
+              onError={(m) => { setUpdatingCard(false); setError(m); }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Card capture for a start/reactivation with no card on file. */}
       {payFor && (

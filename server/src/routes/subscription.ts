@@ -172,6 +172,52 @@ subscription.post("/checkout", async (req, res) => {
 
 const startSchema = putSchema.extend({ setupIntentId: z.string().max(80) });
 
+// POST /card — swap the card on file (SetupIntent from /checkout, confirmed
+// client-side). Future invoices — including a trial's day-7 charge — bill
+// the new card. Old cards are detached: one card on file, ever.
+subscription.post("/card", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  if (!stripe) { res.status(503).json({ error: "Card billing isn't configured on this server yet." }); return; }
+  const parsed = z.object({ setupIntentId: z.string().max(80) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const si = await stripe.setupIntents.retrieve(parsed.data.setupIntentId);
+  if (si.status !== "succeeded" || !si.payment_method || si.metadata?.tenantId !== auth.tenantId || !si.customer) {
+    res.status(400).json({ error: "Your card wasn't confirmed — try again." });
+    return;
+  }
+  const customer = typeof si.customer === "string" ? si.customer : si.customer.id;
+  const pmId = typeof si.payment_method === "string" ? si.payment_method : si.payment_method.id;
+  await stripe.customers.update(customer, { invoice_settings: { default_payment_method: pmId } });
+  const old = await stripe.customers.listPaymentMethods(customer, { type: "card" });
+  for (const p of old.data) if (p.id !== pmId) await stripe.paymentMethods.detach(p.id).catch(() => {});
+  const pm = await stripe.paymentMethods.retrieve(pmId);
+  await saveSub(auth.tenantId, { stripeCustomerId: customer, cardLast4: pm.card?.last4, cardBrand: pm.card?.brand });
+  res.json({ ok: true, cardLast4: pm.card?.last4 ?? null, cardBrand: pm.card?.brand ?? null });
+});
+
+// DELETE /card — unlink the saved card entirely. Only without a live
+// subscription (an active/trialing plan can't bill with no card — cancel
+// first); a canceling one keeps the card until it actually ends.
+subscription.delete("/card", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  if (!stripe) { res.status(503).json({ error: "Card billing isn't configured on this server yet." }); return; }
+  const sub = await subOf(auth.tenantId);
+  if (!sub?.stripeCustomerId) { res.json({ ok: true }); return; }
+  if (sub.stripeSubscriptionId && sub.status !== "canceled") {
+    res.status(400).json({ error: "Cancel your subscription first — a live plan can't bill without a card." });
+    return;
+  }
+  const pms = await stripe.customers.listPaymentMethods(sub.stripeCustomerId, { type: "card" });
+  for (const p of pms.data) await stripe.paymentMethods.detach(p.id).catch(() => {});
+  await db.collection("tenants").doc(auth.tenantId).set(
+    { subscription: { cardLast4: null, cardBrand: null } },
+    { merge: true },
+  );
+  res.json({ ok: true });
+});
+
 // POST /start — the card is on file (SetupIntent succeeded); create the real
 // Stripe Subscription. First-ever start gets the 7-day trial with the card
 // charged automatically on day 7; a lapsed tenant restarting is charged now.
