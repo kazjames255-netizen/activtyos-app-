@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { notify, parentEmailForChild } from "../lib/notify";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (Pupils) — the photos a provider shares of the day, and the feed a
@@ -84,6 +85,38 @@ moments.post("/", async (req, res) => {
     createdAt: new Date().toISOString(),
   };
   const ref = await col.add(doc);
+
+  // Tell the tagged children's families — the parent app already promises
+  // "parents are notified & emailed" when a moment is shared. One
+  // notification per family, however many of their children are in the shot;
+  // an unlinked child (no parent account) simply has nobody to tell.
+  const emails = await Promise.all(parsed.data.childIds.map((id) => parentEmailForChild(id)));
+  const byFamily = new Map<string, string[]>();
+  parsed.data.childIds.forEach((id, i) => {
+    const email = emails[i];
+    if (!email) return;
+    byFamily.set(email, [...(byFamily.get(email) ?? []), consent.names[id] || "your child"]);
+  });
+  const what = doc.photoType === "work" ? "a photo of their work" : "a new photo";
+  await Promise.all(
+    [...byFamily].map(([email, names]) =>
+      notify({
+        tenantId: auth.tenantId!,
+        to: { kind: "parent", email },
+        category: "moment",
+        title: `A new moment featuring ${names.join(" and ")}`,
+        body: doc.caption || (doc.activity ? `${doc.activity} — ${what} from the day.` : `${what[0].toUpperCase()}${what.slice(1)} from the day.`),
+        subject: `${names.join(" and ")}: a new moment was shared`,
+        emailHtml:
+          `<p><b>${names.join(" and ")}</b> ${names.length > 1 ? "were" : "was"} featured in ${what} shared today${doc.activity ? ` from <b>${doc.activity}</b>` : ""}.</p>` +
+          (doc.caption ? `<p>“${doc.caption}”</p>` : "") +
+          `<p>See it — and leave a comment — in your Moments feed.</p>`,
+        href: "/custdash/moments",
+        ref: ref.id,
+      }),
+    ),
+  );
+
   res.status(201).json({ id: ref.id, ...doc });
 });
 

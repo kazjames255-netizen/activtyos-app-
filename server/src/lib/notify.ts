@@ -29,7 +29,8 @@ export type NotifyCategory =
   | "booking"
   | "trip"
   | "calendar"
-  | "message";
+  | "message"
+  | "moment";
 
 export interface NotificationDoc {
   tenantId: string;
