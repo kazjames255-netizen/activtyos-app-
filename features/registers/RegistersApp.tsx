@@ -180,9 +180,18 @@ export function RegistersApp() {
   const [dlOpen, setDlOpen] = useState(false);
   const [openKid, setOpenKid] = useState<Attendee | null>(null);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const refresh = useCallback(() => {
-    Promise.all(WINDOW.map((d) => apiGet<Session[]>(`/api/registers?date=${d}`).then((l) => [d, l] as const).catch(() => [d, [] as Session[]] as const)))
-      .then((pairs) => { setDays(Object.fromEntries(pairs)); setReady(true); setError(null); })
+    // Per-day fetch, tolerant of a single day failing — but track whether EVERY
+    // day errored, so a dead API (e.g. Firestore quota) shows a "couldn't load"
+    // state instead of masquerading as an empty "nothing runs" schedule.
+    Promise.all(WINDOW.map((d) => apiGet<Session[]>(`/api/registers?date=${d}`).then((l) => [d, l] as const).catch(() => [d, null] as const)))
+      .then((pairs) => {
+        const ok = pairs.filter((p) => p[1] !== null) as (readonly [string, Session[]])[];
+        setLoadFailed(ok.length === 0);
+        setDays(Object.fromEntries(ok));
+        setReady(true); setError(null);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load the register"));
   }, [WINDOW]);
   useEffect(() => { refresh(); }, [refresh]);
@@ -264,7 +273,15 @@ export function RegistersApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
       {listingsAll.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing runs in the next few days — nothing to register.</div>
+        loadFailed ? (
+          <div className="rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-12 text-center">
+            <div className="text-[14px] font-extrabold text-[#c02636]">Couldn&rsquo;t load the register</div>
+            <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] text-[#c02636]/85">The service didn&rsquo;t respond — this is usually temporary. Your bookings are safe; nothing has been lost.</p>
+            <button type="button" onClick={refresh} className="mt-3 rounded-full bg-[#c02636] px-4 py-1.5 text-[12px] font-extrabold text-white">Try again</button>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing runs in the next few days — nothing to register.</div>
+        )
       ) : (
         <>
           {/* Hero — blue/white gradient tile with controls + stat tiles */}
