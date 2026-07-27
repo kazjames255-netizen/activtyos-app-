@@ -32,20 +32,32 @@ const fired = () => db.collection("schedulerFired");
  *  instance may retry the delivery. */
 const LEASE_MS = 5 * 60_000;
 
+/** Local hint of each sweep's next due time, learned from the last lock
+ *  read. Purely an optimisation: it skips transactions that would certainly
+ *  lose (Spark-plan quota is a hard cap, so idle polling shouldn't spend
+ *  ops). Firestore stays the authority — a stale hint just means one extra
+ *  transaction, never a duplicate run. */
+const nextDueHint = new Map<string, number>();
+
 /** All instances poll frequently; this lock decides which one actually runs
  *  the interval. Returns true for the single winner. */
 async function claimSweep(name: string, everyMs: number): Promise<boolean> {
   const now = Date.now();
+  if (now < (nextDueHint.get(name) ?? 0)) return false;
   try {
     return await db.runTransaction(async (tx) => {
       const ref = locks().doc(name);
       const snap = await tx.get(ref);
       const nextAt = snap.exists ? Date.parse((snap.get("nextRunAt") as string) ?? "") || 0 : 0;
-      if (now < nextAt) return false;
+      if (now < nextAt) {
+        nextDueHint.set(name, nextAt);
+        return false;
+      }
       tx.set(ref, {
         nextRunAt: new Date(now + everyMs).toISOString(),
         lastRunAt: new Date(now).toISOString(),
       });
+      nextDueHint.set(name, now + everyMs);
       return true;
     });
   } catch {
