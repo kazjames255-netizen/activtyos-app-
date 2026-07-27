@@ -132,6 +132,15 @@ registers.get("/", async (req, res) => {
         emergencyName: c.emergencyName as string | undefined,
         emergencyPhone: c.emergencyPhone as string | undefined,
         photoConsent: c.photoConsent as boolean | undefined,
+        // Fuller picture for the register's child card (shown on tap only).
+        likes: c.likes as string | undefined,
+        dislikes: c.dislikes as string | undefined,
+        swimming: c.swimming as string | undefined,
+        sex: c.sex as string | undefined,
+        suncreamConsent: c.suncreamConsent as boolean | undefined,
+        firstAidConsent: c.firstAidConsent as boolean | undefined,
+        walkHomeConsent: c.walkHomeConsent as boolean | undefined,
+        answers: (c.answers as Record<string, string> | undefined) ?? undefined,
       }];
     }),
   );
@@ -149,6 +158,8 @@ registers.get("/", async (req, res) => {
         ref: b.ref,
         booker: b.booker,
         email: b.email ?? "",
+        phone: b.phone ?? "",
+        note: b.note ?? "",
         bookingStatus: b.status,
         seats: b.seats ?? 1,
         children: b.kids?.length

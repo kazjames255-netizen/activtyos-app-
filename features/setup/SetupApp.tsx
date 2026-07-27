@@ -992,6 +992,12 @@ function QuestionsEditor({
                   <Toggle on={!!q.required} onChange={(v) => patch(q.id, (x) => ({ ...x, required: v }))} labels={["Yes", "No"]} />
                 </div>
 
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-bold">Show on child info for staff</span>
+                  <Toggle on={q.showOnRegister !== false} onChange={(v) => patch(q.id, (x) => ({ ...x, showOnRegister: v }))} labels={["Yes", "No"]} />
+                  <span className="text-[11.5px] text-[var(--ink-3)]">The answer appears on the child&rsquo;s register card on the day.</span>
+                </div>
+
                 <div className="mt-3">
                   <FieldLabel>Only ask about children aged</FieldLabel>
                   <div className="flex flex-wrap items-center gap-1.5">

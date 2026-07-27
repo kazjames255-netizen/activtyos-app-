@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { useSettings, groupForAge, type RatioGroup } from "@/lib/settings";
+import { useSettings, type ChildQuestion } from "@/lib/settings";
 import { Button } from "@/components/ui";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -24,11 +24,12 @@ const BLUE = "#1d3a8f", GREEN = "#0f9d58", RED = "#e11d48", AMBER = "#d97706";
 const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 
 interface Attendance { status?: "in" | "absent"; inAt?: string | null; collectedAt?: string | null; collectedBy?: string | null }
-interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean }
-interface Attendee { ref: string; booker: string; email: string; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
+interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean; likes?: string; dislikes?: string; swimming?: string; sex?: string; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; answers?: Record<string, string> }
+interface Attendee { ref: string; booker: string; email: string; phone?: string; note?: string; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
 interface Head { n: number; by: string; at: string }
 interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null }
 type Action = "in" | "absent" | "collect" | "reset";
+type FlagKind = "" | "allergy" | "medical" | "send" | "dietary";
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const shiftDay = (iso: string, by: number) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + by); return d.toISOString().slice(0, 10); };
@@ -36,17 +37,24 @@ const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en
 const rel = (iso: string) => (iso === todayIso() ? "Today" : iso === shiftDay(todayIso(), 1) ? "Tomorrow" : dow(iso));
 const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
+// Age from a date of birth vs a "today" string (yyyy-mm-dd) — pure, no Date.now
+// in render. Handles ISO (2016-12-12) and UK (12/12/2016) dob strings.
+const ageFrom = (dob?: string, today?: string): number | undefined => {
+  if (!dob || !today) return undefined;
+  const iso = dob.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const uk = dob.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  let y: number, m: number, d: number;
+  if (iso) { y = +iso[1]; m = +iso[2]; d = +iso[3]; }
+  else if (uk) { d = +uk[1]; m = +uk[2]; y = +uk[3]; }
+  else return undefined;
+  const [ty, tm, td] = today.split("-").map(Number);
+  let age = ty - y; if (tm < m || (tm === m && td < d)) age--;
+  return age >= 0 && age < 120 ? age : undefined;
+};
 const st = (a: Attendee): "present" | "absent" | "notArrived" => (a.attendance?.status === "in" ? "present" : a.attendance?.status === "absent" ? "absent" : "notArrived");
 const AV = ["#fde2e4", "#e2f0d9", "#e0e7ff", "#fff3d6", "#e5f6f8", "#f3e8ff", "#ffe9d6", "#dce7ff"];
 const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 
-function staffNeeded(children: { age?: number }[], groups: RatioGroup[]): number {
-  const total = children.length; if (!total) return 0; if (!groups.length) return Math.ceil(total / 8);
-  const per = new Map<string, number>(); let un = 0;
-  for (const c of children) { const g = c.age != null ? groupForAge(groups, c.age) : null; if (g) per.set(g.id, (per.get(g.id) ?? 0) + 1); else un++; }
-  let need = 0; for (const [id, n] of per) { const g = groups.find((x) => x.id === id); need += Math.ceil(n / (g?.targetRatio || 8)); }
-  return Math.max(need + (un ? Math.ceil(un / 8) : 0), 1);
-}
 
 function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: string }) {
   const m = kind === "allergy" ? { bg: "#fde2e4", fg: "#c02636", label: "Allergy" } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, label: "Medical" } : { bg: "#f3e8ff", fg: "#6d28d9", label: "SEND" };
@@ -54,32 +62,125 @@ function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: s
 }
 
 // ── Child detail card ──────────────────────────────────────────────────────
-function ChildModal({ a, showTimes, fields, onClose }: { a: Attendee; showTimes: boolean; fields: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean }; onClose: () => void }) {
-  const c = a.child; const kid = a.children[0];
-  const row = (label: string, v?: ReactNode) => (v ? <div className="flex gap-2 py-1 text-[12.5px]"><span className="w-[130px] flex-none text-[var(--ink-3)]">{label}</span><span className="min-w-0 flex-1 font-semibold text-[var(--ink)]">{v}</span></div> : null);
+const SWIM_LABEL: Record<string, string> = { none: "Non-swimmer", weak: "Weak / needs support", confident: "Confident", strong: "Strong swimmer" };
+type Tint = { bg: string; fg: string };
+const T = {
+  allergy: { bg: "#fee2e2", fg: "#b91c1c" }, medical: { bg: "#dbeafe", fg: "#1d4ed8" }, dietary: { bg: "#dcfce7", fg: "#15803d" },
+  send: { bg: "#f3e8ff", fg: "#7c3aed" }, swim: { bg: "#cffafe", fg: "#0e7490" }, likes: { bg: "#dcfce7", fg: "#15803d" },
+  dislikes: { bg: "#fef3c7", fg: "#b45309" }, care: { bg: "#eef2ff", fg: "#4338ca" }, neutral: { bg: "#f1f5f9", fg: "#475569" },
+  password: { bg: "#fef3c7", fg: "#92400e" }, emergency: { bg: "#ffe4e6", fg: "#be123c" }, ask: { bg: "#e0e7ff", fg: "#3730a3" },
+} as const;
+// One coloured fact tile; renders nothing when empty so sections self-collapse.
+function Fact({ label, value, tint, full }: { label: string; value?: ReactNode; tint: Tint; full?: boolean }) {
+  if (value === undefined || value === null || value === "" || value === false) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-[460px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3">
-          {c?.photo
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={c.photo} alt="" className="h-12 w-12 rounded-full object-cover" />
-            : <span className="flex h-12 w-12 items-center justify-center rounded-full text-[16px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
-          <div className="min-w-0"><div className="truncate text-[16px] font-extrabold">{kid?.name}</div><div className="text-[12px] text-[var(--ink-3)]">{kid?.age != null ? `Age ${kid.age}` : ""}{c?.dob ? ` · ${c.dob}` : ""}{showTimes && a.attendance?.inAt ? ` · in ${timeOf(a.attendance.inAt)}` : ""}</div></div>
+    <div className={`rounded-xl px-3 py-2 ${full ? "col-span-2" : ""}`} style={{ background: tint.bg }}>
+      <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em]" style={{ color: tint.fg }}>{label}</div>
+      <div className="mt-0.5 text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{value}</div>
+    </div>
+  );
+}
+function SectionTitle({ dot, children }: { dot: string; children: ReactNode }) {
+  return <div className="mb-1.5 mt-3.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: dot }} /><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{children}</span></div>;
+}
+function ChildModal({ a, showTimes, fields, questions, ctx, onClose }: { a: Attendee; showTimes: boolean; fields: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean }; questions: ChildQuestion[]; ctx: { attend: { date: string; start: string; end: string; listing: string }[]; siblings: string[] }; onClose: () => void }) {
+  const c = a.child; const kid = a.children[0];
+  const state = st(a);
+  const [showDays, setShowDays] = useState(false);
+  const yesNo = (v?: boolean) => (v === true ? "Yes" : v === false ? "No" : undefined);
+  const answers = c?.answers ?? {};
+  const qById = new Map(questions.map((q) => [q.id, q] as const));
+  // Only answers whose question is flagged to show on the register (default on
+  // for legacy questions with no flag set).
+  const answered = Object.entries(answers).filter(([id, v]) => v != null && String(v).trim() !== "" && (qById.get(id)?.showOnRegister !== false));
+  const anyHealth = c?.allergies || c?.medical || c?.dietary || c?.send || c?.sendPlanName || c?.swimming;
+  const statusChip = state === "present" ? { t: showTimes && a.attendance?.inAt ? `Signed in · ${timeOf(a.attendance.inAt)}` : "Signed in", bg: "rgba(255,255,255,.22)" }
+    : state === "absent" ? { t: "Absent / ill", bg: "rgba(255,255,255,.22)" } : { t: "Not arrived", bg: "rgba(255,255,255,.16)" };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="max-h-[88vh] w-full max-w-[500px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {/* Gradient header */}
+        <div className="relative px-5 pb-4 pt-5 text-white" style={{ background: HERO }}>
+          <button type="button" onClick={onClose} className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
+          <div className="flex items-center gap-3">
+            {c?.photo
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={c.photo} alt="" className="h-14 w-14 flex-none rounded-2xl object-cover ring-2 ring-white/60" />
+              : <span className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl text-[20px] font-extrabold text-[#1d3a8f] ring-2 ring-white/60" style={{ background: "rgba(255,255,255,.9)" }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
+            <div className="min-w-0">
+              <div className="truncate text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{kid?.name}</div>
+              <div className="mt-0.5 text-[12px] text-white/85">{kid?.age != null ? `Age ${kid.age}` : ""}{c?.dob ? ` · born ${c.dob}` : ""}{c?.sex ? ` · ${c.sex}` : ""}</div>
+              {ctx.siblings.length > 0 && <div className="mt-0.5 truncate text-[11px] text-white/75">👥 Sibling of {ctx.siblings.join(", ")}</div>}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="rounded-full px-2.5 py-1 text-[10.5px] font-extrabold" style={{ background: statusChip.bg }}>{statusChip.t}</span>
+            {c?.allergies && <span className="rounded-full bg-white px-2.5 py-1 text-[10.5px] font-extrabold" style={{ color: T.allergy.fg }}>⚠ Allergy</span>}
+            {c?.medical && <span className="rounded-full bg-white px-2.5 py-1 text-[10.5px] font-extrabold" style={{ color: T.medical.fg }}>Medical</span>}
+            {(c?.send || c?.sendPlanName) && <span className="rounded-full bg-white px-2.5 py-1 text-[10.5px] font-extrabold" style={{ color: T.send.fg }}>SEND</span>}
+          </div>
         </div>
-        <div className="mt-3 border-t border-[var(--line)] pt-2">
-          {row("Allergies", c?.allergies && <span className="text-[#e11d48]">⚠ {c.allergies}</span>)}
-          {row("Medical", c?.medical)}{row("Dietary", c?.dietary)}
-          {row("SEND / needs", (c?.send || c?.sendPlanName) && `${c?.send ?? ""}${c?.sendPlanName ? " · plan on file" : ""}`)}
-          {row("Care & personality", c?.careNotes)}
-          {row("Photo consent", c?.photoConsent === false ? <span className="text-[#6d28d9]">No — do not photograph</span> : c?.photoConsent ? "Yes" : undefined)}
-          {fields.school && row("School", c?.school)}
-          {fields.password && row("Collection password", c?.collectionPassword && <span className="text-[#9a5a00]">🔑 {c.collectionPassword}</span>)}
-          {fields.emergency && row("Emergency contact", (c?.emergencyName || c?.emergencyPhone) && `${c?.emergencyName ?? ""}${c?.emergencyPhone ? ` · ${c.emergencyPhone}` : ""}`)}
-          {fields.contact && row("Booker", `${a.booker} · #${a.ref}`)}
-          {a.attendance?.collectedAt && row("Collected", `${showTimes ? timeOf(a.attendance.collectedAt) : "yes"}${a.attendance.collectedBy ? ` · by ${a.attendance.collectedBy}` : ""}`)}
+
+        {/* Body */}
+        <div className="max-h-[calc(88vh-140px)] overflow-y-auto px-5 pb-5 pt-1">
+          <SectionTitle dot={T.allergy.fg}>Health &amp; safeguarding</SectionTitle>
+          {anyHealth ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Fact label="Allergies" tint={T.allergy} full value={c?.allergies && <span>⚠ {c.allergies}</span>} />
+              <Fact label="Medical" tint={T.medical} value={c?.medical} />
+              <Fact label="Dietary" tint={T.dietary} value={c?.dietary} />
+              <Fact label="SEND / needs" tint={T.send} value={(c?.send || c?.sendPlanName) && `${c?.send ?? ""}${c?.sendPlanName ? `${c?.send ? " · " : ""}plan on file` : ""}`} />
+              <Fact label="Swimming" tint={T.swim} value={c?.swimming && (SWIM_LABEL[c.swimming] ?? c.swimming)} />
+            </div>
+          ) : <div className="rounded-xl bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold text-[#15803d]">✓ Nothing flagged</div>}
+
+          {(c?.careNotes || c?.likes || c?.dislikes) && <>
+            <SectionTitle dot={T.care.fg}>Personality &amp; care</SectionTitle>
+            <div className="grid grid-cols-2 gap-2">
+              <Fact label="Care notes" tint={T.care} full value={c?.careNotes} />
+              <Fact label="Likes / settles them" tint={T.likes} value={c?.likes} />
+              <Fact label="Dislikes / avoid" tint={T.dislikes} value={c?.dislikes} />
+            </div>
+          </>}
+
+          {answered.length > 0 && <>
+            <SectionTitle dot={T.ask.fg}>Parent&rsquo;s answers</SectionTitle>
+            <div className="grid grid-cols-2 gap-2">{answered.map(([id, v]) => <Fact key={id} label={qById.get(id)?.label ?? id} tint={T.ask} full value={String(v)} />)}</div>
+          </>}
+
+          <SectionTitle dot={T.send.fg}>Consents</SectionTitle>
+          <div className="flex flex-wrap gap-1.5">
+            {[["Photos", c?.photoConsent === false ? "No" : yesNo(c?.photoConsent)], ["Suncream", yesNo(c?.suncreamConsent)], ["First aid", yesNo(c?.firstAidConsent)], ["Walk home", yesNo(c?.walkHomeConsent)]].map(([l, v]) => v == null ? null : (
+              <span key={l} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={v === "Yes" ? { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" } : { borderColor: "#fecdd3", background: "#fff1f2", color: "#be123c" }}>{l}: {v}</span>
+            ))}
+          </div>
+
+          <SectionTitle dot={T.medical.fg}>Contact &amp; collection</SectionTitle>
+          <div className="grid grid-cols-2 gap-2">
+            <Fact label="Main contact" tint={T.medical} full value={`${a.booker}${a.phone ? ` · ${a.phone}` : ""}${a.email ? ` · ${a.email}` : ""}`} />
+            {fields.emergency && <Fact label="Emergency contact" tint={T.emergency} full value={(c?.emergencyName || c?.emergencyPhone) && `${c?.emergencyName ?? ""}${c?.emergencyPhone ? ` · ${c.emergencyPhone}` : ""}`} />}
+            {fields.password && <Fact label="Collection password" tint={T.password} value={c?.collectionPassword && <span>🔑 {c.collectionPassword}</span>} />}
+            {fields.school && <Fact label="School" tint={T.neutral} value={c?.school} />}
+            <Fact label="Booking ref" tint={T.neutral} value={`#${a.ref}`} />
+            <Fact label="Booking notes" tint={T.neutral} full value={a.note} />
+            <Fact label="Collected" tint={T.dietary} full value={a.attendance?.collectedAt && `${showTimes ? timeOf(a.attendance.collectedAt) : "yes"}${a.attendance.collectedBy ? ` · by ${a.attendance.collectedBy}` : ""}`} />
+          </div>
+
+          {ctx.attend.length > 0 && <>
+            <SectionTitle dot={BLUE}>Attending</SectionTitle>
+            <button type="button" onClick={() => setShowDays((v) => !v)} className="flex w-full items-center justify-between rounded-xl bg-[#eef4fd] px-3 py-2 text-left">
+              <span className="text-[12.5px] font-extrabold text-[#1d3a8f]">📅 {ctx.attend.length} {ctx.attend.length === 1 ? "session" : "sessions"} booked</span>
+              <span className="text-[11px] font-bold text-[#1d3a8f]">{showDays ? "hide ▲" : "show all ▼"}</span>
+            </button>
+            {showDays && <ol className="mt-1.5 space-y-1">{ctx.attend.map((s, i) => (
+              <li key={`${s.date}-${s.start}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px]">
+                <span className="font-extrabold text-[var(--ink)]">{dow(s.date)}</span>
+                <span className="text-[var(--ink-2)]">🕒 {s.start}–{s.end}</span>
+                <span className="text-[var(--ink-3)]">· {s.listing}</span>
+              </li>
+            ))}</ol>}
+          </>}
         </div>
-        <div className="mt-3 flex justify-end border-t border-[var(--line)] pt-3"><Button sm onClick={onClose}>Close</Button></div>
       </div>
     </div>
   );
@@ -154,11 +255,10 @@ function DownloadDialog({ sessions, date, onClose }: { sessions: Session[]; date
 
 /** register view — freelancer, company, franchise and staff portals. */
 export function RegistersApp() {
-  const { settings } = useSettings();
+  const { settings, questions } = useSettings();
   const router = useRouter();
   const portal = (usePathname()?.split("/")[1]) || "freelancer";
   const incidentHref = `/${portal}/${portal === "staff" ? "incident" : "incidents"}`;
-  const groups = settings.ratioGroups ?? [];
   const showTimes = settings.registers?.timestamps ?? true;
   const fields = settings.registers?.fields ?? { contact: true, emergency: true, password: true, school: true };
   const pinRequired = !!settings.registers?.requireCollectionPin;
@@ -176,6 +276,8 @@ export function RegistersApp() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"age" | "start" | "name">("age");
   const [pass, setPass] = useState("");
+  const [flag, setFlag] = useState<FlagKind>("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rollCall, setRollCall] = useState(false);
   const [dlOpen, setDlOpen] = useState(false);
   const [openKid, setOpenKid] = useState<Attendee | null>(null);
@@ -195,6 +297,15 @@ export function RegistersApp() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load the register"));
   }, [WINDOW]);
   useEffect(() => { refresh(); }, [refresh]);
+  // Fetch a single day the initial 10-day window didn't cover (calendar jumps /
+  // arrowing past the window). Cached once loaded, so it only fetches once.
+  const ensureDay = useCallback(async (d: string) => {
+    if (days[d] !== undefined) return;
+    try { const l = await apiGet<Session[]>(`/api/registers?date=${d}`); setDays((prev) => ({ ...prev, [d]: l })); }
+    catch { setDays((prev) => ({ ...prev, [d]: [] })); }
+  }, [days]);
+  const goDay = (delta: number) => { const d = shiftDay(date, delta); setDate(d); ensureDay(d); };
+  const pickDate = (d: string) => { if (!d) return; setDate(d); ensureDay(d); };
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setReadOnly(me.role === "platform")).catch(() => {}); }, []);
   useRealtime(["registers", "bookings", "blocks"], refresh);
 
@@ -223,17 +334,19 @@ export function RegistersApp() {
   }
   function messageOne(a: Attendee) {
     if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; }
-    router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(a.email)}`);
+    router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(a.email.trim().toLowerCase())}`);
   }
+  // Quick-log med / first-aid / incident straight from the register, child pre-filled.
+  const medFor = (a: Attendee) => router.push(`/${portal}/medication?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
+  const accidentFor = (a: Attendee) => router.push(`/${portal}/accidents?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
+  const incidentFor = (a: Attendee) => router.push(`${incidentHref}?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
 
   // Listings that run somewhere in the window; pick the active one.
   const listingsAll = useMemo(() => {
-    const m = new Map<string, string>(); for (const d of WINDOW) for (const s of days[d] ?? []) m.set(s.listingId, s.listingName); return [...m.entries()];
-  }, [days, WINDOW]);
+    const m = new Map<string, string>(); for (const d of Object.keys(days)) for (const s of days[d] ?? []) m.set(s.listingId, s.listingName); return [...m.entries()];
+  }, [days]);
   const active = activeListing || listingsAll[0]?.[0] || "";
   const activeName = listingsAll.find(([id]) => id === active)?.[1] ?? "";
-  // Dates in the window that this listing runs — the accordion rows.
-  const listingDates = WINDOW.filter((d) => (days[d] ?? []).some((s) => s.listingId === active));
   const sessionsOn = (d: string) => (days[d] ?? []).filter((s) => s.listingId === active);
   const daySessions = sessionsOn(date);
 
@@ -243,22 +356,57 @@ export function RegistersApp() {
   const flat: FlatRow[] = daySessions.flatMap((s) => s.attendees.map((a) => ({ a, blockId: s.blockId, start: s.start, end: s.end })));
   const passes = [...new Set(daySessions.map((s) => `${s.start}–${s.end}`))];
   const inPass = (r: FlatRow) => !pass || `${r.start}–${r.end}` === pass;
+  const term = q.trim().toLowerCase();
+  // Pick the comparator from `sort` HERE in the render body (not buried inside a
+  // .sort() callback) so the React Compiler tracks `sort` as a dependency and the
+  // list re-orders the moment the chip changes. Name breaks every tie.
+  // Age falls back to the child record's DOB when the booking has no age — else
+  // every child reads as "unknown" and the Age sort can't order anything.
+  const ageOf = (a: Attendee) => a.children[0]?.age ?? ageFrom(a.child?.dob, anchor);
+  const byName = (x: FlatRow, y: FlatRow) => (x.a.children[0]?.name ?? "").localeCompare(y.a.children[0]?.name ?? "");
+  const cmp: (x: FlatRow, y: FlatRow) => number =
+    sort === "name" ? byName
+    : sort === "start" ? (x, y) => x.start.localeCompare(y.start) || byName(x, y)
+    : (x, y) => ((ageOf(x.a) ?? 999) - (ageOf(y.a) ?? 999)) || byName(x, y);
+  const hasFlag = (a: Attendee, k: FlagKind) => k === "allergy" ? !!a.child?.allergies : k === "medical" ? !!a.child?.medical : k === "dietary" ? !!a.child?.dietary : k === "send" ? !!(a.child?.send || a.child?.sendPlanName) : true;
   const flatShown = flat
-    .filter(inPass)
-    .filter(({ a }) => !q.trim() || a.children.some((c) => c.name.toLowerCase().includes(q.trim().toLowerCase())) || a.booker.toLowerCase().includes(q.trim().toLowerCase()))
-    .sort((x, y) => sort === "name" ? (x.a.children[0]?.name ?? "").localeCompare(y.a.children[0]?.name ?? "") : sort === "start" ? (x.start.localeCompare(y.start) || (x.a.children[0]?.age ?? 0) - (y.a.children[0]?.age ?? 0)) : (x.a.children[0]?.age ?? 999) - (y.a.children[0]?.age ?? 999));
+    .filter((r) => !pass || `${r.start}–${r.end}` === pass)
+    .filter(({ a }) => !flag || hasFlag(a, flag))
+    .filter(({ a }) => !term || a.children.some((c) => c.name.toLowerCase().includes(term)) || a.booker.toLowerCase().includes(term))
+    .slice()
+    .sort(cmp);
+  // Row selection → bulk In / Out / Absent.
+  const shownRefs = flatShown.map(({ a }) => a.ref);
+  const allSelected = shownRefs.length > 0 && shownRefs.every((r) => selected.has(r));
+  const toggleSel = (ref: string) => setSelected((s) => { const n = new Set(s); if (n.has(ref)) n.delete(ref); else n.add(ref); return n; });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(shownRefs));
+  async function bulkMark(action: Action) {
+    const items = flatShown.filter(({ a }) => selected.has(a.ref));
+    if (!items.length) return;
+    setBulkBusy(action); setError(null);
+    try { for (const it of items) await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action }); refresh(); setSelected(new Set()); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
+    setBulkBusy(null);
+  }
+  // Counts for the filter tags (over the whole day / current pass, pre-search).
+  const inPassRows = flat.filter((r) => !pass || `${r.start}–${r.end}` === pass);
+  const flagCounts = { allergy: inPassRows.filter((r) => hasFlag(r.a, "allergy")).length, medical: inPassRows.filter((r) => hasFlag(r.a, "medical")).length, dietary: inPassRows.filter((r) => hasFlag(r.a, "dietary")).length, send: inPassRows.filter((r) => hasFlag(r.a, "send")).length };
 
   // Everyone currently shown (respects the pass filter + search) → the audience
   // for "Message all attending", de-duplicated by email.
-  const attendingEmails = [...new Set(flatShown.map(({ a }) => a.email).filter(Boolean))];
+  // Recipients de-duplicate by email (normalised) — two children in one family
+  // share a parent, so that parent is messaged ONCE. The button, though, counts
+  // attending children, which is what "all attending" means to the eye.
+  const attendingEmails = [...new Set(flatShown.map(({ a }) => a.email.trim().toLowerCase()).filter(Boolean))];
+  const attendingKids = flatShown.reduce((n, { a }) => n + a.children.length, 0);
   const dayCounts = (d: string) => { const ss = sessionsOn(d); return { booked: ss.reduce((n, s) => n + s.counts.expected, 0), present: ss.reduce((n, s) => n + s.counts.present, 0) }; };
   // Head count / stats aggregate the day (respecting the pass filter).
   const passBlocks = daySessions.filter((s) => !pass || `${s.start}–${s.end}` === pass);
   const agg = passBlocks.reduce((o, s) => ({ expected: o.expected + s.counts.expected, present: o.present + s.counts.present, notArrived: o.notArrived + s.counts.notArrived, absent: o.absent + s.counts.absent }), { expected: 0, present: 0, notArrived: 0, absent: 0 });
   const pct = agg.expected ? Math.round((agg.present / agg.expected) * 100) : 0;
   const presentAll = passBlocks.flatMap((s) => s.attendees.filter((a) => st(a) === "present"));
-  const need = staffNeeded(presentAll.flatMap((a) => a.children), groups);
-  const headTiles = { count: passBlocks.reduce((n, s) => n + s.heads.length, 0), last: passBlocks.flatMap((s) => s.heads).slice().sort((a, b) => a.at.localeCompare(b.at)).at(-1), takenBy: passBlocks.map((s) => s.takenBy).filter(Boolean).sort((a, b) => a!.at.localeCompare(b!.at)).at(-1)?.name };
+  const allHeads = passBlocks.flatMap((s) => s.heads).slice().sort((a, b) => a.at.localeCompare(b.at));
+  const headTiles = { count: allHeads.length, last: allHeads.at(-1), takenBy: passBlocks.map((s) => s.takenBy).filter(Boolean).sort((a, b) => a!.at.localeCompare(b!.at)).at(-1)?.name };
   const notInRefs = flat.filter(inPass).filter((r) => st(r.a) === "notArrived");
   const sel = (o: boolean) => ({ borderColor: o ? BLUE : "var(--line)", background: o ? "#eef4fd" : "var(--surface)", color: o ? BLUE : "var(--ink-2)" });
 
@@ -266,6 +414,21 @@ export function RegistersApp() {
     ["EXPECTED", "booked today", agg.expected, BLUE], ["PRESENT", agg.expected ? `${pct}% signed in` : "—", agg.present, GREEN],
     ["NOT ARRIVED", "awaiting", agg.notArrived, AMBER], ["ABSENT / ILL", agg.absent ? "reported" : "—", agg.absent, RED],
   ];
+
+  // For the open child card: every day/time this family is booked across the
+  // loaded window, plus siblings (other children under the same booker email).
+  const kidContext = (a: Attendee) => {
+    const email = a.email.trim().toLowerCase(); const name = a.children[0]?.name;
+    const attend: { date: string; start: string; end: string; listing: string }[] = [];
+    const sibs = new Set<string>();
+    for (const d of Object.keys(days)) for (const s of days[d] ?? []) for (const at of s.attendees) {
+      if (!email || at.email.trim().toLowerCase() !== email) continue;
+      for (const k of at.children) if (k.name && k.name !== name) sibs.add(k.name);
+      if (at.children.some((k) => k.name === name)) attend.push({ date: d, start: s.start, end: s.end, listing: s.listingName });
+    }
+    attend.sort((x, y) => x.date.localeCompare(y.date) || x.start.localeCompare(y.start));
+    return { attend, siblings: [...sibs] };
+  };
 
   if (!ready) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the register…</div></div>;
 
@@ -293,9 +456,14 @@ export function RegistersApp() {
                   {listingsAll.length > 1
                     ? <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="rounded-lg border-0 bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] outline-none">{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
                     : <span className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName}</span>}
-                  <select value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border-0 bg-white/90 px-2.5 py-1.5 text-[12.5px] font-bold text-[#1d3a8f] outline-none">
-                    {(listingDates.length ? listingDates : [date]).map((d) => { const c = dayCounts(d); return <option key={d} value={d}>{rel(d)} · {dow(d)}{c.booked ? ` — ${c.booked} booked` : ""}</option>; })}
-                  </select>
+                  <div className="flex items-center gap-0.5 rounded-lg bg-white/90 px-1 py-0.5 text-[#1d3a8f]">
+                    <button type="button" onClick={() => goDay(-1)} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none hover:bg-[#eaf1fb]">‹</button>
+                    <span className="min-w-[168px] px-1 text-center text-[12.5px] font-extrabold" style={{ fontVariantNumeric: "tabular-nums" }}>{rel(date)} · {dow(date)}{dayCounts(date).booked ? ` — ${dayCounts(date).booked} booked` : ""}</span>
+                    <button type="button" onClick={() => goDay(1)} aria-label="Next day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none hover:bg-[#eaf1fb]">›</button>
+                    <label className="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-[13px] hover:bg-[#eaf1fb]" title="Pick any date">📅
+                      <input type="date" value={date} onChange={(e) => pickDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
+                    </label>
+                  </div>
                   <span className="text-[12px] text-white/85">📍 {daySessions[0]?.blockName ?? "—"}</span>
                 </div>
               </div>
@@ -315,7 +483,7 @@ export function RegistersApp() {
           {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>}
 
           {daySessions.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">Nothing runs for {activeName} on {dayLabel(date)}.</div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? `Loading ${dayLabel(date)}…` : `Nothing runs for ${activeName} on ${dayLabel(date)}.`}</div>
           ) : (
             <>
               {/* Pass (timing) filter */}
@@ -334,15 +502,18 @@ export function RegistersApp() {
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-40 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" />
                 <div className="ml-auto flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => setRollCall((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold" style={sel(rollCall)}>🚨 Roll call</button>
-                  <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">Message all attending{attendingEmails.length ? ` (${attendingEmails.length})` : ""}</button>
+                  <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} title={attendingEmails.length ? `${attendingEmails.length} famil${attendingEmails.length === 1 ? "y" : "ies"} — a parent is messaged once` : ""} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">Message all attending{attendingKids ? ` (${attendingKids})` : ""}</button>
                   <button type="button" onClick={() => setDlOpen(true)} className="rounded-full border border-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬇ Download</button>
                 </div>
               </div>
               <div className="mb-2.5 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Key</span>
-                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#fde2e4", color: "#c02636" }}>Allergy</span>
-                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#e0e9ff", color: BLUE }}>Medical</span>
-                <span className="rounded-md px-1.5 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em]" style={{ background: "#f3e8ff", color: "#6d28d9" }}>SEND</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter</span>
+                {([["allergy", "Allergy", "#fde2e4", "#c02636", flagCounts.allergy], ["medical", "Medical", "#e0e9ff", BLUE, flagCounts.medical], ["dietary", "Dietary", "#dcfce7", "#15803d", flagCounts.dietary], ["send", "SEND", "#f3e8ff", "#6d28d9", flagCounts.send]] as const).map(([k, label, bg, fg, n]) => {
+                  const on = flag === k;
+                  return <button key={k} type="button" onClick={() => setFlag(on ? "" : k)} className="rounded-md px-2 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.03em] transition" style={on ? { background: fg, color: "#fff", boxShadow: `0 0 0 2px ${bg}` } : { background: bg, color: fg }}>{label}{n ? ` · ${n}` : ""}</button>;
+                })}
+                {flag && <button type="button" onClick={() => setFlag("")} className="text-[11px] font-bold text-[var(--ink-3)] underline">clear</button>}
+                <span className="text-[11px] text-[var(--ink-3)]">tap a tag to show only those children — with the note typed</span>
               </div>
 
               {rollCall && (
@@ -352,20 +523,32 @@ export function RegistersApp() {
                 </div>
               )}
 
-              {/* ONE flat table for the day */}
-              <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                {passBlocks[0] && (
-                  <div className="border-b border-[var(--line)] bg-[var(--panel)]/40 px-4 py-3">
-                    <HeadBand count={headTiles.count} expected={agg.present} present={agg.present} last={headTiles.last} takenBy={headTiles.takenBy} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} />
-                    {need > 0 && <div className="mt-2 text-[11.5px] font-semibold text-[var(--ink-3)]">Ratio guide · {presentAll.length} on site now needs ≥ {need} staff.</div>}
+              {/* ONE flat table for the day — blue/white card */}
+              <div className="mb-3 overflow-hidden rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] shadow-[0_10px_30px_-18px_rgba(29,58,143,.45)]">
+                {passBlocks[0] && <HeadBand expected={agg.expected} present={agg.present} heads={allHeads} takenBy={headTiles.takenBy} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} />}
+                {/* Selection / bulk-action bar */}
+                {!readOnly && (
+                  <div className="flex flex-wrap items-center gap-2 border-b border-[#dbe6fb] bg-[#f2f7ff] px-4 py-2">
+                    <label className="flex cursor-pointer items-center gap-2 text-[12px] font-bold text-[var(--ink-2)]">
+                      <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 accent-[#1d3a8f]" />
+                      {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+                    </label>
+                    {selected.size > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Mark</span>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("in")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: GREEN, background: "#e7f6ee", color: GREEN }}>{bulkBusy === "in" ? "…" : "In"}</button>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("collect")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: BLUE, background: "#eef4fd", color: BLUE }}>{bulkBusy === "collect" ? "…" : "Out"}</button>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("absent")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: RED, background: "#fde2e4", color: RED }}>{bulkBusy === "absent" ? "…" : "Absent"}</button>
+                        <button type="button" onClick={() => setSelected(new Set())} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">clear</button>
+                      </div>
+                    ) : notInRefs.length > 0 && <button type="button" disabled={!!bulkBusy} onClick={() => signAllIn(notInRefs)} className="rounded-lg border border-[#bfead0] bg-[#e7f6ee] px-2.5 py-1 text-[12px] font-extrabold text-[#0f9d58] disabled:opacity-40">{bulkBusy === "all" ? "Working…" : `✓ Sign all in (${notInRefs.length})`}</button>}
                   </div>
                 )}
-                {!readOnly && notInRefs.length > 0 && <div className="border-b border-[var(--line)] px-4 py-2"><Button sm disabled={bulkBusy === "all"} onClick={() => signAllIn(notInRefs)}>{bulkBusy === "all" ? "Working…" : `✓ Sign all in (${notInRefs.length})`}</Button></div>}
-                <div className="hidden grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px] gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] md:grid">
-                  <span>Child</span><span>Alerts</span><span>Signed in</span><span>Collected</span><span>Status</span><span>Parent</span>
+                <div className="hidden grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)] gap-3 border-b-2 border-[#dbe6fb] bg-[#eef4fd] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#1d3a8f] md:grid">
+                  <span>Child</span><span>Alerts</span><span>Attendance</span><span className="text-right md:text-left">Quick actions</span>
                 </div>
                 {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
-                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} multiPass={passes.length > 1 && !pass} busy={busyRef === a.ref || readOnly} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} />
+                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} selected={selected.has(a.ref)} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} />
                 ))}
               </div>
             </>
@@ -373,71 +556,117 @@ export function RegistersApp() {
         </>
       )}
 
-      {openKid && <ChildModal a={openKid} showTimes={showTimes} fields={fields} onClose={() => setOpenKid(null)} />}
+      {openKid && <ChildModal a={openKid} showTimes={showTimes} fields={fields} questions={questions} ctx={kidContext(openKid)} onClose={() => setOpenKid(null)} />}
       {dlOpen && <DownloadDialog sessions={passBlocks} date={date} onClose={() => setDlOpen(false)} />}
     </div>
   );
 }
 
-function HeadBand({ count, expected, present, last, takenBy, readOnly, onLog }: { count: number; expected: number; present: number; last?: Head; takenBy?: string; readOnly: boolean; onLog: (n: number) => Promise<void> }) {
+// Slim head-count strip next to "Register taken by". Expands to the full log of
+// every count with its timestamp. You can never log more heads than the number
+// of children in the register for the day (`expected`) — a miscount safeguard.
+function HeadBand({ expected, present, heads, takenBy, readOnly, onLog }: { expected: number; present: number; heads: Head[]; takenBy?: string; readOnly: boolean; onLog: (n: number) => Promise<void> }) {
   const [n, setN] = useState(String(present));
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const last = heads.at(-1);
+  const val = parseInt(n || "", 10);
+  const over = Number.isFinite(val) && val > expected;
+  const canLog = Number.isFinite(val) && val >= 0 && val <= expected;
   return (
-    <div className="flex flex-wrap items-stretch gap-4">
-      <div className="flex w-[110px] flex-none flex-col items-center justify-center rounded-xl bg-[var(--panel)] py-3 text-center">
-        <div className="text-[34px] font-extrabold leading-none">{count}</div>
-        <div className="mt-1 text-[9.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Head counts today</div>
+    <div className="border-b border-[var(--line)] bg-[var(--panel)]/40">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2 text-[12px]">
+        <span className="font-extrabold">Head count</span>
+        {!readOnly && (
+          <span className="flex items-center gap-1.5">
+            <input type="number" min={0} max={expected} value={n} onChange={(e) => setN(e.target.value)} className="w-14 rounded-md border bg-[var(--surface)] px-2 py-1 text-[12px]" style={{ borderColor: over ? RED : "var(--line)" }} />
+            <Button sm variant="solid" disabled={busy || !canLog} onClick={async () => { setBusy(true); await onLog(val); setBusy(false); }}>{busy ? "…" : "Log"}</Button>
+          </span>
+        )}
+        {over ? <span className="font-semibold text-[#c02636]">Only {expected} on the register — can&rsquo;t log more</span>
+          : <span className="text-[11px] text-[var(--ink-3)]">{heads.length} logged · max {expected}</span>}
+        {last && <span className="font-semibold" style={{ color: last.n >= present ? GREEN : AMBER }}>Last {last.n}/{expected} · {timeOf(last.at)}</span>}
+        <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] font-bold text-[#1d3a8f] underline">{open ? "hide log" : `records (${heads.length})`}</button>
+        <span className="ml-auto text-[11px]"><span className="font-bold uppercase tracking-wide text-[var(--ink-3)]">Register taken by</span> <b className="text-[12.5px]">{takenBy ?? "— not yet"}</b></span>
       </div>
-      <div className="min-w-[240px] flex-1">
-        <div className="text-[14px] font-extrabold">Quick head count</div>
-        <p className="text-[12px] text-[var(--ink-3)]">Count the children in front of you and log it — the tally goes up each time.</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <span className="text-[11.5px] text-[var(--ink-3)]">Heads counted</span>
-          <input type="number" value={n} onChange={(e) => setN(e.target.value)} className="w-16 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[13px]" />
-          {!readOnly && <Button sm variant="solid" disabled={busy} onClick={async () => { setBusy(true); await onLog(Math.max(0, parseInt(n || "0", 10))); setBusy(false); }}>{busy ? "…" : "Log head count"}</Button>}
-          <span className="text-[11.5px] text-[var(--ink-3)]">expected {expected}</span>
+      {open && (
+        <div className="border-t border-[var(--line)] px-4 py-2">
+          {heads.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">No head counts logged yet today.</div>
+            : <ol className="space-y-1">{heads.slice().reverse().map((h, i) => (
+                <li key={`${h.at}-${i}`} className="flex items-center gap-2 text-[11.5px]">
+                  <span className="inline-flex h-5 min-w-[38px] items-center justify-center rounded-md px-1.5 font-extrabold" style={{ background: h.n >= present ? "#e7f6ee" : "#fff4e5", color: h.n >= present ? GREEN : AMBER }}>{h.n}/{expected}</span>
+                  <span className="font-semibold">{timeOf(h.at)}</span>
+                  <span className="text-[var(--ink-3)]">· by {h.by}</span>
+                  {h.n < present && <span className="text-[#c02636]">· {present - h.n} short of {present} in</span>}
+                </li>
+              ))}</ol>}
         </div>
-        {last && <div className="mt-1.5 text-[12px] font-semibold" style={{ color: last.n >= expected ? GREEN : RED }}>Last: {last.n}/{expected} {last.n >= expected ? "✓ all present" : `⚠ ${expected - last.n} short`} <span className="font-normal text-[var(--ink-3)]">· by {last.by} at {timeOf(last.at)}</span></div>}
-      </div>
-      <div className="flex flex-none items-center border-l border-[var(--line)] pl-4">
-        <div><div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Register taken by</div><div className="mt-0.5 text-[15px] font-extrabold">{takenBy ?? "— not yet"}</div></div>
-      </div>
+      )}
     </div>
   );
 }
 
-function Row({ a, start, end, showTimes, multiPass, busy, onOpen, onMark, onMsg }: { a: Attendee; start: string; end: string; showTimes: boolean; multiPass: boolean; busy: boolean; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void }) {
-  const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
+// A compact attendance button (In / Out / Absent) — soft tinted when active, so
+// it reads clearly without shouting.
+function StBtn({ label, active, tint, soft, disabled, onClick }: { label: string; active: boolean; tint: string; soft: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <div className="grid grid-cols-1 items-center gap-2 border-b border-[var(--line)] px-4 py-3 last:border-b-0 md:grid-cols-[minmax(200px,1.6fr)_90px_120px_100px_150px_110px]">
-      <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
-        {c?.photo
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={c.photo} alt="" className="h-10 w-10 flex-none rounded-full object-cover" />
-          : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
-        <div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold">{a.children.map((k) => k.name).join(", ")} <span className="text-[11.5px] font-bold text-[#be1259]">view ›</span></div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{kid?.age != null ? `Age ${kid.age}` : ""}{multiPass ? ` · ${start}–${end}` : ""}{c?.collectionPassword ? ` · 🔑 ${c.collectionPassword}` : ""}</div></div>
-      </button>
+    <button type="button" disabled={disabled} onClick={onClick}
+      className="h-7 flex-1 rounded-lg border text-[11.5px] font-bold transition disabled:opacity-40"
+      style={active ? { borderColor: tint, background: soft, color: tint } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
+      {active ? "✓ " : ""}{label}
+    </button>
+  );
+}
+// A text quick-link (no emoji) — jumps straight to the right page, prefilled.
+function QuickLink({ label, tint, onClick }: { label: string; tint: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition hover:-translate-y-px" style={{ borderColor: "var(--line)", color: tint, background: "var(--surface)" }}>{label}</button>
+  );
+}
+function Row({ a, start, end, showTimes, busy, age, flag, selected, onSelect, onOpen, onMark, onMsg, onMed, onAccident, onIncident }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; selected: boolean; onSelect: () => void; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void }) {
+  const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
+  const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? "SEND plan on file" : "")) : "";
+  const fs = flag === "allergy" ? { bg: "#fde2e4", fg: "#c02636" } : flag === "medical" ? { bg: "#e0e9ff", fg: BLUE } : flag === "dietary" ? { bg: "#dcfce7", fg: "#15803d" } : { bg: "#f3e8ff", fg: "#6d28d9" };
+  const inAt = showTimes && a.attendance?.inAt ? timeOf(a.attendance.inAt) : "";
+  const outAt = showTimes && a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
+  return (
+    <div className="grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] px-4 py-3 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]" style={selected ? { background: "#eef4fd" } : undefined}>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={`Select ${kid?.name}`} className="h-4 w-4 flex-none accent-[#1d3a8f]" />
+        <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
+          {c?.photo
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={c.photo} alt="" className="h-11 w-11 flex-none rounded-2xl object-cover ring-2 ring-white shadow-sm" />
+            : <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl text-[14px] font-extrabold text-[#1d3a8f] ring-2 ring-white shadow-sm" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
+          <div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold">{a.children.map((k) => k.name).join(", ")} <span className="text-[11px] font-bold text-[#1d3a8f]">view ›</span></div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? `Age ${age} · ` : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span>{c?.collectionPassword ? ` · 🔑 ${c.collectionPassword}` : ""}</div></div>
+        </button>
+      </div>
       <div className="flex flex-wrap gap-1.5 md:justify-start">
-        {c?.allergies && <AlertSq kind="allergy" text={`Allergy: ${c.allergies}`} />}
-        {c?.medical && <AlertSq kind="medical" text={`Medical: ${c.medical}`} />}
-        {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text="SEND / needs" />}
-        {!c?.allergies && !c?.medical && !c?.send && !c?.sendPlanName && <span className="text-[12px] text-[var(--ink-3)]">—</span>}
+        {flag
+          ? (flagText ? <span className="rounded-md px-2 py-1 text-[11px] font-bold leading-tight" style={{ background: fs.bg, color: fs.fg }}>{flagText}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>)
+          : <>
+              {c?.allergies && <AlertSq kind="allergy" text={`Allergy: ${c.allergies}`} />}
+              {c?.medical && <AlertSq kind="medical" text={`Medical: ${c.medical}`} />}
+              {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text="SEND / needs" />}
+              {!c?.allergies && !c?.medical && !c?.send && !c?.sendPlanName && <span className="text-[12px] text-[var(--ink-3)]">—</span>}
+            </>}
       </div>
+      {/* Attendance — three compact buttons */}
       <div>
-        {state === "present"
-          ? <button type="button" disabled={busy} onClick={() => onMark("in")} className="rounded-lg border-2 px-3 py-1.5 text-[12px] font-extrabold" style={{ borderColor: "#bfead0", background: "#e7f6ee", color: GREEN }}>✓ In{showTimes && a.attendance?.inAt ? ` · ${timeOf(a.attendance.inAt)}` : ""}</button>
-          : <Button sm disabled={busy} onClick={() => onMark("in")}>Sign in</Button>}
+        <div className="flex gap-1">
+          <StBtn label="In" active={state === "present" || collected} tint={GREEN} soft="#e7f6ee" disabled={busy} onClick={() => onMark("in")} />
+          <StBtn label="Out" active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
+          <StBtn label="Absent" active={state === "absent"} tint={RED} soft="#fde2e4" disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
+        </div>
+        {(inAt || outAt) && <div className="mt-1 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{inAt && `In ${inAt}`}{inAt && outAt ? " · " : ""}{outAt && `Out ${outAt}`}</div>}
       </div>
-      <div>
-        {collected ? <button type="button" disabled={busy} onClick={() => onMark("collect")} className="rounded-lg border-2 px-3 py-1.5 text-[12px] font-extrabold" style={{ borderColor: "var(--line)", color: "var(--ink-3)" }}>✓ Collected{showTimes && a.attendance?.collectedAt ? ` · ${timeOf(a.attendance.collectedAt)}` : ""}</button>
-          : <Button sm disabled={busy || state !== "present"} onClick={() => onMark("collect")}>Collect</Button>}
+      {/* Quick actions — text links straight to the prefilled page */}
+      <div className="flex flex-wrap gap-1.5 md:justify-end">
+        <QuickLink label="First aid" tint="#be123c" onClick={onAccident} />
+        <QuickLink label="Incident" tint="#b45309" onClick={onIncident} />
+        <QuickLink label="Medication" tint="#15803d" onClick={onMed} />
+        <QuickLink label="Message" tint="#1d3a8f" onClick={onMsg} />
       </div>
-      <div className="flex items-center gap-1.5">
-        {state === "present" && <span className="rounded-lg px-2.5 py-1 text-[12px] font-extrabold" style={{ background: "#e7f6ee", color: GREEN }}>Present</span>}
-        {state === "absent" && <><span className="rounded-lg px-2.5 py-1 text-[12px] font-extrabold" style={{ background: "#fde2e4", color: RED }}>Absent / ill</span><button type="button" disabled={busy} onClick={() => onMark("reset")} className="text-[12px] font-bold text-[var(--ink-3)] underline">Undo</button></>}
-        {state === "notArrived" && <><span className="rounded-lg px-2.5 py-1 text-[12px] font-bold" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>Not arrived</span><button type="button" disabled={busy} onClick={() => onMark("absent")} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)]">Absent / ill</button></>}
-      </div>
-      <div><button type="button" onClick={onMsg} className="flex items-center gap-1 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">✉ Message</button></div>
     </div>
   );
 }

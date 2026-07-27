@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -50,7 +51,7 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 const COPY = {
-  accident: { title: "Accidents", one: "accident", add: "Log an accident", icon: "⛑️", lede: "Every bump and graze — logged on the day, kept for your records, and sent to the parent." },
+  accident: { title: "First aid", one: "first aid", add: "Log first aid", icon: "⛑️", lede: "Every bump and graze — logged on the day, kept for your records, and sent to the parent." },
   incident: { title: "Behaviour", one: "behaviour record", add: "Log a behaviour concern", icon: "🧩", lede: "Behaviour and near-misses — recorded on the day, kept for your records, and shared with the parent when you choose." },
 } as const;
 const SEV = { minor: { label: "Minor", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Moderate", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "Serious", bg: "#fdebec", fg: "#c02636" } } as const;
@@ -61,9 +62,9 @@ const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDa
 type Draft = Partial<Log> & { kind: Kind; date: string; childName: string; description: string };
 const emptyDraft = (kind: Kind): Draft => ({ kind, date: todayIso(), time: nowTime(), childName: "", description: "", severity: "minor", parentNotified: false });
 
-function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; notifies: boolean; existing?: Log; onSaved: () => void; onCancel: () => void }) {
+function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: { kind: Kind; notifies: boolean; existing?: Log; initialChild?: string; onSaved: () => void; onCancel: () => void }) {
   const isEdit = !!existing;
-  const [d, setD] = useState<Draft>(existing ? { ...existing } : emptyDraft(kind));
+  const [d, setD] = useState<Draft>(existing ? { ...existing } : { ...emptyDraft(kind), childName: initialChild ?? "" });
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -328,9 +329,12 @@ function LogForm({ kind, notifies, existing, onSaved, onCancel }: { kind: Kind; 
 export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolean }) {
   const { settings } = useSettings();
   const notifies = kind === "accident" ? (settings.safeguarding?.notifyParentAccident ?? true) : (settings.safeguarding?.notifyParentIncident ?? false);
+  // Deep-link from the Register: ?child=Name opens the log form pre-filled.
+  const searchParams = useSearchParams();
+  const presetChild = searchParams.get("child") ?? "";
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(!!presetChild);
   const [editing, setEditing] = useState<Log | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -409,7 +413,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
       )}
 
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {adding && <LogForm kind={kind} notifies={notifies} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
+      {adding && <LogForm kind={kind} notifies={notifies} initialChild={presetChild} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
       {editing && <LogForm key={editing.id} kind={kind} notifies={notifies} existing={editing} onSaved={() => { setEditing(null); refresh(); }} onCancel={() => setEditing(null)} />}
 
       {logs && all.length > 0 && (() => {

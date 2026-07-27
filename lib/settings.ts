@@ -57,6 +57,12 @@ export interface ChildQuestion {
   help?: string;
   required?: boolean;
   /**
+   * Surface this answer on the child's register card so staff can see it on the
+   * day. Undefined is treated as true (legacy questions stay visible); set false
+   * to keep an answer out of the register.
+   */
+  showOnRegister?: boolean;
+  /**
    * Which listings ask it. "all" is the default and the common case; an array
    * of listing ids restricts it — a swim school's water-confidence question
    * has no business on their multi-sports camp.

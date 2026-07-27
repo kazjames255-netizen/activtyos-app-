@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -85,8 +86,8 @@ const approvedForDay = (m: { schedule?: string }, iso: string, booked?: Set<stri
 type MedDraft = Partial<Med> & { childName: string; name: string; dose: string };
 const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded: false, heldOnSite: false, consentGranted: false });
 
-function MedForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
-  const [d, setD] = useState<MedDraft>(emptyMed());
+function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onCancel: () => void; initialChild?: string }) {
+  const [d, setD] = useState<MedDraft>(() => ({ ...emptyMed(), childName: initialChild ?? "" }));
   const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [times, setTimes] = useState<string[]>([]);
@@ -310,11 +311,14 @@ function AdministerForm({ med, onDone, requireWitness, booked }: { med: Med; onD
 export function MedicationApp() {
   const { settings } = useSettings();
   const med = settings.medication ?? {};
+  // Deep-link from the Register: ?child=Name opens the add form pre-filled.
+  const searchParams = useSearchParams();
+  const presetChild = searchParams.get("child") ?? "";
   const [role, setRole] = useState("");
   const [meds, setMeds] = useState<Med[] | null>(null);
   const [admins, setAdmins] = useState<AdminEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(!!presetChild);
   const [administering, setAdministering] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -407,7 +411,7 @@ export function MedicationApp() {
 
       {notice && <div className="mb-3 rounded-lg border border-[#bfe6cf] bg-[#e7f6ee] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">{notice}</div>}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {adding && <MedForm onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
+      {adding && <MedForm initialChild={presetChild} onSaved={() => { setAdding(false); refresh(); }} onCancel={() => setAdding(false)} />}
 
       {meds && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
