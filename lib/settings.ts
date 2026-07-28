@@ -444,6 +444,14 @@ export interface TenantSettings {
     timestamps?: boolean;   // show the time next to In / Collected
     requireCollectionPin?: boolean; // show the "collection PIN required" banner
     fields?: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean };
+    /** Which facts appear on a child's register card. Each defaults to on. */
+    card?: {
+      allergies?: boolean; medical?: boolean; dietary?: boolean; send?: boolean; swimming?: boolean;
+      careNotes?: boolean; likes?: boolean; dislikes?: boolean; answers?: boolean; consents?: boolean;
+      mainContact?: boolean; emergency?: boolean; password?: boolean; school?: boolean; bookingNotes?: boolean; attending?: boolean;
+    };
+    /** Which quick-link actions appear on each register row. Each defaults to on. */
+    actions?: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean };
   };
 
   /**
@@ -766,7 +774,12 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     ],
   },
   emailAssets: { quotes: [], images: [] },
-  registers: { timestamps: true, fields: { contact: true, emergency: true, password: true, school: true } },
+  registers: {
+    timestamps: true,
+    fields: { contact: true, emergency: true, password: true, school: true },
+    card: { allergies: true, medical: true, dietary: true, send: true, swimming: true, careNotes: true, likes: true, dislikes: true, answers: true, consents: true, mainContact: true, emergency: true, password: true, school: true, bookingNotes: true, attending: true },
+    actions: { firstAid: true, incident: true, medication: true, message: true, moments: true, email: true },
+  },
   inventory: {
     categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
     locations: ["Main store", "Van", "Shed", "Office"],
@@ -832,7 +845,13 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },
-    registers: { timestamps: s.registers?.timestamps ?? true, fields: { ...DEFAULT_SETTINGS.registers!.fields, ...(s.registers?.fields ?? {}) } },
+    registers: {
+      timestamps: s.registers?.timestamps ?? true,
+      requireCollectionPin: s.registers?.requireCollectionPin ?? false,
+      fields: { ...DEFAULT_SETTINGS.registers!.fields, ...(s.registers?.fields ?? {}) },
+      card: { ...DEFAULT_SETTINGS.registers!.card, ...(s.registers?.card ?? {}) },
+      actions: { ...DEFAULT_SETTINGS.registers!.actions, ...(s.registers?.actions ?? {}) },
+    },
     emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,

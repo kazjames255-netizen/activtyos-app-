@@ -160,6 +160,7 @@ registers.get("/", async (req, res) => {
         email: b.email ?? "",
         phone: b.phone ?? "",
         note: b.note ?? "",
+        addons: b.addons ?? [],
         bookingStatus: b.status,
         seats: b.seats ?? 1,
         children: b.kids?.length

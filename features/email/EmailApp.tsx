@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -83,11 +84,14 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
 }
 
 export function EmailApp() {
+  // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
+  const searchParams = useSearchParams();
+  const presetTo = searchParams.get("to") ?? "";
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [audience, setAudience] = useState<"all" | "one">("all");
-  const [to, setTo] = useState("");
+  const [audience, setAudience] = useState<"all" | "one">(presetTo ? "one" : "all");
+  const [to, setTo] = useState(presetTo);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [reach, setReach] = useState<number | null>(null);

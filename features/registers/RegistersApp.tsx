@@ -25,7 +25,7 @@ const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 
 interface Attendance { status?: "in" | "absent"; inAt?: string | null; collectedAt?: string | null; collectedBy?: string | null }
 interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean; likes?: string; dislikes?: string; swimming?: string; sex?: string; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; answers?: Record<string, string> }
-interface Attendee { ref: string; booker: string; email: string; phone?: string; note?: string; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
+interface Attendee { ref: string; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
 interface Head { n: number; by: string; at: string }
 interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null }
 type Action = "in" | "absent" | "collect" | "reset";
@@ -37,6 +37,8 @@ const dow = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en
 const rel = (iso: string) => (iso === todayIso() ? "Today" : iso === shiftDay(todayIso(), 1) ? "Tomorrow" : dow(iso));
 const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
+// "08:30" → "8:30am" for the start-time filter chips.
+const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
 // Age from a date of birth vs a "today" string (yyyy-mm-dd) — pure, no Date.now
 // in render. Handles ISO (2016-12-12) and UK (12/12/2016) dob strings.
 const ageFrom = (dob?: string, today?: string): number | undefined => {
@@ -61,6 +63,29 @@ function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: s
   return <span title={text} className="rounded-md px-1.5 py-[2px] text-[9.5px] font-extrabold uppercase tracking-[0.03em]" style={{ background: m.bg, color: m.fg }}>{m.label}</span>;
 }
 
+// Searchable listing picker for the hero — a button + type-to-filter popover.
+function ListingPicker({ listings, active, activeName, onPick }: { listings: [string, string][]; active: string; activeName: string; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const shown = listings.filter(([, n]) => n.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || "Choose listing"} <span className="text-[9px]">▾</span></button>
+      {open && (<>
+        <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+        <div className="absolute left-0 z-20 mt-1 w-[260px] rounded-xl border border-[var(--line)] bg-white p-1.5 shadow-xl">
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…" className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+          <div className="max-h-[240px] overflow-y-auto">
+            {shown.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No listing matches.</div> : shown.map(([id, n]) => (
+              <button key={id} type="button" onClick={() => { onPick(id); setOpen(false); setQ(""); }} className="block w-full truncate rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-semibold" style={id === active ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{n}</button>
+            ))}
+          </div>
+        </div>
+      </>)}
+    </div>
+  );
+}
+
 // ── Child detail card ──────────────────────────────────────────────────────
 const SWIM_LABEL: Record<string, string> = { none: "Non-swimmer", weak: "Weak / needs support", confident: "Confident", strong: "Strong swimmer" };
 type Tint = { bg: string; fg: string };
@@ -72,35 +97,41 @@ const T = {
 } as const;
 // One coloured fact tile; renders nothing when empty so sections self-collapse.
 function Fact({ label, value, tint, full }: { label: string; value?: ReactNode; tint: Tint; full?: boolean }) {
+  const [exp, setExp] = useState(false);
   if (value === undefined || value === null || value === "" || value === false) return null;
+  // Long text stays inside a 2-line box; an arrow expands it in place rather than
+  // growing every card. (Length heuristic — the fields that run long are strings.)
+  const long = typeof value === "string" && value.length > (full ? 115 : 42);
   return (
     <div className={`rounded-xl px-3 py-2 ${full ? "col-span-2" : ""}`} style={{ background: tint.bg }}>
       <div className="text-[9.5px] font-extrabold uppercase tracking-[0.04em]" style={{ color: tint.fg }}>{label}</div>
-      <div className="mt-0.5 text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{value}</div>
+      <div className={`mt-0.5 text-[12.5px] font-semibold leading-snug text-[var(--ink)] ${long && !exp ? "line-clamp-2" : ""}`}>{value}</div>
+      {long && <button type="button" onClick={() => setExp((v) => !v)} className="mt-1 text-[10.5px] font-extrabold" style={{ color: tint.fg }}>{exp ? "▲ Show less" : "▾ Show more"}</button>}
     </div>
   );
 }
 function SectionTitle({ dot, children }: { dot: string; children: ReactNode }) {
   return <div className="mb-1.5 mt-3.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: dot }} /><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{children}</span></div>;
 }
-function ChildModal({ a, showTimes, fields, questions, ctx, onClose }: { a: Attendee; showTimes: boolean; fields: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean }; questions: ChildQuestion[]; ctx: { attend: { date: string; start: string; end: string; listing: string }[]; siblings: string[] }; onClose: () => void }) {
+function ChildModal({ a, showTimes, fields, card, questions, ctx, onClose }: { a: Attendee; showTimes: boolean; fields: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean }; card: Record<string, boolean | undefined>; questions: ChildQuestion[]; ctx: { attend: { date: string; start: string; end: string; listing: string }[]; siblings: string[] }; onClose: () => void }) {
   const c = a.child; const kid = a.children[0];
   const state = st(a);
   const [showDays, setShowDays] = useState(false);
+  const on = (k: string) => card[k] !== false; // which facts Setup lets us show
   const yesNo = (v?: boolean) => (v === true ? "Yes" : v === false ? "No" : undefined);
   const answers = c?.answers ?? {};
   const qById = new Map(questions.map((q) => [q.id, q] as const));
   // Only answers whose question is flagged to show on the register (default on
   // for legacy questions with no flag set).
-  const answered = Object.entries(answers).filter(([id, v]) => v != null && String(v).trim() !== "" && (qById.get(id)?.showOnRegister !== false));
-  const anyHealth = c?.allergies || c?.medical || c?.dietary || c?.send || c?.sendPlanName || c?.swimming;
+  const answered = on("answers") ? Object.entries(answers).filter(([id, v]) => v != null && String(v).trim() !== "" && (qById.get(id)?.showOnRegister !== false)) : [];
+  const anyHealth = (on("allergies") && c?.allergies) || (on("medical") && c?.medical) || (on("dietary") && c?.dietary) || (on("send") && (c?.send || c?.sendPlanName)) || (on("swimming") && c?.swimming);
   const statusChip = state === "present" ? { t: showTimes && a.attendance?.inAt ? `Signed in · ${timeOf(a.attendance.inAt)}` : "Signed in", bg: "rgba(255,255,255,.22)" }
     : state === "absent" ? { t: "Absent / ill", bg: "rgba(255,255,255,.22)" } : { t: "Not arrived", bg: "rgba(255,255,255,.16)" };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="max-h-[88vh] w-full max-w-[500px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Gradient header */}
-        <div className="relative px-5 pb-4 pt-5 text-white" style={{ background: HERO }}>
+        <div className="relative flex-none px-5 pb-4 pt-5 text-white" style={{ background: HERO }}>
           <button type="button" onClick={onClose} className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
           <div className="flex items-center gap-3">
             {c?.photo
@@ -122,24 +153,24 @@ function ChildModal({ a, showTimes, fields, questions, ctx, onClose }: { a: Atte
         </div>
 
         {/* Body */}
-        <div className="max-h-[calc(88vh-140px)] overflow-y-auto px-5 pb-5 pt-1">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-1">
           <SectionTitle dot={T.allergy.fg}>Health &amp; safeguarding</SectionTitle>
           {anyHealth ? (
             <div className="grid grid-cols-2 gap-2">
-              <Fact label="Allergies" tint={T.allergy} full value={c?.allergies && <span>⚠ {c.allergies}</span>} />
-              <Fact label="Medical" tint={T.medical} value={c?.medical} />
-              <Fact label="Dietary" tint={T.dietary} value={c?.dietary} />
-              <Fact label="SEND / needs" tint={T.send} value={(c?.send || c?.sendPlanName) && `${c?.send ?? ""}${c?.sendPlanName ? `${c?.send ? " · " : ""}plan on file` : ""}`} />
-              <Fact label="Swimming" tint={T.swim} value={c?.swimming && (SWIM_LABEL[c.swimming] ?? c.swimming)} />
+              {on("allergies") && <Fact label="Allergies" tint={T.allergy} full value={c?.allergies && `⚠ ${c.allergies}`} />}
+              {on("medical") && <Fact label="Medical" tint={T.medical} value={c?.medical} />}
+              {on("dietary") && <Fact label="Dietary" tint={T.dietary} value={c?.dietary} />}
+              {on("send") && <Fact label="SEND / needs" tint={T.send} value={(c?.send || c?.sendPlanName) && `${c?.send ?? ""}${c?.sendPlanName ? `${c?.send ? " · " : ""}plan on file` : ""}`} />}
+              {on("swimming") && <Fact label="Swimming" tint={T.swim} value={c?.swimming && (SWIM_LABEL[c.swimming] ?? c.swimming)} />}
             </div>
           ) : <div className="rounded-xl bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold text-[#15803d]">✓ Nothing flagged</div>}
 
-          {(c?.careNotes || c?.likes || c?.dislikes) && <>
+          {((on("careNotes") && c?.careNotes) || (on("likes") && c?.likes) || (on("dislikes") && c?.dislikes)) && <>
             <SectionTitle dot={T.care.fg}>Personality &amp; care</SectionTitle>
             <div className="grid grid-cols-2 gap-2">
-              <Fact label="Care notes" tint={T.care} full value={c?.careNotes} />
-              <Fact label="Likes / settles them" tint={T.likes} value={c?.likes} />
-              <Fact label="Dislikes / avoid" tint={T.dislikes} value={c?.dislikes} />
+              {on("careNotes") && <Fact label="Care notes" tint={T.care} full value={c?.careNotes} />}
+              {on("likes") && <Fact label="Likes / settles them" tint={T.likes} value={c?.likes} />}
+              {on("dislikes") && <Fact label="Dislikes / avoid" tint={T.dislikes} value={c?.dislikes} />}
             </div>
           </>}
 
@@ -148,25 +179,27 @@ function ChildModal({ a, showTimes, fields, questions, ctx, onClose }: { a: Atte
             <div className="grid grid-cols-2 gap-2">{answered.map(([id, v]) => <Fact key={id} label={qById.get(id)?.label ?? id} tint={T.ask} full value={String(v)} />)}</div>
           </>}
 
-          <SectionTitle dot={T.send.fg}>Consents</SectionTitle>
-          <div className="flex flex-wrap gap-1.5">
-            {[["Photos", c?.photoConsent === false ? "No" : yesNo(c?.photoConsent)], ["Suncream", yesNo(c?.suncreamConsent)], ["First aid", yesNo(c?.firstAidConsent)], ["Walk home", yesNo(c?.walkHomeConsent)]].map(([l, v]) => v == null ? null : (
-              <span key={l} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={v === "Yes" ? { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" } : { borderColor: "#fecdd3", background: "#fff1f2", color: "#be123c" }}>{l}: {v}</span>
-            ))}
-          </div>
+          {on("consents") && <>
+            <SectionTitle dot={T.send.fg}>Consents</SectionTitle>
+            <div className="flex flex-wrap gap-1.5">
+              {[["Photos", c?.photoConsent === false ? "No" : yesNo(c?.photoConsent)], ["Suncream", yesNo(c?.suncreamConsent)], ["First aid", yesNo(c?.firstAidConsent)], ["Walk home", yesNo(c?.walkHomeConsent)]].map(([l, v]) => v == null ? null : (
+                <span key={l} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={v === "Yes" ? { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" } : { borderColor: "#fecdd3", background: "#fff1f2", color: "#be123c" }}>{l}: {v}</span>
+              ))}
+            </div>
+          </>}
 
           <SectionTitle dot={T.medical.fg}>Contact &amp; collection</SectionTitle>
           <div className="grid grid-cols-2 gap-2">
-            <Fact label="Main contact" tint={T.medical} full value={`${a.booker}${a.phone ? ` · ${a.phone}` : ""}${a.email ? ` · ${a.email}` : ""}`} />
-            {fields.emergency && <Fact label="Emergency contact" tint={T.emergency} full value={(c?.emergencyName || c?.emergencyPhone) && `${c?.emergencyName ?? ""}${c?.emergencyPhone ? ` · ${c.emergencyPhone}` : ""}`} />}
-            {fields.password && <Fact label="Collection password" tint={T.password} value={c?.collectionPassword && <span>🔑 {c.collectionPassword}</span>} />}
-            {fields.school && <Fact label="School" tint={T.neutral} value={c?.school} />}
+            {on("mainContact") && <Fact label="Main contact" tint={T.medical} full value={`${a.booker}${a.phone ? ` · ${a.phone}` : ""}${a.email ? ` · ${a.email}` : ""}`} />}
+            {on("emergency") && fields.emergency && <Fact label="Emergency contact" tint={T.emergency} full value={(c?.emergencyName || c?.emergencyPhone) && `${c?.emergencyName ?? ""}${c?.emergencyPhone ? ` · ${c.emergencyPhone}` : ""}`} />}
+            {on("password") && fields.password && <Fact label="Collection password" tint={T.password} value={c?.collectionPassword && <span>🔑 {c.collectionPassword}</span>} />}
+            {on("school") && fields.school && <Fact label="School" tint={T.neutral} value={c?.school} />}
             <Fact label="Booking ref" tint={T.neutral} value={`#${a.ref}`} />
-            <Fact label="Booking notes" tint={T.neutral} full value={a.note} />
+            {on("bookingNotes") && <Fact label="Booking notes" tint={T.neutral} full value={a.note} />}
             <Fact label="Collected" tint={T.dietary} full value={a.attendance?.collectedAt && `${showTimes ? timeOf(a.attendance.collectedAt) : "yes"}${a.attendance.collectedBy ? ` · by ${a.attendance.collectedBy}` : ""}`} />
           </div>
 
-          {ctx.attend.length > 0 && <>
+          {on("attending") && ctx.attend.length > 0 && <>
             <SectionTitle dot={BLUE}>Attending</SectionTitle>
             <button type="button" onClick={() => setShowDays((v) => !v)} className="flex w-full items-center justify-between rounded-xl bg-[#eef4fd] px-3 py-2 text-left">
               <span className="text-[12.5px] font-extrabold text-[#1d3a8f]">📅 {ctx.attend.length} {ctx.attend.length === 1 ? "session" : "sessions"} booked</span>
@@ -261,6 +294,8 @@ export function RegistersApp() {
   const incidentHref = `/${portal}/${portal === "staff" ? "incident" : "incidents"}`;
   const showTimes = settings.registers?.timestamps ?? true;
   const fields = settings.registers?.fields ?? { contact: true, emergency: true, password: true, school: true };
+  const card = settings.registers?.card ?? {};
+  const acts = settings.registers?.actions ?? {};
   const pinRequired = !!settings.registers?.requireCollectionPin;
 
   const anchor = todayIso();
@@ -274,9 +309,10 @@ export function RegistersApp() {
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState<"age" | "start" | "name">("age");
+  const [sort, setSort] = useState<"young" | "old" | "start">("young");
   const [pass, setPass] = useState("");
   const [flag, setFlag] = useState<FlagKind>("");
+  const [addonsOnly, setAddonsOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rollCall, setRollCall] = useState(false);
   const [dlOpen, setDlOpen] = useState(false);
@@ -340,6 +376,8 @@ export function RegistersApp() {
   const medFor = (a: Attendee) => router.push(`/${portal}/medication?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const accidentFor = (a: Attendee) => router.push(`/${portal}/accidents?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const incidentFor = (a: Attendee) => router.push(`${incidentHref}?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
+  const momentsFor = (a: Attendee) => router.push(`/${portal}/moments?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
+  const emailFor = (a: Attendee) => { if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; } router.push(`/${portal}/email?to=${encodeURIComponent(a.email.trim().toLowerCase())}`); };
 
   // Listings that run somewhere in the window; pick the active one.
   const listingsAll = useMemo(() => {
@@ -354,8 +392,8 @@ export function RegistersApp() {
   // block (pass) so it can be marked, then filtered by pass and searched.
   type FlatRow = { a: Attendee; blockId: string; start: string; end: string };
   const flat: FlatRow[] = daySessions.flatMap((s) => s.attendees.map((a) => ({ a, blockId: s.blockId, start: s.start, end: s.end })));
-  const passes = [...new Set(daySessions.map((s) => `${s.start}–${s.end}`))];
-  const inPass = (r: FlatRow) => !pass || `${r.start}–${r.end}` === pass;
+  const passes = [...new Set(daySessions.map((s) => s.start))].sort();
+  const inPass = (r: FlatRow) => !pass || r.start === pass;
   const term = q.trim().toLowerCase();
   // Pick the comparator from `sort` HERE in the render body (not buried inside a
   // .sort() callback) so the React Compiler tracks `sort` as a dependency and the
@@ -365,13 +403,14 @@ export function RegistersApp() {
   const ageOf = (a: Attendee) => a.children[0]?.age ?? ageFrom(a.child?.dob, anchor);
   const byName = (x: FlatRow, y: FlatRow) => (x.a.children[0]?.name ?? "").localeCompare(y.a.children[0]?.name ?? "");
   const cmp: (x: FlatRow, y: FlatRow) => number =
-    sort === "name" ? byName
-    : sort === "start" ? (x, y) => x.start.localeCompare(y.start) || byName(x, y)
+    sort === "start" ? (x, y) => x.start.localeCompare(y.start) || byName(x, y)
+    : sort === "old" ? (x, y) => ((ageOf(y.a) ?? -1) - (ageOf(x.a) ?? -1)) || byName(x, y)
     : (x, y) => ((ageOf(x.a) ?? 999) - (ageOf(y.a) ?? 999)) || byName(x, y);
   const hasFlag = (a: Attendee, k: FlagKind) => k === "allergy" ? !!a.child?.allergies : k === "medical" ? !!a.child?.medical : k === "dietary" ? !!a.child?.dietary : k === "send" ? !!(a.child?.send || a.child?.sendPlanName) : true;
   const flatShown = flat
-    .filter((r) => !pass || `${r.start}–${r.end}` === pass)
+    .filter((r) => !pass || r.start === pass)
     .filter(({ a }) => !flag || hasFlag(a, flag))
+    .filter(({ a }) => !addonsOnly || (a.addons?.length ?? 0) > 0)
     .filter(({ a }) => !term || a.children.some((c) => c.name.toLowerCase().includes(term)) || a.booker.toLowerCase().includes(term))
     .slice()
     .sort(cmp);
@@ -389,7 +428,7 @@ export function RegistersApp() {
     setBulkBusy(null);
   }
   // Counts for the filter tags (over the whole day / current pass, pre-search).
-  const inPassRows = flat.filter((r) => !pass || `${r.start}–${r.end}` === pass);
+  const inPassRows = flat.filter((r) => !pass || r.start === pass);
   const flagCounts = { allergy: inPassRows.filter((r) => hasFlag(r.a, "allergy")).length, medical: inPassRows.filter((r) => hasFlag(r.a, "medical")).length, dietary: inPassRows.filter((r) => hasFlag(r.a, "dietary")).length, send: inPassRows.filter((r) => hasFlag(r.a, "send")).length };
 
   // Everyone currently shown (respects the pass filter + search) → the audience
@@ -401,7 +440,7 @@ export function RegistersApp() {
   const attendingKids = flatShown.reduce((n, { a }) => n + a.children.length, 0);
   const dayCounts = (d: string) => { const ss = sessionsOn(d); return { booked: ss.reduce((n, s) => n + s.counts.expected, 0), present: ss.reduce((n, s) => n + s.counts.present, 0) }; };
   // Head count / stats aggregate the day (respecting the pass filter).
-  const passBlocks = daySessions.filter((s) => !pass || `${s.start}–${s.end}` === pass);
+  const passBlocks = daySessions.filter((s) => !pass || s.start === pass);
   const agg = passBlocks.reduce((o, s) => ({ expected: o.expected + s.counts.expected, present: o.present + s.counts.present, notArrived: o.notArrived + s.counts.notArrived, absent: o.absent + s.counts.absent }), { expected: 0, present: 0, notArrived: 0, absent: 0 });
   const pct = agg.expected ? Math.round((agg.present / agg.expected) * 100) : 0;
   const presentAll = passBlocks.flatMap((s) => s.attendees.filter((a) => st(a) === "present"));
@@ -454,7 +493,7 @@ export function RegistersApp() {
                 <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📋</span>Register</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {listingsAll.length > 1
-                    ? <select value={active} onChange={(e) => setActiveListing(e.target.value)} className="rounded-lg border-0 bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] outline-none">{listingsAll.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
+                    ? <ListingPicker listings={listingsAll} active={active} activeName={activeName} onPick={setActiveListing} />
                     : <span className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName}</span>}
                   <div className="flex items-center gap-0.5 rounded-lg bg-white/90 px-1 py-0.5 text-[#1d3a8f]">
                     <button type="button" onClick={() => goDay(-1)} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none hover:bg-[#eaf1fb]">‹</button>
@@ -467,7 +506,6 @@ export function RegistersApp() {
                   <span className="text-[12px] text-white/85">📍 {daySessions[0]?.blockName ?? "—"}</span>
                 </div>
               </div>
-              <button type="button" onClick={() => router.push(incidentHref)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md">⚑ Log incident</button>
             </div>
             <div className="mt-4 flex flex-wrap gap-2.5">
               {tiles.map(([label, sub, v]) => (
@@ -486,19 +524,25 @@ export function RegistersApp() {
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? `Loading ${dayLabel(date)}…` : `Nothing runs for ${activeName} on ${dayLabel(date)}.`}</div>
           ) : (
             <>
-              {/* Pass (timing) filter */}
-              {passes.length > 1 && (
+              {/* Start-time + add-ons filters */}
+              {(passes.length > 1 || flat.some((r) => (r.a.addons?.length ?? 0) > 0)) && (
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Pass</span>
-                  <button type="button" onClick={() => setPass("")} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(!pass)}>All</button>
-                  {passes.map((p) => <button key={p} type="button" onClick={() => setPass(p)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(pass === p)}>{p}</button>)}
+                  {passes.length > 1 && <>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Start time</span>
+                    <button type="button" onClick={() => setPass("")} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(!pass)}>All</button>
+                    {passes.map((p) => <button key={p} type="button" onClick={() => setPass(p)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(pass === p)}>{fmt12(p)} start</button>)}
+                  </>}
+                  {flat.some((r) => (r.a.addons?.length ?? 0) > 0) && (
+                    <button type="button" onClick={() => setAddonsOnly((v) => !v)} className="rounded-full border px-3 py-1.5 text-[12px] font-extrabold" style={sel(addonsOnly)}>🧩 Add-ons only ({flat.filter((r) => (r.a.addons?.length ?? 0) > 0).length})</button>
+                  )}
                 </div>
               )}
 
               {/* Sort + toolbar */}
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Sort</span>
-                {([["age", "Age"], ["start", "Earliest start"], ["name", "Name"]] as const).map(([id, l]) => <button key={id} type="button" onClick={() => setSort(id)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={sel(sort === id)}>{l}</button>)}
+                <button type="button" onClick={() => setSort(sort === "young" ? "old" : "young")} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={sel(sort === "young" || sort === "old")}>Age · {sort === "old" ? "oldest" : "youngest"} first</button>
+                <button type="button" onClick={() => setSort("start")} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={sel(sort === "start")}>Earliest start</button>
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-40 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" />
                 <div className="ml-auto flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => setRollCall((v) => !v)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold" style={sel(rollCall)}>🚨 Roll call</button>
@@ -537,7 +581,7 @@ export function RegistersApp() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Mark</span>
                         <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("in")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: GREEN, background: "#e7f6ee", color: GREEN }}>{bulkBusy === "in" ? "…" : "In"}</button>
-                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("collect")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: BLUE, background: "#eef4fd", color: BLUE }}>{bulkBusy === "collect" ? "…" : "Out"}</button>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("collect")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: BLUE, background: "#eef4fd", color: BLUE }}>{bulkBusy === "collect" ? "…" : "Collect"}</button>
                         <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("absent")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: RED, background: "#fde2e4", color: RED }}>{bulkBusy === "absent" ? "…" : "Absent"}</button>
                         <button type="button" onClick={() => setSelected(new Set())} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">clear</button>
                       </div>
@@ -545,10 +589,10 @@ export function RegistersApp() {
                   </div>
                 )}
                 <div className="hidden grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)] gap-3 border-b-2 border-[#dbe6fb] bg-[#eef4fd] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#1d3a8f] md:grid">
-                  <span>Child</span><span>Alerts</span><span>Attendance</span><span className="text-right md:text-left">Quick actions</span>
+                  <span>Child</span><span>Alerts</span><span>Attendance</span><span className="md:text-right">Quick actions</span>
                 </div>
                 {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
-                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} selected={selected.has(a.ref)} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} />
+                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} acts={acts} selected={selected.has(a.ref)} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} onMoments={() => momentsFor(a)} onEmail={() => emailFor(a)} />
                 ))}
               </div>
             </>
@@ -556,7 +600,7 @@ export function RegistersApp() {
         </>
       )}
 
-      {openKid && <ChildModal a={openKid} showTimes={showTimes} fields={fields} questions={questions} ctx={kidContext(openKid)} onClose={() => setOpenKid(null)} />}
+      {openKid && <ChildModal a={openKid} showTimes={showTimes} fields={fields} card={card} questions={questions} ctx={kidContext(openKid)} onClose={() => setOpenKid(null)} />}
       {dlOpen && <DownloadDialog sessions={passBlocks} date={date} onClose={() => setDlOpen(false)} />}
     </div>
   );
@@ -623,7 +667,7 @@ function QuickLink({ label, tint, onClick }: { label: string; tint: string; onCl
     <button type="button" onClick={onClick} className="rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition hover:-translate-y-px" style={{ borderColor: "var(--line)", color: tint, background: "var(--surface)" }}>{label}</button>
   );
 }
-function Row({ a, start, end, showTimes, busy, age, flag, selected, onSelect, onOpen, onMark, onMsg, onMed, onAccident, onIncident }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; selected: boolean; onSelect: () => void; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void }) {
+function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSelect, onOpen, onMark, onMsg, onMed, onAccident, onIncident, onMoments, onEmail }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; acts: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean }; selected: boolean; onSelect: () => void; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void; onMoments: () => void; onEmail: () => void }) {
   const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
   const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? "SEND plan on file" : "")) : "";
   const fs = flag === "allergy" ? { bg: "#fde2e4", fg: "#c02636" } : flag === "medical" ? { bg: "#e0e9ff", fg: BLUE } : flag === "dietary" ? { bg: "#dcfce7", fg: "#15803d" } : { bg: "#f3e8ff", fg: "#6d28d9" };
@@ -655,17 +699,19 @@ function Row({ a, start, end, showTimes, busy, age, flag, selected, onSelect, on
       <div>
         <div className="flex gap-1">
           <StBtn label="In" active={state === "present" || collected} tint={GREEN} soft="#e7f6ee" disabled={busy} onClick={() => onMark("in")} />
-          <StBtn label="Out" active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
+          <StBtn label="Collect" active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
           <StBtn label="Absent" active={state === "absent"} tint={RED} soft="#fde2e4" disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
         </div>
         {(inAt || outAt) && <div className="mt-1 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{inAt && `In ${inAt}`}{inAt && outAt ? " · " : ""}{outAt && `Out ${outAt}`}</div>}
       </div>
       {/* Quick actions — text links straight to the prefilled page */}
       <div className="flex flex-wrap gap-1.5 md:justify-end">
-        <QuickLink label="First aid" tint="#be123c" onClick={onAccident} />
-        <QuickLink label="Incident" tint="#b45309" onClick={onIncident} />
-        <QuickLink label="Medication" tint="#15803d" onClick={onMed} />
-        <QuickLink label="Message" tint="#1d3a8f" onClick={onMsg} />
+        {acts.firstAid !== false && <QuickLink label="First aid" tint="#be123c" onClick={onAccident} />}
+        {acts.incident !== false && <QuickLink label="Incident" tint="#b45309" onClick={onIncident} />}
+        {acts.medication !== false && <QuickLink label="Medication" tint="#15803d" onClick={onMed} />}
+        {acts.moments !== false && <QuickLink label="Moments" tint="#7c3aed" onClick={onMoments} />}
+        {acts.email !== false && <QuickLink label="Email" tint="#0e7490" onClick={onEmail} />}
+        {acts.message !== false && <QuickLink label="Message" tint="#1d3a8f" onClick={onMsg} />}
       </div>
     </div>
   );

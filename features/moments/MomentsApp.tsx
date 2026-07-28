@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -90,7 +91,7 @@ function Cropper({ src, onDone, onCancel }: { src: string; onDone: (dataUrl: str
   );
 }
 
-function PostForm({ activities, settings, save, listings, onPosted, onCancel }: { activities: Act[]; settings: SettingsShape; save: SaveFn; listings: { id: string; title: string }[]; onPosted: () => void; onCancel: () => void }) {
+function PostForm({ activities, settings, save, listings, initialChild, onPosted, onCancel }: { activities: Act[]; settings: SettingsShape; save: SaveFn; listings: { id: string; title: string }[]; initialChild?: string; onPosted: () => void; onCancel: () => void }) {
   const [date, setDate] = useState(todayIso());
   const [listingId, setListingId] = useState("");
   const [rawPhoto, setRawPhoto] = useState<string | null>(null); // pre-crop
@@ -107,7 +108,7 @@ function PostForm({ activities, settings, save, listings, onPosted, onCancel }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { apiGet<Taggable[]>(`/api/moments/taggable${listingId ? `?listingId=${encodeURIComponent(listingId)}` : ""}`).then((t) => { setTaggable(t); setTagged([]); }).catch(() => setTaggable([])); }, [listingId]);
+  useEffect(() => { apiGet<Taggable[]>(`/api/moments/taggable${listingId ? `?listingId=${encodeURIComponent(listingId)}` : ""}`).then((t) => { setTaggable(t); const pre = initialChild ? t.filter((x) => x.name.trim().toLowerCase() === initialChild.trim().toLowerCase() && x.photoConsent).map((x) => x.childId) : []; setTagged(pre); }).catch(() => setTaggable([])); }, [listingId, initialChild]);
 
   const canTag = (c: Taggable) => photoType === "work" || c.photoConsent;
   const noConsentTagged = tagged.map((id) => taggable.find((c) => c.childId === id)).filter((c): c is Taggable => !!c && !c.photoConsent);
@@ -203,13 +204,16 @@ function PostForm({ activities, settings, save, listings, onPosted, onCancel }: 
 }
 
 export function MomentsApp() {
+  // Deep-link from the Register: ?child=Name opens "Share a moment" pre-tagged.
+  const searchParams = useSearchParams();
+  const presetChild = searchParams.get("child") ?? "";
   const { settings, save } = useSettings();
   const activities = useMemo(() => (settings.moments?.activities?.length ? settings.moments.activities : ACTS), [settings.moments?.activities]);
   const actByName = (name?: string) => activities.find((a) => a.n === name);
   const [moments, setMoments] = useState<Moment[] | null>(null);
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [posting, setPosting] = useState(false);
+  const [posting, setPosting] = useState(!!presetChild);
   const [canManage, setCanManage] = useState(false);
   const [galMode, setGalMode] = useState<"all" | "child" | "listing">("all");
   const [galFolder, setGalFolder] = useState<string | null>(null);
@@ -366,7 +370,7 @@ export function MomentsApp() {
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
       {savedMsg && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]">✉️ {savedMsg}</div>}
-      {posting && <PostForm activities={activities} settings={settings} save={save} listings={listings} onPosted={() => { setPosting(false); refresh(); }} onCancel={() => setPosting(false)} />}
+      {posting && <PostForm activities={activities} settings={settings} save={save} listings={listings} initialChild={presetChild} onPosted={() => { setPosting(false); refresh(); }} onCancel={() => setPosting(false)} />}
 
       {/* gallery with folders */}
       {photos.length > 0 && (

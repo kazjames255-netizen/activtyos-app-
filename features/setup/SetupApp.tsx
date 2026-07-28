@@ -1329,10 +1329,17 @@ export function SetupApp() {
             <Toggle on={settings.registers?.requireCollectionPin ?? false} onChange={(v) => set("registers", { ...settings.registers, requireCollectionPin: v })} labels={["On", "Off"]} />
           </Row>
           <div className="mt-3 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Show on a child&rsquo;s card</div>
-          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">Allergies, medical and SEND always show for safeguarding. These are the extra details on the tap-through card.</p>
-          {([["password", "Collection password"], ["emergency", "Emergency contact"], ["school", "School"], ["contact", "Booker contact"]] as [("password" | "emergency" | "school" | "contact"), string][]).map(([k, label]) => (
+          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">Every detail on the tap-through card. Turn off anything your staff don&rsquo;t need on the day. Keeping allergies, medical and SEND on is strongly recommended for safeguarding.</p>
+          {([["allergies", "Allergies"], ["medical", "Medical"], ["dietary", "Dietary"], ["send", "SEND / needs"], ["swimming", "Swimming ability"], ["likes", "Likes / what settles them"], ["dislikes", "Dislikes / avoid"], ["careNotes", "Care notes"], ["answers", "Parent's question answers"], ["consents", "Consents (photos, suncream…)"], ["mainContact", "Main contact (name & number)"], ["emergency", "Emergency contact"], ["password", "Collection password"], ["school", "School"], ["bookingNotes", "Booking notes"], ["attending", "Attending days & times"]] as [string, string][]).map(([k, label]) => (
             <Row key={k} label={label}>
-              <Toggle on={settings.registers?.fields?.[k] ?? true} onChange={(v) => set("registers", { ...settings.registers, fields: { ...settings.registers?.fields, [k]: v } })} labels={["Show", "Hide"]} />
+              <Toggle on={settings.registers?.card?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["card"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, card: { ...settings.registers?.card, [k]: v } })} labels={["Show", "Hide"]} />
+            </Row>
+          ))}
+          <div className="mt-4 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Quick actions on each row</div>
+          <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">The one-tap links beside each child — each jumps straight to the right page with the child already filled in.</p>
+          {([["firstAid", "First aid"], ["incident", "Report incident"], ["medication", "Give medication"], ["moments", "Moments"], ["email", "Email parent"], ["message", "Message parent"]] as [string, string][]).map(([k, label]) => (
+            <Row key={k} label={label}>
+              <Toggle on={settings.registers?.actions?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["actions"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, actions: { ...settings.registers?.actions, [k]: v } })} labels={["On", "Off"]} />
             </Row>
           ))}
         </Section>
