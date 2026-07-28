@@ -36,6 +36,9 @@ const PRIO: Record<Prio, { label: string; dot: string }> = {
   urgent: { label: "Urgent", dot: "#ef4444" }, high: { label: "High", dot: "#f59e0b" },
   med: { label: "Medium", dot: "#3b82f6" }, low: { label: "Low", dot: "#8a93a6" },
 };
+const PRANK: Record<Prio, number> = { urgent: 0, high: 1, med: 2, low: 3 };
+// Sort: most urgent first, then soonest due (null due sinks last).
+const byPrioDue = (a: Task, b: Task) => (PRANK[a.prio ?? "med"] - PRANK[b.prio ?? "med"]) || `${a.due ?? "9999-99"}`.localeCompare(`${b.due ?? "9999-99"}`);
 const COLS: { k: Status; label: string; color: string }[] = [
   { k: "backlog", label: "Backlog", color: "#8a93a6" }, { k: "todo", label: "To do", color: "#3b82f6" },
   { k: "prog", label: "In progress", color: "#f59e0b" }, { k: "done", label: "Done", color: "#16b364" },
@@ -90,6 +93,9 @@ export function TasksApp() {
   const [teamSort, setTeamSort] = useState<"up" | "down">("up");
   const [calMonth, setCalMonth] = useState(() => todayIso().slice(0, 7));
   const [drag, setDrag] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [prioFilter, setPrioFilter] = useState<Prio | "">("");
+  const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
   const today = todayIso();
   const manager = role === "company" || role === "franchise";
   const isFreelancer = role === "freelancer";
@@ -133,10 +139,24 @@ export function TasksApp() {
   const overdue = openTasks.filter((t) => t.due && daysBetween(today, t.due) < 0);
   const dueWeek = openTasks.filter((t) => t.due && daysBetween(today, t.due) >= 0 && daysBetween(today, t.due) <= 6);
   const unassigned = openTasks.filter((t) => !t.who || t.who.trim() === "");
-  const kpis: [string, number, string][] = [
-    ["Open", openTasks.length, BLUE], ["Overdue", overdue.length, "#c02636"], ["Due this week", dueWeek.length, "#b45309"],
-    ...(manager ? [["Unassigned", unassigned.length, "#5b6478"] as [string, number, string]] : []),
+  type KpiKey = "open" | "overdue" | "week" | "unassigned";
+  const kpis: [string, number, string, KpiKey][] = [
+    ["Open", openTasks.length, "#bfe0ff", "open"], ["Overdue", overdue.length, "#ffb4bd", "overdue"], ["Due this week", dueWeek.length, "#ffd9a6", "week"],
+    ...(manager ? [["Unassigned", unassigned.length, "#d6dbe6", "unassigned"] as [string, number, string, KpiKey]] : []),
   ];
+
+  // Combined filters — free-text search + a priority chip + the clicked KPI tile
+  // — applied to every view. "My tasks" further narrows to the current user.
+  const term = search.trim().toLowerCase();
+  const kpiMatch = (t: Task) => kpiFilter === "" ? true
+    : kpiFilter === "open" ? t.status !== "done"
+    : kpiFilter === "overdue" ? t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0
+    : kpiFilter === "week" ? t.status !== "done" && !!t.due && daysBetween(today, t.due) >= 0 && daysBetween(today, t.due) <= 6
+    : t.status !== "done" && (!t.who || t.who.trim() === "");
+  const searchMatch = (t: Task) => !term || t.t.toLowerCase().includes(term) || (t.who ?? "").toLowerCase().includes(term) || (t.link?.v ?? "").toLowerCase().includes(term) || (t.labels ?? []).some((l) => l.toLowerCase().includes(term));
+  const base = all.filter((t) => (!prioFilter || t.prio === prioFilter) && kpiMatch(t) && searchMatch(t));
+  const filtersActive = !!term || !!prioFilter || !!kpiFilter;
+  const clearFilters = () => { setSearch(""); setPrioFilter(""); setKpiFilter(""); };
 
   const preview = qa.trim() ? parseQuick(qa, today) : null;
   const previewWhoUnknown = preview?.who && !team.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
@@ -161,13 +181,18 @@ export function TasksApp() {
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px]">✓</span>Task manager</div>
         <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>
         <div className="mt-3.5 flex flex-wrap gap-2.5">
-          {kpis.map(([label, n, color]) => (
-            <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm">
-              <div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums" }}>{n}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em] text-white/80">{label}</div>
-              <div className="h-0.5 w-6 rounded-full" style={{ background: color, opacity: 0.9 }} />
-            </div>
-          ))}
+          {kpis.map(([label, n, color, key]) => {
+            const on = kpiFilter === key;
+            return (
+              <button key={label} type="button" onClick={() => setKpiFilter(on ? "" : key)} title={`Show ${label.toLowerCase()}`}
+                className="rounded-xl px-4 py-2 text-left backdrop-blur-sm transition hover:-translate-y-0.5"
+                style={on ? { background: "#fff", boxShadow: "0 6px 18px -8px rgba(0,0,0,.4)" } : { background: "rgba(255,255,255,.15)" }}>
+                <div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums", color: on ? "#1d3a8f" : "#fff" }}>{n}</div>
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em]" style={{ color: on ? "#4a4763" : "rgba(255,255,255,.8)" }}>{label}</div>
+                <div className="mt-0.5 h-0.5 w-6 rounded-full" style={{ background: color }} />
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -198,18 +223,34 @@ export function TasksApp() {
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]"><b>@</b> assignee · <b>!</b> priority (urgent/high/med/low) · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date</div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-3 flex flex-wrap gap-1.5">
+      {/* Tabs + toolbar */}
+      <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
         {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={tab === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{l}</button>)}
+        <div className="relative ml-auto">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-8 pr-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[var(--ink-3)]">🔎</span>
+        </div>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Priority</span>
+        {(["urgent", "high", "med", "low"] as Prio[]).map((p) => <button key={p} type="button" onClick={() => setPrioFilter(prioFilter === p ? "" : p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={prioFilter === p ? { borderColor: PRIO[p].dot, background: `${PRIO[p].dot}1a`, color: PRIO[p].dot } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span className="h-2 w-2 rounded-full" style={{ background: PRIO[p].dot }} />{PRIO[p].label}</button>)}
+        {filtersActive && <><button type="button" onClick={clearFilters} className="ml-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Clear ✕</button><span className="text-[11.5px] text-[var(--ink-3)]">{base.length} match{base.length === 1 ? "" : "es"}</span></>}
       </div>
 
       {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>One inbox across every company you work for</b> — tasks from all the providers you coach for land here together, each badged with the company it belongs to.</div>}
 
       {/* Views */}
-      {tab === "mine" && <MyTasks tasks={manager ? all : all.filter(mineOf)} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
-      {tab === "board" && <Board tasks={all} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} />}
-      {tab === "cal" && manager && <Calendar tasks={openTasks} month={calMonth} setMonth={setCalMonth} today={today} onOpen={setOpenId} />}
-      {tab === "team" && manager && <TeamView tasks={all} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+      {all.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center">
+          <div className="text-[15px] font-extrabold">No tasks yet</div>
+          <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">Add your first with the quick-add above — try <b>Set up Week 3 registers tomorrow @Sam !high #Bedford</b>. Some will also appear on their own once the auto-spawn engine ships.</p>
+        </div>
+      ) : (<>
+        {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+        {tab === "board" && <Board tasks={base} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} />}
+        {tab === "cal" && manager && <Calendar tasks={base.filter((t) => t.status !== "done")} month={calMonth} setMonth={setCalMonth} today={today} onOpen={setOpenId} />}
+        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+      </>)}
 
       {openTask && <Drawer task={openTask} team={team} isFreelancer={isFreelancer} me={me} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onDelete={() => remove(openTask.id)} />}
     </div>
@@ -219,9 +260,9 @@ export function TasksApp() {
 // ── My Tasks — grouped list ─────────────────────────────────────────────────
 function MyTasks({ tasks, today, onOpen, onToggle }: { tasks: Task[]; today: string; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
   const open = tasks.filter((t) => t.status !== "done");
-  const overdue = open.filter((t) => t.due && daysBetween(today, t.due) < 0);
-  const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0);
-  const upcoming = open.filter((t) => !t.due || daysBetween(today, t.due) > 0).sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`));
+  const overdue = open.filter((t) => t.due && daysBetween(today, t.due) < 0).sort(byPrioDue);
+  const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0).sort(byPrioDue);
+  const upcoming = open.filter((t) => !t.due || daysBetween(today, t.due) > 0).sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`) || byPrioDue(a, b));
   const done = tasks.filter((t) => t.status === "done");
   const groups: [string, Task[], string][] = [["Overdue", overdue, "Nothing overdue — nice."], ["Today", todayT, "Clear for today."], ["Upcoming", upcoming, "Nothing scheduled."], ["Done", done, "Nothing done yet."]];
   return (
@@ -241,8 +282,9 @@ function TaskRow({ t, today, onOpen, onToggle }: { t: Task; today: string; onOpe
   const done = t.status === "done";
   const dl = dueLabel(t.due, today);
   const subs = t.subs ?? [];
+  const isOverdue = !done && !!t.due && daysBetween(today, t.due) < 0;
   return (
-    <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[#f7faff]">
+    <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[#f7faff]" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
       <button type="button" onClick={() => onToggle(t)} aria-label="Toggle done" className="flex h-5 w-5 flex-none items-center justify-center rounded-full border-2" style={{ borderColor: done ? "#16b364" : "var(--line)", background: done ? "#16b364" : "transparent", color: "#fff" }}>{done ? "✓" : ""}</button>
       <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
       <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -262,27 +304,33 @@ function TaskRow({ t, today, onOpen, onToggle }: { t: Task; today: string; onOpe
 // ── Board — kanban with drag ────────────────────────────────────────────────
 function Board({ tasks, onOpen, drag, setDrag, onDrop }: { tasks: Task[]; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void }) {
   const [over, setOver] = useState<Status | null>(null);
+  const today = todayIso();
   return (
     <>
       <div className="grid gap-2.5 md:grid-cols-4">
         {COLS.map((c) => {
-          const list = tasks.filter((t) => (t.status ?? "todo") === c.k);
+          const list = tasks.filter((t) => (t.status ?? "todo") === c.k).slice().sort(byPrioDue);
           return (
             <div key={c.k} onDragOver={(e) => { e.preventDefault(); setOver(c.k); }} onDragLeave={() => setOver((o) => (o === c.k ? null : o))} onDrop={() => { if (drag) onDrop(drag, c.k); setDrag(null); setOver(null); }}
               className="rounded-2xl border bg-[var(--surface)] p-2 transition-colors" style={{ borderColor: over === c.k ? c.color : "var(--line)", background: over === c.k ? "#f7faff" : "var(--surface)" }}>
               <div className="mb-1.5 flex items-center gap-1.5 px-1 py-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} /><span className="text-[11.5px] font-extrabold uppercase tracking-wide" style={{ color: c.color }}>{c.label}</span><span className="ml-auto rounded-full bg-[var(--panel)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
               <div className="space-y-1.5">
-                {list.map((t) => (
+                {list.map((t) => {
+                  const dl = dueLabel(t.due, today);
+                  const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
+                  return (
                   <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
-                    className="cursor-grab rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing">
+                    className="cursor-grab rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
                     <div className="flex items-start gap-1.5"><span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span></div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       {t.spawn && <span className="rounded bg-[#fdecc8] px-1.5 text-[9px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
                       {t.link && <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
+                      {dl && t.status !== "done" && <span className="text-[10px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
                       {t.who && <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(t.who) }} title={t.who}>{initials(t.who)}</span>}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-4 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
               </div>
             </div>
@@ -373,9 +421,17 @@ function Drawer({ task, team, isFreelancer, me, onClose, onPatch, onDelete }: { 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="flex h-full w-full max-w-[460px] flex-col bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-          <input value={task.t} onChange={(e) => onPatch({ t: e.target.value })} className="min-w-0 flex-1 rounded-lg px-1 text-[15px] font-extrabold outline-none focus:bg-[var(--panel)]" />
-          <button type="button" onClick={onClose} className="ml-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
+        <div className="border-b border-[var(--line)] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <input value={task.t} onChange={(e) => onPatch({ t: e.target.value })} className="min-w-0 flex-1 rounded-lg px-1 text-[15px] font-extrabold outline-none focus:bg-[var(--panel)]" />
+            <button type="button" onClick={onClose} className="ml-2 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <button type="button" onClick={() => onPatch({ status: task.status === "done" ? "todo" : "done" })} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={task.status === "done" ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#eef4fd", color: "#1d3a8f" }}>{task.status === "done" ? "✓ Done — reopen" : "Mark complete"}</button>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold"><span className="h-2 w-2 rounded-full" style={{ background: PRIO[task.prio ?? "med"].dot }} />{PRIO[task.prio ?? "med"].label}</span>
+            {task.link && <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: LINK[task.link.k].bg, color: LINK[task.link.k].fg }}>{LINK[task.link.k].icon} {task.link.v}</span>}
+            {task.spawn && <span className="rounded bg-[#fdecc8] px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {field("Assignee", <input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} />)}
