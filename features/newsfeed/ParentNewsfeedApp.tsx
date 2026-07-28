@@ -78,7 +78,12 @@ export function ParentNewsfeedApp() {
                     <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
                   </div>
                   <div className="p-3 pt-2"><NewsletterView data={p.newsletter} /></div>
-                  {p.react !== false && <div className="px-3 pb-3"><button type="button" onClick={() => react(p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button></div>}
+                  {(p.ackRequired || p.react !== false) && (
+                    <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+                      {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>}
+                      {p.react !== false && <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
+                    </div>
+                  )}
                 </Card>
               );
             }

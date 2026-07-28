@@ -33,17 +33,31 @@ export const newMeta = (): NlMeta => ({ name: "", folder: "", audScope: "all", a
 // ink + muted text and the colour text sits on over an accent. Deliberately
 // multi-hue so a newsletter reads as designed, not flat.
 export interface Palette { id: string; name: string; bg: string; surface: string; accent: string; accent2: string; ink: string; muted: string; onAccent: string; band: string }
-export const PALETTES: Palette[] = [
-  { id: "classic", name: "Classic Blue", bg: "#eef3fb", surface: "#ffffff", accent: "#1d3a8f", accent2: "#3f78d8", ink: "#16203a", muted: "#5b6478", onAccent: "#ffffff", band: "#e6eefc" },
-  { id: "sunshine", name: "Sunshine", bg: "#fff6e9", surface: "#fffdf9", accent: "#f2683c", accent2: "#f5b301", ink: "#3a2a17", muted: "#8a7256", onAccent: "#ffffff", band: "#ffe9cc" },
-  { id: "ocean", name: "Ocean", bg: "#e7f6f7", surface: "#ffffff", accent: "#0f6d8c", accent2: "#28b6c4", ink: "#0e2b33", muted: "#4c6f78", onAccent: "#ffffff", band: "#d3eef1" },
-  { id: "forest", name: "Forest", bg: "#eaf6ed", surface: "#ffffff", accent: "#15803d", accent2: "#84b13b", ink: "#14301f", muted: "#4f6b57", onAccent: "#ffffff", band: "#d7eede" },
-  { id: "berry", name: "Berry", bg: "#fdeef4", surface: "#fffafc", accent: "#c02467", accent2: "#8b5cf6", ink: "#38162a", muted: "#7d5b6c", onAccent: "#ffffff", band: "#fbdcec" },
-  { id: "sherbet", name: "Sherbet", bg: "#f3eefe", surface: "#ffffff", accent: "#7c3aed", accent2: "#fb7185", ink: "#241a3a", muted: "#665a80", onAccent: "#ffffff", band: "#e9e0fd" },
-  { id: "midnight", name: "Midnight", bg: "#141a2e", surface: "#1e2740", accent: "#f5b301", accent2: "#5b8def", ink: "#eaf0ff", muted: "#9aa6c4", onAccent: "#141a2e", band: "#26314f" },
-  { id: "sage", name: "Sage & Clay", bg: "#f2f1ea", surface: "#fffefb", accent: "#9a6a4b", accent2: "#7d8b6a", ink: "#2e2a22", muted: "#736c5e", onAccent: "#ffffff", band: "#e7e4d8" },
+
+// Two-level colour: 10 FAMILIES (by mood/hue), each with 10 SCHEMES (an accent +
+// a complementary second accent). Neutrals are derived from the accent so every
+// scheme reads as designed, not flat. 10 × 10 = 100 schemes.
+interface Family { id: string; name: string; dark?: boolean; pairs: [string, string][] }
+const FAMILIES: Family[] = [
+  { id: "ocean", name: "Ocean", pairs: [["#1d3a8f", "#3f78d8"], ["#0f6d8c", "#28b6c4"], ["#123a6b", "#4f9ed6"], ["#1e5fa8", "#6ec1e4"], ["#0b4f6c", "#0197b1"], ["#274690", "#5a75c4"], ["#1b3b6f", "#0a6e9e"], ["#005f73", "#0a9396"], ["#14213d", "#4361ee"], ["#003049", "#4f8fc0"]] },
+  { id: "sunset", name: "Sunset", pairs: [["#f2683c", "#f5b301"], ["#e0480c", "#ff9e00"], ["#d1495b", "#edae49"], ["#bc3908", "#f6aa1c"], ["#c1121f", "#f08700"], ["#e85d04", "#faa307"], ["#dc2f02", "#f4a261"], ["#9d0208", "#e85d04"], ["#ca6702", "#ee9b00"], ["#bb3e03", "#e9853b"]] },
+  { id: "forest", name: "Forest", pairs: [["#15803d", "#84b13b"], ["#2d6a4f", "#52b788"], ["#1b4332", "#40916c"], ["#386641", "#8aab3c"], ["#1a7431", "#57cc42"], ["#087e8b", "#0b6e4f"], ["#31572c", "#7f9d3c"], ["#134611", "#3da35d"], ["#2b9348", "#55a630"], ["#004b23", "#3f9d54"]] },
+  { id: "berry", name: "Berry", pairs: [["#c02467", "#8b5cf6"], ["#a4133c", "#ff4d6d"], ["#b5179e", "#f72585"], ["#9d174d", "#ec4899"], ["#831843", "#db4d8a"], ["#d1006f", "#ff5d8f"], ["#7a0f4e", "#c9184a"], ["#a01a58", "#e0479e"], ["#c9184a", "#ff758f"], ["#8e2984", "#d43790"]] },
+  { id: "grape", name: "Grape", pairs: [["#5b21b6", "#8b5cf6"], ["#6d28d9", "#a06cf5"], ["#4c1d95", "#7c3aed"], ["#3c096c", "#9d4edd"], ["#5a189a", "#b268f0"], ["#240046", "#7b2cbf"], ["#3a0ca3", "#4361ee"], ["#560bad", "#b5179e"], ["#7209b7", "#c026a9"], ["#480ca8", "#5b8def"]] },
+  { id: "teal", name: "Teal", pairs: [["#0f766e", "#2dd4bf"], ["#036666", "#5eab8f"], ["#008080", "#20c997"], ["#0d9488", "#41d3b8"], ["#14746f", "#249ea0"], ["#005f60", "#00afb9"], ["#046865", "#28c2b8"], ["#01727a", "#54c9a8"], ["#0a9396", "#5cc3ad"], ["#006d77", "#4aa79f"]] },
+  { id: "coral", name: "Coral", pairs: [["#e5674e", "#ff9770"], ["#ef6351", "#f7a072"], ["#e07a5f", "#e0a458"], ["#f4845f", "#f27059"], ["#e56b6f", "#e79b7f"], ["#d1495b", "#e08a76"], ["#cb4749", "#f4978e"], ["#e63946", "#f88379"], ["#e76f51", "#f4a261"], ["#c9584a", "#e8927c"]] },
+  { id: "slate", name: "Slate", pairs: [["#334155", "#64748b"], ["#3f3f46", "#71717a"], ["#475569", "#8593a8"], ["#44403c", "#8a827a"], ["#374151", "#6b7280"], ["#1f2937", "#4b5563"], ["#3d405b", "#7d8199"], ["#2b2d42", "#8d99ae"], ["#495057", "#98a2ac"], ["#403d39", "#6c757d"]] },
+  { id: "midnight", name: "Midnight", dark: true, pairs: [["#f5b301", "#5b8def"], ["#ffd60a", "#00b4d8"], ["#c77dff", "#7b2cbf"], ["#f72585", "#4cc9f0"], ["#ffbe0b", "#fb5607"], ["#64dfdf", "#5390d9"], ["#ff4d8d", "#8338ec"], ["#2ee6a5", "#00b4d8"], ["#f5b301", "#e5383b"], ["#ffca3a", "#8ac926"]] },
+  { id: "candy", name: "Candy", pairs: [["#ef476f", "#ff9e00"], ["#8ac926", "#1982c4"], ["#6a4c93", "#ff924c"], ["#f15bb5", "#9b5de5"], ["#00bbf9", "#00cfa5"], ["#ee5d9b", "#f5b301"], ["#ff70a6", "#ff9770"], ["#06d6a0", "#118ab2"], ["#c05299", "#ff9770"], ["#e5484d", "#f5b301"]] },
 ];
-export const paletteOf = (id: string) => PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+const mk = (famId: string, i: number, accent: string, accent2: string, dark?: boolean): Palette => dark
+  ? { id: `${famId}-${i}`, name: `${i + 1}`, bg: "#141a2e", surface: "#1e2740", accent, accent2, ink: "#eaf0ff", muted: "#9aa6c4", onAccent: "#141a2e", band: "#26314f" }
+  : { id: `${famId}-${i}`, name: `${i + 1}`, bg: `${accent}0f`, surface: "#ffffff", accent, accent2, ink: "#1b2130", muted: "#5f6672", onAccent: "#ffffff", band: `${accent}1e` };
+export interface PaletteFamily { id: string; name: string; schemes: Palette[] }
+export const PALETTE_FAMILIES: PaletteFamily[] = FAMILIES.map((f) => ({ id: f.id, name: f.name, schemes: f.pairs.map(([a, b], i) => mk(f.id, i, a, b, f.dark)) }));
+export const ALL_PALETTES: Palette[] = PALETTE_FAMILIES.flatMap((f) => f.schemes);
+export const familyOfPalette = (id: string) => id.split("-")[0];
+export const paletteOf = (id: string) => ALL_PALETTES.find((p) => p.id === id) ?? ALL_PALETTES[0];
 
 // ── 10 layouts: each seeds a block list. Company details flow from the top-level
 // `company`, so they only get typed once.
@@ -64,7 +78,7 @@ export const LAYOUTS: Layout[] = [
 export const layoutOf = (id: string) => LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 
 export const newNewsletter = (layoutId: string, company: Partial<Company> = {}): Newsletter => ({
-  layout: layoutId, palette: "classic",
+  layout: layoutId, palette: ALL_PALETTES[0].id,
   company: { name: company.name ?? "", phone: company.phone ?? "", email: company.email ?? "", address: company.address ?? "", logo: company.logo },
   blocks: layoutOf(layoutId).blocks(),
 });
@@ -228,12 +242,20 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
               </div>
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour scheme</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour — pick a palette</div>
               <div className="flex flex-wrap gap-1.5">
-                {PALETTES.map((pl) => (
-                  <button key={pl.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} title={pl.name} className="flex items-center gap-1 rounded-full border px-1.5 py-1" style={{ borderColor: nl.palette === pl.id ? pl.accent : "var(--line)", background: nl.palette === pl.id ? `${pl.accent}12` : "transparent" }}>
-                    <span className="flex overflow-hidden rounded-full" style={{ height: 16, width: 16, border: "1px solid rgba(0,0,0,.1)" }}><span style={{ flex: 1, background: pl.accent }} /><span style={{ flex: 1, background: pl.accent2 }} /></span>
-                    <span className="text-[10.5px] font-bold text-[var(--ink-2)]">{pl.name}</span>
+                {PALETTE_FAMILIES.map((f) => { const on = familyOfPalette(nl.palette) === f.id; const sw = f.schemes[0]; return (
+                  <button key={f.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: f.schemes[0].id }))} title={f.name} className="flex items-center gap-1 rounded-full border px-1.5 py-1" style={{ borderColor: on ? sw.accent : "var(--line)", background: on ? `${sw.accent}12` : "transparent" }}>
+                    <span className="flex overflow-hidden rounded-full" style={{ height: 15, width: 15, border: "1px solid rgba(0,0,0,.1)" }}><span style={{ flex: 1, background: sw.accent }} /><span style={{ flex: 1, background: sw.accent2 }} /></span>
+                    <span className="text-[10.5px] font-bold text-[var(--ink-2)]">{f.name}</span>
+                  </button>
+                ); })}
+              </div>
+              <div className="mb-1 mt-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">…then a scheme</div>
+              <div className="flex flex-wrap gap-1">
+                {(PALETTE_FAMILIES.find((f) => f.id === familyOfPalette(nl.palette)) ?? PALETTE_FAMILIES[0]).schemes.map((s) => (
+                  <button key={s.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: s.id }))} title={`Scheme ${s.name}`} className="overflow-hidden rounded-md" style={{ height: 26, width: 34, border: nl.palette === s.id ? "2px solid #1d3a8f" : "1px solid var(--line)", display: "flex" }}>
+                    <span style={{ flex: 2, background: s.accent }} /><span style={{ flex: 1, background: s.accent2 }} /><span style={{ flex: 1, background: s.bg }} />
                   </button>
                 ))}
               </div>
