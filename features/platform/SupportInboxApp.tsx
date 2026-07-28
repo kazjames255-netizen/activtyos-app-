@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 
@@ -62,10 +63,12 @@ const FILTERS: { id: FilterId; label: string }[] = [
 ];
 
 export function SupportInboxApp() {
+  const searchParams = useSearchParams();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [filter, setFilter] = useState<FilterId>("all");
   const [q, setQ] = useState("");
-  const [selId, setSelId] = useState<string | null>(null);
+  // Deep-link from the HQ notification bell: ?thread=id opens that conversation.
+  const [selId, setSelId] = useState<string | null>(() => searchParams.get("thread"));
   const [composing, setComposing] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [err, setErr] = useState<string | null>(null);

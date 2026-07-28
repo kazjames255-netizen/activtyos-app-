@@ -11,6 +11,7 @@ import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-cust
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 import { Bell } from "./Bell";
+import { PlatformBell } from "./PlatformBell";
 import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 
@@ -133,6 +134,7 @@ export function Header({ portal }: { portal: PortalKey }) {
             than filing them, so no bug button either. */}
         {portal !== "platform" && <BugReport />}
         {portal !== "platform" && <Bell portal={portal} />}
+        {portal === "platform" && <PlatformBell />}
         <PortalSwitcher portal={portal} />
         {/* On phones the drawer's "Log out" item covers this. */}
         <Button

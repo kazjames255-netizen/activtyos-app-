@@ -89,6 +89,7 @@ export function TasksApp() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [qa, setQa] = useState("");
+  const [qaDue, setQaDue] = useState("");
   const [teamFilter, setTeamFilter] = useState("");
   const [teamSort, setTeamSort] = useState<"up" | "down">("up");
   const [calAnchor, setCalAnchor] = useState(() => todayIso());
@@ -141,8 +142,8 @@ export function TasksApp() {
     if (!qa.trim()) return;
     const p = parseQuick(qa, today);
     if (!p.t) return;
-    create({ t: p.t, who: noAssignee ? "" : (p.who ?? ""), prio: p.prio ?? "med", link: p.link ?? null, due: p.due ?? null });
-    setQa("");
+    create({ t: p.t, who: noAssignee ? "" : (p.who ?? ""), prio: p.prio ?? "med", link: p.link ?? null, due: qaDue || p.due || null });
+    setQa(""); setQaDue("");
   }
 
   // KPIs
@@ -211,6 +212,7 @@ export function TasksApp() {
       <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
+          <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>🗓 Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <Button onClick={addQuick}>Quick add</Button>
           <Button variant="primary" onClick={() => setCreating(true)}>+ New task</Button>
         </div>
