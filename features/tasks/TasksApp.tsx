@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
+import { HowItWorks } from "@/components/HowItWorks";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Task Manager — the operator to-do system. A task hangs off a real record
@@ -298,6 +299,12 @@ export function TasksApp() {
         </div>
       </div>
 
+      <HowItWorks video="Adding tasks fast, linking them to a booking or family, the board, and showing a task on the Events calendar." minutes="2 min">
+        <p className="mb-2"><b className="text-[var(--ink-2)]">Everything your team needs to do, in one place.</b> Add a task with the quick bar — type <b>@name</b> to assign it{noAssignee ? "" : ""}, <b>!high</b> for priority and a word like <b>tomorrow</b> for the deadline — or press <b>+ New task</b> for the full form.</p>
+        <p className="mb-2"><b className="text-[var(--ink-2)]">Link it to the real thing.</b> A task can point straight at a booking, child, parent, listing or location — the chip on the card jumps you there, so &ldquo;call the Barda family&rdquo; is one click from their booking.</p>
+        <p><b className="text-[var(--ink-2)]">Track it your way.</b> Drag cards across the board, tick <b>Done</b>, filter by <b>When</b> or priority, and optionally mirror a task onto the Events calendar so its labels, subtasks and comments show there too.</p>
+      </HowItWorks>
+
       {/* Quick add */}
       <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
@@ -457,47 +464,54 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone, onArc
   const today = todayIso();
   return (
     <>
-      <div className="grid gap-2.5 md:grid-cols-4">
-        {COLS.map((c) => {
-          const list = tasks.filter((t) => (t.status ?? "todo") === c.k).slice().sort(byPrioDue);
-          return (
-            <div key={c.k} onDragOver={(e) => { e.preventDefault(); setOver(c.k); }} onDragLeave={() => setOver((o) => (o === c.k ? null : o))} onDrop={() => { if (drag) onDrop(drag, c.k); setDrag(null); setOver(null); }}
-              className="flex flex-col overflow-hidden rounded-2xl border shadow-sm transition-colors" style={{ borderColor: over === c.k ? c.color : "var(--line)" }}>
-              <div className="flex items-center gap-1.5 px-3 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c.color}, ${c.color}c8)` }}><span className="h-2.5 w-2.5 rounded-full bg-white/85" /><span className="text-[11.5px] font-extrabold uppercase tracking-wide">{c.label}</span><span className="ml-auto rounded-full bg-white/25 px-2 text-[10.5px] font-extrabold">{list.length}</span></div>
-              <div className="flex-1 space-y-2 p-2" style={{ background: over === c.k ? `${c.color}12` : `${c.color}08` }}>
-                {list.map((t) => {
-                  const dl = dueFull(t, today);
-                  const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
-                  const accent = isOverdue ? "#c02636" : PRIO[t.prio ?? "med"].dot;
-                  return (
-                  <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
-                    className="cursor-grab overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing">
-                    <div className="border-l-[3px] p-2.5" style={{ borderColor: accent }}>
-                      <div className="flex items-start gap-1.5">
-                        <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
-                        <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                        {t.link && <LinkChip link={t.link} size="xs" />}
-                        {dl && t.status !== "done" && <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold" style={{ background: `${dl.color}18`, color: dl.color }}>{dl.text}</span>}
-                        {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
-                        <div className="ml-auto flex items-center gap-1">
-                          {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
-                          <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="rounded-md border px-2 py-0.5 text-[10px] font-extrabold transition-colors" style={t.status === "done" ? { borderColor: "#16b364", background: "#16b364", color: "#fff" } : { borderColor: "#16b364", color: "#0f8a4a" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-                {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-5 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid items-start gap-2.5 md:grid-cols-4">
+        {COLS.map((c) => (
+          <BoardColumn key={c.k} c={c} list={tasks.filter((t) => (t.status ?? "todo") === c.k).slice().sort(byPrioDue)} today={today} noAssignee={noAssignee} over={over === c.k} setOver={setOver} drag={drag} setDrag={setDrag} onDrop={onDrop} onOpen={onOpen} onDone={onDone} onArchive={onArchive} />
+        ))}
       </div>
       <p className="mt-2 text-[11px] text-[var(--ink-3)]">Drag a card between columns to move it, or click to open.</p>
     </>
+  );
+}
+
+// One kanban column — shows the first 10 cards, then a "Show N more" toggle.
+function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag, onDrop, onOpen, onDone, onArchive }: { c: { k: Status; label: string; color: string }; list: Task[]; today: string; noAssignee: boolean; over: boolean; setOver: (s: Status | null) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onOpen: (id: string) => void; onDone: (t: Task) => void; onArchive: (t: Task) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? list : list.slice(0, 10);
+  return (
+    <div onDragOver={(e) => { e.preventDefault(); setOver(c.k); }} onDragLeave={() => setOver(null)} onDrop={() => { if (drag) onDrop(drag, c.k); setDrag(null); setOver(null); }}
+      className="flex flex-col overflow-hidden rounded-2xl border shadow-sm transition-colors" style={{ borderColor: over ? c.color : "var(--line)" }}>
+      <div className="flex items-center gap-1.5 px-3 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c.color}, ${c.color}c8)` }}><span className="h-2.5 w-2.5 rounded-full bg-white/85" /><span className="text-[11.5px] font-extrabold uppercase tracking-wide">{c.label}</span><span className="ml-auto rounded-full bg-white/25 px-2 text-[10.5px] font-extrabold">{list.length}</span></div>
+      <div className="flex-1 space-y-2 p-2" style={{ background: over ? `${c.color}12` : `${c.color}08` }}>
+        {shown.map((t) => {
+          const dl = dueFull(t, today);
+          const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
+          const accent = isOverdue ? "#c02636" : PRIO[t.prio ?? "med"].dot;
+          return (
+          <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
+            className="cursor-grab overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing">
+            <div className="border-l-[3px] p-2.5" style={{ borderColor: accent }}>
+              <div className="flex items-start gap-1.5">
+                <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
+                <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {t.link && <LinkChip link={t.link} size="xs" />}
+                {dl && t.status !== "done" && <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold" style={{ background: `${dl.color}18`, color: dl.color }}>{dl.text}</span>}
+                {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
+                <div className="ml-auto flex items-center gap-1">
+                  {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="rounded-md border px-2 py-0.5 text-[10px] font-extrabold transition-colors" style={t.status === "done" ? { borderColor: "#16b364", background: "#16b364", color: "#fff" } : { borderColor: "#16b364", color: "#0f8a4a" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })}
+        {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-5 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
+        {list.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="w-full rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] py-1.5 text-[11px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? "Show less" : `Show ${list.length - 10} more`}</button>}
+      </div>
+    </div>
   );
 }
 
