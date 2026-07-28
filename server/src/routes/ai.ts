@@ -258,3 +258,53 @@ ai.post("/chat", async (req, res) => {
   }
   res.json({ reply });
 });
+
+// POST /api/ai/compose — draft a newsfeed post from a template + a few details.
+// Unlike /chat (read-only Q&A over live data), this WRITES: the operator gives
+// the gist and the specifics, picks a length, and gets back {title, body}.
+const TPL_GUIDE: Record<string, string> = {
+  announce: "A general announcement to families. Informative and warm.",
+  event: "An event invitation. Lead with what/where/when, mention it's great to see families there, and that they can RSVP in the app.",
+  reminder: "A short, actionable reminder. One or two sentences, clear about what to do and by when.",
+  urgent: "An urgent notice (e.g. a closure or early pick-up). Be calm, clear and reassuring; state exactly what is happening and what the parent must do. Do NOT be alarmist.",
+  celebrate: "A warm celebration or shout-out. Upbeat and positive; name achievements if given.",
+  booking: "A friendly nudge to book a listing. Create light urgency (limited spaces / early-bird) only if that's given, and end pointing at the booking button.",
+};
+const composeSchema = z.object({
+  kind: z.enum(["announce", "event", "reminder", "urgent", "celebrate", "booking"]),
+  notes: z.string().trim().min(1).max(1_500),                 // "what do you want to tell parents"
+  fields: z.record(z.string(), z.string().max(300)).optional(), // date/time/cost/location/listing…
+  length: z.enum(["short", "medium", "long"]).optional(),
+});
+ai.post("/compose", async (req, res) => {
+  if (!process.env.GROQ_API_KEY) { res.status(503).json({ error: "The AI writer isn't configured on this server (GROQ_API_KEY is missing)." }); return; }
+  const auth = req.auth!;
+  if (!(auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise" || auth.role === "staff")) { res.status(403).json({ error: "Operators only" }); return; }
+  const parsed = composeSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Send { kind, notes, fields?, length? }" }); return; }
+  const { kind, notes, fields, length } = parsed.data;
+  const len = length ?? "medium";
+  const lenGuide = len === "short" ? "1 short sentence (under 25 words)." : len === "long" ? "a warm short paragraph (about 4-6 sentences)." : "2-3 clear sentences.";
+  const detail = fields && Object.keys(fields).length ? Object.entries(fields).filter(([, v]) => v && v.trim()).map(([k, v]) => `- ${k}: ${v}`).join("\n") : "(none given)";
+  const system = [
+    "You write announcements from a UK children's activity provider (camp/club/class) to parents, shown in the parents' app.",
+    `This is a ${kind} post. ${TPL_GUIDE[kind]}`,
+    `Length of the message body: ${lenGuide}`,
+    "Voice: warm, clear, professional, British English. Money in GBP like £30. Use ONLY the facts given — never invent dates, prices, names or numbers. Do not use hashtags. Avoid emojis unless it is a celebration, and then at most one.",
+    "Respond with ONLY a compact JSON object of the form {\"title\":\"…\",\"body\":\"…\"} — a short punchy title and the message body. No markdown, no code fences, no commentary.",
+  ].join("\n");
+  const userMsg = `What the provider wants to say:\n${notes}\n\nSpecifics to include:\n${detail}`;
+  const groqRes = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    body: JSON.stringify({ model: MODEL, messages: [{ role: "system", content: system }, { role: "user", content: userMsg }], temperature: 0.6, max_tokens: 500, response_format: { type: "json_object" } }),
+  });
+  if (!groqRes.ok) { const d = await groqRes.text().catch(() => ""); console.error(`[ai] compose Groq ${groqRes.status}: ${d.slice(0, 300)}`); res.status(502).json({ error: "The writer couldn't reach its model just now — try again." }); return; }
+  const data = (await groqRes.json()) as { choices?: { message?: { content?: string } }[] };
+  const raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+  try {
+    const obj = JSON.parse(raw) as { title?: string; body?: string };
+    if (!obj.body) throw new Error("empty");
+    res.json({ title: (obj.title ?? "").slice(0, 160), body: obj.body.slice(0, 4_000) });
+  } catch { res.json({ title: "", body: raw.slice(0, 4_000) }); } // model didn't return clean JSON — use the text
+});
