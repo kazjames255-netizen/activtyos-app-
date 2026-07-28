@@ -133,6 +133,7 @@ export function TasksApp() {
   const [drag, setDrag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [prioFilter, setPrioFilter] = useState<Prio | "">("");
+  const [dueScope, setDueScope] = useState(""); // "" (any) | "today" | "tomorrow" | an ISO date
   const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
   const [listings, setListings] = useState<{ id: string; title: string; location?: string }[]>([]);
   const [bookings, setBookings] = useState<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>([]);
@@ -253,9 +254,11 @@ export function TasksApp() {
     : kpiFilter === "week" ? t.status !== "done" && !!t.due && daysBetween(today, t.due) >= 0 && daysBetween(today, t.due) <= 6
     : t.status !== "done" && (!t.who || t.who.trim() === "");
   const searchMatch = (t: Task) => !term || t.t.toLowerCase().includes(term) || (t.who ?? "").toLowerCase().includes(term) || (t.link?.v ?? "").toLowerCase().includes(term) || (t.labels ?? []).some((l) => l.toLowerCase().includes(term));
-  const base = all.filter((t) => (!prioFilter || t.prio === prioFilter) && kpiMatch(t) && searchMatch(t));
-  const filtersActive = !!term || !!prioFilter || !!kpiFilter;
-  const clearFilters = () => { setSearch(""); setPrioFilter(""); setKpiFilter(""); };
+  const scopeIso = dueScope === "today" ? today : dueScope === "tomorrow" ? shiftIso(today, 1) : dueScope; // keyword → date; else already ISO/""
+  const whenMatch = (t: Task) => !dueScope || t.due === scopeIso;
+  const base = all.filter((t) => (!prioFilter || t.prio === prioFilter) && kpiMatch(t) && whenMatch(t) && searchMatch(t));
+  const filtersActive = !!term || !!prioFilter || !!kpiFilter || !!dueScope;
+  const clearFilters = () => { setSearch(""); setPrioFilter(""); setKpiFilter(""); setDueScope(""); };
 
   const preview = qa.trim() ? parseQuick(qa, today) : null;
   const previewWhoUnknown = preview?.who && !team.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
@@ -324,6 +327,11 @@ export function TasksApp() {
         <div className="relative ml-auto">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
         </div>
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">When</span>
+        {([["All", ""], ["Today", "today"], ["Tomorrow", "tomorrow"]] as const).map(([label, val]) => <button key={label} type="button" onClick={() => setDueScope(val)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope === val ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope && dueScope !== "today" && dueScope !== "tomorrow" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span>Pick date</span><input type="date" value={dueScope !== "today" && dueScope !== "tomorrow" ? dueScope : ""} onChange={(e) => setDueScope(e.target.value)} className="bg-transparent text-[11.5px] text-[var(--ink)] outline-none" /></label>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Priority</span>
@@ -454,32 +462,35 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone, onArc
           const list = tasks.filter((t) => (t.status ?? "todo") === c.k).slice().sort(byPrioDue);
           return (
             <div key={c.k} onDragOver={(e) => { e.preventDefault(); setOver(c.k); }} onDragLeave={() => setOver((o) => (o === c.k ? null : o))} onDrop={() => { if (drag) onDrop(drag, c.k); setDrag(null); setOver(null); }}
-              className="rounded-2xl border bg-[var(--surface)] p-2 transition-colors" style={{ borderColor: over === c.k ? c.color : "var(--line)", background: over === c.k ? "#f7faff" : "var(--surface)" }}>
-              <div className="mb-1.5 flex items-center gap-1.5 px-1 py-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} /><span className="text-[11.5px] font-extrabold uppercase tracking-wide" style={{ color: c.color }}>{c.label}</span><span className="ml-auto rounded-full bg-[var(--panel)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
-              <div className="space-y-1.5">
+              className="flex flex-col overflow-hidden rounded-2xl border shadow-sm transition-colors" style={{ borderColor: over === c.k ? c.color : "var(--line)" }}>
+              <div className="flex items-center gap-1.5 px-3 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c.color}, ${c.color}c8)` }}><span className="h-2.5 w-2.5 rounded-full bg-white/85" /><span className="text-[11.5px] font-extrabold uppercase tracking-wide">{c.label}</span><span className="ml-auto rounded-full bg-white/25 px-2 text-[10.5px] font-extrabold">{list.length}</span></div>
+              <div className="flex-1 space-y-2 p-2" style={{ background: over === c.k ? `${c.color}12` : `${c.color}08` }}>
                 {list.map((t) => {
                   const dl = dueFull(t, today);
                   const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
+                  const accent = isOverdue ? "#c02636" : PRIO[t.prio ?? "med"].dot;
                   return (
                   <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
-                    className="cursor-grab rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
-                    <div className="flex items-start gap-1.5">
-                      <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
-                      <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                      {t.link && <LinkChip link={t.link} size="xs" />}
-                      {dl && t.status !== "done" && <span className="text-[10px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
-                      {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
-                      <div className="ml-auto flex items-center gap-1">
-                        {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
-                        <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="rounded-md border px-2 py-0.5 text-[10px] font-extrabold" style={t.status === "done" ? { borderColor: "#16b364", background: "#e7f6ee", color: "#0f8a4a" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
+                    className="cursor-grab overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing">
+                    <div className="border-l-[3px] p-2.5" style={{ borderColor: accent }}>
+                      <div className="flex items-start gap-1.5">
+                        <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
+                        <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        {t.link && <LinkChip link={t.link} size="xs" />}
+                        {dl && t.status !== "done" && <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold" style={{ background: `${dl.color}18`, color: dl.color }}>{dl.text}</span>}
+                        {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
+                        <div className="ml-auto flex items-center gap-1">
+                          {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="rounded-md border px-2 py-0.5 text-[10px] font-extrabold transition-colors" style={t.status === "done" ? { borderColor: "#16b364", background: "#16b364", color: "#fff" } : { borderColor: "#16b364", color: "#0f8a4a" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
+                        </div>
                       </div>
                     </div>
                   </div>
                   );
                 })}
-                {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-4 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
+                {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-5 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
               </div>
             </div>
           );
