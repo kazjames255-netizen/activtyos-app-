@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../firebase";
-import { countsTowardCapacity } from "../lib/blockDomain";
+import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 
 // Operator-wide child lookup — the "Find a child" popup in the portal header.
@@ -61,9 +61,16 @@ children.get("/:id", async (req, res) => {
   if (!auth.tenantId || !CARD_ROLES.has(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   // One pass over the tenant's bookings: parent contact + this child's bookings.
   const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
+  // The session times live on the block (its sessions each carry start/end).
+  const timeOf = (blockId?: string) => {
+    if (!blockId) return { start: "", end: "" };
+    const blk = blocks.docs.find((d) => d.id === blockId)?.data() as BlockDoc | undefined;
+    const first = blk?.sessions?.[0];
+    return { start: first?.start ?? "", end: first?.end ?? "" };
+  };
   const snaps = blocks.empty ? [] : await Promise.all(blocks.docs.map((d) => db.collection("bookings").where("blockId", "==", d.id).get()));
   let contact: { parentName: string; email: string; phone: string; ref: string } | null = null;
-  const bookings: { ref: string; listing: string; dates: string; pass: string; status: string }[] = [];
+  const bookings: { ref: string; listing: string; dates: string; pass: string; start: string; end: string; status: string }[] = [];
   for (const s of snaps)
     for (const d of s.docs) {
       const b = fromDoc(d.data() as BookingDoc);
@@ -71,7 +78,7 @@ children.get("/:id", async (req, res) => {
       if (!has) continue;
       if (!contact) contact = { parentName: b.booker ?? "", email: b.email ?? "", phone: b.phone ?? "", ref: b.ref };
       else if (!contact.phone && b.phone) contact.phone = b.phone;
-      if (countsTowardCapacity(b.status) && b.status !== "Offered") bookings.push({ ref: b.ref, listing: b.listing ?? "", dates: b.dates ?? "", pass: b.pass ?? "", status: b.status });
+      if (countsTowardCapacity(b.status) && b.status !== "Offered") { const t = timeOf(b.blockId); bookings.push({ ref: b.ref, listing: b.listing ?? "", dates: b.dates ?? "", pass: b.pass ?? "", start: t.start, end: t.end, status: b.status }); }
     }
   if (!contact) { res.status(404).json({ error: "Child not found for this account" }); return; }
   const doc = await db.collection("children").doc(id).get();

@@ -7,7 +7,7 @@ import { useSettings } from "@/lib/settings";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string }
-interface CardResp { childId: string; name: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; bookings?: { ref: string; listing: string; dates: string; pass: string; status: string }[]; record: Record<string, string | boolean | Record<string, string> | undefined> }
+interface CardResp { childId: string; name: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; bookings?: { ref: string; listing: string; dates: string; pass: string; start: string; end: string; status: string }[]; record: Record<string, string | boolean | Record<string, string> | undefined> }
 
 const ageOf = (dob?: string) => { if (!dob) return undefined; const bd = new Date(dob); if (isNaN(+bd)) return undefined; const n = new Date(); let a = n.getFullYear() - bd.getFullYear(); const m = n.getMonth() - bd.getMonth(); if (m < 0 || (m === 0 && n.getDate() < bd.getDate())) a--; return a >= 0 && a < 120 ? a : undefined; };
 
@@ -47,7 +47,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         photoConsent: r.photoConsent as boolean | undefined, suncreamConsent: r.suncreamConsent as boolean | undefined, firstAidConsent: r.firstAidConsent as boolean | undefined, walkHomeConsent: r.walkHomeConsent as boolean | undefined,
         collectionPassword: r.collectionPassword as string | undefined, emergencyName: r.emergencyName as string | undefined, emergencyPhone: r.emergencyPhone as string | undefined, school: r.school as string | undefined,
         contactName: d.parentName, contactPhone: d.parentPhone, contactEmail: d.parentEmail, bookingRef: d.ref,
-        attending: (d.bookings ?? []).map((bk) => { const [s, e] = (bk.pass || "").split(/[–-]/).map((x) => x.trim()); return { label: bk.dates || bk.listing || `#${bk.ref}`, start: s || bk.pass || "", end: e || "", listing: bk.listing || "" }; }),
+        attending: (d.bookings ?? []).map((bk) => ({ label: bk.dates || bk.listing || `#${bk.ref}`, start: bk.start || "", end: bk.end || "", listing: [bk.listing, bk.pass].filter(Boolean).join(" · ") })),
       };
       setOpenInfo({ info, name: d.name, email: d.parentEmail });
     } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t load the child card"); }
@@ -58,21 +58,35 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
   // they're switched off in Setup → Register.
   const go = (href: string) => { onClose(); router.push(href); };
   const incidentSeg = portal === "staff" ? "incident" : "incidents";
-  const mkLink = (label: string, tint: string, href: string, disabled = false) => (
-    <button key={label} type="button" disabled={disabled} onClick={() => go(href)} className="rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition hover:-translate-y-px disabled:opacity-40" style={{ borderColor: "var(--line)", color: tint, background: "var(--surface)" }}>{label}</button>
+  // A fancy action tile — icon disc + label, hover lift, tinted to its action.
+  const tile = (icon: string, label: string, tint: string, href: string, disabled = false) => (
+    <button key={label} type="button" disabled={disabled} onClick={() => go(href)}
+      className="flex flex-col items-center gap-1 rounded-xl border px-1.5 py-2 text-center transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-10px_rgba(9,20,44,.5)] disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+      style={{ borderColor: tint + "33", background: tint + "0f" }}>
+      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[15px]" style={{ background: tint + "22" }}>{icon}</span>
+      <span className="text-[10.5px] font-extrabold leading-tight" style={{ color: tint }}>{label}</span>
+    </button>
+  );
+  // Two "wheels": Log (records) and Family (reach the parent), 3 tiles each.
+  const wheel = (title: string, dot: string, items: ReactNode[]) => items.length === 0 ? null : (
+    <div className="min-w-[230px] flex-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-2.5">
+      <div className="mb-1.5 flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: dot }} /><span className="text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{title}</span></div>
+      <div className="grid grid-cols-3 gap-1.5">{items}</div>
+    </div>
   );
   let quickLinks: ReactNode = null;
   if (openInfo) {
     const name = encodeURIComponent(openInfo.name);
     const email = encodeURIComponent(openInfo.email.trim().toLowerCase());
-    const items: ReactNode[] = [];
-    if (acts.firstAid !== false) items.push(mkLink("First aid", "#be123c", `/${portal}/accidents?child=${name}`));
-    if (acts.incident !== false) items.push(mkLink("Incident", "#b45309", `/${portal}/${incidentSeg}?child=${name}`));
-    if (acts.medication !== false) items.push(mkLink("Medication", "#15803d", `/${portal}/medication?child=${name}`));
-    if (acts.moments !== false) items.push(mkLink("Moments", "#7c3aed", `/${portal}/moments?child=${name}`));
-    if (acts.email !== false) items.push(mkLink("Email parent", "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
-    if (acts.message !== false) items.push(mkLink("Message parent", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
-    quickLinks = <>{items}</>;
+    const log: ReactNode[] = [];
+    if (acts.firstAid !== false) log.push(tile("⛑️", "First aid", "#be123c", `/${portal}/accidents?child=${name}`));
+    if (acts.incident !== false) log.push(tile("⚠️", "Incident", "#b45309", `/${portal}/${incidentSeg}?child=${name}`));
+    if (acts.medication !== false) log.push(tile("💊", "Medication", "#15803d", `/${portal}/medication?child=${name}`));
+    const fam: ReactNode[] = [];
+    if (acts.message !== false) fam.push(tile("💬", "Message parent", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
+    if (acts.email !== false) fam.push(tile("✉️", "Email parent", "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
+    if (acts.moments !== false) fam.push(tile("📸", "Add moment", "#7c3aed", `/${portal}/moments?child=${name}`));
+    quickLinks = <div className="flex w-full flex-wrap gap-2">{wheel("Log", "#be123c", log)}{wheel("Family", "#1d3a8f", fam)}</div>;
   }
 
   return (

@@ -605,7 +605,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSele
         {acts.firstAid !== false && <QuickLink label="First aid" tint="#be123c" onClick={onAccident} />}
         {acts.incident !== false && <QuickLink label="Incident" tint="#b45309" onClick={onIncident} />}
         {acts.medication !== false && <QuickLink label="Medication" tint="#15803d" onClick={onMed} />}
-        {acts.moments !== false && <QuickLink label="Moments" tint="#7c3aed" onClick={onMoments} />}
+        {acts.moments !== false && <QuickLink label="Add moment" tint="#7c3aed" onClick={onMoments} />}
         {acts.email !== false && <QuickLink label="Email parent" tint="#0e7490" onClick={onEmail} />}
         {acts.message !== false && <QuickLink label="Message parent" tint="#1d3a8f" onClick={onMsg} />}
       </div>
