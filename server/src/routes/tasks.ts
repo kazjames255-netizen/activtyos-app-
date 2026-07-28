@@ -31,6 +31,7 @@ const taskSchema = z.object({
   spawn: z.boolean().optional(),                      // auto-created (P2 engine) — shows the "auto" badge
   cat: z.string().max(60).optional(),                 // custom "linked to" category
   archived: z.boolean().optional(),                   // hidden from the main views, kept in Archive
+  calEventId: z.string().max(60).nullable().optional(),// id of the mirrored calendarEvents doc (if shown on the Events calendar)
 });
 const partialSchema = taskSchema.partial();
 

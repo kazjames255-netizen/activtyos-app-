@@ -618,9 +618,9 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       <div className="mb-3">
         <button
           onClick={close}
-          className="cursor-pointer text-[13px] font-bold text-[var(--brand)]"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-2 text-[13px] font-extrabold text-white shadow-sm transition hover:-translate-y-px hover:opacity-95"
         >
-          ‹ Back to bookings
+          <span className="text-[15px] leading-none">‹</span> Back to bookings
         </button>
       </div>
 

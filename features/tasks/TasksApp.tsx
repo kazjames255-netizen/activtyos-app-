@@ -30,7 +30,7 @@ interface Att { name: string }
 interface Task {
   id: string; t: string; who?: string; prio?: Prio; due?: string | null; time?: string | null; status?: Status;
   link?: TaskLink | null; co?: string; cat?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
-  spawn?: boolean; archived?: boolean; createdByName?: string;
+  spawn?: boolean; archived?: boolean; createdByName?: string; calEventId?: string | null;
 }
 
 const PRIO: Record<Prio, { label: string; dot: string }> = {
@@ -81,6 +81,17 @@ function dueLabel(iso: string | null | undefined, today: string): { text: string
   if (d === 0) return { text: "Today", color: "#b45309" };
   if (d === 1) return { text: "Tomorrow", color: "#8a86a3" };
   return { text: `In ${d}d`, color: "#8a86a3" };
+}
+// Compose the calendar-event notes from a task so its labels, subtasks and
+// comments travel across to the Events calendar (max 1900 chars — the event
+// notes cap is 2000).
+function calEventNotes(t: Task): string {
+  const lines: string[] = [t.link?.v ? `Task · ${t.link.v}` : "Task"];
+  if (t.who) lines.push(`Assignee: ${t.who}`);
+  if (t.labels?.length) lines.push(`Labels: ${t.labels.join(", ")}`);
+  if (t.subs?.length) lines.push("Subtasks:\n" + t.subs.map((s) => `  [${s.done ? "x" : " "}] ${s.t}`).join("\n"));
+  if (t.comments?.length) lines.push("Comments:\n" + t.comments.map((c) => `  ${c.who}: ${c.body}`).join("\n"));
+  return lines.join("\n").slice(0, 1900);
 }
 // The deadline as a real date (+ optional time), prefixed with the relative word
 // so "Tomorrow · Fri 1 Aug 3:30pm" reads at a glance. Null when there's no due.
@@ -180,9 +191,24 @@ export function TasksApp() {
   const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
   const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats };
 
-  async function create(fields: Partial<Task>) {
-    try { await apiPost("/api/tasks", { status: "todo", prio: "med", ...fields }); refresh(); }
+  async function create(fields: Partial<Task>, toCal = false) {
+    try { const created = await apiPost<Task>("/api/tasks", { status: "todo", prio: "med", ...fields }); if (toCal && created?.due) await syncToCalendar(created); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t add the task"); }
+  }
+  // Mirror a task onto the Events calendar. First sync creates the event and
+  // stamps its id on the task; later syncs UPDATE it (no duplicates), so labels,
+  // subtasks and comments added afterwards travel across too.
+  async function syncToCalendar(t: Task) {
+    if (!t.due) return;
+    const payload = { title: t.t, date: t.due, category: "Task", notes: calEventNotes(t), ...(t.time ? { start: t.time, allDay: false } : { allDay: true }) };
+    try {
+      if (t.calEventId) await api(`/api/calendar-events/${encodeURIComponent(t.calEventId)}`, { method: "PUT", body: JSON.stringify(payload) });
+      else { const ev = await apiPost<{ id: string }>("/api/calendar-events", payload); await patch(t.id, { calEventId: ev.id }); }
+    } catch { /* the mirror is non-critical — never block the task */ }
+  }
+  async function unsyncFromCalendar(t: Task) {
+    if (t.calEventId) { try { await api(`/api/calendar-events/${encodeURIComponent(t.calEventId)}`, { method: "DELETE" }); } catch { /* already gone */ } }
+    patch(t.id, { calEventId: null });
   }
   async function patch(id: string, fields: Partial<Task>) {
     setTasks((ts) => (ts ?? []).map((t) => (t.id === id ? { ...t, ...fields } : t))); // optimistic
@@ -322,8 +348,8 @@ export function TasksApp() {
       </>)}
 
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
-      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f); if (toCal && f.due) apiPost("/api/calendar-events", { title: f.t, date: f.due, category: "Task", notes: f.link?.v ? `Task · ${f.link.v}` : "Task", ...(f.time ? { start: f.time, allDay: false } : { allDay: true }) }).catch(() => {}); setCreating(false); setQa(""); }} />}
-      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
     </div>
   );
 }
@@ -357,33 +383,62 @@ function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]
   return (
     <div className="space-y-4">
       {groups.map(([title, list, empty, color]) => (
-        <div key={title}>
-          <div className="mb-1.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color }}>{title}</span><span className="rounded-full px-1.5 text-[10.5px] font-extrabold" style={{ background: `${color}14`, color }}>{list.length}</span></div>
-          {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
-            : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} hideDone={title === "Done"} onOpen={onOpen} onStatus={onStatus} />)}</div>}
-        </div>
+        <TaskGroup key={title} title={title} list={list} empty={empty} color={color} today={today} noAssignee={noAssignee} hideDone={title === "Done"} onOpen={onOpen} onStatus={onStatus} />
       ))}
+    </div>
+  );
+}
+
+// One group (Overdue / Today / Upcoming / Done) — shows the first 5, then a
+// "Show N more" toggle so long lists stay compact.
+function TaskGroup({ title, list, empty, color, today, noAssignee, hideDone, onOpen, onStatus }: { title: string; list: Task[]; empty: string; color: string; today: string; noAssignee: boolean; hideDone: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? list : list.slice(0, 10);
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color }}>{title}</span><span className="rounded-full px-1.5 text-[10.5px] font-extrabold" style={{ background: `${color}14`, color }}>{list.length}</span></div>
+      {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
+        : <>
+          <div className="space-y-2">{shown.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} hideDone={hideDone} onOpen={onOpen} onStatus={onStatus} />)}</div>
+          {list.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-2 w-full rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] py-2 text-[11.5px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? "Show less" : `Show ${list.length - 10} more`}</button>}
+        </>}
     </div>
   );
 }
 
 function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task; today: string; noAssignee: boolean; hideDone?: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   const done = t.status === "done";
-  const dl = dueFull(t, today);
   const subs = t.subs ?? [];
   const isOverdue = !done && !!t.due && daysBetween(today, t.due) < 0;
+  const sc = STATUS_C[t.status ?? "todo"];
+  // Left date rail — the prominent, listing-card style block.
+  const railBg = done ? "linear-gradient(160deg,#0f7a3d,#16b364)" : isOverdue ? "linear-gradient(160deg,#8f1420,#c02636)" : "linear-gradient(160deg,#16307a,#3f78d8)";
+  const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }).toUpperCase() : "";
+  const rel = done ? "Done" : isOverdue ? "Overdue" : (dueLabel(t.due, today)?.text ?? "");
   return (
-    <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[#f7faff]" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
-      {!hideDone && (() => { const sc = STATUS_C[t.status ?? "todo"]; return <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2.5 py-1 text-[10.5px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>; })()}
-      <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
-      <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-        <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
-        {t.co && <span className="flex-none rounded-full bg-[var(--panel)] px-2 text-[10.5px] font-bold text-[var(--ink-2)]">{t.co}</span>}
-        {subs.length > 0 && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{subs.filter((s) => s.done).length}/{subs.length} done</span>}
-      </button>
-      {t.link && <LinkChip link={t.link} />}
-      {dl && <span className="flex-none text-[11px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
-      {!noAssignee && t.who && <span className="flex-none text-[11px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
+    <div className="flex h-[52px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:shadow-md">
+      {/* Date rail — compact */}
+      <div className="flex w-[58px] flex-none flex-col items-center justify-center px-1 text-center leading-none text-white" style={{ background: t.due ? railBg : "linear-gradient(160deg,#8a93a6,#aab0be)" }}>
+        {t.due ? <>
+          <div className="text-[8px] font-bold uppercase tracking-[0.1em] text-white/80">{mon}</div>
+          <div className="text-[19px] font-extrabold">{Number(t.due.slice(-2))}</div>
+          <div className="mt-0.5 text-[7.5px] font-bold uppercase tracking-wide text-white/85">{rel}</div>
+        </> : <div className="text-[9px] font-bold uppercase leading-tight tracking-wide text-white/90">No<br />date</div>}
+      </div>
+      {/* Body — single row */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
+        {!hideDone && <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2 py-0.5 text-[10px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>}
+        <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
+        <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
+          {t.co && <span className="flex-none rounded-full bg-[var(--panel)] px-2 text-[10px] font-bold text-[var(--ink-2)]">{t.co}</span>}
+        </button>
+        {subs.length > 0 && <span className="flex-none text-[10px] font-semibold text-[var(--ink-3)]">{subs.filter((s) => s.done).length}/{subs.length}</span>}
+        {t.time && <span className="flex-none text-[10.5px] font-bold text-[var(--ink-3)]">{t.time}</span>}
+        {t.link && <LinkChip link={t.link} size="xs" />}
+        {t.calEventId && <span className="flex-none rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-bold text-[#1d3a8f]">Cal</span>}
+        {!noAssignee && t.who && <span className="flex-none text-[10.5px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
+      </div>
     </div>
   );
 }
@@ -631,7 +686,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
                 <span className="text-[12.5px] font-extrabold">{label}</span>
                 <span className="text-[11px] text-[var(--ink-3)]">{openCount(who)} open{over ? ` · ${over} overdue` : ""}</span>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={false} onOpen={onOpen} onStatus={onStatus} />)}</div>
+              <div className="space-y-2">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={false} onOpen={onOpen} onStatus={onStatus} />)}</div>
             </div>
           );
         })}
@@ -641,7 +696,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onArchive: () => void; onDelete: () => void }) {
+function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -695,6 +750,27 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onArchive,
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Attachments</div>
             {(task.atts ?? []).map((a, i) => <div key={i} className="text-[12px] text-[var(--ink-2)]">📎 {a.name}</div>)}
             <div className="text-[11px] text-[var(--ink-3)]">File uploads land here once storage ships.</div>
+          </div>
+
+          <div className="mt-3 border-t border-[var(--line)] pt-2">
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Events calendar</div>
+            {!task.due ? (
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Set a due date to show this task on the Events calendar.</div>
+            ) : task.calEventId ? (
+              <div className="rounded-lg border border-[#cfe8d8] bg-[#f0faf4] px-3 py-2">
+                <div className="text-[12.5px] font-bold text-[#0f8a4a]">On the Events calendar</div>
+                <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Its labels, subtasks and comments show in the event notes. Press update after you change them.</div>
+                <div className="mt-2 flex gap-2">
+                  <button type="button" onClick={onSyncCal} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[11.5px] font-extrabold text-white">Update event</button>
+                  <button type="button" onClick={onUnsyncCal} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">Remove from calendar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2">
+                <div className="text-[11px] text-[var(--ink-2)]">Also show this task on the Events calendar, carrying its labels, subtasks and comments into the event notes.</div>
+                <button type="button" onClick={onSyncCal} className="mt-2 rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[11.5px] font-extrabold text-white">Show in Events calendar</button>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-3">
