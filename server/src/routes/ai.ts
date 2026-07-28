@@ -308,3 +308,44 @@ ai.post("/compose", async (req, res) => {
     res.json({ title: (obj.title ?? "").slice(0, 160), body: obj.body.slice(0, 4_000) });
   } catch { res.json({ title: "", body: raw.slice(0, 4_000) }); } // model didn't return clean JSON — use the text
 });
+
+// POST /api/ai/compose-newsletter — fill a whole newsletter from one short brief.
+// The client sends the ordered text-bearing blocks (index + type); the model
+// returns content per index, which the client drops into each slot.
+const nlComposeSchema = z.object({
+  brief: z.string().trim().min(1).max(2_000),
+  company: z.string().trim().max(120).optional(),
+  blocks: z.array(z.object({ i: z.number().int().nonnegative(), t: z.string().max(20) })).min(1).max(40),
+});
+ai.post("/compose-newsletter", async (req, res) => {
+  if (!process.env.GROQ_API_KEY) { res.status(503).json({ error: "The AI writer isn't configured on this server (GROQ_API_KEY is missing)." }); return; }
+  const auth = req.auth!;
+  if (!(auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise" || auth.role === "staff")) { res.status(403).json({ error: "Operators only" }); return; }
+  const parsed = nlComposeSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Send { brief, company?, blocks:[{i,t}] }" }); return; }
+  const { brief, company, blocks } = parsed.data;
+  const system = [
+    "You write a parents' newsletter for a UK children's activity provider (camp/club/class), filling a fixed set of content blocks from the provider's brief.",
+    company ? `The provider is called ${company}.` : "",
+    "For each block index, return content suited to its TYPE:",
+    "- hero: { heading (a punchy title, ≤8 words), body (one warm sentence) }",
+    "- heading: { heading (a short section title, ≤6 words) }",
+    "- text: { body (2-3 clear sentences) }",
+    "- columns: { left (a short item, 1-2 sentences), right (a second short item) }",
+    "- quote: { body (a short uplifting quote), heading (who said it, e.g. '— Mrs Smith') }",
+    "- discount: { code (an UPPERCASE code ≤12 chars), codeDesc (one line on the offer) }",
+    "Voice: warm, clear, British English. Money in GBP like £30. Use ONLY facts in the brief — never invent prices, dates, names or numbers; leave specifics general if not given.",
+    "Respond with ONLY a JSON object whose keys are the block index numbers (as strings) and whose values are the field objects above. No prose, no code fences.",
+  ].filter(Boolean).join("\n");
+  const userMsg = `Brief:\n${brief}\n\nBlocks to fill:\n${blocks.map((b) => `- index ${b.i}: ${b.t}`).join("\n")}`;
+  const groqRes = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    body: JSON.stringify({ model: MODEL, messages: [{ role: "system", content: system }, { role: "user", content: userMsg }], temperature: 0.6, max_tokens: 1_200, response_format: { type: "json_object" } }),
+  });
+  if (!groqRes.ok) { const d = await groqRes.text().catch(() => ""); console.error(`[ai] nl Groq ${groqRes.status}: ${d.slice(0, 300)}`); res.status(502).json({ error: "The writer couldn't reach its model just now — try again." }); return; }
+  const data = (await groqRes.json()) as { choices?: { message?: { content?: string } }[] };
+  const raw = data.choices?.[0]?.message?.content?.trim() ?? "{}";
+  try { res.json({ blocks: JSON.parse(raw) as Record<string, Record<string, string>> }); }
+  catch { res.status(502).json({ error: "The writer returned something unexpected — try again." }); }
+});

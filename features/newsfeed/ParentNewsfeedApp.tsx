@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
+import { NewsletterView, type Newsletter } from "./newsletter";
 
 // The parent's newsfeed — updates from every provider they've booked with.
 // Events can be RSVP'd, urgent notices acknowledged, and posts reacted to. Since
@@ -12,14 +13,14 @@ import { Badge, Card } from "@/components/ui";
 // this device remembers the parent's own choices in localStorage and bumps the
 // shared counters through the /react /rsvp /ack endpoints.
 
-type Tpl = "announce" | "event" | "reminder" | "urgent" | "celebrate" | "booking";
+type Tpl = "announce" | "event" | "reminder" | "urgent" | "celebrate" | "booking" | "newsletter";
 interface Cta { label: string; target?: string; url?: string }
 interface Rsvp { yes: number; no: number; maybe: number }
 interface Post {
   id: string; tpl?: Tpl; title?: string; body: string;
   pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
   date?: string; time?: string; location?: string; cta?: Cta | null; rsvp?: Rsvp | null;
-  seen?: number; reactions?: number; tenantName?: string; createdAt?: string;
+  seen?: number; reactions?: number; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
 }
 type Mine = { rsvp?: "yes" | "no" | "maybe"; acked?: boolean; reacted?: boolean };
 
@@ -27,6 +28,7 @@ const TPL: Record<Tpl, { label: string; color: string }> = {
   announce: { label: "Announcement", color: "#2596df" }, event: { label: "Event", color: "#7c5cff" },
   reminder: { label: "Reminder", color: "#f59e0b" }, urgent: { label: "Urgent", color: "#ef4444" },
   celebrate: { label: "Celebration", color: "#e22295" }, booking: { label: "Booking", color: "#15b364" },
+  newsletter: { label: "Newsletter", color: "#1d3a8f" },
 };
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const LS = "aos.news.mine.v1";
@@ -67,6 +69,19 @@ export function ParentNewsfeedApp() {
           {list.map((p) => {
             const t = TPL[p.tpl ?? "announce"];
             const m = mine[p.id] ?? {};
+            if (p.tpl === "newsletter" && p.newsletter) {
+              return (
+                <Card key={p.id} className="overflow-hidden !p-0">
+                  <div className="flex items-center gap-1.5 px-3 pt-2.5">
+                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
+                    <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? "Provider"}</Badge>
+                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
+                  </div>
+                  <div className="p-3 pt-2"><NewsletterView data={p.newsletter} /></div>
+                  {p.react !== false && <div className="px-3 pb-3"><button type="button" onClick={() => react(p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button></div>}
+                </Card>
+              );
+            }
             return (
               <Card key={p.id} className="overflow-hidden !p-0">
                 <div className="border-l-[4px] p-3.5" style={{ borderColor: t.color }}>

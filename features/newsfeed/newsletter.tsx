@@ -1,0 +1,284 @@
+"use client";
+/* eslint-disable @next/next/no-img-element -- newsletter images are arbitrary operator-uploaded URLs (and data previews); next/image doesn't fit. */
+
+import { useState, type CSSProperties } from "react";
+import { post as apiPost } from "@/lib/api";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Newsletter builder — a rich, email-style post. The operator picks one of ten
+// LAYOUTS (an ordered set of blocks with seeded content) and one of a set of
+// curated PALETTES (multi-colour schemes, not a single flat colour), then edits
+// each slot. NewsletterView renders the result the same way in the composer
+// preview, the operator feed and the parent feed.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type BlockType = "banner" | "hero" | "heading" | "text" | "image" | "discount" | "button" | "columns" | "quote" | "divider" | "eventbar" | "footer";
+export interface Block {
+  t: BlockType;
+  heading?: string; body?: string; image?: string;
+  code?: string; codeDesc?: string;
+  label?: string; url?: string;
+  left?: string; right?: string;
+  date?: string; time?: string; location?: string;
+}
+export interface Company { name: string; phone: string; email: string; address: string; logo?: string }
+export interface Newsletter { layout: string; palette: string; company: Company; blocks: Block[] }
+
+// ── Curated palettes — each carries a background, a card surface, two accents,
+// ink + muted text and the colour text sits on over an accent. Deliberately
+// multi-hue so a newsletter reads as designed, not flat.
+export interface Palette { id: string; name: string; bg: string; surface: string; accent: string; accent2: string; ink: string; muted: string; onAccent: string; band: string }
+export const PALETTES: Palette[] = [
+  { id: "classic", name: "Classic Blue", bg: "#eef3fb", surface: "#ffffff", accent: "#1d3a8f", accent2: "#3f78d8", ink: "#16203a", muted: "#5b6478", onAccent: "#ffffff", band: "#e6eefc" },
+  { id: "sunshine", name: "Sunshine", bg: "#fff6e9", surface: "#fffdf9", accent: "#f2683c", accent2: "#f5b301", ink: "#3a2a17", muted: "#8a7256", onAccent: "#ffffff", band: "#ffe9cc" },
+  { id: "ocean", name: "Ocean", bg: "#e7f6f7", surface: "#ffffff", accent: "#0f6d8c", accent2: "#28b6c4", ink: "#0e2b33", muted: "#4c6f78", onAccent: "#ffffff", band: "#d3eef1" },
+  { id: "forest", name: "Forest", bg: "#eaf6ed", surface: "#ffffff", accent: "#15803d", accent2: "#84b13b", ink: "#14301f", muted: "#4f6b57", onAccent: "#ffffff", band: "#d7eede" },
+  { id: "berry", name: "Berry", bg: "#fdeef4", surface: "#fffafc", accent: "#c02467", accent2: "#8b5cf6", ink: "#38162a", muted: "#7d5b6c", onAccent: "#ffffff", band: "#fbdcec" },
+  { id: "sherbet", name: "Sherbet", bg: "#f3eefe", surface: "#ffffff", accent: "#7c3aed", accent2: "#fb7185", ink: "#241a3a", muted: "#665a80", onAccent: "#ffffff", band: "#e9e0fd" },
+  { id: "midnight", name: "Midnight", bg: "#141a2e", surface: "#1e2740", accent: "#f5b301", accent2: "#5b8def", ink: "#eaf0ff", muted: "#9aa6c4", onAccent: "#141a2e", band: "#26314f" },
+  { id: "sage", name: "Sage & Clay", bg: "#f2f1ea", surface: "#fffefb", accent: "#9a6a4b", accent2: "#7d8b6a", ink: "#2e2a22", muted: "#736c5e", onAccent: "#ffffff", band: "#e7e4d8" },
+];
+export const paletteOf = (id: string) => PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+
+// ── 10 layouts: each seeds a block list. Company details flow from the top-level
+// `company`, so they only get typed once.
+const B = (t: BlockType, extra: Partial<Block> = {}): Block => ({ t, ...extra });
+export interface Layout { id: string; name: string; blocks: () => Block[] }
+export const LAYOUTS: Layout[] = [
+  { id: "classic", name: "Classic newsletter", blocks: () => [B("banner"), B("hero", { image: "", heading: "This month at {company}", body: "A short welcome line to set the scene." }), B("heading", { heading: "What's on" }), B("text", { body: "Write your main update here — news, dates, and anything families should know." }), B("button", { label: "Book now" }), B("footer")] },
+  { id: "announce", name: "Simple announcement", blocks: () => [B("banner"), B("heading", { heading: "An update for our families" }), B("text", { body: "Your announcement goes here." }), B("footer")] },
+  { id: "event", name: "Event invite", blocks: () => [B("banner"), B("hero", { heading: "You're invited!", body: "Join us for a special day." }), B("eventbar", { date: "", time: "", location: "" }), B("text", { body: "Tell families what to expect and what to bring." }), B("button", { label: "Let us know you're coming" }), B("footer")] },
+  { id: "offer", name: "Offer / discount", blocks: () => [B("banner"), B("heading", { heading: "A treat for our families" }), B("discount", { code: "SUMMER10", codeDesc: "10% off your next booking — this week only." }), B("text", { body: "How to use it and when it ends." }), B("button", { label: "Book & save" }), B("footer")] },
+  { id: "twocol", name: "Two columns", blocks: () => [B("banner"), B("hero", { image: "", heading: "News in brief" }), B("columns", { left: "First thing families should know.", right: "Second thing families should know." }), B("button", { label: "Read more" }), B("footer")] },
+  { id: "photostory", name: "Photo story", blocks: () => [B("banner"), B("image", { image: "" }), B("heading", { heading: "A brilliant week" }), B("text", { body: "A few words about what the children got up to." }), B("image", { image: "" }), B("footer")] },
+  { id: "welcome", name: "Welcome pack", blocks: () => [B("banner"), B("hero", { heading: "Welcome to {company}!", body: "We're so pleased to have you with us." }), B("text", { body: "Everything you need for your first day." }), B("columns", { left: "What to bring", right: "Drop-off & pick-up" }), B("footer")] },
+  { id: "roundup", name: "Monthly round-up", blocks: () => [B("banner"), B("heading", { heading: "This month's round-up" }), B("text", { body: "Highlight one." }), B("divider"), B("text", { body: "Highlight two." }), B("divider"), B("text", { body: "Highlight three." }), B("footer")] },
+  { id: "bigcta", name: "Big image + button", blocks: () => [B("hero", { image: "", heading: "Summer camp is open" }), B("heading", { heading: "Spaces are limited" }), B("button", { label: "Book your place" }), B("footer")] },
+  { id: "quote", name: "Shout-out & quote", blocks: () => [B("banner"), B("heading", { heading: "Star of the month" }), B("quote", { body: "A lovely thing to celebrate.", heading: "— the team" }), B("text", { body: "A few more words." }), B("footer")] },
+];
+export const layoutOf = (id: string) => LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
+
+export const newNewsletter = (layoutId: string, company: Partial<Company> = {}): Newsletter => ({
+  layout: layoutId, palette: "classic",
+  company: { name: company.name ?? "", phone: company.phone ?? "", email: company.email ?? "", address: company.address ?? "", logo: company.logo },
+  blocks: layoutOf(layoutId).blocks(),
+});
+
+const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
+
+// ── Renderer — draws the newsletter from blocks + palette. Used in preview and
+// both feeds.
+export function NewsletterView({ data, scale }: { data: Newsletter; scale?: number }) {
+  const p = paletteOf(data.palette);
+  const c = data.company;
+  const wrap: CSSProperties = { background: p.bg, padding: 14, borderRadius: 16 };
+  const surface: CSSProperties = { background: p.surface, borderRadius: 12, overflow: "hidden", maxWidth: 600, margin: "0 auto", boxShadow: "0 8px 26px -14px rgba(0,0,0,.28)" };
+  return (
+    <div style={wrap}>
+      <div style={surface}>
+        {data.blocks.map((b, i) => <BlockView key={i} b={b} p={p} c={c} />)}
+      </div>
+      {scale ? null : null}
+    </div>
+  );
+}
+
+function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
+  const pad = "22px 26px";
+  switch (b.t) {
+    case "banner":
+      return (
+        <div style={{ background: p.accent, color: p.onAccent, padding: "16px 26px", display: "flex", alignItems: "center", gap: 12 }}>
+          {c.logo ? <img src={c.logo} alt="" style={{ height: 34, width: 34, borderRadius: 8, objectFit: "cover", background: "#fff" }} /> : <div style={{ height: 34, width: 34, borderRadius: 8, background: p.accent2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{(c.name || "A").slice(0, 1)}</div>}
+          <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .2 }}>{c.name || "Your company"}</div>
+        </div>
+      );
+    case "hero":
+      return (
+        <div>
+          {b.image ? <img src={b.image} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} /> : <div style={{ height: 120, background: `linear-gradient(120deg, ${p.accent}, ${p.accent2})` }} />}
+          {(b.heading || b.body) && (
+            <div style={{ padding: pad, background: p.band }}>
+              {b.heading && <div style={{ fontSize: 24, fontWeight: 800, color: p.ink, lineHeight: 1.15 }}>{fill(b.heading, c)}</div>}
+              {b.body && <div style={{ fontSize: 14, color: p.muted, marginTop: 6, lineHeight: 1.55 }}>{fill(b.body, c)}</div>}
+            </div>
+          )}
+        </div>
+      );
+    case "heading":
+      return <div style={{ padding: "18px 26px 0" }}><div style={{ fontSize: 19, fontWeight: 800, color: p.ink }}>{fill(b.heading, c)}</div><div style={{ height: 3, width: 42, background: p.accent2, borderRadius: 3, marginTop: 8 }} /></div>;
+    case "text":
+      return <div style={{ padding: "12px 26px", fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{fill(b.body, c)}</div>;
+    case "image":
+      return b.image ? <img src={b.image} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} /> : <div style={{ height: 150, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>Image</div>;
+    case "discount":
+      return (
+        <div style={{ padding: "14px 26px" }}>
+          <div style={{ border: `2px dashed ${p.accent}`, borderRadius: 12, padding: "14px 16px", textAlign: "center", background: p.band }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: p.muted, textTransform: "uppercase" }}>Your code</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: p.accent, letterSpacing: 2, margin: "2px 0 4px" }}>{b.code || "CODE"}</div>
+            <div style={{ fontSize: 13, color: p.ink }}>{fill(b.codeDesc, c)}</div>
+          </div>
+        </div>
+      );
+    case "button":
+      return <div style={{ padding: "14px 26px", textAlign: "center" }}><span style={{ display: "inline-block", background: p.accent, color: p.onAccent, fontWeight: 800, fontSize: 14, padding: "11px 22px", borderRadius: 999 }}>{b.label || "Learn more"}</span></div>;
+    case "columns":
+      return (
+        <div style={{ padding: "12px 26px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {[b.left, b.right].map((t, i) => <div key={i} style={{ background: p.band, borderRadius: 10, padding: 14, fontSize: 13.5, color: p.ink, lineHeight: 1.5 }}>{fill(t, c)}</div>)}
+        </div>
+      );
+    case "quote":
+      return <div style={{ padding: "16px 26px" }}><div style={{ borderLeft: `4px solid ${p.accent2}`, paddingLeft: 14, fontSize: 17, fontStyle: "italic", color: p.ink, lineHeight: 1.5 }}>“{fill(b.body, c)}”</div>{b.heading && <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: p.muted }}>{b.heading}</div>}</div>;
+    case "divider":
+      return <div style={{ height: 1, background: p.band, margin: "6px 26px" }} />;
+    case "eventbar":
+      return <div style={{ margin: "12px 26px", background: p.accent, color: p.onAccent, borderRadius: 10, padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 16, fontWeight: 700, fontSize: 14 }}>{[b.date, b.time, b.location].filter(Boolean).join("   •   ") || "Add a date, time & place"}</div>;
+    case "footer":
+      return (
+        <div style={{ background: p.ink, color: "#fff", padding: "18px 26px", fontSize: 12.5, lineHeight: 1.7 }}>
+          <div style={{ fontWeight: 800, fontSize: 14 }}>{c.name || "Your company"}</div>
+          {c.address && <div style={{ opacity: .85 }}>{c.address}</div>}
+          <div style={{ opacity: .85 }}>{[c.phone, c.email].filter(Boolean).join("  ·  ")}</div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+// ── Builder — layout gallery, palette swatches, company details, per-block
+// editors, live preview. Calls onSave with the finished Newsletter.
+export function NewsletterBuilder({ initial, initialCompany, onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; onCancel: () => void; onSave: (n: Newsletter) => void }) {
+  const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany));
+  const [busy, setBusy] = useState(false);
+  const [aiBrief, setAiBrief] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiErr, setAiErr] = useState("");
+  const p = paletteOf(nl.palette);
+  const setBlock = (i: number, f: Partial<Block>) => setNl((n) => ({ ...n, blocks: n.blocks.map((b, j) => (j === i ? { ...b, ...f } : b)) }));
+  const setCompany = (f: Partial<Company>) => setNl((n) => ({ ...n, company: { ...n.company, ...f } }));
+  const pickLayout = (id: string) => setNl((n) => ({ ...newNewsletter(id, n.company), palette: n.palette }));
+
+  // One-click: describe the newsletter, and the AI fills every text section.
+  async function writeAll() {
+    if (!aiBrief.trim()) { setAiErr("Tell the AI what the newsletter is about first."); return; }
+    setAiBusy(true); setAiErr("");
+    const wanted = new Set<BlockType>(["hero", "heading", "text", "columns", "quote", "discount"]);
+    const blocks = nl.blocks.map((b, i) => ({ i, t: b.t })).filter((x) => wanted.has(x.t));
+    try {
+      const r = await apiPost<{ blocks: Record<string, Record<string, string>> }>("/api/ai/compose-newsletter", { brief: aiBrief.trim(), company: nl.company.name || undefined, blocks });
+      const allow = ["heading", "body", "left", "right", "code", "codeDesc"] as const;
+      setNl((n) => ({ ...n, blocks: n.blocks.map((b, i) => { const f = r.blocks?.[String(i)]; if (!f) return b; const upd: Partial<Block> = {}; for (const k of allow) if (typeof f[k] === "string") upd[k] = f[k]; return { ...b, ...upd }; }) }));
+    } catch (e) { setAiErr(e instanceof Error ? e.message : "Couldn’t write it — try again."); }
+    finally { setAiBusy(false); }
+  }
+
+  async function upload(file: File, apply: (url: string) => void) {
+    setBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
+      apply(url);
+    } catch { /* ignore — keep whatever was there */ } finally { setBusy(false); }
+  }
+  const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]";
+  const imgBtn = (apply: (url: string) => void) => (
+    <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+      {busy ? "Uploading…" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, apply); }} />
+    </label>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-3 pt-[3vh]" onClick={onCancel}>
+      <div className="flex w-full max-w-[960px] flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ maxHeight: "94vh" }}>
+        <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
+          <div className="text-[16px] font-extrabold">Design a newsletter</div>
+          <button type="button" onClick={onCancel} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold">×</button>
+        </div>
+
+        <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_420px]">
+          {/* Editor */}
+          <div className="space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
+            <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-2.5">
+              <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">✨ Let AI write it for you</div>
+              <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={2} placeholder="Describe your newsletter — e.g. “July update: Sports Day Fri 25th 10am on the main field, summer camp now open (early-bird ends Sunday), reminder to bring sun cream.”" className={inputCls} />
+              <div className="mt-1.5 flex items-center gap-2">
+                <button type="button" onClick={writeAll} disabled={aiBusy} className="rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it all"}</button>
+                <span className="text-[11px] text-[var(--ink-3)]">Fills every text section — tweak anything after.</span>
+              </div>
+              {aiErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{aiErr}</div>}
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Layout</div>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                {LAYOUTS.map((l) => <button key={l.id} type="button" onClick={() => pickLayout(l.id)} className="rounded-lg border p-1.5 text-[10px] font-bold leading-tight" style={nl.layout === l.id ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{l.name}</button>)}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour scheme</div>
+              <div className="flex flex-wrap gap-1.5">
+                {PALETTES.map((pl) => (
+                  <button key={pl.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} title={pl.name} className="flex items-center gap-1 rounded-full border px-1.5 py-1" style={{ borderColor: nl.palette === pl.id ? pl.accent : "var(--line)", background: nl.palette === pl.id ? `${pl.accent}12` : "transparent" }}>
+                    <span className="flex overflow-hidden rounded-full" style={{ height: 16, width: 16, border: "1px solid rgba(0,0,0,.1)" }}><span style={{ flex: 1, background: pl.accent }} /><span style={{ flex: 1, background: pl.accent2 }} /></span>
+                    <span className="text-[10.5px] font-bold text-[var(--ink-2)]">{pl.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your details</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input value={nl.company.name} onChange={(e) => setCompany({ name: e.target.value })} placeholder="Company name" className={inputCls} />
+                <input value={nl.company.phone} onChange={(e) => setCompany({ phone: e.target.value })} placeholder="Phone" className={inputCls} />
+                <input value={nl.company.email} onChange={(e) => setCompany({ email: e.target.value })} placeholder="Email" className={inputCls} />
+                <input value={nl.company.address} onChange={(e) => setCompany({ address: e.target.value })} placeholder="Address" className={inputCls} />
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                {nl.company.logo && <img src={nl.company.logo} alt="" className="h-7 w-7 rounded object-cover" />}
+                {imgBtn((url) => setCompany({ logo: url }))}
+                <span className="text-[11px] text-[var(--ink-3)]">Logo (optional)</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Content</div>
+              <div className="space-y-2">
+                {nl.blocks.map((b, i) => {
+                  const has = (k: keyof Block) => b[k] !== undefined;
+                  if (b.t === "banner" || b.t === "footer" || b.t === "divider") return null;
+                  return (
+                    <div key={i} className="rounded-lg border border-[var(--line)] p-2">
+                      <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t}</div>
+                      <div className="space-y-1.5">
+                        {(b.t === "hero" || b.t === "image") && (b.image ? <div className="flex items-center gap-2"><img src={b.image} alt="" className="h-10 w-16 rounded object-cover" /><button type="button" onClick={() => setBlock(i, { image: "" })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div> : imgBtn((url) => setBlock(i, { image: url })))}
+                        {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder="Heading" className={inputCls} />}
+                        {has("body") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder="Text" className={inputCls} />}
+                        {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder="Left column" className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder="Right column" className={inputCls} /></>}
+                        {b.t === "discount" && <div className="grid grid-cols-2 gap-1.5"><input value={b.code ?? ""} onChange={(e) => setBlock(i, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={inputCls} /><input value={b.codeDesc ?? ""} onChange={(e) => setBlock(i, { codeDesc: e.target.value })} placeholder="What it gives" className={inputCls} /></div>}
+                        {b.t === "button" && <div className="grid grid-cols-2 gap-1.5"><input value={b.label ?? ""} onChange={(e) => setBlock(i, { label: e.target.value })} placeholder="Button label" className={inputCls} /><input value={b.url ?? ""} onChange={(e) => setBlock(i, { url: e.target.value })} placeholder="Link (https://… — optional)" className={inputCls} /></div>}
+                        {b.t === "eventbar" && <div className="grid grid-cols-3 gap-1.5"><input type="date" value={b.date ?? ""} onChange={(e) => setBlock(i, { date: e.target.value })} className={inputCls} /><input type="time" value={b.time ?? ""} onChange={(e) => setBlock(i, { time: e.target.value })} className={inputCls} /><input value={b.location ?? ""} onChange={(e) => setBlock(i, { location: e.target.value })} placeholder="Place" className={inputCls} /></div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="overflow-y-auto bg-[var(--panel)] p-3">
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Preview</div>
+            <NewsletterView data={nl} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
+          <button type="button" onClick={() => onSave(nl)} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">Use this newsletter</button>
+        </div>
+      </div>
+    </div>
+  );
+}

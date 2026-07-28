@@ -21,8 +21,18 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 // A call-to-action / link on a post: a label plus either a listing (target = its
 // title, opens the listing in-app) or an external url.
 const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), url: z.string().trim().max(600).optional() }).nullable();
+// A designed newsletter payload (layout + palette + company + content blocks).
+// Block fields are all strings; images are uploaded URLs, so the doc stays small.
+const nlBlockSchema = z.object({ t: z.string().max(20) }).catchall(z.string().max(4_000));
+const newsletterSchema = z.object({
+  layout: z.string().max(40),
+  palette: z.string().max(40),
+  company: z.object({ name: z.string().max(120).optional(), phone: z.string().max(60).optional(), email: z.string().max(160).optional(), address: z.string().max(200).optional(), logo: z.string().max(600).optional() }),
+  blocks: z.array(nlBlockSchema).max(40),
+}).nullable();
 const postSchema = z.object({
-  tpl: z.enum(["announce", "event", "reminder", "urgent", "celebrate", "booking"]).optional(),
+  tpl: z.enum(["announce", "event", "reminder", "urgent", "celebrate", "booking", "newsletter"]).optional(),
+  newsletter: newsletterSchema.optional(),
   title: z.string().trim().max(160).optional(),
   body: z.string().trim().min(1).max(4_000),
   photoUrl: z.string().trim().max(600).optional(),      // uploaded image URL (uses the /api/uploads store)
