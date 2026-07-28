@@ -28,7 +28,10 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
   // content. Navigating (pathname change) closes it.
   const [menuOpen, setMenuOpen] = useState(false);
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  // Close the drawer on navigation — adjust during render (no effect) so it
+  // stays in sync with pathname without a cascading re-render.
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) { setMenuPath(pathname); setMenuOpen(false); }
   // "Find a child" — operator-wide safeguarding lookup (opens the child card).
   const [lookupOpen, setLookupOpen] = useState(false);
   const canLookup = portal !== "custdash" && portal !== "platform";

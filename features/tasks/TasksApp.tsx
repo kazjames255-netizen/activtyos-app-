@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
@@ -21,8 +22,8 @@ const BLUE = "#1d3a8f";
 
 type Prio = "urgent" | "high" | "med" | "low";
 type Status = "backlog" | "todo" | "prog" | "done";
-type LinkKind = "camp" | "book" | "comp" | "venue" | "list" | "gen";
-interface TaskLink { k: LinkKind; v: string }
+type LinkKind = "child" | "parent" | "camp" | "book" | "comp" | "venue" | "list" | "gen";
+interface TaskLink { k: LinkKind; v: string; href?: string }
 interface Sub { t: string; done: boolean }
 interface Comment { who: string; body: string; when: string }
 interface Att { name: string }
@@ -44,10 +45,25 @@ const COLS: { k: Status; label: string; color: string }[] = [
   { k: "prog", label: "In progress", color: "#f59e0b" }, { k: "done", label: "Done", color: "#16b364" },
 ];
 const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: string }> = {
-  camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" },
-  comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" }, venue: { label: "Venue", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" },
-  list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
+  child: { label: "Child", bg: "#fff1f5", fg: "#be2063", icon: "🧒" }, parent: { label: "Parent", bg: "#eef4fd", fg: "#1d3a8f", icon: "👤" },
+  book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" }, list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" },
+  venue: { label: "Venue", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
+  camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
 };
+// The types the picker offers (old camp/comp still render on legacy tasks).
+const LINK_TYPES: LinkKind[] = ["child", "parent", "book", "list", "venue", "gen"];
+interface LinkOpts { portal: string; bookOpts: { ref: string; label: string }[]; childOpts: { name: string; ref: string }[]; parentOpts: { name: string; ref: string }[]; listings: { id: string; title: string }[]; venues: string[]; cats: string[] }
+
+// A link chip — deep-links straight to the record when it has an href, and shows
+// a ↗ so it's obviously a link ("go to booking", not just a label).
+function LinkChip({ link, size = "sm" }: { link: TaskLink; size?: "sm" | "xs" }) {
+  const router = useRouter();
+  const m = LINK[link.k] ?? LINK.gen;
+  const cls = `inline-flex flex-none items-center gap-1 rounded-full font-bold ${size === "xs" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]"}`;
+  const label = <><span className="opacity-70">{m.label}</span> {link.v}</>;
+  if (link.href) return <button type="button" title={`Open ${m.label.toLowerCase()}`} onClick={(e) => { e.stopPropagation(); router.push(link.href!); }} className={`${cls} underline decoration-transparent hover:decoration-current`} style={{ background: m.bg, color: m.fg }}>{label} <span className="font-black">↗</span></button>;
+  return <span className={cls} style={{ background: m.bg, color: m.fg }}>{label}</span>;
+}
 const AV = ["#e0e7ff", "#efe0ff", "#dcfce7", "#fff3d6", "#ffe4ef", "#e5f6f8", "#ffe9d6"];
 const avBg = (n: string) => AV[[...(n || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 const initials = (n: string) => (n || "?").split(/\s+/).map((x) => x[0]).slice(0, 2).join("").toUpperCase();
@@ -88,6 +104,7 @@ export function TasksApp() {
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [flash, setFlash] = useState(false);
   const [qa, setQa] = useState("");
   const [qaDue, setQaDue] = useState("");
   const [teamFilter, setTeamFilter] = useState("");
@@ -99,6 +116,8 @@ export function TasksApp() {
   const [prioFilter, setPrioFilter] = useState<Prio | "">("");
   const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
   const [listings, setListings] = useState<{ id: string; title: string; location?: string }[]>([]);
+  const [bookings, setBookings] = useState<{ ref: string; booker?: string; child?: string; kids?: { name: string }[]; listing?: string }[]>([]);
+  const portal = usePathname()?.split("/")[1] || "freelancer";
   const today = todayIso();
   const manager = role === "company" || role === "franchise";
   const isFreelancer = role === "freelancer";
@@ -112,7 +131,14 @@ export function TasksApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => { setRole(m.role); setMe(m.name || m.email || ""); }).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ ref: string; booker?: string; child?: string; kids?: { name: string }[]; listing?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, []);
   useRealtime(["tasks"], refresh);
+
+  // Real records to link a task to — each carries a deep-link so the chip jumps
+  // straight to it. Child/parent link to that family's booking.
+  const bookOpts = useMemo(() => bookings.map((b) => ({ ref: b.ref, label: `${b.kids?.map((k) => k.name).join(", ") || b.child || "—"} · #${b.ref}` })), [bookings]);
+  const childOpts = useMemo(() => { const m = new Map<string, string>(); for (const b of bookings) for (const n of (b.kids?.length ? b.kids.map((k) => k.name) : [b.child])) if (n && !m.has(n)) m.set(n, b.ref); return [...m.entries()].map(([name, ref]) => ({ name, ref })); }, [bookings]);
+  const parentOpts = useMemo(() => { const m = new Map<string, string>(); for (const b of bookings) if (b.booker && !m.has(b.booker)) m.set(b.booker, b.ref); return [...m.entries()].map(([name, ref]) => ({ name, ref })); }, [bookings]);
 
   const everything = useMemo(() => tasks ?? [], [tasks]);
   const all = useMemo(() => everything.filter((t) => !t.archived), [everything]);
@@ -122,6 +148,7 @@ export function TasksApp() {
   const team = useMemo(() => [...new Set(all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== ""))].sort(), [all]);
   const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
   const venues = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
+  const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, venues, cats };
 
   async function create(fields: Partial<Task>) {
     try { await apiPost("/api/tasks", { status: "todo", prio: "med", ...fields }); refresh(); }
@@ -132,6 +159,8 @@ export function TasksApp() {
     try { await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(fields) }); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); refresh(); }
   }
+  const flashDone = () => { setFlash(true); setTimeout(() => setFlash(false), 1300); };
+  const toggleDone = (t: Task) => { const done = t.status !== "done"; patch(t.id, { status: done ? "done" : "todo" }); if (done) flashDone(); };
   async function remove(id: string) {
     if (!confirm("Delete this task?")) return;
     setOpenId(null);
@@ -190,7 +219,7 @@ export function TasksApp() {
 
       {/* Hero */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
-        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px]">✓</span>Task manager</div>
+        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
         <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>
         <div className="mt-3.5 flex flex-wrap gap-2.5">
           {kpis.map(([label, n, color, key]) => {
@@ -212,9 +241,9 @@ export function TasksApp() {
       <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
-          <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>🗓 Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
+          <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <Button onClick={addQuick}>Quick add</Button>
-          <Button variant="primary" onClick={() => setCreating(true)}>+ New task</Button>
+          <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">+ New task</button>
         </div>
         {preview && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
@@ -233,8 +262,8 @@ export function TasksApp() {
       <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
         {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={tab === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{l}</button>)}
         <div className="relative ml-auto">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-8 pr-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[var(--ink-3)]">🔎</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
+          
         </div>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
@@ -252,15 +281,16 @@ export function TasksApp() {
           <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">Add your first with the quick-add above — try <b>Set up Week 3 registers tomorrow @Sam !high #Bedford</b>. Some will also appear on their own once the auto-spawn engine ships.</p>
         </div>
       ) : (<>
-        {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
-        {tab === "board" && <Board tasks={base} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
-        {tab === "cal" && <Calendar tasks={base.filter((t) => t.status !== "done")} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} onOpen={setOpenId} />}
-        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+        {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onToggle={toggleDone} />}
+        {tab === "board" && <Board tasks={base} noAssignee={noAssignee} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={toggleDone} />}
+        {tab === "cal" && <Calendar tasks={base.filter((t) => t.status !== "done")} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} noAssignee={noAssignee} onOpen={setOpenId} />}
+        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={toggleDone} />}
         {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
       </>)}
 
-      {creating && <CreateModal noAssignee={noAssignee} team={team} cats={cats} venues={venues} listings={listings} onClose={() => setCreating(false)} onCreate={(f) => { create(f); setCreating(false); }} />}
-      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} cats={cats} venues={venues} listings={listings} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
+      {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f); if (toCal && f.due) apiPost("/api/calendar-events", { title: f.t, date: f.due, category: "Task", notes: f.link?.v ? `Task · ${f.link.v}` : "Task" }).catch(() => {}); setCreating(false); setQa(""); }} />}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
     </div>
   );
 }
@@ -274,7 +304,7 @@ function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (i
         <div key={t.id} className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 last:border-b-0">
           <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
           <button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--ink-2)]">{t.t}</button>
-          {t.link && <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
+          {t.link && <span className="flex-none"><LinkChip link={t.link} /></span>}
           {t.due && <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(t.due)}</span>}
           <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Unarchive</button>
         </div>
@@ -284,7 +314,7 @@ function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (i
 }
 
 // ── My Tasks — grouped list ─────────────────────────────────────────────────
-function MyTasks({ tasks, today, onOpen, onToggle }: { tasks: Task[]; today: string; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
+function MyTasks({ tasks, today, noAssignee, onOpen, onToggle }: { tasks: Task[]; today: string; noAssignee: boolean; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
   const open = tasks.filter((t) => t.status !== "done");
   const overdue = open.filter((t) => t.due && daysBetween(today, t.due) < 0).sort(byPrioDue);
   const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0).sort(byPrioDue);
@@ -297,38 +327,36 @@ function MyTasks({ tasks, today, onOpen, onToggle }: { tasks: Task[]; today: str
         <div key={title}>
           <div className="mb-1.5 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{title}</span><span className="rounded-full bg-[var(--panel)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
           {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
-            : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} onOpen={onOpen} onToggle={onToggle} />)}</div>}
+            : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} onOpen={onOpen} onToggle={onToggle} />)}</div>}
         </div>
       ))}
     </div>
   );
 }
 
-function TaskRow({ t, today, onOpen, onToggle }: { t: Task; today: string; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
+function TaskRow({ t, today, noAssignee, onOpen, onToggle }: { t: Task; today: string; noAssignee: boolean; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
   const done = t.status === "done";
   const dl = dueLabel(t.due, today);
   const subs = t.subs ?? [];
   const isOverdue = !done && !!t.due && daysBetween(today, t.due) < 0;
   return (
     <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[#f7faff]" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
-      <button type="button" onClick={() => onToggle(t)} aria-label="Toggle done" className="flex h-5 w-5 flex-none items-center justify-center rounded-full border-2" style={{ borderColor: done ? "#16b364" : "var(--line)", background: done ? "#16b364" : "transparent", color: "#fff" }}>{done ? "✓" : ""}</button>
+      <button type="button" onClick={() => onToggle(t)} aria-label="Toggle done" className="flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 text-[10px]" style={{ borderColor: done ? "#16b364" : "var(--line)", background: done ? "#16b364" : "transparent", color: "#fff" }}>{done ? "✓" : ""}</button>
       <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
       <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
-        {t.spawn && <span className="flex-none rounded bg-[#fdecc8] px-1.5 text-[9.5px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
         {t.co && <span className="flex-none rounded-full bg-[var(--panel)] px-2 text-[10.5px] font-bold text-[var(--ink-2)]">{t.co}</span>}
-        {subs.length > 0 && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">☑ {subs.filter((s) => s.done).length}/{subs.length}</span>}
-        {t.link && <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
+        {subs.length > 0 && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{subs.filter((s) => s.done).length}/{subs.length} done</span>}
       </button>
+      {t.link && <LinkChip link={t.link} />}
       {dl && <span className="flex-none text-[11px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
-      {t.who ? <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[9.5px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(t.who) }} title={t.who}>{initials(t.who)}</span>
-        : <span className="flex-none text-[10.5px] text-[var(--ink-3)]">Unassigned</span>}
+      {!noAssignee && t.who && <span className="flex-none text-[11px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
     </div>
   );
 }
 
 // ── Board — kanban with drag ────────────────────────────────────────────────
-function Board({ tasks, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onDone: (t: Task) => void }) {
+function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]; noAssignee: boolean; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onDone: (t: Task) => void }) {
   const [over, setOver] = useState<Status | null>(null);
   const today = todayIso();
   return (
@@ -348,14 +376,14 @@ function Board({ tasks, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]
                   <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
                     className="cursor-grab rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
                     <div className="flex items-start gap-1.5">
-                      <button type="button" title={t.status === "done" ? "Reopen" : "Mark done"} onClick={(e) => { e.stopPropagation(); onDone(t); }} className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border-2 text-[9px]" style={{ borderColor: t.status === "done" ? "#16b364" : "var(--line)", background: t.status === "done" ? "#16b364" : "transparent", color: "#fff" }}>{t.status === "done" ? "✓" : ""}</button>
+                      <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
                       <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                      {t.spawn && <span className="rounded bg-[#fdecc8] px-1.5 text-[9px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
-                      {t.link && <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
+                      {t.link && <LinkChip link={t.link} size="xs" />}
                       {dl && t.status !== "done" && <span className="text-[10px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
-                      {t.who && <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-[var(--ink-2)]" style={{ background: avBg(t.who) }} title={t.who}>{initials(t.who)}</span>}
+                      {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="ml-auto rounded-md border px-2 py-0.5 text-[10px] font-extrabold" style={t.status === "done" ? { borderColor: "#16b364", background: "#e7f6ee", color: "#0f8a4a" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
                     </div>
                   </div>
                   );
@@ -372,7 +400,7 @@ function Board({ tasks, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]
 }
 
 // ── Calendar — Day / Week / Month ───────────────────────────────────────────
-function Calendar({ tasks, anchor, setAnchor, view, setView, today, onOpen }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; onOpen: (id: string) => void }) {
+function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void }) {
   const on = (iso: string) => tasks.filter((t) => t.due === iso).slice().sort(byPrioDue);
   const dowMon = (iso: string) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon
   const weekStart = shiftIso(anchor, -dowMon(anchor));
@@ -382,7 +410,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, onOpen }: { 
     : view === "week" ? `Week of ${fmtDay(weekStart)}`
     : new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
   const chip = (t: Task) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10.5px] font-bold text-white" style={{ background: PRIO[t.prio ?? "med"].dot }} title={t.t}>{t.t}</button>;
-  const fullChip = (t: Task) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-left text-[12.5px] hover:bg-[#f7faff]"><span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><span className="min-w-0 flex-1 truncate font-bold">{t.t}</span>{t.link && <span className="flex-none rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}{t.who && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t.who}</span>}</button>;
+  const fullChip = (t: Task) => <div key={t.id} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] hover:bg-[#f7faff]"><span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-left font-bold">{t.t}</button>{t.link && <LinkChip link={t.link} size="xs" />}{!noAssignee && t.who && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t.who}</span>}</div>;
 
   let body: ReactNode;
   if (view === "month") {
@@ -428,28 +456,47 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, onOpen }: { 
   );
 }
 
-// ── Linked-to picker (shared by create + drawer) ────────────────────────────
-function LinkedPicker({ link, onChange, venues, listings, cats, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; venues: string[]; listings: { id: string; title: string }[]; cats: string[]; inputCls: string }) {
+// ── Linked-to picker — pulls real records + builds the deep-link ─────────────
+function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; opts: LinkOpts; inputCls: string }) {
   const k = link?.k ?? "";
+  const { portal, bookOpts, childOpts, parentOpts, listings, venues, cats } = opts;
+  const bookingHref = (ref: string) => `/${portal}/bookings?ref=${encodeURIComponent(ref)}`;
   const setK = (nk: string) => onChange(nk ? { k: nk as LinkKind, v: "" } : null);
-  const setV = (v: string) => onChange({ k: (link?.k ?? "gen") as LinkKind, v });
   return (
     <div className="space-y-1.5">
-      <select value={k} onChange={(e) => setK(e.target.value)} className={inputCls}>
+      <select value={LINK_TYPES.includes(k as LinkKind) ? k : (k || "")} onChange={(e) => setK(e.target.value)} className={inputCls}>
         <option value="">— not linked —</option>
-        {(Object.keys(LINK) as LinkKind[]).map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
+        {LINK_TYPES.map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
       </select>
-      {k === "venue" && (venues.length ? <select value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} className={inputCls}><option value="">Choose a venue…</option>{venues.map((v) => <option key={v} value={v}>{v}</option>)}</select> : <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Venue name" className={inputCls} />)}
-      {k === "list" && (listings.length ? <select value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.title}>{l.title}</option>)}</select> : <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Listing name" className={inputCls} />)}
-      {k === "gen" && <><input list="task-cats" value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Category — type a new one or pick" className={inputCls} /><datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist></>}
-      {(k === "camp" || k === "book" || k === "comp") && <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder={k === "camp" ? "e.g. Summer Camp · Wk1" : k === "book" ? "e.g. #APF-1042" : "e.g. DBS · Tom"} className={inputCls} />}
+
+      {k === "book" && (bookOpts.length
+        ? <select value={link?.v ?? ""} onChange={(e) => { const o = bookOpts.find((b) => b.label === e.target.value); onChange(o ? { k: "book", v: o.label, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a booking…</option>{bookOpts.map((b) => <option key={b.ref} value={b.label}>{b.label}</option>)}</select>
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "book", v: e.target.value })} placeholder="e.g. #APF-1042" className={inputCls} />)}
+
+      {k === "child" && (childOpts.length
+        ? <select value={link?.v ?? ""} onChange={(e) => { const o = childOpts.find((c) => c.name === e.target.value); onChange(o ? { k: "child", v: o.name, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a child…</option>{childOpts.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "child", v: e.target.value })} placeholder="Child name" className={inputCls} />)}
+
+      {k === "parent" && (parentOpts.length
+        ? <select value={link?.v ?? ""} onChange={(e) => { const o = parentOpts.find((p) => p.name === e.target.value); onChange(o ? { k: "parent", v: o.name, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a parent…</option>{parentOpts.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "parent", v: e.target.value })} placeholder="Parent name" className={inputCls} />)}
+
+      {k === "list" && (listings.length
+        ? <select value={link?.v ?? ""} onChange={(e) => onChange(e.target.value ? { k: "list", v: e.target.value } : null)} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.title}>{l.title}</option>)}</select>
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "list", v: e.target.value })} placeholder="Listing name" className={inputCls} />)}
+
+      {k === "venue" && (venues.length
+        ? <select value={link?.v ?? ""} onChange={(e) => onChange(e.target.value ? { k: "venue", v: e.target.value } : null)} className={inputCls}><option value="">Choose a venue…</option>{venues.map((v) => <option key={v} value={v}>{v}</option>)}</select>
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder="Venue name" className={inputCls} />)}
+
+      {k === "gen" && <><input list="task-cats" value={link?.v ?? ""} onChange={(e) => onChange({ k: "gen", v: e.target.value })} placeholder="Category — type a new one or pick" className={inputCls} /><datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist></>}
     </div>
   );
 }
 
 // ── Create-task modal ───────────────────────────────────────────────────────
-function CreateModal({ noAssignee, team, cats, venues, listings, onClose, onCreate }: { noAssignee: boolean; team: string[]; cats: string[]; venues: string[]; listings: { id: string; title: string }[]; onClose: () => void; onCreate: (f: Partial<Task>) => void }) {
-  const [t, setT] = useState("");
+function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+  const [t, setT] = useState(initialTitle ?? "");
   const [who, setWho] = useState("");
   const [prio, setPrio] = useState<Prio>("med");
   const [due, setDue] = useState("");
@@ -457,9 +504,10 @@ function CreateModal({ noAssignee, team, cats, venues, listings, onClose, onCrea
   const [link, setLink] = useState<TaskLink | null>(null);
   const [labels, setLabels] = useState<string[]>([]);
   const [labelIn, setLabelIn] = useState("");
+  const [toCal, setToCal] = useState(false);
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const fieldRow = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
-  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, status, link, labels }); };
+  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, status, link, labels }, toCal); };
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
       <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -475,8 +523,13 @@ function CreateModal({ noAssignee, team, cats, venues, listings, onClose, onCrea
             {!noAssignee && fieldRow("Assignee", <><input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} /><datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
             {fieldRow("Status", <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
           </div>
-          {fieldRow("Linked to", <LinkedPicker link={link} onChange={setLink} venues={venues} listings={listings} cats={cats} inputCls={inputCls} />)}
+          {fieldRow("Linked to", <LinkedPicker link={link} onChange={setLink} opts={opts} inputCls={inputCls} />)}
           {fieldRow("Labels", <div className="flex flex-wrap gap-1.5">{labels.map((l, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold">{l}<button type="button" onClick={() => setLabels(labels.filter((_, j) => j !== i))} className="text-[var(--ink-3)]">×</button></span>)}<input value={labelIn} onChange={(e) => setLabelIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && labelIn.trim()) { setLabels([...labels, labelIn.trim()]); setLabelIn(""); } }} placeholder="+ label" className="w-[100px] rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] outline-none focus:border-[#1d3a8f]" /></div>)}
+          <label className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12.5px] ${due ? "cursor-pointer border-[#dbe6fb] bg-[#f2f7ff]" : "border-[var(--line)] opacity-60"}`}>
+            <input type="checkbox" checked={toCal} disabled={!due} onChange={(e) => setToCal(e.target.checked)} className="h-4 w-4 accent-[#1d3a8f]" />
+            <span className="font-bold">Also show in the Events calendar</span>
+            <span className="text-[11px] text-[var(--ink-3)]">{due ? "adds it to your sidebar calendar too" : "set a deadline first"}</span>
+          </label>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <Button sm onClick={onClose}>Cancel</Button>
@@ -512,7 +565,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
                 <span className="text-[12.5px] font-extrabold">{label}</span>
                 <span className="text-[11px] text-[var(--ink-3)]">{openCount(who)} open{over ? ` · ${over} overdue` : ""}</span>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} onOpen={onOpen} onToggle={onToggle} />)}</div>
+              <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={false} onOpen={onOpen} onToggle={onToggle} />)}</div>
             </div>
           );
         })}
@@ -522,7 +575,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, noAssignee, me, cats, venues, listings, onClose, onPatch, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; cats: string[]; venues: string[]; listings: { id: string; title: string }[]; onClose: () => void; onPatch: (f: Partial<Task>) => void; onArchive: () => void; onDelete: () => void }) {
+function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onArchive: () => void; onDelete: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -540,7 +593,7 @@ function Drawer({ task, team, noAssignee, me, cats, venues, listings, onClose, o
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <button type="button" onClick={() => onPatch({ status: task.status === "done" ? "todo" : "done" })} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={task.status === "done" ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#eef4fd", color: "#1d3a8f" }}>{task.status === "done" ? "✓ Done — reopen" : "Mark complete"}</button>
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold"><span className="h-2 w-2 rounded-full" style={{ background: PRIO[task.prio ?? "med"].dot }} />{PRIO[task.prio ?? "med"].label}</span>
-            {task.link && <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: LINK[task.link.k].bg, color: LINK[task.link.k].fg }}>{LINK[task.link.k].icon} {task.link.v}</span>}
+            {task.link && <LinkChip link={task.link} />}
             {task.spawn && <span className="rounded bg-[#fdecc8] px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
           </div>
         </div>
@@ -549,7 +602,7 @@ function Drawer({ task, team, noAssignee, me, cats, venues, listings, onClose, o
           {field("Due date", <input type="date" value={task.due ?? ""} onChange={(e) => onPatch({ due: e.target.value || null })} className={inputCls} />)}
           {field("Priority", <select value={task.prio ?? "med"} onChange={(e) => onPatch({ prio: e.target.value as Prio })} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
           {field("Status", <select value={task.status ?? "todo"} onChange={(e) => onPatch({ status: e.target.value as Status })} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
-          {field("Linked to", <LinkedPicker link={task.link} onChange={(l) => onPatch({ link: l })} venues={venues} listings={listings} cats={cats} inputCls={inputCls} />)}
+          {field("Linked to", <LinkedPicker link={task.link} onChange={(l) => onPatch({ link: l })} opts={opts} inputCls={inputCls} />)}
 
           <div className="mt-2 border-t border-[var(--line)] pt-2">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Labels</div>
