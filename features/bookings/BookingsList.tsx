@@ -396,6 +396,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       identical rows. */}
                   <span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">
                     {kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}
+                    <span className="ml-1.5 whitespace-nowrap text-[11px] font-bold text-[#1d3a8f]">View details ›</span>
                   </span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">
                     {/* On the row, not behind a click — "when did this come

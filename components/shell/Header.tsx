@@ -12,6 +12,7 @@ import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 import { Bell } from "./Bell";
 import { Sidebar } from "./Sidebar";
+import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 
 // Lives in the portal layout (not the per-view page) so it persists across
 // view navigation; derives the current view from the URL rather than a prop
@@ -27,6 +28,9 @@ export function Header({ portal }: { portal: PortalKey }) {
   // content. Navigating (pathname change) closes it.
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => { setMenuOpen(false); }, [pathname]);
+  // "Find a child" — operator-wide safeguarding lookup (opens the child card).
+  const [lookupOpen, setLookupOpen] = useState(false);
+  const canLookup = portal !== "custdash" && portal !== "platform";
 
   // Parents message their provider from the top bar rather than a sidebar tab —
   // it's an action, not a place. Named after the provider when there's just one.
@@ -110,6 +114,18 @@ export function Header({ portal }: { portal: PortalKey }) {
         </nav>
       )}
 
+      {canLookup && (
+        <button
+          type="button"
+          onClick={() => setLookupOpen(true)}
+          title="Find a child — key info card"
+          className="inline-flex flex-none items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3.5 py-[7px] text-[12.5px] font-bold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface)]"
+        >
+          <span aria-hidden>🔎</span>
+          <span className="hidden sm:inline">Find a child</span>
+        </button>
+      )}
+
       <div className="flex flex-none items-center gap-2 sm:gap-3">
         {user?.email && portal !== "custdash" && <span className="hidden text-[12px] text-[var(--ink-3)] xl:inline">{user.email}</span>}
         {/* Platform accounts have no tenant, so no bell of their own (the API
@@ -130,6 +146,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           Sign out
         </Button>
       </div>
+      {lookupOpen && <ChildLookupModal onClose={() => setLookupOpen(false)} />}
     </header>
   );
 }

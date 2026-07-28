@@ -189,6 +189,39 @@ bookings.get("/:ref", async (req, res) => {
   res.json(withCreated(doc));
 });
 
+// GET /api/bookings/:ref/children — the full child record(s) for this booking's
+// kids (same safeguarding projection the register uses), so the booking detail
+// can show the identical child card. Scoped to the operator's own booking.
+bookings.get("/:ref/children", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId query param required for platform accounts" }); return; }
+  const doc = await col.doc(bookingDocId(tenantId, req.params.ref)).get();
+  if (!doc.exists || !inScope(doc.data() as BookingDoc, scope)) { res.status(404).json({ error: "Booking not found" }); return; }
+  const b = fromDoc(doc.data() as BookingDoc);
+  const kids = b.kids?.length ? b.kids.map((k) => ({ name: k.name, childId: k.childId })) : [{ name: b.child, childId: b.childId }];
+  const ids = [...new Set(kids.map((k) => k.childId).filter(Boolean) as string[])];
+  const childDocs = ids.length ? await db.getAll(...ids.map((id) => db.collection("children").doc(id))) : [];
+  const byId = new Map(childDocs.filter((d) => d.exists).map((d) => {
+    const c = d.data() as Record<string, unknown>;
+    return [d.id, {
+      photo: c.photo as string | undefined, dob: c.dob as string | undefined, school: c.school as string | undefined,
+      allergies: c.allergies as string | undefined, medical: c.medical as string | undefined, dietary: c.dietary as string | undefined,
+      send: c.send as string | undefined, sendPlanName: c.sendPlanName as string | undefined, careNotes: c.careNotes as string | undefined,
+      collectionPassword: c.collectionPassword as string | undefined, emergencyName: c.emergencyName as string | undefined, emergencyPhone: c.emergencyPhone as string | undefined,
+      photoConsent: c.photoConsent as boolean | undefined, likes: c.likes as string | undefined, dislikes: c.dislikes as string | undefined,
+      swimming: c.swimming as string | undefined, sex: c.sex as string | undefined, suncreamConsent: c.suncreamConsent as boolean | undefined,
+      firstAidConsent: c.firstAidConsent as boolean | undefined, walkHomeConsent: c.walkHomeConsent as boolean | undefined,
+      answers: (c.answers as Record<string, string> | undefined) ?? undefined,
+    }] as const;
+  }));
+  res.json({
+    booker: b.booker, email: b.email ?? "", phone: b.phone ?? "", ref: b.ref, note: b.note ?? "",
+    children: kids.map((k) => ({ name: k.name, childId: k.childId ?? null, record: k.childId ? byId.get(k.childId) ?? null : null })),
+  });
+});
+
 // POST /api/bookings — take a manual booking (into the caller's own scope)
 bookings.post("/", async (req, res) => {
   const scope = operatorScope(req, res);

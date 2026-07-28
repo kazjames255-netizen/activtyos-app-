@@ -21,6 +21,7 @@ import { Badge, Button, Card, DefRow, Input, SectionHead, Select } from "@/compo
 import { useTenantSettings, reasonsFor } from "@/lib/settings";
 import { refundFor, policyById } from "@/lib/cancellation";
 import { post as apiPost, get as apiGet } from "@/lib/api";
+import { ChildCard, type ChildInfo } from "@/features/registers/ChildCard";
 
 interface MsgTemplate { id: string; name: string; subject?: string; body: string }
 
@@ -542,6 +543,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const saveNote = useBookingsStore((s) => s.saveNote);
   const [note, setNote] = useState(booking.note || "");
   const [messaging, setMessaging] = useState(false);
+  const [tab, setTab] = useState<"booking" | "children">("booking");
   // The block's live availability — feeds the per-day "Move" chips with the
   // dates this block really runs and has space on.
   const [blockAvail, setBlockAvail] = useState<BlockAvail | null>(null);
@@ -695,6 +697,19 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           <Tile big={money(b.amount)} small="Total" />
         </div>
 
+        {/* Tabs — the booking, or the same child card as the register */}
+        <div className="mt-3 flex gap-1.5 border-b border-[var(--line)]">
+          {(["booking", "children"] as const).map((t) => (
+            <button key={t} type="button" onClick={() => setTab(t)} className="-mb-px border-b-2 px-3 py-2 text-[12.5px] font-extrabold transition-colors" style={tab === t ? { borderColor: "#1d3a8f", color: "#1d3a8f" } : { borderColor: "transparent", color: "var(--ink-3)" }}>
+              {t === "booking" ? "Booking details" : "Child card"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "children" && <div className="mt-3"><ChildCardsPane key={b.ref} booking={b} /></div>}
+
+        {tab === "booking" && (<>
+        <div className="mt-3" />
         <DateChangePanel booking={b} />
 
         {b._cancelling && <CancelPanel booking={b} />}
@@ -847,10 +862,44 @@ export function BookingDetail({ booking }: { booking: Booking }) {
             Save note
           </a>
         </div>
+        </>)}
 
       </Card>
     </div>
   );
+}
+
+// The register's child card, shown in the booking detail — one per kid on the
+// booking, fed by GET /api/bookings/:ref/children (full child record).
+function ChildCardsPane({ booking }: { booking: Booking }) {
+  const { settings, questions } = useTenantSettings();
+  const card = settings.registers?.card ?? {};
+  const fields = settings.registers?.fields ?? {};
+  const [infos, setInfos] = useState<ChildInfo[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    // Keyed by booking.ref so it mounts fresh per booking — no synchronous reset.
+    apiGet<{ booker: string; email: string; phone: string; ref: string; note: string; children: { name: string; childId: string | null; record: Record<string, unknown> | null }[] }>(`/api/bookings/${encodeURIComponent(booking.ref)}/children`)
+      .then((d) => {
+        const ageOf = (dob?: string) => { if (!dob) return undefined; const bd = new Date(dob); if (isNaN(+bd)) return undefined; const n = new Date(); let a = n.getFullYear() - bd.getFullYear(); const m = n.getMonth() - bd.getMonth(); if (m < 0 || (m === 0 && n.getDate() < bd.getDate())) a--; return a >= 0 && a < 120 ? a : undefined; };
+        setInfos(d.children.map((ch) => {
+          const r = (ch.record ?? {}) as Record<string, string | boolean | Record<string, string> | undefined>;
+          return {
+            name: ch.name, age: ageOf(r.dob as string | undefined), dob: r.dob as string | undefined, sex: r.sex as string | undefined, photo: r.photo as string | undefined,
+            allergies: r.allergies as string | undefined, medical: r.medical as string | undefined, dietary: r.dietary as string | undefined, send: r.send as string | undefined, sendPlanName: r.sendPlanName as string | undefined, swimming: r.swimming as string | undefined,
+            careNotes: r.careNotes as string | undefined, likes: r.likes as string | undefined, dislikes: r.dislikes as string | undefined, answers: r.answers as Record<string, string> | undefined,
+            photoConsent: r.photoConsent as boolean | undefined, suncreamConsent: r.suncreamConsent as boolean | undefined, firstAidConsent: r.firstAidConsent as boolean | undefined, walkHomeConsent: r.walkHomeConsent as boolean | undefined,
+            collectionPassword: r.collectionPassword as string | undefined, emergencyName: r.emergencyName as string | undefined, emergencyPhone: r.emergencyPhone as string | undefined, school: r.school as string | undefined,
+            contactName: d.booker, contactPhone: d.phone, contactEmail: d.email, bookingRef: d.ref, bookingNotes: d.note,
+          } as ChildInfo;
+        }));
+      })
+      .catch((e) => setErr(e instanceof Error ? e.message : "Couldn’t load child details"));
+  }, [booking.ref]);
+  if (err) return <div className="rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>;
+  if (!infos) return <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading child details…</div>;
+  if (infos.length === 0) return <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">No child linked to this booking.</div>;
+  return <div className="space-y-4">{infos.map((info, i) => <ChildCard key={i} info={info} card={card} questions={questions} fields={fields} inline />)}</div>;
 }
 
 function RefundSummary({ booking }: { booking: Booking }) {
