@@ -66,7 +66,11 @@ Non-negotiables shared by all views:
   wizard publish → parent books → live operator update), cancellations and
   the waitlist loop, the Stripe pay-link (real test-card payment), discount
   codes, child profiles, registers, newsfeed, tasks, invites, messages,
-  invoices. It provisions throwaway `@activityos-test.com` accounts on the
+  invoices, trips consent (bell → parent one-tap consent → requireConsent
+  enforcement), subscription billing (a FRESH signup through the gate's real
+  PaymentElement → trial → cancel → reactivate — the standing operator
+  accounts predate the gate and are never walled), and the HQ apps (sales
+  board round-trip; 🐞 bug report → support inbox → reply → resolve). It provisions throwaway `@activityos-test.com` accounts on the
   live dev stack (reused across runs, but their DATA is wiped at the start of
   every run); `npm run e2e:cleanup` deletes them and everything they own. New
   views/flows should get a spec here.
