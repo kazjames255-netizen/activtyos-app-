@@ -156,8 +156,8 @@ export function ChildCard({ info, card, questions, fields, inline, actions, onCl
           {showDays && <ol className="mt-1.5 space-y-1">{attend.map((s, i) => (
             <li key={`${s.label}-${s.start}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px]">
               <span className="font-extrabold text-[var(--ink)]">{s.label}</span>
-              <span className="text-[var(--ink-2)]">🕒 {s.start}–{s.end}</span>
-              <span className="text-[var(--ink-3)]">· {s.listing}</span>
+              {s.start && <span className="text-[var(--ink-2)]">🕒 {s.start}{s.end ? `–${s.end}` : ""}</span>}
+              {s.listing && <span className="text-[var(--ink-3)]">· {s.listing}</span>}
             </li>
           ))}</ol>}
         </>}

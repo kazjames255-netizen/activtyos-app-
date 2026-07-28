@@ -7,7 +7,7 @@ import { useSettings } from "@/lib/settings";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string }
-interface CardResp { childId: string; name: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; record: Record<string, string | boolean | Record<string, string> | undefined> }
+interface CardResp { childId: string; name: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; bookings?: { ref: string; listing: string; dates: string; pass: string; status: string }[]; record: Record<string, string | boolean | Record<string, string> | undefined> }
 
 const ageOf = (dob?: string) => { if (!dob) return undefined; const bd = new Date(dob); if (isNaN(+bd)) return undefined; const n = new Date(); let a = n.getFullYear() - bd.getFullYear(); const m = n.getMonth() - bd.getMonth(); if (m < 0 || (m === 0 && n.getDate() < bd.getDate())) a--; return a >= 0 && a < 120 ? a : undefined; };
 
@@ -47,6 +47,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         photoConsent: r.photoConsent as boolean | undefined, suncreamConsent: r.suncreamConsent as boolean | undefined, firstAidConsent: r.firstAidConsent as boolean | undefined, walkHomeConsent: r.walkHomeConsent as boolean | undefined,
         collectionPassword: r.collectionPassword as string | undefined, emergencyName: r.emergencyName as string | undefined, emergencyPhone: r.emergencyPhone as string | undefined, school: r.school as string | undefined,
         contactName: d.parentName, contactPhone: d.parentPhone, contactEmail: d.parentEmail, bookingRef: d.ref,
+        attending: (d.bookings ?? []).map((bk) => { const [s, e] = (bk.pass || "").split(/[–-]/).map((x) => x.trim()); return { label: bk.dates || bk.listing || `#${bk.ref}`, start: s || bk.pass || "", end: e || "", listing: bk.listing || "" }; }),
       };
       setOpenInfo({ info, name: d.name, email: d.parentEmail });
     } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t load the child card"); }

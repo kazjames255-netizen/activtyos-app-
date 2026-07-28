@@ -53,21 +53,45 @@ children.get("/lookup", async (req, res) => {
 });
 
 // GET /api/children/:id — the full safeguarding record for the card, tenant-gated
-// (the child must be booked with the caller's tenant).
+// (the child must be booked with the caller's tenant). Also returns the parent's
+// resolved phone (booking → customer record fallback) and the child's bookings.
 children.get("/:id", async (req, res) => {
   const auth = req.auth!;
+  const id = req.params.id;
   if (!auth.tenantId || !CARD_ROLES.has(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
-  const idx = await bookedChildren(auth.tenantId);
-  const p = idx.get(req.params.id);
-  if (!p) { res.status(404).json({ error: "Child not found for this account" }); return; }
-  const doc = await db.collection("children").doc(req.params.id).get();
+  // One pass over the tenant's bookings: parent contact + this child's bookings.
+  const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
+  const snaps = blocks.empty ? [] : await Promise.all(blocks.docs.map((d) => db.collection("bookings").where("blockId", "==", d.id).get()));
+  let contact: { parentName: string; email: string; phone: string; ref: string } | null = null;
+  const bookings: { ref: string; listing: string; dates: string; pass: string; status: string }[] = [];
+  for (const s of snaps)
+    for (const d of s.docs) {
+      const b = fromDoc(d.data() as BookingDoc);
+      const has = b.kids?.length ? b.kids.some((k) => k.childId === id) : b.childId === id;
+      if (!has) continue;
+      if (!contact) contact = { parentName: b.booker ?? "", email: b.email ?? "", phone: b.phone ?? "", ref: b.ref };
+      else if (!contact.phone && b.phone) contact.phone = b.phone;
+      if (countsTowardCapacity(b.status) && b.status !== "Offered") bookings.push({ ref: b.ref, listing: b.listing ?? "", dates: b.dates ?? "", pass: b.pass ?? "", status: b.status });
+    }
+  if (!contact) { res.status(404).json({ error: "Child not found for this account" }); return; }
+  const doc = await db.collection("children").doc(id).get();
   if (!doc.exists) { res.status(404).json({ error: "Child not found" }); return; }
   const c = doc.data() as Record<string, unknown>;
+  // Phone fallback: the booking often has none — the number lives on the customer
+  // record (operator directory / parent account). Postcode comes off the user doc.
+  if (!contact.phone && contact.email) {
+    const cust = await db.collection("customers").where("email", "==", contact.email).limit(1).get();
+    if (!cust.empty) contact.phone = ((cust.docs[0].data() as { phone?: string }).phone ?? "");
+  }
   let postcode = "";
-  if (c.parentUid) { const u = await db.collection("users").doc(c.parentUid as string).get(); postcode = u.exists ? ((u.data() as { postcode?: string }).postcode ?? "") : ""; }
+  if (c.parentUid) {
+    const u = await db.collection("users").doc(c.parentUid as string).get();
+    if (u.exists) { const ud = u.data() as { postcode?: string; phone?: string }; postcode = ud.postcode ?? ""; if (!contact.phone && ud.phone) contact.phone = ud.phone; }
+  }
   res.json({
     childId: doc.id, name: (c.name as string) ?? "",
-    parentName: p.parentName, parentEmail: p.email, parentPhone: p.phone, ref: p.ref, postcode,
+    parentName: contact.parentName, parentEmail: contact.email, parentPhone: contact.phone, ref: contact.ref, postcode,
+    bookings,
     record: {
       photo: c.photo, dob: c.dob, school: c.school, allergies: c.allergies, medical: c.medical, dietary: c.dietary,
       send: c.send, sendPlanName: c.sendPlanName, careNotes: c.careNotes, collectionPassword: c.collectionPassword,
