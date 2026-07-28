@@ -1337,7 +1337,7 @@ export function SetupApp() {
           ))}
           <div className="mt-4 mb-1 text-[12px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Quick actions on each row</div>
           <p className="mb-2 -mt-0.5 text-[12px] text-[var(--ink-3)]">The one-tap links beside each child — each jumps straight to the right page with the child already filled in.</p>
-          {([["firstAid", "First aid"], ["incident", "Report incident"], ["medication", "Give medication"], ["moments", "Moments"], ["email", "Email parent"], ["message", "Message parent"]] as [string, string][]).map(([k, label]) => (
+          {([["firstAid", "First aid"], ["incident", "Report incident"], ["medication", "Give medication"], ["moments", "Add moment"], ["message", "Message parent"], ["email", "Email parent"], ["whatsapp", "WhatsApp parent"]] as [string, string][]).map(([k, label]) => (
             <Row key={k} label={label}>
               <Toggle on={settings.registers?.actions?.[k as keyof NonNullable<NonNullable<typeof settings.registers>["actions"]>] ?? true} onChange={(v) => set("registers", { ...settings.registers, actions: { ...settings.registers?.actions, [k]: v } })} labels={["On", "Off"]} />
             </Row>

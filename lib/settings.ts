@@ -451,7 +451,7 @@ export interface TenantSettings {
       mainContact?: boolean; emergency?: boolean; password?: boolean; school?: boolean; bookingNotes?: boolean; attending?: boolean;
     };
     /** Which quick-link actions appear on each register row. Each defaults to on. */
-    actions?: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean };
+    actions?: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean };
   };
 
   /**
@@ -778,7 +778,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     timestamps: true,
     fields: { contact: true, emergency: true, password: true, school: true },
     card: { allergies: true, medical: true, dietary: true, send: true, swimming: true, careNotes: true, likes: true, dislikes: true, answers: true, consents: true, mainContact: true, emergency: true, password: true, school: true, bookingNotes: true, attending: true },
-    actions: { firstAid: true, incident: true, medication: true, message: true, moments: true, email: true },
+    actions: { firstAid: true, incident: true, medication: true, message: true, moments: true, email: true, whatsapp: true },
   },
   inventory: {
     categories: ["Sports equipment", "Arts & crafts", "First aid", "Stationery", "Catering", "Cleaning", "Uniform / kit"],
