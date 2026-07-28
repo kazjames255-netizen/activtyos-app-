@@ -242,25 +242,6 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
               </div>
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour — pick a palette</div>
-              <div className="flex flex-wrap gap-1.5">
-                {PALETTE_FAMILIES.map((f) => { const on = familyOfPalette(nl.palette) === f.id; const sw = f.schemes[0]; return (
-                  <button key={f.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: f.schemes[0].id }))} title={f.name} className="flex items-center gap-1 rounded-full border px-1.5 py-1" style={{ borderColor: on ? sw.accent : "var(--line)", background: on ? `${sw.accent}12` : "transparent" }}>
-                    <span className="flex overflow-hidden rounded-full" style={{ height: 15, width: 15, border: "1px solid rgba(0,0,0,.1)" }}><span style={{ flex: 1, background: sw.accent }} /><span style={{ flex: 1, background: sw.accent2 }} /></span>
-                    <span className="text-[10.5px] font-bold text-[var(--ink-2)]">{f.name}</span>
-                  </button>
-                ); })}
-              </div>
-              <div className="mb-1 mt-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">…then a scheme</div>
-              <div className="flex flex-wrap gap-1">
-                {(PALETTE_FAMILIES.find((f) => f.id === familyOfPalette(nl.palette)) ?? PALETTE_FAMILIES[0]).schemes.map((s) => (
-                  <button key={s.id} type="button" onClick={() => setNl((n) => ({ ...n, palette: s.id }))} title={`Scheme ${s.name}`} className="overflow-hidden rounded-md" style={{ height: 26, width: 34, border: nl.palette === s.id ? "2px solid #1d3a8f" : "1px solid var(--line)", display: "flex" }}>
-                    <span style={{ flex: 2, background: s.accent }} /><span style={{ flex: 1, background: s.accent2 }} /><span style={{ flex: 1, background: s.bg }} />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your details</div>
               <div className="grid grid-cols-2 gap-1.5">
                 <input value={nl.company.name} onChange={(e) => setCompany({ name: e.target.value })} placeholder="Company name" className={inputCls} />
