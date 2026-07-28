@@ -70,14 +70,14 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
     if (acts.incident !== false) items.push(mkLink("Incident", "#b45309", `/${portal}/${incidentSeg}?child=${name}`));
     if (acts.medication !== false) items.push(mkLink("Medication", "#15803d", `/${portal}/medication?child=${name}`));
     if (acts.moments !== false) items.push(mkLink("Moments", "#7c3aed", `/${portal}/moments?child=${name}`));
-    if (acts.email !== false) items.push(mkLink("Email", "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
-    if (acts.message !== false) items.push(mkLink("Message", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
+    if (acts.email !== false) items.push(mkLink("Email parent", "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
+    if (acts.message !== false) items.push(mkLink("Message parent", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
     quickLinks = <>{items}</>;
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-4 pt-[6vh]" onClick={onClose}>
-      <div className="w-full max-w-[680px]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[860px]" onClick={(e) => e.stopPropagation()}>
         {openInfo ? (
           <div>
             <div className="mb-2 flex items-center justify-between">

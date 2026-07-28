@@ -100,7 +100,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, onCl
       </div>
 
       {/* Body */}
-      <div className={`px-5 pb-5 pt-1 ${inline ? "" : "min-h-0 flex-1 overflow-y-auto"}`}>
+      <div className={`px-5 pb-5 pt-1 ${inline ? "" : "min-h-0 flex-1 overflow-y-auto [scrollbar-color:#9db8ee_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#9db8ee] [&::-webkit-scrollbar]:w-2.5"}`}>
         {actions && <div className="mt-2 flex flex-wrap gap-1.5">{actions}</div>}
         <SectionTitle dot={T.allergy.fg}>Health &amp; safeguarding</SectionTitle>
         {anyHealth ? (

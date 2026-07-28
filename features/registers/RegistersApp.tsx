@@ -108,7 +108,7 @@ function ChildModal({ a, showTimes, fields, card, questions, ctx, onClose }: { a
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-[680px]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[860px]" onClick={(e) => e.stopPropagation()}>
         <ChildCard info={info} card={card} questions={questions} fields={fields} onClose={onClose} />
       </div>
     </div>
@@ -606,8 +606,8 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSele
         {acts.incident !== false && <QuickLink label="Incident" tint="#b45309" onClick={onIncident} />}
         {acts.medication !== false && <QuickLink label="Medication" tint="#15803d" onClick={onMed} />}
         {acts.moments !== false && <QuickLink label="Moments" tint="#7c3aed" onClick={onMoments} />}
-        {acts.email !== false && <QuickLink label="Email" tint="#0e7490" onClick={onEmail} />}
-        {acts.message !== false && <QuickLink label="Message" tint="#1d3a8f" onClick={onMsg} />}
+        {acts.email !== false && <QuickLink label="Email parent" tint="#0e7490" onClick={onEmail} />}
+        {acts.message !== false && <QuickLink label="Message parent" tint="#1d3a8f" onClick={onMsg} />}
       </div>
     </div>
   );
