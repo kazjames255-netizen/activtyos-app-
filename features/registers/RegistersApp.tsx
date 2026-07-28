@@ -40,6 +40,8 @@ const dayLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateStrin
 const timeOf = (ts?: string | null) => (ts ? new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
 // "08:30" → "8:30am" for the start-time filter chips.
 const fmt12 = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); if (Number.isNaN(h)) return hhmm; const ap = h >= 12 ? "pm" : "am"; return `${h % 12 || 12}:${String(m ?? 0).padStart(2, "0")}${ap}`; };
+// UK-first number for wa.me (0… → 44…, strip non-digits).
+const waNumber = (phone?: string) => { let n = (phone || "").replace(/\D/g, ""); if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "44" + n.slice(1); return n; };
 // Age from a date of birth vs a "today" string (yyyy-mm-dd) — pure, no Date.now
 // in render. Handles ISO (2016-12-12) and UK (12/12/2016) dob strings.
 const ageFrom = (dob?: string, today?: string): number | undefined => {
@@ -274,6 +276,7 @@ export function RegistersApp() {
   const incidentFor = (a: Attendee) => router.push(`${incidentHref}?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const momentsFor = (a: Attendee) => router.push(`/${portal}/moments?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const emailFor = (a: Attendee) => { if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; } router.push(`/${portal}/email?to=${encodeURIComponent(a.email.trim().toLowerCase())}`); };
+  const whatsappFor = (a: Attendee) => { const n = waNumber(a.phone); if (!n) { setError(`No phone on file for ${a.booker}.`); return; } const el = document.createElement("a"); el.href = `https://wa.me/${n}`; el.target = "_blank"; el.rel = "noopener noreferrer"; document.body.appendChild(el); el.click(); el.remove(); };
 
   // Listings that run somewhere in the window; pick the active one.
   const listingsAll = useMemo(() => {
@@ -488,7 +491,7 @@ export function RegistersApp() {
                   <span>Child</span><span>Alerts</span><span>Attendance</span><span className="md:text-right">Quick actions</span>
                 </div>
                 {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
-                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} acts={acts} selected={selected.has(a.ref)} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} onMoments={() => momentsFor(a)} onEmail={() => emailFor(a)} />
+                  <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} acts={acts} selected={selected.has(a.ref)} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} onMoments={() => momentsFor(a)} onEmail={() => emailFor(a)} onWhatsapp={() => whatsappFor(a)} />
                 ))}
               </div>
             </>
@@ -563,7 +566,7 @@ function QuickLink({ label, tint, onClick }: { label: string; tint: string; onCl
     <button type="button" onClick={onClick} className="rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition hover:-translate-y-px" style={{ borderColor: "var(--line)", color: tint, background: "var(--surface)" }}>{label}</button>
   );
 }
-function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSelect, onOpen, onMark, onMsg, onMed, onAccident, onIncident, onMoments, onEmail }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; acts: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean }; selected: boolean; onSelect: () => void; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void; onMoments: () => void; onEmail: () => void }) {
+function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSelect, onOpen, onMark, onMsg, onMed, onAccident, onIncident, onMoments, onEmail }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; acts: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean }; selected: boolean; onSelect: () => void; onOpen: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void; onMoments: () => void; onEmail: () => void; onWhatsapp: () => void }) {
   const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
   const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? "SEND plan on file" : "")) : "";
   const fs = flag === "allergy" ? { bg: "#fde2e4", fg: "#c02636" } : flag === "medical" ? { bg: "#e0e9ff", fg: BLUE } : flag === "dietary" ? { bg: "#dcfce7", fg: "#15803d" } : { bg: "#f3e8ff", fg: "#6d28d9" };
@@ -608,6 +611,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSele
         {acts.moments !== false && <QuickLink label="Add moment" tint="#7c3aed" onClick={onMoments} />}
         {acts.email !== false && <QuickLink label="Email parent" tint="#0e7490" onClick={onEmail} />}
         {acts.message !== false && <QuickLink label="Message parent" tint="#1d3a8f" onClick={onMsg} />}
+        {acts.whatsapp !== false && <QuickLink label="WhatsApp" tint="#128c7e" onClick={onWhatsapp} />}
       </div>
     </div>
   );
