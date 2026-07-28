@@ -40,7 +40,7 @@ const postSchema = z.object({
   pinned: z.boolean().optional(),                       // stays at the top of the feed
   ackRequired: z.boolean().optional(),                  // families must tap "Got it"
   react: z.boolean().optional(),                        // allow likes/reactions (default on)
-  status: z.enum(["published", "scheduled", "archived"]).optional(),
+  status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
   audience: z.enum(["all", "site", "listing"]).optional(),
   audId: z.string().trim().max(80).optional(),          // the site/listing id when scoped
   audLabel: z.string().trim().max(160).optional(),      // human label ("Site: Bristol")
@@ -49,6 +49,7 @@ const postSchema = z.object({
   location: z.string().trim().max(160).optional(),      // event location
   cta: ctaSchema.optional(),                            // booking nudge {label,target}
   publishAt: z.string().trim().max(40).optional(),      // when status==="scheduled"
+  folder: z.string().trim().max(80).optional(),         // library folder a newsletter is filed in
 });
 const partialSchema = postSchema.partial();
 

@@ -5,7 +5,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
-import { NewsletterBuilder, NewsletterView, type Newsletter } from "./newsletter";
+import { NewsletterBuilder, NewsletterView, newMeta, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (operator) — announcements to families, built from templates. Each
@@ -21,7 +21,7 @@ const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 const BLUE = "#1d3a8f";
 
 type Tpl = "announce" | "event" | "reminder" | "urgent" | "celebrate" | "booking" | "newsletter";
-type Status = "published" | "scheduled" | "archived";
+type Status = "draft" | "published" | "scheduled" | "archived";
 interface Cta { label: string; target?: string; url?: string }
 interface Rsvp { yes: number; no: number; maybe: number }
 interface Post {
@@ -29,7 +29,7 @@ interface Post {
   priority?: "normal" | "urgent"; pinned?: boolean; ackRequired?: boolean; react?: boolean;
   status?: Status; audience?: "all" | "site" | "listing"; audId?: string; audLabel?: string;
   date?: string; time?: string; location?: string; cta?: Cta | null; publishAt?: string;
-  rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null;
+  rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null; folder?: string;
   postedByName?: string; createdAt?: string; editedAt?: string;
 }
 
@@ -71,8 +71,9 @@ export function NewsfeedApp() {
   const [canManage, setCanManage] = useState(false);
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string } | null>(null);
-  const [filter, setFilter] = useState<"all" | Tpl | "scheduled" | "archived">("all");
+  const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string; meta?: NlMeta } | null>(null);
+  const [filter, setFilter] = useState<"all" | Tpl | "draft" | "scheduled" | "archived">("all");
+  const [folderFilter, setFolderFilter] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -84,12 +85,17 @@ export function NewsfeedApp() {
 
   const all = useMemo(() => posts ?? [], [posts]);
   const live = useMemo(() => all.filter((p) => (p.status ?? "published") === "published"), [all]);
+  const folders = useMemo(() => [...new Set(all.map((p) => p.folder).filter((f): f is string => !!f && f.trim() !== ""))].sort(), [all]);
+  const live1 = (p: Post) => (p.status ?? "published") !== "archived" && p.status !== "draft";
   const shown = useMemo(() => {
-    if (filter === "all") return all.filter((p) => (p.status ?? "published") !== "archived");
-    if (filter === "scheduled") return all.filter((p) => p.status === "scheduled");
-    if (filter === "archived") return all.filter((p) => p.status === "archived");
-    return all.filter((p) => (p.tpl ?? "announce") === filter && (p.status ?? "published") !== "archived");
-  }, [all, filter]);
+    let list = filter === "all" ? all.filter(live1)
+      : filter === "scheduled" ? all.filter((p) => p.status === "scheduled")
+      : filter === "draft" ? all.filter((p) => p.status === "draft")
+      : filter === "archived" ? all.filter((p) => p.status === "archived")
+      : all.filter((p) => (p.tpl ?? "announce") === filter && live1(p));
+    if (folderFilter) list = list.filter((p) => (p.folder ?? "") === folderFilter);
+    return list;
+  }, [all, filter, folderFilter]);
   const pinnedCount = live.filter((p) => p.pinned).length;
   const scheduledCount = all.filter((p) => p.status === "scheduled").length;
 
@@ -124,18 +130,29 @@ export function NewsfeedApp() {
     try { await api(`/api/posts/${encodeURIComponent(p.id)}`, { method: "DELETE" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
-  async function saveNewsletter(nl: Newsletter, editId?: string) {
+  async function saveNewsletter(nl: Newsletter, meta: NlMeta, editId?: string) {
     const name = nl.company.name || "us";
     const firstHeading = nl.blocks.find((b) => b.heading)?.heading;
-    const title = (firstHeading || nl.company.name || "Newsletter").replace(/\{company\}/g, name).slice(0, 120);
+    const title = (meta.name.trim() || firstHeading || nl.company.name || "Newsletter").replace(/\{company\}/g, name).slice(0, 120);
     const body = (nl.blocks.map((b) => [b.heading, b.body, b.left, b.right, b.codeDesc].filter(Boolean).join(" ")).filter(Boolean).join("\n").replace(/\{company\}/g, name).slice(0, 900)) || title;
-    const payload: Partial<Post> = { tpl: "newsletter", title, body, newsletter: nl, status: "published", audience: "all", audLabel: "All families", react: true };
+    const scheduled = meta.when === "later" && !!meta.publishAt;
+    const status: Status = meta.when === "draft" ? "draft" : scheduled ? "scheduled" : "published";
+    const audLabel = meta.audScope === "all" ? "All families" : `Listing: ${listings.find((l) => l.id === meta.audId)?.title ?? "—"}`;
+    const payload: Partial<Post> = {
+      tpl: "newsletter", title, body, newsletter: nl,
+      status,
+      audience: meta.audScope, audId: meta.audScope === "listing" ? meta.audId : undefined, audLabel,
+      pinned: meta.pinned, ackRequired: meta.ackRequired, react: meta.react, priority: meta.priority,
+      folder: meta.folder.trim() || undefined,
+      ...(scheduled ? { publishAt: meta.publishAt } : {}),
+    };
     try {
       if (editId) await api(`/api/posts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
       setNlOpen(null); setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save the newsletter"); }
   }
+  const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audId: p.audId ?? "", pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
   const editPost = (p: Post) => setDraft({
     editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body,
     audScope: p.audience === "listing" ? "listing" : "all", audId: p.audId ?? "",
@@ -187,26 +204,33 @@ export function NewsfeedApp() {
 
       {/* Filters */}
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        {([["all", "All"], ...TPL_ORDER.map((k) => [k, TPL[k].label] as const), ["scheduled", "Scheduled"], ["archived", "Archived"]] as [typeof filter, string][]).map(([k, label]) => (
+        {([["all", "All"], ...TPL_ORDER.map((k) => [k, TPL[k].label] as const), ["newsletter", "Newsletter"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["archived", "Archived"]] as [typeof filter, string][]).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={filter === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
         ))}
       </div>
+      {folders.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Folders</span>
+          <button type="button" onClick={() => setFolderFilter("")} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
+          {folders.map((f) => <button key={f} type="button" onClick={() => setFolderFilter(folderFilter === f ? "" : f)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>📁 {f}</button>)}
+        </div>
+      )}
 
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here yet — {canManage ? "pick a post type above to write your first update." : "your provider hasn’t posted yet."}</div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id }) : editPost(p))} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}
+          {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} folders={folders} onMove={(f) => patch(p.id, { folder: f || undefined })} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id, meta: metaFromPost(p) }) : editPost(p))} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}
         </div>
       )}
 
       {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} onClose={() => setDraft(null)} onPublish={publish} />}
-      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} onCancel={() => setNlOpen(null)} onSave={(nl) => saveNewsletter(nl, nlOpen.editId)} />}
+      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialMeta={nlOpen.meta} listings={listings} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta) => saveNewsletter(nl, meta, nlOpen.editId)} />}
     </div>
   );
 }
 
-function PostCard({ p, canManage, onEdit, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
+function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; folders?: string[]; onMove?: (f: string) => void; onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
   const tpl = TPL[p.tpl ?? "announce"];
   const manageBar = canManage && (
     <span className="ml-auto flex items-center gap-1.5">
@@ -221,6 +245,8 @@ function PostCard({ p, canManage, onEdit, onPin, onArchive, onDelete }: { p: Pos
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
         <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-3">
           <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${tpl.color}18`, color: tpl.color }}>Newsletter</span>
+          {p.folder && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">📁 {p.folder}</span>}
+          {p.status === "draft" && <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-extrabold text-[#92600a]">Draft</span>}
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
           {p.status === "scheduled" && <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10px] font-extrabold text-[#5b3fd8]">Scheduled {p.publishAt}</span>}
           {p.status === "archived" && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)]">Archived</span>}
@@ -229,6 +255,14 @@ function PostCard({ p, canManage, onEdit, onPin, onArchive, onDelete }: { p: Pos
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">
           <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
           <span>Seen {p.seen ?? 0} · ♥ {p.reactions ?? 0}</span>
+          {canManage && onMove && (
+            <label className="flex items-center gap-1">📁
+              <select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none">
+                <option value="">Unfiled</option>
+                {folders.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </label>
+          )}
           {manageBar}
         </div>
       </div>

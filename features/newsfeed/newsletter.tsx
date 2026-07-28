@@ -24,6 +24,11 @@ export interface Block {
 export interface Company { name: string; phone: string; email: string; address: string; logo?: string }
 export interface Newsletter { layout: string; palette: string; company: Company; blocks: Block[] }
 
+// Publishing metadata for a newsletter — how it's named, filed and sent. Kept
+// alongside the Newsletter design so the builder owns the whole flow.
+export interface NlMeta { name: string; folder: string; audScope: "all" | "listing"; audId: string; pinned: boolean; ackRequired: boolean; react: boolean; priority: "normal" | "urgent"; when: "now" | "later" | "draft"; publishAt: string }
+export const newMeta = (): NlMeta => ({ name: "", folder: "", audScope: "all", audId: "", pinned: false, ackRequired: false, react: true, priority: "normal", when: "now", publishAt: "" });
+
 // ── Curated palettes — each carries a background, a card surface, two accents,
 // ink + muted text and the colour text sits on over an accent. Deliberately
 // multi-hue so a newsletter reads as designed, not flat.
@@ -150,8 +155,10 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
 
 // ── Builder — layout gallery, palette swatches, company details, per-block
 // editors, live preview. Calls onSave with the finished Newsletter.
-export function NewsletterBuilder({ initial, initialCompany, onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; onCancel: () => void; onSave: (n: Newsletter) => void }) {
+export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta) => void }) {
   const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany));
+  const [meta, setMeta] = useState<NlMeta>(initialMeta ?? newMeta());
+  const setM = (f: Partial<NlMeta>) => setMeta((m) => ({ ...m, ...f }));
   const [busy, setBusy] = useState(false);
   const [aiBrief, setAiBrief] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
@@ -201,6 +208,10 @@ export function NewsletterBuilder({ initial, initialCompany, onCancel, onSave }:
         <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_420px]">
           {/* Editor */}
           <div className="space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Newsletter name</div>
+              <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder="e.g. July Family Update" className={inputCls} />
+            </div>
             <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-2.5">
               <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">✨ Let AI write it for you</div>
               <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={2} placeholder="Describe your newsletter — e.g. “July update: Sports Day Fri 25th 10am on the main field, summer camp now open (early-bird ends Sunday), reminder to bring sun cream.”" className={inputCls} />
@@ -265,6 +276,32 @@ export function NewsletterBuilder({ initial, initialCompany, onCancel, onSave }:
                 })}
               </div>
             </div>
+
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Publish</div>
+              <div className="space-y-2 rounded-xl border border-[var(--line)] p-2.5">
+                <div>
+                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">Folder</div>
+                  <input list="nl-folders" value={meta.folder} onChange={(e) => setM({ folder: e.target.value })} placeholder="Unfiled — type a new folder or pick one" className={inputCls} />
+                  <datalist id="nl-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
+                </div>
+                <div>
+                  <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">Who sees it</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {([["all", "All families"], ["listing", "One listing’s families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ audScope: k, audId: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.audScope === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                    {meta.audScope === "listing" && <select value={meta.audId} onChange={(e) => setM({ audId: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none"><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {([["pinned", "Pin to top"], ["ackRequired", "Ask to acknowledge"], ["react", "Allow reactions"]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => setM({ [f]: !meta[f] } as Partial<NlMeta>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta[f] ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta[f] ? "✓ " : ""}{label}</button>)}
+                  <button type="button" onClick={() => setM({ priority: meta.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta.priority === "urgent" ? "✓ " : ""}High priority</button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {([["now", "Publish now"], ["later", "Schedule"], ["draft", "Save as draft"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.when === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                  {meta.when === "later" && <input type="datetime-local" value={meta.publishAt} onChange={(e) => setM({ publishAt: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none" />}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Preview */}
@@ -276,7 +313,7 @@ export function NewsletterBuilder({ initial, initialCompany, onCancel, onSave }:
 
         <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <button type="button" onClick={() => onSave(nl)} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">Use this newsletter</button>
+          <button type="button" onClick={() => onSave(nl, meta)} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule newsletter" : "Publish newsletter"}</button>
         </div>
       </div>
     </div>
