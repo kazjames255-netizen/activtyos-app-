@@ -10,7 +10,7 @@ export const tasks = Router();
 const col = db.collection("tasks");
 const canUse = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 
-const linkSchema = z.object({ k: z.enum(["camp", "book", "comp", "venue", "gen"]), v: z.string().max(160) }).nullable();
+const linkSchema = z.object({ k: z.enum(["camp", "book", "comp", "venue", "list", "gen"]), v: z.string().max(160) }).nullable();
 const subSchema = z.object({ t: z.string().max(200), done: z.boolean() });
 const commentSchema = z.object({ who: z.string().max(80), body: z.string().max(2_000), when: z.string().max(40) });
 const attSchema = z.object({ name: z.string().max(200) });
@@ -28,6 +28,8 @@ const taskSchema = z.object({
   comments: z.array(commentSchema).max(200).optional(),
   atts: z.array(attSchema).max(50).optional(),
   spawn: z.boolean().optional(),                      // auto-created (P2 engine) — shows the "auto" badge
+  cat: z.string().max(60).optional(),                 // custom "linked to" category
+  archived: z.boolean().optional(),                   // hidden from the main views, kept in Archive
 });
 const partialSchema = taskSchema.partial();
 

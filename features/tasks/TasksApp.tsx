@@ -21,15 +21,15 @@ const BLUE = "#1d3a8f";
 
 type Prio = "urgent" | "high" | "med" | "low";
 type Status = "backlog" | "todo" | "prog" | "done";
-type LinkKind = "camp" | "book" | "comp" | "venue" | "gen";
+type LinkKind = "camp" | "book" | "comp" | "venue" | "list" | "gen";
 interface TaskLink { k: LinkKind; v: string }
 interface Sub { t: string; done: boolean }
 interface Comment { who: string; body: string; when: string }
 interface Att { name: string }
 interface Task {
   id: string; t: string; who?: string; prio?: Prio; due?: string | null; status?: Status;
-  link?: TaskLink | null; co?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
-  spawn?: boolean; createdByName?: string;
+  link?: TaskLink | null; co?: string; cat?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
+  spawn?: boolean; archived?: boolean; createdByName?: string;
 }
 
 const PRIO: Record<Prio, { label: string; dot: string }> = {
@@ -46,7 +46,7 @@ const COLS: { k: Status; label: string; color: string }[] = [
 const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: string }> = {
   camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" },
   comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" }, venue: { label: "Venue", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" },
-  gen: { label: "General", bg: "#f1f2f6", fg: "#5b6478", icon: "•" },
+  list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
 };
 const AV = ["#e0e7ff", "#efe0ff", "#dcfce7", "#fff3d6", "#ffe4ef", "#e5f6f8", "#ffe9d6"];
 const avBg = (n: string) => AV[[...(n || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
@@ -85,31 +85,42 @@ export function TasksApp() {
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState("");
   const [me, setMe] = useState("");
-  const [tab, setTab] = useState<"mine" | "team" | "board" | "cal">("mine");
+  const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [qa, setQa] = useState("");
-  const [actCo, setActCo] = useState("");
   const [teamFilter, setTeamFilter] = useState("");
   const [teamSort, setTeamSort] = useState<"up" | "down">("up");
-  const [calMonth, setCalMonth] = useState(() => todayIso().slice(0, 7));
+  const [calAnchor, setCalAnchor] = useState(() => todayIso());
+  const [calView, setCalView] = useState<"day" | "week" | "month">("month");
   const [drag, setDrag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [prioFilter, setPrioFilter] = useState<Prio | "">("");
   const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
+  const [listings, setListings] = useState<{ id: string; title: string; location?: string }[]>([]);
   const today = todayIso();
   const manager = role === "company" || role === "franchise";
   const isFreelancer = role === "freelancer";
+  // A solo freelancer has no team — assignment is meaningless, so every task is
+  // theirs and the assignee UI is hidden.
+  const noAssignee = isFreelancer;
 
   const refresh = useCallback(() => {
     apiGet<Task[]>("/api/tasks").then((t) => { setTasks(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => { setRole(m.role); setMe(m.name || m.email || ""); }).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
   useRealtime(["tasks"], refresh);
 
-  const all = useMemo(() => tasks ?? [], [tasks]);
-  const mineOf = (t: Task) => (t.who || "").trim().toLowerCase() === me.trim().toLowerCase();
+  const everything = useMemo(() => tasks ?? [], [tasks]);
+  const all = useMemo(() => everything.filter((t) => !t.archived), [everything]);
+  const archived = useMemo(() => everything.filter((t) => t.archived), [everything]);
+  // For a freelancer every task is "mine"; otherwise match on assignee.
+  const mineOf = (t: Task) => noAssignee || (t.who || "").trim().toLowerCase() === me.trim().toLowerCase();
   const team = useMemo(() => [...new Set(all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== ""))].sort(), [all]);
+  const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
+  const venues = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
 
   async function create(fields: Partial<Task>) {
     try { await apiPost("/api/tasks", { status: "todo", prio: "med", ...fields }); refresh(); }
@@ -130,7 +141,7 @@ export function TasksApp() {
     if (!qa.trim()) return;
     const p = parseQuick(qa, today);
     if (!p.t) return;
-    create({ t: p.t, who: p.who ?? "", prio: p.prio ?? "med", link: p.link ?? null, due: p.due ?? null, ...(isFreelancer && actCo ? { co: actCo } : {}) });
+    create({ t: p.t, who: noAssignee ? "" : (p.who ?? ""), prio: p.prio ?? "med", link: p.link ?? null, due: p.due ?? null });
     setQa("");
   }
 
@@ -165,8 +176,8 @@ export function TasksApp() {
 
   const openTask = openId ? all.find((t) => t.id === openId) ?? null : null;
   const TABS: [typeof tab, string][] = manager
-    ? [["mine", "My tasks"], ["team", "Team"], ["board", "Board"], ["cal", "Calendar"]]
-    : [["mine", "My tasks"], ["board", "Board"]];
+    ? [["mine", "My tasks"], ["team", "Team"], ["board", "Board"], ["cal", "Calendar"], ["archive", `Archive${archived.length ? ` (${archived.length})` : ""}`]]
+    : [["mine", "My tasks"], ["board", "Board"], ["cal", "Calendar"], ["archive", `Archive${archived.length ? ` (${archived.length})` : ""}`]];
   const sub = role === "staff" ? "Your to-do list — tied to the sessions, children & camps you're working."
     : isFreelancer ? "Your to-dos across every company you work for — one combined inbox."
     : role === "franchise" ? "Tasks for your franchise team & freelancers — tied to your camps, bookings & people."
@@ -196,19 +207,12 @@ export function TasksApp() {
         </div>
       </div>
 
-      {/* Auto-spawn banner (P2 stub) */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#f7e0a8] bg-[#fff8e8] px-3.5 py-2.5">
-        <span className="text-[15px]">⚡</span>
-        <div className="min-w-0 flex-1 text-[12px] text-[#8a6d1a]"><b>{manager ? "Tasks can be created automatically." : "Some tasks we create for you."}</b> A booking with a nut allergy, or a certificate due to expire, opens its own task — no one has to remember.</div>
-        <span className="rounded-full bg-[#f2c94c] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#5a4300]">Auto-spawn · P2</span>
-      </div>
-
       {/* Quick add */}
       <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder="Add a task…   try:  Brief coaches tomorrow @Jess !high #Riverside" className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
-          {isFreelancer && <input value={actCo} onChange={(e) => setActCo(e.target.value)} placeholder="Acting for (company)" className="w-[170px] rounded-lg border border-[var(--line)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]" />}
-          <Button variant="primary" onClick={addQuick}>Add task</Button>
+          <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
+          <Button onClick={addQuick}>Quick add</Button>
+          <Button variant="primary" onClick={() => setCreating(true)}>+ New task</Button>
         </div>
         {preview && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
@@ -220,7 +224,7 @@ export function TasksApp() {
             {preview.due && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold">📅 {fmtDay(preview.due)}</span>}
           </div>
         )}
-        <div className="mt-1.5 text-[11px] text-[var(--ink-3)]"><b>@</b> assignee · <b>!</b> priority (urgent/high/med/low) · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date</div>
+        <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{noAssignee ? "" : <><b>@</b> assignee · </>}<b>!</b> priority · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date · or <b>+ New task</b> for the full form</div>
       </div>
 
       {/* Tabs + toolbar */}
@@ -247,12 +251,32 @@ export function TasksApp() {
         </div>
       ) : (<>
         {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
-        {tab === "board" && <Board tasks={base} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} />}
-        {tab === "cal" && manager && <Calendar tasks={base.filter((t) => t.status !== "done")} month={calMonth} setMonth={setCalMonth} today={today} onOpen={setOpenId} />}
+        {tab === "board" && <Board tasks={base} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+        {tab === "cal" && <Calendar tasks={base.filter((t) => t.status !== "done")} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} onOpen={setOpenId} />}
         {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={(t) => patch(t.id, { status: t.status === "done" ? "todo" : "done" })} />}
+        {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
       </>)}
 
-      {openTask && <Drawer task={openTask} team={team} isFreelancer={isFreelancer} me={me} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onDelete={() => remove(openTask.id)} />}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} cats={cats} venues={venues} listings={listings} onClose={() => setCreating(false)} onCreate={(f) => { create(f); setCreating(false); }} />}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} cats={cats} venues={venues} listings={listings} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
+    </div>
+  );
+}
+
+// ── Archive ─────────────────────────────────────────────────────────────────
+function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (id: string) => void; onUnarchive: (t: Task) => void }) {
+  if (tasks.length === 0) return <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[12.5px] text-[var(--ink-3)]">Nothing archived. Archive a task from its card to tuck it away here.</div>;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+      {tasks.map((t) => (
+        <div key={t.id} className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 last:border-b-0">
+          <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
+          <button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--ink-2)]">{t.t}</button>
+          {t.link && <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
+          {t.due && <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(t.due)}</span>}
+          <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Unarchive</button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -302,7 +326,7 @@ function TaskRow({ t, today, onOpen, onToggle }: { t: Task; today: string; onOpe
 }
 
 // ── Board — kanban with drag ────────────────────────────────────────────────
-function Board({ tasks, onOpen, drag, setDrag, onDrop }: { tasks: Task[]; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void }) {
+function Board({ tasks, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onDone: (t: Task) => void }) {
   const [over, setOver] = useState<Status | null>(null);
   const today = todayIso();
   return (
@@ -321,7 +345,10 @@ function Board({ tasks, onOpen, drag, setDrag, onDrop }: { tasks: Task[]; onOpen
                   return (
                   <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
                     className="cursor-grab rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
-                    <div className="flex items-start gap-1.5"><span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span></div>
+                    <div className="flex items-start gap-1.5">
+                      <button type="button" title={t.status === "done" ? "Reopen" : "Mark done"} onClick={(e) => { e.stopPropagation(); onDone(t); }} className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border-2 text-[9px]" style={{ borderColor: t.status === "done" ? "#16b364" : "var(--line)", background: t.status === "done" ? "#16b364" : "transparent", color: "#fff" }}>{t.status === "done" ? "✓" : ""}</button>
+                      <span className={`text-[12.5px] leading-snug ${t.status === "done" ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
+                    </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       {t.spawn && <span className="rounded bg-[#fdecc8] px-1.5 text-[9px] font-extrabold uppercase text-[#8a6d1a]">auto</span>}
                       {t.link && <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}
@@ -342,35 +369,117 @@ function Board({ tasks, onOpen, drag, setDrag, onDrop }: { tasks: Task[]; onOpen
   );
 }
 
-// ── Calendar — month grid ───────────────────────────────────────────────────
-function Calendar({ tasks, month, setMonth, today, onOpen }: { tasks: Task[]; month: string; setMonth: (m: string) => void; today: string; onOpen: (id: string) => void }) {
-  const [y, m] = month.split("-").map(Number);
-  const first = `${month}-01`;
-  const firstDow = (new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7; // Mon-first
-  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const cells: (string | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
-  while (cells.length % 7 !== 0) cells.push(null);
-  const monthLabel = new Date(`${first}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
-  const stepMonth = (by: number) => { const d = new Date(Date.UTC(y, m - 1 + by, 1)); setMonth(d.toISOString().slice(0, 7)); };
+// ── Calendar — Day / Week / Month ───────────────────────────────────────────
+function Calendar({ tasks, anchor, setAnchor, view, setView, today, onOpen }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; onOpen: (id: string) => void }) {
+  const on = (iso: string) => tasks.filter((t) => t.due === iso).slice().sort(byPrioDue);
+  const dowMon = (iso: string) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon
+  const weekStart = shiftIso(anchor, -dowMon(anchor));
+  const step = view === "day" ? 1 : view === "week" ? 7 : 0;
+  const stepBy = (dir: number) => { if (view === "month") { const [y, m] = anchor.split("-").map(Number); setAnchor(new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 10)); } else setAnchor(shiftIso(anchor, dir * step)); };
+  const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+    : view === "week" ? `Week of ${fmtDay(weekStart)}`
+    : new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const chip = (t: Task) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10.5px] font-bold text-white" style={{ background: PRIO[t.prio ?? "med"].dot }} title={t.t}>{t.t}</button>;
+  const fullChip = (t: Task) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-left text-[12.5px] hover:bg-[#f7faff]"><span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><span className="min-w-0 flex-1 truncate font-bold">{t.t}</span>{t.link && <span className="flex-none rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: LINK[t.link.k].bg, color: LINK[t.link.k].fg }}>{LINK[t.link.k].icon} {t.link.v}</span>}{t.who && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t.who}</span>}</button>;
+
+  let body: ReactNode;
+  if (view === "month") {
+    const [y, m] = anchor.split("-").map(Number);
+    const firstDow = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells: (string | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: dim }, (_, i) => `${anchor.slice(0, 7)}-${String(i + 1).padStart(2, "0")}`)];
+    while (cells.length % 7 !== 0) cells.push(null);
+    body = <>
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
+      <div className="grid grid-cols-7 gap-1">{cells.map((iso, i) => (
+        <div key={i} className="min-h-[78px] rounded-lg border p-1" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : iso ? "var(--surface)" : "transparent" }}>
+          {iso && <><div className="text-right text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div><div className="space-y-0.5">{on(iso).slice(0, 3).map(chip)}{on(iso).length > 3 && <div className="px-1 text-[9.5px] text-[var(--ink-3)]">+{on(iso).length - 3} more</div>}</div></>}
+        </div>
+      ))}</div>
+    </>;
+  } else if (view === "week") {
+    const days = Array.from({ length: 7 }, (_, i) => shiftIso(weekStart, i));
+    body = <div className="grid grid-cols-7 gap-1">{days.map((iso) => (
+      <div key={iso} className="min-h-[220px] rounded-lg border p-1.5" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : "var(--surface)" }}>
+        <div className="mb-1 text-[10.5px] font-extrabold text-[var(--ink-2)]">{new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" })}</div>
+        <div className="space-y-1">{on(iso).map(chip)}{on(iso).length === 0 && <div className="text-[10px] text-[var(--ink-3)]">—</div>}</div>
+      </div>
+    ))}</div>;
+  } else {
+    const list = on(anchor);
+    body = <div className="space-y-1.5 py-1">{list.length === 0 ? <div className="rounded-lg border border-dashed border-[var(--line)] py-8 text-center text-[12px] text-[var(--ink-3)]">Nothing due this day.</div> : list.map(fullChip)}</div>;
+  }
+
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm">
-      <div className="mb-2 flex items-center gap-2">
-        <button type="button" onClick={() => stepMonth(-1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">‹</button>
-        <div className="text-[14px] font-extrabold">{monthLabel}</div>
-        <button type="button" onClick={() => stepMonth(1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">›</button>
-        <button type="button" onClick={() => setMonth(today.slice(0, 7))} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">Today</button>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => stepBy(-1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">‹</button>
+        <div className="min-w-[180px] text-[14px] font-extrabold">{title}</div>
+        <button type="button" onClick={() => stepBy(1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">›</button>
+        <button type="button" onClick={() => setAnchor(today)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">Today</button>
+        <div className="ml-auto flex gap-1 rounded-full border border-[var(--line)] p-0.5">
+          {(["day", "week", "month"] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} className="rounded-full px-3 py-1 text-[11.5px] font-bold capitalize" style={view === v ? { background: "#eef4fd", color: BLUE } : { color: "var(--ink-3)" }}>{v}</button>)}
+        </div>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((iso, i) => (
-          <div key={i} className="min-h-[76px] rounded-lg border p-1" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : iso ? "var(--surface)" : "transparent" }}>
-            {iso && <>
-              <div className="text-right text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div>
-              <div className="space-y-0.5">{tasks.filter((t) => t.due === iso).slice(0, 3).map((t) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-bold text-white" style={{ background: PRIO[t.prio ?? "med"].dot }} title={t.t}>{t.t}</button>)}
-                {tasks.filter((t) => t.due === iso).length > 3 && <div className="px-1 text-[9.5px] text-[var(--ink-3)]">+{tasks.filter((t) => t.due === iso).length - 3} more</div>}</div>
-            </>}
+      {body}
+    </div>
+  );
+}
+
+// ── Linked-to picker (shared by create + drawer) ────────────────────────────
+function LinkedPicker({ link, onChange, venues, listings, cats, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; venues: string[]; listings: { id: string; title: string }[]; cats: string[]; inputCls: string }) {
+  const k = link?.k ?? "";
+  const setK = (nk: string) => onChange(nk ? { k: nk as LinkKind, v: "" } : null);
+  const setV = (v: string) => onChange({ k: (link?.k ?? "gen") as LinkKind, v });
+  return (
+    <div className="space-y-1.5">
+      <select value={k} onChange={(e) => setK(e.target.value)} className={inputCls}>
+        <option value="">— not linked —</option>
+        {(Object.keys(LINK) as LinkKind[]).map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
+      </select>
+      {k === "venue" && (venues.length ? <select value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} className={inputCls}><option value="">Choose a venue…</option>{venues.map((v) => <option key={v} value={v}>{v}</option>)}</select> : <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Venue name" className={inputCls} />)}
+      {k === "list" && (listings.length ? <select value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.title}>{l.title}</option>)}</select> : <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Listing name" className={inputCls} />)}
+      {k === "gen" && <><input list="task-cats" value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder="Category — type a new one or pick" className={inputCls} /><datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist></>}
+      {(k === "camp" || k === "book" || k === "comp") && <input value={link?.v ?? ""} onChange={(e) => setV(e.target.value)} placeholder={k === "camp" ? "e.g. Summer Camp · Wk1" : k === "book" ? "e.g. #APF-1042" : "e.g. DBS · Tom"} className={inputCls} />}
+    </div>
+  );
+}
+
+// ── Create-task modal ───────────────────────────────────────────────────────
+function CreateModal({ noAssignee, team, cats, venues, listings, onClose, onCreate }: { noAssignee: boolean; team: string[]; cats: string[]; venues: string[]; listings: { id: string; title: string }[]; onClose: () => void; onCreate: (f: Partial<Task>) => void }) {
+  const [t, setT] = useState("");
+  const [who, setWho] = useState("");
+  const [prio, setPrio] = useState<Prio>("med");
+  const [due, setDue] = useState("");
+  const [status, setStatus] = useState<Status>("todo");
+  const [link, setLink] = useState<TaskLink | null>(null);
+  const [labels, setLabels] = useState<string[]>([]);
+  const [labelIn, setLabelIn] = useState("");
+  const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
+  const fieldRow = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
+  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, status, link, labels }); };
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
+      <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: HERO }}>
+          <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>New task</div>
+          <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold">×</button>
+        </div>
+        <div className="max-h-[70vh] space-y-2.5 overflow-y-auto p-4">
+          {fieldRow("Task", <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="What needs doing?" className={inputCls} />)}
+          <div className="grid grid-cols-2 gap-2.5">
+            {fieldRow("Due / deadline", <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} />)}
+            {fieldRow("Priority", <select value={prio} onChange={(e) => setPrio(e.target.value as Prio)} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
+            {!noAssignee && fieldRow("Assignee", <><input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} /><datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
+            {fieldRow("Status", <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
           </div>
-        ))}
+          {fieldRow("Linked to", <LinkedPicker link={link} onChange={setLink} venues={venues} listings={listings} cats={cats} inputCls={inputCls} />)}
+          {fieldRow("Labels", <div className="flex flex-wrap gap-1.5">{labels.map((l, i) => <span key={i} className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold">{l}<button type="button" onClick={() => setLabels(labels.filter((_, j) => j !== i))} className="text-[var(--ink-3)]">×</button></span>)}<input value={labelIn} onChange={(e) => setLabelIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && labelIn.trim()) { setLabels([...labels, labelIn.trim()]); setLabelIn(""); } }} placeholder="+ label" className="w-[100px] rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] outline-none focus:border-[#1d3a8f]" /></div>)}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
+          <Button sm onClick={onClose}>Cancel</Button>
+          <Button sm variant="primary" onClick={submit}>Create task</Button>
+        </div>
       </div>
     </div>
   );
@@ -411,7 +520,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, isFreelancer, me, onClose, onPatch, onDelete }: { task: Task; team: string[]; isFreelancer: boolean; me: string; onClose: () => void; onPatch: (f: Partial<Task>) => void; onDelete: () => void }) {
+function Drawer({ task, team, noAssignee, me, cats, venues, listings, onClose, onPatch, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; cats: string[]; venues: string[]; listings: { id: string; title: string }[]; onClose: () => void; onPatch: (f: Partial<Task>) => void; onArchive: () => void; onDelete: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -434,14 +543,11 @@ function Drawer({ task, team, isFreelancer, me, onClose, onPatch, onDelete }: { 
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
-          {field("Assignee", <input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} />)}
-          <datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist>
+          {!noAssignee && field("Assignee", <><input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} /><datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
           {field("Due date", <input type="date" value={task.due ?? ""} onChange={(e) => onPatch({ due: e.target.value || null })} className={inputCls} />)}
           {field("Priority", <select value={task.prio ?? "med"} onChange={(e) => onPatch({ prio: e.target.value as Prio })} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
           {field("Status", <select value={task.status ?? "todo"} onChange={(e) => onPatch({ status: e.target.value as Status })} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
-          {isFreelancer && field("Company", <input value={task.co ?? ""} onChange={(e) => onPatch({ co: e.target.value })} placeholder="Which company" className={inputCls} />)}
-          {field("Linked to", <select value={task.link?.k ?? ""} onChange={(e) => onPatch({ link: e.target.value ? { k: e.target.value as LinkKind, v: task.link?.v ?? "" } : null })} className={inputCls}><option value="">— none —</option>{(Object.keys(LINK) as LinkKind[]).map((k) => <option key={k} value={k}>{LINK[k].label}</option>)}</select>)}
-          {task.link && field("Entity", <input value={task.link.v} onChange={(e) => onPatch({ link: { k: task.link!.k, v: e.target.value } })} placeholder="e.g. Riverside · Wk1" className={inputCls} />)}
+          {field("Linked to", <LinkedPicker link={task.link} onChange={(l) => onPatch({ link: l })} venues={venues} listings={listings} cats={cats} inputCls={inputCls} />)}
 
           <div className="mt-2 border-t border-[var(--line)] pt-2">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Labels</div>
@@ -471,7 +577,10 @@ function Drawer({ task, team, isFreelancer, me, onClose, onPatch, onDelete }: { 
         </div>
         <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onDelete} className="rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636]">Delete</button>
-          <Button sm variant="primary" onClick={onClose}>Done</Button>
+          <div className="flex gap-2">
+            <button type="button" onClick={onArchive} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Archive</button>
+            <Button sm variant="primary" onClick={onClose}>Done</Button>
+          </div>
         </div>
       </div>
     </div>
