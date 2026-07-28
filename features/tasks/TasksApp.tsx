@@ -28,7 +28,7 @@ interface Sub { t: string; done: boolean }
 interface Comment { who: string; body: string; when: string }
 interface Att { name: string }
 interface Task {
-  id: string; t: string; who?: string; prio?: Prio; due?: string | null; status?: Status;
+  id: string; t: string; who?: string; prio?: Prio; due?: string | null; time?: string | null; status?: Status;
   link?: TaskLink | null; co?: string; cat?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
   spawn?: boolean; archived?: boolean; createdByName?: string;
 }
@@ -44,15 +44,16 @@ const COLS: { k: Status; label: string; color: string }[] = [
   { k: "backlog", label: "Backlog", color: "#8a93a6" }, { k: "todo", label: "To do", color: "#3b82f6" },
   { k: "prog", label: "In progress", color: "#f59e0b" }, { k: "done", label: "Done", color: "#16b364" },
 ];
+const STATUS_C: Record<Status, string> = { backlog: "#8a93a6", todo: "#3b82f6", prog: "#f59e0b", done: "#16b364" };
 const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: string }> = {
   child: { label: "Child", bg: "#fff1f5", fg: "#be2063", icon: "🧒" }, parent: { label: "Parent", bg: "#eef4fd", fg: "#1d3a8f", icon: "👤" },
   book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" }, list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" },
-  venue: { label: "Venue", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
+  venue: { label: "Location", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
   camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
 };
 // The types the picker offers (old camp/comp still render on legacy tasks).
 const LINK_TYPES: LinkKind[] = ["child", "parent", "book", "list", "venue", "gen"];
-interface LinkOpts { portal: string; bookOpts: { ref: string; label: string }[]; childOpts: { name: string; ref: string }[]; parentOpts: { name: string; ref: string }[]; listings: { id: string; title: string }[]; venues: string[]; cats: string[] }
+interface LinkOpts { portal: string; bookOpts: { ref: string; v: string; sub?: string }[]; childOpts: { name: string; ref: string; sub?: string }[]; parentOpts: { name: string; ref: string; sub?: string }[]; listings: { id: string; title: string; location?: string }[]; locations: string[]; cats: string[] }
 
 // A link chip — deep-links straight to the record when it has an href, and shows
 // a ↗ so it's obviously a link ("go to booking", not just a label).
@@ -80,6 +81,13 @@ function dueLabel(iso: string | null | undefined, today: string): { text: string
   if (d === 0) return { text: "Today", color: "#b45309" };
   if (d === 1) return { text: "Tomorrow", color: "#8a86a3" };
   return { text: `In ${d}d`, color: "#8a86a3" };
+}
+// The deadline as a real date (+ optional time), prefixed with the relative word
+// so "Tomorrow · Fri 1 Aug 3:30pm" reads at a glance. Null when there's no due.
+function dueFull(t: Task, today: string): { text: string; color: string } | null {
+  const dl = dueLabel(t.due, today);
+  if (!dl || !t.due) return null;
+  return { text: `${dl.text} · ${fmtDay(t.due)}${t.time ? ` ${t.time}` : ""}`, color: dl.color };
 }
 
 // Natural-language quick-add: "Brief coaches tomorrow @Jess !high #Riverside".
@@ -116,7 +124,7 @@ export function TasksApp() {
   const [prioFilter, setPrioFilter] = useState<Prio | "">("");
   const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
   const [listings, setListings] = useState<{ id: string; title: string; location?: string }[]>([]);
-  const [bookings, setBookings] = useState<{ ref: string; booker?: string; child?: string; kids?: { name: string }[]; listing?: string }[]>([]);
+  const [bookings, setBookings] = useState<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>([]);
   const portal = usePathname()?.split("/")[1] || "freelancer";
   const today = todayIso();
   const manager = role === "company" || role === "franchise";
@@ -131,14 +139,36 @@ export function TasksApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => { setRole(m.role); setMe(m.name || m.email || ""); }).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ ref: string; booker?: string; child?: string; kids?: { name: string }[]; listing?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, []);
   useRealtime(["tasks"], refresh);
 
   // Real records to link a task to — each carries a deep-link so the chip jumps
   // straight to it. Child/parent link to that family's booking.
-  const bookOpts = useMemo(() => bookings.map((b) => ({ ref: b.ref, label: `${b.kids?.map((k) => k.name).join(", ") || b.child || "—"} · #${b.ref}` })), [bookings]);
-  const childOpts = useMemo(() => { const m = new Map<string, string>(); for (const b of bookings) for (const n of (b.kids?.length ? b.kids.map((k) => k.name) : [b.child])) if (n && !m.has(n)) m.set(n, b.ref); return [...m.entries()].map(([name, ref]) => ({ name, ref })); }, [bookings]);
-  const parentOpts = useMemo(() => { const m = new Map<string, string>(); for (const b of bookings) if (b.booker && !m.has(b.booker)) m.set(b.booker, b.ref); return [...m.entries()].map(([name, ref]) => ({ name, ref })); }, [bookings]);
+  // Each option carries a `sub` line — the disambiguating detail (a parent's
+  // email/phone, a child's age + family, a booking's listing/pass/dates) so the
+  // operator can tell "which Sally" before linking.
+  const bookOpts = useMemo(() => bookings.map((b) => ({ ref: b.ref, v: `${b.kids?.map((k) => k.name).join(", ") || b.child || "—"} · #${b.ref}`, sub: [b.listing, b.pass, b.dates].filter(Boolean).join(" · ") })), [bookings]);
+  const childOpts = useMemo(() => {
+    const m = new Map<string, { ref: string; sub: string }>();
+    for (const b of bookings) {
+      const kids = b.kids?.length ? b.kids : (b.child ? [{ name: b.child, age: undefined }] : []);
+      for (const k of kids) if (k.name && !m.has(k.name)) m.set(k.name, { ref: b.ref, sub: [k.age != null ? `age ${k.age}` : null, b.booker ? `parent ${b.booker}` : null, b.listing].filter(Boolean).join(" · ") });
+    }
+    return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: x.sub }));
+  }, [bookings]);
+  // Parents: aggregate across all their bookings — first hit is the most recent
+  // (the API returns newest-first), and we collect the distinct listings they've
+  // booked on plus contact + postcode so the row is unmistakable.
+  const parentOpts = useMemo(() => {
+    const m = new Map<string, { ref: string; email?: string; phone?: string; postcode?: string; listings: string[] }>();
+    for (const b of bookings) {
+      if (!b.booker) continue;
+      const cur = m.get(b.booker);
+      if (!cur) m.set(b.booker, { ref: b.ref, email: b.email, phone: b.phone, postcode: b.postcode, listings: b.listing ? [b.listing] : [] });
+      else { if (b.listing && !cur.listings.includes(b.listing)) cur.listings.push(b.listing); if (!cur.postcode && b.postcode) cur.postcode = b.postcode; }
+    }
+    return [...m.entries()].map(([name, x]) => ({ name, ref: x.ref, sub: [x.email, x.phone, x.postcode, x.listings.length ? `booked: ${x.listings.slice(0, 3).join(", ")}` : null].filter(Boolean).join(" · ") }));
+  }, [bookings]);
 
   const everything = useMemo(() => tasks ?? [], [tasks]);
   const all = useMemo(() => everything.filter((t) => !t.archived), [everything]);
@@ -147,8 +177,8 @@ export function TasksApp() {
   const mineOf = (t: Task) => noAssignee || (t.who || "").trim().toLowerCase() === me.trim().toLowerCase();
   const team = useMemo(() => [...new Set(all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== ""))].sort(), [all]);
   const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
-  const venues = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
-  const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, venues, cats };
+  const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
+  const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats };
 
   async function create(fields: Partial<Task>) {
     try { await apiPost("/api/tasks", { status: "todo", prio: "med", ...fields }); refresh(); }
@@ -161,6 +191,8 @@ export function TasksApp() {
   }
   const flashDone = () => { setFlash(true); setTimeout(() => setFlash(false), 1300); };
   const toggleDone = (t: Task) => { const done = t.status !== "done"; patch(t.id, { status: done ? "done" : "todo" }); if (done) flashDone(); };
+  // Set a task's status from a dropdown; flash "logged" when it newly becomes Done.
+  const setStatus = (t: Task, s: Status) => { patch(t.id, { status: s }); if (s === "done" && t.status !== "done") flashDone(); };
   async function remove(id: string) {
     if (!confirm("Delete this task?")) return;
     setOpenId(null);
@@ -259,11 +291,12 @@ export function TasksApp() {
       </div>
 
       {/* Tabs + toolbar */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-        {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-full border px-3.5 py-1.5 text-[12px] font-bold" style={tab === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>{l}</button>)}
+      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        <div className="inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold shadow-sm">
+          {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>)}
+        </div>
         <div className="relative ml-auto">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
-          
         </div>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
@@ -281,15 +314,15 @@ export function TasksApp() {
           <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">Add your first with the quick-add above — try <b>Set up Week 3 registers tomorrow @Sam !high #Bedford</b>. Some will also appear on their own once the auto-spawn engine ships.</p>
         </div>
       ) : (<>
-        {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onToggle={toggleDone} />}
-        {tab === "board" && <Board tasks={base} noAssignee={noAssignee} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={toggleDone} />}
-        {tab === "cal" && <Calendar tasks={base.filter((t) => t.status !== "done")} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} noAssignee={noAssignee} onOpen={setOpenId} />}
-        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onToggle={toggleDone} />}
+        {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
+        {tab === "board" && <Board tasks={base} noAssignee={noAssignee} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={toggleDone} onArchive={(t) => patch(t.id, { archived: true })} />}
+        {tab === "cal" && <Calendar tasks={base} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
+        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onStatus={setStatus} />}
         {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
       </>)}
 
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
-      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f); if (toCal && f.due) apiPost("/api/calendar-events", { title: f.t, date: f.due, category: "Task", notes: f.link?.v ? `Task · ${f.link.v}` : "Task" }).catch(() => {}); setCreating(false); setQa(""); }} />}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f); if (toCal && f.due) apiPost("/api/calendar-events", { title: f.t, date: f.due, category: "Task", notes: f.link?.v ? `Task · ${f.link.v}` : "Task", ...(f.time ? { start: f.time, allDay: false } : { allDay: true }) }).catch(() => {}); setCreating(false); setQa(""); }} />}
       {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
     </div>
   );
@@ -314,34 +347,34 @@ function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (i
 }
 
 // ── My Tasks — grouped list ─────────────────────────────────────────────────
-function MyTasks({ tasks, today, noAssignee, onOpen, onToggle }: { tasks: Task[]; today: string; noAssignee: boolean; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
+function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   const open = tasks.filter((t) => t.status !== "done");
   const overdue = open.filter((t) => t.due && daysBetween(today, t.due) < 0).sort(byPrioDue);
   const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0).sort(byPrioDue);
   const upcoming = open.filter((t) => !t.due || daysBetween(today, t.due) > 0).sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`) || byPrioDue(a, b));
   const done = tasks.filter((t) => t.status === "done");
-  const groups: [string, Task[], string][] = [["Overdue", overdue, "Nothing overdue — nice."], ["Today", todayT, "Clear for today."], ["Upcoming", upcoming, "Nothing scheduled."], ["Done", done, "Nothing done yet."]];
+  const groups: [string, Task[], string, string][] = [["Overdue", overdue, "Nothing overdue — nice.", "#c02636"], ["Today", todayT, "Clear for today.", "#b45309"], ["Upcoming", upcoming, "Nothing scheduled.", "#3b82f6"], ["Done", done, "Nothing done yet.", "#16b364"]];
   return (
     <div className="space-y-4">
-      {groups.map(([title, list, empty]) => (
+      {groups.map(([title, list, empty, color]) => (
         <div key={title}>
-          <div className="mb-1.5 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{title}</span><span className="rounded-full bg-[var(--panel)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
+          <div className="mb-1.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color }}>{title}</span><span className="rounded-full px-1.5 text-[10.5px] font-extrabold" style={{ background: `${color}14`, color }}>{list.length}</span></div>
           {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
-            : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} onOpen={onOpen} onToggle={onToggle} />)}</div>}
+            : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} hideDone={title === "Done"} onOpen={onOpen} onStatus={onStatus} />)}</div>}
         </div>
       ))}
     </div>
   );
 }
 
-function TaskRow({ t, today, noAssignee, onOpen, onToggle }: { t: Task; today: string; noAssignee: boolean; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
+function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task; today: string; noAssignee: boolean; hideDone?: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   const done = t.status === "done";
-  const dl = dueLabel(t.due, today);
+  const dl = dueFull(t, today);
   const subs = t.subs ?? [];
   const isOverdue = !done && !!t.due && daysBetween(today, t.due) < 0;
   return (
     <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[#f7faff]" style={isOverdue ? { boxShadow: "inset 3px 0 0 #c02636" } : undefined}>
-      <button type="button" onClick={() => onToggle(t)} aria-label="Toggle done" className="flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 text-[10px]" style={{ borderColor: done ? "#16b364" : "var(--line)", background: done ? "#16b364" : "transparent", color: "#fff" }}>{done ? "✓" : ""}</button>
+      {!hideDone && (() => { const sc = STATUS_C[t.status ?? "todo"]; return <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2.5 py-1 text-[10.5px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>; })()}
       <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
       <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-bold"}`}>{t.t}</span>
@@ -356,7 +389,7 @@ function TaskRow({ t, today, noAssignee, onOpen, onToggle }: { t: Task; today: s
 }
 
 // ── Board — kanban with drag ────────────────────────────────────────────────
-function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone }: { tasks: Task[]; noAssignee: boolean; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onDone: (t: Task) => void }) {
+function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone, onArchive }: { tasks: Task[]; noAssignee: boolean; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onDone: (t: Task) => void; onArchive: (t: Task) => void }) {
   const [over, setOver] = useState<Status | null>(null);
   const today = todayIso();
   return (
@@ -370,7 +403,7 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone }: { t
               <div className="mb-1.5 flex items-center gap-1.5 px-1 py-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} /><span className="text-[11.5px] font-extrabold uppercase tracking-wide" style={{ color: c.color }}>{c.label}</span><span className="ml-auto rounded-full bg-[var(--panel)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{list.length}</span></div>
               <div className="space-y-1.5">
                 {list.map((t) => {
-                  const dl = dueLabel(t.due, today);
+                  const dl = dueFull(t, today);
                   const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
                   return (
                   <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
@@ -383,7 +416,10 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone }: { t
                       {t.link && <LinkChip link={t.link} size="xs" />}
                       {dl && t.status !== "done" && <span className="text-[10px] font-bold" style={{ color: dl.color }}>{dl.text}</span>}
                       {!noAssignee && t.who && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{t.who}</span>}
-                      <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="ml-auto rounded-md border px-2 py-0.5 text-[10px] font-extrabold" style={t.status === "done" ? { borderColor: "#16b364", background: "#e7f6ee", color: "#0f8a4a" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
+                      <div className="ml-auto flex items-center gap-1">
+                        {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
+                        <button type="button" onClick={(e) => { e.stopPropagation(); onDone(t); }} className="rounded-md border px-2 py-0.5 text-[10px] font-extrabold" style={t.status === "done" ? { borderColor: "#16b364", background: "#e7f6ee", color: "#0f8a4a" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{t.status === "done" ? "✓ Done" : "Done"}</button>
+                      </div>
                     </div>
                   </div>
                   );
@@ -400,7 +436,7 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onDone }: { t
 }
 
 // ── Calendar — Day / Week / Month ───────────────────────────────────────────
-function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void }) {
+function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   const on = (iso: string) => tasks.filter((t) => t.due === iso).slice().sort(byPrioDue);
   const dowMon = (iso: string) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon
   const weekStart = shiftIso(anchor, -dowMon(anchor));
@@ -409,8 +445,10 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
   const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
     : view === "week" ? `Week of ${fmtDay(weekStart)}`
     : new Date(`${anchor}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
-  const chip = (t: Task) => <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10.5px] font-bold text-white" style={{ background: PRIO[t.prio ?? "med"].dot }} title={t.t}>{t.t}</button>;
-  const fullChip = (t: Task) => <div key={t.id} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] hover:bg-[#f7faff]"><span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} /><button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-left font-bold">{t.t}</button>{t.link && <LinkChip link={t.link} size="xs" />}{!noAssignee && t.who && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t.who}</span>}</div>;
+  // Compact chip (month/week) — done tasks read struck-through and dimmed.
+  const chip = (t: Task) => { const done = t.status === "done"; return <button key={t.id} type="button" onClick={() => onOpen(t.id)} className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-[10.5px] font-bold text-white ${done ? "line-through opacity-60" : ""}`} style={{ background: done ? "#16b364" : PRIO[t.prio ?? "med"].dot }} title={t.t}>{t.time ? `${t.time} ` : ""}{t.t}</button>; };
+  // Day-view row — inline status picker so Done / In progress etc can be set right here.
+  const fullChip = (t: Task) => { const done = t.status === "done"; return <div key={t.id} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] hover:bg-[#f7faff]"><span className="h-2 w-2 flex-none rounded-full" style={{ background: done ? "#16b364" : PRIO[t.prio ?? "med"].dot }} /><button type="button" onClick={() => onOpen(t.id)} className={`min-w-0 flex-1 truncate text-left font-bold ${done ? "text-[var(--ink-3)] line-through" : ""}`}>{t.time ? <span className="mr-1 font-black text-[var(--ink-3)]">{t.time}</span> : null}{t.t}</button>{t.link && <LinkChip link={t.link} size="xs" />}{!noAssignee && t.who && <span className="flex-none text-[10.5px] text-[var(--ink-3)]">{t.who}</span>}<select value={t.status ?? "todo"} onChange={(e) => onStatus(t, e.target.value as Status)} onClick={(e) => e.stopPropagation()} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold outline-none" style={{ borderColor: `${STATUS_C[t.status ?? "todo"]}55`, background: `${STATUS_C[t.status ?? "todo"]}14`, color: STATUS_C[t.status ?? "todo"] }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select></div>; };
 
   let body: ReactNode;
   if (view === "month") {
@@ -457,9 +495,35 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
 }
 
 // ── Linked-to picker — pulls real records + builds the deep-link ─────────────
+// A search-as-you-type combobox. Each row shows a bold primary line and a muted
+// `sub` line (the disambiguating detail) so you pick the right record.
+function SearchSelect({ value, placeholder, options, onPick, inputCls }: { value: string; placeholder: string; options: { v: string; sub?: string }[]; onPick: (v: string) => void; inputCls: string }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ql = q.trim().toLowerCase();
+  const filtered = (ql ? options.filter((o) => `${o.v} ${o.sub ?? ""}`.toLowerCase().includes(ql)) : options).slice(0, 60);
+  return (
+    <div className="relative">
+      <input value={open ? q : value} placeholder={value || `${placeholder} — type to search`} onFocus={() => { setOpen(true); setQ(""); }} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 160)} className={inputCls} />
+      {open && (
+        <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
+          {value && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(""); setOpen(false); }} className="w-full border-b border-[var(--line)] px-3 py-1.5 text-left text-[11.5px] font-bold text-[var(--ink-3)] hover:bg-[#f7faff]">Clear selection</button>}
+          {filtered.length === 0 ? <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">No matches</div>
+            : filtered.map((o) => (
+              <button type="button" key={o.v} onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(o.v); setOpen(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-1.5 text-left last:border-b-0 hover:bg-[#eef4fd]">
+                <span className="text-[12.5px] font-bold text-[var(--ink)]">{o.v}</span>
+                {o.sub && <span className="text-[11px] text-[var(--ink-3)]">{o.sub}</span>}
+              </button>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; opts: LinkOpts; inputCls: string }) {
   const k = link?.k ?? "";
-  const { portal, bookOpts, childOpts, parentOpts, listings, venues, cats } = opts;
+  const { portal, bookOpts, childOpts, parentOpts, listings, locations, cats } = opts;
   const bookingHref = (ref: string) => `/${portal}/bookings?ref=${encodeURIComponent(ref)}`;
   const setK = (nk: string) => onChange(nk ? { k: nk as LinkKind, v: "" } : null);
   return (
@@ -470,24 +534,24 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
       </select>
 
       {k === "book" && (bookOpts.length
-        ? <select value={link?.v ?? ""} onChange={(e) => { const o = bookOpts.find((b) => b.label === e.target.value); onChange(o ? { k: "book", v: o.label, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a booking…</option>{bookOpts.map((b) => <option key={b.ref} value={b.label}>{b.label}</option>)}</select>
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a booking" options={bookOpts.map((b) => ({ v: b.v, sub: b.sub }))} onPick={(v) => { const o = bookOpts.find((b) => b.v === v); onChange(o ? { k: "book", v: o.v, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
         : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "book", v: e.target.value })} placeholder="e.g. #APF-1042" className={inputCls} />)}
 
       {k === "child" && (childOpts.length
-        ? <select value={link?.v ?? ""} onChange={(e) => { const o = childOpts.find((c) => c.name === e.target.value); onChange(o ? { k: "child", v: o.name, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a child…</option>{childOpts.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a child" options={childOpts.map((c) => ({ v: c.name, sub: c.sub }))} onPick={(v) => { const o = childOpts.find((c) => c.name === v); onChange(o ? { k: "child", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
         : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "child", v: e.target.value })} placeholder="Child name" className={inputCls} />)}
 
       {k === "parent" && (parentOpts.length
-        ? <select value={link?.v ?? ""} onChange={(e) => { const o = parentOpts.find((p) => p.name === e.target.value); onChange(o ? { k: "parent", v: o.name, href: bookingHref(o.ref) } : null); }} className={inputCls}><option value="">Choose a parent…</option>{parentOpts.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}</select>
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a parent" options={parentOpts.map((p) => ({ v: p.name, sub: p.sub }))} onPick={(v) => { const o = parentOpts.find((p) => p.name === v); onChange(o ? { k: "parent", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
         : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "parent", v: e.target.value })} placeholder="Parent name" className={inputCls} />)}
 
       {k === "list" && (listings.length
-        ? <select value={link?.v ?? ""} onChange={(e) => onChange(e.target.value ? { k: "list", v: e.target.value } : null)} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.title}>{l.title}</option>)}</select>
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a listing" options={listings.map((l) => ({ v: l.title, sub: l.location }))} onPick={(v) => onChange(v ? { k: "list", v } : null)} inputCls={inputCls} />
         : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "list", v: e.target.value })} placeholder="Listing name" className={inputCls} />)}
 
-      {k === "venue" && (venues.length
-        ? <select value={link?.v ?? ""} onChange={(e) => onChange(e.target.value ? { k: "venue", v: e.target.value } : null)} className={inputCls}><option value="">Choose a venue…</option>{venues.map((v) => <option key={v} value={v}>{v}</option>)}</select>
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder="Venue name" className={inputCls} />)}
+      {k === "venue" && (locations.length
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a location" options={locations.map((v) => ({ v }))} onPick={(v) => onChange(v ? { k: "venue", v } : null)} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder="Location or address" className={inputCls} />)}
 
       {k === "gen" && <><input list="task-cats" value={link?.v ?? ""} onChange={(e) => onChange({ k: "gen", v: e.target.value })} placeholder="Category — type a new one or pick" className={inputCls} /><datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist></>}
     </div>
@@ -500,6 +564,7 @@ function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }
   const [who, setWho] = useState("");
   const [prio, setPrio] = useState<Prio>("med");
   const [due, setDue] = useState("");
+  const [time, setTime] = useState("");
   const [status, setStatus] = useState<Status>("todo");
   const [link, setLink] = useState<TaskLink | null>(null);
   const [labels, setLabels] = useState<string[]>([]);
@@ -507,7 +572,7 @@ function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }
   const [toCal, setToCal] = useState(false);
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const fieldRow = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
-  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, status, link, labels }, toCal); };
+  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, time: time || null, status, link, labels }, toCal); };
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
       <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -519,6 +584,7 @@ function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }
           {fieldRow("Task", <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="What needs doing?" className={inputCls} />)}
           <div className="grid grid-cols-2 gap-2.5">
             {fieldRow("Due / deadline", <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} />)}
+            {fieldRow("Time (optional)", <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />)}
             {fieldRow("Priority", <select value={prio} onChange={(e) => setPrio(e.target.value as Prio)} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
             {!noAssignee && fieldRow("Assignee", <><input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} /><datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
             {fieldRow("Status", <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
@@ -541,7 +607,7 @@ function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }
 }
 
 // ── Team — per-assignee ─────────────────────────────────────────────────────
-function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen, onToggle }: { tasks: Task[]; team: string[]; filter: string; setFilter: (s: string) => void; sort: "up" | "down"; setSort: (s: "up" | "down") => void; today: string; onOpen: (id: string) => void; onToggle: (t: Task) => void }) {
+function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen, onStatus }: { tasks: Task[]; team: string[]; filter: string; setFilter: (s: string) => void; sort: "up" | "down"; setSort: (s: "up" | "down") => void; today: string; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   const people = filter ? [filter] : [...team, "__unassigned"];
   const byOf = (who: string) => tasks.filter((t) => (who === "__unassigned" ? !t.who || t.who.trim() === "" : (t.who || "") === who));
   const openCount = (who: string) => byOf(who).filter((t) => t.status !== "done").length;
@@ -565,7 +631,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
                 <span className="text-[12.5px] font-extrabold">{label}</span>
                 <span className="text-[11px] text-[var(--ink-3)]">{openCount(who)} open{over ? ` · ${over} overdue` : ""}</span>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={false} onOpen={onOpen} onToggle={onToggle} />)}</div>
+              <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">{list.map((t) => <TaskRow key={t.id} t={t} today={today} noAssignee={false} onOpen={onOpen} onStatus={onStatus} />)}</div>
             </div>
           );
         })}
@@ -600,6 +666,7 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onArchive,
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {!noAssignee && field("Assignee", <><input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} /><datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
           {field("Due date", <input type="date" value={task.due ?? ""} onChange={(e) => onPatch({ due: e.target.value || null })} className={inputCls} />)}
+          {field("Time", <input type="time" value={task.time ?? ""} onChange={(e) => onPatch({ time: e.target.value || null })} className={inputCls} />)}
           {field("Priority", <select value={task.prio ?? "med"} onChange={(e) => onPatch({ prio: e.target.value as Prio })} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
           {field("Status", <select value={task.status ?? "todo"} onChange={(e) => onPatch({ status: e.target.value as Status })} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
           {field("Linked to", <LinkedPicker link={task.link} onChange={(l) => onPatch({ link: l })} opts={opts} inputCls={inputCls} />)}

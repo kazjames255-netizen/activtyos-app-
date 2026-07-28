@@ -20,6 +20,7 @@ const taskSchema = z.object({
   who: z.string().max(80).optional(),                 // assignee display name ("" = unassigned)
   prio: z.enum(["urgent", "high", "med", "low"]).optional(),
   due: z.string().max(10).nullable().optional(),      // ISO date (yyyy-mm-dd) or null
+  time: z.string().max(5).nullable().optional(),      // optional HH:MM deadline time
   status: z.enum(["backlog", "todo", "prog", "done"]).optional(),
   link: linkSchema.optional(),                        // {k,v} or null
   co: z.string().max(160).optional(),                 // freelancer: company the task is filed to
