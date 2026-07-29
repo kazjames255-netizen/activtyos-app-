@@ -34,30 +34,16 @@ export const newMeta = (): NlMeta => ({ name: "", folder: "", audScope: "all", a
 // multi-hue so a newsletter reads as designed, not flat.
 export interface Palette { id: string; name: string; bg: string; surface: string; accent: string; accent2: string; ink: string; muted: string; onAccent: string; band: string }
 
-// Two-level colour: 10 FAMILIES (by mood/hue), each with 10 SCHEMES (an accent +
-// a complementary second accent). Neutrals are derived from the accent so every
-// scheme reads as designed, not flat. 10 × 10 = 100 schemes.
-interface Family { id: string; name: string; dark?: boolean; pairs: [string, string][] }
-const FAMILIES: Family[] = [
-  { id: "ocean", name: "Ocean", pairs: [["#1d3a8f", "#3f78d8"], ["#0f6d8c", "#28b6c4"], ["#123a6b", "#4f9ed6"], ["#1e5fa8", "#6ec1e4"], ["#0b4f6c", "#0197b1"], ["#274690", "#5a75c4"], ["#1b3b6f", "#0a6e9e"], ["#005f73", "#0a9396"], ["#14213d", "#4361ee"], ["#003049", "#4f8fc0"]] },
-  { id: "sunset", name: "Sunset", pairs: [["#f2683c", "#f5b301"], ["#e0480c", "#ff9e00"], ["#d1495b", "#edae49"], ["#bc3908", "#f6aa1c"], ["#c1121f", "#f08700"], ["#e85d04", "#faa307"], ["#dc2f02", "#f4a261"], ["#9d0208", "#e85d04"], ["#ca6702", "#ee9b00"], ["#bb3e03", "#e9853b"]] },
-  { id: "forest", name: "Forest", pairs: [["#15803d", "#84b13b"], ["#2d6a4f", "#52b788"], ["#1b4332", "#40916c"], ["#386641", "#8aab3c"], ["#1a7431", "#57cc42"], ["#087e8b", "#0b6e4f"], ["#31572c", "#7f9d3c"], ["#134611", "#3da35d"], ["#2b9348", "#55a630"], ["#004b23", "#3f9d54"]] },
-  { id: "berry", name: "Berry", pairs: [["#c02467", "#8b5cf6"], ["#a4133c", "#ff4d6d"], ["#b5179e", "#f72585"], ["#9d174d", "#ec4899"], ["#831843", "#db4d8a"], ["#d1006f", "#ff5d8f"], ["#7a0f4e", "#c9184a"], ["#a01a58", "#e0479e"], ["#c9184a", "#ff758f"], ["#8e2984", "#d43790"]] },
-  { id: "grape", name: "Grape", pairs: [["#5b21b6", "#8b5cf6"], ["#6d28d9", "#a06cf5"], ["#4c1d95", "#7c3aed"], ["#3c096c", "#9d4edd"], ["#5a189a", "#b268f0"], ["#240046", "#7b2cbf"], ["#3a0ca3", "#4361ee"], ["#560bad", "#b5179e"], ["#7209b7", "#c026a9"], ["#480ca8", "#5b8def"]] },
-  { id: "teal", name: "Teal", pairs: [["#0f766e", "#2dd4bf"], ["#036666", "#5eab8f"], ["#008080", "#20c997"], ["#0d9488", "#41d3b8"], ["#14746f", "#249ea0"], ["#005f60", "#00afb9"], ["#046865", "#28c2b8"], ["#01727a", "#54c9a8"], ["#0a9396", "#5cc3ad"], ["#006d77", "#4aa79f"]] },
-  { id: "coral", name: "Coral", pairs: [["#e5674e", "#ff9770"], ["#ef6351", "#f7a072"], ["#e07a5f", "#e0a458"], ["#f4845f", "#f27059"], ["#e56b6f", "#e79b7f"], ["#d1495b", "#e08a76"], ["#cb4749", "#f4978e"], ["#e63946", "#f88379"], ["#e76f51", "#f4a261"], ["#c9584a", "#e8927c"]] },
-  { id: "slate", name: "Slate", pairs: [["#334155", "#64748b"], ["#3f3f46", "#71717a"], ["#475569", "#8593a8"], ["#44403c", "#8a827a"], ["#374151", "#6b7280"], ["#1f2937", "#4b5563"], ["#3d405b", "#7d8199"], ["#2b2d42", "#8d99ae"], ["#495057", "#98a2ac"], ["#403d39", "#6c757d"]] },
-  { id: "midnight", name: "Midnight", dark: true, pairs: [["#f5b301", "#5b8def"], ["#ffd60a", "#00b4d8"], ["#c77dff", "#7b2cbf"], ["#f72585", "#4cc9f0"], ["#ffbe0b", "#fb5607"], ["#64dfdf", "#5390d9"], ["#ff4d8d", "#8338ec"], ["#2ee6a5", "#00b4d8"], ["#f5b301", "#e5383b"], ["#ffca3a", "#8ac926"]] },
-  { id: "candy", name: "Candy", pairs: [["#ef476f", "#ff9e00"], ["#8ac926", "#1982c4"], ["#6a4c93", "#ff924c"], ["#f15bb5", "#9b5de5"], ["#00bbf9", "#00cfa5"], ["#ee5d9b", "#f5b301"], ["#ff70a6", "#ff9770"], ["#06d6a0", "#118ab2"], ["#c05299", "#ff9770"], ["#e5484d", "#f5b301"]] },
+// Simple, single-colour themes — pick one bright popular colour and the whole
+// newsletter (header banner, buttons, event bar, footer) uses it. Neutrals are
+// derived from the colour so it stays clean, not multi-hue.
+const NL_COLOURS: [string, string, string][] = [ // [id, name, hex]
+  ["blue", "Blue", "#2563eb"], ["sky", "Sky", "#0284c7"], ["teal", "Teal", "#0d9488"], ["green", "Green", "#16a34a"], ["lime", "Lime", "#4d7c0f"],
+  ["amber", "Amber", "#d97706"], ["orange", "Orange", "#ea580c"], ["red", "Red", "#dc2626"], ["pink", "Pink", "#db2777"], ["purple", "Purple", "#7c3aed"],
 ];
-const mk = (famId: string, i: number, accent: string, accent2: string, dark?: boolean): Palette => dark
-  ? { id: `${famId}-${i}`, name: `${i + 1}`, bg: "#141a2e", surface: "#1e2740", accent, accent2, ink: "#eaf0ff", muted: "#9aa6c4", onAccent: "#141a2e", band: "#26314f" }
-  : { id: `${famId}-${i}`, name: `${i + 1}`, bg: `${accent}0f`, surface: "#ffffff", accent, accent2, ink: "#1b2130", muted: "#5f6672", onAccent: "#ffffff", band: `${accent}1e` };
-export interface PaletteFamily { id: string; name: string; schemes: Palette[] }
-export const PALETTE_FAMILIES: PaletteFamily[] = FAMILIES.map((f) => ({ id: f.id, name: f.name, schemes: f.pairs.map(([a, b], i) => mk(f.id, i, a, b, f.dark)) }));
-export const ALL_PALETTES: Palette[] = PALETTE_FAMILIES.flatMap((f) => f.schemes);
-export const familyOfPalette = (id: string) => id.split("-")[0];
-export const paletteOf = (id: string) => ALL_PALETTES.find((p) => p.id === id) ?? ALL_PALETTES[0];
+const mkC = (id: string, name: string, hex: string): Palette => ({ id, name, bg: `${hex}10`, surface: "#ffffff", accent: hex, accent2: hex, ink: "#1b2130", muted: "#5f6672", onAccent: "#ffffff", band: `${hex}1a` });
+export const NL_PALETTES: Palette[] = NL_COLOURS.map(([id, name, hex]) => mkC(id, name, hex));
+export const paletteOf = (id: string) => NL_PALETTES.find((p) => p.id === id) ?? NL_PALETTES[0];
 
 // ── 10 layouts: each seeds a block list. Company details flow from the top-level
 // `company`, so they only get typed once.
@@ -78,20 +64,20 @@ export const LAYOUTS: Layout[] = [
 export const layoutOf = (id: string) => LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 
 export const newNewsletter = (layoutId: string, company: Partial<Company> = {}): Newsletter => ({
-  layout: layoutId, palette: ALL_PALETTES[0].id,
+  layout: layoutId, palette: NL_PALETTES[0].id,
   company: { name: company.name ?? "", phone: company.phone ?? "", email: company.email ?? "", address: company.address ?? "", logo: company.logo },
   blocks: layoutOf(layoutId).blocks(),
 });
 
 const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
 
-// A post image rendered in a fixed 16:9 frame with a focal point + zoom, so what
-// the operator sees in the composer is exactly what families get. `pos` is an
-// object-position ("50% 30%"), `zoom` a scale (1 = fit).
-export function PostImage({ url, pos = "50% 50%", zoom = 1, rounded = true }: { url: string; pos?: string; zoom?: number; rounded?: boolean }) {
+// A post image in a fixed 16:9 frame, pannable in any direction (translate x/y in
+// % of the frame) and zoomable (scale). The composer preview and every place it's
+// shown use this same transform, so what the operator sets is exactly what sends.
+export function PostImage({ url, x = 0, y = 0, zoom = 1, rounded = true }: { url: string; x?: number; y?: number; zoom?: number; rounded?: boolean }) {
   return (
     <div className={`relative w-full overflow-hidden ${rounded ? "rounded-lg" : ""}`} style={{ aspectRatio: "16 / 9", background: "#0b1020" }}>
-      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: pos, transform: `scale(${zoom})`, transformOrigin: pos }} />
+      <img src={url} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${x}%, ${y}%) scale(${zoom})`, transformOrigin: "center" }} />
     </div>
   );
 }
@@ -137,7 +123,7 @@ export function newsletterToHtml(nl: Newsletter): string {
       case "quote": return `<div style="padding:16px 26px"><div style="border-left:4px solid ${p.accent2};padding-left:14px;font-size:17px;font-style:italic;color:${p.ink}">&ldquo;${e(b.body)}&rdquo;</div>${b.heading ? `<div style="margin-top:6px;font-size:13px;font-weight:700;color:${p.muted}">${e(b.heading)}</div>` : ""}</div>`;
       case "divider": return `<div style="height:1px;background:${p.band};margin:6px 26px"></div>`;
       case "eventbar": return `<div style="margin:12px 26px;background:${p.accent};color:${p.onAccent};border-radius:10px;padding:12px 16px;font-weight:700;font-size:14px">${e([b.date, b.time, b.location].filter(Boolean).join("   •   ")) || "Event details"}</div>`;
-      case "footer": return `<div style="background:${p.ink};color:#fff;padding:18px 26px;font-size:12.5px;line-height:1.7"><div style="font-weight:800;font-size:14px">${e(c.name) || "Your company"}</div>${c.address ? `<div style="opacity:.85">${e(c.address)}</div>` : ""}<div style="opacity:.85">${e([c.phone, c.email].filter(Boolean).join("  ·  "))}</div></div>`;
+      case "footer": return `<div style="background:${p.accent};color:#fff;padding:18px 26px;font-size:12.5px;line-height:1.7"><div style="font-weight:800;font-size:14px">${e(c.name) || "Your company"}</div>${c.address ? `<div style="opacity:.85">${e(c.address)}</div>` : ""}<div style="opacity:.85">${e([c.phone, c.email].filter(Boolean).join("  ·  "))}</div></div>`;
       default: return "";
     }
   }).join("");
@@ -148,7 +134,7 @@ export function printNewsletter(nl: Newsletter) {
   const w = typeof window !== "undefined" ? window.open("", "_blank", "width=760,height=980") : null;
   if (!w) return;
   const title = (fill(nl.company.name, nl.company) || "Newsletter").replace(/[&<>]/g, "");
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>@page{size:A4;margin:10mm}html,body{margin:0}body{background:#fff;padding:0;font-family:system-ui,-apple-system,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${newsletterToHtml(nl)}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:8mm}html,body{margin:0}body{background:#fff;padding:0;font-family:system-ui,-apple-system,sans-serif}body>div{max-width:760px!important}</style></head><body>${newsletterToHtml(nl)}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
   w.document.close();
 }
 
@@ -223,7 +209,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
       return <div style={{ margin: "12px 26px", background: p.accent, color: p.onAccent, borderRadius: 10, padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 16, fontWeight: 700, fontSize: 14 }}>{[b.date, b.time, b.location].filter(Boolean).join("   •   ") || "Add a date, time & place"}</div>;
     case "footer":
       return (
-        <div style={{ background: p.ink, color: "#fff", padding: "18px 26px", fontSize: 12.5, lineHeight: 1.7 }}>
+        <div style={{ background: p.accent, color: "#fff", padding: "18px 26px", fontSize: 12.5, lineHeight: 1.7 }}>
           <div style={{ fontWeight: 800, fontSize: 14 }}>{c.name || "Your company"}</div>
           {c.address && <div style={{ opacity: .85 }}>{c.address}</div>}
           <div style={{ opacity: .85 }}>{[c.phone, c.email].filter(Boolean).join("  ·  ")}</div>
@@ -306,6 +292,13 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Layout</div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
                 {LAYOUTS.map((l) => <button key={l.id} type="button" onClick={() => pickLayout(l.id)} className="rounded-lg border p-1.5 text-[10px] font-bold leading-tight" style={nl.layout === l.id ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{l.name}</button>)}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour</div>
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-6 flex-none rounded-full" style={{ background: p.accent, border: "1px solid rgba(0,0,0,.1)" }} />
+                <select value={nl.palette} onChange={(e) => setNl((n) => ({ ...n, palette: e.target.value }))} className={inputCls}>{NL_PALETTES.map((pl) => <option key={pl.id} value={pl.id}>{pl.name}</option>)}</select>
               </div>
             </div>
             <div>

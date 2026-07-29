@@ -17,7 +17,7 @@ type Tpl = "announce" | "event" | "reminder" | "urgent" | "celebrate" | "booking
 interface Cta { label: string; target?: string; url?: string }
 interface Rsvp { yes: number; no: number; maybe: number }
 interface Post {
-  id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imagePos?: string; imageZoom?: number;
+  id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imageX?: number; imageY?: number; imageZoom?: number;
   pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
   date?: string; time?: string; location?: string; cta?: Cta | null; rsvp?: Rsvp | null;
   seen?: number; reactions?: number; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
@@ -98,7 +98,7 @@ export function ParentNewsfeedApp() {
                   </div>
                   {p.title && <div className="text-[14px] font-extrabold">{p.title}</div>}
                   <div className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink-2)]">{p.body}</div>
-                  {p.photoUrl && <div className="mt-2"><PostImage url={p.photoUrl} pos={p.imagePos} zoom={p.imageZoom} /></div>}
+                  {p.photoUrl && <div className="mt-2"><PostImage url={p.photoUrl} x={p.imageX} y={p.imageY} zoom={p.imageZoom} /></div>}
 
                   {p.tpl === "event" && (p.date || p.time || p.location) && (
                     <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel,#f4f2f8)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{[p.date, p.time, p.location].filter(Boolean).join(" · ")}</div>
