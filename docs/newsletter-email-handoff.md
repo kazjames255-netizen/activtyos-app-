@@ -1,3 +1,18 @@
+# Email area — status + backend spec (Amir)
+
+> **Kaz's steer (2026-07-29):** the Email area is an extensive area to build out.
+> **Finish the front-end first**, then wire the backend as a later build task.
+> **Done now:** HTML embed works (`/api/emails/send` accepts an `html` field and
+> sends the designed post/newsletter as-is, with the plain-text `body` as
+> fallback); subject auto-fills from the title; the recipient list shows family
+> names and can be trimmed before sending (`recipients[]`).
+> **Future backend task:** real **PDF/file attachments** (the "Attach as a PDF"
+> button only downloads for now) — needs a server-side PDF render + nodemailer
+> `attachments` (or client-uploads-PDF → server attaches). Plus the wider email
+> build-out (templates, scheduling, visual builder).
+
+---
+
 # Newsletter → HTML email — backend spec (Amir)
 
 **Goal:** when an operator picks **"✉ Email to parents"** in the newsletter
