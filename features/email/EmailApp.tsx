@@ -189,7 +189,7 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
   enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "New enquiries" },
   system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
 };
-interface Mail { id: string; from: string; subject: string; preview: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" }
+interface Mail { id: string; from: string; subject: string; preview: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" }
 // Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
 const DEMO_MAIL: Mail[] = [
   { id: "m1", from: "Sarah Khan", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"] },
@@ -205,14 +205,35 @@ const FOLDERS: [string, string, number?][] = [
   ["drafts", "Drafts", 1], ["scheduled", "Scheduled", 1], ["spam", "Spam", 1], ["trash", "Trash"], ["all", "All mail"],
 ];
 
-function InboxView({ onCompose }: { onCompose: () => void }) {
+function InboxView({ onCompose, onReply, onForward, history }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; history: Sent[] | null }) {
+  const [items, setItems] = useState<Mail[]>(() => DEMO_MAIL.map((m) => ({ ...m, folder: m.folder ?? "inbox" })));
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
   const [density, setDensity] = useState<"cozy" | "compact">("cozy");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Mail | null>(null);
-  const list = DEMO_MAIL.filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
+
+  const patch = (id: string, p: Partial<Mail>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
+  const drop = (id: string) => setItems((xs) => xs.filter((x) => x.id !== id));
+  const openMail = (m: Mail) => { if (m.unread) patch(m.id, { unread: false }); setOpen(m); };
+  const archive = (m: Mail) => { patch(m.id, { folder: "archive" }); setOpen(null); };
+  const del = (m: Mail) => { drop(m.id); setOpen(null); };
+  const reply = (m: Mail) => { setOpen(null); onReply(m); };
+  const forward = (m: Mail) => { setOpen(null); onForward(m); };
+
+  // Real sent history shows in the Sent folder as mail rows.
+  const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: "You", subject: h.subject, preview: h.audience === "one" ? "Sent to 1 address" : `Sent to ${h.recipientCount} families`, time: when(h.createdAt), folder: "sent" }));
+  const pool = folder === "sent" ? sentMail : items;
+  const inFolder = (m: Mail) => {
+    if (folder === "all") return m.folder !== "archive";
+    if (folder === "starred") return !!m.starred && m.folder !== "archive";
+    if (folder === "inbox") return (m.folder ?? "inbox") === "inbox";
+    return m.folder === folder;
+  };
+  const list = pool.filter(inFolder)
+    .filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
     .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); });
+  const count = (k: string) => k === "sent" ? sentMail.length : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length : k === "starred" ? items.filter((m) => m.starred && m.folder !== "archive").length : undefined;
   const pad = density === "cozy" ? "py-3" : "py-1.5";
   return (
     <div>
@@ -221,41 +242,43 @@ function InboxView({ onCompose }: { onCompose: () => void }) {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail · try from: subject: label: is:unread has:attachment" className="w-full rounded-full border border-[var(--line)] bg-white px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
         </div>
         {([["cozy", "Cozy"], ["compact", "Compact"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
-        <span className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">⌨ Shortcuts</span>
       </div>
       <div className="grid gap-3 md:grid-cols-[210px_1fr]">
         <div>
           <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>✎ Compose</button>
           <div className="flex flex-col">
-            {FOLDERS.map(([k, label, n]) => (
+            {FOLDERS.map(([k, label]) => { const n = count(k); return (
               <button key={k} type="button" onClick={() => setFolder(k)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-semibold" style={folder === k ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 800 } : { color: "var(--ink-2)" }}>
                 <span className="flex-1">{label}</span>{n ? <span className="rounded-full bg-[var(--panel)] px-1.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span> : null}
               </button>
-            ))}
+            ); })}
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
-            <input type="checkbox" className="h-4 w-4 accent-[#2f6bd8]" aria-label="Select all" />
-            <button type="button" className="text-[14px] text-[var(--ink-3)]" title="Refresh">↻</button>
             {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
-            <span className="ml-auto text-[12px] text-[var(--ink-3)]">1–{list.length} of {list.length}</span>
+            <span className="ml-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
           </div>
           {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here.</div>
           : list.map((m) => (
-            <button key={m.id} type="button" onClick={() => setOpen(m)} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 text-left last:border-0 hover:bg-[#f7faff] ${pad}`}>
-              <input type="checkbox" onClick={(e) => e.stopPropagation()} className="h-4 w-4 flex-none accent-[#2f6bd8]" aria-label={`Select ${m.subject}`} />
-              <span className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }}>{m.starred ? "★" : "☆"}</span>
-              <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
-              <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
-              {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
-              {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
-              <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
-            </button>
+            <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`}>
+              <button type="button" onClick={() => patch(m.id, { starred: !m.starred })} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
+              <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
+                <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
+                {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
+                {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
+                <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
+              </button>
+              {folder !== "sent" && <>
+                <button type="button" onClick={() => archive(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Archive">🗄</button>
+                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title="Delete">🗑</button>
+              </>}
+            </div>
           ))}
         </div>
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox is a front-end preview — receiving email needs inbound mail set up (handed to the backend). Compose, Automatic emails, and the sent history are live.</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox actions (star, read, archive, delete, reply, forward) work locally. Sent shows your real send history. Receiving external email needs inbound mail set up — handed to the backend.</div>
       {open && (
         <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[6vh]" onClick={() => setOpen(null)}>
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -270,7 +293,10 @@ function InboxView({ onCompose }: { onCompose: () => void }) {
               {open.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {open.attachment}</div>}
             </div>
             <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-3">
-              {["↩ Reply", "↪ Forward", "🗄 Archive", "🗑 Delete"].map((a) => <button key={a} type="button" onClick={() => setOpen(null)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{a}</button>)}
+              <button type="button" onClick={() => reply(open)} className="rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Reply</button>
+              <button type="button" onClick={() => forward(open)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↪ Forward</button>
+              <button type="button" onClick={() => archive(open)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🗄 Archive</button>
+              <button type="button" onClick={() => del(open)} className="rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">🗑 Delete</button>
             </div>
           </div>
         </div>
@@ -448,7 +474,7 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView onCompose={() => setTab("compose")} />}
+      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); setSubject(`Re: ${m.subject}`); setBody(`\n\n———\n${m.from} wrote:\n${m.preview}`); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(`\n\n———\nForwarded from ${m.from}:\n${m.preview}`); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView history={history} onNew={() => setTab("compose")} />}
       {tab === "audiences" && <AudiencesView reach={reachCount} onEmail={() => setTab("compose")} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(t.body); setTab("compose"); }} />}
