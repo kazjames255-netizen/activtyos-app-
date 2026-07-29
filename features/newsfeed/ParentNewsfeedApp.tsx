@@ -20,7 +20,7 @@ interface Post {
   id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imageAspect?: string; imageX?: number; imageY?: number; imageZoom?: number;
   colour?: string; pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
   date?: string; time?: string; location?: string; cta?: Cta | null; rsvp?: Rsvp | null;
-  seen?: number; reactions?: number; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
+  seen?: number; reactions?: number; tenantId?: string; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
 }
 type Mine = { rsvp?: "yes" | "no" | "maybe"; acked?: boolean; reacted?: boolean };
 
@@ -53,6 +53,10 @@ export function ParentNewsfeedApp() {
   const rsvp = (p: Post, choice: "yes" | "no" | "maybe") => { const prev = mine[p.id]?.rsvp ?? null; if (prev === choice) return; saveMine(p.id, { rsvp: choice }); setPosts((ps) => (ps ?? []).map((x) => { if (x.id !== p.id || !x.rsvp) return x; const r = { ...x.rsvp }; r[choice] += 1; if (prev) r[prev] = Math.max(0, r[prev] - 1); return { ...x, rsvp: r }; })); apiPost(`/api/posts/${encodeURIComponent(p.id)}/rsvp`, { choice, prev }).catch(() => {}); };
   const ack = (p: Post) => { if (mine[p.id]?.acked) return; saveMine(p.id, { acked: true }); setPosts((ps) => (ps ?? []).map((x) => (x.id === p.id ? { ...x, seen: (x.seen ?? 0) + 1 } : x))); void api(`/api/posts/${encodeURIComponent(p.id)}/ack`, { method: "POST", body: "{}" }).catch(() => {}); };
   const cta = (p: Post) => { saveMine(p.id, { acked: true }); if (p.cta?.url) window.open(p.cta.url, "_blank", "noopener,noreferrer"); else if (p.cta?.listingId) router.push(`/book/${p.cta.listingId}`); else router.push("/custdash/browse"); };
+  // "Message us for more info" — jump straight to this provider's message thread
+  // with the subject pre-filled from the post, ready for the family to type + send.
+  const messageUs = (p: Post) => { const subject = `Re: ${(p.title || (p.tpl === "newsletter" ? p.newsletter?.company.name : "") || "your update").toString().slice(0, 80)}`; const qs = new URLSearchParams({ compose: "1", subject }); if (p.tenantId) qs.set("tenant", p.tenantId); router.push(`/custdash/messages?${qs.toString()}`); };
+  const msgBtn = (p: Post) => <button type="button" onClick={() => messageUs(p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:text-[#1d3a8f]" style={{ borderColor: "var(--line)" }}>💬 Message us for more info</button>;
 
   const list = useMemo(() => posts ?? [], [posts]);
 
@@ -79,12 +83,11 @@ export function ParentNewsfeedApp() {
                     <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
                   </div>
                   <div className="p-3 pt-2"><NewsletterView data={p.newsletter} /></div>
-                  {(p.ackRequired || p.react !== false) && (
-                    <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
-                      {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>}
-                      {p.react !== false && <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+                    {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>}
+                    {msgBtn(p)}
+                    {p.react !== false && <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
+                  </div>
                 </Card>
               );
             }
@@ -122,6 +125,7 @@ export function ParentNewsfeedApp() {
                     {p.cta && (
                       <button type="button" onClick={() => cta(p)} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: accent }}>{p.cta.label}</button>
                     )}
+                    {msgBtn(p)}
                     {p.react !== false && (
                       <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>
                     )}

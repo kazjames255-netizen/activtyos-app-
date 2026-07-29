@@ -87,19 +87,24 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     ? Array.from(new Set((searchParams.get("emails") ?? "").split(",").map((e) => e.trim()).filter(Boolean)))
     : [];
   const preCompose = preEmails.length > 0;
+  // Parent deep-link from a newsfeed post/newsletter ("Message us for more info"):
+  // ?compose=1&tenant=<id>&subject=<title> opens the composer pre-addressed to that
+  // provider with the subject filled, leaving the parent to type the message.
+  const preParentCompose = mode === "parent" && searchParams.get("compose") != null;
+  const preTenant = preParentCompose ? (searchParams.get("tenant") ?? "") : "";
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [composing, setComposing] = useState(preCompose);
+  const [composing, setComposing] = useState(preCompose || preParentCompose);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [target, setTarget] = useState(""); // tenantId (parent) or customer email (operator)
-  const [subject, setSubject] = useState(preCompose ? (searchParams.get("subject") ?? "") : ""); // optional heading for a NEW thread
+  const [target, setTarget] = useState(preTenant); // tenantId (parent) or customer email (operator)
+  const [subject, setSubject] = useState(preCompose || preParentCompose ? (searchParams.get("subject") ?? "") : ""); // optional heading for a NEW thread
   const [familyQuery, setFamilyQuery] = useState("");
   const [familyTargets, setFamilyTargets] = useState<string[]>(preEmails); // operator: 1+ family emails
-  const [pickerOpen, setPickerOpen] = useState(!preCompose); // recipient picker expanded?
+  const [pickerOpen, setPickerOpen] = useState(!preCompose && !preParentCompose); // recipient picker expanded?
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
   const [listings, setListings] = useState<string[]>([]);
   const [listingTargets, setListingTargets] = useState<string[]>([]);

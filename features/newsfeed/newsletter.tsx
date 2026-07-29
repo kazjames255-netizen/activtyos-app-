@@ -150,7 +150,7 @@ export function newsletterToHtml(nl: Newsletter): string {
     switch (b.t) {
       case "banner": return `<div style="background:${p.accent};color:${p.onAccent};padding:16px 26px;font-weight:800;font-size:17px">${c.logo ? `<img src="${c.logo}" style="height:30px;vertical-align:middle;margin-right:10px;background:#fff;border-radius:6px" alt=""/>` : ""}${e(c.name) || "Your company"}</div>`;
       case "hero": return `${b.image ? `<div style="height:340px;overflow:hidden"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div>` : `<div style="height:220px;background:linear-gradient(120deg,${p.accent},${p.accent2})"></div>`}${(b.heading || b.body) ? `<div style="padding:22px 26px;background:${p.band}">${b.heading ? `<div style="font-size:24px;font-weight:800;color:${p.ink}">${e(b.heading)}</div>` : ""}${b.body ? `<div style="font-size:14px;color:${p.muted};margin-top:6px">${e(b.body)}</div>` : ""}</div>` : ""}`;
-      case "heading": return `<div style="padding:18px 26px 0"><div style="font-size:19px;font-weight:800;color:${p.ink}">${e(b.heading)}</div><div style="height:3px;width:42px;background:${p.accent2};border-radius:3px;margin-top:8px"></div></div>`;
+      case "heading": return `<div style="padding:18px 26px 0"><div style="font-size:19px;font-weight:800;color:${p.ink}">${e(b.heading)}</div><div style="height:3px;width:42px;background:${p.accent2};border-radius:3px;margin-top:8px"></div>${b.body ? `<div style="font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap;margin-top:10px">${e(b.body)}</div>` : ""}</div>`;
       case "text": return `<div style="padding:12px 26px;font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap">${e(b.body)}</div>`;
       case "image": return b.image ? `<div style="height:300px;overflow:hidden"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div>` : "";
       case "discount": return `<div style="padding:14px 26px"><div style="border:2px dashed ${p.accent};border-radius:12px;padding:14px 16px;text-align:center;background:${p.band}"><div style="font-size:12px;font-weight:800;letter-spacing:1px;color:${p.muted};text-transform:uppercase">Your code</div><div style="font-size:26px;font-weight:900;color:${p.accent};letter-spacing:2px">${e(b.code) || "CODE"}</div><div style="font-size:13px;color:${p.ink}">${e(b.codeDesc)}</div></div></div>`;
@@ -214,7 +214,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
         </div>
       );
     case "heading":
-      return <div style={{ padding: "18px 26px 0" }}><div style={{ fontSize: 19, fontWeight: 800, color: p.ink }}>{fill(b.heading, c)}</div><div style={{ height: 3, width: 42, background: p.accent2, borderRadius: 3, marginTop: 8 }} /></div>;
+      return <div style={{ padding: "18px 26px 0" }}><div style={{ fontSize: 19, fontWeight: 800, color: p.ink }}>{fill(b.heading, c)}</div><div style={{ height: 3, width: 42, background: p.accent2, borderRadius: 3, marginTop: 8 }} />{b.body ? <div style={{ fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 10 }}>{fill(b.body, c)}</div> : null}</div>;
     case "text":
       return <div style={{ padding: "12px 26px", fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{fill(b.body, c)}</div>;
     case "image":
@@ -361,7 +361,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
               <div className="mt-1.5 flex items-center gap-2">
                 {nl.company.logo && <img src={nl.company.logo} alt="" className="h-7 w-7 rounded object-cover" />}
                 {imgBtn((url) => setCompany({ logo: url }))}
-                <span className="text-[11px] text-[var(--ink-3)]">Logo (optional)</span>
+                {nl.company.logo ? <button type="button" onClick={() => setCompany({ logo: undefined })} className="text-[11px] font-bold text-[#c02636]">Remove</button> : <span className="text-[11px] text-[var(--ink-3)]">Logo (optional)</span>}
               </div>
             </div>
 
@@ -396,7 +396,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                           </div>
                         ) : imgBtn((url) => setBlock(i, { image: url })))}
                         {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder="Heading" className={inputCls} />}
-                        {has("body") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder="Text" className={inputCls} />}
+                        {(has("body") || b.t === "heading") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder={b.t === "heading" ? "Text under this heading (optional)" : "Text"} className={inputCls} />}
                         {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder="Left column" className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder="Right column" className={inputCls} /></>}
                         {b.t === "discount" && <div className="grid gap-1.5">{coupons.length > 0 && <select value={coupons.some((c) => c.code === b.code) ? b.code : ""} onChange={(e) => { const c = coupons.find((x) => x.code === e.target.value); if (c) setBlock(i, { code: c.code, codeDesc: c.desc }); }} className={inputCls}><option value="">Pull in a discount code…</option>{coupons.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.desc}</option>)}</select>}<div className="grid grid-cols-2 gap-1.5"><input value={b.code ?? ""} onChange={(e) => setBlock(i, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={inputCls} /><input value={b.codeDesc ?? ""} onChange={(e) => setBlock(i, { codeDesc: e.target.value })} placeholder="What it gives" className={inputCls} /></div></div>}
                         {b.t === "button" && (() => { const kind = b.url ? "url" : "listing"; return (
@@ -449,6 +449,8 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
           <div className="overflow-y-auto bg-[var(--panel)] p-3">
             <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Preview</div>
             <NewsletterView data={nl} />
+            <div className="mt-2 flex justify-center"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">💬 Message us for more info</span></div>
+            <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Families get a “Message us” button on every post — opens a message to you, subject pre-filled.</div>
           </div>
         </div>
 

@@ -425,6 +425,7 @@ function PostPreview({ d }: { d: Draft }) {
         <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{d.body || "Your message…"}</div>
         {d.tpl === "event" && (d.date || d.time || d.location) && <div className="mt-2.5 inline-flex flex-wrap items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white" style={{ background: accent }}>{[d.date, d.time, d.location].filter(Boolean).join(" · ")}</div>}
         {d.ctaKind !== "none" && d.ctaLabel && <div className="mt-2.5"><span className="inline-flex rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: accent }}>{d.ctaLabel} →</span></div>}
+        <div className="mt-2.5"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">💬 Message us for more info</span></div>
       </div>
     </div>
   );
