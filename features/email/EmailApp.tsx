@@ -11,7 +11,7 @@ import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui"
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
-import type { Newsletter } from "@/features/newsfeed/newsletter";
+import { downscaleImage, type Newsletter } from "@/features/newsfeed/newsletter";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -688,6 +688,54 @@ function AnalyticsView() {
   );
 }
 
+interface EmailSig { id: string; name: string; html: string }
+function SignatureManager({ settings, save, onClose }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void>; onClose: () => void }) {
+  const sigs: EmailSig[] = settings.emailSignatures ?? [];
+  const seq = useRef(0);
+  const [draft, setDraft] = useState<EmailSig | null>(null);
+  const b = settings.billing ?? {};
+  const name = settings.providerName || b.businessName || "Your business";
+  const fromDetails = () => `${b.logoUrl ? `<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` : ""}<b>${name}</b><br>${b.phone ? `Tel: ${b.phone}<br>` : ""}${b.email ? `Email: ${b.email}` : ""}`;
+  const persist = (next: EmailSig[], def?: string) => save({ settings: { ...settings, emailSignatures: next, ...(def !== undefined ? { defaultSignatureId: def } : {}) } });
+  const saveDraft = () => { if (!draft) return; const d = { ...draft, name: draft.name.trim() || "Signature" }; persist(sigs.some((s) => s.id === d.id) ? sigs.map((s) => s.id === d.id ? d : s) : [...sigs, d]); setDraft(null); };
+  const del = (id: string) => { if (confirm("Delete this signature?")) persist(sigs.filter((s) => s.id !== id), settings.defaultSignatureId === id ? "" : undefined); };
+  return (
+    <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">Manage signatures</div><button type="button" onClick={onClose} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+        <div className="max-h-[66vh] overflow-y-auto p-5">
+          {!draft ? (
+            <>
+              {sigs.length === 0 ? <p className="mb-3 text-[13px] text-[var(--ink-3)]">No signatures yet. Create one — your logo, business name and contact details, appended to the bottom of an email.</p>
+              : <div className="mb-3 flex flex-col gap-2">{sigs.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
+                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-bold text-[var(--ink)]">{s.name}{settings.defaultSignatureId === s.id && <span className="ml-2 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Default</span>}</div><div className="mt-1 max-h-16 overflow-hidden text-[11.5px] text-[var(--ink-3)]" dangerouslySetInnerHTML={{ __html: s.html }} /></div>
+                    <div className="flex flex-none flex-col gap-1">
+                      <button type="button" onClick={() => setDraft(s)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
+                      <button type="button" onClick={() => persist(sigs, settings.defaultSignatureId === s.id ? "" : s.id)} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{settings.defaultSignatureId === s.id ? "Unset default" : "Default"}</button>
+                      <button type="button" onClick={() => del(s.id)} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+                    </div>
+                  </div>
+                ))}</div>}
+              <button type="button" onClick={() => setDraft({ id: `sig-${sigs.length}-${seq.current++}`, name: "", html: fromDetails() })} className="rounded-lg px-3.5 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New signature</button>
+            </>
+          ) : (
+            <div className="space-y-2.5">
+              <div><FieldLabel>Name</FieldLabel><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. LOGO" className="w-full" /></div>
+              <div className="flex flex-wrap gap-2">
+                {b.logoUrl && <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: `${d.html}<img src="${b.logoUrl}" alt="" style="max-height:64px"><br>` }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🖼 Insert logo</button>}
+                <button type="button" onClick={() => setDraft((d) => d && ({ ...d, html: fromDetails() }))} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">✨ Fill from my business details</button>
+              </div>
+              <div><FieldLabel>Signature</FieldLabel><RichText value={draft.html} onChange={(h) => setDraft((d) => d && ({ ...d, html: h }))} /></div>
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" onClick={saveDraft} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Save signature</button></div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
@@ -711,6 +759,8 @@ export function EmailApp() {
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [extraTo, setExtraTo] = useState<string[]>([]); // addresses the operator typed in by hand
   const [extraInput, setExtraInput] = useState("");
+  const [sigChoice, setSigChoice] = useState<string | null>(null); // null = follow default
+  const [sigMgr, setSigMgr] = useState(false);
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -797,6 +847,31 @@ export function EmailApp() {
   const emailAllowed = new Set(mergeFieldsFor(audience === "listing" ? "listing" : "family").map((f) => f.token.toLowerCase()));
   const emailKnown = new Set(MERGE_FIELDS.map((f) => f.token.toLowerCase()));
   const templateUsable = (t: EmailTemplate) => (`${t.subject ?? ""} ${t.body}`.match(/\{[A-Za-z]+\}/g) ?? []).map((x) => x.toLowerCase()).every((tok) => !emailKnown.has(tok) || emailAllowed.has(tok));
+  // Signature: the operator's pick, or the tenant default until they choose.
+  const signatures = settings.emailSignatures ?? [];
+  const effSigId = sigChoice ?? settings.defaultSignatureId ?? "";
+  const selectedSig = signatures.find((s) => s.id === effSigId) ?? null;
+  // Insert an uploaded image inline into the rich body.
+  async function insertPhoto(f: File) {
+    try {
+      const small = await downscaleImage(f);
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small });
+      setBody((bd) => `${bd}<img src="${url}" alt="" style="max-width:100%;border-radius:8px"><br>`);
+    } catch { setError("Couldn’t add that photo — try a smaller JPG or PNG."); }
+  }
+  // "Help me write" — draft/extend the email body from a short brief via the AI writer.
+  const [aiBusy, setAiBusy] = useState(false);
+  async function aiWrite() {
+    const notes = window.prompt("What should this email say? A line or two — the writer turns it into a friendly email.");
+    if (!notes?.trim()) return;
+    setAiBusy(true); setError(null);
+    try {
+      const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: "announce", notes: notes.trim(), length: "medium" });
+      if (r.title && !subject.trim()) setSubject(r.title);
+      if (r.body) setBody((bd) => bd.trim() ? `${bd}<br><br>${mdToHtml(r.body)}` : mdToHtml(r.body));
+    } catch (e) { setError(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
+    finally { setAiBusy(false); }
+  }
 
   const addAttachment = (f: File) => { const kb = Math.max(1, Math.round(f.size / 1024)); setAttachments((xs) => [...xs, { name: f.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB` }]); };
 
@@ -819,8 +894,8 @@ export function EmailApp() {
     setSending(true); setError(null); setOk(null);
     try {
       const r = await apiPost<{ recipientCount: number }>("/api/emails/send", {
-        subject, body: bodyText,
-        html: docHtml && mode === "embed" ? docHtml : body,
+        subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
+        html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
         audience: "all",
         recipients: finalRecipients,
         cc: cc.trim() || undefined,
@@ -919,13 +994,24 @@ export function EmailApp() {
         )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5">
-          <div className="mb-1 flex items-center justify-between"><FieldLabel>Message</FieldLabel>
-            <div className="flex items-center gap-2">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
+              <label title="Insert a photo into the email" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🖼 Photo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void insertPhoto(f); e.target.value = ""; }} /></label>
               <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
               {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t && templateUsable(t)) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · per-booking only"}</option>; })}</Select>}
             </div>
           </div>
           <RichText value={body} onChange={setBody} />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">✒ Signature</span>
+            <Select value={selectedSig ? selectedSig.id : "none"} onChange={(e) => { const v = e.target.value; if (v === "__manage") { setSigMgr(true); return; } setSigChoice(v === "none" ? "" : v); }} className="text-[12px]">
+              <option value="none">No signature</option>
+              {signatures.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              <option value="__manage">Manage signatures…</option>
+            </Select>
+          </div>
+          {selectedSig && <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3"><div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Signature added to the bottom</div><div className="text-[12.5px] text-[var(--ink-2)]" dangerouslySetInnerHTML={{ __html: selectedSig.html }} /></div>}
           {attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
         </div>
         <div className="mt-3 flex items-center gap-3">
@@ -965,6 +1051,7 @@ export function EmailApp() {
         </div>
       )}
       </>)}
+      {sigMgr && <SignatureManager settings={settings} save={save} onClose={() => setSigMgr(false)} />}
     </OperatorPage>
   );
 }

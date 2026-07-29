@@ -519,6 +519,12 @@ export interface TenantSettings {
     autoAddPhotos?: boolean;
   };
 
+  /** Email signatures — reusable HTML blocks (logo + details) appended to a send.
+   *  Managed + picked on the Email page's Compose tab. */
+  emailSignatures?: { id: string; name: string; html: string }[];
+  /** Which signature is pre-selected on a new email ("" / absent = none). */
+  defaultSignatureId?: string;
+
   /** Inventory — reusable categories, storage locations and seasons. */
   inventory?: {
     categories?: string[];
@@ -831,6 +837,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     ],
   },
   emailAssets: { quotes: [], images: [] },
+  emailSignatures: [],
   registers: {
     timestamps: true,
     fields: { contact: true, emergency: true, password: true, school: true },
