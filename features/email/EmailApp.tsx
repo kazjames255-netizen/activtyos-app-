@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
@@ -645,16 +645,60 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
 interface EmailTemplate { id: string; name: string; subject?: string; body: string }
 function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
-  useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
+  const [edit, setEdit] = useState<EmailTemplate | null>(null); // the one being edited/created
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(() => apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])), []);
+  useEffect(() => { load(); }, [load]);
+  async function saveTmpl() {
+    if (!edit || !edit.name.trim()) { setErr("Give the template a name."); return; }
+    setBusy(true); setErr(null);
+    const payload = { name: edit.name.trim(), subject: edit.subject?.trim() || undefined, body: edit.body };
+    try {
+      if (edit.id) await api(`/api/messages/templates/${encodeURIComponent(edit.id)}`, { method: "PUT", body: JSON.stringify(payload) });
+      else await apiPost("/api/messages/templates", payload);
+      setEdit(null); load();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); }
+    finally { setBusy(false); }
+  }
+  async function del(t: EmailTemplate) {
+    if (!confirm(`Delete the template “${t.name}”?`)) return;
+    try { await api(`/api/messages/templates/${encodeURIComponent(t.id)}`, { method: "DELETE" }); load(); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t delete"); }
+  }
   if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
-  return templates.length === 0
-    ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No saved templates yet. Save one from the message composer to reuse it here.</Card>
-    : <div className="flex flex-col gap-2">{templates.map((t) => (
-        <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
-          <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
-          <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">Reusable email templates — shared with Messages</span>
+        <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
+      </div>
+      {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
+      {templates.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No templates yet. Create one — it’s available here and in Messages.</Card>
+      : <div className="flex flex-col gap-2">{templates.map((t) => (
+          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
+            <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
+            <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
+            <button type="button" onClick={() => setEdit(t)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
+            <button type="button" onClick={() => del(t)} className="flex-none rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
+          </div>
+        ))}</div>}
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically. Booking-specific ones ({"{SessionDate}"}, {"{VenueName}"}) only work when sending from a booking, so they’re locked in bulk Email sends.</p>
+      {edit && (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
+          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? "Edit template" : "New template"}</div><button type="button" onClick={() => setEdit(null)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
+            <div className="max-h-[66vh] space-y-2.5 overflow-y-auto p-5">
+              <div><FieldLabel>Name</FieldLabel><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Booking confirmation" className="w-full" /></div>
+              <div><FieldLabel>Subject (optional)</FieldLabel><Input value={edit.subject ?? ""} onChange={(e) => setEdit({ ...edit, subject: e.target.value })} placeholder="Subject line" className="w-full" /></div>
+              <div><FieldLabel>Body</FieldLabel><textarea value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} rows={8} placeholder="Write the template… use {ChildName}, {ListingName} etc. for merge fields" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" /><div className="mt-1 flex flex-wrap gap-1.5">{MERGE_FIELDS.map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => setEdit((d) => d && ({ ...d, body: `${d.body}${d.body && !d.body.endsWith(" ") ? " " : ""}${f.token}` }))} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}</div></div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3"><button type="button" onClick={() => setEdit(null)} className="rounded-lg border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button><button type="button" onClick={saveTmpl} disabled={busy} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{busy ? "Saving…" : "Save template"}</button></div>
+          </div>
         </div>
-      ))}</div>;
+      )}
+    </div>
+  );
 }
 
 function AnalyticsView() {
