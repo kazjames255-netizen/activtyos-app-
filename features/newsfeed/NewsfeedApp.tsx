@@ -446,6 +446,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
           {sharedLine}
         </div>
+        {p.title && <div className="px-3.5 pt-2 text-[15px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>🔖 {p.title}</div>}
         <div className="p-3.5 pt-2"><NewsletterView data={p.newsletter} /></div>
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">
           <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
