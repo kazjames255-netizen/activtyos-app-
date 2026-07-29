@@ -56,6 +56,7 @@ const postSchema = z.object({
   cta: ctaSchema.optional(),                            // booking nudge {label,target}
   publishAt: z.string().trim().max(40).optional(),      // when status==="scheduled"
   folder: z.string().trim().max(80).optional(),         // library folder a newsletter is filed in
+  ref: z.string().trim().max(120).optional(),           // operator-only "save as" name, for searching the library
 });
 const partialSchema = postSchema.partial();
 

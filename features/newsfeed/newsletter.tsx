@@ -331,8 +331,9 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
           {/* Editor */}
           <div className="min-h-0 space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Newsletter name</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Save as (a name to find it later)</div>
               <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder="e.g. July Family Update" className={inputCls} />
+              <span className="mt-1 block text-[10px] text-[var(--ink-3)]">Just for your search — set it now and it’s saved even if you send by email.</span>
             </div>
             <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-2.5">
               <div className="mb-1 text-[11.5px] font-extrabold text-[#1d3a8f]">✨ Let AI write it for you</div>

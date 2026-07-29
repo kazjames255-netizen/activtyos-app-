@@ -31,7 +31,7 @@ interface Post {
   priority?: "normal" | "urgent"; colour?: string; pinned?: boolean; ackRequired?: boolean; react?: boolean;
   status?: Status; audience?: "all" | "site" | "listing"; audId?: string; audIds?: string[]; audLabel?: string;
   date?: string; time?: string; location?: string; cta?: Cta | null; publishAt?: string;
-  rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null; folder?: string;
+  rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null; folder?: string; ref?: string;
   postedByName?: string; createdAt?: string; editedAt?: string;
 }
 
@@ -110,7 +110,7 @@ async function downloadPostImage(d: Draft) {
 
 type CtaKind = "none" | "listing" | "url";
 interface Draft {
-  editId: string; tpl: Tpl; title: string; body: string; colour: string; image: string; imageAspect: string; imageX: number; imageY: number; imageZoom: number; folder: string;
+  editId: string; tpl: Tpl; title: string; body: string; colour: string; image: string; imageAspect: string; imageX: number; imageY: number; imageZoom: number; folder: string; ref: string;
   audScope: "all" | "listing"; audIds: string[];
   date: string; time: string; location: string;
   pinned: boolean; priority: "normal" | "urgent"; ackRequired: boolean; react: boolean;
@@ -118,7 +118,7 @@ interface Draft {
   when: "now" | "later" | "draft"; publishAt: string;
 }
 const draftFor = (tpl: Tpl, listings: { id: string; title: string }[]): Draft => ({
-  editId: "", tpl, title: "", body: "", colour: "", image: "", imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1, folder: "", audScope: "all", audIds: [],
+  editId: "", tpl, title: "", body: "", colour: "", image: "", imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1, folder: "", ref: "", audScope: "all", audIds: [],
   date: "", time: "", location: "",
   pinned: tpl === "urgent" || tpl === "reminder",
   priority: tpl === "urgent" ? "urgent" : "normal",
@@ -141,7 +141,9 @@ export function NewsfeedApp() {
   const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string; meta?: NlMeta } | null>(null);
   const [filter, setFilter] = useState<"all" | Tpl | "draft" | "scheduled" | "archived">("all");
   const [folderFilter, setFolderFilter] = useState("");
+  const [folderKind, setFolderKind] = useState<"all" | "post" | "newsletter">("all"); // sub-filter inside an open folder
   const [query, setQuery] = useState("");
+  const [pending, setPending] = useState<{ label: string; run: () => void } | null>(null); // live-post countdown
   const router = useRouter();
   const portal = usePathname()?.split("/")[1] || "freelancer";
 
@@ -164,15 +166,28 @@ export function NewsfeedApp() {
       : filter === "draft" ? all.filter((p) => p.status === "draft")
       : filter === "archived" ? all.filter((p) => p.status === "archived")
       : all.filter((p) => (p.tpl ?? "announce") === filter && live1(p));
-    if (folderFilter) list = list.filter((p) => (p.folder ?? "") === folderFilter);
+    if (folderFilter) {
+      list = list.filter((p) => (p.folder ?? "") === folderFilter);
+      if (folderKind !== "all") list = list.filter((p) => (folderKind === "newsletter" ? p.tpl === "newsletter" : p.tpl !== "newsletter"));
+    }
     const q = query.trim().toLowerCase();
-    if (q) list = list.filter((p) => `${p.title ?? ""} ${p.body ?? ""} ${p.folder ?? ""} ${p.audLabel ?? ""} ${p.newsletter?.company.name ?? ""}`.toLowerCase().includes(q));
+    if (q) list = list.filter((p) => `${p.ref ?? ""} ${p.title ?? ""} ${p.body ?? ""} ${p.folder ?? ""} ${p.audLabel ?? ""} ${p.newsletter?.company.name ?? ""}`.toLowerCase().includes(q));
     return list;
-  }, [all, filter, folderFilter, query]);
+  }, [all, filter, folderFilter, folderKind, query]);
   const pinnedCount = live.filter((p) => p.pinned).length;
   const scheduledCount = all.filter((p) => p.status === "scheduled").length;
 
-  async function publish(d: Draft, channel: "page" | "email" | "both" | "download") {
+  // Live posts to families go through a 5-second cancellable countdown. Drafts,
+  // schedules, PDF and email hand-off don't (nothing hits families yet).
+  function publish(d: Draft, channel: "page" | "email" | "both" | "download") {
+    if (channel === "page" && d.when === "now") {
+      if (!d.title.trim() || !d.body.trim()) { setError("Add a title and a message."); return; }
+      setPending({ label: d.editId ? "Updating your post" : "Posting to the Newsfeed", run: () => commitPublish(d, channel) });
+      return;
+    }
+    commitPublish(d, channel);
+  }
+  async function commitPublish(d: Draft, channel: "page" | "email" | "both" | "download") {
     if (!d.title.trim() || !d.body.trim()) { setError("Add a title and a message."); return; }
     if (channel === "download") { printPost(d); return; }
     const chosen = d.audScope === "listing" ? listings.filter((l) => d.audIds.includes(l.id)) : [];
@@ -189,6 +204,7 @@ export function NewsfeedApp() {
       status,
       audience: d.audScope, audIds: d.audScope === "listing" ? d.audIds : undefined, audLabel,
       folder: d.folder.trim() || undefined,
+      ref: d.ref.trim() || undefined,
       ...(d.tpl === "event" ? { date: d.date, time: d.time, location: d.location } : {}),
       cta,
       ...(scheduled ? { publishAt: d.publishAt } : {}),
@@ -220,7 +236,14 @@ export function NewsfeedApp() {
     try { await api(`/api/posts/${encodeURIComponent(p.id)}`, { method: "DELETE" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
-  async function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email" | "both", editId?: string) {
+  function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email" | "both", editId?: string) {
+    if (channel === "page" && meta.when === "now") {
+      setPending({ label: editId ? "Updating your newsletter" : "Posting to the Newsfeed", run: () => commitNewsletter(nl, meta, channel, editId) });
+      return;
+    }
+    commitNewsletter(nl, meta, channel, editId);
+  }
+  async function commitNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email" | "both", editId?: string) {
     const name = nl.company.name || "us";
     const firstHeading = nl.blocks.find((b) => b.heading)?.heading;
     const title = (meta.name.trim() || firstHeading || nl.company.name || "Newsletter").replace(/\{company\}/g, name).slice(0, 120);
@@ -251,7 +274,7 @@ export function NewsfeedApp() {
   }
   const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []), pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
   const draftFromPost = (p: Post): Draft => ({
-    editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, colour: p.colour ?? "", image: p.photoUrl ?? "", imageAspect: p.imageAspect ?? "full", imageX: p.imageX ?? 0, imageY: p.imageY ?? 0, imageZoom: p.imageZoom ?? 1, folder: p.folder ?? "",
+    editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, colour: p.colour ?? "", image: p.photoUrl ?? "", imageAspect: p.imageAspect ?? "full", imageX: p.imageX ?? 0, imageY: p.imageY ?? 0, imageZoom: p.imageZoom ?? 1, folder: p.folder ?? "", ref: p.ref ?? "",
     audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []),
     date: p.date ?? "", time: p.time ?? "", location: p.location ?? "",
     pinned: !!p.pinned, priority: p.priority ?? "normal", ackRequired: !!p.ackRequired, react: p.react !== false,
@@ -270,7 +293,7 @@ export function NewsfeedApp() {
       priority: p.priority, pinned: false, ackRequired: p.ackRequired, react: p.react,
       status: "draft",
       audience: p.audience, audId: p.audId, audIds: p.audIds, audLabel: p.audLabel,
-      folder: p.folder,
+      folder: p.folder, ref: p.ref ? `${p.ref} (copy)` : undefined,
       ...(p.tpl === "event" ? { date: p.date, time: p.time, location: p.location } : {}),
       cta: p.cta ?? null,
       ...(p.tpl === "newsletter" && p.newsletter ? { newsletter: p.newsletter } : {}),
@@ -334,13 +357,19 @@ export function NewsfeedApp() {
       {folders.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Folders</span>
-          <button type="button" onClick={() => setFolderFilter("")} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
+          <button type="button" onClick={() => { setFolderFilter(""); setFolderKind("all"); }} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
           {folders.map((f) => (
             <span key={f} className="inline-flex items-center overflow-hidden rounded-full border" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-              <button type="button" onClick={() => setFolderFilter(folderFilter === f ? "" : f)} className="py-1 pl-2.5 pr-1.5 text-[11.5px] font-bold">📁 {f}</button>
+              <button type="button" onClick={() => { setFolderFilter(folderFilter === f ? "" : f); setFolderKind("all"); }} className="py-1 pl-2.5 pr-1.5 text-[11.5px] font-bold">📁 {f}</button>
               {canManage && <button type="button" onClick={() => deleteFolder(f)} title={`Delete folder “${f}”`} aria-label={`Delete folder ${f}`} className="py-1 pl-1 pr-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
             </span>
           ))}
+        </div>
+      )}
+      {folderFilter && (
+        <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 pl-1">
+          <span className="text-[11px] font-bold text-[var(--ink-3)]">In “{folderFilter}”:</span>
+          {([["all", "All"], ["post", "Posts"], ["newsletter", "Newsletters"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setFolderKind(k)} className="rounded-full border px-2.5 py-0.5 text-[11px] font-bold" style={folderKind === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
         </div>
       )}
 
@@ -354,6 +383,36 @@ export function NewsfeedApp() {
 
       {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} onClose={() => setDraft(null)} onPublish={publish} />}
       {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialCompany={nlCompany} initialMeta={nlOpen.meta} listings={listings} coupons={coupons} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
+      {pending && <PostCountdown label={pending.label} onSend={() => { const run = pending.run; setPending(null); run(); }} onCancel={() => setPending(null)} />}
+    </div>
+  );
+}
+
+// A big, unmissable 5-second countdown before anything goes live to families.
+// Tap Cancel any time in those 5 seconds and nothing is sent.
+function PostCountdown({ label, onSend, onCancel }: { label: string; onSend: () => void; onCancel: () => void }) {
+  const [left, setLeft] = useState(5);
+  useEffect(() => {
+    const t = setInterval(() => setLeft((n) => (n <= 1 ? 0 : n - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => { if (left === 0) onSend(); }, [left, onSend]);
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0b1020]/80 p-6 text-center backdrop-blur-sm" style={LIGHT_PALETTE}>
+      <style>{`@keyframes cd-ring{from{stroke-dashoffset:0}to{stroke-dashoffset:339}}@keyframes cd-pop{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}`}</style>
+      <div className="text-[15px] font-bold uppercase tracking-[0.18em] text-white/80">{label}</div>
+      <div className="relative my-6 h-[220px] w-[220px]" style={{ animation: "cd-pop .3s ease both" }}>
+        <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="8" />
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" strokeDasharray="339" style={{ animation: "cd-ring 5s linear forwards" }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[110px] font-black leading-none text-white" style={{ fontVariantNumeric: "tabular-nums" }}>{left}</span>
+        </div>
+      </div>
+      <div className="text-[14px] text-white/85">Going to families in <b>{left}</b> second{left === 1 ? "" : "s"}…</div>
+      <button type="button" onClick={onCancel} className="mt-6 rounded-full bg-white px-10 py-4 text-[18px] font-black text-[#0b1020] shadow-xl transition hover:scale-105 active:scale-95">✋ Cancel</button>
+      <div className="mt-3 text-[12px] text-white/60">Tap Cancel to stop — nothing is sent until the count reaches zero.</div>
     </div>
   );
 }
@@ -390,6 +449,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
         <div className="p-3.5 pt-2"><NewsletterView data={p.newsletter} /></div>
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">
           <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
+          {p.ref && <span className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">🔖 {p.ref}</span>}
           <span>Seen {p.seen ?? 0} · ♥ {p.reactions ?? 0}</span>
           {canManage && onMove && (
             <label className="flex items-center gap-1">📁
@@ -428,6 +488,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
 
         <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-2.5 text-[11px] text-[var(--ink-3)]">
           <span>{p.postedByName} · {when(p.createdAt)}{p.editedAt ? " · edited" : ""}</span>
+          {p.ref && <span className="rounded bg-[var(--panel)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">🔖 {p.ref}</span>}
           <span className="flex items-center gap-2.5">
             <span title="Seen / acknowledged">Seen {p.seen ?? 0}</span>
             {p.react !== false && <span title="Reactions">♥ {p.reactions ?? 0}</span>}
@@ -627,6 +688,10 @@ function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish 
                 </div>
               )}
             </div>
+          ))}
+
+          {field("Save as (a name to find it later)", (
+            <><input value={draft.ref} onChange={(e) => set({ ref: e.target.value })} placeholder={`e.g. ${draft.title.trim() || "Summer camp reminder"}`} className={inputCls} /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Just for your search — families don’t see this. Set it now and it’s saved even if you send by email.</span></>
           ))}
 
           {field("Folder (optional)", (
