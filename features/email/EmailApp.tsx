@@ -100,9 +100,13 @@ export function EmailApp() {
   // subject + body stashed in localStorage. Read once on first render.
   const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string; html?: string; newsletter?: Newsletter } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
   const [docHtml] = useState<string>(() => nlDraft?.html ?? "");
+  const [mode, setMode] = useState<"embed" | "attach">("embed");
+  const [families, setFamilies] = useState<{ email: string; name: string }[]>([]);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [recipOpen, setRecipOpen] = useState(false);
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(nlDraft ? "Ready to send — the designed version is embedded; the text below is the plain-text fallback." : null);
+  const [ok, setOk] = useState<string | null>(null);
   const [audience, setAudience] = useState<"all" | "one">(presetTo ? "one" : "all");
   const [to, setTo] = useState(presetTo);
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
@@ -147,18 +151,28 @@ export function EmailApp() {
   useEffect(() => { refresh(); }, [refresh]);
   // Consume the newsletter hand-off once so it doesn't re-fill on a later visit.
   useEffect(() => { try { localStorage.removeItem("aos.email.draft.v1"); } catch { /* private mode */ } }, []);
-  useEffect(() => { apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); }, []);
+  const loadRecipients = useCallback(() => { apiGet<{ count: number; families?: { email: string; name: string }[] }>("/api/emails/recipients").then((r) => { setReach(r.count); setFamilies(r.families ?? []); }).catch(() => {}); }, []);
+  useEffect(() => { loadRecipients(); }, [loadRecipients]);
   useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
-  useRealtime(["emails", "bookings", "moments"], () => { refresh(); apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
+  useRealtime(["emails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
+  const included = families.filter((f) => !excluded.has(f.email));
+  const reachCount = families.length ? included.length : reach ?? 0;
 
   async function send() {
     if (!subject.trim() || !body.trim()) { setError("A subject and a message are required."); return; }
     if (audience === "one" && !to.trim()) { setError("Enter a recipient address."); return; }
-    const count = audience === "one" ? 1 : reach ?? 0;
+    const count = audience === "one" ? 1 : reachCount;
+    if (count === 0) { setError("No families selected to send to."); return; }
     if (!confirm(audience === "one" ? `Send this email to ${to}?` : `Send this email to ${count} famil${count === 1 ? "y" : "ies"}?`)) return;
     setSending(true); setError(null); setOk(null);
     try {
-      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", { subject, body, html: docHtml || undefined, audience, to: audience === "one" ? to : undefined });
+      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", {
+        subject, body,
+        html: docHtml && mode === "embed" ? docHtml : undefined,
+        audience,
+        to: audience === "one" ? to : undefined,
+        recipients: audience === "all" && families.length ? included.map((f) => f.email) : undefined,
+      });
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.`);
       setSubject(""); setBody(""); setTo(""); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
@@ -177,24 +191,46 @@ export function EmailApp() {
           <div>
             <FieldLabel>Audience</FieldLabel>
             <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one")} className="w-full">
-              <option value="all">All families{reach != null ? ` (${reach})` : ""}</option>
+              <option value="all">All families ({reachCount})</option>
               <option value="one">A single address</option>
             </Select>
           </div>
           {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
         </div>
+        {audience === "all" && families.length > 0 && (
+          <div className="mt-2">
+            <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} Review the {reachCount} famil{reachCount === 1 ? "y" : "ies"} who’ll get this</button>
+            {recipOpen && (
+              <div className="mt-1.5 max-h-56 divide-y divide-[var(--line)] overflow-auto rounded-lg border border-[var(--line)]">
+                {families.map((f) => { const on = !excluded.has(f.email); return (
+                  <div key={f.email} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px]" style={on ? undefined : { opacity: 0.5 }}>
+                    <span className="min-w-0 flex-1 truncate"><b>{f.name}</b> <span className="text-[var(--ink-3)]">{f.email}</span></span>
+                    <button type="button" onClick={() => setExcluded((s) => { const n = new Set(s); if (on) n.add(f.email); else n.delete(f.email); return n; })} className="flex-none rounded-md border px-2 py-0.5 text-[11px] font-bold" style={on ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }}>{on ? "Remove" : "Add back"}</button>
+                  </div>
+                ); })}
+              </div>
+            )}
+          </div>
+        )}
         {docHtml && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[12.5px]">
-            <span className="font-bold text-[#1d3a8f]">Designed version embedded ✓</span>
-            <span className="text-[var(--ink-3)]">Families get the full designed layout (with the text below as a fallback).</span>
-            <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF to attach</button>
+          <div className="mt-2.5 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
+            <div className="mb-1.5 text-[12px] font-extrabold text-[#1d3a8f]">How should families get the designed version?</div>
+            <div className="flex flex-wrap gap-2">
+              {([["embed", "📧 Embed inside the email"], ["attach", "📎 Attach as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border px-3 py-1.5 text-[12.5px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
+              {mode === "embed"
+                ? <span>The full designed layout appears in the email body; the text below is the plain-text fallback.</span>
+                : <span>Download the PDF to attach. <b className="text-[#8a6d1a]">Automatic file-attach is a backend step — for now grab the PDF here.</b></span>}
+              <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF</button>
+            </div>
           </div>
         )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5"><FieldLabel>Message</FieldLabel><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" /></div>
         <div className="mt-3 flex items-center gap-3">
-          <Button variant="primary" onClick={send} disabled={sending}>{sending ? "Sending…" : audience === "one" ? "Send email" : `Send to ${reach ?? 0} famil${reach === 1 ? "y" : "ies"}`}</Button>
-          {audience === "all" && reach === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">No booked families to email yet.</span>}
+          <Button variant="primary" onClick={send} disabled={sending}>{sending ? "Sending…" : audience === "one" ? "Send email" : `Send to ${reachCount} famil${reachCount === 1 ? "y" : "ies"}`}</Button>
+          {audience === "all" && reachCount === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">No booked families to email yet.</span>}
         </div>
       </Card>
 

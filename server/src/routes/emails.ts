@@ -19,6 +19,7 @@ const sendSchema = z.object({
   html: z.string().max(400_000).optional(),            // pre-rendered HTML (a designed post/newsletter) — sent as-is
   audience: z.enum(["all", "one"]).default("all"),
   to: z.string().trim().email().max(160).optional(),
+  recipients: z.array(z.string().trim().email()).max(2000).optional(), // explicit "all" list (operator removed some)
   dryRun: z.boolean().default(false),
 }).refine((s) => s.audience !== "one" || !!s.to, { message: "Provide a recipient address for a single email" });
 
@@ -33,28 +34,30 @@ function opScope(req: Request, res: Response): string | null {
   return auth.tenantId;
 }
 
-// The distinct family (booker) emails for a tenant — everyone who's booked and
-// isn't cancelled/declined. This is the "all families" audience.
-async function familyEmails(tenantId: string): Promise<string[]> {
+// The distinct families (booker name + email) for a tenant — everyone who's
+// booked and isn't cancelled/declined. This is the "all families" audience.
+async function familyRecipients(tenantId: string): Promise<{ email: string; name: string }[]> {
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
-  const set = new Set<string>();
+  const map = new Map<string, string>(); // email → booker name
   for (const d of snap.docs) {
-    const b = d.data() as { email?: string; status?: string };
+    const b = d.data() as { email?: string; booker?: string; status?: string };
     if (!b.email || b.status === "Cancelled" || b.status === "Declined") continue;
-    set.add(b.email.toLowerCase());
+    const e = b.email.toLowerCase();
+    if (!map.has(e)) map.set(e, (b.booker || "").trim() || e);
   }
-  return [...set];
+  return [...map.entries()].map(([email, name]) => ({ email, name }));
 }
+const familyEmails = async (tenantId: string) => (await familyRecipients(tenantId)).map((r) => r.email);
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
 const bodyHtml = (body: string) => `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">${esc(body).replace(/\n/g, "<br>")}</div>`;
 
-// GET /api/emails/recipients — how many families the "all" blast would reach.
+// GET /api/emails/recipients — the families the "all" blast would reach (name + email).
 emails.get("/recipients", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
-  const list = await familyEmails(tenantId);
-  res.json({ count: list.length, sample: list.slice(0, 20) });
+  const list = await familyRecipients(tenantId);
+  res.json({ count: list.length, families: list, sample: list.slice(0, 20).map((r) => r.email) });
 });
 
 // GET /api/emails — the send history (operators).
@@ -75,7 +78,11 @@ emails.post("/send", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const input = parsed.data;
 
-  const recipients = input.audience === "one" ? [input.to!.toLowerCase()] : await familyEmails(auth.tenantId);
+  const recipients = input.audience === "one"
+    ? [input.to!.toLowerCase()]
+    : input.recipients?.length
+      ? [...new Set(input.recipients.map((e) => e.toLowerCase()))]
+      : await familyEmails(auth.tenantId);
   if (recipients.length === 0) { res.status(400).json({ error: "No families to email yet" }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `Too many recipients (${recipients.length}) — max ${MAX_RECIPIENTS}` }); return; }
 
