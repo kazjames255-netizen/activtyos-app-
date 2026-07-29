@@ -346,9 +346,8 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
             </div>
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour</div>
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex-none rounded-full" style={{ background: p.accent, border: "1px solid rgba(0,0,0,.1)" }} />
-                <select value={nl.palette} onChange={(e) => setNl((n) => ({ ...n, palette: e.target.value }))} className={inputCls}>{NL_PALETTES.map((pl) => <option key={pl.id} value={pl.id}>{pl.name}</option>)}</select>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {NL_PALETTES.map((pl) => <button key={pl.id} type="button" title={pl.name} onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} className="h-7 w-7 rounded-full" style={{ background: pl.accent, boxShadow: nl.palette === pl.id ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
               </div>
             </div>
             <div>
