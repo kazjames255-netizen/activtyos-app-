@@ -8,6 +8,7 @@ import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { printNewsletter, type Newsletter } from "@/features/newsfeed/newsletter";
 
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
@@ -89,7 +90,8 @@ export function EmailApp() {
   const presetTo = searchParams.get("to") ?? "";
   // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
   // subject + body stashed in localStorage. Read once on first render.
-  const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
+  const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string; newsletter?: Newsletter } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
+  const [nlAttach] = useState<Newsletter | null>(() => nlDraft?.newsletter ?? null);
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(nlDraft ? "Your newsletter is ready to send — review the subject and message, then send to your families." : null);
@@ -173,6 +175,13 @@ export function EmailApp() {
           </div>
           {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
         </div>
+        {nlAttach && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[12.5px]">
+            <span className="font-bold text-[#1d3a8f]">Newsletter ready</span>
+            <span className="text-[var(--ink-3)]">— the title is your subject and the text is embedded in the message below.</span>
+            <button type="button" onClick={() => printNewsletter(nlAttach)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF to attach</button>
+          </div>
+        )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5"><FieldLabel>Message</FieldLabel><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={7} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" /></div>
         <div className="mt-3 flex items-center gap-3">

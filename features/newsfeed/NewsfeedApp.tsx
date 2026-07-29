@@ -183,7 +183,7 @@ export function NewsfeedApp() {
       if (editId) await api(`/api/posts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
       if (channel === "email" || channel === "both") {
-        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl) })); } catch { /* private mode */ }
+        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl), newsletter: nl })); } catch { /* private mode */ }
         setNlOpen(null); router.push(`/${portal}/email`); return;
       }
       setNlOpen(null); setError(null); refresh();
