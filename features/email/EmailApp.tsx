@@ -736,6 +736,35 @@ function SignatureManager({ settings, save, onClose }: { settings: TenantSetting
   );
 }
 
+function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void> }) {
+  const p = settings.emailPrefs ?? {};
+  const sigs = settings.emailSignatures ?? [];
+  const setP = (patch: Partial<NonNullable<TenantSettings["emailPrefs"]>>) => save({ settings: { ...settings, emailPrefs: { ...p, ...patch } } });
+  const chip = (on: boolean) => on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" };
+  return (
+    <div className="flex max-w-2xl flex-col gap-3">
+      <Card className="p-4">
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">Undo send</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">A grace period after you hit Send where you can still pull it back before it goes.</p>
+        <div className="flex flex-wrap gap-1.5">{([[0, "Off"], [5, "5s"], [10, "10s"], [20, "20s"], [30, "30s"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ undoSeconds: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.undoSeconds ?? 5) === v)}>{l}</button>)}</div>
+      </Card>
+      <Card className="p-4">
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">Signature defaults</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">Which signature is pre-selected. Manage the signatures themselves on the Compose tab.</p>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <div><FieldLabel>On new emails</FieldLabel><Select value={settings.defaultSignatureId || "none"} onChange={(e) => save({ settings: { ...settings, defaultSignatureId: e.target.value === "none" ? "" : e.target.value } })} className="w-full"><option value="none">No signature</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
+          <div><FieldLabel>On reply / forward</FieldLabel><Select value={p.replySignatureId || "none"} onChange={(e) => setP({ replySignatureId: e.target.value === "none" ? "" : e.target.value })} className="w-full"><option value="none">No signature</option>{sigs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
+        </div>
+      </Card>
+      <Card className="p-4">
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">Default reply behaviour</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">Which button leads when you open a message in the inbox.</p>
+        <div className="flex flex-wrap gap-1.5">{([["reply", "Reply"], ["replyAll", "Reply all"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ defaultReply: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.defaultReply ?? "reply") === v)}>{l}</button>)}</div>
+      </Card>
+    </div>
+  );
+}
+
 export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
@@ -763,6 +792,9 @@ export function EmailApp() {
   const [sigMgr, setSigMgr] = useState(false);
   const [schedOpen, setSchedOpen] = useState(false);
   const [schedAt, setSchedAt] = useState("");
+  const [undoSend, setUndoSend] = useState<{ payload: Record<string, unknown>; count: number; hadAttachments: boolean } | null>(null);
+  const [undoLeft, setUndoLeft] = useState(0);
+  const undoFired = useRef(false);
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -777,7 +809,7 @@ export function EmailApp() {
   const { settings, save } = useSettings();
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
   // the Inbox (the manual's default Email view).
-  type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose";
+  type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose" | "settings";
   const [tab, setTab] = useState<Tab>(nlDraft || presetTo ? "compose" : "inbox");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
@@ -885,28 +917,40 @@ export function EmailApp() {
     return [...new Set([...base, ...extraTo])].filter(Boolean);
   })();
 
-  async function send() {
+  // Fire the actual API send with a snapshotted payload, then clear the composer.
+  const dispatchSend = useCallback(async (payload: Record<string, unknown>, hadAttachments: boolean) => {
+    setSending(true); setError(null); setOk(null);
+    try {
+      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", payload);
+      setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${hadAttachments ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
+      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
+    finally { setSending(false); }
+  }, [refresh]);
+
+  // Undo-send window: tick down, then fire the queued send once (Undo cancels it).
+  useEffect(() => {
+    if (!undoSend) { undoFired.current = false; return; }
+    if (undoLeft > 0) { const t = setTimeout(() => setUndoLeft((n) => n - 1), 1000); return () => clearTimeout(t); }
+    if (!undoFired.current) { undoFired.current = true; const u = undoSend; setUndoSend(null); void dispatchSend(u.payload, u.hadAttachments); }
+  }, [undoSend, undoLeft, dispatchSend]);
+
+  function send() {
     const bodyText = htmlToText(body);
     if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
     if (audience === "one" && !to.trim() && extraTo.length === 0) { setError("Enter a recipient address."); return; }
     if (audience === "listing" && listingIds.length === 0) { setError("Pick at least one listing to email."); return; }
     const count = finalRecipients.length;
     if (count === 0) { setError("No recipients selected to send to."); return; }
+    const payload: Record<string, unknown> = {
+      subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
+      html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
+      audience: "all", recipients: finalRecipients, cc: cc.trim() || undefined, bcc: bcc.trim() || undefined,
+    };
+    const secs = settings.emailPrefs?.undoSeconds ?? 5;
+    if (secs > 0) { setError(null); setOk(null); setUndoSend({ payload, count, hadAttachments: attachments.length > 0 }); setUndoLeft(secs); return; }
     if (!confirm(`Send this email to ${count} recipient${count === 1 ? "" : "s"}?`)) return;
-    setSending(true); setError(null); setOk(null);
-    try {
-      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", {
-        subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
-        html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
-        audience: "all",
-        recipients: finalRecipients,
-        cc: cc.trim() || undefined,
-        bcc: bcc.trim() || undefined,
-      });
-      setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${attachments.length ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
-      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); refresh();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
-    finally { setSending(false); }
+    void dispatchSend(payload, attachments.length > 0);
   }
 
   // Schedule the email for later. Held in a local queue with the composed content;
@@ -924,18 +968,20 @@ export function EmailApp() {
 
   return (
     <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place.">
-      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"]]} value={tab} onChange={setTab} />
+      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
       {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
+      {tab === "settings" && <EmailPrefs settings={settings} save={save} />}
 
       {tab === "compose" && (<>
+      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#dbe6fb] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-white px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">↩ Undo</button></div>}
       <Card className="mb-4 p-4">
         <div className="grid gap-2.5 sm:grid-cols-2">
           <div>

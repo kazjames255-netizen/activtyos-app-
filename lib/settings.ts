@@ -524,6 +524,12 @@ export interface TenantSettings {
   emailSignatures?: { id: string; name: string; html: string }[];
   /** Which signature is pre-selected on a new email ("" / absent = none). */
   defaultSignatureId?: string;
+  /** Email preferences (Email page → Settings tab). */
+  emailPrefs?: {
+    undoSeconds?: number;              // send-cancellation window: 0 (off) | 5 | 10 | 20 | 30
+    defaultReply?: "reply" | "replyAll"; // which reply action leads in the inbox
+    replySignatureId?: string;         // signature to use on replies/forwards ("" = none)
+  };
 
   /** Inventory — reusable categories, storage locations and seasons. */
   inventory?: {
@@ -838,6 +844,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   },
   emailAssets: { quotes: [], images: [] },
   emailSignatures: [],
+  emailPrefs: { undoSeconds: 5, defaultReply: "reply" },
   registers: {
     timestamps: true,
     fields: { contact: true, emergency: true, password: true, school: true },
@@ -905,6 +912,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
+    emailPrefs: { ...DEFAULT_SETTINGS.emailPrefs, ...(s.emailPrefs ?? {}) },
     staff: { ...DEFAULT_SETTINGS.staff, ...(s.staff ?? {}) },
     learning: { ...DEFAULT_SETTINGS.learning, ...(s.learning ?? {}) },
     meals: { ...DEFAULT_SETTINGS.meals, ...(s.meals ?? {}) },
