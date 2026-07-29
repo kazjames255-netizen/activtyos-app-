@@ -39,6 +39,15 @@ booked provider regardless of scope. Enforce it: for a listing-scoped post, only
 deliver to parents who have a booking on that listing. (Manual also has **site**
 scope for company/franchise — not built here; there's no sites source wired yet.)
 
+## 4b. Newsletter → email is plain text
+The newsletter builder's **"Email to parents"** action files the newsletter as a
+draft, renders a **plain-text** version (`newsletterToText`), and hands it to the
+Email area (`/api/emails/send`, which HTML-escapes the body). A true **HTML
+newsletter email** (the designed layout, images, palette) needs the mailer +
+`/api/emails/send` to accept and send raw HTML (skip the `esc()` wrap) and the
+front-end to pass `NewsletterView` rendered to HTML. Until then families get a
+readable text version.
+
 ## 5. Images
 Newsletter/logo images upload via the existing `POST /api/uploads` (base64 →
 `/api/images/:id`), which is Firestore-doc-backed. Same Storage-bucket migration
