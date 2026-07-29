@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
 import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
@@ -131,6 +132,11 @@ export function NewsfeedApp() {
   const [error, setError] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
+  const [coupons, setCoupons] = useState<{ code: string; desc: string }[]>([]);
+  const { settings } = useSettings();
+  // Seed a new newsletter's banner/footer with the provider's own details (name
+  // auto-fills from onboarding; every field stays editable in the builder).
+  const nlCompany = useMemo(() => ({ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }), [settings]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string; meta?: NlMeta } | null>(null);
   const [filter, setFilter] = useState<"all" | Tpl | "draft" | "scheduled" | "archived">("all");
@@ -144,6 +150,7 @@ export function NewsfeedApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing" })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ code: string; type: string; value: number; expiry?: string; active?: boolean }[]>("/api/discounts").then((cs) => setCoupons(cs.filter((c) => c.active !== false && c.code).map((c) => { const v = c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `£${c.value} off per child` : `£${c.value} off`; return { code: c.code, desc: c.expiry ? `${v} — until ${c.expiry}` : v }; }))).catch(() => {}); }, []);
   useRealtime(["posts"], refresh);
 
   const all = useMemo(() => posts ?? [], [posts]);
@@ -311,7 +318,7 @@ export function NewsfeedApp() {
       )}
 
       {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} onClose={() => setDraft(null)} onPublish={publish} />}
-      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialMeta={nlOpen.meta} listings={listings} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
+      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialCompany={nlCompany} initialMeta={nlOpen.meta} listings={listings} coupons={coupons} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
     </div>
   );
 }
