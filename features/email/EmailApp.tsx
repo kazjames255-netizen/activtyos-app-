@@ -189,7 +189,8 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
   enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "New enquiries" },
   system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
 };
-interface Mail { id: string; from: string; fromEmail?: string; to?: string; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" }
+type MailFolder = "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" | "snoozed" | "trash";
+interface Mail { id: string; from: string; fromEmail?: string; to?: string; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: MailFolder }
 // Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
 const DEMO_MAIL: Mail[] = [
   { id: "m1", from: "Sarah Khan", fromEmail: "sarah.khan@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", body: "Just so you have it on file — Jack’s now also reacting to sesame as well as his existing nut allergy. His EpiPen is in date. Happy to send the updated care plan if useful.", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"], quickReplies: ["Thanks — noted on Jack’s file.", "Could you send the updated care plan?", "We’ll make sure all staff are aware."] },
@@ -200,9 +201,9 @@ const DEMO_MAIL: Mail[] = [
   { id: "m6", from: "ActivityOS", fromEmail: "no-reply@activityos.uk", to: "bookings@apf", tag: "System", subject: "Booking confirmed — APF-10293 (Jack Khan)", preview: "A new booking has been confirmed and paid.", body: "A new booking has been confirmed and paid: APF-10293 — Jack Khan, Summer Multi-Activity, week of 12 Aug.", time: "4 Jun", starred: true, labels: ["system"] },
   { id: "m7", from: "Aisha Patel", fromEmail: "aisha.patel@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Welcome to Summer Camp — what to bring", preview: "Hi Aisha, we can’t wait to see you! Here’s what to pack…", body: "Hi Aisha, we can’t wait to see you! Here’s what to pack: sun cream, a water bottle, a packed lunch and trainers.", time: "2 Jun", starred: true, quickReplies: ["You’re welcome — see you Monday!", "Let us know if you have any questions.", "Anything else we can help with?"] },
 ];
-const FOLDERS: [string, string, number?][] = [
-  ["inbox", "Inbox", 2], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
-  ["drafts", "Drafts", 1], ["scheduled", "Scheduled", 1], ["spam", "Spam", 1], ["trash", "Trash"], ["all", "All mail"],
+const FOLDERS: [string, string][] = [
+  ["inbox", "Inbox"], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
+  ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
 ];
 
 function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; history: Sent[] | null }) {
@@ -212,31 +213,39 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
   const [density, setDensity] = useState<"cozy" | "compact">("cozy");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Mail | null>(null);
+  const [showContact, setShowContact] = useState(false);
 
   const patch = (id: string, p: Partial<Mail>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const drop = (id: string) => setItems((xs) => xs.filter((x) => x.id !== id));
+  const move = (m: Mail, f: MailFolder) => { patch(m.id, { folder: f }); setOpen(null); };
   const openMail = (m: Mail) => { if (m.unread) patch(m.id, { unread: false }); setOpen(m); };
-  const archive = (m: Mail) => { patch(m.id, { folder: "archive" }); setOpen(null); };
-  const del = (m: Mail) => { drop(m.id); setOpen(null); };
+  const archive = (m: Mail) => move(m, "archive");
+  const snooze = (m: Mail) => move(m, "snoozed");
+  const spam = (m: Mail) => move(m, "spam");
+  const restore = (m: Mail) => move(m, "inbox");
+  // First delete → Trash (recoverable). Deleting from Trash removes it for good.
+  const del = (m: Mail) => { if ((m.folder ?? "inbox") === "trash") drop(m.id); else move(m, "trash"); };
   const reply = (m: Mail) => { setOpen(null); onReply(m); };
   const forward = (m: Mail) => { setOpen(null); onForward(m); };
   const markUnread = (m: Mail) => { patch(m.id, { unread: true }); setOpen(null); };
-  const spam = (m: Mail) => { patch(m.id, { folder: "spam" }); setOpen(null); };
   const quickReply = (m: Mail, text: string) => { setOpen(null); onQuickReply(m, text); };
 
   // Real sent history shows in the Sent folder as mail rows.
   const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: "You", subject: h.subject, preview: h.audience === "one" ? "Sent to 1 address" : `Sent to ${h.recipientCount} families`, time: when(h.createdAt), folder: "sent" }));
   const pool = folder === "sent" ? sentMail : items;
   const inFolder = (m: Mail) => {
-    if (folder === "all") return m.folder !== "archive";
-    if (folder === "starred") return !!m.starred && m.folder !== "archive";
+    if (folder === "all") return m.folder !== "spam" && m.folder !== "trash";
+    if (folder === "starred") return !!m.starred && m.folder !== "spam" && m.folder !== "trash";
     if (folder === "inbox") return (m.folder ?? "inbox") === "inbox";
     return m.folder === folder;
   };
+  const restorable = folder === "archive" || folder === "snoozed" || folder === "spam" || folder === "trash";
   const list = pool.filter(inFolder)
     .filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
     .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); });
-  const count = (k: string) => k === "sent" ? sentMail.length : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length : k === "starred" ? items.filter((m) => m.starred && m.folder !== "archive").length : undefined;
+  const count = (k: string) => k === "sent" ? sentMail.length : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length
+    : k === "starred" ? items.filter((m) => m.starred && m.folder !== "spam" && m.folder !== "trash").length
+    : (k === "archive" || k === "snoozed" || k === "spam" || k === "trash") ? items.filter((m) => m.folder === k).length || undefined : undefined;
   const pad = density === "cozy" ? "py-3" : "py-1.5";
   return (
     <div>
@@ -273,9 +282,12 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
                 {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
                 <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
               </button>
-              {folder !== "sent" && <>
+              {folder === "sent" ? null : restorable ? <>
+                <button type="button" onClick={() => restore(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Move to Inbox">↩</button>
+                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title={folder === "trash" ? "Delete forever" : "Move to Trash"}>🗑</button>
+              </> : <>
                 <button type="button" onClick={() => archive(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Archive">🗄</button>
-                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title="Delete">🗑</button>
+                <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title="Move to Trash">🗑</button>
               </>}
             </div>
           ))}
@@ -291,14 +303,15 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
               <div className="flex flex-wrap items-center gap-2"><span className="text-[19px] font-extrabold text-[var(--ink)]">{o.subject}</span>{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}</div>
               <div className="mt-3 flex flex-wrap items-center gap-2 overflow-x-auto">
                 <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
-                <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>
-                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>⏰ Snooze</button>
+                {o.folder && o.folder !== "inbox" && o.folder !== "sent"
+                  ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
+                  : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
+                <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back to your inbox in the Snoozed folder">⏰ Snooze</button>
                 <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
-                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>🏷 Label</button>
                 <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
-                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[#fdebec] hover:text-[#c02636]">🗑 Delete</button>
-                {o.tag && <span className="ml-auto flex-none text-[12.5px] text-[var(--ink-3)]">{o.tag}</span>}
-                <span className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">◐ Contact</span>
+                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[#fdebec] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+                {o.tag && <span className="ml-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]" title="Which contact list this sender belongs to">🏷 {o.tag}</span>}
+                <button type="button" onClick={() => setShowContact((v) => !v)} className={toolBtn} title="Show this sender's contact card">◐ Contact</button>
               </div>
             </div>
             <div className="px-5 py-4">
@@ -307,6 +320,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
                 <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? ` · to ${o.to}` : ""}</div></div>
                 <span className="flex-none text-[12.5px] text-[var(--ink-3)]">{o.time}</span>
               </div>
+              {showContact && <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px]"><div className="font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]">List: <b>{o.tag}</b></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Full contact history opens in the CRM once linked (backend).</div></div>}
               <p className="mt-3 text-[14px] leading-relaxed text-[var(--ink-2)]">{o.body ?? o.preview}</p>
               {o.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
