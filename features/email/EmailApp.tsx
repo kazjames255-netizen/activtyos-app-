@@ -189,23 +189,23 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
   enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "New enquiries" },
   system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
 };
-interface Mail { id: string; from: string; subject: string; preview: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" }
+interface Mail { id: string; from: string; fromEmail?: string; to?: string; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" }
 // Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
 const DEMO_MAIL: Mail[] = [
-  { id: "m1", from: "Sarah Khan", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"] },
-  { id: "m2", from: "Milton Keynes Council", subject: "HAF claim — May sessions (PO #MK-4471)", preview: "Please find the signed PO attached for May’s funded places.", time: "Mon", starred: true, thread: true, labels: ["haf"], attachment: "PO-MK-4471.pdf" },
-  { id: "m3", from: "Fuel Catering Ltd", subject: "Re: Lunch order cut-off this week", preview: "Cut-off is 6pm the day before — send final numbers by then.", time: "Tue", starred: true },
-  { id: "m4", from: "Dani Obi", subject: "Enquiry: places for August football camp?", preview: "Hi — do you have any spaces left for the week of the 12th?", time: "08:02", unread: true, starred: true, thread: true, labels: ["enquiry"] },
-  { id: "m5", from: "Marcus B.", subject: "Shift swap request — Friday PM", preview: "Could I swap my Friday afternoon with Priya this week?", time: "Wed", starred: true },
-  { id: "m6", from: "ActivityOS", subject: "Booking confirmed — APF-10293 (Jack Khan)", preview: "A new booking has been confirmed and paid.", time: "4 Jun", starred: true, labels: ["system"] },
-  { id: "m7", from: "Aisha Patel", subject: "Welcome to Summer Camp — what to bring", preview: "Hi Aisha, we can’t wait to see you! Here’s what to pack…", time: "2 Jun", starred: true },
+  { id: "m1", from: "Sarah Khan", fromEmail: "sarah.khan@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", body: "Just so you have it on file — Jack’s now also reacting to sesame as well as his existing nut allergy. His EpiPen is in date. Happy to send the updated care plan if useful.", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"], quickReplies: ["Thanks — noted on Jack’s file.", "Could you send the updated care plan?", "We’ll make sure all staff are aware."] },
+  { id: "m2", from: "MK Council HAF Team", fromEmail: "haf@milton-keynes.gov.uk", to: "bookings@apf", tag: "Schools & councils", subject: "HAF claim — May sessions (PO #MK-4471)", preview: "Please find the signed PO attached for May’s funded places.", body: "Please find the approved PO attached for the May HAF sessions. Submit your claim with attendance evidence by month end.", time: "Mon", starred: true, thread: true, labels: ["haf"], attachment: "PO-MK-4471.pdf", attachmentSize: "84 KB", quickReplies: ["Thank you — received, we’ll action this.", "Could you confirm the deadline?", "Invoice to follow shortly."] },
+  { id: "m3", from: "Fuel Catering Ltd", fromEmail: "orders@fuelcatering.co.uk", to: "bookings@apf", tag: "Suppliers", subject: "Re: Lunch order cut-off this week", preview: "Cut-off is 6pm the day before — send final numbers by then.", body: "Cut-off is 6pm the day before — send final numbers by then and we’ll have it prepped for the morning.", time: "Tue", starred: true, quickReplies: ["Thanks — will confirm numbers by 5pm.", "Can we push the cut-off to 7pm?", "Noted, thank you."] },
+  { id: "m4", from: "Dani Obi", fromEmail: "dani.obi@outlook.com", to: "bookings@apf", tag: "Parents", subject: "Enquiry: places for August football camp?", preview: "Hi — do you have any spaces left for the week of the 12th?", body: "Hi! Do you still have spaces for the August football camp for a 10-year-old? And do you offer sibling discounts? Thanks, Dani.", time: "08:02", unread: true, starred: true, thread: true, labels: ["enquiry"], quickReplies: ["Thanks — noted, all set!", "We’ll keep an eye out, thank you.", "Could you confirm your booking reference?"] },
+  { id: "m5", from: "Marcus B.", fromEmail: "marcus.b@apf.staff", to: "bookings@apf", tag: "Team", subject: "Shift swap request — Friday PM", preview: "Could I swap my Friday afternoon with Priya this week?", body: "Could I swap my Friday afternoon with Priya this week? She’s happy to cover — just needs your sign-off.", time: "Wed", starred: true, quickReplies: ["Approved — I’ll update the rota.", "Let me check cover and come back to you.", "Can you both confirm in writing?"] },
+  { id: "m6", from: "ActivityOS", fromEmail: "no-reply@activityos.uk", to: "bookings@apf", tag: "System", subject: "Booking confirmed — APF-10293 (Jack Khan)", preview: "A new booking has been confirmed and paid.", body: "A new booking has been confirmed and paid: APF-10293 — Jack Khan, Summer Multi-Activity, week of 12 Aug.", time: "4 Jun", starred: true, labels: ["system"] },
+  { id: "m7", from: "Aisha Patel", fromEmail: "aisha.patel@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Welcome to Summer Camp — what to bring", preview: "Hi Aisha, we can’t wait to see you! Here’s what to pack…", body: "Hi Aisha, we can’t wait to see you! Here’s what to pack: sun cream, a water bottle, a packed lunch and trainers.", time: "2 Jun", starred: true, quickReplies: ["You’re welcome — see you Monday!", "Let us know if you have any questions.", "Anything else we can help with?"] },
 ];
 const FOLDERS: [string, string, number?][] = [
   ["inbox", "Inbox", 2], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
   ["drafts", "Drafts", 1], ["scheduled", "Scheduled", 1], ["spam", "Spam", 1], ["trash", "Trash"], ["all", "All mail"],
 ];
 
-function InboxView({ onCompose, onReply, onForward, history }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; history: Sent[] | null }) {
+function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; history: Sent[] | null }) {
   const [items, setItems] = useState<Mail[]>(() => DEMO_MAIL.map((m) => ({ ...m, folder: m.folder ?? "inbox" })));
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
@@ -220,6 +220,9 @@ function InboxView({ onCompose, onReply, onForward, history }: { onCompose: () =
   const del = (m: Mail) => { drop(m.id); setOpen(null); };
   const reply = (m: Mail) => { setOpen(null); onReply(m); };
   const forward = (m: Mail) => { setOpen(null); onForward(m); };
+  const markUnread = (m: Mail) => { patch(m.id, { unread: true }); setOpen(null); };
+  const spam = (m: Mail) => { patch(m.id, { folder: "spam" }); setOpen(null); };
+  const quickReply = (m: Mail, text: string) => { setOpen(null); onQuickReply(m, text); };
 
   // Real sent history shows in the Sent folder as mail rows.
   const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: "You", subject: h.subject, preview: h.audience === "one" ? "Sent to 1 address" : `Sent to ${h.recipientCount} families`, time: when(h.createdAt), folder: "sent" }));
@@ -279,28 +282,43 @@ function InboxView({ onCompose, onReply, onForward, history }: { onCompose: () =
         </div>
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox actions (star, read, archive, delete, reply, forward) work locally. Sent shows your real send history. Receiving external email needs inbound mail set up — handed to the backend.</div>
-      {open && (
-        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[6vh]" onClick={() => setOpen(null)}>
+      {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+        const toolBtn = "flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]";
+        return (
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[5vh]" onClick={() => setOpen(null)}>
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
-              <span className="text-[16px] font-extrabold text-[var(--ink)]">{open.subject}</span>
-              {open.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
-              <button type="button" onClick={() => setOpen(null)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
+            <div className="border-b border-[var(--line)] px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2"><span className="text-[19px] font-extrabold text-[var(--ink)]">{o.subject}</span>{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}</div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 overflow-x-auto">
+                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
+                <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>
+                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>⏰ Snooze</button>
+                <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
+                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>🏷 Label</button>
+                <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
+                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[#fdebec] hover:text-[#c02636]">🗑 Delete</button>
+                {o.tag && <span className="ml-auto flex-none text-[12.5px] text-[var(--ink-3)]">{o.tag}</span>}
+                <span className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">◐ Contact</span>
+              </div>
             </div>
-            <div className="px-4 py-3 text-[13px] text-[var(--ink-2)]">
-              <div className="mb-2 font-bold text-[var(--ink)]">{open.from} <span className="font-normal text-[var(--ink-3)]">· {open.time}</span></div>
-              <p className="leading-relaxed">{open.preview}</p>
-              {open.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {open.attachment}</div>}
+            <div className="px-5 py-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials}</span>
+                <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? ` · to ${o.to}` : ""}</div></div>
+                <span className="flex-none text-[12.5px] text-[var(--ink-3)]">{o.time}</span>
+              </div>
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--ink-2)]">{o.body ?? o.preview}</p>
+              {o.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
-            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-3">
-              <button type="button" onClick={() => reply(open)} className="rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Reply</button>
-              <button type="button" onClick={() => forward(open)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↪ Forward</button>
-              <button type="button" onClick={() => archive(open)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🗄 Archive</button>
-              <button type="button" onClick={() => del(open)} className="rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">🗑 Delete</button>
+            {o.quickReplies?.length ? <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-5 py-3">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink-2)] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{qr}</button>)}</div> : null}
+            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-5 py-3">
+              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>↩ Reply</button>
+              <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↩ Reply all</button>
+              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↪ Forward</button>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
     </div>
   );
 }
@@ -717,7 +735,7 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); setSubject(`Re: ${m.subject}`); setBody(`\n\n———\n${m.from} wrote:\n${m.preview}`); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(`\n\n———\nForwarded from ${m.from}:\n${m.preview}`); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(text); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
       {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(t.body); setTab("compose"); }} />}
