@@ -16,6 +16,7 @@ const MAX_RECIPIENTS = 2000;
 const sendSchema = z.object({
   subject: z.string().trim().min(1).max(200),
   body: z.string().trim().min(1).max(20_000),
+  html: z.string().max(400_000).optional(),            // pre-rendered HTML (a designed post/newsletter) — sent as-is
   audience: z.enum(["all", "one"]).default("all"),
   to: z.string().trim().email().max(160).optional(),
   dryRun: z.boolean().default(false),
@@ -80,7 +81,9 @@ emails.post("/send", async (req, res) => {
 
   if (input.dryRun) { res.json({ dryRun: true, recipientCount: recipients.length, sample: recipients.slice(0, 20) }); return; }
 
-  const html = bodyHtml(input.body);
+  // A pre-rendered designed document (post/newsletter) is sent as-is; otherwise
+  // the plain-text body is wrapped. `body` is kept as the plain-text record.
+  const html = input.html && input.html.trim() ? input.html : bodyHtml(input.body);
   for (const to of recipients) void sendMail(to, input.subject, html);
 
   const doc = {

@@ -8,7 +8,15 @@ import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
-import { printNewsletter, type Newsletter } from "@/features/newsfeed/newsletter";
+import type { Newsletter } from "@/features/newsfeed/newsletter";
+
+// Open a designed document's HTML in a print window (browser "Save as PDF").
+function printDocHtml(html: string) {
+  const w = typeof window !== "undefined" ? window.open("", "_blank", "width=820,height=1060") : null;
+  if (!w) return;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Document</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:10mm}html,body{margin:0}body{font-family:system-ui,-apple-system,sans-serif;padding:12px}</style></head><body>${html}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.close();
+}
 
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
@@ -90,11 +98,11 @@ export function EmailApp() {
   const presetTo = searchParams.get("to") ?? "";
   // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
   // subject + body stashed in localStorage. Read once on first render.
-  const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string; newsletter?: Newsletter } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
-  const [nlAttach] = useState<Newsletter | null>(() => nlDraft?.newsletter ?? null);
+  const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string; html?: string; newsletter?: Newsletter } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
+  const [docHtml] = useState<string>(() => nlDraft?.html ?? "");
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(nlDraft ? "Your newsletter is ready to send — review the subject and message, then send to your families." : null);
+  const [ok, setOk] = useState<string | null>(nlDraft ? "Ready to send — the designed version is embedded; the text below is the plain-text fallback." : null);
   const [audience, setAudience] = useState<"all" | "one">(presetTo ? "one" : "all");
   const [to, setTo] = useState(presetTo);
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
@@ -150,7 +158,7 @@ export function EmailApp() {
     if (!confirm(audience === "one" ? `Send this email to ${to}?` : `Send this email to ${count} famil${count === 1 ? "y" : "ies"}?`)) return;
     setSending(true); setError(null); setOk(null);
     try {
-      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", { subject, body, audience, to: audience === "one" ? to : undefined });
+      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", { subject, body, html: docHtml || undefined, audience, to: audience === "one" ? to : undefined });
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.`);
       setSubject(""); setBody(""); setTo(""); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
@@ -175,11 +183,11 @@ export function EmailApp() {
           </div>
           {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
         </div>
-        {nlAttach && (
+        {docHtml && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[12.5px]">
-            <span className="font-bold text-[#1d3a8f]">Newsletter ready</span>
-            <span className="text-[var(--ink-3)]">— the title is your subject and the text is embedded in the message below.</span>
-            <button type="button" onClick={() => printNewsletter(nlAttach)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF to attach</button>
+            <span className="font-bold text-[#1d3a8f]">Designed version embedded ✓</span>
+            <span className="text-[var(--ink-3)]">Families get the full designed layout (with the text below as a fallback).</span>
+            <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF to attach</button>
           </div>
         )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>

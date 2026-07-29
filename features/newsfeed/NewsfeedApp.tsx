@@ -6,7 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
-import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, type Newsletter, type NlMeta } from "./newsletter";
+import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (operator) — announcements to families, built from templates. Each
@@ -53,6 +53,16 @@ function postToText(d: Draft): string {
   if (d.tpl === "event") { const e = [d.date, d.time, d.location].filter(Boolean).join(" · "); if (e) parts.push(e); }
   if (d.ctaKind !== "none" && d.ctaLabel) parts.push(`${d.ctaLabel}${d.ctaUrl ? `: ${d.ctaUrl}` : d.ctaTarget ? `: ${d.ctaTarget}` : ""}`);
   return parts.filter(Boolean).join("\n\n");
+}
+// Designed, email-safe HTML of a post — the "whole document" embedded in the email.
+function postToHtml(d: Draft): string {
+  const tpl = TPL[d.tpl];
+  const accent = d.colour || tpl.color;
+  const esc = (s?: string) => (s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+  const img = d.image ? `<img src="${d.image}" alt="" style="display:block;width:100%;max-width:600px" />` : `<div style="height:6px;background:${accent}"></div>`;
+  const ev = d.tpl === "event" && (d.date || d.time || d.location) ? `<div style="margin-top:12px;background:${accent};color:#fff;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px">${esc([d.date, d.time, d.location].filter(Boolean).join(" · "))}</div>` : "";
+  const cta = d.ctaKind !== "none" && d.ctaLabel ? `<div style="padding:0 24px 18px">${d.ctaUrl ? `<a href="${esc(d.ctaUrl)}" style="display:inline-block;text-decoration:none;` : `<span style="display:inline-block;`}background:${accent};color:#fff;font-weight:800;font-size:14px;padding:11px 22px;border-radius:8px">${esc(d.ctaLabel)}${d.ctaUrl ? "</a>" : "</span>"}</div>` : "";
+  return `<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#171534;border:1px solid #ece6f1;border-radius:12px;overflow:hidden">${img}<div style="padding:18px 24px 8px"><span style="display:inline-block;background:${accent};color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px">${esc(tpl.label)}</span>${d.title ? `<div style="font-size:23px;font-weight:800;line-height:1.15;margin-top:10px">${esc(d.title)}</div>` : ""}<div style="font-size:15px;line-height:1.6;margin-top:8px;white-space:pre-wrap">${esc(d.body)}</div>${ev}</div>${cta}</div>`;
 }
 // Open a printable window (browser "Save as PDF"), full A4 page, colours forced.
 function printPost(d: Draft) {
@@ -153,7 +163,7 @@ export function NewsfeedApp() {
       if (d.editId) await api(`/api/posts/${encodeURIComponent(d.editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
       if (channel === "email" || channel === "both") {
-        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: d.title.trim(), body: postToText(d) })); } catch { /* private mode */ }
+        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: d.title.trim(), body: postToText(d), html: postToHtml(d) })); } catch { /* private mode */ }
         setDraft(null); router.push(`/${portal}/email`); return;
       }
       setDraft(null); setError(null); refresh();
@@ -191,7 +201,7 @@ export function NewsfeedApp() {
       if (editId) await api(`/api/posts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
       if (channel === "email" || channel === "both") {
-        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl), newsletter: nl })); } catch { /* private mode */ }
+        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl), html: newsletterToHtml(nl), newsletter: nl })); } catch { /* private mode */ }
         setNlOpen(null); router.push(`/${portal}/email`); return;
       }
       setNlOpen(null); setError(null); refresh();
