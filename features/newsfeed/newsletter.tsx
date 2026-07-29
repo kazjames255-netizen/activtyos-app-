@@ -271,6 +271,10 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
   const [aiErr, setAiErr] = useState("");
   const p = paletteOf(nl.palette);
   const setBlock = (i: number, f: Partial<Block>) => setNl((n) => ({ ...n, blocks: n.blocks.map((b, j) => (j === i ? { ...b, ...f } : b)) }));
+  // Duplicate a content box (insert a copy right after it) so operators can add
+  // extra headings / paragraphs / images without picking a whole new layout.
+  const dupBlock = (i: number) => setNl((n) => ({ ...n, blocks: [...n.blocks.slice(0, i + 1), { ...n.blocks[i] }, ...n.blocks.slice(i + 1)] }));
+  const delBlock = (i: number) => setNl((n) => ({ ...n, blocks: n.blocks.filter((_, j) => j !== i) }));
   // Drag-to-move + zoom for a block's image (same crop model as posts).
   const bClampS = (v: number, z: number) => { const m = ((z - 1) / 2) * 100; return Math.max(-m, Math.min(m, v)); };
   const bDrag = useRef<{ i: number; sx: number; sy: number; x: number; y: number; w: number; h: number } | null>(null);
@@ -370,7 +374,13 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                   if (b.t === "banner" || b.t === "footer" || b.t === "divider") return null;
                   return (
                     <div key={i} className="rounded-lg border border-[var(--line)] p-2">
-                      <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t}</div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t}</span>
+                        <span className="flex items-center gap-2">
+                          <button type="button" onClick={() => dupBlock(i)} className="text-[11px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">Duplicate</button>
+                          <button type="button" onClick={() => delBlock(i)} className="text-[11px] font-bold text-[#c02636]">Remove</button>
+                        </span>
+                      </div>
                       <div className="space-y-1.5">
                         {(b.t === "hero" || b.t === "image") && (b.image ? (
                           <div>
