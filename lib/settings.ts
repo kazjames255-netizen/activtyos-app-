@@ -396,6 +396,37 @@ export interface TenantSettings {
     reviewRequests?: boolean;   // ask a parent to review after their LAST booked session
   };
 
+  /** Branding — a customer-facing accent colour. The logo + business/display name
+   *  live in `billing` / `providerName` (single source of truth); this just tints
+   *  customer pages. */
+  brandColor?: string;
+
+  /** Staff & workforce policy. Front-end preferences; the actual enforcement
+   *  (blocking an out-of-date DBS, gating who assigns staff) is backend — see
+   *  docs/settings-areas-handoff.md. */
+  staff?: {
+    assignByLeads?: boolean;      // only site managers/leads can assign staff to groups
+    requireDBS?: boolean;         // a valid DBS must be on file before a staff member works
+    requireCompliance?: boolean;  // key certificates (first aid, safeguarding) must be in date
+    defaultRatioTarget?: number;  // default staff:child ratio target
+    inviteMessage?: string;       // a note added to staff invite emails
+  };
+
+  /** Learning & development. */
+  learning?: {
+    trackTraining?: boolean;      // keep staff training / certificate records
+    observations?: boolean;       // enable learning observations / journeys for children
+    framework?: string;           // curriculum framework label (e.g. "EYFS")
+  };
+
+  /** Meals & catering (the parent-facing meal ordering). */
+  meals?: {
+    ordering?: boolean;           // parents can pre-order meals
+    showAllergens?: boolean;      // show allergen info on the menu
+    orderCutoffHours?: number;    // hours before a session that ordering closes
+    menuNote?: string;            // a note shown on the meals page
+  };
+
   /** Medication administration policy — edited in Setup → Medication, read by
    *  features/medication/MedicationApp.tsx (and, for notifications, by the
    *  backend once wired — see docs/medication-parent-notify-handoff.md). */
@@ -773,6 +804,10 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
   autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
+  brandColor: "#2f6bd8",
+  staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
+  learning: { trackTraining: true, observations: false, framework: "EYFS" },
+  meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
@@ -863,6 +898,9 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
+    staff: { ...DEFAULT_SETTINGS.staff, ...(s.staff ?? {}) },
+    learning: { ...DEFAULT_SETTINGS.learning, ...(s.learning ?? {}) },
+    meals: { ...DEFAULT_SETTINGS.meals, ...(s.meals ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}), contacts: { ...DEFAULT_SETTINGS.safeguarding!.contacts, ...(s.safeguarding?.contacts ?? {}) } },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },

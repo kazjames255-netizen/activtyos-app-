@@ -69,7 +69,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "people" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1112,7 +1112,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "people", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1149,7 +1149,12 @@ export function SetupApp() {
 
   const TABS: [Tab, string][] = [
     ["features", "Features"],
+    ["company", "Company setup"],
+    ["branding", "Branding"],
     ["people", "Child questions"],
+    ["staff", "Staff & workforce"],
+    ["learning", "Learning"],
+    ["meals", "Meals"],
     ["medication", "Medication"],
     ["safeguarding", "Safeguarding"],
     ["registers", "Register"],
@@ -1193,6 +1198,88 @@ export function SetupApp() {
       </HowItWorks>
 
       <TabStrip tabs={TABS} value={tab} onChange={setTab} />
+
+      {tab === "company" && (
+        <Section title="Company setup" lede="Who you are — the name and details your customers and documents show. Bank details and the invoice template live in the Money tab.">
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <div><FieldLabel>Display name (what customers see)</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
+            <div><FieldLabel>Show your name as</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => set("providerNameMode", e.target.value as "person" | "business")} className="w-full"><option value="business">Business name</option><option value="person">My own name</option></Select></div>
+            {([
+              ["businessName", "Legal / business name", "Little Kickers Ltd"],
+              ["email", "Contact email", "hello@yourbiz.co.uk"],
+              ["phone", "Phone", "07700 900000"],
+              ["address", "Registered address", "12 High St, Townsville, AB1 2CD"],
+              ["vatNumber", "VAT number (if any)", "GB123456789"],
+              ["companyReg", "Company registration no.", "133950"],
+            ] as const).map(([k, label, ph]) => (
+              <div key={k}><FieldLabel>{label}</FieldLabel><Input value={settings.billing?.[k] ?? ""} placeholder={ph} onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), [k]: e.target.value } } })} className="w-full" /></div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {tab === "branding" && (
+        <Section title="Branding" lede="Your logo and accent colour on customer-facing pages, emails and documents.">
+          <Row label="Logo" hint="A PNG or JPG. Shown on your customer pages, emails and PDFs.">
+            <div className="flex items-center gap-2">
+              {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
+              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — try a PNG or JPG."); } e.target.value = ""; }} /></label>
+              {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+            </div>
+          </Row>
+          <Row label="Accent colour" hint="Tints buttons and highlights on your customer-facing pages.">
+            <div className="flex items-center gap-2">
+              {["#2f6bd8", "#0d9488", "#16a34a", "#ea580c", "#dc2626", "#db2777", "#7c3aed"].map((c) => <button key={c} type="button" onClick={() => set("brandColor", c)} title={c} className="h-6 w-6 rounded-full" style={{ background: c, boxShadow: (settings.brandColor ?? "#2f6bd8") === c ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
+              <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-7 w-8 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" />
+            </div>
+          </Row>
+        </Section>
+      )}
+
+      {tab === "staff" && (
+        <Section title="Staff & workforce" lede="Team policy — who can do what, and the checks you require. The checks are enforced by the backend (handed over).">
+          <Row label="Who assigns staff to groups" hint="On: only site managers & leads can assign staff to age groups / rooms. Off: anyone on the team can.">
+            <Toggle on={settings.staff?.assignByLeads ?? false} onChange={(v) => set("staff", { ...settings.staff, assignByLeads: v })} labels={["Leads only", "Anyone"]} />
+          </Row>
+          <Row label="Require a valid DBS" hint="A staff member can’t be rostered until a valid DBS is on file." note="Enforcement: backend">
+            <Toggle on={settings.staff?.requireDBS ?? true} onChange={(v) => set("staff", { ...settings.staff, requireDBS: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Require key certificates in date" hint="First aid, safeguarding and similar must be current." note="Enforcement: backend">
+            <Toggle on={settings.staff?.requireCompliance ?? true} onChange={(v) => set("staff", { ...settings.staff, requireCompliance: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Default staff : child ratio" hint="The starting target on the Ratios board (1 adult to N children).">
+            <Input type="number" min={1} value={settings.staff?.defaultRatioTarget ?? 8} onChange={(e) => set("staff", { ...settings.staff, defaultRatioTarget: Number(e.target.value) || 1 })} className="w-24" />
+          </Row>
+          <div className="mt-3"><FieldLabel>Note added to staff invite emails</FieldLabel><Input value={settings.staff?.inviteMessage ?? ""} placeholder="Looking forward to having you on the team!" onChange={(e) => set("staff", { ...settings.staff, inviteMessage: e.target.value })} className="w-full" /></div>
+        </Section>
+      )}
+
+      {tab === "learning" && (
+        <Section title="Learning" lede="Staff training records and children’s learning.">
+          <Row label="Keep staff training records" hint="Track certificates and renewals for your team.">
+            <Toggle on={settings.learning?.trackTraining ?? true} onChange={(v) => set("learning", { ...settings.learning, trackTraining: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Learning observations / journeys" hint="Log observations against children’s development." note="Needs backend">
+            <Toggle on={settings.learning?.observations ?? false} onChange={(v) => set("learning", { ...settings.learning, observations: v })} labels={["On", "Off"]} />
+          </Row>
+          <div className="mt-3"><FieldLabel>Curriculum framework</FieldLabel><Input value={settings.learning?.framework ?? ""} placeholder="EYFS" onChange={(e) => set("learning", { ...settings.learning, framework: e.target.value })} className="w-full sm:w-64" /></div>
+        </Section>
+      )}
+
+      {tab === "meals" && (
+        <Section title="Meals" lede="Meal ordering for parents. The menu itself is managed in the Meals area.">
+          <Row label="Parents can pre-order meals" hint="Off: hide meal ordering from parents entirely.">
+            <Toggle on={settings.meals?.ordering ?? true} onChange={(v) => set("meals", { ...settings.meals, ordering: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Show allergens on the menu" hint="Display allergen info against each meal.">
+            <Toggle on={settings.meals?.showAllergens ?? true} onChange={(v) => set("meals", { ...settings.meals, showAllergens: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Order cut-off" hint="How many hours before a session that meal ordering closes.">
+            <Input type="number" min={0} value={settings.meals?.orderCutoffHours ?? 18} onChange={(e) => set("meals", { ...settings.meals, orderCutoffHours: Number(e.target.value) || 0 })} className="w-24" />
+          </Row>
+          <div className="mt-3"><FieldLabel>Note shown on the meals page</FieldLabel><Input value={settings.meals?.menuNote ?? ""} placeholder="Orders close at 6pm the day before." onChange={(e) => set("meals", { ...settings.meals, menuNote: e.target.value })} className="w-full" /></div>
+        </Section>
+      )}
 
       {tab === "medication" && (
         <Section
