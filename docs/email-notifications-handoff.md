@@ -16,8 +16,13 @@ Front-end is built; these tabs need backend:
   tracking work.
 - **Audiences** — "All families" is live (from `/api/emails/recipients`). Segments
   *Past customers / Waitlisted / New enquiries* need backend queries.
-- **Templates** — reads `/api/messages/templates` (live). Fine as-is; a dedicated
-  email-template store could be split out later.
+- **Templates** — reads `/api/messages/templates` (live, shared with Messages).
+  Booking-scoped merge fields ({SessionDate}/{VenueName}/{BookingRef}) are **locked
+  in the Email picker for bulk sends** (front-end, via `lib/merge-fields`
+  `bookingScoped`), so nothing goes out with unresolved tokens. **Future:** to let
+  those templates be used in Email, the send would need to **resolve merge fields
+  per recipient** at send time (expand {SessionDate} etc. from each family's booking
+  — a backend step; only non-booking fields like {ProviderName} resolve today).
 - **Analytics** — send counts are live from history; **delivered / open / click**
   rates need the sending engine to record events.
 - **Compose** — live (`/api/emails/send`). Now also: audience **by listing**
