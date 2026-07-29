@@ -77,10 +77,34 @@ function printPost(d: Draft) {
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title || "Post")}</title><style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:12mm}html,body{margin:0}body{font-family:system-ui,-apple-system,sans-serif;color:#171534;line-height:1.6}.wrap{width:100%;max-width:100%}h1{font-size:32px;margin:0 0 6px;line-height:1.14}</style></head><body><div class="wrap"><h1>${esc(d.title)}</h1>${ev}${img}<div style="white-space:pre-wrap;font-size:16px">${esc(d.body)}</div></div><script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
   w.document.close();
 }
-// Download the uploaded image file itself (PNG/JPG as uploaded).
-function downloadImageFile(url: string, name: string) {
+// Download the WHOLE post as a PNG image (title + photo + text, designed). Renders
+// the post's HTML into an SVG foreignObject → canvas. The photo is inlined as a
+// data URL so the canvas isn't tainted; falls back to the print/PDF path on error.
+async function downloadPostImage(d: Draft) {
   if (typeof document === "undefined") return;
-  const a = document.createElement("a"); a.href = url; a.download = name || "image"; a.target = "_blank"; document.body.appendChild(a); a.click(); a.remove();
+  const name = (d.title || "post").replace(/[^a-z0-9]+/gi, "-").slice(0, 60) || "post";
+  try {
+    let imageForHtml = d.image;
+    if (d.image) {
+      const blob = await (await fetch(d.image)).blob();
+      imageForHtml = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error("read")); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
+    }
+    const html = postToHtml({ ...d, image: imageForHtml });
+    const width = 600;
+    const holder = document.createElement("div");
+    holder.style.cssText = `position:fixed;left:-9999px;top:0;width:${width}px`;
+    holder.innerHTML = html;
+    document.body.appendChild(holder);
+    const height = (holder.firstElementChild as HTMLElement | null)?.offsetHeight || holder.offsetHeight || 400;
+    document.body.removeChild(holder);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff">${html}</div></foreignObject></svg>`;
+    const img = new Image();
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("svg")); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+    const canvas = document.createElement("canvas"); canvas.width = width * 2; canvas.height = height * 2;
+    const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("ctx");
+    ctx.scale(2, 2); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); ctx.drawImage(img, 0, 0);
+    await new Promise<void>((res) => canvas.toBlob((blob) => { if (blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${name}.png`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href); } res(); }, "image/png"));
+  } catch { printPost(d); } // couldn't rasterise (browser/CORS) — give the PDF instead
 }
 
 type CtaKind = "none" | "listing" | "url";
@@ -581,7 +605,7 @@ function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <Button sm onClick={onClose}>Cancel</Button>
           <span className="mr-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
-          {draft.image && <button type="button" onClick={() => downloadImageFile(draft.image, (draft.title || "image").replace(/[^a-z0-9]+/gi, "-"))} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ Image</button>}
+          <button type="button" onClick={() => downloadPostImage(draft)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ Image</button>
           <button type="button" onClick={() => onPublish(draft, "download")} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
           <button type="button" onClick={() => onPublish(draft, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
           <button type="button" onClick={() => onPublish(draft, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white">{draft.editId ? "Save changes" : draft.when === "draft" ? "Save draft" : draft.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
