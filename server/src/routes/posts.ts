@@ -23,7 +23,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), listingId: z.string().trim().max(80).optional(), url: z.string().trim().max(600).optional() }).nullable();
 // A designed newsletter payload (layout + palette + company + content blocks).
 // Block fields are all strings; images are uploaded URLs, so the doc stays small.
-const nlBlockSchema = z.object({ t: z.string().max(20) }).catchall(z.string().max(4_000));
+const nlBlockSchema = z.object({ t: z.string().max(20) }).catchall(z.union([z.string().max(4_000), z.number()]));
 const newsletterSchema = z.object({
   layout: z.string().max(40),
   palette: z.string().max(40),

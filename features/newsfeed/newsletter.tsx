@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- newsletter images are arbitrary operator-uploaded URLs (and data previews); next/image doesn't fit. */
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent as RPE } from "react";
 import { post as apiPost } from "@/lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -16,8 +16,9 @@ export type BlockType = "banner" | "hero" | "heading" | "text" | "image" | "disc
 export interface Block {
   t: BlockType;
   heading?: string; body?: string; image?: string;
+  ix?: number; iy?: number; iz?: number; // image crop: pan x/y (% of frame) + zoom
   code?: string; codeDesc?: string;
-  label?: string; url?: string;
+  label?: string; url?: string; listingId?: string; listingTitle?: string;
   left?: string; right?: string;
   date?: string; time?: string; location?: string;
 }
@@ -147,13 +148,13 @@ export function newsletterToHtml(nl: Newsletter): string {
   const e = (s?: string) => fill(s, c).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch] as string));
   const blocks = nl.blocks.map((b) => {
     switch (b.t) {
-      case "banner": return `<div style="background:${p.accent};color:${p.onAccent};padding:16px 26px;font-weight:800;font-size:17px">${e(c.name) || "Your company"}</div>`;
-      case "hero": return `${b.image ? `<img src="${b.image}" style="width:100%;max-height:220px;object-fit:cover;display:block" alt=""/>` : `<div style="height:120px;background:linear-gradient(120deg,${p.accent},${p.accent2})"></div>`}${(b.heading || b.body) ? `<div style="padding:22px 26px;background:${p.band}">${b.heading ? `<div style="font-size:24px;font-weight:800;color:${p.ink}">${e(b.heading)}</div>` : ""}${b.body ? `<div style="font-size:14px;color:${p.muted};margin-top:6px">${e(b.body)}</div>` : ""}</div>` : ""}`;
+      case "banner": return `<div style="background:${p.accent};color:${p.onAccent};padding:16px 26px;font-weight:800;font-size:17px">${c.logo ? `<img src="${c.logo}" style="height:30px;vertical-align:middle;margin-right:10px;background:#fff;border-radius:6px" alt=""/>` : ""}${e(c.name) || "Your company"}</div>`;
+      case "hero": return `${b.image ? `<div style="height:340px;overflow:hidden"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div>` : `<div style="height:220px;background:linear-gradient(120deg,${p.accent},${p.accent2})"></div>`}${(b.heading || b.body) ? `<div style="padding:22px 26px;background:${p.band}">${b.heading ? `<div style="font-size:24px;font-weight:800;color:${p.ink}">${e(b.heading)}</div>` : ""}${b.body ? `<div style="font-size:14px;color:${p.muted};margin-top:6px">${e(b.body)}</div>` : ""}</div>` : ""}`;
       case "heading": return `<div style="padding:18px 26px 0"><div style="font-size:19px;font-weight:800;color:${p.ink}">${e(b.heading)}</div><div style="height:3px;width:42px;background:${p.accent2};border-radius:3px;margin-top:8px"></div></div>`;
       case "text": return `<div style="padding:12px 26px;font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap">${e(b.body)}</div>`;
-      case "image": return b.image ? `<img src="${b.image}" style="width:100%;max-height:260px;object-fit:cover;display:block" alt=""/>` : "";
+      case "image": return b.image ? `<div style="height:300px;overflow:hidden"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div>` : "";
       case "discount": return `<div style="padding:14px 26px"><div style="border:2px dashed ${p.accent};border-radius:12px;padding:14px 16px;text-align:center;background:${p.band}"><div style="font-size:12px;font-weight:800;letter-spacing:1px;color:${p.muted};text-transform:uppercase">Your code</div><div style="font-size:26px;font-weight:900;color:${p.accent};letter-spacing:2px">${e(b.code) || "CODE"}</div><div style="font-size:13px;color:${p.ink}">${e(b.codeDesc)}</div></div></div>`;
-      case "button": return `<div style="padding:14px 26px;text-align:center"><span style="display:inline-block;background:${p.accent};color:${p.onAccent};font-weight:800;font-size:14px;padding:11px 22px;border-radius:999px">${e(b.label) || "Learn more"}</span></div>`;
+      case "button": { const bhref = b.listingId ? `/book/${b.listingId}` : (b.url || ""); const bs = `display:inline-block;background:${p.accent};color:${p.onAccent};font-weight:800;font-size:14px;padding:11px 22px;border-radius:999px;text-decoration:none`; return `<div style="padding:14px 26px;text-align:center">${bhref ? `<a href="${e(bhref)}" style="${bs}">` : `<span style="${bs}">`}${e(b.label) || "Learn more"}${bhref ? "</a>" : "</span>"}</div>`; }
       case "columns": return `<div style="padding:12px 26px;display:flex;gap:16px">${[b.left, b.right].map((t) => `<div style="flex:1;background:${p.band};border-radius:10px;padding:14px;font-size:13.5px;color:${p.ink}">${e(t)}</div>`).join("")}</div>`;
       case "quote": return `<div style="padding:16px 26px"><div style="border-left:4px solid ${p.accent2};padding-left:14px;font-size:17px;font-style:italic;color:${p.ink}">&ldquo;${e(b.body)}&rdquo;</div>${b.heading ? `<div style="margin-top:6px;font-size:13px;font-weight:700;color:${p.muted}">${e(b.heading)}</div>` : ""}</div>`;
       case "divider": return `<div style="height:1px;background:${p.band};margin:6px 26px"></div>`;
@@ -196,14 +197,14 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
     case "banner":
       return (
         <div style={{ background: p.accent, color: p.onAccent, padding: "16px 26px", display: "flex", alignItems: "center", gap: 12 }}>
-          {c.logo ? <img src={c.logo} alt="" style={{ height: 34, width: 34, borderRadius: 8, objectFit: "cover", background: "#fff" }} /> : <div style={{ height: 34, width: 34, borderRadius: 8, background: p.accent2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{(c.name || "A").slice(0, 1)}</div>}
+          {c.logo && <img src={c.logo} alt="" style={{ height: 34, borderRadius: 6, objectFit: "contain", background: "#fff" }} />}
           <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .2 }}>{c.name || "Your company"}</div>
         </div>
       );
     case "hero":
       return (
         <div>
-          {b.image ? <img src={b.image} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} /> : <div style={{ height: 120, background: `linear-gradient(120deg, ${p.accent}, ${p.accent2})` }} />}
+          {b.image ? <div style={{ height: 340, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 220, background: `linear-gradient(120deg, ${p.accent}, ${p.accent2})`, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.85)", fontSize: 13, fontWeight: 700 }}>Add a big photo here</div>}
           {(b.heading || b.body) && (
             <div style={{ padding: pad, background: p.band }}>
               {b.heading && <div style={{ fontSize: 24, fontWeight: 800, color: p.ink, lineHeight: 1.15 }}>{fill(b.heading, c)}</div>}
@@ -217,7 +218,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
     case "text":
       return <div style={{ padding: "12px 26px", fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{fill(b.body, c)}</div>;
     case "image":
-      return b.image ? <img src={b.image} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} /> : <div style={{ height: 150, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>Image</div>;
+      return b.image ? <div style={{ height: 300, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 200, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>Add a photo</div>;
     case "discount":
       return (
         <div style={{ padding: "14px 26px" }}>
@@ -228,8 +229,11 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
           </div>
         </div>
       );
-    case "button":
-      return <div style={{ padding: "14px 26px", textAlign: "center" }}><span style={{ display: "inline-block", background: p.accent, color: p.onAccent, fontWeight: 800, fontSize: 14, padding: "11px 22px", borderRadius: 999 }}>{b.label || "Learn more"}</span></div>;
+    case "button": {
+      const href = b.listingId ? `/book/${b.listingId}` : (b.url || "");
+      const bStyle = { display: "inline-block", background: p.accent, color: p.onAccent, fontWeight: 800, fontSize: 14, padding: "11px 22px", borderRadius: 999, textDecoration: "none" } as CSSProperties;
+      return <div style={{ padding: "14px 26px", textAlign: "center" }}>{href ? <a href={href} style={bStyle}>{b.label || "Learn more"}</a> : <span style={bStyle}>{b.label || "Learn more"}</span>}</div>;
+    }
     case "columns":
       return (
         <div style={{ padding: "12px 26px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -267,6 +271,13 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
   const [aiErr, setAiErr] = useState("");
   const p = paletteOf(nl.palette);
   const setBlock = (i: number, f: Partial<Block>) => setNl((n) => ({ ...n, blocks: n.blocks.map((b, j) => (j === i ? { ...b, ...f } : b)) }));
+  // Drag-to-move + zoom for a block's image (same crop model as posts).
+  const bClampS = (v: number, z: number) => { const m = ((z - 1) / 2) * 100; return Math.max(-m, Math.min(m, v)); };
+  const bDrag = useRef<{ i: number; sx: number; sy: number; x: number; y: number; w: number; h: number } | null>(null);
+  const bDown = (i: number) => (e: RPE<HTMLDivElement>) => { bDrag.current = { i, sx: e.clientX, sy: e.clientY, x: nl.blocks[i].ix ?? 0, y: nl.blocks[i].iy ?? 0, w: e.currentTarget.clientWidth || 1, h: e.currentTarget.clientHeight || 1 }; e.currentTarget.setPointerCapture(e.pointerId); };
+  const bMove = (e: RPE<HTMLDivElement>) => { const d = bDrag.current; if (!d) return; const z = nl.blocks[d.i].iz ?? 1; setBlock(d.i, { ix: bClampS(d.x + ((e.clientX - d.sx) / d.w) * 100, z), iy: bClampS(d.y + ((e.clientY - d.sy) / d.h) * 100, z) }); };
+  const bUp = () => { bDrag.current = null; };
+  const bZoom = (i: number, z: number) => setBlock(i, { iz: z, ix: bClampS(nl.blocks[i].ix ?? 0, z), iy: bClampS(nl.blocks[i].iy ?? 0, z) });
   const setCompany = (f: Partial<Company>) => setNl((n) => ({ ...n, company: { ...n.company, ...f } }));
   const pickLayout = (id: string) => setNl((n) => ({ ...newNewsletter(id, n.company), palette: n.palette }));
 
@@ -361,12 +372,35 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                     <div key={i} className="rounded-lg border border-[var(--line)] p-2">
                       <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t}</div>
                       <div className="space-y-1.5">
-                        {(b.t === "hero" || b.t === "image") && (b.image ? <div className="flex items-center gap-2"><img src={b.image} alt="" className="h-10 w-16 rounded object-cover" /><button type="button" onClick={() => setBlock(i, { image: "" })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div> : imgBtn((url) => setBlock(i, { image: url })))}
+                        {(b.t === "hero" || b.t === "image") && (b.image ? (
+                          <div>
+                            <div className="cursor-move touch-none select-none overflow-hidden rounded" style={{ aspectRatio: b.t === "hero" ? "600 / 340" : "600 / 300", background: "#0b1020" }} onPointerDown={bDown(i)} onPointerMove={bMove} onPointerUp={bUp} onPointerCancel={bUp}>
+                              <img src={b.image} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} />
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-[10.5px] font-bold text-[var(--ink-3)]">Zoom</span>
+                              <input type="range" min={1} max={4} step={0.02} value={b.iz ?? 1} onChange={(e) => bZoom(i, parseFloat(e.target.value))} className="h-1 flex-1 accent-[#1d3a8f]" />
+                              {imgBtn((url) => setBlock(i, { image: url, ix: 0, iy: 0, iz: 1 }))}
+                              <button type="button" onClick={() => setBlock(i, { image: "", ix: 0, iy: 0, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button>
+                            </div>
+                            <div className="text-[10px] text-[var(--ink-3)]">Drag to move · zoom to crop.</div>
+                          </div>
+                        ) : imgBtn((url) => setBlock(i, { image: url })))}
                         {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder="Heading" className={inputCls} />}
                         {has("body") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder="Text" className={inputCls} />}
                         {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder="Left column" className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder="Right column" className={inputCls} /></>}
                         {b.t === "discount" && <div className="grid grid-cols-2 gap-1.5"><input value={b.code ?? ""} onChange={(e) => setBlock(i, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={inputCls} /><input value={b.codeDesc ?? ""} onChange={(e) => setBlock(i, { codeDesc: e.target.value })} placeholder="What it gives" className={inputCls} /></div>}
-                        {b.t === "button" && <div className="grid grid-cols-2 gap-1.5"><input value={b.label ?? ""} onChange={(e) => setBlock(i, { label: e.target.value })} placeholder="Button label" className={inputCls} /><input value={b.url ?? ""} onChange={(e) => setBlock(i, { url: e.target.value })} placeholder="Link (https://… — optional)" className={inputCls} /></div>}
+                        {b.t === "button" && (() => { const kind = b.url ? "url" : "listing"; return (
+                          <div className="space-y-1.5">
+                            <input value={b.label ?? ""} onChange={(e) => setBlock(i, { label: e.target.value })} placeholder="Button label (e.g. Book now)" className={inputCls} />
+                            <div className="flex flex-wrap gap-1.5">
+                              {([["listing", "To a listing"], ["url", "To a web link"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => (k === "listing" ? setBlock(i, { url: "" }) : setBlock(i, { listingId: "", listingTitle: "" }))} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={kind === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+                            </div>
+                            {kind === "listing"
+                              ? <select value={b.listingId ?? ""} onChange={(e) => { const l = listings.find((x) => x.id === e.target.value); setBlock(i, { listingId: e.target.value, listingTitle: l?.title ?? "", url: "" }); }} className={inputCls}><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>
+                              : <input value={b.url ?? ""} onChange={(e) => setBlock(i, { url: e.target.value, listingId: "", listingTitle: "" })} placeholder="https://…" className={inputCls} />}
+                          </div>
+                        ); })()}
                         {b.t === "eventbar" && <div className="grid grid-cols-3 gap-1.5"><input type="date" value={b.date ?? ""} onChange={(e) => setBlock(i, { date: e.target.value })} className={inputCls} /><input type="time" value={b.time ?? ""} onChange={(e) => setBlock(i, { time: e.target.value })} className={inputCls} /><input value={b.location ?? ""} onChange={(e) => setBlock(i, { location: e.target.value })} placeholder="Place" className={inputCls} /></div>}
                       </div>
                     </div>
