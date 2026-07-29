@@ -111,6 +111,30 @@ function mdToHtml(src: string): string {
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\n/g, "<br>");
 }
+// HTML (from the rich editor) → a plain-text fallback for the stored body.
+function htmlToText(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li)>/gi, "\n").replace(/<li[^>]*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\n{3,}/g, "\n\n").trim();
+}
+// A small WYSIWYG editor — Bold/Heading/Italic/List/Link format the text LIVE
+// (contentEditable), and the value is HTML that's emailed as-is.
+function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = ref.current; if (el && el.innerHTML !== value) el.innerHTML = value; }, [value]);
+  const cmd = (c: string, arg?: string) => { ref.current?.focus(); document.execCommand(c, false, arg); if (ref.current) onChange(ref.current.innerHTML); };
+  const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white";
+  return (
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+      <div className="flex flex-wrap items-center gap-1 rounded-t-lg border-b border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("formatBlock", "H3")} title="Heading" className={`${btn} font-extrabold`}>Aa</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} title="Bold" className={`${btn} font-extrabold`}>B</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} title="Italic" className={`${btn} italic`}>I</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} title="Bullet list" className={btn}>• List</button>
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const u = prompt("Link URL"); if (u) cmd("createLink", u); }} title="Insert link" className={btn}>🔗</button>
+      </div>
+      <div ref={ref} contentEditable suppressContentEditableWarning onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }} className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_ul]:list-disc [&_ul]:pl-5" />
+    </div>
+  );
+}
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
@@ -684,14 +708,15 @@ export function EmailApp() {
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [extraTo, setExtraTo] = useState<string[]>([]); // addresses the operator typed in by hand
+  const [extraInput, setExtraInput] = useState("");
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
-  const [body, setBody] = useState(nlDraft?.body ?? "");
+  const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
   const [listingIds, setListingIds] = useState<string[]>([]);
   const [composeListings, setComposeListings] = useState<{ id: string; title: string }[]>([]);
   const [composeBookings, setComposeBookings] = useState<Booking[]>([]);
   const [composeTemplates, setComposeTemplates] = useState<EmailTemplate[]>([]);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [reach, setReach] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [assetsOpen, setAssetsOpen] = useState(true);
@@ -711,7 +736,8 @@ export function EmailApp() {
     return { ...im, sourceCaption: live.caption ?? im.sourceCaption, sourceComments: (live.comments ?? []).filter((c) => c.role === "parent").map((c) => ({ text: c.text, byName: c.byName, marketing: c.marketing })) };
   };
 
-  const appendBody = (block: string) => setBody((b) => (b.trim() ? `${b.replace(/\s+$/, "")}\n\n${block}\n` : `${block}\n`));
+  // Append a plain-text block to the HTML body (converted to HTML).
+  const appendBody = (block: string) => setBody((b) => { const h = mdToHtml(block); return b.trim() ? `${b}<br><br>${h}` : h; });
 
   function patchImage(id: string, partial: Partial<SavedImage>) {
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.map((im) => im.id === id ? { ...im, ...partial } : im) } } });
@@ -757,40 +783,43 @@ export function EmailApp() {
   const bookingMatchesSel = (b: Booking) => listingIds.includes(b.listingId || "\0") || listingIds.includes(b.title || "\0") || listingIds.includes(b.listingTitle || "\0");
   // Recipients when targeting by listing: distinct emails booked on any selected
   // listing (a repeat parent across duplicated listings only appears once).
-  const listingEmails = (() => { const s = new Set<string>(); for (const b of composeBookings) if (b.email && bookingMatchesSel(b)) s.add(b.email.toLowerCase()); return [...s]; })();
-  const reachCount = audience === "listing" ? listingEmails.length : families.length ? included.length : reach ?? 0;
+  const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
+  const listingEmails = listingFamilies.map((f) => f.email);
+  const audienceFamilies = audience === "listing" ? listingFamilies : families;
+  const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
+  const reachCount = audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
+  const addExtra = () => { const parts = extraInput.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
 
-  // Insert text at the cursor (formatting toolbar + link).
-  const insert = (before: string, after = "", placeholder = "") => {
-    const ta = bodyRef.current;
-    if (!ta) { setBody((b) => b + before + placeholder + after); return; }
-    const s = ta.selectionStart, e = ta.selectionEnd, sel = body.slice(s, e) || placeholder;
-    setBody(body.slice(0, s) + before + sel + after + body.slice(e));
-    requestAnimationFrame(() => { ta.focus(); ta.selectionStart = s + before.length; ta.selectionEnd = s + before.length + sel.length; });
-  };
   const addAttachment = (f: File) => { const kb = Math.max(1, Math.round(f.size / 1024)); setAttachments((xs) => [...xs, { name: f.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB` }]); };
 
+  // The exact list this send will go to: the chosen audience (minus anyone removed)
+  // plus any addresses the operator typed in by hand, de-duplicated.
+  const finalRecipients = (() => {
+    const base = audience === "one" ? (to.trim() ? [to.trim().toLowerCase()] : [])
+      : audienceIncluded.map((f) => f.email.toLowerCase());
+    return [...new Set([...base, ...extraTo])].filter(Boolean);
+  })();
+
   async function send() {
-    if (!subject.trim() || !body.trim()) { setError("A subject and a message are required."); return; }
-    if (audience === "one" && !to.trim()) { setError("Enter a recipient address."); return; }
+    const bodyText = htmlToText(body);
+    if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
+    if (audience === "one" && !to.trim() && extraTo.length === 0) { setError("Enter a recipient address."); return; }
     if (audience === "listing" && listingIds.length === 0) { setError("Pick at least one listing to email."); return; }
-    const recipients = audience === "listing" ? listingEmails : audience === "all" && families.length ? included.map((f) => f.email) : undefined;
-    const count = audience === "one" ? 1 : reachCount;
-    if (count === 0) { setError("No families selected to send to."); return; }
-    if (!confirm(audience === "one" ? `Send this email to ${to}?` : `Send this email to ${count} famil${count === 1 ? "y" : "ies"}?`)) return;
+    const count = finalRecipients.length;
+    if (count === 0) { setError("No recipients selected to send to."); return; }
+    if (!confirm(`Send this email to ${count} recipient${count === 1 ? "" : "s"}?`)) return;
     setSending(true); setError(null); setOk(null);
     try {
       const r = await apiPost<{ recipientCount: number }>("/api/emails/send", {
-        subject, body,
-        html: docHtml && mode === "embed" ? docHtml : mdToHtml(body),
-        audience: audience === "listing" ? "all" : audience,
-        to: audience === "one" ? to : undefined,
-        recipients,
+        subject, body: bodyText,
+        html: docHtml && mode === "embed" ? docHtml : body,
+        audience: "all",
+        recipients: finalRecipients,
         cc: cc.trim() || undefined,
         bcc: bcc.trim() || undefined,
       });
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${attachments.length ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
-      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setAttachments([]); refresh();
+      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
     finally { setSending(false); }
   }
@@ -801,10 +830,10 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(text); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
       {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
-      {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(t.body); setTab("compose"); }} />}
+      {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
 
@@ -840,10 +869,17 @@ export function EmailApp() {
             </div>
           ) : <button type="button" onClick={() => setShowCcBcc(true)} className="text-[12px] font-bold text-[#1d3a8f]">＋ Add Cc / Bcc</button>}
         </div>
-        {audience === "all" && families.length > 0 && (
+        <div className="mt-2">
+          <FieldLabel>Also send to — add anyone (yourself, a colleague…)</FieldLabel>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">
+            {extraTo.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setExtraTo((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}
+            <input value={extraInput} onChange={(e) => setExtraInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtra(); } }} onBlur={addExtra} placeholder="name@example.com — Enter to add" className="min-w-[180px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" />
+          </div>
+        </div>
+        {audience !== "one" && audienceFamilies.length > 0 && (
           <div className="mt-2">
             <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} Review the {reachCount} famil{reachCount === 1 ? "y" : "ies"} who’ll get this</button>
-            {recipOpen && (() => { const q = recipQuery.trim().toLowerCase(); const shown = q ? families.filter((f) => `${f.name} ${f.email}`.toLowerCase().includes(q)) : families; return (
+            {recipOpen && (() => { const q = recipQuery.trim().toLowerCase(); const shown = q ? audienceFamilies.filter((f) => `${f.name} ${f.email}`.toLowerCase().includes(q)) : audienceFamilies; return (
               <div className="mt-1.5 rounded-lg border border-[var(--line)]">
                 <div className="border-b border-[var(--line)] p-1.5"><input value={recipQuery} onChange={(e) => setRecipQuery(e.target.value)} placeholder="🔍 Search families by name or email…" className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" /></div>
                 <div className="max-h-56 divide-y divide-[var(--line)] overflow-auto">
@@ -875,22 +911,18 @@ export function EmailApp() {
         )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5">
-          <div className="mb-1 flex items-center justify-between"><FieldLabel>Message</FieldLabel></div>
-          {/* Formatting + attach + link + templates toolbar */}
-          <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("# ", "", "Heading")} title="Heading" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">Aa</button>
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("**", "**", "bold text")} title="Bold" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">B</button>
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("_", "_", "italic")} title="Italic" className="rounded px-2 py-1 text-[13px] italic text-[var(--ink-2)] hover:bg-white">I</button>
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const url = prompt("Link URL"); if (url) insert("[", `](${url})`, "link text"); }} title="Insert link" className="rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white">🔗</button>
-            <label title="Attach a file" className="cursor-pointer rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white">📎<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
-            {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}\n\n${t.body}` : t.body); } }} className="ml-auto text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
+          <div className="mb-1 flex items-center justify-between"><FieldLabel>Message</FieldLabel>
+            <div className="flex items-center gap-2">
+              <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
+              {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
+            </div>
           </div>
-          <textarea ref={bodyRef} value={body} onChange={(e) => setBody(e.target.value)} rows={8} className="w-full rounded-b-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px]" />
+          <RichText value={body} onChange={setBody} />
           {attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <Button variant="primary" onClick={send} disabled={sending}>{sending ? "Sending…" : audience === "one" ? "Send email" : `Send to ${reachCount} famil${reachCount === 1 ? "y" : "ies"}`}</Button>
-          {audience === "all" && reachCount === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">No booked families to email yet.</span>}
+          <Button variant="primary" onClick={send} disabled={sending}>{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</Button>
+          {reachCount === 0 && extraTo.length === 0 && audience !== "one" && <span className="text-[11.5px] text-[var(--ink-3)]">No recipients yet.</span>}
         </div>
       </Card>
 
