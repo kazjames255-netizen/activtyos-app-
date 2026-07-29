@@ -91,11 +91,11 @@ export function ParentNewsfeedApp() {
             return (
               <Card key={p.id} className="overflow-hidden !p-0">
                 {p.photoUrl
-                  ? <div className="relative"><PostImage url={p.photoUrl} aspect={p.imageAspect} x={p.imageX} y={p.imageY} zoom={p.imageZoom} rounded={false} /><span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm" style={{ background: accent }}>{t.label}</span></div>
+                  ? <PostImage url={p.photoUrl} aspect={p.imageAspect} x={p.imageX} y={p.imageY} zoom={p.imageZoom} rounded={false} />
                   : <div className="h-1.5 w-full" style={{ background: accent }} />}
                 <div className="p-3.5">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                    {!p.photoUrl && <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t.label}</span>}
+                    <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t.label}</span>
                     {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
                     <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? "Provider"}</Badge>
                     <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>

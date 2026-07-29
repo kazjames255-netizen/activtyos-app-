@@ -317,11 +317,11 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:shadow-md">
       {p.photoUrl
-        ? <div className="relative"><PostImage url={p.photoUrl} aspect={p.imageAspect} x={p.imageX} y={p.imageY} zoom={p.imageZoom} rounded={false} /><span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm" style={{ background: accent }}>{tpl.label}</span></div>
+        ? <PostImage url={p.photoUrl} aspect={p.imageAspect} x={p.imageX} y={p.imageY} zoom={p.imageZoom} rounded={false} />
         : <div className="h-1.5 w-full" style={{ background: accent }} />}
       <div className="p-4">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          {!p.photoUrl && <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tpl.label}</span>}
+          <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white" style={{ background: accent }}>{tpl.label}</span>
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
           {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">Urgent</span>}
           {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Acknowledge</span>}
@@ -367,10 +367,10 @@ function PostPreview({ d }: { d: Draft }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
       {d.image
-        ? <div className="relative"><PostImage url={d.image} aspect={d.imageAspect} x={d.imageX} y={d.imageY} zoom={d.imageZoom} rounded={false} /><span className="absolute left-3 top-3 shadow-sm">{tag}</span></div>
+        ? <PostImage url={d.image} aspect={d.imageAspect} x={d.imageX} y={d.imageY} zoom={d.imageZoom} rounded={false} />
         : <div className="h-1.5 w-full" style={{ background: accent }} />}
       <div className="p-4">
-        {!d.image && <div className="mb-1.5">{tag}</div>}
+        <div className="mb-1.5">{tag}</div>
         {d.title && <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{d.title}</div>}
         <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{d.body || "Your message…"}</div>
         {d.tpl === "event" && (d.date || d.time || d.location) && <div className="mt-2.5 inline-flex flex-wrap items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white" style={{ background: accent }}>{[d.date, d.time, d.location].filter(Boolean).join(" · ")}</div>}
