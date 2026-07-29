@@ -100,6 +100,17 @@ function printDocHtml(html: string) {
   w.document.close();
 }
 
+// Turn the composer's light markdown (# heading, **bold**, _italic_, [text](url),
+// line breaks) into safe HTML so the formatting actually renders in the sent email.
+function mdToHtml(src: string): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return esc(src)
+    .replace(/^# (.*)$/gm, '<h3 style="margin:0 0 8px">$1</h3>')
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/_([^_]+)_/g, "<i>$1</i>")
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\n/g, "<br>");
+}
 interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
@@ -664,6 +675,7 @@ export function EmailApp() {
   const [families, setFamilies] = useState<{ email: string; name: string }[]>([]);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [recipOpen, setRecipOpen] = useState(false);
+  const [recipQuery, setRecipQuery] = useState("");
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -732,8 +744,20 @@ export function EmailApp() {
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setComposeTemplates).catch(() => {}); }, []);
   useRealtime(["emails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
   const included = families.filter((f) => !excluded.has(f.email));
-  // Recipients when targeting by listing: everyone who booked any selected listing.
-  const listingEmails = (() => { const s = new Set<string>(); for (const b of composeBookings) if (b.email && listingIds.includes(b.listingId || "")) s.add(b.email.toLowerCase()); return [...s]; })();
+  // Listing options for targeting: LIVE listings + any PAST listing still referenced
+  // by a booking. Duplicating a listing makes a new id, so a parent booked on the
+  // original would be missed if we only showed live listings — surface the old one
+  // too, marked "past". A booking matches by id or by title.
+  const listingOpts = (() => {
+    const opts: { key: string; title: string; live: boolean }[] = composeListings.map((l) => ({ key: l.id, title: l.title, live: true }));
+    const liveIds = new Set(composeListings.map((l) => l.id)); const liveTitles = new Set(composeListings.map((l) => l.title)); const seen = new Set<string>();
+    for (const b of composeBookings) { const key = b.listingId || b.title || b.listingTitle; const title = b.title || b.listingTitle || key; if (!key || !title || liveIds.has(key) || liveTitles.has(title) || seen.has(key)) continue; seen.add(key); opts.push({ key, title, live: false }); }
+    return opts;
+  })();
+  const bookingMatchesSel = (b: Booking) => listingIds.includes(b.listingId || "\0") || listingIds.includes(b.title || "\0") || listingIds.includes(b.listingTitle || "\0");
+  // Recipients when targeting by listing: distinct emails booked on any selected
+  // listing (a repeat parent across duplicated listings only appears once).
+  const listingEmails = (() => { const s = new Set<string>(); for (const b of composeBookings) if (b.email && bookingMatchesSel(b)) s.add(b.email.toLowerCase()); return [...s]; })();
   const reachCount = audience === "listing" ? listingEmails.length : families.length ? included.length : reach ?? 0;
 
   // Insert text at the cursor (formatting toolbar + link).
@@ -758,7 +782,7 @@ export function EmailApp() {
     try {
       const r = await apiPost<{ recipientCount: number }>("/api/emails/send", {
         subject, body,
-        html: docHtml && mode === "embed" ? docHtml : undefined,
+        html: docHtml && mode === "embed" ? docHtml : mdToHtml(body),
         audience: audience === "listing" ? "all" : audience,
         to: audience === "one" ? to : undefined,
         recipients,
@@ -801,11 +825,13 @@ export function EmailApp() {
           <div className="mt-2">
             <FieldLabel>Listings — everyone booked on the ones you pick ({listingEmails.length})</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {composeListings.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings yet.</span>
-                : composeListings.map((l) => { const on = listingIds.includes(l.id); return <button key={l.id} type="button" onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.id) : [...xs, l.id])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}
+              {listingOpts.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings yet.</span>
+                : listingOpts.map((l) => { const on = listingIds.includes(l.key); return <button key={l.key} type="button" onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}{!l.live && <span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
             </div>
+            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Includes past listings still linked to bookings — so parents from a listing you’ve since duplicated aren’t missed. Repeat parents are only emailed once.</p>
           </div>
         )}
+        {audience !== "one" && reachCount > 1 && <p className="mt-2 text-[11.5px] font-semibold text-[#127a3e]">✓ Each family gets their own copy — recipients never see each other’s email address.</p>}
         <div className="mt-2">
           {showCcBcc ? (
             <div className="grid gap-2.5 sm:grid-cols-2">
@@ -817,16 +843,20 @@ export function EmailApp() {
         {audience === "all" && families.length > 0 && (
           <div className="mt-2">
             <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} Review the {reachCount} famil{reachCount === 1 ? "y" : "ies"} who’ll get this</button>
-            {recipOpen && (
-              <div className="mt-1.5 max-h-56 divide-y divide-[var(--line)] overflow-auto rounded-lg border border-[var(--line)]">
-                {families.map((f) => { const on = !excluded.has(f.email); return (
-                  <div key={f.email} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px]" style={on ? undefined : { opacity: 0.5 }}>
-                    <span className="min-w-0 flex-1 truncate"><b>{f.name}</b> <span className="text-[var(--ink-3)]">{f.email}</span></span>
-                    <button type="button" onClick={() => setExcluded((s) => { const n = new Set(s); if (on) n.add(f.email); else n.delete(f.email); return n; })} className="flex-none rounded-md border px-2 py-0.5 text-[11px] font-bold" style={on ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }}>{on ? "Remove" : "Add back"}</button>
-                  </div>
-                ); })}
+            {recipOpen && (() => { const q = recipQuery.trim().toLowerCase(); const shown = q ? families.filter((f) => `${f.name} ${f.email}`.toLowerCase().includes(q)) : families; return (
+              <div className="mt-1.5 rounded-lg border border-[var(--line)]">
+                <div className="border-b border-[var(--line)] p-1.5"><input value={recipQuery} onChange={(e) => setRecipQuery(e.target.value)} placeholder="🔍 Search families by name or email…" className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" /></div>
+                <div className="max-h-56 divide-y divide-[var(--line)] overflow-auto">
+                  {shown.length === 0 ? <div className="px-3 py-4 text-center text-[12px] text-[var(--ink-3)]">No families match “{recipQuery.trim()}”.</div>
+                  : shown.map((f) => { const on = !excluded.has(f.email); return (
+                    <div key={f.email} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px]" style={on ? undefined : { opacity: 0.5 }}>
+                      <span className="min-w-0 flex-1 truncate"><b>{f.name}</b> <span className="text-[var(--ink-3)]">{f.email}</span></span>
+                      <button type="button" onClick={() => setExcluded((s) => { const n = new Set(s); if (on) n.add(f.email); else n.delete(f.email); return n; })} className="flex-none rounded-md border px-2 py-0.5 text-[11px] font-bold" style={on ? { borderColor: "var(--line)", color: "var(--ink-2)" } : { borderColor: "#1d3a8f", color: "#1d3a8f" }}>{on ? "Remove" : "Add back"}</button>
+                    </div>
+                  ); })}
+                </div>
               </div>
-            )}
+            ); })()}
           </div>
         )}
         {docHtml && (
@@ -848,10 +878,10 @@ export function EmailApp() {
           <div className="mb-1 flex items-center justify-between"><FieldLabel>Message</FieldLabel></div>
           {/* Formatting + attach + link + templates toolbar */}
           <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
-            <button type="button" onClick={() => insert("# ", "", "Heading")} title="Heading" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">Aa</button>
-            <button type="button" onClick={() => insert("**", "**", "bold")} title="Bold" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">B</button>
-            <button type="button" onClick={() => insert("_", "_", "italic")} title="Italic" className="rounded px-2 py-1 text-[13px] italic text-[var(--ink-2)] hover:bg-white">I</button>
-            <button type="button" onClick={() => { const url = prompt("Link URL"); if (url) insert("[", `](${url})`, "link text"); }} title="Insert link" className="rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white">🔗</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("# ", "", "Heading")} title="Heading" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">Aa</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("**", "**", "bold text")} title="Bold" className="rounded px-2 py-1 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-white">B</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert("_", "_", "italic")} title="Italic" className="rounded px-2 py-1 text-[13px] italic text-[var(--ink-2)] hover:bg-white">I</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const url = prompt("Link URL"); if (url) insert("[", `](${url})`, "link text"); }} title="Insert link" className="rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white">🔗</button>
             <label title="Attach a file" className="cursor-pointer rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white">📎<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
             {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}\n\n${t.body}` : t.body); } }} className="ml-auto text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
           </div>
