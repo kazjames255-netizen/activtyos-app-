@@ -20,7 +20,12 @@ Front-end is built; these tabs need backend:
   email-template store could be split out later.
 - **Analytics** — send counts are live from history; **delivered / open / click**
   rates need the sending engine to record events.
-- **Compose** — already live (`/api/emails/send`).
+- **Compose** — live (`/api/emails/send`). Now also: audience **by listing**
+  (recipients resolved from bookings, front-end), **Cc/Bcc** (added to the recipient
+  set server-side — true header-level Cc/Bcc is a mailer enhancement), a
+  formatting/link toolbar (markdown), a **template inserter**, and **attachments**
+  (front-end chips only — actual file-attach needs nodemailer `attachments` +
+  an upload step on the backend).
 
 ---
 
