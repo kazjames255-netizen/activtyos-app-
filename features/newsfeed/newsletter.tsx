@@ -12,7 +12,7 @@ import { post as apiPost } from "@/lib/api";
 // preview, the operator feed and the parent feed.
 // ─────────────────────────────────────────────────────────────────────────
 
-export type BlockType = "banner" | "hero" | "heading" | "text" | "image" | "discount" | "button" | "columns" | "quote" | "divider" | "eventbar" | "footer";
+export type BlockType = "banner" | "hero" | "heading" | "text" | "image" | "imageSmall" | "discount" | "button" | "columns" | "quote" | "divider" | "eventbar" | "footer";
 export interface Block {
   t: BlockType;
   heading?: string; body?: string; image?: string;
@@ -51,13 +51,13 @@ export const paletteOf = (id: string) => NL_PALETTES.find((p) => p.id === id) ??
 const B = (t: BlockType, extra: Partial<Block> = {}): Block => ({ t, ...extra });
 export interface Layout { id: string; name: string; blocks: () => Block[] }
 export const LAYOUTS: Layout[] = [
-  { id: "classic", name: "Classic newsletter", blocks: () => [B("banner"), B("hero", { image: "", heading: "This month at {company}", body: "A short welcome line to set the scene." }), B("heading", { heading: "What's on" }), B("text", { body: "Write your main update here — news, dates, and anything families should know." }), B("button", { label: "Book now" }), B("footer")] },
+  { id: "classic", name: "Classic newsletter", blocks: () => [B("banner"), B("hero", { image: "", heading: "This month at {company}", body: "A short welcome line to set the scene." }), B("heading", { heading: "What's on" }), B("text", { body: "Write your main update here — news, dates, and anything families should know." }), B("imageSmall", { image: "" }), B("button", { label: "Book now" }), B("footer")] },
   { id: "announce", name: "Simple announcement", blocks: () => [B("banner"), B("heading", { heading: "An update for our families" }), B("text", { body: "Your announcement goes here." }), B("footer")] },
-  { id: "event", name: "Event invite", blocks: () => [B("banner"), B("hero", { heading: "You're invited!", body: "Join us for a special day." }), B("eventbar", { date: "", time: "", location: "" }), B("text", { body: "Tell families what to expect and what to bring." }), B("button", { label: "Let us know you're coming" }), B("footer")] },
-  { id: "offer", name: "Offer / discount", blocks: () => [B("banner"), B("heading", { heading: "A treat for our families" }), B("discount", { code: "SUMMER10", codeDesc: "10% off your next booking — this week only." }), B("text", { body: "How to use it and when it ends." }), B("button", { label: "Book & save" }), B("footer")] },
-  { id: "twocol", name: "Two columns", blocks: () => [B("banner"), B("hero", { image: "", heading: "News in brief" }), B("columns", { left: "First thing families should know.", right: "Second thing families should know." }), B("button", { label: "Read more" }), B("footer")] },
+  { id: "event", name: "Event invite", blocks: () => [B("banner"), B("hero", { heading: "You're invited!", body: "Join us for a special day." }), B("eventbar", { date: "", time: "", location: "" }), B("text", { body: "Tell families what to expect and what to bring." }), B("imageSmall", { image: "" }), B("button", { label: "Let us know you're coming" }), B("footer")] },
+  { id: "offer", name: "Offer / discount", blocks: () => [B("banner"), B("heading", { heading: "A treat for our families" }), B("discount", { code: "SUMMER10", codeDesc: "10% off your next booking — this week only." }), B("text", { body: "How to use it and when it ends." }), B("imageSmall", { image: "" }), B("button", { label: "Book & save" }), B("footer")] },
+  { id: "twocol", name: "Two columns", blocks: () => [B("banner"), B("hero", { image: "", heading: "News in brief" }), B("columns", { left: "First thing families should know.", right: "Second thing families should know." }), B("imageSmall", { image: "" }), B("button", { label: "Read more" }), B("footer")] },
   { id: "photostory", name: "Photo story", blocks: () => [B("banner"), B("image", { image: "" }), B("heading", { heading: "A brilliant week" }), B("text", { body: "A few words about what the children got up to." }), B("image", { image: "" }), B("footer")] },
-  { id: "welcome", name: "Welcome pack", blocks: () => [B("banner"), B("hero", { heading: "Welcome to {company}!", body: "We're so pleased to have you with us." }), B("text", { body: "Everything you need for your first day." }), B("columns", { left: "What to bring", right: "Drop-off & pick-up" }), B("footer")] },
+  { id: "welcome", name: "Welcome pack", blocks: () => [B("banner"), B("hero", { heading: "Welcome to {company}!", body: "We're so pleased to have you with us." }), B("text", { body: "Everything you need for your first day." }), B("columns", { left: "What to bring", right: "Drop-off & pick-up" }), B("imageSmall", { image: "" }), B("footer")] },
   { id: "roundup", name: "Monthly round-up", blocks: () => [B("banner"), B("heading", { heading: "This month's round-up" }), B("text", { body: "Highlight one." }), B("divider"), B("text", { body: "Highlight two." }), B("divider"), B("text", { body: "Highlight three." }), B("footer")] },
   { id: "bigcta", name: "Big image + button", blocks: () => [B("hero", { image: "", heading: "Summer camp is open" }), B("heading", { heading: "Spaces are limited" }), B("button", { label: "Book your place" }), B("footer")] },
   { id: "quote", name: "Shout-out & quote", blocks: () => [B("banner"), B("heading", { heading: "Star of the month" }), B("quote", { body: "A lovely thing to celebrate.", heading: "— the team" }), B("text", { body: "A few more words." }), B("footer")] },
@@ -153,6 +153,7 @@ export function newsletterToHtml(nl: Newsletter): string {
       case "heading": return `<div style="padding:18px 26px 0"><div style="font-size:19px;font-weight:800;color:${p.ink}">${e(b.heading)}</div><div style="height:3px;width:42px;background:${p.accent2};border-radius:3px;margin-top:8px"></div>${b.body ? `<div style="font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap;margin-top:10px">${e(b.body)}</div>` : ""}</div>`;
       case "text": return `<div style="padding:12px 26px;font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap">${e(b.body)}</div>`;
       case "image": return b.image ? `<div style="height:300px;overflow:hidden"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div>` : "";
+      case "imageSmall": return b.image ? `<div style="padding:10px 26px;text-align:center"><div style="display:inline-block;width:56%;height:170px;overflow:hidden;border-radius:10px"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center" alt=""/></div></div>` : "";
       case "discount": return `<div style="padding:14px 26px"><div style="border:2px dashed ${p.accent};border-radius:12px;padding:14px 16px;text-align:center;background:${p.band}"><div style="font-size:12px;font-weight:800;letter-spacing:1px;color:${p.muted};text-transform:uppercase">Your code</div><div style="font-size:26px;font-weight:900;color:${p.accent};letter-spacing:2px">${e(b.code) || "CODE"}</div><div style="font-size:13px;color:${p.ink}">${e(b.codeDesc)}</div></div></div>`;
       case "button": { const bhref = b.listingId ? `/book/${b.listingId}` : (b.url || ""); const bs = `display:inline-block;background:${p.accent};color:${p.onAccent};font-weight:800;font-size:14px;padding:11px 22px;border-radius:999px;text-decoration:none`; return `<div style="padding:14px 26px;text-align:center">${bhref ? `<a href="${e(bhref)}" style="${bs}">` : `<span style="${bs}">`}${e(b.label) || "Learn more"}${bhref ? "</a>" : "</span>"}</div>`; }
       case "columns": return `<div style="padding:12px 26px;display:flex;gap:16px">${[b.left, b.right].map((t) => `<div style="flex:1;background:${p.band};border-radius:10px;padding:14px;font-size:13.5px;color:${p.ink}">${e(t)}</div>`).join("")}</div>`;
@@ -219,6 +220,10 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
       return <div style={{ padding: "12px 26px", fontSize: 14, color: p.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{fill(b.body, c)}</div>;
     case "image":
       return b.image ? <div style={{ height: 300, overflow: "hidden" }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div> : <div style={{ height: 200, margin: "12px 26px", borderRadius: 10, background: p.band, display: "flex", alignItems: "center", justifyContent: "center", color: p.muted, fontSize: 12, fontWeight: 700 }}>Add a photo</div>;
+    case "imageSmall":
+      // Optional secondary photo, half the main image's size, centred. Renders
+      // nothing at all when left empty, so it never disturbs the layout.
+      return b.image ? <div style={{ padding: "10px 26px", textAlign: "center" }}><div style={{ display: "inline-block", width: "56%", height: 170, overflow: "hidden", borderRadius: 10 }}><img src={b.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} /></div></div> : null;
     case "discount":
       return (
         <div style={{ padding: "14px 26px" }}>
@@ -374,16 +379,16 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                   return (
                     <div key={i} className="rounded-lg border border-[var(--line)] p-2">
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t}</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wide" style={{ color: p.accent }}>{b.t === "imageSmall" ? "Extra photo (optional)" : b.t}</span>
                         <span className="flex items-center gap-2">
                           <button type="button" onClick={() => dupBlock(i)} className="text-[11px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">Duplicate</button>
                           <button type="button" onClick={() => delBlock(i)} className="text-[11px] font-bold text-[#c02636]">Remove</button>
                         </span>
                       </div>
                       <div className="space-y-1.5">
-                        {(b.t === "hero" || b.t === "image") && (b.image ? (
+                        {(b.t === "hero" || b.t === "image" || b.t === "imageSmall") && (b.image ? (
                           <div>
-                            <div className="cursor-move touch-none select-none overflow-hidden rounded" style={{ aspectRatio: b.t === "hero" ? "600 / 340" : "600 / 300", background: "#0b1020" }} onPointerDown={bDown(i)} onPointerMove={bMove} onPointerUp={bUp} onPointerCancel={bUp}>
+                            <div className="cursor-move touch-none select-none overflow-hidden rounded" style={{ aspectRatio: b.t === "hero" ? "600 / 340" : b.t === "imageSmall" ? "336 / 170" : "600 / 300", background: "#0b1020" }} onPointerDown={bDown(i)} onPointerMove={bMove} onPointerUp={bUp} onPointerCancel={bUp}>
                               <img src={b.image} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${b.ix ?? 0}%, ${b.iy ?? 0}%) scale(${b.iz ?? 1})`, transformOrigin: "center" }} />
                             </div>
                             <div className="mt-1 flex items-center gap-2">
@@ -394,7 +399,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                             </div>
                             <div className="text-[10px] text-[var(--ink-3)]">Drag to move · zoom to crop.</div>
                           </div>
-                        ) : imgBtn((url) => setBlock(i, { image: url })))}
+                        ) : <div className="flex items-center gap-2">{imgBtn((url) => setBlock(i, { image: url }))}{b.t === "imageSmall" && <span className="text-[10.5px] text-[var(--ink-3)]">Optional — a smaller second photo. Leave empty and it won’t show.</span>}</div>)}
                         {has("heading") && <input value={b.heading ?? ""} onChange={(e) => setBlock(i, { heading: e.target.value })} placeholder="Heading" className={inputCls} />}
                         {(has("body") || b.t === "heading") && <textarea value={b.body ?? ""} onChange={(e) => setBlock(i, { body: e.target.value })} rows={2} placeholder={b.t === "heading" ? "Text under this heading (optional)" : "Text"} className={inputCls} />}
                         {b.t === "columns" && <><input value={b.left ?? ""} onChange={(e) => setBlock(i, { left: e.target.value })} placeholder="Left column" className={inputCls} /><input value={b.right ?? ""} onChange={(e) => setBlock(i, { right: e.target.value })} placeholder="Right column" className={inputCls} /></>}
