@@ -1026,6 +1026,16 @@ export function EmailApp() {
 
       {tab === "compose" && (<>
       {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#dbe6fb] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-white px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">↩ Undo</button></div>}
+      {docHtml && (
+        <div className="mb-4 rounded-2xl border-2 border-[#2f6bd8] bg-[#f4f8ff] p-4">
+          <div className="text-[14px] font-extrabold text-[#1d3a8f]">📰 A designed newsletter came from the Newsfeed — how should families get it?</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {([["embed", "📧 Embed the design inside the email"], ["attach", "📎 Attach it as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
+            <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
+          </div>
+          <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full designed layout in the email body; the text below is the plain-text fallback." : <span>Families get a short covering email with the newsletter attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
+        </div>
+      )}
       <Card className="mb-4 p-4">
         <div className="grid gap-2.5 sm:grid-cols-2">
           <div>
@@ -1081,20 +1091,6 @@ export function EmailApp() {
                 </div>
               </div>
             ); })()}
-          </div>
-        )}
-        {docHtml && (
-          <div className="mt-2.5 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
-            <div className="mb-1.5 text-[12px] font-extrabold text-[#1d3a8f]">How should families get the designed version?</div>
-            <div className="flex flex-wrap gap-2">
-              {([["embed", "📧 Embed inside the email"], ["attach", "📎 Attach as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border px-3 py-1.5 text-[12.5px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
-              {mode === "embed"
-                ? <span>The full designed layout appears in the email body; the text below is the plain-text fallback.</span>
-                : <span>Download the PDF to attach. <b className="text-[#8a6d1a]">Automatic file-attach is a backend step — for now grab the PDF here.</b></span>}
-              <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Download PDF</button>
-            </div>
           </div>
         )}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
