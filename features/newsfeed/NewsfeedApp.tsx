@@ -141,6 +141,7 @@ export function NewsfeedApp() {
   const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string; meta?: NlMeta } | null>(null);
   const [filter, setFilter] = useState<"all" | Tpl | "draft" | "scheduled" | "archived">("all");
   const [folderFilter, setFolderFilter] = useState("");
+  const [query, setQuery] = useState("");
   const router = useRouter();
   const portal = usePathname()?.split("/")[1] || "freelancer";
 
@@ -164,8 +165,10 @@ export function NewsfeedApp() {
       : filter === "archived" ? all.filter((p) => p.status === "archived")
       : all.filter((p) => (p.tpl ?? "announce") === filter && live1(p));
     if (folderFilter) list = list.filter((p) => (p.folder ?? "") === folderFilter);
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((p) => `${p.title ?? ""} ${p.body ?? ""} ${p.folder ?? ""} ${p.audLabel ?? ""} ${p.newsletter?.company.name ?? ""}`.toLowerCase().includes(q));
     return list;
-  }, [all, filter, folderFilter]);
+  }, [all, filter, folderFilter, query]);
   const pinnedCount = live.filter((p) => p.pinned).length;
   const scheduledCount = all.filter((p) => p.status === "scheduled").length;
 
@@ -203,6 +206,14 @@ export function NewsfeedApp() {
   const patch = async (id: string, f: Partial<Post>) => {
     setPosts((ps) => (ps ?? []).map((p) => (p.id === id ? { ...p, ...f } : p)));
     try { await api(`/api/posts/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(f) }); } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); refresh(); }
+  };
+  // Delete a folder = un-file everything in it (posts are NOT deleted, just moved
+  // to Unfiled). Confirmed first because it touches several posts at once.
+  const deleteFolder = (f: string) => {
+    const inside = all.filter((p) => (p.folder ?? "") === f);
+    if (!confirm(`Delete the folder “${f}”?\n\nThe ${inside.length} item${inside.length === 1 ? "" : "s"} inside will move to Unfiled — they won’t be deleted.`)) return;
+    inside.forEach((p) => patch(p.id, { folder: "" }));
+    if (folderFilter === f) setFolderFilter("");
   };
   async function remove(p: Post) {
     if (!confirm("Delete this post? Families will no longer see it.")) return;
@@ -309,22 +320,32 @@ export function NewsfeedApp() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters + quick search */}
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {([["all", "All"], ...TPL_ORDER.map((k) => [k, TPL[k].label] as const), ["newsletter", "Newsletter"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["archived", "Archived"]] as [typeof filter, string][]).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={filter === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>
         ))}
+        <div className="relative ml-auto">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search posts…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-7 pr-7 text-[12px] text-[var(--ink)] outline-none focus:border-[color:var(--brand,#1d3a8f)]" />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>}
+        </div>
       </div>
       {folders.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Folders</span>
           <button type="button" onClick={() => setFolderFilter("")} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={!folderFilter ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>All</button>
-          {folders.map((f) => <button key={f} type="button" onClick={() => setFolderFilter(folderFilter === f ? "" : f)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>📁 {f}</button>)}
+          {folders.map((f) => (
+            <span key={f} className="inline-flex items-center overflow-hidden rounded-full border" style={folderFilter === f ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+              <button type="button" onClick={() => setFolderFilter(folderFilter === f ? "" : f)} className="py-1 pl-2.5 pr-1.5 text-[11.5px] font-bold">📁 {f}</button>
+              {canManage && <button type="button" onClick={() => deleteFolder(f)} title={`Delete folder “${f}”`} aria-label={`Delete folder ${f}`} className="py-1 pl-1 pr-2 text-[11px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}
+            </span>
+          ))}
         </div>
       )}
 
       {shown.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here yet — {canManage ? "pick a post type above to write your first update." : "your provider hasn’t posted yet."}</div>
+        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{query.trim() ? `No posts match “${query.trim()}”.` : `Nothing here yet — ${canManage ? "pick a post type above to write your first update." : "your provider hasn’t posted yet."}`}</div>
       ) : (
         <div className="grid items-start gap-3 md:grid-cols-2">
           {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} folders={folders} onMove={(f) => patch(p.id, { folder: f || undefined })} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id, meta: metaFromPost(p) }) : editPost(p))} onDuplicate={() => duplicate(p)} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}

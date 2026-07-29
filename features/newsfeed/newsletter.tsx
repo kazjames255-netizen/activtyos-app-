@@ -327,9 +327,9 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
           <button type="button" onClick={onCancel} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold">×</button>
         </div>
 
-        <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_420px]">
+        <div className="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_420px]">
           {/* Editor */}
-          <div className="space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
+          <div className="min-h-0 space-y-3 overflow-y-auto border-r border-[var(--line)] p-4">
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Newsletter name</div>
               <input value={meta.name} onChange={(e) => setM({ name: e.target.value })} placeholder="e.g. July Family Update" className={inputCls} />
@@ -451,7 +451,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
           </div>
 
           {/* Preview */}
-          <div className="overflow-y-auto bg-[var(--panel)] p-3">
+          <div className="min-h-0 overflow-y-auto bg-[var(--panel)] p-3">
             <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Preview</div>
             <NewsletterView data={nl} />
             <div className="mt-2 flex justify-center"><span className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">💬 Message us for more info</span></div>
