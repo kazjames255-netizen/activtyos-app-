@@ -20,7 +20,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 
 // A call-to-action / link on a post: a label plus either a listing (target = its
 // title, opens the listing in-app) or an external url.
-const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), url: z.string().trim().max(600).optional() }).nullable();
+const ctaSchema = z.object({ label: z.string().trim().max(60), target: z.string().trim().max(160).optional(), listingId: z.string().trim().max(80).optional(), url: z.string().trim().max(600).optional() }).nullable();
 // A designed newsletter payload (layout + palette + company + content blocks).
 // Block fields are all strings; images are uploaded URLs, so the doc stays small.
 const nlBlockSchema = z.object({ t: z.string().max(20) }).catchall(z.string().max(4_000));
@@ -36,10 +36,12 @@ const postSchema = z.object({
   title: z.string().trim().max(160).optional(),
   body: z.string().trim().min(1).max(4_000),
   photoUrl: z.string().trim().max(600).optional(),      // uploaded image URL (uses the /api/uploads store)
+  imageAspect: z.string().trim().max(8).optional(),     // "full" (whole image) | "16/9" | "1/1" | "4/5"
   imageX: z.number().min(-100).max(100).optional(),     // crop pan X (% of frame)
   imageY: z.number().min(-100).max(100).optional(),     // crop pan Y (% of frame)
   imageZoom: z.number().min(1).max(5).optional(),       // crop zoom (1 = fit)
   priority: z.enum(["normal", "urgent"]).optional(),
+  colour: z.string().trim().max(20).optional(),         // accent colour override (hex); default = template colour
   pinned: z.boolean().optional(),                       // stays at the top of the feed
   ackRequired: z.boolean().optional(),                  // families must tap "Got it"
   react: z.boolean().optional(),                        // allow likes/reactions (default on)

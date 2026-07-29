@@ -14,11 +14,11 @@ import { NewsletterView, PostImage, type Newsletter } from "./newsletter";
 // shared counters through the /react /rsvp /ack endpoints.
 
 type Tpl = "announce" | "event" | "reminder" | "urgent" | "celebrate" | "booking" | "newsletter";
-interface Cta { label: string; target?: string; url?: string }
+interface Cta { label: string; target?: string; listingId?: string; url?: string }
 interface Rsvp { yes: number; no: number; maybe: number }
 interface Post {
-  id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imageX?: number; imageY?: number; imageZoom?: number;
-  pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
+  id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string; imageAspect?: string; imageX?: number; imageY?: number; imageZoom?: number;
+  colour?: string; pinned?: boolean; priority?: "normal" | "urgent"; ackRequired?: boolean; react?: boolean;
   date?: string; time?: string; location?: string; cta?: Cta | null; rsvp?: Rsvp | null;
   seen?: number; reactions?: number; tenantName?: string; createdAt?: string; newsletter?: Newsletter | null;
 }
@@ -52,7 +52,7 @@ export function ParentNewsfeedApp() {
   const react = (p: Post) => { const on = !mine[p.id]?.reacted; saveMine(p.id, { reacted: on }); setPosts((ps) => (ps ?? []).map((x) => (x.id === p.id ? { ...x, reactions: Math.max(0, (x.reactions ?? 0) + (on ? 1 : -1)) } : x))); apiPost(`/api/posts/${encodeURIComponent(p.id)}/react`, { on }).catch(() => {}); };
   const rsvp = (p: Post, choice: "yes" | "no" | "maybe") => { const prev = mine[p.id]?.rsvp ?? null; if (prev === choice) return; saveMine(p.id, { rsvp: choice }); setPosts((ps) => (ps ?? []).map((x) => { if (x.id !== p.id || !x.rsvp) return x; const r = { ...x.rsvp }; r[choice] += 1; if (prev) r[prev] = Math.max(0, r[prev] - 1); return { ...x, rsvp: r }; })); apiPost(`/api/posts/${encodeURIComponent(p.id)}/rsvp`, { choice, prev }).catch(() => {}); };
   const ack = (p: Post) => { if (mine[p.id]?.acked) return; saveMine(p.id, { acked: true }); setPosts((ps) => (ps ?? []).map((x) => (x.id === p.id ? { ...x, seen: (x.seen ?? 0) + 1 } : x))); void api(`/api/posts/${encodeURIComponent(p.id)}/ack`, { method: "POST", body: "{}" }).catch(() => {}); };
-  const cta = (p: Post) => { saveMine(p.id, { acked: true }); if (p.cta?.url) window.open(p.cta.url, "_blank", "noopener,noreferrer"); else router.push("/custdash/browse"); };
+  const cta = (p: Post) => { saveMine(p.id, { acked: true }); if (p.cta?.url) window.open(p.cta.url, "_blank", "noopener,noreferrer"); else if (p.cta?.listingId) router.push(`/book/${p.cta.listingId}`); else router.push("/custdash/browse"); };
 
   const list = useMemo(() => posts ?? [], [posts]);
 
@@ -65,9 +65,10 @@ export function ParentNewsfeedApp() {
       {!posts ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       : list.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No updates yet.</Card>
       : (
-        <div className="flex flex-col gap-2.5">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {list.map((p) => {
             const t = TPL[p.tpl ?? "announce"];
+            const accent = p.colour || t.color;
             const m = mine[p.id] ?? {};
             if (p.tpl === "newsletter" && p.newsletter) {
               return (
@@ -89,16 +90,18 @@ export function ParentNewsfeedApp() {
             }
             return (
               <Card key={p.id} className="overflow-hidden !p-0">
-                <div className="border-l-[4px] p-3.5" style={{ borderColor: t.color }}>
-                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${t.color}18`, color: t.color }}>{t.label}</span>
-                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
+                {p.photoUrl
+                  ? <div className="relative"><PostImage url={p.photoUrl} aspect={p.imageAspect} x={p.imageX} y={p.imageY} zoom={p.imageZoom} rounded={false} /><span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm" style={{ background: accent }}>{t.label}</span></div>
+                  : <div className="h-1.5 w-full" style={{ background: accent }} />}
+                <div className="p-3.5">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    {!p.photoUrl && <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t.label}</span>}
+                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
                     <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? "Provider"}</Badge>
                     <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
                   </div>
-                  {p.title && <div className="text-[14px] font-extrabold">{p.title}</div>}
-                  <div className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink-2)]">{p.body}</div>
-                  {p.photoUrl && <div className="mt-2"><PostImage url={p.photoUrl} x={p.imageX} y={p.imageY} zoom={p.imageZoom} /></div>}
+                  {p.title && <div className="text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
+                  <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{p.body}</div>
 
                   {p.tpl === "event" && (p.date || p.time || p.location) && (
                     <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel,#f4f2f8)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{[p.date, p.time, p.location].filter(Boolean).join(" · ")}</div>
@@ -117,7 +120,7 @@ export function ParentNewsfeedApp() {
                       <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>
                     )}
                     {p.cta && (
-                      <button type="button" onClick={() => cta(p)} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: t.color }}>{p.cta.label}</button>
+                      <button type="button" onClick={() => cta(p)} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: accent }}>{p.cta.label}</button>
                     )}
                     {p.react !== false && (
                       <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>

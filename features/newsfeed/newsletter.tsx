@@ -71,12 +71,16 @@ export const newNewsletter = (layoutId: string, company: Partial<Company> = {}):
 
 const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
 
-// A post image in a fixed 16:9 frame, pannable in any direction (translate x/y in
-// % of the frame) and zoomable (scale). The composer preview and every place it's
-// shown use this same transform, so what the operator sets is exactly what sends.
-export function PostImage({ url, x = 0, y = 0, zoom = 1, rounded = true }: { url: string; x?: number; y?: number; zoom?: number; rounded?: boolean }) {
+// A post image. "full" shows the WHOLE picture (nothing cropped) — the default,
+// so an uploaded photo is never cut. Any other aspect ("16/9" / "1/1" / "4/5")
+// crops to that shape with pan (translate x/y in % of frame) + zoom, rendered
+// identically in the composer, both feeds and the PDF.
+export function PostImage({ url, aspect = "full", x = 0, y = 0, zoom = 1, rounded = true }: { url: string; aspect?: string; x?: number; y?: number; zoom?: number; rounded?: boolean }) {
+  if (!aspect || aspect === "full") {
+    return <div className="w-full text-center" style={{ background: "#f2f5fb" }}><img src={url} alt="" draggable={false} className={rounded ? "rounded-lg" : ""} style={{ display: "inline-block", maxWidth: "100%", maxHeight: 440, verticalAlign: "middle" }} /></div>;
+  }
   return (
-    <div className={`relative w-full overflow-hidden ${rounded ? "rounded-lg" : ""}`} style={{ aspectRatio: "16 / 9", background: "#0b1020" }}>
+    <div className={`relative w-full overflow-hidden ${rounded ? "rounded-lg" : ""}`} style={{ aspectRatio: aspect.replace("/", " / "), background: "#0b1020" }}>
       <img src={url} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${x}%, ${y}%) scale(${zoom})`, transformOrigin: "center" }} />
     </div>
   );
