@@ -9,6 +9,7 @@ import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
+import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import type { Newsletter } from "@/features/newsfeed/newsletter";
 
@@ -789,6 +790,13 @@ export function EmailApp() {
   const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
   const reachCount = audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
   const addExtra = () => { const parts = extraInput.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
+  // A template is usable in Email only if every merge field it uses can resolve for
+  // this send. Email is a bulk/no-booking context, so booking-scoped fields
+  // ({SessionDate}, {VenueName}, {BookingRef}) can't be filled — those templates are
+  // locked here and must be sent per-booking. ({ListingName} is OK on a listing send.)
+  const emailAllowed = new Set(mergeFieldsFor(audience === "listing" ? "listing" : "family").map((f) => f.token.toLowerCase()));
+  const emailKnown = new Set(MERGE_FIELDS.map((f) => f.token.toLowerCase()));
+  const templateUsable = (t: EmailTemplate) => (`${t.subject ?? ""} ${t.body}`.match(/\{[A-Za-z]+\}/g) ?? []).map((x) => x.toLowerCase()).every((tok) => !emailKnown.has(tok) || emailAllowed.has(tok));
 
   const addAttachment = (f: File) => { const kb = Math.max(1, Math.round(f.size / 1024)); setAttachments((xs) => [...xs, { name: f.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB` }]); };
 
@@ -914,7 +922,7 @@ export function EmailApp() {
           <div className="mb-1 flex items-center justify-between"><FieldLabel>Message</FieldLabel>
             <div className="flex items-center gap-2">
               <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
-              {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
+              {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t && templateUsable(t)) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · per-booking only"}</option>; })}</Select>}
             </div>
           </div>
           <RichText value={body} onChange={setBody} />
