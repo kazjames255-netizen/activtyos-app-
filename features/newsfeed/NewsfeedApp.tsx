@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- post/newsletter images are arbitrary operator-uploaded URLs; next/image doesn't fit. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,7 +29,7 @@ interface Rsvp { yes: number; no: number; maybe: number }
 interface Post {
   id: string; tpl?: Tpl; title?: string; body: string; photoUrl?: string;
   priority?: "normal" | "urgent"; pinned?: boolean; ackRequired?: boolean; react?: boolean;
-  status?: Status; audience?: "all" | "site" | "listing"; audId?: string; audLabel?: string;
+  status?: Status; audience?: "all" | "site" | "listing"; audId?: string; audIds?: string[]; audLabel?: string;
   date?: string; time?: string; location?: string; cta?: Cta | null; publishAt?: string;
   rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null; folder?: string;
   postedByName?: string; createdAt?: string; editedAt?: string;
@@ -47,17 +48,35 @@ const TPL_ORDER: Tpl[] = ["announce", "event", "reminder", "urgent", "celebrate"
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
+// Plain-text of a post — for the "email to parents" hand-off.
+function postToText(d: Draft): string {
+  const parts = [d.body.trim()];
+  if (d.tpl === "event") { const e = [d.date, d.time, d.location].filter(Boolean).join(" · "); if (e) parts.push(e); }
+  if (d.ctaKind !== "none" && d.ctaLabel) parts.push(`${d.ctaLabel}${d.ctaUrl ? `: ${d.ctaUrl}` : d.ctaTarget ? `: ${d.ctaTarget}` : ""}`);
+  return parts.filter(Boolean).join("\n\n");
+}
+// Open a printable window (browser "Save as PDF") for a post.
+function printPost(d: Draft) {
+  const w = typeof window !== "undefined" ? window.open("", "_blank", "width=720,height=900") : null;
+  if (!w) return;
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+  const img = d.image ? `<img src="${d.image}" style="max-width:100%;border-radius:10px;margin:12px 0" alt="" />` : "";
+  const ev = d.tpl === "event" ? `<p style="font-weight:700;color:#1d3a8f">${esc([d.date, d.time, d.location].filter(Boolean).join(" · "))}</p>` : "";
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title || "Post")}</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:640px;margin:32px auto;padding:0 20px;color:#171534;line-height:1.6}h1{font-size:25px;margin:0 0 4px}</style></head><body><h1>${esc(d.title)}</h1>${img}${ev}<div style="white-space:pre-wrap;font-size:15px">${esc(d.body)}</div><script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.close();
+}
+
 type CtaKind = "none" | "listing" | "url";
 interface Draft {
-  editId: string; tpl: Tpl; title: string; body: string;
-  audScope: "all" | "listing"; audId: string;
+  editId: string; tpl: Tpl; title: string; body: string; image: string; folder: string;
+  audScope: "all" | "listing"; audIds: string[];
   date: string; time: string; location: string;
   pinned: boolean; priority: "normal" | "urgent"; ackRequired: boolean; react: boolean;
   ctaKind: CtaKind; ctaLabel: string; ctaTarget: string; ctaUrl: string;
-  when: "now" | "later"; publishAt: string;
+  when: "now" | "later" | "draft"; publishAt: string;
 }
 const draftFor = (tpl: Tpl, listings: { id: string; title: string }[]): Draft => ({
-  editId: "", tpl, title: "", body: "", audScope: "all", audId: "",
+  editId: "", tpl, title: "", body: "", image: "", folder: "", audScope: "all", audIds: [],
   date: "", time: "", location: "",
   pinned: tpl === "urgent" || tpl === "reminder",
   priority: tpl === "urgent" ? "urgent" : "normal",
@@ -102,18 +121,23 @@ export function NewsfeedApp() {
   const pinnedCount = live.filter((p) => p.pinned).length;
   const scheduledCount = all.filter((p) => p.status === "scheduled").length;
 
-  async function publish(d: Draft) {
+  async function publish(d: Draft, channel: "page" | "email" | "both" | "download") {
     if (!d.title.trim() || !d.body.trim()) { setError("Add a title and a message."); return; }
-    const audLabel = d.audScope === "all" ? "All families" : `Listing: ${listings.find((l) => l.id === d.audId)?.title ?? "—"}`;
+    if (channel === "download") { printPost(d); return; }
+    const chosen = d.audScope === "listing" ? listings.filter((l) => d.audIds.includes(l.id)) : [];
+    const audLabel = d.audScope === "all" ? "All families" : `Listings: ${chosen.map((l) => l.title).join(", ") || "—"}`;
     const scheduled = d.when === "later" && !!d.publishAt;
     const cta: Cta | null = d.ctaKind === "listing" && d.ctaTarget ? { label: d.ctaLabel.trim() || "Open", target: d.ctaTarget }
       : d.ctaKind === "url" && d.ctaUrl.trim() ? { label: d.ctaLabel.trim() || "Open link", url: d.ctaUrl.trim() }
       : null;
+    // Email only → filed as a draft; posting to the page (or both) follows the When choice.
+    const status: Status = channel === "email" ? "draft" : d.when === "draft" ? "draft" : scheduled ? "scheduled" : "published";
     const payload: Partial<Post> = {
-      tpl: d.tpl, title: d.title.trim(), body: d.body.trim(),
+      tpl: d.tpl, title: d.title.trim(), body: d.body.trim(), photoUrl: d.image || undefined,
       priority: d.priority, pinned: d.pinned, ackRequired: d.ackRequired, react: d.react,
-      status: scheduled ? "scheduled" : "published",
-      audience: d.audScope, audId: d.audScope === "listing" ? d.audId : undefined, audLabel,
+      status,
+      audience: d.audScope, audIds: d.audScope === "listing" ? d.audIds : undefined, audLabel,
+      folder: d.folder.trim() || undefined,
       ...(d.tpl === "event" ? { date: d.date, time: d.time, location: d.location } : {}),
       cta,
       ...(scheduled ? { publishAt: d.publishAt } : {}),
@@ -121,6 +145,10 @@ export function NewsfeedApp() {
     try {
       if (d.editId) await api(`/api/posts/${encodeURIComponent(d.editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
+      if (channel === "email" || channel === "both") {
+        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: d.title.trim(), body: postToText(d) })); } catch { /* private mode */ }
+        setDraft(null); router.push(`/${portal}/email`); return;
+      }
       setDraft(null); setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t post"); }
   }
@@ -163,8 +191,8 @@ export function NewsfeedApp() {
   }
   const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audId: p.audId ?? "", pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
   const editPost = (p: Post) => setDraft({
-    editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body,
-    audScope: p.audience === "listing" ? "listing" : "all", audId: p.audId ?? "",
+    editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, image: p.photoUrl ?? "", folder: p.folder ?? "",
+    audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []),
     date: p.date ?? "", time: p.time ?? "", location: p.location ?? "",
     pinned: !!p.pinned, priority: p.priority ?? "normal", ackRequired: !!p.ackRequired, react: p.react !== false,
     ctaKind: p.cta?.url ? "url" : p.cta?.target ? "listing" : "none", ctaLabel: p.cta?.label ?? "", ctaTarget: p.cta?.target ?? "", ctaUrl: p.cta?.url ?? "", when: "now", publishAt: "",
@@ -233,7 +261,7 @@ export function NewsfeedApp() {
         </div>
       )}
 
-      {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} onClose={() => setDraft(null)} onPublish={publish} />}
+      {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} onClose={() => setDraft(null)} onPublish={publish} />}
       {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialMeta={nlOpen.meta} listings={listings} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
     </div>
   );
@@ -291,6 +319,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive
         </div>
         {p.title && <div className="text-[14px] font-extrabold">{p.title}</div>}
         <div className="mt-0.5 whitespace-pre-wrap text-[13px] text-[var(--ink-2)]">{p.body}</div>
+        {p.photoUrl && <img src={p.photoUrl} alt="" className="mt-2 max-h-64 w-full rounded-lg object-cover" />}
 
         {p.tpl === "event" && (p.date || p.time || p.location) && (
           <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{[p.date, p.time, p.location].filter(Boolean).join(" · ")}</div>
@@ -318,11 +347,17 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive
   );
 }
 
-function Composer({ draft, setDraft, listings, onClose, onPublish }: { draft: Draft; setDraft: (d: Draft) => void; listings: { id: string; title: string }[]; onClose: () => void; onPublish: (d: Draft) => void }) {
+function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish }: { draft: Draft; setDraft: (d: Draft) => void; listings: { id: string; title: string }[]; folders?: string[]; onClose: () => void; onPublish: (d: Draft, channel: "page" | "email" | "both" | "download") => void }) {
   const tpl = TPL[draft.tpl];
   const set = (f: Partial<Draft>) => setDraft({ ...draft, ...f });
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const field = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
+  const [imgBusy, setImgBusy] = useState(false);
+  async function uploadImage(file: File) {
+    setImgBusy(true);
+    try { const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); }); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); set({ image: url }); } catch { /* keep as-is */ } finally { setImgBusy(false); }
+  }
+  const toggleListing = (id: string) => set({ audIds: draft.audIds.includes(id) ? draft.audIds.filter((x) => x !== id) : [...draft.audIds, id] });
 
   // AI "help me write" — the operator gives the gist + specifics, picks a length,
   // and the model drafts the title + message (server: POST /api/ai/compose).
@@ -380,6 +415,13 @@ function Composer({ draft, setDraft, listings, onClose, onPublish }: { draft: Dr
 
           {field("Title", <input autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Early pick-up today at 3pm" className={inputCls} />)}
           {field("Message", <textarea value={draft.body} onChange={(e) => set({ body: e.target.value })} rows={4} placeholder="Write the update families will see…" className={inputCls} />)}
+          {field("Image (optional)", (
+            <div className="flex items-center gap-2">
+              {draft.image && <img src={draft.image} alt="" className="h-12 w-16 rounded-lg object-cover" />}
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : draft.image ? "Replace image" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
+              {draft.image && <button type="button" onClick={() => set({ image: "" })} className="text-[11.5px] font-bold text-[#c02636]">Remove</button>}
+            </div>
+          ))}
 
           {draft.tpl === "event" && (
             <div className="grid grid-cols-3 gap-2.5">
@@ -405,10 +447,21 @@ function Composer({ draft, setDraft, listings, onClose, onPublish }: { draft: Dr
           ))}
 
           {field("Who sees it", (
-            <div className="flex flex-wrap items-center gap-2">
-              {([["all", "All families"], ["listing", "One listing’s families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ audScope: k, audId: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.audScope === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
-              {draft.audScope === "listing" && <select value={draft.audId} onChange={(e) => set({ audId: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none"><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {([["all", "All families"], ["listing", "Chosen listings’ families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.audScope === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+              </div>
+              {draft.audScope === "listing" && (
+                <div className="flex flex-wrap gap-1.5">
+                  {listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">No listings yet.</span>
+                    : listings.map((l) => { const on = draft.audIds.includes(l.id); return <button key={l.id} type="button" onClick={() => toggleListing(l.id)} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={on ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}
+                </div>
+              )}
             </div>
+          ))}
+
+          {field("Folder (optional)", (
+            <><input list="post-folders" value={draft.folder} onChange={(e) => set({ folder: e.target.value })} placeholder="File it — type a new folder or pick one" className={inputCls} /><datalist id="post-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist></>
           ))}
 
           <div className="flex flex-wrap gap-1.5">
@@ -416,16 +469,20 @@ function Composer({ draft, setDraft, listings, onClose, onPublish }: { draft: Dr
             <button type="button" onClick={() => set({ priority: draft.priority === "urgent" ? "normal" : "urgent" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.priority === "urgent" ? { borderColor: "#c02636", background: "#fde2e4", color: "#c02636" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{draft.priority === "urgent" ? "✓ " : ""}High priority</button>
           </div>
 
-          {field("When", (
+          {field("When (for the Newsfeed)", (
             <div className="flex flex-wrap items-center gap-2">
-              {([["now", "Publish now"], ["later", "Schedule"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.when === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
+              {([["now", "Publish now"], ["later", "Schedule"], ["draft", "Save as draft"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => set({ when: k })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.when === k ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
               {draft.when === "later" && <input type="datetime-local" value={draft.publishAt} onChange={(e) => set({ publishAt: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none" />}
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <Button sm onClick={onClose}>Cancel</Button>
-          <Button sm variant="primary" onClick={() => onPublish(draft)}>{draft.editId ? "Save changes" : draft.when === "later" ? "Schedule" : "Publish"}</Button>
+          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Send it →</span>
+          <button type="button" onClick={() => onPublish(draft, "download")} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
+          <button type="button" onClick={() => onPublish(draft, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
+          <button type="button" onClick={() => onPublish(draft, "both")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Both</button>
+          <button type="button" onClick={() => onPublish(draft, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white">{draft.editId ? "Save changes" : draft.when === "draft" ? "Save draft" : draft.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
         </div>
       </div>
     </div>

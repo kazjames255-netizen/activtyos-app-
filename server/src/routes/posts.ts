@@ -42,8 +42,9 @@ const postSchema = z.object({
   react: z.boolean().optional(),                        // allow likes/reactions (default on)
   status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
   audience: z.enum(["all", "site", "listing"]).optional(),
-  audId: z.string().trim().max(80).optional(),          // the site/listing id when scoped
-  audLabel: z.string().trim().max(160).optional(),      // human label ("Site: Bristol")
+  audId: z.string().trim().max(80).optional(),          // single site/listing id (legacy / one)
+  audIds: z.array(z.string().trim().max(80)).max(60).optional(), // multiple listing ids when scoped to several
+  audLabel: z.string().trim().max(200).optional(),      // human label ("Listings: Camp A, Camp B")
   date: z.string().trim().max(40).optional(),           // event date
   time: z.string().trim().max(20).optional(),           // event time
   location: z.string().trim().max(160).optional(),      // event location
