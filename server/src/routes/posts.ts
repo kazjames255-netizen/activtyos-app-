@@ -36,6 +36,8 @@ const postSchema = z.object({
   title: z.string().trim().max(160).optional(),
   body: z.string().trim().min(1).max(4_000),
   photoUrl: z.string().trim().max(600).optional(),      // uploaded image URL (uses the /api/uploads store)
+  imagePos: z.string().trim().max(20).optional(),       // object-position focal point, e.g. "50% 30%"
+  imageZoom: z.number().min(1).max(4).optional(),       // crop zoom (1 = fit)
   priority: z.enum(["normal", "urgent"]).optional(),
   pinned: z.boolean().optional(),                       // stays at the top of the feed
   ackRequired: z.boolean().optional(),                  // families must tap "Got it"

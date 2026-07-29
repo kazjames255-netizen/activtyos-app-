@@ -85,6 +85,17 @@ export const newNewsletter = (layoutId: string, company: Partial<Company> = {}):
 
 const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
 
+// A post image rendered in a fixed 16:9 frame with a focal point + zoom, so what
+// the operator sees in the composer is exactly what families get. `pos` is an
+// object-position ("50% 30%"), `zoom` a scale (1 = fit).
+export function PostImage({ url, pos = "50% 50%", zoom = 1, rounded = true }: { url: string; pos?: string; zoom?: number; rounded?: boolean }) {
+  return (
+    <div className={`relative w-full overflow-hidden ${rounded ? "rounded-lg" : ""}`} style={{ aspectRatio: "16 / 9", background: "#0b1020" }}>
+      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: pos, transform: `scale(${zoom})`, transformOrigin: pos }} />
+    </div>
+  );
+}
+
 // A plain-text rendering of the newsletter — used to hand it to the Email area
 // ready to send to parents (the email channel is plain text today).
 export function newsletterToText(nl: Newsletter): string {
@@ -137,7 +148,7 @@ export function printNewsletter(nl: Newsletter) {
   const w = typeof window !== "undefined" ? window.open("", "_blank", "width=760,height=980") : null;
   if (!w) return;
   const title = (fill(nl.company.name, nl.company) || "Newsletter").replace(/[&<>]/g, "");
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body style="background:#eef2f8;margin:0;padding:20px;font-family:system-ui,-apple-system,sans-serif">${newsletterToHtml(nl)}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>@page{size:A4;margin:10mm}html,body{margin:0}body{background:#fff;padding:0;font-family:system-ui,-apple-system,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${newsletterToHtml(nl)}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
   w.document.close();
 }
 
@@ -373,9 +384,9 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
           <span className="mr-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
+          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Do one now — reopen to do another</span>
           <button type="button" onClick={() => printNewsletter(nl)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
           <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
-          <button type="button" onClick={() => onSave(nl, meta, "both")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Both</button>
           <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
         </div>
       </div>
