@@ -247,11 +247,25 @@ export function NewsfeedApp() {
     ctaKind: p.cta?.url ? "url" : p.cta?.target ? "listing" : "none", ctaLabel: p.cta?.label ?? "", ctaTarget: p.cta?.target ?? "", ctaListingId: p.cta?.listingId ?? "", ctaUrl: p.cta?.url ?? "", when: "now", publishAt: "",
   });
   const editPost = (p: Post) => setDraft(draftFromPost(p));
-  // Duplicate a saved post/newsletter → open a fresh copy (no editId) so saving
-  // creates a new one, leaving the original untouched.
-  const duplicate = (p: Post) => {
-    if (p.tpl === "newsletter" && p.newsletter) { setNlOpen({ initial: p.newsletter, meta: { ...metaFromPost(p), name: `${p.title ?? "Newsletter"} (copy)`, when: "draft" } }); return; }
-    setDraft({ ...draftFromPost(p), editId: "", title: `${p.title ?? ""} (copy)`.trim(), when: "draft" });
+  // Duplicate a saved post/newsletter → immediately create a fresh copy filed as
+  // a DRAFT (never re-blasts families), then jump to the Drafts view so it's
+  // visible to edit/publish. The original is untouched.
+  const duplicate = async (p: Post) => {
+    const payload: Partial<Post> = {
+      tpl: p.tpl ?? "announce",
+      title: `${(p.title ?? (p.tpl === "newsletter" ? "Newsletter" : "Post"))} (copy)`.trim(),
+      body: p.body,
+      colour: p.colour, photoUrl: p.photoUrl, imageAspect: p.imageAspect, imageX: p.imageX, imageY: p.imageY, imageZoom: p.imageZoom,
+      priority: p.priority, pinned: false, ackRequired: p.ackRequired, react: p.react,
+      status: "draft",
+      audience: p.audience, audId: p.audId, audIds: p.audIds, audLabel: p.audLabel,
+      folder: p.folder,
+      ...(p.tpl === "event" ? { date: p.date, time: p.time, location: p.location } : {}),
+      cta: p.cta ?? null,
+      ...(p.tpl === "newsletter" && p.newsletter ? { newsletter: p.newsletter } : {}),
+    };
+    try { await apiPost("/api/posts", payload); setFilter("draft"); setFolderFilter(""); setError(null); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t duplicate"); }
   };
 
   if (!posts) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the newsfeed…</div></div>;
@@ -325,6 +339,15 @@ export function NewsfeedApp() {
 
 function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; folders?: string[]; onMove?: (f: string) => void; onEdit: () => void; onDuplicate: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
   const tpl = TPL[p.tpl ?? "announce"];
+  // One clear line saying who this was shared to and when (or its pre-share state).
+  const audience = p.audLabel || (p.audience === "listing" ? "Chosen listings" : "All families");
+  const sharedLine = p.status === "draft"
+    ? <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-extrabold text-[#92600a]">📝 Draft — not shared yet</span>
+    : p.status === "scheduled"
+    ? <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10px] font-extrabold text-[#5b3fd8]">⏰ Will share to {audience} · {p.publishAt || "later"}</span>
+    : p.status === "archived"
+    ? <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">🗄 Was shared to {audience} · {when(p.createdAt)}</span>
+    : <span className="rounded-full bg-[#e7f6ee] px-2 py-0.5 text-[10px] font-extrabold text-[#0f8a4a]">✅ Shared to {audience} · {when(p.createdAt)}</span>;
   const manageBar = canManage && (
     <span className="ml-auto flex flex-wrap items-center gap-1.5">
       <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
@@ -340,10 +363,8 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
         <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-3">
           <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${tpl.color}18`, color: tpl.color }}>Newsletter</span>
           {p.folder && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">📁 {p.folder}</span>}
-          {p.status === "draft" && <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-extrabold text-[#92600a]">Draft</span>}
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
-          {p.status === "scheduled" && <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10px] font-extrabold text-[#5b3fd8]">Scheduled {p.publishAt}</span>}
-          {p.status === "archived" && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)]">Archived</span>}
+          {sharedLine}
         </div>
         <div className="p-3.5 pt-2"><NewsletterView data={p.newsletter} /></div>
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">
@@ -374,9 +395,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
           {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">Urgent</span>}
           {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Acknowledge</span>}
-          {p.status === "scheduled" && <span className="rounded-full bg-[#efeaff] px-2 py-0.5 text-[10.5px] font-extrabold text-[#5b3fd8]">Scheduled {p.publishAt}</span>}
-          {p.status === "archived" && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-extrabold text-[var(--ink-3)]">Archived</span>}
-          {p.audLabel && p.audLabel !== "All families" && <span className="ml-auto rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">{p.audLabel}</span>}
+          <span className="ml-auto">{sharedLine}</span>
         </div>
         {p.title && <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
         <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{p.body}</div>
