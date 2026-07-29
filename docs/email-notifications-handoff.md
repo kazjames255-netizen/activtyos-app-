@@ -1,3 +1,29 @@
+# Email client — backend spec (Amir)
+
+The Email page is now a full client (mirrors the Build Manual): tabs **Inbox ·
+Campaigns · Audiences · Templates · Automatic emails · Analytics · Compose**.
+Front-end is built; these tabs need backend:
+
+- **Inbox** — currently a front-end preview with demo mail. Needs **inbound email**:
+  a provider mailbox/alias, an inbound webhook (e.g. SES/Postmark/Mailgun inbound →
+  `POST /api/emails/inbound`), storage of received messages (from, subject, body,
+  attachments, labels, folder, read/starred flags), and endpoints to list/read/
+  reply/forward/archive/delete + folders (Inbox/Starred/Snoozed/Sent/Drafts/
+  Scheduled/Spam/Trash/All). Labels shown: Urgent, Follow-up, HAF/funded, New
+  enquiries, System.
+- **Campaigns** — currently lists the real send history. A true campaign object
+  (name, audience, schedule, status, per-recipient delivery) would let scheduling +
+  tracking work.
+- **Audiences** — "All families" is live (from `/api/emails/recipients`). Segments
+  *Past customers / Waitlisted / New enquiries* need backend queries.
+- **Templates** — reads `/api/messages/templates` (live). Fine as-is; a dedicated
+  email-template store could be split out later.
+- **Analytics** — send counts are live from history; **delivered / open / click**
+  rates need the sending engine to record events.
+- **Compose** — already live (`/api/emails/send`).
+
+---
+
 # Automatic emails (notifications) — backend spec (Amir)
 
 The Email page now has two tabs (from the Build Manual):

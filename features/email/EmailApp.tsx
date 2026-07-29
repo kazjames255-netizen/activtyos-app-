@@ -174,6 +174,183 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Full email client (mirrors the Build Manual's Email screen): Inbox with
+// folders + labels + attachments + density, plus Campaigns / Audiences /
+// Templates / Automatic emails / Analytics. The INBOX is a front-end preview —
+// receiving mail needs inbound-email infrastructure (see the handoff doc). The
+// Compose/send + Automatic-emails tabs are real.
+// ─────────────────────────────────────────────────────────────────────────
+type LabelTone = "urgent" | "follow" | "haf" | "enquiry" | "system";
+const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> = {
+  urgent: { bg: "#fde5e6", fg: "#c0271f", text: "Urgent" },
+  follow: { bg: "#f7ead0", fg: "#9a5a00", text: "Follow-up" },
+  haf: { bg: "#dff3e6", fg: "#127a3e", text: "HAF / funded" },
+  enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "New enquiries" },
+  system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
+};
+interface Mail { id: string; from: string; subject: string; preview: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; folder?: "inbox" | "sent" | "drafts" | "scheduled" | "spam" }
+// Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
+const DEMO_MAIL: Mail[] = [
+  { id: "m1", from: "Sarah Khan", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"] },
+  { id: "m2", from: "Milton Keynes Council", subject: "HAF claim — May sessions (PO #MK-4471)", preview: "Please find the signed PO attached for May’s funded places.", time: "Mon", starred: true, thread: true, labels: ["haf"], attachment: "PO-MK-4471.pdf" },
+  { id: "m3", from: "Fuel Catering Ltd", subject: "Re: Lunch order cut-off this week", preview: "Cut-off is 6pm the day before — send final numbers by then.", time: "Tue", starred: true },
+  { id: "m4", from: "Dani Obi", subject: "Enquiry: places for August football camp?", preview: "Hi — do you have any spaces left for the week of the 12th?", time: "08:02", unread: true, starred: true, thread: true, labels: ["enquiry"] },
+  { id: "m5", from: "Marcus B.", subject: "Shift swap request — Friday PM", preview: "Could I swap my Friday afternoon with Priya this week?", time: "Wed", starred: true },
+  { id: "m6", from: "ActivityOS", subject: "Booking confirmed — APF-10293 (Jack Khan)", preview: "A new booking has been confirmed and paid.", time: "4 Jun", starred: true, labels: ["system"] },
+  { id: "m7", from: "Aisha Patel", subject: "Welcome to Summer Camp — what to bring", preview: "Hi Aisha, we can’t wait to see you! Here’s what to pack…", time: "2 Jun", starred: true },
+];
+const FOLDERS: [string, string, number?][] = [
+  ["inbox", "Inbox", 2], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
+  ["drafts", "Drafts", 1], ["scheduled", "Scheduled", 1], ["spam", "Spam", 1], ["trash", "Trash"], ["all", "All mail"],
+];
+
+function InboxView({ onCompose }: { onCompose: () => void }) {
+  const [folder, setFolder] = useState("inbox");
+  const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
+  const [density, setDensity] = useState<"cozy" | "compact">("cozy");
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<Mail | null>(null);
+  const list = DEMO_MAIL.filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
+    .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); });
+  const pad = density === "cozy" ? "py-3" : "py-1.5";
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[240px] flex-1">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail · try from: subject: label: is:unread has:attachment" className="w-full rounded-full border border-[var(--line)] bg-white px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
+        </div>
+        {([["cozy", "Cozy"], ["compact", "Compact"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
+        <span className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">⌨ Shortcuts</span>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[210px_1fr]">
+        <div>
+          <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>✎ Compose</button>
+          <div className="flex flex-col">
+            {FOLDERS.map(([k, label, n]) => (
+              <button key={k} type="button" onClick={() => setFolder(k)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-semibold" style={folder === k ? { background: "#eef4fd", color: "#1d3a8f", fontWeight: 800 } : { color: "var(--ink-2)" }}>
+                <span className="flex-1">{label}</span>{n ? <span className="rounded-full bg-[var(--panel)] px-1.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
+            <input type="checkbox" className="h-4 w-4 accent-[#2f6bd8]" aria-label="Select all" />
+            <button type="button" className="text-[14px] text-[var(--ink-3)]" title="Refresh">↻</button>
+            {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
+            <span className="ml-auto text-[12px] text-[var(--ink-3)]">1–{list.length} of {list.length}</span>
+          </div>
+          {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here.</div>
+          : list.map((m) => (
+            <button key={m.id} type="button" onClick={() => setOpen(m)} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 text-left last:border-0 hover:bg-[#f7faff] ${pad}`}>
+              <input type="checkbox" onClick={(e) => e.stopPropagation()} className="h-4 w-4 flex-none accent-[#2f6bd8]" aria-label={`Select ${m.subject}`} />
+              <span className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }}>{m.starred ? "★" : "☆"}</span>
+              <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
+              <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
+              {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
+              {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
+              <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox is a front-end preview — receiving email needs inbound mail set up (handed to the backend). Compose, Automatic emails, and the sent history are live.</div>
+      {open && (
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[6vh]" onClick={() => setOpen(null)}>
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+              <span className="text-[16px] font-extrabold text-[var(--ink)]">{open.subject}</span>
+              {open.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
+              <button type="button" onClick={() => setOpen(null)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
+            </div>
+            <div className="px-4 py-3 text-[13px] text-[var(--ink-2)]">
+              <div className="mb-2 font-bold text-[var(--ink)]">{open.from} <span className="font-normal text-[var(--ink-3)]">· {open.time}</span></div>
+              <p className="leading-relaxed">{open.preview}</p>
+              {open.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {open.attachment}</div>}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-4 py-3">
+              {["↩ Reply", "↪ Forward", "🗄 Archive", "🗑 Delete"].map((a) => <button key={a} type="button" onClick={() => setOpen(null)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{a}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return <div className="rounded-2xl border border-[var(--line)] bg-white p-4"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[26px] font-extrabold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{value}</div>{sub && <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>}</div>;
+}
+
+function CampaignsView({ history, onNew }: { history: Sent[] | null; onNew: () => void }) {
+  const rows = (history ?? []).slice(0, 20);
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between"><span className="text-[13px] font-bold text-[var(--ink-2)]">Your email campaigns & one-off sends</span><button type="button" onClick={onNew} className="rounded-lg px-3 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New campaign</button></div>
+      {rows.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No campaigns sent yet. Hit “New campaign” to write one.</Card>
+      : <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+          <div className="grid grid-cols-[1fr_120px_90px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Subject</span><span>Recipients</span><span>Sent</span></div>
+          {rows.map((h) => <div key={h.id} className="grid grid-cols-[1fr_120px_90px] items-center gap-2 border-b border-[var(--line)] px-4 py-2.5 text-[13px] last:border-0"><span className="truncate font-bold text-[var(--ink)]">{h.subject}</span><span className="text-[var(--ink-2)]">{h.audience === "one" ? "1 address" : `${h.recipientCount} families`}</span><span className="text-[var(--ink-3)]">{when(h.createdAt)}</span></div>)}
+        </div>}
+    </div>
+  );
+}
+
+function AudiencesView({ reach, onEmail }: { reach: number; onEmail: () => void }) {
+  const segs: { name: string; count: string; desc: string }[] = [
+    { name: "All families", count: String(reach), desc: "Everyone with a booking — the default audience." },
+    { name: "Past customers", count: "—", desc: "Families who’ve booked before but have nothing upcoming. (Backend)" },
+    { name: "Waitlisted", count: "—", desc: "Parents currently on a waitlist. (Backend)" },
+    { name: "New enquiries", count: "—", desc: "People who emailed asking about places. (Backend)" },
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {segs.map((s) => (
+        <div key={s.name} className="rounded-2xl border border-[var(--line)] bg-white p-4">
+          <div className="flex items-center justify-between"><span className="text-[14px] font-extrabold text-[var(--ink)]">{s.name}</span><span className="text-[20px] font-extrabold text-[#2f6bd8]" style={{ fontVariantNumeric: "tabular-nums" }}>{s.count}</span></div>
+          <p className="mt-1 text-[12px] text-[var(--ink-3)]">{s.desc}</p>
+          <button type="button" onClick={onEmail} className="mt-2.5 rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">✉ Email this audience</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface EmailTemplate { id: string; name: string; subject?: string; body: string }
+function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
+  const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
+  useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
+  if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+  return templates.length === 0
+    ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No saved templates yet. Save one from the message composer to reuse it here.</Card>
+    : <div className="flex flex-col gap-2">{templates.map((t) => (
+        <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
+          <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
+          <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
+        </div>
+      ))}</div>;
+}
+
+function AnalyticsView({ history }: { history: Sent[] | null }) {
+  const sent = history ?? [];
+  const total = sent.reduce((n, h) => n + (h.recipientCount || 0), 0);
+  return (
+    <div>
+      <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Emails sent" value={String(total)} sub={`${sent.length} send${sent.length === 1 ? "" : "s"}`} />
+        <StatTile label="Delivered" value={total ? "—" : "0"} sub="Backend metric" />
+        <StatTile label="Open rate" value="—" sub="Backend metric" />
+        <StatTile label="Click rate" value="—" sub="Backend metric" />
+      </div>
+      <div className="rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Delivery, open and click tracking need the sending engine wired (handed to the backend). Send counts are live from your history below.</div>
+      <div className="mt-3 mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Recent sends</div>
+      {sent.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing sent yet.</Card>
+      : <div className="flex flex-col gap-1.5">{sent.map((h) => <Card key={h.id} className="flex flex-wrap items-center gap-2 p-2.5"><span className="min-w-0 flex-1 truncate text-[13px] font-bold">{h.subject}</span><Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{h.audience === "one" ? "1 address" : `${h.recipientCount} families`}</Badge><span className="text-[11px] text-[var(--ink-3)]">{when(h.createdAt)}</span></Card>)}</div>}
+    </div>
+  );
+}
+
 export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
@@ -199,8 +376,9 @@ export function EmailApp() {
   const [moments, setMoments] = useState<LiveMoment[] | null>(null);
   const { settings, save } = useSettings();
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
-  // the Automatic-emails preferences (the manual's default Email view).
-  const [tab, setTab] = useState<"automatic" | "compose">(nlDraft || presetTo ? "compose" : "automatic");
+  // the Inbox (the manual's default Email view).
+  type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose";
+  const [tab, setTab] = useState<Tab>(nlDraft || presetTo ? "compose" : "inbox");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
   // Read the live moment so a photo carries its own message + marketing quote
@@ -265,11 +443,16 @@ export function EmailApp() {
   }
 
   return (
-    <OperatorPage title="Email" icon="✉️" lede="The emails ActivityOS sends for you, and one-off emails to your families — everyone who’s booked, or a single address.">
-      <TabStrip<"automatic" | "compose"> tabs={[["automatic", "Automatic emails"], ["compose", "Compose & send"]]} value={tab} onChange={setTab} />
+    <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place.">
+      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
+      {tab === "inbox" && <InboxView onCompose={() => setTab("compose")} />}
+      {tab === "campaigns" && <CampaignsView history={history} onNew={() => setTab("compose")} />}
+      {tab === "audiences" && <AudiencesView reach={reachCount} onEmail={() => setTab("compose")} />}
+      {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(t.body); setTab("compose"); }} />}
+      {tab === "analytics" && <AnalyticsView history={history} />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
 
       {tab === "compose" && (<>
