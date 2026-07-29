@@ -198,13 +198,20 @@ export function NewsfeedApp() {
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save the newsletter"); }
   }
   const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []), pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
-  const editPost = (p: Post) => setDraft({
+  const draftFromPost = (p: Post): Draft => ({
     editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, colour: p.colour ?? "", image: p.photoUrl ?? "", imageAspect: p.imageAspect ?? "full", imageX: p.imageX ?? 0, imageY: p.imageY ?? 0, imageZoom: p.imageZoom ?? 1, folder: p.folder ?? "",
     audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []),
     date: p.date ?? "", time: p.time ?? "", location: p.location ?? "",
     pinned: !!p.pinned, priority: p.priority ?? "normal", ackRequired: !!p.ackRequired, react: p.react !== false,
     ctaKind: p.cta?.url ? "url" : p.cta?.target ? "listing" : "none", ctaLabel: p.cta?.label ?? "", ctaTarget: p.cta?.target ?? "", ctaListingId: p.cta?.listingId ?? "", ctaUrl: p.cta?.url ?? "", when: "now", publishAt: "",
   });
+  const editPost = (p: Post) => setDraft(draftFromPost(p));
+  // Duplicate a saved post/newsletter → open a fresh copy (no editId) so saving
+  // creates a new one, leaving the original untouched.
+  const duplicate = (p: Post) => {
+    if (p.tpl === "newsletter" && p.newsletter) { setNlOpen({ initial: p.newsletter, meta: { ...metaFromPost(p), name: `${p.title ?? "Newsletter"} (copy)`, when: "draft" } }); return; }
+    setDraft({ ...draftFromPost(p), editId: "", title: `${p.title ?? ""} (copy)`.trim(), when: "draft" });
+  };
 
   if (!posts) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the newsfeed…</div></div>;
 
@@ -265,7 +272,7 @@ export function NewsfeedApp() {
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here yet — {canManage ? "pick a post type above to write your first update." : "your provider hasn’t posted yet."}</div>
       ) : (
         <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} folders={folders} onMove={(f) => patch(p.id, { folder: f || undefined })} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id, meta: metaFromPost(p) }) : editPost(p))} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}
+          {shown.map((p) => <PostCard key={p.id} p={p} canManage={canManage} folders={folders} onMove={(f) => patch(p.id, { folder: f || undefined })} onEdit={() => (p.tpl === "newsletter" && p.newsletter ? setNlOpen({ initial: p.newsletter, editId: p.id, meta: metaFromPost(p) }) : editPost(p))} onDuplicate={() => duplicate(p)} onPin={() => patch(p.id, { pinned: !p.pinned })} onArchive={() => patch(p.id, { status: p.status === "archived" ? "published" : "archived" })} onDelete={() => remove(p)} />)}
         </div>
       )}
 
@@ -275,12 +282,13 @@ export function NewsfeedApp() {
   );
 }
 
-function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; folders?: string[]; onMove?: (f: string) => void; onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
+function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onPin, onArchive, onDelete }: { p: Post; canManage: boolean; folders?: string[]; onMove?: (f: string) => void; onEdit: () => void; onDuplicate: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void }) {
   const tpl = TPL[p.tpl ?? "announce"];
   const manageBar = canManage && (
-    <span className="ml-auto flex items-center gap-1.5">
+    <span className="ml-auto flex flex-wrap items-center gap-1.5">
       <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
       <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
+      <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
       <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? "Restore" : "Archive"}</button>
       <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
     </span>
@@ -349,6 +357,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onPin, onArchive
               {onMove && <label className="flex items-center gap-1">📁<select value={p.folder ?? ""} onChange={(e) => onMove(e.target.value)} className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] outline-none"><option value="">Unfiled</option>{folders.map((f) => <option key={f} value={f}>{f}</option>)}</select></label>}
               <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
               <button type="button" onClick={onEdit} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
+              <button type="button" onClick={onDuplicate} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
               <button type="button" onClick={onArchive} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.status === "archived" ? "Restore" : "Archive"}</button>
               <button type="button" onClick={onDelete} className="rounded-md border border-[#f6c9cc] px-2 py-0.5 text-[10.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
             </span>
