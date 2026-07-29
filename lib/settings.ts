@@ -375,6 +375,27 @@ export interface TenantSettings {
     poTerms?: string;            // terms & conditions text
   };
 
+  /**
+   * Automatic (system) emails — which transactional/reminder emails ActivityOS
+   * sends on the provider's behalf, and their timing. Edited on the Email page
+   * ("Automatic emails" tab). The SENDING is a backend job (see
+   * docs/email-notifications-handoff.md); this block is just the on/off + timing
+   * preferences the front-end reads and the backend must honour.
+   */
+  autoEmails?: {
+    bookings?: boolean;         // booking confirmed / approved / declined / cancelled (core transactional)
+    payments?: boolean;         // receipts, refunds, payment-failed
+    paymentDue?: boolean;       // a payment-due reminder before the balance is owed
+    paymentDueTiming?: number;  // hours before the due date (12 / 24 / 48 / 72)
+    sessionReminder?: boolean;  // pre-session reminder with the key details & what to bring
+    sessionTiming?: number;     // hours before the session (12 / 24 / 48 / 72)
+    waitlist?: boolean;         // place-opened / moved-up-the-queue emails
+    dayOf?: boolean;            // on-the-day register / arrival / incident-logged alerts
+    lateCollection?: boolean;   // alert when a child is checked out late
+    announcements?: boolean;    // re-marketing to past/opted-in customers when new camps open (opt-in)
+    reviewRequests?: boolean;   // ask a parent to review after their LAST booked session
+  };
+
   /** Medication administration policy — edited in Setup → Medication, read by
    *  features/medication/MedicationApp.tsx (and, for notifications, by the
    *  backend once wired — see docs/medication-parent-notify-handoff.md). */
@@ -751,6 +772,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emergencyContacts: 1,
   collectionCheck: "password",
   charLimits: { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 },
+  autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
@@ -840,6 +862,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
+    autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}), contacts: { ...DEFAULT_SETTINGS.safeguarding!.contacts, ...(s.safeguarding?.contacts ?? {}) } },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },

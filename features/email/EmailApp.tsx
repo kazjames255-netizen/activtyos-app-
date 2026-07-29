@@ -8,7 +8,89 @@ import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { OperatorPage, TabStrip } from "@/components/OperatorPage";
+import type { TenantSettings } from "@/lib/settings";
 import type { Newsletter } from "@/features/newsfeed/newsletter";
+
+// ── "Automatic emails" — which system emails ActivityOS sends on the provider's
+// behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
+// persist to settings.autoEmails; the actual sending is a backend job (see
+// docs/email-notifications-handoff.md).
+type AutoKey = keyof NonNullable<TenantSettings["autoEmails"]>;
+const REMINDER_TIMES: [number, string][] = [[12, "12 hours before"], [24, "24 hours before"], [48, "48 hours before"], [72, "3 days before"]];
+const AUTO_EMAILS: { key: AutoKey; title: string; sub: string; desc: string; core?: boolean; timing?: AutoKey }[] = [
+  { key: "bookings", title: "Bookings & approvals", sub: "Booking confirmed, request approved/declined & cancellation emails", core: true, desc: "Automatic emails to the parent for: booking confirmed, request-to-book approved, request declined, and cancellation confirmed. Core transactional emails — best left on." },
+  { key: "payments", title: "Payments", sub: "Receipts, refunds & payment-failed emails", desc: "Sends a receipt when a payment succeeds, a note when a refund is issued, and an alert if a card payment fails." },
+  { key: "sessionReminder", title: "Session reminders", sub: "A pre-session reminder with the key details & what to bring", timing: "sessionTiming", desc: "Sent before the session. Includes the child’s name, date, start & finish times, venue and what to bring. Any outstanding balance is shown; once it’s paid the price isn’t re-quoted." },
+  { key: "waitlist", title: "Waitlist", sub: "Tells a waitlisted parent when a place opens or they move up", desc: "When a place frees up, the next waitlisted parent is emailed an offer with a time limit to claim it. They can also be told when they move up the queue." },
+  { key: "dayOf", title: "Day-of alerts", sub: "On-the-day register & arrival alerts (incl. logged incidents)", desc: "On-the-day operational alerts: registers open, a child not yet arrived, and a notification when an incident is logged (the incident detail stays restricted to Head Office and the staff who logged it)." },
+  { key: "lateCollection", title: "Late collection", sub: "Alerts you when a child is checked out late", desc: "If a child is checked out later than your late-collection threshold (Registers tab), the late-checkout flag raises an alert." },
+  { key: "announcements", title: "New camp announcements", sub: "Email your past & opted-in customers when new camps open", desc: "A one-off email to your OWN past and opted-in customers announcing new camps or dates. This is re-marketing to people who have already booked with you — ActivityOS has no public marketplace or ‘followers’." },
+  { key: "reviewRequests", title: "Review requests", sub: "Asks a parent to leave a review after their final session", desc: "Sent once, after the parent’s LAST booked session (not after every booking). The link takes them straight to the review screen." },
+];
+
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: on ? "#22a565" : "#cfd3dd" }}>
+      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: on ? 22 : 2 }} />
+    </button>
+  );
+}
+
+function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch: { settings?: TenantSettings }) => Promise<void> }) {
+  const ae = settings.autoEmails ?? {};
+  const set = (patch: Partial<NonNullable<TenantSettings["autoEmails"]>>) => save({ settings: { ...settings, autoEmails: { ...ae, ...patch } } });
+  return (
+    <div>
+      <p className="mb-3 max-w-[720px] text-[12.5px] leading-[1.5] text-[var(--ink-3)]">The emails ActivityOS sends automatically on your behalf. Turn any off, or change when reminders go out. Changes save as you make them.</p>
+      <div className="flex flex-col gap-2.5">
+        {AUTO_EMAILS.map((c) => {
+          // Effective on-state: everything defaults ON except announcements (opt-in re-marketing).
+          const value = (ae[c.key] as boolean | undefined) ?? (c.key === "announcements" ? false : true);
+          return (
+            <div key={c.key} className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[14.5px] font-extrabold text-[var(--ink)]">{c.title}</span>
+                    {c.core && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">Core</span>}
+                  </div>
+                  <div className="mt-0.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{c.sub}</div>
+                  <div className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]">{c.desc}</div>
+                  {c.timing && value && (
+                    <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
+                      Send
+                      <Select value={String(ae[c.timing] ?? (c.timing === "sessionTiming" ? 48 : 24))} onChange={(e) => set({ [c.timing as string]: Number(e.target.value) })}>
+                        {REMINDER_TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </Select>
+                    </label>
+                  )}
+                </div>
+                <Toggle on={value} onClick={() => set({ [c.key]: !value })} label={c.title} />
+              </div>
+              {c.key === "payments" && value && (
+                <div className="mt-3 flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-bold text-[var(--ink)]">Payment-due reminder</div>
+                    <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Remind a parent before an outstanding balance is due.</div>
+                    {ae.paymentDue !== false && (
+                      <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">Send
+                        <Select value={String(ae.paymentDueTiming ?? 24)} onChange={(e) => set({ paymentDueTiming: Number(e.target.value) })}>
+                          {REMINDER_TIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </Select>
+                      </label>
+                    )}
+                  </div>
+                  <Toggle on={ae.paymentDue !== false} onClick={() => set({ paymentDue: ae.paymentDue === false })} label="Payment-due reminder" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // Open a designed document's HTML in a print window (browser "Save as PDF").
 function printDocHtml(html: string) {
@@ -116,6 +198,9 @@ export function EmailApp() {
   const [assetsOpen, setAssetsOpen] = useState(true);
   const [moments, setMoments] = useState<LiveMoment[] | null>(null);
   const { settings, save } = useSettings();
+  // Land on Compose when arriving from a hand-off (newsletter/register), else on
+  // the Automatic-emails preferences (the manual's default Email view).
+  const [tab, setTab] = useState<"automatic" | "compose">(nlDraft || presetTo ? "compose" : "automatic");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
   // Read the live moment so a photo carries its own message + marketing quote
@@ -180,12 +265,14 @@ export function EmailApp() {
   }
 
   return (
-    <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Email</h2>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Email your families out of app — everyone who’s booked, or a single address.</p>
+    <OperatorPage title="Email" icon="✉️" lede="The emails ActivityOS sends for you, and one-off emails to your families — everyone who’s booked, or a single address.">
+      <TabStrip<"automatic" | "compose"> tabs={[["automatic", "Automatic emails"], ["compose", "Compose & send"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
+      {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
+
+      {tab === "compose" && (<>
       <Card className="mb-4 p-4">
         <div className="grid gap-2.5 sm:grid-cols-2">
           <div>
@@ -264,6 +351,7 @@ export function EmailApp() {
           ))}
         </div>
       )}
-    </div>
+      </>)}
+    </OperatorPage>
   );
 }
