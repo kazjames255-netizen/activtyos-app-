@@ -25,6 +25,10 @@ Front-end is built; these tabs need backend:
   — a backend step; only non-booking fields like {ProviderName} resolve today).
 - **Analytics** — send counts are live from history; **delivered / open / click**
   rates need the sending engine to record events.
+- **Schedule send** — the split Send button queues an email for a future time into
+  `localStorage aos.email.scheduled.v1` ({subject, recipientCount, sendAt}). **Needs
+  backend:** persist scheduled sends server-side + a cron/worker that fires
+  `/api/emails/send` at `sendAt`. Front-end queue is a placeholder until then.
 - **Compose** — live (`/api/emails/send`). Now also: audience **by listing**
   (recipients resolved from bookings, front-end), **Cc/Bcc** (added to the recipient
   set server-side — true header-level Cc/Bcc is a mailer enhancement), a

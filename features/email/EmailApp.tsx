@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
-import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
@@ -761,6 +761,8 @@ export function EmailApp() {
   const [extraInput, setExtraInput] = useState("");
   const [sigChoice, setSigChoice] = useState<string | null>(null); // null = follow default
   const [sigMgr, setSigMgr] = useState(false);
+  const [schedOpen, setSchedOpen] = useState(false);
+  const [schedAt, setSchedAt] = useState("");
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -907,6 +909,19 @@ export function EmailApp() {
     finally { setSending(false); }
   }
 
+  // Schedule the email for later. Held in a local queue with the composed content;
+  // the timed send itself is a backend job (see the handoff doc).
+  function scheduleSend() {
+    const bodyText = htmlToText(body);
+    if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
+    if (finalRecipients.length === 0) { setError("No recipients selected to send to."); return; }
+    if (!schedAt || new Date(schedAt) <= new Date()) { setError("Pick a future date & time to schedule."); return; }
+    const item = { id: `sch-${schedAt}-${finalRecipients.length}`, subject, recipientCount: finalRecipients.length, sendAt: schedAt };
+    writeLS("aos.email.scheduled.v1", [item, ...readLS<typeof item[]>("aos.email.scheduled.v1", [])]);
+    setOk(`Scheduled for ${new Date(schedAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} — held until the timed-send job runs (backend).`);
+    setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); setSchedAt("");
+  }
+
   return (
     <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place.">
       <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"]]} value={tab} onChange={setTab} />
@@ -1014,8 +1029,19 @@ export function EmailApp() {
           {selectedSig && <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3"><div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Signature added to the bottom</div><div className="text-[12.5px] text-[var(--ink-2)]" dangerouslySetInnerHTML={{ __html: selectedSig.html }} /></div>}
           {attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <Button variant="primary" onClick={send} disabled={sending}>{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</Button>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative inline-flex">
+            <button type="button" onClick={send} disabled={sending} className="rounded-l-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</button>
+            <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label="Schedule send" className="rounded-r-lg border-l border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
+            {schedOpen && (
+              <div className="absolute bottom-full left-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-white p-3 shadow-xl">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">📣 Schedule send</div>
+                <input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" />
+                <div className="mt-2 flex gap-2"><button type="button" onClick={scheduleSend} className="flex-1 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white">Schedule</button><button type="button" onClick={() => setSchedOpen(false)} className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
+                <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Held in a queue; the timed send runs on the backend.</div>
+              </div>
+            )}
+          </div>
           {reachCount === 0 && extraTo.length === 0 && audience !== "one" && <span className="text-[11.5px] text-[var(--ink-3)]">No recipients yet.</span>}
         </div>
       </Card>
