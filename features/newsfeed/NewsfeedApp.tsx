@@ -161,20 +161,21 @@ export function NewsfeedApp() {
     try { await api(`/api/posts/${encodeURIComponent(p.id)}`, { method: "DELETE" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
-  async function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email", editId?: string) {
+  async function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email" | "both", editId?: string) {
     const name = nl.company.name || "us";
     const firstHeading = nl.blocks.find((b) => b.heading)?.heading;
     const title = (meta.name.trim() || firstHeading || nl.company.name || "Newsletter").replace(/\{company\}/g, name).slice(0, 120);
     const body = (nl.blocks.map((b) => [b.heading, b.body, b.left, b.right, b.codeDesc].filter(Boolean).join(" ")).filter(Boolean).join("\n").replace(/\{company\}/g, name).slice(0, 900)) || title;
     const scheduled = meta.when === "later" && !!meta.publishAt;
-    // Email channel: the newsletter is filed as a draft (not posted live) and
-    // handed to the Email area, ready to send to parents.
+    // Email-only → filed as a draft (not live); posting to the page (or both)
+    // follows the When choice.
     const status: Status = channel === "email" ? "draft" : meta.when === "draft" ? "draft" : scheduled ? "scheduled" : "published";
-    const audLabel = meta.audScope === "all" ? "All families" : `Listing: ${listings.find((l) => l.id === meta.audId)?.title ?? "—"}`;
+    const chosen = meta.audScope === "listing" ? listings.filter((l) => meta.audIds.includes(l.id)) : [];
+    const audLabel = meta.audScope === "all" ? "All families" : `Listings: ${chosen.map((l) => l.title).join(", ") || "—"}`;
     const payload: Partial<Post> = {
       tpl: "newsletter", title, body, newsletter: nl,
       status,
-      audience: meta.audScope, audId: meta.audScope === "listing" ? meta.audId : undefined, audLabel,
+      audience: meta.audScope, audIds: meta.audScope === "listing" ? meta.audIds : undefined, audLabel,
       pinned: meta.pinned, ackRequired: meta.ackRequired, react: meta.react, priority: meta.priority,
       folder: meta.folder.trim() || undefined,
       ...(scheduled ? { publishAt: meta.publishAt } : {}),
@@ -182,14 +183,14 @@ export function NewsfeedApp() {
     try {
       if (editId) await api(`/api/posts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
-      if (channel === "email") {
+      if (channel === "email" || channel === "both") {
         try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl) })); } catch { /* private mode */ }
         setNlOpen(null); router.push(`/${portal}/email`); return;
       }
       setNlOpen(null); setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save the newsletter"); }
   }
-  const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audId: p.audId ?? "", pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
+  const metaFromPost = (p: Post): NlMeta => ({ ...newMeta(), name: p.title ?? "", folder: p.folder ?? "", audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []), pinned: !!p.pinned, ackRequired: !!p.ackRequired, react: p.react !== false, priority: p.priority ?? "normal" });
   const editPost = (p: Post) => setDraft({
     editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, image: p.photoUrl ?? "", folder: p.folder ?? "",
     audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []),

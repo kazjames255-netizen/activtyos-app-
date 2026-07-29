@@ -26,8 +26,8 @@ export interface Newsletter { layout: string; palette: string; company: Company;
 
 // Publishing metadata for a newsletter — how it's named, filed and sent. Kept
 // alongside the Newsletter design so the builder owns the whole flow.
-export interface NlMeta { name: string; folder: string; audScope: "all" | "listing"; audId: string; pinned: boolean; ackRequired: boolean; react: boolean; priority: "normal" | "urgent"; when: "now" | "later" | "draft"; publishAt: string }
-export const newMeta = (): NlMeta => ({ name: "", folder: "", audScope: "all", audId: "", pinned: false, ackRequired: false, react: true, priority: "normal", when: "now", publishAt: "" });
+export interface NlMeta { name: string; folder: string; audScope: "all" | "listing"; audIds: string[]; pinned: boolean; ackRequired: boolean; react: boolean; priority: "normal" | "urgent"; when: "now" | "later" | "draft"; publishAt: string }
+export const newMeta = (): NlMeta => ({ name: "", folder: "", audScope: "all", audIds: [], pinned: false, ackRequired: false, react: true, priority: "normal", when: "now", publishAt: "" });
 
 // ── Curated palettes — each carries a background, a card surface, two accents,
 // ink + muted text and the colour text sits on over an accent. Deliberately
@@ -105,6 +105,40 @@ export function newsletterToText(nl: Newsletter): string {
     out.push("");
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+// Designed HTML of the newsletter (inline styles) — for the print-to-PDF window
+// and, later, the HTML email. Mirrors BlockView.
+export function newsletterToHtml(nl: Newsletter): string {
+  const p = paletteOf(nl.palette);
+  const c = nl.company;
+  const e = (s?: string) => fill(s, c).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch] as string));
+  const blocks = nl.blocks.map((b) => {
+    switch (b.t) {
+      case "banner": return `<div style="background:${p.accent};color:${p.onAccent};padding:16px 26px;font-weight:800;font-size:17px">${e(c.name) || "Your company"}</div>`;
+      case "hero": return `${b.image ? `<img src="${b.image}" style="width:100%;max-height:220px;object-fit:cover;display:block" alt=""/>` : `<div style="height:120px;background:linear-gradient(120deg,${p.accent},${p.accent2})"></div>`}${(b.heading || b.body) ? `<div style="padding:22px 26px;background:${p.band}">${b.heading ? `<div style="font-size:24px;font-weight:800;color:${p.ink}">${e(b.heading)}</div>` : ""}${b.body ? `<div style="font-size:14px;color:${p.muted};margin-top:6px">${e(b.body)}</div>` : ""}</div>` : ""}`;
+      case "heading": return `<div style="padding:18px 26px 0"><div style="font-size:19px;font-weight:800;color:${p.ink}">${e(b.heading)}</div><div style="height:3px;width:42px;background:${p.accent2};border-radius:3px;margin-top:8px"></div></div>`;
+      case "text": return `<div style="padding:12px 26px;font-size:14px;color:${p.ink};line-height:1.6;white-space:pre-wrap">${e(b.body)}</div>`;
+      case "image": return b.image ? `<img src="${b.image}" style="width:100%;max-height:260px;object-fit:cover;display:block" alt=""/>` : "";
+      case "discount": return `<div style="padding:14px 26px"><div style="border:2px dashed ${p.accent};border-radius:12px;padding:14px 16px;text-align:center;background:${p.band}"><div style="font-size:12px;font-weight:800;letter-spacing:1px;color:${p.muted};text-transform:uppercase">Your code</div><div style="font-size:26px;font-weight:900;color:${p.accent};letter-spacing:2px">${e(b.code) || "CODE"}</div><div style="font-size:13px;color:${p.ink}">${e(b.codeDesc)}</div></div></div>`;
+      case "button": return `<div style="padding:14px 26px;text-align:center"><span style="display:inline-block;background:${p.accent};color:${p.onAccent};font-weight:800;font-size:14px;padding:11px 22px;border-radius:999px">${e(b.label) || "Learn more"}</span></div>`;
+      case "columns": return `<div style="padding:12px 26px;display:flex;gap:16px">${[b.left, b.right].map((t) => `<div style="flex:1;background:${p.band};border-radius:10px;padding:14px;font-size:13.5px;color:${p.ink}">${e(t)}</div>`).join("")}</div>`;
+      case "quote": return `<div style="padding:16px 26px"><div style="border-left:4px solid ${p.accent2};padding-left:14px;font-size:17px;font-style:italic;color:${p.ink}">&ldquo;${e(b.body)}&rdquo;</div>${b.heading ? `<div style="margin-top:6px;font-size:13px;font-weight:700;color:${p.muted}">${e(b.heading)}</div>` : ""}</div>`;
+      case "divider": return `<div style="height:1px;background:${p.band};margin:6px 26px"></div>`;
+      case "eventbar": return `<div style="margin:12px 26px;background:${p.accent};color:${p.onAccent};border-radius:10px;padding:12px 16px;font-weight:700;font-size:14px">${e([b.date, b.time, b.location].filter(Boolean).join("   •   ")) || "Event details"}</div>`;
+      case "footer": return `<div style="background:${p.ink};color:#fff;padding:18px 26px;font-size:12.5px;line-height:1.7"><div style="font-weight:800;font-size:14px">${e(c.name) || "Your company"}</div>${c.address ? `<div style="opacity:.85">${e(c.address)}</div>` : ""}<div style="opacity:.85">${e([c.phone, c.email].filter(Boolean).join("  ·  "))}</div></div>`;
+      default: return "";
+    }
+  }).join("");
+  return `<div style="background:${p.surface};max-width:600px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 26px -14px rgba(0,0,0,.28)">${blocks}</div>`;
+}
+// Open a print window (browser "Save as PDF") for the newsletter.
+export function printNewsletter(nl: Newsletter) {
+  const w = typeof window !== "undefined" ? window.open("", "_blank", "width=760,height=980") : null;
+  if (!w) return;
+  const title = (fill(nl.company.name, nl.company) || "Newsletter").replace(/[&<>]/g, "");
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body style="background:#eef2f8;margin:0;padding:20px;font-family:system-ui,-apple-system,sans-serif">${newsletterToHtml(nl)}<script>window.onload=function(){window.focus();window.print();}</script></body></html>`);
+  w.document.close();
 }
 
 // ── Renderer — draws the newsletter from blocks + palette. Used in preview and
@@ -191,7 +225,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
 
 // ── Builder — layout gallery, palette swatches, company details, per-block
 // editors, live preview. Calls onSave with the finished Newsletter.
-export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email") => void }) {
+export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email" | "both") => void }) {
   const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany));
   const [meta, setMeta] = useState<NlMeta>(initialMeta ?? newMeta());
   const setM = (f: Partial<NlMeta>) => setMeta((m) => ({ ...m, ...f }));
@@ -313,9 +347,9 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
                 <div>
                   <div className="mb-1 text-[10.5px] font-bold text-[var(--ink-3)]">Who sees it</div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {([["all", "All families"], ["listing", "One listing’s families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ audScope: k, audId: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.audScope === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
-                    {meta.audScope === "listing" && <select value={meta.audId} onChange={(e) => setM({ audId: e.target.value })} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[12px] outline-none"><option value="">Choose a listing…</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select>}
+                    {([["all", "All families"], ["listing", "Chosen listings’ families"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setM({ audScope: k, audIds: [] })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta.audScope === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
                   </div>
+                  {meta.audScope === "listing" && <div className="mt-1.5 flex flex-wrap gap-1.5">{listings.length === 0 ? <span className="text-[11px] text-[var(--ink-3)]">No listings yet.</span> : listings.map((l) => { const on = meta.audIds.includes(l.id); return <button key={l.id} type="button" onClick={() => setM({ audIds: on ? meta.audIds.filter((x) => x !== l.id) : [...meta.audIds, l.id] })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}</button>; })}</div>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {([["pinned", "Pin to top"], ["ackRequired", "Ask to acknowledge"], ["react", "Allow reactions"]] as const).map(([f, label]) => <button key={f} type="button" onClick={() => setM({ [f]: !meta[f] } as Partial<NlMeta>)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={meta[f] ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{meta[f] ? "✓ " : ""}{label}</button>)}
@@ -339,8 +373,10 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
           <span className="mr-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
-          <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email to parents</button>
-          <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule on Newsfeed" : "Post to Newsfeed"}</button>
+          <button type="button" onClick={() => printNewsletter(nl)} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⬇ PDF</button>
+          <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email</button>
+          <button type="button" onClick={() => onSave(nl, meta, "both")} className="rounded-lg border border-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Both</button>
+          <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule" : "Post to Newsfeed"}</button>
         </div>
       </div>
     </div>
