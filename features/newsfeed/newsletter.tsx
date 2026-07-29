@@ -85,6 +85,28 @@ export const newNewsletter = (layoutId: string, company: Partial<Company> = {}):
 
 const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
 
+// A plain-text rendering of the newsletter — used to hand it to the Email area
+// ready to send to parents (the email channel is plain text today).
+export function newsletterToText(nl: Newsletter): string {
+  const c = nl.company;
+  const f = (s?: string) => fill(s, c);
+  const out: string[] = [];
+  for (const b of nl.blocks) {
+    if (b.t === "banner") { if (c.name) out.push(c.name.toUpperCase(), ""); continue; }
+    if (b.t === "footer") { out.push("—"); if (c.name) out.push(c.name); if (c.address) out.push(c.address); const cc = [c.phone, c.email].filter(Boolean).join(" · "); if (cc) out.push(cc); continue; }
+    if (b.t === "divider") { out.push("———"); continue; }
+    if (b.heading) out.push(f(b.heading));
+    if (b.body) out.push(f(b.body));
+    if (b.left) out.push(f(b.left));
+    if (b.right) out.push(f(b.right));
+    if (b.t === "discount" && b.code) out.push(`Code: ${b.code}${b.codeDesc ? ` — ${f(b.codeDesc)}` : ""}`);
+    if (b.t === "eventbar") { const e = [b.date, b.time, b.location].filter(Boolean).join(" · "); if (e) out.push(e); }
+    if (b.t === "button" && b.label) out.push(`${b.label}${b.url ? `: ${b.url}` : ""}`);
+    out.push("");
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 // ── Renderer — draws the newsletter from blocks + palette. Used in preview and
 // both feeds.
 export function NewsletterView({ data, scale }: { data: Newsletter; scale?: number }) {
@@ -169,7 +191,7 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
 
 // ── Builder — layout gallery, palette swatches, company details, per-block
 // editors, live preview. Calls onSave with the finished Newsletter.
-export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta) => void }) {
+export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email") => void }) {
   const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany));
   const [meta, setMeta] = useState<NlMeta>(initialMeta ?? newMeta());
   const setM = (f: Partial<NlMeta>) => setMeta((m) => ({ ...m, ...f }));
@@ -314,9 +336,11 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
-          <button type="button" onClick={() => onSave(nl, meta)} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule newsletter" : "Publish newsletter"}</button>
+          <span className="mr-auto text-[11px] text-[var(--ink-3)]">Choose where it goes →</span>
+          <button type="button" onClick={() => onSave(nl, meta, "email")} className="rounded-lg border border-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">✉ Email to parents</button>
+          <button type="button" onClick={() => onSave(nl, meta, "page")} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white">{meta.when === "draft" ? "Save to library" : meta.when === "later" ? "Schedule on Newsfeed" : "Post to Newsfeed"}</button>
         </div>
       </div>
     </div>

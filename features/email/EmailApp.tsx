@@ -87,13 +87,16 @@ export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
   const presetTo = searchParams.get("to") ?? "";
+  // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
+  // subject + body stashed in localStorage. Read once on first render.
+  const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(nlDraft ? "Your newsletter is ready to send — review the subject and message, then send to your families." : null);
   const [audience, setAudience] = useState<"all" | "one">(presetTo ? "one" : "all");
   const [to, setTo] = useState(presetTo);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState(nlDraft?.subject ?? "");
+  const [body, setBody] = useState(nlDraft?.body ?? "");
   const [reach, setReach] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [assetsOpen, setAssetsOpen] = useState(true);
@@ -132,6 +135,8 @@ export function EmailApp() {
     apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
+  // Consume the newsletter hand-off once so it doesn't re-fill on a later visit.
+  useEffect(() => { try { localStorage.removeItem("aos.email.draft.v1"); } catch { /* private mode */ } }, []);
   useEffect(() => { apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); }, []);
   useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
   useRealtime(["emails", "bookings", "moments"], () => { refresh(); apiGet<{ count: number }>("/api/emails/recipients").then((r) => setReach(r.count)).catch(() => {}); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });

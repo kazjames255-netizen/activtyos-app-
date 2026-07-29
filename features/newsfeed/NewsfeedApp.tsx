@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
-import { NewsletterBuilder, NewsletterView, newMeta, type Newsletter, type NlMeta } from "./newsletter";
+import { NewsletterBuilder, NewsletterView, newMeta, newsletterToText, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (operator) — announcements to families, built from templates. Each
@@ -74,6 +75,8 @@ export function NewsfeedApp() {
   const [nlOpen, setNlOpen] = useState<{ initial?: Newsletter; editId?: string; meta?: NlMeta } | null>(null);
   const [filter, setFilter] = useState<"all" | Tpl | "draft" | "scheduled" | "archived">("all");
   const [folderFilter, setFolderFilter] = useState("");
+  const router = useRouter();
+  const portal = usePathname()?.split("/")[1] || "freelancer";
 
   const refresh = useCallback(() => {
     apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -130,13 +133,15 @@ export function NewsfeedApp() {
     try { await api(`/api/posts/${encodeURIComponent(p.id)}`, { method: "DELETE" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
   }
-  async function saveNewsletter(nl: Newsletter, meta: NlMeta, editId?: string) {
+  async function saveNewsletter(nl: Newsletter, meta: NlMeta, channel: "page" | "email", editId?: string) {
     const name = nl.company.name || "us";
     const firstHeading = nl.blocks.find((b) => b.heading)?.heading;
     const title = (meta.name.trim() || firstHeading || nl.company.name || "Newsletter").replace(/\{company\}/g, name).slice(0, 120);
     const body = (nl.blocks.map((b) => [b.heading, b.body, b.left, b.right, b.codeDesc].filter(Boolean).join(" ")).filter(Boolean).join("\n").replace(/\{company\}/g, name).slice(0, 900)) || title;
     const scheduled = meta.when === "later" && !!meta.publishAt;
-    const status: Status = meta.when === "draft" ? "draft" : scheduled ? "scheduled" : "published";
+    // Email channel: the newsletter is filed as a draft (not posted live) and
+    // handed to the Email area, ready to send to parents.
+    const status: Status = channel === "email" ? "draft" : meta.when === "draft" ? "draft" : scheduled ? "scheduled" : "published";
     const audLabel = meta.audScope === "all" ? "All families" : `Listing: ${listings.find((l) => l.id === meta.audId)?.title ?? "—"}`;
     const payload: Partial<Post> = {
       tpl: "newsletter", title, body, newsletter: nl,
@@ -149,6 +154,10 @@ export function NewsfeedApp() {
     try {
       if (editId) await api(`/api/posts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
       else await apiPost("/api/posts", payload);
+      if (channel === "email") {
+        try { localStorage.setItem("aos.email.draft.v1", JSON.stringify({ subject: title, body: newsletterToText(nl) })); } catch { /* private mode */ }
+        setNlOpen(null); router.push(`/${portal}/email`); return;
+      }
       setNlOpen(null); setError(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save the newsletter"); }
   }
@@ -225,7 +234,7 @@ export function NewsfeedApp() {
       )}
 
       {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} onClose={() => setDraft(null)} onPublish={publish} />}
-      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialMeta={nlOpen.meta} listings={listings} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta) => saveNewsletter(nl, meta, nlOpen.editId)} />}
+      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialMeta={nlOpen.meta} listings={listings} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
     </div>
   );
 }
