@@ -71,6 +71,37 @@ export const newNewsletter = (layoutId: string, company: Partial<Company> = {}):
 
 const fill = (s: string | undefined, company: Company) => (s ?? "").replace(/\{company\}/g, company.name || "us");
 
+// Shrink an image client-side (cap the longest edge, re-encode as JPEG) so big
+// camera photos fit under the /api/uploads 2 MB limit and load fast.
+export function downscaleImage(file: File, max = 1600): Promise<string> {
+  const bytesOf = (dataUrl: string) => Math.floor(((dataUrl.length - dataUrl.indexOf(",") - 1) * 3) / 4);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Couldn’t read that file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("That file doesn’t look like an image."));
+      img.onload = () => {
+        let width = img.width, height = img.height;
+        if (Math.max(width, height) > max) { const s = max / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Couldn’t process the image.")); return; }
+        const draw = (w: number, h: number, q: number) => { canvas.width = w; canvas.height = h; ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h); return canvas.toDataURL("image/jpeg", q); };
+        let quality = 0.85, out = draw(width, height, quality), guard = 0;
+        // The route rejects images over ~900 KB decoded — keep re-encoding until it fits.
+        while (bytesOf(out) > 850_000 && guard++ < 8) {
+          if (quality > 0.5) quality -= 0.12; else { width = Math.round(width * 0.85); height = Math.round(height * 0.85); }
+          out = draw(width, height, quality);
+        }
+        resolve(out);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // A post image. "full" shows the WHOLE picture (nothing cropped) — the default,
 // so an uploaded photo is never cut. Any other aspect ("16/9" / "1/1" / "4/5")
 // crops to that shape with pan (translate x/y in % of frame) + zoom, rendered
@@ -256,7 +287,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
   async function upload(file: File, apply: (url: string) => void) {
     setBusy(true);
     try {
-      const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
+      const dataUrl = await downscaleImage(file);
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
       apply(url);
     } catch { /* ignore — keep whatever was there */ } finally { setBusy(false); }

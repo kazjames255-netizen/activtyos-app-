@@ -6,7 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
-import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, newMeta, newsletterToText, type Newsletter, type NlMeta } from "./newsletter";
+import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (operator) — announcements to families, built from templates. Each
@@ -386,9 +386,15 @@ function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish 
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const field = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
   const [imgBusy, setImgBusy] = useState(false);
+  const [imgErr, setImgErr] = useState("");
   async function uploadImage(file: File) {
-    setImgBusy(true);
-    try { const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); }); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); set({ image: url, imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1 }); } catch { /* keep as-is */ } finally { setImgBusy(false); }
+    setImgBusy(true); setImgErr("");
+    try {
+      const dataUrl = await downscaleImage(file);
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
+      set({ image: url, imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1 });
+    } catch (e) { setImgErr(e instanceof Error ? e.message : "Couldn’t upload that image — try again."); }
+    finally { setImgBusy(false); }
   }
   const setAspect = (a: string) => set({ imageAspect: a, imageX: 0, imageY: 0, imageZoom: a === "full" ? 1 : 1.2 });
   const toggleListing = (id: string) => set({ audIds: draft.audIds.includes(id) ? draft.audIds.filter((x) => x !== id) : [...draft.audIds, id] });
@@ -485,9 +491,13 @@ function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish 
                   <button type="button" onClick={() => set({ image: "" })} className="text-[11px] font-bold text-[#c02636]">Remove</button>
                   <span className="text-[10.5px] text-[var(--ink-3)]">{draft.imageAspect === "full" ? "Whole photo shown — nothing cropped." : "Drag to move · zoom to crop. Exactly how families see it."}</span>
                 </div>
+                {imgErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{imgErr}</div>}
               </div>
             ) : (
-              <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
+              <div>
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} /></label>
+                {imgErr && <div className="mt-1 text-[11px] font-bold text-[#c02636]">{imgErr}</div>}
+              </div>
             )
           ))}
 
