@@ -302,6 +302,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
   const [history, setHistory] = useState<CampaignDesign[]>([]);
+  const [future, setFuture] = useState<CampaignDesign[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(id); }, []);
 
@@ -310,9 +311,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const selBlock = design ? (design.blocks.find((b) => b.k === selKey) ?? null) : null;
   const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
   const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold text-[#33456b] hover:bg-[#e7ecf4] disabled:opacity-30";
-  const start = (id: string) => { const d = newDesign(id, company, socials); setHistory([]); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
-  const snapshot = () => setHistory((h) => (design ? [...h.slice(-49), design] : h));
-  const undo = () => { if (!history.length) return; setDesign(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); setSelKey(null); setAddOpen(false); };
+  const start = (id: string) => { const d = newDesign(id, company, socials); setHistory([]); setFuture([]); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
+  const snapshot = () => { setHistory((h) => (design ? [...h.slice(-49), design] : h)); setFuture([]); };
+  const undo = () => { if (!history.length || !design) return; setFuture((f) => [design, ...f].slice(0, 50)); setDesign(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); setSelKey(null); setAddOpen(false); };
+  const redo = () => { if (!future.length || !design) return; setHistory((h) => [...h.slice(-49), design]); setDesign(future[0]); setFuture((f) => f.slice(1)); setSelKey(null); setAddOpen(false); };
   const setBlocks = (fn: (bs: Block[]) => Block[]) => { snapshot(); setDesign((d) => (d ? { ...d, blocks: fn(d.blocks) } : d)); };
   const patch = (k: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.k === k ? { ...b, ...p } : b)));
   const move = (k: string, dir: -1 | 1) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); const j = i + dir; if (i < 0 || j < 0 || j >= bs.length) return bs; const n = [...bs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
@@ -392,7 +394,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               : <div><div className="text-[16px] font-extrabold">Choose a template</div><div className="text-[12px] text-white/75">30 detailed, camp-ready designs. Pick one, then make it yours block by block.</div></div>}
           </div>
           <div className="flex flex-none items-center gap-2">
-            {design && <button type="button" onClick={undo} disabled={!history.length} title="Undo last change" className="flex items-center gap-1 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25 disabled:opacity-40">↶ Undo</button>}
+            {design && <div className="flex items-center overflow-hidden rounded-lg bg-white/15"><button type="button" onClick={undo} disabled={!history.length} title="Undo" className="px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/20 disabled:opacity-40">↶ Undo</button><span className="h-4 w-px bg-white/25" /><button type="button" onClick={redo} disabled={!future.length} title="Redo" className="px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/20 disabled:opacity-40">Redo ↷</button></div>}
             {design && <div className="relative">
               <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
               {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
