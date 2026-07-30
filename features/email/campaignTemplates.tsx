@@ -16,11 +16,11 @@ import { useEffect, useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost, get as apiGet } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
 
-export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact" | "countdown" | "graph";
-export interface Card { image?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
+export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact" | "countdown" | "graph" | "collage";
+export interface Card { image?: string; video?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; video?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -50,9 +50,15 @@ const para = (s: string | undefined, style: string) => (s ?? "").split(/\n{2,}/)
 // A cropped image: fixed-height frame + object-fit cover. Pan is object-position
 // (0–100%, works at any zoom with no gaps) and zoom scales from the same anchor —
 // email-safe and renders in every modern inbox.
-const cropImg = (b: { image?: string; ix?: number; iy?: number; iz?: number }, h: string, radius: string, ph: string) => { const x = b.ix ?? 50, y = b.iy ?? 50, z = b.iz ?? 1; return b.image
-  ? `<div style="height:${h};overflow:hidden;border-radius:${radius}"><img src="${esc(b.image)}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;display:block"></div>`
-  : `<div style="height:${h};border-radius:${radius};background:${ph}"></div>`; };
+const cropImg = (b: { image?: string; video?: string; ix?: number; iy?: number; iz?: number }, h: string, radius: string, ph: string) => {
+  const x = b.ix ?? 50, y = b.iy ?? 50, z = b.iz ?? 1;
+  const inner = b.image
+    ? `<img src="${esc(b.image)}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;display:block">`
+    : `<div style="width:100%;height:100%;background:${b.video ? "#0b1020" : ph}"></div>`;
+  const play = b.video ? `<div style="position:absolute;top:0;left:0;right:0;bottom:0"><table role="presentation" width="100%" height="100%" style="width:100%;height:100%"><tr><td align="center" valign="middle"><span style="display:inline-block;width:58px;height:58px;line-height:58px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#ffffff;font-size:22px">▶</span></td></tr></table></div>` : "";
+  const frame = `<div style="height:${h};overflow:hidden;border-radius:${radius};position:relative">${inner}${play}</div>`;
+  return b.video ? `<a href="${esc(b.video)}" style="display:block;text-decoration:none">${frame}</a>` : frame;
+};
 // Image frame height for a given shape at a given pixel width (capped so tall shapes stay sensible).
 const imgHeight = (shape: string, wpx: number) => { const r = shape === "square" ? 1 : shape === "portrait" ? 1.3 : shape === "wide" ? 0.4 : 0.7; return Math.min(Math.round(wpx * r), 470); };
 const btn = (bg: string, fg: string, label?: string, url?: string) => `<a href="${esc(url || "#")}" style="display:inline-block;background:${bg};color:${fg};text-decoration:none;font-weight:800;font-size:14px;padding:12px 28px;border-radius:26px">${esc(label || "Learn more")}</a>`;
@@ -173,6 +179,17 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
       }
       return row(`${title}${body}`, "padding:20px 30px");
     }
+    case "collage": {
+      const cs = (b.cards || []).slice(0, 4); const gap = "6px";
+      let inner = "";
+      if (cs.length >= 3) {
+        // big left + two stacked right
+        inner = `<table role="presentation" width="100%" style="border-collapse:collapse;width:100%"><tr><td width="58%" valign="top" style="padding-right:${gap}">${cropImg(cs[0], "236px", "12px", t.aDark)}</td><td width="42%" valign="top"><div>${cropImg(cs[1], "115px", "12px", t.aDark)}</div><div style="height:${gap}"></div><div>${cropImg(cs[2], "115px", "12px", t.aDark)}</div>${cs[3] ? `<div style="height:${gap}"></div><div>${cropImg(cs[3], "115px", "12px", t.aDark)}</div>` : ""}</td></tr></table>`;
+      } else {
+        inner = `<table role="presentation" width="100%" style="border-collapse:collapse;width:100%"><tr>${cs.map((cd, i) => `<td width="${Math.floor(100 / Math.max(cs.length, 1))}%" valign="top" style="${i ? `padding-left:${gap}` : ""}">${cropImg(cd, "170px", "12px", t.aDark)}</td>`).join("")}</tr></table>`;
+      }
+      return row(`${b.heading ? `<h3 style="margin:0 0 12px;font-size:19px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h3>` : ""}${inner}`, "padding:16px 22px");
+    }
     case "divider":
       return row(`<div style="height:1px;background:${t.line}"></div>`, "padding:4px 26px");
     case "footer":
@@ -186,7 +203,7 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
 const B = (t: BlockType, p: Partial<Block> = {}): Block => ({ t, ...p });
 const C = (title: string, caption = "", price = "", label = ""): Card => ({ title, caption, price, label });
 const foot = (): Block => B("footer", { body: "Your venue · Town · Postcode" });
-const soc = (): Block => B("social", { heading: "Follow the fun @yourclub", socials: DEFAULT_SOCIALS });
+const soc = (): Block => B("social", { heading: "Follow {company} for daily fun", socials: DEFAULT_SOCIALS });
 const H = (sub = "") => B("header", { subheading: sub });
 
 export interface CampaignTemplate { id: string; name: string; category: string; accentId: string; blocks: () => Block[] }
@@ -257,7 +274,8 @@ export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 
 }
 export function renderDesignText(d: CampaignDesign): string { const out: string[] = []; for (const b of d.blocks || []) { [b.heading, b.subheading, b.body, b.label].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); (b.cards || []).forEach((cd) => { [cd.title, cd.caption, cd.price].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); }); } return out.join("\n\n"); }
 const withSocials = (blocks: Block[], seed?: Social[]): Block[] => (seed && seed.length ? blocks.map((b) => (b.t === "social" && (!b.socials || b.socials.every((s) => !s.url)) ? { ...b, socials: seed } : b)) : blocks);
-export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const blocks = withSocials(t.blocks(), seed).map((b) => (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: c?.name || "" } : b); return { templateId, accent: t.accentId, blocks }; };
+const fillCo = (s: string | undefined, name?: string) => (s && s.includes("{company}") ? s.replace(/\{company\}/g, name || "us") : s);
+export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const name = c?.name || undefined; const blocks = withSocials(t.blocks(), seed).map((b) => { const bb = (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: name || "" } : { ...b }; return { ...bb, heading: fillCo(bb.heading, name), subheading: fillCo(bb.subheading, name), body: fillCo(bb.body, name), caption: fillCo(bb.caption, name) }; }); return { templateId, accent: t.accentId, blocks }; };
 
 // ── block palette for "add section" — ready-made sections with lovely layout ─
 const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | Block[] }[] = [
@@ -276,6 +294,8 @@ const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | 
   { icon: "🌟", label: "Feature trio", hint: "3 selling points", make: () => [B("heading", { heading: "Why families love us" }), B("cards", { cols: 3, cards: [C("Qualified team", "DBS-checked & first-aid trained"), C("Small groups", "More attention for every child"), C("Easy booking", "Secure a place in minutes")] })] },
   { icon: "🎨", label: "Activity grid", hint: "6 activities", make: () => [B("heading", { heading: "Something for everyone" }), B("cards", { cols: 3, cards: [C("Multi-Sports"), C("Arts & Crafts"), C("Coding Club"), C("Go-Karting"), C("Forest School"), C("Bouncy Castles")] })] },
   { icon: "📸", label: "Photo gallery", hint: "3-photo row", make: () => [B("heading", { heading: "Moments from camp" }), B("cards", { cols: 3, cards: [{ image: "", title: "" }, { image: "", title: "" }, { image: "", title: "" }] })] },
+  { icon: "🖼", label: "3 photos in a row", hint: "Triple image strip", make: () => B("collage", { cards: [{ image: "" }, { image: "" }, { image: "" }] }) },
+  { icon: "🧩", label: "Photo collage", hint: "Big + two stacked", make: () => B("collage", { heading: "", cards: [{ image: "" }, { image: "" }, { image: "" }] }) },
   { icon: "💷", label: "Pricing section", hint: "3 price tiers", make: () => [B("heading", { heading: "Simple pricing" }), B("tiers", { cards: [C("1 Day", "Try us out", "£28", "Book"), C("3 Days", "Most popular", "£75", "Book"), C("Full Week", "Best value", "£120", "Book")] })] },
   { icon: "🪜", label: "How it works", hint: "3 easy steps", make: () => [B("heading", { heading: "How it works" }), B("cards", { cols: 3, cards: [C("1. Choose", "Pick your camp or club"), C("2. Book", "Secure a place online"), C("3. Enjoy", "We take it from there")] })] },
   { icon: "⚡", label: "Highlight offer", hint: "Colour band + button", make: () => B("band", { heading: "⚡ Early-bird ends Sunday — save 15%", label: "Grab the offer" }) },
@@ -285,7 +305,7 @@ const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | 
   { icon: "➖", label: "Divider", hint: "A thin line", make: () => B("divider") },
   { icon: "📍", label: "Footer", hint: "Name + address", make: () => foot() },
 ];
-const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", logo: "Logo", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer", quote: "Testimonial", stats: "Stats", checklist: "Checklist", code: "Discount code", contact: "Contact strip", countdown: "Countdown timer", graph: "Graph" };
+const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", logo: "Logo", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer", quote: "Testimonial", stats: "Stats", checklist: "Checklist", code: "Discount code", contact: "Contact strip", countdown: "Countdown timer", graph: "Graph", collage: "Photo collage" };
 
 // ── crop control — drag anywhere to reposition (object-position pan) + zoom ───
 const clamp01 = (v: number) => Math.max(0, Math.min(100, v));
@@ -354,10 +374,14 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const delCard = (bk: string, ci: number) => setBlocks((bs) => bs.map((b) => (b.k === bk ? { ...b, cards: (b.cards || []).filter((_, i) => i !== ci) } : b)));
   const upload = async (key: string, apply: (url: string) => void, file: File) => { setBusyKey(key); try { const small = await downscaleImage(file); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small }); apply(url); } catch { /* ignore */ } setBusyKey(null); };
 
-  const imgField = (id: string, o: { image?: string; ix?: number; iy?: number; iz?: number }, apply: (p: Partial<Block> & Partial<Card>) => void) => (
-    o.image
-      ? <div className="space-y-1.5"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Image — drag to crop</span><button type="button" onClick={() => apply({ image: "", ix: 50, iy: 50, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><CropBox url={o.image} ix={o.ix} iy={o.iy} iz={o.iz} onChange={apply} /></div>
-      : <div className="flex flex-wrap items-center gap-1.5"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{busyKey === id ? "…" : "⬆ Add image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(id, (u) => apply({ image: u }), f); e.target.value = ""; }} /></label><input placeholder="or paste URL" value={o.image ?? ""} onChange={(e) => apply({ image: e.target.value })} className={`${inputCls} min-w-[110px] flex-1`} /></div>
+  const imgField = (id: string, o: { image?: string; video?: string; ix?: number; iy?: number; iz?: number }, apply: (p: Partial<Block> & Partial<Card>) => void) => (
+    <div className="space-y-1.5">
+      {o.image
+        ? <div className="space-y-1.5"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">{o.video ? "Poster image — drag to crop" : "Image — drag to crop"}</span><button type="button" onClick={() => apply({ image: "", ix: 50, iy: 50, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><CropBox url={o.image} ix={o.ix} iy={o.iy} iz={o.iz} onChange={apply} /></div>
+        : <div className="flex flex-wrap items-center gap-1.5"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{busyKey === id ? "…" : "⬆ Add image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(id, (u) => apply({ image: u }), f); e.target.value = ""; }} /></label><input placeholder="or paste URL" value={o.image ?? ""} onChange={(e) => apply({ image: e.target.value })} className={`${inputCls} min-w-[110px] flex-1`} /></div>}
+      <input placeholder="🎬 Video link (optional — plays on click)" value={o.video ?? ""} onChange={(e) => apply({ video: e.target.value })} className={inputCls} />
+      {o.video && <div className="text-[10px] font-semibold text-[#127a3e]">Shown as a play button linking to the video — the image above is its poster.</div>}
+    </div>
   );
 
   const blockEditor = (b: Block) => {
@@ -404,6 +428,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
         <div><div className={lbl}>Chart type</div><div className="flex flex-wrap gap-1">{([["bars", "▬ Bars"], ["columns", "▮ Columns"], ["progress", "◔ Progress"], ["stacked", "▤ Stacked"], ["pie", "◕ Pie"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => patch(k, { chart: v })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.chart || "bars") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{l}</button>)}</div></div>
         <div><div className={lbl}>Unit (optional)</div><div className="flex items-center gap-1.5"><input placeholder="e.g. £, %, kids" value={b.unit ?? ""} onChange={(e) => patch(k, { unit: e.target.value })} className={`${inputCls} flex-1`} />{(["£", "$", "%", ""] as const).map((u) => <button key={u || "none"} type="button" onClick={() => patch(k, { unit: u })} className={`rounded border px-2 py-1 text-[11px] font-bold ${(b.unit ?? "") === u ? "border-[#16306e] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>{u || "none"}</button>)}</div></div>
         {(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Item {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="grid grid-cols-2 gap-1"><input placeholder="Label" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Value (number)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 6 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add item</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 6 items.</div>}</div>;
+      case "collage": return <div className="space-y-2">{hd("Heading (optional)", b.heading)}<div className="text-[10px] text-[var(--ink-3)]">3 photos = big-left + two stacked · 2 photos = side by side. Add a video link on any photo to make it a play button.</div>{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Photo {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div>{imgField(`${k}-c${i}`, cd, (p) => setCard(k, i, p))}</div>)}{(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => setBlocks((bs) => bs.map((x) => (x.k === k ? { ...x, cards: [...(x.cards || []), { image: "" }] } : x)))} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add photo</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4 photos.</div>}</div>;
       case "contact": return <div className="space-y-1.5">{hd("Heading (optional)", b.heading)}<div className="grid grid-cols-2 gap-2"><input autoComplete="off" data-lpignore="true" placeholder="Phone" value={b.footerPhone ?? ""} onChange={(e) => patch(k, { footerPhone: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Email" value={b.footerEmail ?? ""} onChange={(e) => patch(k, { footerEmail: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Website" value={b.footerWeb ?? ""} onChange={(e) => patch(k, { footerWeb: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Address" value={b.footerAddress ?? ""} onChange={(e) => patch(k, { footerAddress: e.target.value })} className={inputCls} /></div><div className="text-[10px] text-[var(--ink-3)]">Leave blank to use your saved business details.</div></div>;
       default: return null;
     }
