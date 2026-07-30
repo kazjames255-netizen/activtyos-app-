@@ -16,11 +16,11 @@ import { useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
 
-export type BlockType = "header" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer";
+export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact";
 export interface Card { image?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[] }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -100,7 +100,7 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>): string {
     }
     case "tiers": {
       const cs = b.cards || []; let inner = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>`;
-      cs.forEach((cd) => { inner += `<td valign="top" width="${Math.floor(100 / Math.max(cs.length, 1))}%" style="padding:6px"><div style="background:${t.cardAlt};border-radius:14px;padding:16px 12px;text-align:center"><div style="font-size:13px;font-weight:800;color:${t.ink}">${esc(cd.title)}</div><div style="margin:8px 0;font-size:26px;font-weight:900;color:${t.a}">${esc(cd.price)}</div><div style="font-size:11.5px;line-height:1.5;color:${t.mut};min-height:34px">${esc(cd.caption)}</div>${cd.label ? `<div style="margin-top:10px">${btnSm(t.a, t.onA, cd.label, cd.url)}</div>` : ""}</div></td>`; });
+      cs.forEach((cd) => { inner += `<td valign="top" width="${Math.floor(100 / Math.max(cs.length, 1))}%" style="padding:6px"><div style="background:${t.cardAlt};border-radius:14px;padding:16px 12px;text-align:center;height:100%;box-sizing:border-box"><div style="font-size:13px;font-weight:800;color:${t.ink}">${esc(cd.title)}</div><div style="margin:8px 0;font-size:26px;font-weight:900;color:${t.a}">${esc(cd.price)}</div><div style="font-size:11.5px;line-height:1.5;color:${t.mut};min-height:34px">${esc(cd.caption)}</div>${cd.label ? `<div style="margin-top:10px">${btnSm(t.a, t.onA, cd.label, cd.url)}</div>` : ""}</div></td>`; });
       return row(inner + "</tr></table>", "padding:12px 14px");
     }
     case "split": {
@@ -115,6 +115,26 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>): string {
       const list = (b.socials && b.socials.length ? b.socials : DEFAULT_SOCIALS);
       const icons = list.map((s) => { const m = SOC[s.net] || SOC.website; return `<td style="padding:0 5px"><a href="${esc(s.url || "#")}" style="text-decoration:none"><span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:${m.bg};color:#fff;font-weight:800;font-size:14px">${m.ch}</span></a></td>`; }).join("");
       return row(`<table role="presentation" align="center" style="margin:0 auto;border-collapse:collapse"><tr>${icons}</tr></table>${b.heading ? `<div style="margin-top:8px;font-size:12px;color:${t.mut}">${esc(b.heading)}</div>` : ""}`, "text-align:center;padding:16px 26px");
+    }
+    case "logo": {
+      const src = b.image || c?.logo; const h = b.size === "s" ? 34 : b.size === "full" ? 74 : 52; const al = b.align || "center";
+      return row(src ? `<img src="${esc(src)}" alt="${esc(c?.name || "")}" style="height:${h}px;max-width:70%;object-fit:contain;display:inline-block">` : `<div style="display:inline-block;font-size:12px;color:${t.mut};border:1px dashed ${t.line};border-radius:8px;padding:14px 20px">Your saved logo shows here — add one in Settings › Branding.</div>`, `text-align:${al};padding:18px 26px`);
+    }
+    case "quote":
+      return row(`<div style="text-align:center"><div style="color:${t.a};font-size:16px;letter-spacing:3px">★★★★★</div><div style="margin:12px 0;font-size:18px;line-height:1.55;font-style:italic;color:${t.ink};font-family:Georgia,serif">&ldquo;${esc(b.body || "Absolutely brilliant — my two had the best week ever!")}&rdquo;</div><div style="font-size:12.5px;font-weight:800;color:${t.mut}">${esc(b.heading || "— A very happy parent")}</div></div>`, `background:${t.aSoft};padding:26px 34px`);
+    case "stats": {
+      const cs = (b.cards || []).slice(0, 4); const inner = cs.map((cd) => `<td valign="top" width="${Math.floor(100 / Math.max(cs.length, 1))}%" style="text-align:center;padding:6px"><div style="font-size:30px;font-weight:900;color:${t.a}">${esc(cd.title)}</div><div style="font-size:12px;color:${t.mut};margin-top:2px">${esc(cd.caption)}</div></td>`).join("");
+      return row(`<table role="presentation" width="100%" style="border-collapse:collapse;width:100%"><tr>${inner}</tr></table>`, "padding:22px 20px");
+    }
+    case "checklist": {
+      const items = [b.item1, b.item2, b.item3, b.item4, b.item5, b.item6].filter(Boolean);
+      return row(`${b.heading ? `<h3 style="margin:0 0 12px;font-size:19px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h3>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;max-width:420px;margin:0 auto">${items.map((it) => `<tr><td style="padding:6px 0;font-size:14px;line-height:1.4;color:${t.ink}"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${t.a};color:${t.onA};font-weight:900;font-size:12px;margin-right:10px">✓</span>${esc(it)}</td></tr>`).join("")}</table>`, "padding:20px 30px");
+    }
+    case "code":
+      return row(`<div style="border:2px dashed ${t.a};border-radius:14px;padding:16px 18px;text-align:center;background:${t.aSoft}"><div style="font-size:11px;font-weight:800;letter-spacing:1px;color:${t.mut};text-transform:uppercase">${esc(b.subheading || "Your code")}</div><div style="font-size:27px;font-weight:900;letter-spacing:2px;color:${t.a};margin:2px 0">${esc(b.heading || "SUMMER15")}</div><div style="font-size:12.5px;color:${t.mut}">${esc(b.body || "15% off your next booking — this week only.")}</div></div>`, "padding:14px 26px");
+    case "contact": {
+      const bits = [b.footerPhone || c?.phone, b.footerEmail || c?.email, b.footerWeb, b.footerAddress || c?.address].map((x) => x?.trim()).filter(Boolean) as string[];
+      return row(`${b.heading ? `<div style="font-size:13px;font-weight:800;color:${t.onA};text-align:center${bits.length ? ";margin-bottom:6px" : ""}">${esc(b.heading)}</div>` : ""}${bits.length ? `<div style="text-align:center;font-size:13px;font-weight:600;color:${t.onA}">${bits.map((x) => esc(x)).join(" &nbsp;•&nbsp; ")}</div>` : ""}`, `background:${t.a};padding:16px 24px`);
     }
     case "divider":
       return row(`<div style="height:1px;background:${t.line}"></div>`, "padding:4px 26px");
@@ -181,6 +201,13 @@ export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Socia
 // ── block palette for "add section" — ready-made sections with lovely layout ─
 const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | Block[] }[] = [
   { icon: "🖼", label: "Big hero", hint: "Image + headline + button", make: () => B("hero", { heading: "A brilliant headline", subheading: "A supporting line to set the scene", label: "Book now" }) },
+  { icon: "🏷", label: "Logo", hint: "Your saved business logo", make: () => B("logo", { size: "m", align: "center" }) },
+  { icon: "⭐", label: "Testimonial", hint: "A 5-star parent review", make: () => B("quote", { body: "Absolutely brilliant — my two had the best week ever and can't wait to go back!", heading: "— Sarah, mum of two" }) },
+  { icon: "📊", label: "Stats row", hint: "Big numbers that impress", make: () => [B("heading", { heading: "Trusted by families" }), B("stats", { cards: [{ title: "2,000+", caption: "happy children" }, { title: "12", caption: "venues" }, { title: "10 yrs", caption: "of adventures" }] })] },
+  { icon: "✅", label: "What's included", hint: "A tick-list of perks", make: () => B("checklist", { heading: "Every day includes", item1: "Qualified, DBS-checked coaches", item2: "A hot lunch & snacks", item3: "Free early & late care", item4: "All equipment provided" }) },
+  { icon: "🎟", label: "Discount code", hint: "A promo code box", make: () => B("code", { subheading: "Use code", heading: "SUMMER15", body: "15% off your next booking — this week only." }) },
+  { icon: "📞", label: "Contact strip", hint: "Phone · email · address", make: () => B("contact", { heading: "Get in touch" }) },
+  { icon: "⏰", label: "Countdown offer", hint: "Urgency banner", make: () => B("band", { heading: "⏳ Early-bird ends Sunday at midnight", label: "Book before it's gone" }) },
   { icon: "✍️", label: "Heading", hint: "A titled section", make: () => B("heading", { heading: "Section heading", subheading: "An optional supporting line" }) },
   { icon: "📝", label: "Text", hint: "A paragraph (+ optional button)", make: () => B("text", { body: "Write your message here." }) },
   { icon: "🏞", label: "Image + text", hint: "Photo beside words", make: () => B("split", { heading: "Tell them about it", body: "A short, friendly paragraph that sits neatly beside the photo.", label: "Find out more" }) },
@@ -196,7 +223,7 @@ const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | 
   { icon: "➖", label: "Divider", hint: "A thin line", make: () => B("divider") },
   { icon: "📍", label: "Footer", hint: "Name + address", make: () => foot() },
 ];
-const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer" };
+const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", logo: "Logo", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer", quote: "Testimonial", stats: "Stats", checklist: "Checklist", code: "Discount code", contact: "Contact strip" };
 
 // ── crop control — drag anywhere to reposition (object-position pan) + zoom ───
 const clamp01 = (v: number) => Math.max(0, Math.min(100, v));
@@ -232,14 +259,17 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [selKey, setSelKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
+  const [history, setHistory] = useState<CampaignDesign[]>([]);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
   const selBlock = design ? (design.blocks.find((b) => b.k === selKey) ?? null) : null;
   const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
   const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold text-[#33456b] hover:bg-[#e7ecf4] disabled:opacity-30";
-  const start = (id: string) => { const d = newDesign(id, company, socials); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
-  const setBlocks = (fn: (bs: Block[]) => Block[]) => setDesign((d) => (d ? { ...d, blocks: fn(d.blocks) } : d));
+  const start = (id: string) => { const d = newDesign(id, company, socials); setHistory([]); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
+  const snapshot = () => setHistory((h) => (design ? [...h.slice(-49), design] : h));
+  const undo = () => { if (!history.length) return; setDesign(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); setSelKey(null); setAddOpen(false); };
+  const setBlocks = (fn: (bs: Block[]) => Block[]) => { snapshot(); setDesign((d) => (d ? { ...d, blocks: fn(d.blocks) } : d)); };
   const patch = (k: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.k === k ? { ...b, ...p } : b)));
   const move = (k: string, dir: -1 | 1) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); const j = i + dir; if (i < 0 || j < 0 || j >= bs.length) return bs; const n = [...bs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const dup = (k: string) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); if (i < 0) return bs; return [...bs.slice(0, i + 1), { ...bs[i], k: nk(), cards: bs[i].cards ? bs[i].cards!.map((c) => ({ ...c })) : undefined }, ...bs.slice(i + 1)]; });
@@ -290,7 +320,17 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       case "cards":
       case "tiers": return <div className="space-y-2">{b.t === "cards" && <div className="flex items-center gap-2"><span className={lbl}>Columns</span>{[2, 3].map((n) => <button key={n} type="button" onClick={() => patch(k, { cols: n })} className={`rounded px-2 py-0.5 text-[11px] font-bold ${(b.cols || 3) === n ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{n}</button>)}</div>}
         {(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Item {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="space-y-1"><input placeholder="Title" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder={b.t === "tiers" ? "Price (e.g. £100)" : "Caption"} value={(b.t === "tiers" ? cd.price : cd.caption) ?? ""} onChange={(e) => setCard(k, i, b.t === "tiers" ? { price: e.target.value } : { caption: e.target.value })} className={inputCls} />{b.t === "cards" && <input placeholder="Price (optional)" value={cd.price ?? ""} onChange={(e) => setCard(k, i, { price: e.target.value })} className={inputCls} />}{b.t === "tiers" && <input placeholder="What's included" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} />}{b.t === "cards" && imgField(`${k}-c${i}`, cd, (p) => setCard(k, i, p))}<div className="grid grid-cols-2 gap-1"><input placeholder="Button (optional)" value={cd.label ?? ""} onChange={(e) => setCard(k, i, { label: e.target.value })} className={inputCls} /><input placeholder="Link" value={cd.url ?? ""} onChange={(e) => setCard(k, i, { url: e.target.value })} className={inputCls} /></div></div></div>)}
-        <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add item</button></div>;
+        {(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add item</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4 per row.</div>}</div>;
+      case "logo": return <div className="space-y-2"><div className="text-[11px] text-[var(--ink-3)]">Uses your saved business logo automatically. Upload a different image to override it here.</div>
+        {b.image
+          ? <div className="flex items-center gap-2"><img src={b.image} alt="" className="h-9 max-w-[120px] flex-none object-contain" /><button type="button" onClick={() => patch(k, { image: "" })} className="text-[11px] font-bold text-[#1d3a8f]">↩ Use saved logo</button></div>
+          : <div className="flex flex-wrap items-center gap-1.5"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{busyKey === `${k}-logo` ? "…" : "⬆ Upload logo"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(`${k}-logo`, (u) => patch(k, { image: u }), f); e.target.value = ""; }} /></label><input placeholder="or paste URL" value={b.image ?? ""} onChange={(e) => patch(k, { image: e.target.value })} className={`${inputCls} min-w-[110px] flex-1`} /></div>}
+        <div className="flex items-start gap-4"><div><div className={lbl}>Size</div><div className="flex gap-1">{(["s", "m", "full"] as const).map((s) => <button key={s} type="button" onClick={() => patch(k, { size: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.size || "m") === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{s === "s" ? "Small" : s === "m" ? "Medium" : "Large"}</button>)}</div></div><div><div className={lbl}>Align</div><div className="flex gap-1">{(["left", "center", "right"] as const).map((al) => <button key={al} type="button" onClick={() => patch(k, { align: al })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.align || "center") === al ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{al[0].toUpperCase()}</button>)}</div></div></div></div>;
+      case "quote": return <div className="space-y-1.5">{ta("Review / quote")}{hd("Who said it", b.heading)}</div>;
+      case "checklist": return <div className="space-y-1.5">{hd("Heading", b.heading)}{(["item1", "item2", "item3", "item4", "item5", "item6"] as const).map((key, i) => <input key={key} placeholder={`Item ${i + 1}${i > 2 ? " (optional)" : ""}`} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} />)}</div>;
+      case "code": return <div className="space-y-1.5">{hd("The code", b.heading)}{hd("Label above it", b.subheading, "subheading")}{ta("Description")}</div>;
+      case "stats": return <div className="space-y-2">{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Stat {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="space-y-1"><input placeholder="Number (e.g. 2,000+)" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Label (e.g. happy children)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add stat</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4.</div>}</div>;
+      case "contact": return <div className="space-y-1.5">{hd("Heading (optional)", b.heading)}<div className="grid grid-cols-2 gap-2"><input autoComplete="off" data-lpignore="true" placeholder="Phone" value={b.footerPhone ?? ""} onChange={(e) => patch(k, { footerPhone: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Email" value={b.footerEmail ?? ""} onChange={(e) => patch(k, { footerEmail: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Website" value={b.footerWeb ?? ""} onChange={(e) => patch(k, { footerWeb: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Address" value={b.footerAddress ?? ""} onChange={(e) => patch(k, { footerAddress: e.target.value })} className={inputCls} /></div><div className="text-[10px] text-[var(--ink-3)]">Leave blank to use your saved business details.</div></div>;
       default: return null;
     }
   };
@@ -306,9 +346,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               : <div><div className="text-[16px] font-extrabold">Choose a template</div><div className="text-[12px] text-white/75">30 detailed, camp-ready designs. Pick one, then make it yours block by block.</div></div>}
           </div>
           <div className="flex flex-none items-center gap-2">
+            {design && <button type="button" onClick={undo} disabled={!history.length} title="Undo last change" className="flex items-center gap-1 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25 disabled:opacity-40">↶ Undo</button>}
             {design && <div className="relative">
               <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
-              {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
+              {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
             </div>}
             {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">Use this design</button>}
             <button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button>
