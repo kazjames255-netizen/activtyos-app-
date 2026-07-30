@@ -237,7 +237,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const shown = TEMPLATES.filter((t) => t.category === cat);
   const selBlock = design ? (design.blocks.find((b) => b.k === selKey) ?? null) : null;
   const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
-  const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30";
+  const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold text-[#33456b] hover:bg-[#e7ecf4] disabled:opacity-30";
   const start = (id: string) => { const d = newDesign(id, company, socials); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
   const setBlocks = (fn: (bs: Block[]) => Block[]) => setDesign((d) => (d ? { ...d, blocks: fn(d.blocks) } : d));
   const patch = (k: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.k === k ? { ...b, ...p } : b)));
@@ -298,9 +298,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   return (
     <div className="fixed inset-0 z-50 flex bg-black/50" onClick={onCancel}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--card,#fff)]" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
-          <div><div className="text-[16px] font-extrabold">{design ? "Design your email" : "Choose a template"}</div><div className="text-[12px] text-white/75">{design ? "Every section can be moved ↑↓, duplicated ⧉ or deleted 🗑 — and every image drags to crop + zoom." : "30 detailed, camp-ready designs. Pick one, then make it yours block by block."}</div></div>
-          <div className="flex items-center gap-2">{design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">Use this design</button>}<button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button></div>
+        <style>{`.aos-scroll{scrollbar-width:auto;scrollbar-color:#8aa0c4 #e7ecf4}.aos-scroll::-webkit-scrollbar{width:14px;height:14px}.aos-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.aos-scroll::-webkit-scrollbar-thumb{background:#8aa0c4;border-radius:8px;border:3px solid #e7ecf4}.aos-scroll::-webkit-scrollbar-thumb:hover{background:#6f88b3}`}</style>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+          <div className="flex min-w-0 items-center gap-3">
+            {design
+              ? <><button type="button" onClick={() => setDesign(null)} className="flex flex-none items-center gap-1 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25">← Templates</button><div className="min-w-0"><div className="truncate text-[15px] font-extrabold">{tpl?.name || "Design your email"}</div><div className="text-[11px] text-white/70">Move ↑↓ · duplicate ⧉ · delete 🗑 · drag any image to crop</div></div></>
+              : <div><div className="text-[16px] font-extrabold">Choose a template</div><div className="text-[12px] text-white/75">30 detailed, camp-ready designs. Pick one, then make it yours block by block.</div></div>}
+          </div>
+          <div className="flex flex-none items-center gap-2">
+            {design && <div className="relative">
+              <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
+              {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
+            </div>}
+            {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">Use this design</button>}
+            <button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button>
+          </div>
         </div>
 
         {!design ? (
@@ -308,7 +320,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             <div className="flex flex-wrap gap-1.5 border-b border-[var(--line)] px-5 py-3">
               {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => setCat(k)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
             </div>
-            <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid min-h-0 flex-1 gap-4 aos-scroll overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
               {shown.map((t) => (
                 <button key={t.id} type="button" onClick={() => start(t.id)} className="group overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
                   <div className="h-60 overflow-hidden bg-[#f3f6fb]"><div style={{ width: 600, transform: "scale(0.46)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company) }} /></div>
@@ -328,29 +340,18 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                       <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
                         <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company)}</table>` }} />
                         <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
-                        <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white/95 px-1 py-0.5 shadow-lg ring-1 ring-black/10 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                          <span className="px-1 text-[10px] font-extrabold text-[var(--ink-3)]">{BLOCK_LABEL[b.t]}</span>
+                        <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                          <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>
                           <button type="button" title="Move up" onClick={(e) => { e.stopPropagation(); move(b.k!, -1); }} disabled={i === 0} className={ctrlBtn}>↑</button>
                           <button type="button" title="Move down" onClick={(e) => { e.stopPropagation(); move(b.k!, 1); }} disabled={i === design.blocks.length - 1} className={ctrlBtn}>↓</button>
                           <button type="button" title="Duplicate" onClick={(e) => { e.stopPropagation(); dup(b.k!); }} className={ctrlBtn}>⧉</button>
                           <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); del(b.k!); }} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
                         </div>
-                        <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-3.5 left-1/2 z-20 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-[#2f6bd8] text-[17px] font-bold leading-none text-white opacity-0 shadow-lg transition group-hover:opacity-100">＋</button>
+                        <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setSelKey(null); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-[#2f6bd8] px-4 py-2 text-[12.5px] font-extrabold leading-none text-white opacity-0 shadow-[0_8px_20px_-4px_rgba(47,107,216,.75)] ring-2 ring-white transition hover:bg-[#1d3a8f] group-hover:opacity-100"><span className="text-[16px] leading-none">＋</span> Add section</button>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* top-left toolbar */}
-            <div className="absolute left-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2.5 py-1.5 shadow-lg backdrop-blur">
-              <button type="button" onClick={() => setDesign(null)} className="text-[12px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">← Templates</button>
-              {tpl && <span className="max-w-[130px] truncate text-[12px] font-extrabold text-[var(--ink)]">{tpl.name}</span>}
-              <span className="h-4 w-px bg-[var(--line)]" />
-              <div className="relative">
-                <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full px-1.5 py-0.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]"><span className="h-4 w-4 rounded-full border border-white shadow" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
-                {colourOpen && <div className="absolute left-0 top-full z-40 mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
               </div>
             </div>
 
@@ -361,17 +362,14 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <button type="button" onClick={() => setZoom((z) => Math.min(1.6, Math.round((z + 0.1) * 10) / 10))} className="flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
             </div>
 
-            {/* bottom-center add */}
-            <button type="button" onClick={(e) => { e.stopPropagation(); setAddIndex(design.blocks.length); setAddOpen(true); }} className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-6 py-3 text-[13px] font-extrabold text-white shadow-xl transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✦ Add a section</button>
-
             {/* add palette — docked on the side, doesn't cover the email; inserts where you clicked */}
-            {addOpen && <div className="absolute bottom-4 left-4 top-16 z-40 flex w-[300px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10" onClick={(e) => e.stopPropagation()}>
+            {addOpen && <div className="absolute bottom-4 right-4 top-16 z-40 flex w-[300px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
                 <span className="text-[13px] font-extrabold">✦ Add a section</span>
                 <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[10.5px] font-bold">{addIndex != null && addIndex < design.blocks.length ? `at position ${addIndex + 1}` : "at the end"}</span>
                 <button type="button" onClick={() => { setAddOpen(false); setAddIndex(null); }} className="flex h-6 w-6 items-center justify-center rounded text-[16px] text-white/85 hover:bg-white/20">×</button>
               </div>
-              <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
+              <div className="min-h-0 flex-1 space-y-1.5 aos-scroll overflow-y-auto p-2.5">
                 {ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-2.5 py-2 text-left shadow-sm transition hover:-translate-y-px hover:border-[#2f6bd8] hover:shadow-md">
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-[#eef4fd] to-[#e2ecfb] text-[18px]">{a.icon}</span>
                   <span className="min-w-0"><span className="block text-[12.5px] font-extrabold text-[var(--ink)]">{a.label}</span><span className="block truncate text-[10.5px] text-[var(--ink-3)]">{a.hint}</span></span>
@@ -383,15 +381,15 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[384px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10">
               <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
                 <span className="text-[11px]">✎</span><span className="text-[13px] font-extrabold">Editing: {BLOCK_LABEL[selBlock.t]}</span>
-                <div className="ml-auto flex items-center gap-0.5 text-white">
-                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">↑</button>
-                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">↓</button>
-                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">⧉</button>
-                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] hover:bg-white/20">🗑</button>
-                  <button type="button" title="Close" onClick={() => setSelKey(null)} className="flex h-6 w-6 items-center justify-center rounded text-[16px] text-white/85 hover:bg-white/20">×</button>
+                <div className="ml-auto flex items-center gap-1">
+                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">↑</button>
+                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">↓</button>
+                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">⧉</button>
+                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] hover:bg-white/35">🗑</button>
+                  <button type="button" title="Close" onClick={() => setSelKey(null)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[16px] font-bold text-white hover:bg-white/35">×</button>
                 </div>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
+              <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
             </div>}
           </div>
           )}
