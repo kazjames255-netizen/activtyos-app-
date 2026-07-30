@@ -178,20 +178,23 @@ export function renderDesignText(d: CampaignDesign): string { const out: string[
 const withSocials = (blocks: Block[], seed?: Social[]): Block[] => (seed && seed.length ? blocks.map((b) => (b.t === "social" && (!b.socials || b.socials.every((s) => !s.url)) ? { ...b, socials: seed } : b)) : blocks);
 export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const blocks = withSocials(t.blocks(), seed).map((b) => (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: c?.name || "" } : b); return { templateId, accent: t.accentId, blocks }; };
 
-// ── block palette for "add section" ─────────────────────────────────────────
-const ADDABLE: { t: BlockType; label: string; make: () => Block }[] = [
-  { t: "heading", label: "Heading", make: () => B("heading", { heading: "Section heading" }) },
-  { t: "text", label: "Text", make: () => B("text", { body: "Write your message here." }) },
-  { t: "image", label: "Image", make: () => B("image", { size: "full", shape: "landscape", align: "center" }) },
-  { t: "hero", label: "Hero (image + text)", make: () => B("hero", { heading: "Big headline", subheading: "A supporting line" }) },
-  { t: "cards", label: "Cards (3 columns)", make: () => B("cards", { cols: 3, cards: [C("Title", "Caption", "£0"), C("Title", "Caption", "£0"), C("Title", "Caption", "£0")] }) },
-  { t: "tiers", label: "Pricing tiers", make: () => B("tiers", { cards: [C("Basic", "What's included", "£0", "Choose"), C("Plus", "What's included", "£0", "Choose"), C("Pro", "What's included", "£0", "Choose")] }) },
-  { t: "split", label: "Image + text", make: () => B("split", { heading: "Title", body: "A short paragraph." }) },
-  { t: "band", label: "Colour band", make: () => B("band", { heading: "A highlighted message" }) },
-  { t: "button", label: "Button", make: () => B("button", { label: "Book now", url: "" }) },
-  { t: "social", label: "Social icons", make: () => soc() },
-  { t: "divider", label: "Divider", make: () => B("divider") },
-  { t: "footer", label: "Footer", make: () => foot() },
+// ── block palette for "add section" — ready-made sections with lovely layout ─
+const ADDABLE: { label: string; hint: string; make: () => Block | Block[] }[] = [
+  { label: "🖼 Big hero", hint: "Image + headline + button", make: () => B("hero", { heading: "A brilliant headline", subheading: "A supporting line to set the scene", label: "Book now" }) },
+  { label: "✍️ Heading", hint: "A titled section", make: () => B("heading", { heading: "Section heading", subheading: "An optional supporting line" }) },
+  { label: "📝 Text", hint: "A paragraph (+ optional button)", make: () => B("text", { body: "Write your message here." }) },
+  { label: "🏞 Image + text", hint: "Photo beside words", make: () => B("split", { heading: "Tell them about it", body: "A short, friendly paragraph that sits neatly beside the photo.", label: "Find out more" }) },
+  { label: "🌟 Feature trio", hint: "3 selling points", make: () => [B("heading", { heading: "Why families love us" }), B("cards", { cols: 3, cards: [C("Qualified team", "DBS-checked & first-aid trained"), C("Small groups", "More attention for every child"), C("Easy booking", "Secure a place in minutes")] })] },
+  { label: "🎨 Activity grid", hint: "6 activities", make: () => [B("heading", { heading: "Something for everyone" }), B("cards", { cols: 3, cards: [C("Multi-Sports"), C("Arts & Crafts"), C("Coding Club"), C("Go-Karting"), C("Forest School"), C("Bouncy Castles")] })] },
+  { label: "📸 Photo gallery", hint: "3-photo row", make: () => [B("heading", { heading: "Moments from camp" }), B("cards", { cols: 3, cards: [{ image: "", title: "" }, { image: "", title: "" }, { image: "", title: "" }] })] },
+  { label: "💷 Pricing section", hint: "3 price tiers", make: () => [B("heading", { heading: "Simple pricing" }), B("tiers", { cards: [C("1 Day", "Try us out", "£28", "Book"), C("3 Days", "Most popular", "£75", "Book"), C("Full Week", "Best value", "£120", "Book")] })] },
+  { label: "🪜 How it works", hint: "3 easy steps", make: () => [B("heading", { heading: "How it works" }), B("cards", { cols: 3, cards: [C("1. Choose", "Pick your camp or club"), C("2. Book", "Secure a place online"), C("3. Enjoy", "We take it from there")] })] },
+  { label: "⚡ Highlight offer", hint: "Colour band + button", make: () => B("band", { heading: "⚡ Early-bird ends Sunday — save 15%", label: "Grab the offer" }) },
+  { label: "📣 Call to action", hint: "Panel + button", make: () => [B("band", { heading: "Ready to book?", body: "Places are filling fast — grab yours today.", label: "Book now" })] },
+  { label: "🔘 Button", hint: "A single link", make: () => B("button", { label: "Book now", url: "" }) },
+  { label: "📱 Social icons", hint: "Your profiles", make: () => soc() },
+  { label: "➖ Divider", hint: "A thin line", make: () => B("divider") },
+  { label: "📍 Footer", hint: "Name + address", make: () => foot() },
 ];
 const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer" };
 
@@ -223,6 +226,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [design, setDesign] = useState<CampaignDesign | null>(() => (initial ? { ...initial, blocks: withSocials(initial.blocks, socials).map((b, i) => ({ ...b, k: `i${i}` })) } : null));
   const [cat, setCat] = useState("All");
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
@@ -233,7 +237,12 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const move = (k: string, dir: -1 | 1) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); const j = i + dir; if (i < 0 || j < 0 || j >= bs.length) return bs; const n = [...bs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const dup = (k: string) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); if (i < 0) return bs; return [...bs.slice(0, i + 1), { ...bs[i], k: nk(), cards: bs[i].cards ? bs[i].cards!.map((c) => ({ ...c })) : undefined }, ...bs.slice(i + 1)]; });
   const del = (k: string) => setBlocks((bs) => bs.filter((b) => b.k !== k));
-  const add = (mk: () => Block) => { const nb = { ...mk(), k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; setBlocks((bs) => [...bs, nb]); setAddOpen(false); };
+  const add = (mk: () => Block | Block[]) => { const made = mk(); const arr = (Array.isArray(made) ? made : [made]).map((x) => { const nb = { ...x, k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; return nb; }); setBlocks((bs) => [...bs, ...arr]); setAddOpen(false); };
+  const aiWrite = async (bk: string, key: keyof Block, ctx?: string) => {
+    const brief = typeof window !== "undefined" ? window.prompt("In a few words, what should this say? The writer turns it into friendly copy.", ctx || "") : null;
+    if (!brief?.trim()) return; setAiBusy(`${bk}-${String(key)}`);
+    try { const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: "announce", notes: brief.trim(), length: "medium" }); if (r.body) patch(bk, { [key]: r.body } as Partial<Block>); } catch { /* ignore */ } setAiBusy(null);
+  };
   const setCard = (bk: string, ci: number, p: Partial<Card>) => setBlocks((bs) => bs.map((b) => (b.k === bk ? { ...b, cards: (b.cards || []).map((c, i) => (i === ci ? { ...c, ...p } : c)) } : b)));
   const addCard = (bk: string) => setBlocks((bs) => bs.map((b) => (b.k === bk ? { ...b, cards: [...(b.cards || []), C("New", "", "")] } : b)));
   const delCard = (bk: string, ci: number) => setBlocks((bs) => bs.map((b) => (b.k === bk ? { ...b, cards: (b.cards || []).filter((_, i) => i !== ci) } : b)));
@@ -248,7 +257,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const blockEditor = (b: Block) => {
     const k = b.k!;
     const hd = (label: string, val?: string, key: keyof Block = "heading") => <div><div className={lbl}>{label}</div><input value={(val ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
-    const ta = (label: string, key: keyof Block = "body") => <div><div className={lbl}>{label}</div><textarea rows={2} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
+    const ta = (label: string, key: keyof Block = "body") => <div><div className="mb-0.5 flex items-center gap-2"><span className={lbl.replace("mb-0.5 ", "")}>{label}</span><button type="button" onClick={() => aiWrite(k, key, b.heading)} className="ml-auto text-[10.5px] font-extrabold text-[#7c3aed] hover:underline">{aiBusy === `${k}-${String(key)}` ? "✨ Writing…" : "✨ Help me write"}</button></div><textarea rows={3} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
     switch (b.t) {
       case "header": return <div className="space-y-1.5">{hd("Business name", b.heading)}{hd("Tagline (optional)", b.subheading, "subheading")}</div>;
       case "hero": return <div className="space-y-1.5"><div><div className={lbl}>Image</div>{imgField(`${k}-img`, b, (p) => patch(k, p))}</div>{hd("Heading", b.heading)}{hd("Sub-heading", b.subheading, "subheading")}{ta("Body")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
@@ -258,7 +267,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       case "image": { const beside = b.size !== "full"; return <div className="space-y-2">{imgField(`${k}-img`, b, (p) => patch(k, p))}
         <div><div className={lbl}>Shape</div><div className="flex flex-wrap gap-1">{([["landscape", "Rectangle"], ["square", "Square"], ["portrait", "Portrait"], ["wide", "Banner"]] as const).map(([s, l]) => <button key={s} type="button" onClick={() => patch(k, { shape: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.shape || "landscape") === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{l}</button>)}</div></div>
         <div className="flex items-start gap-4"><div><div className={lbl}>Size</div><div className="flex gap-1">{(["s", "m", "full"] as const).map((s) => <button key={s} type="button" onClick={() => patch(k, { size: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${b.size === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{s === "s" ? "Small" : s === "m" ? "Medium" : "Full"}</button>)}</div></div><div><div className={lbl}>{beside && (b.heading || b.body) ? "Image side" : "Align"}</div><div className="flex gap-1">{(["left", "center", "right"] as const).map((al) => <button key={al} type="button" onClick={() => patch(k, { align: al })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.align || "center") === al ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{al[0].toUpperCase()}</button>)}</div></div></div>
-        {beside ? <div className="space-y-1.5 rounded-lg border border-dashed border-[#bcd3f5] bg-[#f6f9ff] p-2.5"><div className="text-[11px] font-bold text-[#1d3a8f]">✎ Text beside the image <span className="font-normal text-[var(--ink-3)]">— there's room, so fill it (optional)</span></div>{hd("Heading", b.heading)}{ta("Body")}{(b.heading || b.body) && <div><div className={lbl}>Image / text split — drag to keep the image bigger</div><input type="range" min={25} max={70} step={1} value={b.splitPct ?? (b.size === "s" ? 38 : 52)} onChange={(e) => patch(k, { splitPct: Number(e.target.value) })} className="w-full" /><div className="text-[10px] text-[var(--ink-3)]">Image {b.splitPct ?? (b.size === "s" ? 38 : 52)}% · text fills the rest</div></div>}</div> : <div className="text-[10.5px] text-[var(--ink-3)]">Tip: switch to Small or Medium and a text area appears to sit beside the image.</div>}
+        {beside ? <div className="space-y-1.5 rounded-lg border border-dashed border-[#bcd3f5] bg-[#f6f9ff] p-2.5"><div className="text-[11px] font-bold text-[#1d3a8f]">✎ Text beside the image <span className="font-normal text-[var(--ink-3)]">— there&apos;s room, so fill it (optional)</span></div>{hd("Heading", b.heading)}{ta("Body")}{(b.heading || b.body) && <div><div className={lbl}>Image / text split — drag to keep the image bigger</div><input type="range" min={25} max={70} step={1} value={b.splitPct ?? (b.size === "s" ? 38 : 52)} onChange={(e) => patch(k, { splitPct: Number(e.target.value) })} className="w-full" /><div className="text-[10px] text-[var(--ink-3)]">Image {b.splitPct ?? (b.size === "s" ? 38 : 52)}% · text fills the rest</div></div>}</div> : <div className="text-[10.5px] text-[var(--ink-3)]">Tip: switch to Small or Medium and a text area appears to sit beside the image.</div>}
         {hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}
         {hd("Caption (optional)", b.caption, "caption")}</div>; }
       case "split": return <div className="space-y-1.5">{imgField(`${k}-img`, b, (p) => patch(k, p))}<label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={!!b.flip} onChange={(e) => patch(k, { flip: e.target.checked })} /> Image on the right</label>{hd("Heading", b.heading)}{ta("Body")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
@@ -325,7 +334,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               ))}
               <div className="relative">
                 <button type="button" onClick={() => setAddOpen((v) => !v)} className="w-full rounded-xl border-2 border-dashed border-[var(--line)] px-3 py-2.5 text-[12.5px] font-extrabold text-[#1d3a8f] hover:border-[#2f6bd8] hover:bg-[#f4f8ff]">＋ Add a section</button>
-                {addOpen && <div className="absolute bottom-full left-0 z-10 mb-1 grid w-full grid-cols-2 gap-1 rounded-xl border border-[var(--line)] bg-white p-2 shadow-xl">{ADDABLE.map((a) => <button key={a.t + a.label} type="button" onClick={() => add(a.make)} className="rounded-lg px-2.5 py-1.5 text-left text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{a.label}</button>)}</div>}
+                {addOpen && <div className="absolute bottom-full left-0 z-10 mb-1 grid max-h-[60vh] w-full grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-2 shadow-xl">{ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => add(a.make)} className="rounded-lg px-2.5 py-1.5 text-left hover:bg-[var(--panel)]"><div className="text-[12px] font-bold text-[var(--ink)]">{a.label}</div><div className="text-[10px] text-[var(--ink-3)]">{a.hint}</div></button>)}</div>}
               </div>
             </div>
             <div className="min-h-0 overflow-y-auto bg-[#eef1f6] p-4">
