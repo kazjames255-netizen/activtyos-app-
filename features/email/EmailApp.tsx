@@ -762,32 +762,50 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
   const [building, setBuilding] = useState(false);
+  const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("segments");
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
+  const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
+  const SUBS = [
+    { k: "segments" as const, label: "🎯 Segments", count: 1 + SEED_AUDIENCES.length },
+    { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
+    { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
+  ];
   return (
     <div>
       <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
 
-      <AudSection title="🎯 Segments" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...SEED_AUDIENCES].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button>} />)}</div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <AudSection title="📩 Enquiries — by location" hint="Emailed you but never booked. They drop off automatically once they book." />
-        <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d"], ["90", "Last 90d"], ["all", "All time"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+      {/* switch between the three audience areas */}
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
+        {SUBS.map((s) => <button key={s.k} type="button" onClick={() => setSub(s.k)} className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-extrabold transition ${sub === s.k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)] hover:text-[#1d3a8f]"}`}>{s.label}<span className={`rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums ${sub === s.k ? "bg-[#eef4fd] text-[#1d3a8f]" : "bg-[var(--line)] text-[var(--ink-3)]"}`}>{s.count}</span></button>)}
       </div>
-      {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
-        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-        : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} />)}</div>}
 
-      <AudSection title="⭐ Your audiences" hint="Custom segments you build. New ones land here." />
-      {custom.length === 0
-        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one.</div>
-        : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{custom.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<><button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
+      {sub === "segments" && (<>
+        <AudSection title="🎯 Segments" hint="Built-in CRM segments over all your bookings." />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...SEED_AUDIENCES].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button>} />)}</div>
+      </>)}
 
-      <div className="mt-4"><button type="button" onClick={() => setBuilding(true)} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New audience</button></div>
-      {building && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setBuilding(false)} onCreate={(a) => { setCustom((xs) => [...xs, a]); setBuilding(false); }} />}
+      {sub === "enquiries" && (<>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <AudSection title="📩 Enquiries — by location" hint="Emailed you but never booked. They drop off automatically once they book." />
+          <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d"], ["90", "Last 90d"], ["all", "All time"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+        </div>
+        {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} />)}</div>}
+      </>)}
+
+      {sub === "custom" && (<>
+        <AudSection title="⭐ Your audiences" hint="Custom segments you build. New ones land here." />
+        {custom.length === 0
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one.</div>
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{custom.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<><button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
+        <div className="mt-4"><button type="button" onClick={() => setBuilding(true)} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New audience</button></div>
+      </>)}
+
+      {building && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setBuilding(false)} onCreate={(a) => { setCustom((xs) => [...xs, a]); setBuilding(false); setSub("custom"); }} />}
     </div>
   );
 }
