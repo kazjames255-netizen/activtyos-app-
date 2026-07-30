@@ -918,15 +918,25 @@ export function EmailApp() {
   // (not separate text below it). Embedded inline + resizable.
   async function addImageToEmail(im: SavedImage) {
     const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const { caption, quotes } = resolveSavedText(im);
+    let src = im.photoUrl, composed = false;
+    // Try the Moments-style composed image (text baked in). If it can't be made or
+    // hosted in a few seconds, fall back to the raw photo — never fail silently.
     try {
-      const { caption, quotes } = resolveSavedText(im);
-      const dataUrl = await composeMomentImage({ photoUrl: im.photoUrl, ratio: im.ratio, color: im.color, caption, quotes, footer: im.footer, fit: im.fit ?? "contain" });
-      let url = dataUrl;
-      try { const r = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); url = r.url; } catch { /* too big to host — embed the data URL directly as a fallback */ }
-      const block = `<img src="${url}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
-      setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
-      setOk("✓ Added successfully — the photo (with its message & quote) is embedded. Click it to resize, or pick Embed / PDF at the top.");
-    } catch { setError("Couldn’t add that photo — try again."); }
+      const dataUrl = await Promise.race([
+        composeMomentImage({ photoUrl: im.photoUrl, ratio: im.ratio, color: im.color, caption, quotes, footer: im.footer, fit: im.fit ?? "contain" }),
+        new Promise<null>((r) => setTimeout(() => r(null), 4000)),
+      ]);
+      if (dataUrl) { composed = true; src = dataUrl; try { const r = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); src = r.url; } catch { /* keep the data URL */ } }
+    } catch { /* keep the raw photo */ }
+    let block = `<img src="${src}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
+    if (!composed) { // raw photo — add the message/quote as text since it isn't baked in
+      if (caption) block += `<div style="margin-top:6px">${esc(caption)}</div>`;
+      for (const q of quotes) block += `<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`;
+    }
+    setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
+    setOk("✓ Photo added to your email — it’s in the message above with a size slider. Click a photo to resize it.");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const refresh = useCallback(() => {
@@ -984,6 +994,8 @@ export function EmailApp() {
       const small = await downscaleImage(f);
       const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small });
       setBody((bd) => `${bd}<img src="${url}" alt="" style="max-width:100%;border-radius:8px"><br>`);
+      setOk("✓ Photo added — it’s in the message above with a size slider.");
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     } catch { setError("Couldn’t add that photo — try a smaller JPG or PNG."); }
   }
   // "Help me write" — draft/extend the email body from a short brief via the AI writer.
