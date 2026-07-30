@@ -54,7 +54,7 @@ const imgHeight = (shape: string, wpx: number) => { const r = shape === "square"
 const btn = (bg: string, fg: string, label?: string, url?: string) => `<a href="${esc(url || "#")}" style="display:inline-block;background:${bg};color:${fg};text-decoration:none;font-weight:800;font-size:14px;padding:12px 28px;border-radius:26px">${esc(label || "Learn more")}</a>`;
 const btnSm = (bg: string, fg: string, label?: string, url?: string) => `<a href="${esc(url || "#")}" style="display:inline-block;background:${bg};color:${fg};text-decoration:none;font-weight:800;font-size:11px;padding:7px 14px;border-radius:14px">${esc(label || "More")}</a>`;
 const row = (inner: string, style = "") => `<tr><td style="${style}">${inner}</td></tr>`;
-const wrapRows = (rows: string) => `<div style="max-width:600px;margin:0 auto;background:#ffffff;font-family:system-ui,-apple-system,'Segoe UI',sans-serif"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;max-width:600px">${rows}</table></div>`;
+const wrapRows = (rows: string) => `<div style="max-width:640px;margin:0 auto;background:#ffffff;font-family:system-ui,-apple-system,'Segoe UI',sans-serif"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;max-width:640px">${rows}</table></div>`;
 
 export const SOC: Record<string, { bg: string; ch: string; label: string }> = { facebook: { bg: "#3b5998", ch: "f", label: "Facebook" }, instagram: { bg: "#c13584", ch: "◎", label: "Instagram" }, tiktok: { bg: "#111111", ch: "♪", label: "TikTok" }, twitter: { bg: "#1da1f2", ch: "t", label: "X / Twitter" }, youtube: { bg: "#ff0000", ch: "▶", label: "YouTube" }, website: { bg: "#4a5568", ch: "🔗", label: "Website" } };
 export const SOC_NETS = Object.keys(SOC);
@@ -179,22 +179,22 @@ const withSocials = (blocks: Block[], seed?: Social[]): Block[] => (seed && seed
 export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const blocks = withSocials(t.blocks(), seed).map((b) => (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: c?.name || "" } : b); return { templateId, accent: t.accentId, blocks }; };
 
 // ── block palette for "add section" — ready-made sections with lovely layout ─
-const ADDABLE: { label: string; hint: string; make: () => Block | Block[] }[] = [
-  { label: "🖼 Big hero", hint: "Image + headline + button", make: () => B("hero", { heading: "A brilliant headline", subheading: "A supporting line to set the scene", label: "Book now" }) },
-  { label: "✍️ Heading", hint: "A titled section", make: () => B("heading", { heading: "Section heading", subheading: "An optional supporting line" }) },
-  { label: "📝 Text", hint: "A paragraph (+ optional button)", make: () => B("text", { body: "Write your message here." }) },
-  { label: "🏞 Image + text", hint: "Photo beside words", make: () => B("split", { heading: "Tell them about it", body: "A short, friendly paragraph that sits neatly beside the photo.", label: "Find out more" }) },
-  { label: "🌟 Feature trio", hint: "3 selling points", make: () => [B("heading", { heading: "Why families love us" }), B("cards", { cols: 3, cards: [C("Qualified team", "DBS-checked & first-aid trained"), C("Small groups", "More attention for every child"), C("Easy booking", "Secure a place in minutes")] })] },
-  { label: "🎨 Activity grid", hint: "6 activities", make: () => [B("heading", { heading: "Something for everyone" }), B("cards", { cols: 3, cards: [C("Multi-Sports"), C("Arts & Crafts"), C("Coding Club"), C("Go-Karting"), C("Forest School"), C("Bouncy Castles")] })] },
-  { label: "📸 Photo gallery", hint: "3-photo row", make: () => [B("heading", { heading: "Moments from camp" }), B("cards", { cols: 3, cards: [{ image: "", title: "" }, { image: "", title: "" }, { image: "", title: "" }] })] },
-  { label: "💷 Pricing section", hint: "3 price tiers", make: () => [B("heading", { heading: "Simple pricing" }), B("tiers", { cards: [C("1 Day", "Try us out", "£28", "Book"), C("3 Days", "Most popular", "£75", "Book"), C("Full Week", "Best value", "£120", "Book")] })] },
-  { label: "🪜 How it works", hint: "3 easy steps", make: () => [B("heading", { heading: "How it works" }), B("cards", { cols: 3, cards: [C("1. Choose", "Pick your camp or club"), C("2. Book", "Secure a place online"), C("3. Enjoy", "We take it from there")] })] },
-  { label: "⚡ Highlight offer", hint: "Colour band + button", make: () => B("band", { heading: "⚡ Early-bird ends Sunday — save 15%", label: "Grab the offer" }) },
-  { label: "📣 Call to action", hint: "Panel + button", make: () => [B("band", { heading: "Ready to book?", body: "Places are filling fast — grab yours today.", label: "Book now" })] },
-  { label: "🔘 Button", hint: "A single link", make: () => B("button", { label: "Book now", url: "" }) },
-  { label: "📱 Social icons", hint: "Your profiles", make: () => soc() },
-  { label: "➖ Divider", hint: "A thin line", make: () => B("divider") },
-  { label: "📍 Footer", hint: "Name + address", make: () => foot() },
+const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | Block[] }[] = [
+  { icon: "🖼", label: "Big hero", hint: "Image + headline + button", make: () => B("hero", { heading: "A brilliant headline", subheading: "A supporting line to set the scene", label: "Book now" }) },
+  { icon: "✍️", label: "Heading", hint: "A titled section", make: () => B("heading", { heading: "Section heading", subheading: "An optional supporting line" }) },
+  { icon: "📝", label: "Text", hint: "A paragraph (+ optional button)", make: () => B("text", { body: "Write your message here." }) },
+  { icon: "🏞", label: "Image + text", hint: "Photo beside words", make: () => B("split", { heading: "Tell them about it", body: "A short, friendly paragraph that sits neatly beside the photo.", label: "Find out more" }) },
+  { icon: "🌟", label: "Feature trio", hint: "3 selling points", make: () => [B("heading", { heading: "Why families love us" }), B("cards", { cols: 3, cards: [C("Qualified team", "DBS-checked & first-aid trained"), C("Small groups", "More attention for every child"), C("Easy booking", "Secure a place in minutes")] })] },
+  { icon: "🎨", label: "Activity grid", hint: "6 activities", make: () => [B("heading", { heading: "Something for everyone" }), B("cards", { cols: 3, cards: [C("Multi-Sports"), C("Arts & Crafts"), C("Coding Club"), C("Go-Karting"), C("Forest School"), C("Bouncy Castles")] })] },
+  { icon: "📸", label: "Photo gallery", hint: "3-photo row", make: () => [B("heading", { heading: "Moments from camp" }), B("cards", { cols: 3, cards: [{ image: "", title: "" }, { image: "", title: "" }, { image: "", title: "" }] })] },
+  { icon: "💷", label: "Pricing section", hint: "3 price tiers", make: () => [B("heading", { heading: "Simple pricing" }), B("tiers", { cards: [C("1 Day", "Try us out", "£28", "Book"), C("3 Days", "Most popular", "£75", "Book"), C("Full Week", "Best value", "£120", "Book")] })] },
+  { icon: "🪜", label: "How it works", hint: "3 easy steps", make: () => [B("heading", { heading: "How it works" }), B("cards", { cols: 3, cards: [C("1. Choose", "Pick your camp or club"), C("2. Book", "Secure a place online"), C("3. Enjoy", "We take it from there")] })] },
+  { icon: "⚡", label: "Highlight offer", hint: "Colour band + button", make: () => B("band", { heading: "⚡ Early-bird ends Sunday — save 15%", label: "Grab the offer" }) },
+  { icon: "📣", label: "Call to action", hint: "Panel + button", make: () => [B("band", { heading: "Ready to book?", body: "Places are filling fast — grab yours today.", label: "Book now" })] },
+  { icon: "🔘", label: "Button", hint: "A single link", make: () => B("button", { label: "Book now", url: "" }) },
+  { icon: "📱", label: "Social icons", hint: "Your profiles", make: () => soc() },
+  { icon: "➖", label: "Divider", hint: "A thin line", make: () => B("divider") },
+  { icon: "📍", label: "Footer", hint: "Name + address", make: () => foot() },
 ];
 const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer" };
 
@@ -231,6 +231,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [addIndex, setAddIndex] = useState<number | null>(null);
   const [selKey, setSelKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [colourOpen, setColourOpen] = useState(false);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
@@ -322,7 +323,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             <div className="absolute inset-0 overflow-auto" onClick={() => { setSelKey(null); setAddOpen(false); }}>
               <div className="flex min-h-full justify-center px-6 pb-28 pt-16">
                 <div style={{ zoom }} className="h-max">
-                  <div className="w-[600px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
+                  <div className="w-[640px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
                     {design.blocks.map((b, i) => (
                       <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
                         <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company)}</table>` }} />
@@ -347,7 +348,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <button type="button" onClick={() => setDesign(null)} className="text-[12px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">← Templates</button>
               {tpl && <span className="max-w-[130px] truncate text-[12px] font-extrabold text-[var(--ink)]">{tpl.name}</span>}
               <span className="h-4 w-px bg-[var(--line)]" />
-              <div className="flex items-center gap-1">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => setDesign((d) => (d ? { ...d, accent: a.id } : d))} title={a.name} className={`rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow"}`} style={{ background: a.hex, height: 18, width: 18 }} />)}</div>
+              <div className="relative">
+                <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full px-1.5 py-0.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]"><span className="h-4 w-4 rounded-full border border-white shadow" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
+                {colourOpen && <div className="absolute left-0 top-full z-40 mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
+              </div>
             </div>
 
             {/* zoom control */}
@@ -360,11 +364,18 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             {/* bottom-center add */}
             <button type="button" onClick={(e) => { e.stopPropagation(); setAddIndex(design.blocks.length); setAddOpen(true); }} className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-6 py-3 text-[13px] font-extrabold text-white shadow-xl transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✦ Add a section</button>
 
-            {/* add palette */}
-            {addOpen && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/25 p-6" onClick={() => { setAddOpen(false); setAddIndex(null); }}>
-              <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-2 text-[14px] font-extrabold text-[var(--ink)]">Add a section</div>
-                <div className="grid max-h-[64vh] grid-cols-2 gap-1.5 overflow-y-auto">{ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-[#dbe6fb] hover:bg-[#f4f8ff]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{a.label}</div><div className="text-[10.5px] text-[var(--ink-3)]">{a.hint}</div></button>)}</div>
+            {/* add palette — docked on the side, doesn't cover the email; inserts where you clicked */}
+            {addOpen && <div className="absolute bottom-4 left-4 top-16 z-40 flex w-[300px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+                <span className="text-[13px] font-extrabold">✦ Add a section</span>
+                <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[10.5px] font-bold">{addIndex != null && addIndex < design.blocks.length ? `at position ${addIndex + 1}` : "at the end"}</span>
+                <button type="button" onClick={() => { setAddOpen(false); setAddIndex(null); }} className="flex h-6 w-6 items-center justify-center rounded text-[16px] text-white/85 hover:bg-white/20">×</button>
+              </div>
+              <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
+                {ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-2.5 py-2 text-left shadow-sm transition hover:-translate-y-px hover:border-[#2f6bd8] hover:shadow-md">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-[#eef4fd] to-[#e2ecfb] text-[18px]">{a.icon}</span>
+                  <span className="min-w-0"><span className="block text-[12.5px] font-extrabold text-[var(--ink)]">{a.label}</span><span className="block truncate text-[10.5px] text-[var(--ink-3)]">{a.hint}</span></span>
+                </button>)}
               </div>
             </div>}
 
