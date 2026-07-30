@@ -298,7 +298,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   return (
     <div className="fixed inset-0 z-50 flex bg-black/50" onClick={onCancel}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--card,#fff)]" onClick={(e) => e.stopPropagation()}>
-        <style>{`.aos-scroll{scrollbar-width:auto;scrollbar-color:#8aa0c4 #e7ecf4}.aos-scroll::-webkit-scrollbar{width:14px;height:14px}.aos-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.aos-scroll::-webkit-scrollbar-thumb{background:#8aa0c4;border-radius:8px;border:3px solid #e7ecf4}.aos-scroll::-webkit-scrollbar-thumb:hover{background:#6f88b3}`}</style>
+        <style>{`.aos-scroll{overflow-y:scroll}.aos-scroll::-webkit-scrollbar{width:14px;height:14px}.aos-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.aos-scroll::-webkit-scrollbar-thumb{background:#6f88b3;border-radius:8px;border:3px solid #e7ecf4;min-height:40px}.aos-scroll::-webkit-scrollbar-thumb:hover{background:#4f6da0}`}</style>
         <div className="flex items-center justify-between gap-3 px-5 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <div className="flex min-w-0 items-center gap-3">
             {design
