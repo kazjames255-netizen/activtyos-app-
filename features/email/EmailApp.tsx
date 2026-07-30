@@ -274,9 +274,9 @@ const FOLDERS: [string, string][] = [
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
 ];
 
-function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, location?: string) => void; history: Sent[] | null; locations: string[] }) {
+function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[] }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
-  const [enqLoc, setEnqLoc] = useState("");
+  const [enqLocs, setEnqLocs] = useState<string[]>([]);
   const [items, setItems] = useState<Mail[]>(() => DEMO_MAIL.map((m) => ({ ...m, folder: m.folder ?? "inbox" })));
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
@@ -406,7 +406,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
               <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { setEnqLoc(""); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
             </div>
           </div>
         </div>
@@ -419,15 +419,19 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
             </div>
             <div className="p-5">
-              <FieldLabel>Location</FieldLabel>
-              <Select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} className="w-full">
-                <option value="">No specific location</option>
-                {locations.map((l) => <option key={l} value={l}>{l}</option>)}
-              </Select>
-              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">They&apos;ll appear on the New-enquiries board for this location and drop off automatically once they book.</p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button type="button" onClick={() => setEnqFor(null)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
-                <button type="button" onClick={() => { onEnquiry(enqFor, enqLoc || undefined); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>➕ Add to enquiries</button>
+              <FieldLabel>Location{locations.length > 0 && <span className="ml-1 font-normal normal-case tracking-normal text-[var(--ink-3)]">— pick one or more</span>}</FieldLabel>
+              {locations.length === 0
+                ? <p className="text-[12.5px] text-[var(--ink-3)]">No venues on file yet — they&apos;ll be added with no specific location.</p>
+                : <div className="flex flex-wrap gap-2">
+                    {locations.map((l) => { const on = enqLocs.includes(l); return (
+                      <button key={l} type="button" onClick={() => setEnqLocs((xs) => xs.includes(l) ? xs.filter((x) => x !== l) : [...xs, l])} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${on ? "bg-[#16306e] text-white shadow-sm" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{on ? "✓ " : ""}{l}</button>
+                    ); })}
+                  </div>}
+              <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{enqLocs.length === 0 ? "None selected — they’ll be added with no specific location." : `They’ll appear on ${enqLocs.length} location board${enqLocs.length === 1 ? "" : "s"}.`} Drops off automatically once they book.</p>
+              <div className="mt-5 flex items-center gap-2">
+                {enqLocs.length > 0 && <button type="button" onClick={() => setEnqLocs([])} className="mr-auto text-[12px] font-bold text-[var(--ink-3)] hover:text-[#1d3a8f]">Clear</button>}
+                <button type="button" onClick={() => setEnqFor(null)} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+                <button type="button" onClick={() => { onEnquiry(enqFor, enqLocs); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>➕ Add to enquiries</button>
               </div>
             </div>
           </div>
@@ -1142,7 +1146,20 @@ export function EmailApp() {
   // Recipients when targeting by listing: distinct emails booked on any selected
   // listing (a repeat parent across duplicated listings only appears once).
   const composeLocations = [...new Set(composeListings.map((l) => (l.venueId ? venueName[l.venueId] : undefined)).filter((x): x is string => !!x))].sort();
-  const addEnquiry = (m: Mail, location?: string) => { const email = (m.fromEmail || "").toLowerCase(); if (!email) { setError("This sender has no email address to save."); return; } const prev = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES; if (prev.some((e) => e.email.toLowerCase() === email)) { setError(null); setOk(`${m.from} is already on your New-enquiries board.`); return; } writeLS(LS_ENQ, [{ email, name: m.from, location: location || undefined, at: new Date().toISOString().slice(0, 10) }, ...prev]); setError(null); setOk(null); setUndoEnq({ name: m.from, location, prev }); setUndoEnqLeft(5); };
+  const addEnquiry = (m: Mail, locations: string[]) => {
+    const email = (m.fromEmail || "").toLowerCase();
+    if (!email) { setError("This sender has no email address to save."); return; }
+    const prev = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES;
+    const at = new Date().toISOString().slice(0, 10);
+    const wanted = locations.length ? locations : [undefined]; // no selection → one "no specific location" record
+    const additions = wanted
+      .filter((loc) => !prev.some((e) => e.email.toLowerCase() === email && (e.location || undefined) === (loc || undefined)))
+      .map((loc) => ({ email, name: m.from, location: loc || undefined, at } as EnquiryRec));
+    if (!additions.length) { setError(null); setOk(`${m.from} is already on ${locations.length ? "those enquiry boards" : "your New-enquiries board"}.`); return; }
+    writeLS(LS_ENQ, [...additions, ...prev]);
+    setError(null); setOk(null);
+    setUndoEnq({ name: m.from, location: locations.join(", ") || undefined, prev }); setUndoEnqLeft(5);
+  };
   const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
   const audienceFamilies = audience === "listing" ? listingFamilies : families;
