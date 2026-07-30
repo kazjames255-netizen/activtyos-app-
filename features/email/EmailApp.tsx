@@ -667,8 +667,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
-        <div className="max-h-[80vh] space-y-3 overflow-y-auto p-5">
-          {primary && <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
+        <div className="max-h-[80vh] space-y-4 overflow-y-auto bg-[#f4f7fc] p-5">
+          {primary && <div className="rounded-xl border-l-4 border-[#3f78d8] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
+          <div className="space-y-3 rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm">
           <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
           <div><FieldLabel>Audiences in this send <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— combine any; recipients are deduped so no one is emailed twice</span></FieldLabel>
             <div className="flex flex-wrap gap-1.5">
@@ -685,9 +686,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             </div>}
           </div>
           <div><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" className="w-full" /></div>
+          </div>
 
           {/* Content — pick an uploaded template, or design a simple branded layout */}
-          <div className="rounded-xl border border-[var(--line)] p-3.5">
+          <div className="rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm">
             <div className="mb-2.5 flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</span>
               <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">
@@ -710,7 +712,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
 
           {/* recipient list — trim this send, or remove people from the list for good */}
           {people.length > 0 && (
-            <div className="rounded-xl border border-[var(--line)]">
+            <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
               <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
               {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
                 {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
@@ -725,7 +727,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             </div>
           )}
 
-          <div className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-[13px] text-[var(--ink-2)]">Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
+          <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
           <p className="text-[13px] font-semibold text-[var(--ink)]">Recipients who have opted out of marketing are excluded automatically. A one-click unsubscribe footer is added to every send.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
