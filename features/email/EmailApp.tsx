@@ -116,6 +116,21 @@ function mdToHtml(src: string): string {
 function htmlToText(html: string): string {
   return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li)>/gi, "\n").replace(/<li[^>]*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\n{3,}/g, "\n\n").trim();
 }
+// A simple, email-safe layout — banner image, heading, subtitle, body, CTA button.
+// Kept deliberately small: a few named areas, inline styles only (no external CSS).
+interface EmailLayout { heading?: string; subtitle?: string; imageUrl?: string; body?: string; ctaLabel?: string; ctaUrl?: string }
+function layoutHasContent(l: EmailLayout): boolean { return !!(l.heading || l.subtitle || l.imageUrl || l.body || (l.ctaLabel && l.ctaUrl)); }
+function simpleEmailHtml(l: EmailLayout, brand = "#16306e"): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const bodyHtml = (l.body ?? "").split(/\n{2,}/).map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+  const cta = l.ctaLabel && l.ctaUrl ? `<div style="margin:22px 0 4px"><a href="${esc(l.ctaUrl)}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px">${esc(l.ctaLabel)}</a></div>` : "";
+  const img = l.imageUrl ? `<img src="${esc(l.imageUrl)}" alt="" style="width:100%;max-width:600px;display:block;border-radius:12px;margin:0 0 18px">` : "";
+  const heading = l.heading ? `<h1 style="margin:0 0 6px;font-size:26px;line-height:1.25;color:${brand};font-family:Georgia,'Times New Roman',serif">${esc(l.heading)}</h1>` : "";
+  const subtitle = l.subtitle ? `<div style="margin:0 0 18px;font-size:15px;color:#6b7280;font-weight:600">${esc(l.subtitle)}</div>` : "";
+  return `<div style="max-width:600px;margin:0 auto;padding:8px;font-family:system-ui,-apple-system,Segoe UI,sans-serif">${img}${heading}${subtitle}${bodyHtml}${cta}</div>`;
+}
+function layoutToText(l: EmailLayout): string { return [l.heading, l.subtitle, l.body, l.ctaLabel && l.ctaUrl ? `${l.ctaLabel}: ${l.ctaUrl}` : ""].filter(Boolean).join("\n\n"); }
+
 // A small WYSIWYG editor — Bold/Heading/Italic/List/Link format the text LIVE
 // (contentEditable), and the value is HTML that's emailed as-is.
 function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
@@ -618,35 +633,101 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, lockAudience, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; lockAudience?: boolean; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
-  const [audId, setAudId] = useState(initialAudienceId ?? audiences[0]?.id ?? "");
+  const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [subject, setSubject] = useState("");
-  const [excludedByAud, setExcludedByAud] = useState<Record<string, string[]>>({});
+  const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(true);
-  const audience = audiences.find((a) => a.id === audId) ?? audiences[0];
+  const [mode, setMode] = useState<"template" | "design">("template");
+  const [heading, setHeading] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [layoutBody, setLayoutBody] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [ctaLabel, setCtaLabel] = useState("");
+  const [ctaUrl, setCtaUrl] = useState("");
+  const [imgBusy, setImgBusy] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
-  const excluded = new Set(excludedByAud[audId] ?? []);
-  const toggleExclude = (email: string) => setExcludedByAud((m) => { const cur = new Set(m[audId] ?? []); if (cur.has(email)) cur.delete(email); else cur.add(email); return { ...m, [audId]: [...cur] }; });
-  const people = audience?.people?.length ? audience.people : (audience?.emails ?? []).map((e) => ({ email: e, name: e as string | undefined }));
-  const included = people.filter((p) => !excluded.has(p.email));
-  const isEnquiry = !!audience && audience.id.startsWith("enq-");
-  const submit = (action: CampStatus) => { if (!audience) return; onSubmit({ name: name.trim() || subject.trim() || "Untitled campaign", audience: { ...audience, emails: included.map((p) => p.email), count: included.length }, template, subject: subject.trim() || template?.subject || name.trim() }, action); };
+  const selectedAuds = audIds.map((id) => audiences.find((a) => a.id === id)).filter((a): a is Audience => !!a);
+  const primary = selectedAuds[0];
+  // Union of everyone across the chosen audiences — DEDUPED by email so nobody is emailed twice.
+  const peopleMap = new Map<string, { email: string; name?: string }>();
+  const enqEmails = new Set<string>();
+  for (const a of selectedAuds) {
+    const ppl = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
+    const isEnq = a.id.startsWith("enq-");
+    for (const p of ppl) { const k = p.email.toLowerCase(); if (!peopleMap.has(k)) peopleMap.set(k, { email: p.email, name: p.name }); if (isEnq) enqEmails.add(k); }
+  }
+  const people = [...peopleMap.values()];
+  const excluded = new Set(excludedEmails.map((e) => e.toLowerCase()));
+  const toggleExclude = (email: string) => setExcludedEmails((xs) => { const k = email.toLowerCase(); return xs.some((e) => e.toLowerCase() === k) ? xs.filter((e) => e.toLowerCase() !== k) : [...xs, email]; });
+  const included = people.filter((p) => !excluded.has(p.email.toLowerCase()));
+  const hasEnquiryAud = selectedAuds.some((a) => a.id.startsWith("enq-"));
+  const availableToAdd = audiences.filter((a) => !audIds.includes(a.id));
+  const segG = availableToAdd.filter((a) => a.id === "all" || a.id.startsWith("seg-"));
+  const enqG = availableToAdd.filter((a) => a.id.startsWith("enq-"));
+  const cusG = availableToAdd.filter((a) => !(a.id === "all" || a.id.startsWith("seg-") || a.id.startsWith("enq-")));
+  const addAud = (id: string) => { if (id) setAudIds((xs) => (xs.includes(id) ? xs : [...xs, id])); };
+  const removeAud = (id: string) => setAudIds((xs) => (xs.length > 1 ? xs.filter((x) => x !== id) : xs));
+  const layout: EmailLayout = { heading, subtitle, imageUrl, body: layoutBody, ctaLabel, ctaUrl };
+  const useDesign = mode === "design" && layoutHasContent(layout);
+  const uploadBanner = async (f: File) => { setImgBusy(true); try { const small = await downscaleImage(f); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small }); setImageUrl(url); } catch { /* ignore */ } setImgBusy(false); };
+  const submit = (action: CampStatus) => {
+    if (!primary) return;
+    const subj = subject.trim() || (mode === "design" ? heading.trim() : template?.subject) || name.trim();
+    const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
+    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign ? simpleEmailHtml(layout) : undefined, body: useDesign ? layoutToText(layout) : undefined }, action);
+  };
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
       <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
         <div className="max-h-[64vh] space-y-3 overflow-y-auto p-5">
-          {audience && <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{audience.name}</span><span className="text-[12.5px] text-[var(--ink-3)]">{audience.desc}</span></div></div>}
+          {primary && <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
           <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
-          {lockAudience
-            ? <div><FieldLabel>Template</FieldLabel><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
-            : <div className="grid grid-cols-2 gap-2.5">
-                <div><FieldLabel>Audience</FieldLabel><Select value={audId} onChange={(e) => setAudId(e.target.value)} className="w-full">{audiences.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</Select><button type="button" onClick={onBuildAudience} className="mt-1 text-[12px] font-bold text-[#1d3a8f]">＋ Build a new audience</button></div>
-                <div><FieldLabel>Template</FieldLabel><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
-              </div>}
+          <div><FieldLabel>Audiences in this send <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— combine any; recipients are deduped so no one is emailed twice</span></FieldLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[12px] font-bold text-[#1d3a8f]">{a.name} ({a.count}){selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}
+            </div>
+            {availableToAdd.length > 0 && <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Select value="" onChange={(e) => addAud(e.target.value)} className="max-w-[280px]">
+                <option value="">＋ Add another audience…</option>
+                {segG.length > 0 && <optgroup label="🎯 Segments">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
+                {enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
+                {cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
+              </Select>
+              <button type="button" onClick={onBuildAudience} className="text-[12px] font-bold text-[#1d3a8f]">＋ Build new</button>
+            </div>}
+          </div>
           <div><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" className="w-full" /></div>
+
+          {/* Content — pick an uploaded template, or design a simple branded layout */}
+          <div className="rounded-xl border border-[var(--line)] p-3.5">
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</span>
+              <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">
+                {([["template", "📄 Template"], ["design", "🎨 Simple layout"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+              </div>
+            </div>
+            {mode === "template"
+              ? <><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></>
+              : <div className="space-y-2.5">
+                  <div><FieldLabel>Banner image <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
+                    {imageUrl
+                      ? <div className="flex items-center gap-2"><img src={imageUrl} alt="" className="h-14 w-24 flex-none rounded-lg border border-[var(--line)] object-cover" /><button type="button" onClick={() => setImageUrl("")} className="rounded-full border border-[#f0c9cd] px-3 py-1 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Remove</button></div>
+                      : <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "⬆ Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadBanner(f); e.target.value = ""; }} /></label><span className="text-[12px] text-[var(--ink-3)]">or</span><Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL" className="min-w-[150px] flex-1" /></div>}
+                  </div>
+                  <div><FieldLabel>Heading</FieldLabel><Input value={heading} onChange={(e) => setHeading(e.target.value)} placeholder="e.g. Summer places are filling up" className="w-full" /></div>
+                  <div><FieldLabel>Subtitle</FieldLabel><Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g. A quick heads-up for our regulars" className="w-full" /></div>
+                  <div><FieldLabel>Message</FieldLabel><textarea value={layoutBody} onChange={(e) => setLayoutBody(e.target.value)} rows={4} placeholder="Write your message… (blank line starts a new paragraph)" className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[14px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div><FieldLabel>Button label <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— optional</span></FieldLabel><Input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder="Book now" className="w-full" /></div>
+                    <div><FieldLabel>Button link</FieldLabel><Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://…" className="w-full" /></div>
+                  </div>
+                  {layoutHasContent(layout) && <div><FieldLabel>Preview</FieldLabel><div className="max-h-64 overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-3" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} /></div>}
+                </div>}
+          </div>
 
           {/* recipient list — trim this send, or remove people from the list for good */}
           {people.length > 0 && (
@@ -657,15 +738,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, lockAudience, on
                   <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3.5 py-2 last:border-0">
                     <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
                     <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
-                    {isEnquiry && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
+                    {enqEmails.has(p.email.toLowerCase()) && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
                   </div>
                 ); })}
               </div>}
-              <div className="border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">{isEnquiry ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."}</div>
+              <div className="border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."} Duplicate addresses across audiences are merged automatically.</div>
             </div>
           )}
 
-          <div className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-[13px] text-[var(--ink-2)]">Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {audience?.desc ?? "—"}</div>
+          <div className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-[13px] text-[var(--ink-2)]">Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
           <p className="text-[13px] font-semibold text-[var(--ink)]">Recipients who have opted out of marketing are excluded automatically. A one-click unsubscribe footer is added to every send.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
@@ -712,11 +793,11 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed }: { onSent: () 
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => { const next = xs.filter((e) => e.email.toLowerCase() !== email.toLowerCase()); writeLS(LS_ENQ, next); return next; });
   const closeCampaign = () => { setModal(null); onSeedConsumed?.(); };
   const audiences = [allAudience, ...SEED_AUDIENCES, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
-  const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => {
-    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name, audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? "scheduled" : action === "sent" ? "just now" : undefined, subject: c.subject };
+  const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => {
+    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Simple layout" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? "scheduled" : action === "sent" ? "just now" : undefined, subject: c.subject };
     setCampaigns((xs) => [row, ...xs]); closeCampaign();
     if (action === "sent" && c.audience.emails.length) {
-      try { await apiPost("/api/emails/send", { subject: c.subject || c.name, body: c.template?.body || c.subject || c.name, recipients: c.audience.emails }); } catch { /* surfaced in history */ }
+      try { await apiPost("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails }); } catch { /* surfaced in history */ }
       onSent();
     }
   };
@@ -736,7 +817,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed }: { onSent: () 
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} lockAudience={!!seedAudienceId} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
