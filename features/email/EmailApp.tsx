@@ -989,30 +989,51 @@ function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
 function AnalyticsView() {
   const [campaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
   const tracked = campaigns.filter((c) => c.opens != null);
-  const sent = tracked.reduce((n, c) => n + c.recipients, 0);
+  const [sel, setSel] = useState<string>("all");
+  const active = sel === "all" ? null : (tracked.find((c) => c.id === sel) ?? null);
+  const base = active ? [active] : tracked;
+  const sent = base.reduce((n, c) => n + c.recipients, 0);
   const delivered = Math.round(sent * 0.987);
-  const wAvg = (pick: (c: Campaign) => number) => sent ? Math.round(tracked.reduce((n, c) => n + pick(c) * c.recipients, 0) / sent) : 0;
-  const openRate = wAvg((c) => c.opens ?? 0);
-  const clickRate = wAvg((c) => c.clicks ?? 0);
+  const wAvg = (pick: (c: Campaign) => number) => sent ? Math.round(base.reduce((n, c) => n + pick(c) * c.recipients, 0) / sent) : 0;
+  const openRate = active ? (active.opens ?? 0) : wAvg((c) => c.opens ?? 0);
+  const clickRate = active ? (active.clicks ?? 0) : wAvg((c) => c.clicks ?? 0);
   const bounces = sent - delivered;
   const unsubs = Math.round(sent * 0.008);
+  const opened = Math.round(sent * openRate / 100);
+  const clicked = Math.round(sent * clickRate / 100);
   return (
     <div>
-      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> across every campaign — delivered, opens, clicks, bounces &amp; unsubscribes, tracked through the marketing pipeline. 1:1 inbox mail isn’t tracked (no pixels on personal correspondence).</div>
+      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per campaign or across all. Delivered, opens, clicks, bounces &amp; unsubscribes, tracked through the marketing pipeline. 1:1 inbox mail isn’t tracked (no pixels on personal correspondence).</div>
+      {/* campaign selector */}
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        <button type="button" onClick={() => setSel("all")} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${sel === "all" ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>All campaigns <span className="opacity-60">{tracked.length}</span></button>
+        {tracked.map((c) => <button key={c.id} type="button" onClick={() => setSel(c.id)} className={`max-w-[220px] truncate rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${sel === c.id ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{c.name}</button>)}
+      </div>
+      {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.name}</span>{active.subject && <span className="text-[12.5px] text-[var(--ink-3)]">“{active.subject}”</span>}{active.statusDate && <span className="ml-auto text-[12px] text-[var(--ink-3)]">{active.statusDate}</span>}</div>}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of sent` : undefined} />
-        <StatCard label="Open rate" value={`${openRate}%`} tone="#16a34a" />
-        <StatCard label="Click rate" value={`${clickRate}%`} tone="#16a34a" />
+        <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of ${sent} sent` : undefined} />
+        <StatCard label="Open rate" value={`${openRate}%`} sub={`${opened} opened`} tone="#16a34a" />
+        <StatCard label="Click rate" value={`${clickRate}%`} sub={`${clicked} clicked`} tone="#16a34a" />
         <StatCard label="Bounces" value={String(bounces)} sub={sent ? `${Math.round((bounces / sent) * 100)}%` : undefined} tone="#ea580c" />
         <StatCard label="Unsubscribes" value={String(unsubs)} tone="#ea580c" />
       </div>
-      <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-        <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by campaign</div>
-        {tracked.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sent campaigns yet.</div>
-        : tracked.map((c) => (
-          <div key={c.id} className="mb-3 last:mb-0"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)]">{c.name}</span><span className="font-bold text-[var(--ink)]">{c.opens}% open</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${c.opens}%`, background: "#16306e" }} /></div></div>
-        ))}
-      </div>
+      {active
+        ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Delivery funnel</div>
+            <div className="space-y-2.5">
+              <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
+              <FunnelBar label="Delivered" n={delivered} max={sent} color="#16306e" />
+              <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
+              <FunnelBar label="Clicked" n={clicked} max={sent} color="#0f9d58" />
+            </div>
+          </div>
+        : <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by campaign <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
+            {tracked.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sent campaigns yet.</div>
+            : tracked.map((c) => (
+              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-left last:mb-0"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.name}</span><span className="font-bold text-[var(--ink)]">{c.opens}% open · {c.clicks}% click</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${c.opens}%`, background: "#16306e" }} /></div></button>
+            ))}
+          </div>}
     </div>
   );
 }
@@ -1356,7 +1377,7 @@ export function EmailApp() {
 
   return (
     <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place.">
-      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
+      <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["compose", "Compose"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
       {undoEnq && (
