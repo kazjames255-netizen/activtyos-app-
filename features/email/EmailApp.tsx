@@ -490,14 +490,14 @@ function FunnelBar({ label, n, max, color }: { label: string; n: number; max: nu
   return <div className="mb-2.5"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)]">{label}</span><span className="font-bold text-[var(--ink)]">{n}</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${max ? Math.round((n / max) * 100) : 0}%`, background: color }} /></div></div>;
 }
 
-function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: { bookings: Booking[]; listings: { id: string; title: string; runFrom?: string; runTo?: string }[]; locations: string[]; onCancel: () => void; onCreate: (a: Audience, useNow: boolean) => void }) {
+function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: { bookings: Booking[]; listings: { id: string; title: string; location?: string; runFrom?: string; runTo?: string }[]; locations: string[]; onCancel: () => void; onCreate: (a: Audience, useNow: boolean) => void }) {
   const [f, setF] = useState<AudFilter>({});
   const [name, setName] = useState("");
   const seq = useRef(0);
   const set = (p: Partial<AudFilter>) => setF((x) => ({ ...x, ...p }));
   const { emails, count } = resolveAudience(bookings, f);
   // Listings for the chosen location (via their bookings), each with its run dates.
-  const listingsHere = listings.filter((l) => !f.location || bookings.some((b) => b.listingId === l.id && (b.locationName || "") === f.location));
+  const listingsHere = listings.filter((l) => !f.location || l.location === f.location);
   const runLabel = (l: { id: string; runFrom?: string; runTo?: string }) => {
     if (l.runFrom || l.runTo) return `${fmtD(l.runFrom) || "…"} – ${fmtD(l.runTo) || "…"}`;
     const ds = bookings.filter((b) => b.listingId === l.id).map((b) => sessionDate(b)).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
@@ -591,13 +591,19 @@ function NewCampaign({ audiences, templates, onCancel, onBuildAudience, onSubmit
 }
 
 function useCampaignData() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [listings, setListings] = useState<{ id: string; title: string; runFrom?: string; runTo?: string }[]>([]);
+  const [rawBookings, setRawBookings] = useState<Booking[]>([]);
+  const [rawListings, setRawListings] = useState<{ id: string; title: string; venueId?: string; runFrom?: string; runTo?: string }[]>([]);
+  const [venueName, setVenueName] = useState<Record<string, string>>({}); // venueId → name
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBookings).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; runFrom?: string; runTo?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", runFrom: x.runFrom, runTo: x.runTo })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setRawBookings).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
-  const locations = [...new Set(bookings.map((b) => b.locationName).filter((x): x is string => !!x))].sort();
+  // A listing's location = its venue's name. A booking inherits its listing's location.
+  const listings = rawListings.map((l) => ({ ...l, location: l.venueId ? venueName[l.venueId] : undefined }));
+  const locByListing = new Map(listings.map((l) => [l.id, l.location]));
+  const bookings = rawBookings.map((b) => ({ ...b, locationName: b.locationName || locByListing.get(b.listingId || "") }));
+  const locations = [...new Set([...listings.map((l) => l.location), ...bookings.map((b) => b.locationName)].filter((x): x is string => !!x))].sort();
   const allEmails = resolveAudience(bookings, {}).emails;
   const allAudience: Audience = { id: "all", name: "All active families", count: allEmails.length, emails: allEmails, desc: "Has an active or upcoming booking" };
   return { bookings, listings, templates, locations, allAudience };
