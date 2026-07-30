@@ -912,17 +912,20 @@ export function EmailApp() {
     if (!confirm("Remove this saved image?")) return;
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.filter((im) => im.id !== id) } } });
   }
-  // Add the photo to the email draft as a real inline image + its message/quote,
-  // so the embed-vs-PDF chooser applies to it.
-  function addImageToEmail(im: SavedImage) {
+  // Add the photo to the email draft as ONE composed image — the message + quote
+  // baked in exactly like the Moments card, so the text is part of the picture
+  // (not separate text below it). Embedded inline + resizable.
+  async function addImageToEmail(im: SavedImage) {
     const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const { caption, quotes } = resolveSavedText(im);
-    const bits = [`<img src="${im.photoUrl}" alt="${esc(im.childName ?? "")}" style="max-width:100%;border-radius:10px">`];
-    if (caption) bits.push(`<div style="margin-top:6px">${esc(caption)}</div>`);
-    for (const q of quotes) bits.push(`<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`);
-    const block = bits.join("");
-    setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
-    setOk("✓ Added successfully — it’s embedded in the email. Click the photo to change its size, or choose Embed / PDF at the top.");
+    try {
+      const { caption, quotes } = resolveSavedText(im);
+      const dataUrl = await composeMomentImage({ photoUrl: im.photoUrl, ratio: im.ratio, color: im.color, caption, quotes, footer: im.footer, fit: im.fit ?? "contain" });
+      let url = dataUrl;
+      try { const r = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); url = r.url; } catch { /* too big to host — embed the data URL directly as a fallback */ }
+      const block = `<img src="${url}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
+      setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
+      setOk("✓ Added successfully — the photo (with its message & quote) is embedded. Click it to resize, or pick Embed / PDF at the top.");
+    } catch { setError("Couldn’t add that photo — try again."); }
   }
 
   const refresh = useCallback(() => {
