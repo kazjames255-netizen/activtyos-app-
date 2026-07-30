@@ -1145,8 +1145,10 @@ export function EmailApp() {
   const [ok, setOk] = useState<string | null>(null);
   const [audience, setAudience] = useState<"all" | "one" | "listing" | "none">(presetTo ? "one" : "all");
   const [to, setTo] = useState(presetTo);
-  const [cc, setCc] = useState("");
-  const [bcc, setBcc] = useState("");
+  const [cc, setCc] = useState<string[]>([]);
+  const [bcc, setBcc] = useState<string[]>([]);
+  const [ccInput, setCcInput] = useState("");
+  const [bccInput, setBccInput] = useState("");
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [extraTo, setExtraTo] = useState<string[]>([]); // addresses the operator typed in by hand
   const [extraInput, setExtraInput] = useState("");
@@ -1268,11 +1270,13 @@ export function EmailApp() {
   };
   const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
-  const parseAddrs = (s: string) => s.split(/[,;]/).map((a) => a.trim().toLowerCase()).filter((a) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a));
   const audienceFamilies = audience === "listing" ? listingFamilies : audience === "all" ? families : [];
   const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
-  const reachCount = audience === "none" ? new Set([...extraTo, ...parseAddrs(cc), ...parseAddrs(bcc)]).size : audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
-  const addExtra = () => { const parts = extraInput.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
+  const reachCount = audience === "none" ? new Set([...extraTo, ...cc, ...bcc]).size : audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
+  const parseEmails = (s: string) => s.split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter((x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
+  const addExtra = () => { const parts = parseEmails(extraInput); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
+  const addCc = () => { const p = parseEmails(ccInput); if (p.length) setCc((xs) => [...new Set([...xs, ...p])]); setCcInput(""); };
+  const addBcc = () => { const p = parseEmails(bccInput); if (p.length) setBcc((xs) => [...new Set([...xs, ...p])]); setBccInput(""); };
   // A template is usable in Email only if every merge field it uses can resolve for
   // this send. Email is a bulk/no-booking context, so booking-scoped fields
   // ({SessionDate}, {VenueName}, {BookingRef}) can't be filled — those templates are
@@ -1321,7 +1325,7 @@ export function EmailApp() {
     const base = audience === "none" ? []
       : audience === "one" ? (to.trim() ? [to.trim().toLowerCase()] : [])
       : audienceIncluded.map((f) => f.email.toLowerCase());
-    return [...new Set([...base, ...extraTo, ...parseAddrs(cc), ...parseAddrs(bcc)])].filter(Boolean);
+    return [...new Set([...base, ...extraTo, ...cc, ...bcc])].filter(Boolean);
   })();
 
   // Fire the actual API send with a snapshotted payload, then clear the composer.
@@ -1330,7 +1334,7 @@ export function EmailApp() {
     try {
       const r = await apiPost<{ recipientCount: number }>("/api/emails/send", payload);
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${hadAttachments ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
-      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); setReplyTo(null); refresh();
+      setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setReplyTo(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
     finally { setSending(false); }
   }, [refresh]);
@@ -1359,7 +1363,7 @@ export function EmailApp() {
     const payload: Record<string, unknown> = {
       subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
       html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
-      audience: "all", recipients: finalRecipients, cc: cc.trim() || undefined, bcc: bcc.trim() || undefined,
+      audience: "all", recipients: finalRecipients, cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
     };
     const secs = settings.emailPrefs?.undoSeconds ?? 5;
     if (secs > 0) { setError(null); setOk(null); setUndoSend({ payload, count, hadAttachments: attachments.length > 0 }); setUndoLeft(secs); return; }
@@ -1377,7 +1381,7 @@ export function EmailApp() {
     const item = { id: `sch-${schedAt}-${finalRecipients.length}`, subject, recipientCount: finalRecipients.length, sendAt: schedAt };
     writeLS("aos.email.scheduled.v1", [item, ...readLS<typeof item[]>("aos.email.scheduled.v1", [])]);
     setOk(`Scheduled for ${new Date(schedAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} — held until the timed-send job runs (backend).`);
-    setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); setSchedAt("");
+    setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setSchedAt("");
   }
 
   return (
@@ -1456,8 +1460,8 @@ export function EmailApp() {
         <div className="mt-2">
           {showCcBcc ? (
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <div><FieldLabel>Cc</FieldLabel><Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="cc@example.com, …" className="w-full" /></div>
-              <div><FieldLabel>Bcc</FieldLabel><Input value={bcc} onChange={(e) => setBcc(e.target.value)} placeholder="bcc@example.com, …" className="w-full" /></div>
+              <div><FieldLabel>Cc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{cc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setCc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={ccInput} onChange={(e) => setCcInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCc(); } }} onBlur={addCc} placeholder="cc@example.com — Enter to add" className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
+              <div><FieldLabel>Bcc</FieldLabel><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">{bcc.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setBcc((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}<input value={bccInput} onChange={(e) => setBccInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addBcc(); } }} onBlur={addBcc} placeholder="bcc@example.com — Enter to add" className="min-w-[130px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" /></div></div>
             </div>
           ) : <button type="button" onClick={() => setShowCcBcc(true)} className="text-[12px] font-bold text-[#1d3a8f]">＋ Add Cc / Bcc</button>}
         </div>
