@@ -53,13 +53,21 @@ const para = (s: string | undefined, style: string) => (s ?? "").split(/\n{2,}/)
 const cropImg = (b: { image?: string; video?: string; ix?: number; iy?: number; iz?: number }, h: string, radius: string, ph: string) => {
   const x = b.ix ?? 50, y = b.iy ?? 50, z = b.iz ?? 1;
   if (b.video) {
-    // Plays inline where the client supports HTML5 video (Apple Mail, most webmail
-    // + the in-app preview); elsewhere the poster shows as a clickable fallback.
-    const poster = b.image ? ` poster="${esc(b.image)}"` : "";
-    const ext = (b.video.split(/[?#]/)[0].split(".").pop() || "").toLowerCase();
-    const mime = ext === "webm" ? "video/webm" : ext === "ogg" ? "video/ogg" : ext === "mov" ? "video/quicktime" : "video/mp4";
-    const fallback = `<a href="${esc(b.video)}" style="display:block;text-decoration:none">${b.image ? `<img src="${esc(b.image)}" alt="" style="width:100%;height:${h};object-fit:cover;border-radius:${radius};display:block">` : `<div style="height:${h};border-radius:${radius};background:#0b1020"></div>`}</a>`;
-    return `<video controls playsinline preload="metadata"${poster} style="width:100%;height:${h};object-fit:cover;border-radius:${radius};display:block;background:#0b1020"><source src="${esc(b.video)}" type="${mime}">${fallback}</video>`;
+    const isFile = /\.(mp4|webm|ogg|mov)(?:[?#]|$)/i.test(b.video);
+    if (isFile) {
+      // Direct video file — plays inline where the client supports HTML5 video
+      // (Apple Mail, most webmail + this preview); poster is the clickable fallback.
+      const poster = b.image ? ` poster="${esc(b.image)}"` : "";
+      const ext = (b.video.split(/[?#]/)[0].split(".").pop() || "").toLowerCase();
+      const mime = ext === "webm" ? "video/webm" : ext === "ogg" ? "video/ogg" : ext === "mov" ? "video/quicktime" : "video/mp4";
+      const fb = `<a href="${esc(b.video)}" style="display:block;text-decoration:none">${b.image ? `<img src="${esc(b.image)}" alt="" style="width:100%;height:${h};object-fit:cover;border-radius:${radius};display:block">` : `<div style="height:${h};border-radius:${radius};background:#0b1020"></div>`}</a>`;
+      return `<video controls playsinline preload="metadata"${poster} style="width:100%;height:${h};object-fit:cover;border-radius:${radius};display:block;background:#0b1020"><source src="${esc(b.video)}" type="${mime}">${fb}</video>`;
+    }
+    // YouTube / Vimeo / page link — clickable play-poster that opens the video.
+    const yt = b.video.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([\w-]{11})/);
+    const poster = b.image || (yt ? `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg` : "");
+    const posterHtml = poster ? `<img src="${esc(poster)}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;display:block">` : `<div style="width:100%;height:100%;background:#0b1020"></div>`;
+    return `<a href="${esc(b.video)}" style="display:block;text-decoration:none"><div style="height:${h};overflow:hidden;border-radius:${radius};position:relative;background:#0b1020">${posterHtml}<div style="position:absolute;top:0;left:0;right:0;bottom:0"><table role="presentation" width="100%" height="100%" style="width:100%;height:100%"><tr><td align="center" valign="middle"><span style="display:inline-block;width:64px;height:64px;line-height:64px;text-align:center;border-radius:50%;background:rgba(214,0,0,.92);color:#ffffff;font-size:26px">▶</span></td></tr></table></div></div></a>`;
   }
   const inner = b.image
     ? `<img src="${esc(b.image)}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;display:block">`
@@ -389,8 +397,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       {o.image
         ? <div className="space-y-1.5"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">{o.video ? "Poster image — drag to crop" : "Image — drag to crop"}</span><button type="button" onClick={() => apply({ image: "", ix: 50, iy: 50, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><CropBox url={o.image} ix={o.ix} iy={o.iy} iz={o.iz} onChange={apply} /></div>
         : <div className="flex flex-wrap items-center gap-1.5"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{busyKey === id ? "…" : "⬆ Add image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(id, (u) => apply({ image: u }), f); e.target.value = ""; }} /></label><input placeholder="or paste URL" value={o.image ?? ""} onChange={(e) => apply({ image: e.target.value })} className={`${inputCls} min-w-[110px] flex-1`} /></div>}
-      <input placeholder="🎬 Direct video URL (.mp4) — plays inline" value={o.video ?? ""} onChange={(e) => apply({ video: e.target.value })} className={inputCls} />
-      {o.video && <div className="text-[10px] font-semibold text-[#127a3e]">Must be a direct video file link ending in .mp4 (e.g. from your website/CDN) — a YouTube/Vimeo page URL will not play. Plays inline where supported (Apple Mail, most webmail) and in this preview.</div>}
+      <input placeholder="🎬 Video link — YouTube or a direct .mp4" value={o.video ?? ""} onChange={(e) => apply({ video: e.target.value })} className={inputCls} />
+      {o.video && <div className="text-[10px] font-semibold text-[#127a3e]">A <b>direct .mp4</b> plays inline (Apple Mail / most webmail). A <b>YouTube</b> link shows a play thumbnail that opens the video — its thumbnail is used automatically if you don&apos;t add a poster image.</div>}
     </div>
   );
 
