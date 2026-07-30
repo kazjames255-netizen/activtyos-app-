@@ -412,7 +412,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         </div>
       ); })()}
       {enqFor && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
           <div className="w-full max-w-md rounded-2xl bg-[var(--card)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="rounded-t-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
               <div className="text-[15px] font-extrabold">Mark as enquiry</div>
