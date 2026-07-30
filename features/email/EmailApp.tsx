@@ -1268,9 +1268,10 @@ export function EmailApp() {
   };
   const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
-  const audienceFamilies = audience === "listing" ? listingFamilies : families;
+  const parseAddrs = (s: string) => s.split(/[,;]/).map((a) => a.trim().toLowerCase()).filter((a) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a));
+  const audienceFamilies = audience === "listing" ? listingFamilies : audience === "all" ? families : [];
   const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
-  const reachCount = audience === "none" ? extraTo.length : audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
+  const reachCount = audience === "none" ? new Set([...extraTo, ...parseAddrs(cc), ...parseAddrs(bcc)]).size : audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
   const addExtra = () => { const parts = extraInput.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
   // A template is usable in Email only if every merge field it uses can resolve for
   // this send. Email is a bulk/no-booking context, so booking-scoped fields
@@ -1320,7 +1321,7 @@ export function EmailApp() {
     const base = audience === "none" ? []
       : audience === "one" ? (to.trim() ? [to.trim().toLowerCase()] : [])
       : audienceIncluded.map((f) => f.email.toLowerCase());
-    return [...new Set([...base, ...extraTo])].filter(Boolean);
+    return [...new Set([...base, ...extraTo, ...parseAddrs(cc), ...parseAddrs(bcc)])].filter(Boolean);
   })();
 
   // Fire the actual API send with a snapshotted payload, then clear the composer.
