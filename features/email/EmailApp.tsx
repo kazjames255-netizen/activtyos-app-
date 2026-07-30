@@ -11,7 +11,8 @@ import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
-import { downscaleImage, NewsletterBuilder, NewsletterView, newsletterToHtml, newsletterToText, type Newsletter, type Company } from "@/features/newsfeed/newsletter";
+import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
+import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign } from "@/features/email/campaignTemplates";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -618,7 +619,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, listings, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; listings?: { id: string; title: string }[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -626,7 +627,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, listing
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(true);
   const [mode, setMode] = useState<"template" | "design">("template");
-  const [nl, setNl] = useState<Newsletter | null>(null);   // a designed newsletter (10 layouts + palettes + footer)
+  const [design, setDesign] = useState<CampaignDesign | null>(null);   // a designed email (rich template gallery)
   const [designing, setDesigning] = useState(false);
   const [previewBig, setPreviewBig] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
@@ -651,12 +652,12 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, listing
   const cusG = availableToAdd.filter((a) => !(a.id === "all" || a.id.startsWith("seg-") || a.id.startsWith("enq-")));
   const addAud = (id: string) => { if (id) setAudIds((xs) => (xs.includes(id) ? xs : [...xs, id])); };
   const removeAud = (id: string) => setAudIds((xs) => (xs.length > 1 ? xs.filter((x) => x !== id) : xs));
-  const useDesign = mode === "design" && !!nl;
+  const useDesign = mode === "design" && !!design;
   const submit = (action: CampStatus) => {
     if (!primary) return;
     const subj = subject.trim() || template?.subject || name.trim();
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
-    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && nl ? newsletterToHtml(nl) : undefined, body: useDesign && nl ? newsletterToText(nl) : undefined }, action);
+    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company) : undefined, body: useDesign && design ? renderDesignText(design) : undefined }, action);
   };
   return (
     <>
@@ -692,15 +693,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, listing
             </div>
             {mode === "template"
               ? <><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></>
-              : nl
+              : design
                 ? <div>
-                    <div className="mb-1.5 flex items-center gap-2"><FieldLabel>Your design</FieldLabel><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setNl(null)} className="rounded-lg border border-[#f0c9cd] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
-                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#f7f9fc] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg shadow-sm"><NewsletterView data={nl} /></div></button>
+                    <div className="mb-1.5 flex items-center gap-2"><FieldLabel>Your design</FieldLabel><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} /></button>
                   </div>
                 : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7f9fc] p-5 text-center">
-                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Choose a layout</div>
-                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Pick from 10 ready-made layouts, colour palettes and your business footer — the same designer used for newsletters.</p>
-                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Choose a layout &amp; design</button>
+                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Choose a template</div>
+                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Pick from a gallery of beautiful, ready-made email designs — recolour them and drop in your own words and photos.</p>
+                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Browse templates</button>
                   </div>}
           </div>
 
@@ -732,15 +733,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, listing
         </div>
       </div>
     </div>
-    {previewBig && nl && (
+    {previewBig && design && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="mx-auto max-w-[600px]"><NewsletterView data={nl} /></div>
+          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} />
         </div>
       </div>
     )}
-    {designing && <div className="relative z-[145]"><NewsletterBuilder initial={nl ?? undefined} initialCompany={company} listings={listings} onCancel={() => setDesigning(false)} onSave={(n) => { setNl(n); setDesigning(false); }} /></div>}
+    {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
     </>
   );
 }
@@ -802,7 +803,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company }: { on
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} listings={listings} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
