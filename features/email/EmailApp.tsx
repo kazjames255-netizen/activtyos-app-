@@ -413,7 +413,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
       ); })()}
       {enqFor && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-[var(--card)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#16306e]/10" onClick={(e) => e.stopPropagation()}>
             <div className="rounded-t-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
               <div className="text-[15px] font-extrabold">Mark as enquiry</div>
               <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
