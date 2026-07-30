@@ -379,17 +379,18 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
 
             {/* inspector for the selected section — floats over the preview */}
             {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[384px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10">
-              <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
-                <span className="text-[11px]">✎</span><span className="text-[13px] font-extrabold">Editing: {BLOCK_LABEL[selBlock.t]}</span>
+              <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+                <span className="text-[13px] font-extrabold">✎ Editing: {BLOCK_LABEL[selBlock.t]}</span>
                 <div className="ml-auto flex items-center gap-1">
-                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">↑</button>
-                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">↓</button>
-                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] font-bold text-white hover:bg-white/35">⧉</button>
-                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[13px] hover:bg-white/35">🗑</button>
-                  <button type="button" title="Close" onClick={() => setSelKey(null)} className="flex h-6 w-6 items-center justify-center rounded-md bg-white/20 text-[16px] font-bold text-white hover:bg-white/35">×</button>
+                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">↑</button>
+                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">↓</button>
+                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">⧉</button>
+                  <button type="button" title="Delete section" onClick={() => del(selBlock.k!)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#c02636] shadow-sm hover:bg-[#fdecec]">🗑</button>
+                  <button type="button" onClick={() => setSelKey(null)} className="ml-1 rounded-md bg-white px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">✓ Done</button>
                 </div>
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
+              <div className="border-t border-[var(--line)] p-2.5"><button type="button" onClick={() => setSelKey(null)} className="w-full rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✓ Done editing</button></div>
             </div>}
           </div>
           )}
