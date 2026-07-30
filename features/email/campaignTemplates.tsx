@@ -228,6 +228,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [addIndex, setAddIndex] = useState<number | null>(null);
+  const [selKey, setSelKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
@@ -237,8 +239,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const patch = (k: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.k === k ? { ...b, ...p } : b)));
   const move = (k: string, dir: -1 | 1) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); const j = i + dir; if (i < 0 || j < 0 || j >= bs.length) return bs; const n = [...bs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const dup = (k: string) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); if (i < 0) return bs; return [...bs.slice(0, i + 1), { ...bs[i], k: nk(), cards: bs[i].cards ? bs[i].cards!.map((c) => ({ ...c })) : undefined }, ...bs.slice(i + 1)]; });
-  const del = (k: string) => setBlocks((bs) => bs.filter((b) => b.k !== k));
-  const add = (mk: () => Block | Block[]) => { const made = mk(); const arr = (Array.isArray(made) ? made : [made]).map((x) => { const nb = { ...x, k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; return nb; }); setBlocks((bs) => [...bs, ...arr]); setAddOpen(false); };
+  const del = (k: string) => { setBlocks((bs) => bs.filter((b) => b.k !== k)); setSelKey((s) => (s === k ? null : s)); };
+  const addAt = (mk: () => Block | Block[], index: number) => { const made = mk(); const arr = (Array.isArray(made) ? made : [made]).map((x) => { const nb = { ...x, k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; return nb; }); setBlocks((bs) => [...bs.slice(0, index), ...arr, ...bs.slice(index)]); setAddOpen(false); setAddIndex(null); if (arr[0]?.k) setSelKey(arr[0].k); };
   const aiWrite = async (bk: string, key: keyof Block, ctx?: string) => {
     const brief = typeof window !== "undefined" ? window.prompt("In a few words, what should this say? The writer turns it into friendly copy.", ctx || "") : null;
     if (!brief?.trim()) return; setAiBusy(`${bk}-${String(key)}`);
@@ -311,55 +313,77 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               ))}
             </div>
           </>
-        ) : (
-          // ── Fancy building canvas: the real email fills the space, the editor floats over it ──
+        ) : (() => {
+          const selBlock = design.blocks.find((b) => b.k === selKey) || null;
+          const t2 = theme(accentHex(design.accent) || design.accent);
+          const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30";
+          return (
+          // ── In-place builder: controls live ON each section of the working email ──
           <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: "radial-gradient(1200px 500px at 70% -5%, #eef3fb, #e3e8f1)" }}>
-            {/* full-page preview canvas — the email fills the whole page, tools float on top */}
-            <div className="absolute inset-0 overflow-auto">
-              <div className="flex min-h-full justify-center px-6 py-10">
+            <div className="absolute inset-0 overflow-auto" onClick={() => { setSelKey(null); setAddOpen(false); }}>
+              <div className="flex min-h-full justify-center px-6 pb-28 pt-16">
                 <div style={{ zoom }} className="h-max">
-                  <div className="overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} />
+                  <div className="w-[600px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)" }} onClick={(e) => e.stopPropagation()}>
+                    {design.blocks.map((b, i) => (
+                      <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
+                        <div dangerouslySetInnerHTML={{ __html: renderBlock(b, t2, company) }} />
+                        <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
+                        <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white/95 px-1 py-0.5 shadow-lg ring-1 ring-black/10 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                          <span className="px-1 text-[10px] font-extrabold text-[var(--ink-3)]">{BLOCK_LABEL[b.t]}</span>
+                          <button type="button" title="Move up" onClick={(e) => { e.stopPropagation(); move(b.k!, -1); }} disabled={i === 0} className={ctrlBtn}>↑</button>
+                          <button type="button" title="Move down" onClick={(e) => { e.stopPropagation(); move(b.k!, 1); }} disabled={i === design.blocks.length - 1} className={ctrlBtn}>↓</button>
+                          <button type="button" title="Duplicate" onClick={(e) => { e.stopPropagation(); dup(b.k!); }} className={ctrlBtn}>⧉</button>
+                          <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); del(b.k!); }} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
+                        </div>
+                        <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-3.5 left-1/2 z-20 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-[#2f6bd8] text-[17px] font-bold leading-none text-white opacity-0 shadow-lg transition group-hover:opacity-100">＋</button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* top-left toolbar */}
+            <div className="absolute left-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2.5 py-1.5 shadow-lg backdrop-blur">
+              <button type="button" onClick={() => setDesign(null)} className="text-[12px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">← Templates</button>
+              <span className="h-4 w-px bg-[var(--line)]" />
+              <div className="flex items-center gap-1">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => setDesign((d) => (d ? { ...d, accent: a.id } : d))} title={a.name} className={`rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow"}`} style={{ background: a.hex, height: 18, width: 18 }} />)}</div>
+            </div>
+
             {/* zoom control */}
-            <div className="absolute right-5 top-4 z-20 flex items-center gap-1 rounded-full border border-white/70 bg-white/85 px-1.5 py-1 shadow-lg backdrop-blur">
+            <div className="absolute right-5 top-4 z-30 flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-1.5 py-1 shadow-lg backdrop-blur">
               <button type="button" onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))} className="flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">−</button>
               <span className="w-10 text-center text-[11.5px] font-extrabold tabular-nums text-[var(--ink-2)]">{Math.round(zoom * 100)}%</span>
               <button type="button" onClick={() => setZoom((z) => Math.min(1.6, Math.round((z + 0.1) * 10) / 10))} className="flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
             </div>
 
-            {/* floating editor panel */}
-            <div className="absolute bottom-4 left-4 top-4 z-10 flex w-[420px] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/95 shadow-[0_24px_60px_-24px_rgba(20,30,60,.5)] backdrop-blur-md">
-              <div className="flex items-center gap-2 border-b border-[var(--line)] px-3.5 py-2.5">
-                <button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">← Templates</button>
-                <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{tpl?.name}</span>
+            {/* bottom-center add */}
+            <button type="button" onClick={(e) => { e.stopPropagation(); setAddIndex(design.blocks.length); setAddOpen(true); }} className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full px-6 py-3 text-[13px] font-extrabold text-white shadow-xl transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✦ Add a section</button>
+
+            {/* add palette */}
+            {addOpen && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/25 p-6" onClick={() => { setAddOpen(false); setAddIndex(null); }}>
+              <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-2 text-[14px] font-extrabold text-[var(--ink)]">Add a section</div>
+                <div className="grid max-h-[64vh] grid-cols-2 gap-1.5 overflow-y-auto">{ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => addAt(a.make, addIndex ?? design.blocks.length)} className="rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-[#dbe6fb] hover:bg-[#f4f8ff]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{a.label}</div><div className="text-[10.5px] text-[var(--ink-3)]">{a.hint}</div></button>)}</div>
               </div>
-              <div className="flex items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)]/60 px-3.5 py-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Colour</span><div className="ml-auto flex flex-wrap gap-1">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => setDesign((d) => (d ? { ...d, accent: a.id } : d))} title={a.name} className={`rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow"}`} style={{ background: a.hex, height: 22, width: 22 }} />)}</div></div>
-              <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3.5">
-                {design.blocks.map((b, i) => (
-                  <div key={b.k} className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
-                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-[#f3f6fc] to-[#eef2f9] px-2.5 py-1.5">
-                      <span className="text-[11.5px] font-extrabold text-[var(--ink-2)]">{BLOCK_LABEL[b.t]}</span>
-                      <div className="ml-auto flex items-center gap-0.5 text-[13px]">
-                        <button type="button" title="Move up" onClick={() => move(b.k!, -1)} disabled={i === 0} className="rounded px-1.5 py-0.5 text-[var(--ink-3)] hover:bg-white disabled:opacity-30">↑</button>
-                        <button type="button" title="Move down" onClick={() => move(b.k!, 1)} disabled={i === design.blocks.length - 1} className="rounded px-1.5 py-0.5 text-[var(--ink-3)] hover:bg-white disabled:opacity-30">↓</button>
-                        <button type="button" title="Duplicate" onClick={() => dup(b.k!)} className="rounded px-1.5 py-0.5 text-[var(--ink-3)] hover:bg-white">⧉</button>
-                        <button type="button" title="Delete" onClick={() => del(b.k!)} className="rounded px-1.5 py-0.5 text-[#c02636] hover:bg-white">🗑</button>
-                      </div>
-                    </div>
-                    <div className="p-2.5">{blockEditor(b)}</div>
-                  </div>
-                ))}
+            </div>}
+
+            {/* inspector for the selected section — floats over the preview */}
+            {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[372px] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white shadow-2xl">
+              <div className="flex items-center gap-1.5 border-b border-[var(--line)] bg-gradient-to-r from-[#f3f6fc] to-[#eef2f9] px-3.5 py-2.5">
+                <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{BLOCK_LABEL[selBlock.t]}</span>
+                <div className="ml-auto flex items-center gap-0.5">
+                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className={ctrlBtn}>↑</button>
+                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className={ctrlBtn}>↓</button>
+                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className={ctrlBtn}>⧉</button>
+                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
+                  <button type="button" title="Close" onClick={() => setSelKey(null)} className={`${ctrlBtn} text-[15px]`}>×</button>
+                </div>
               </div>
-              <div className="relative border-t border-[var(--line)] bg-white/80 p-3">
-                <button type="button" onClick={() => setAddOpen((v) => !v)} className="w-full rounded-xl px-3 py-3 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✦ Add a section</button>
-                {addOpen && <div className="absolute bottom-full left-3 right-3 z-30 mb-2 grid max-h-[56vh] grid-cols-2 gap-1.5 overflow-y-auto rounded-2xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{ADDABLE.map((a) => <button key={a.label} type="button" onClick={() => add(a.make)} className="rounded-xl border border-transparent px-2.5 py-2 text-left transition hover:border-[#dbe6fb] hover:bg-[#f4f8ff]"><div className="text-[12px] font-bold text-[var(--ink)]">{a.label}</div><div className="text-[10px] text-[var(--ink-3)]">{a.hint}</div></button>)}</div>}
-              </div>
-            </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
+            </div>}
           </div>
-        )}
+          ); })()}
       </div>
     </div>
   );
