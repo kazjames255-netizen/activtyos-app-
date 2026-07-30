@@ -297,6 +297,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addIndex, setAddIndex] = useState<number | null>(null);
+  const [pendingSpan, setPendingSpan] = useState<"half" | "third" | null>(null);
   const [selKey, setSelKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
@@ -317,7 +318,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const move = (k: string, dir: -1 | 1) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); const j = i + dir; if (i < 0 || j < 0 || j >= bs.length) return bs; const n = [...bs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
   const dup = (k: string) => setBlocks((bs) => { const i = bs.findIndex((b) => b.k === k); if (i < 0) return bs; return [...bs.slice(0, i + 1), { ...bs[i], k: nk(), cards: bs[i].cards ? bs[i].cards!.map((c) => ({ ...c })) : undefined }, ...bs.slice(i + 1)]; });
   const del = (k: string) => { setBlocks((bs) => bs.filter((b) => b.k !== k)); setSelKey((s) => (s === k ? null : s)); };
-  const addAt = (mk: () => Block | Block[], index: number) => { const made = mk(); const arr = (Array.isArray(made) ? made : [made]).map((x) => { const nb = { ...x, k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; return nb; }); setBlocks((bs) => [...bs.slice(0, index), ...arr, ...bs.slice(index)]); setAddOpen(false); setAddIndex(null); if (arr[0]?.k) setSelKey(arr[0].k); };
+  const addAt = (mk: () => Block | Block[], index: number) => { const made = mk(); const arr = (Array.isArray(made) ? made : [made]).map((x, idx) => { const nb = { ...x, k: nk() }; if (nb.t === "social" && socials?.length) nb.socials = socials; if (idx === 0 && pendingSpan) nb.span = pendingSpan; return nb; }); setBlocks((bs) => [...bs.slice(0, index), ...arr, ...bs.slice(index)]); setAddOpen(false); setAddIndex(null); setPendingSpan(null); if (arr[0]?.k) setSelKey(arr[0].k); };
   const aiWrite = async (bk: string, key: keyof Block, ctx?: string) => {
     const brief = typeof window !== "undefined" ? window.prompt("In a few words, what should this say? The writer turns it into friendly copy.", ctx || "") : null;
     if (!brief?.trim()) return; setAiBusy(`${bk}-${String(key)}`);
@@ -435,9 +436,14 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                               <button type="button" title="Duplicate" onClick={(e) => { e.stopPropagation(); dup(b.k!); }} className={ctrlBtn}>⧉</button>
                               <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); del(b.k!); }} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
                             </div>
-                            <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setSelKey(null); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-[#2f6bd8] px-3.5 py-1.5 text-[12px] font-extrabold leading-none text-white opacity-0 shadow-[0_8px_20px_-4px_rgba(47,107,216,.75)] ring-2 ring-white transition hover:bg-[#1d3a8f] group-hover:opacity-100"><span className="text-[15px] leading-none">＋</span> Add</button>
+                            <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setSelKey(null); setPendingSpan(null); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-[#2f6bd8] px-3.5 py-1.5 text-[12px] font-extrabold leading-none text-white opacity-0 shadow-[0_8px_20px_-4px_rgba(47,107,216,.75)] ring-2 ring-white transition hover:bg-[#1d3a8f] group-hover:opacity-100"><span className="text-[15px] leading-none">＋</span> Add</button>
                           </div>
                         ); })}
+                        {(() => { const used = rowBlocks.reduce((s, b) => s + widthOf(b), 0); const remain = 1 - used; if (remain < 0.02) return null; const fw = `${(remain * 100).toFixed(3)}%`; const idxAfter = design.blocks.indexOf(rowBlocks[rowBlocks.length - 1]) + 1; const rowSpan = (rowBlocks[0].span === "third" ? "third" : "half") as "half" | "third"; return (
+                          <div className="min-w-0 p-1.5" style={{ flex: `0 0 ${fw}`, maxWidth: fw }} onClick={(e) => e.stopPropagation()}>
+                            <button type="button" onClick={() => { setSelKey(null); setPendingSpan(rowSpan); setAddIndex(idxAfter); setAddOpen(true); }} className="flex h-full min-h-[70px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#16a34a]/45 bg-[#16a34a]/[.05] text-[12px] font-extrabold text-[#127a3e] opacity-70 transition hover:border-[#16a34a] hover:bg-[#16a34a]/12 hover:opacity-100"><span className="text-[18px] leading-none">＋</span>Add section here</button>
+                          </div>
+                        ); })()}
                       </div>
                     ))}
                   </div>
