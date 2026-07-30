@@ -121,12 +121,14 @@ function htmlToText(html: string): string {
 function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const selImg = useRef<HTMLImageElement | null>(null);
-  const [imgSel, setImgSel] = useState(false);   // an image is selected for resizing
-  const [imgW, setImgW] = useState(100);          // its width %
-  useEffect(() => { const el = ref.current; if (el && el.innerHTML !== value) { el.innerHTML = value; selImg.current = null; setImgSel(false); } }, [value]);
+  const [imgW, setImgW] = useState(100);          // width % of the targeted image
+  const hasImg = /<img/i.test(value);
+  // The image the size bar controls: the last-clicked one, else the last in the body.
+  const targetImg = (): HTMLImageElement | null => { const el = ref.current; if (!el) return null; if (selImg.current && el.contains(selImg.current)) return selImg.current; const imgs = el.querySelectorAll("img"); return imgs.length ? (imgs[imgs.length - 1] as HTMLImageElement) : null; };
+  useEffect(() => { const el = ref.current; if (el && el.innerHTML !== value) { el.innerHTML = value; selImg.current = null; } }, [value]);
   const cmd = (c: string, arg?: string) => { ref.current?.focus(); document.execCommand(c, false, arg); if (ref.current) onChange(ref.current.innerHTML); };
-  const pickImg = (e: React.MouseEvent) => { const t = e.target as HTMLElement; if (t.tagName === "IMG") { const img = t as HTMLImageElement; selImg.current = img; setImgW(parseInt(img.style.width) || 100); setImgSel(true); } else if (imgSel) { selImg.current = null; setImgSel(false); } };
-  const sizeImg = (w: number) => { const img = selImg.current; if (!img) return; const cw = Math.min(100, Math.max(10, Math.round(w))); img.style.width = `${cw}%`; img.style.height = "auto"; setImgW(cw); if (ref.current) onChange(ref.current.innerHTML); };
+  const pickImg = (e: React.MouseEvent) => { const t = e.target as HTMLElement; if (t.tagName === "IMG") { const img = t as HTMLImageElement; selImg.current = img; setImgW(parseInt(img.style.width) || 100); } };
+  const sizeImg = (w: number) => { const img = targetImg(); if (!img) return; selImg.current = img; const cw = Math.min(100, Math.max(10, Math.round(w))); img.style.width = `${cw}%`; img.style.height = "auto"; setImgW(cw); if (ref.current) onChange(ref.current.innerHTML); };
   const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white";
   const sep = <span className="mx-0.5 h-4 w-px bg-[var(--line)]" />;
   // [command, arg, title, label, extraClass] — plain <button>s (no inline components).
@@ -147,23 +149,22 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
           return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c, arg)} title={title} className={`${btn} ${cls}`}>{label}</button>;
         })}
       </div>
-      {imgSel && (
-        <div className="flex items-center gap-2 border-b border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2">
+      {hasImg && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2">
           <span className="flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">🖼 Photo size</span>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW - 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#dbe6fb] bg-white text-[15px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">−</button>
-          <input type="range" min={10} max={100} step={1} value={imgW} onChange={(e) => sizeImg(Number(e.target.value))} className="h-1.5 flex-1 accent-[#2f6bd8]" />
+          <input type="range" min={10} max={100} step={1} value={imgW} onChange={(e) => sizeImg(Number(e.target.value))} className="h-1.5 min-w-[120px] flex-1 accent-[#2f6bd8]" />
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW + 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#dbe6fb] bg-white text-[15px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">+</button>
           <span className="w-10 flex-none text-right text-[12px] font-extrabold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{imgW}%</span>
           <div className="mx-1 h-4 w-px flex-none bg-[#dbe6fb]" />
           {([["S", 30], ["M", 60], ["L", 100]] as const).map(([l, w]) => <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(w)} className="flex-none rounded-md border border-[#dbe6fb] bg-white px-2 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{l}</button>)}
-          <button type="button" onClick={() => setImgSel(false)} className="flex-none text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">Done</button>
         </div>
       )}
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
         onClick={pickImg}
         className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_img]:cursor-pointer [&_img]:rounded-lg [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" />
-      <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">💡 Tip: click a photo, then use the slider or −/+ to resize it.</div>
+      {hasImg && <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">💡 The slider above resizes your photo. With more than one, click the one you want first.</div>}
     </div>
   );
 }
