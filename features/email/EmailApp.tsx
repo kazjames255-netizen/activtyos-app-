@@ -1005,9 +1005,12 @@ function AnalyticsView() {
     <div>
       <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per campaign or across all. Delivered, opens, clicks, bounces &amp; unsubscribes, tracked through the marketing pipeline. 1:1 inbox mail isn’t tracked (no pixels on personal correspondence).</div>
       {/* campaign selector */}
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <button type="button" onClick={() => setSel("all")} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${sel === "all" ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>All campaigns <span className="opacity-60">{tracked.length}</span></button>
-        {tracked.map((c) => <button key={c.id} type="button" onClick={() => setSel(c.id)} className={`max-w-[220px] truncate rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition ${sel === c.id ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{c.name}</button>)}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</span>
+        <Select value={sel} onChange={(e) => setSel(e.target.value)} className="max-w-[340px] font-bold text-[#1d3a8f]">
+          <option value="all">📊 All campaigns ({tracked.length})</option>
+          {tracked.map((c) => <option key={c.id} value={c.id}>{c.name} — {c.opens}% open</option>)}
+        </Select>
       </div>
       {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.name}</span>{active.subject && <span className="text-[12.5px] text-[var(--ink-3)]">“{active.subject}”</span>}{active.statusDate && <span className="ml-auto text-[12px] text-[var(--ink-3)]">{active.statusDate}</span>}</div>}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
