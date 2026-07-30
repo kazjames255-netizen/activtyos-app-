@@ -1143,7 +1143,7 @@ export function EmailApp() {
   const [history, setHistory] = useState<Sent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [audience, setAudience] = useState<"all" | "one" | "listing">(presetTo ? "one" : "all");
+  const [audience, setAudience] = useState<"all" | "one" | "listing" | "none">(presetTo ? "one" : "all");
   const [to, setTo] = useState(presetTo);
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
@@ -1270,7 +1270,7 @@ export function EmailApp() {
   const listingEmails = listingFamilies.map((f) => f.email);
   const audienceFamilies = audience === "listing" ? listingFamilies : families;
   const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
-  const reachCount = audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
+  const reachCount = audience === "none" ? extraTo.length : audience === "one" ? 1 : audienceFamilies.length ? audienceIncluded.length : reach ?? 0;
   const addExtra = () => { const parts = extraInput.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)); if (parts.length) setExtraTo((xs) => [...new Set([...xs, ...parts])]); setExtraInput(""); };
   // A template is usable in Email only if every merge field it uses can resolve for
   // this send. Email is a bulk/no-booking context, so booking-scoped fields
@@ -1317,7 +1317,8 @@ export function EmailApp() {
   // The exact list this send will go to: the chosen audience (minus anyone removed)
   // plus any addresses the operator typed in by hand, de-duplicated.
   const finalRecipients = (() => {
-    const base = audience === "one" ? (to.trim() ? [to.trim().toLowerCase()] : [])
+    const base = audience === "none" ? []
+      : audience === "one" ? (to.trim() ? [to.trim().toLowerCase()] : [])
       : audienceIncluded.map((f) => f.email.toLowerCase());
     return [...new Set([...base, ...extraTo])].filter(Boolean);
   })();
@@ -1430,10 +1431,11 @@ export function EmailApp() {
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div>
               <FieldLabel>Audience</FieldLabel>
-              <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing")} className="w-full">
+              <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing" | "none")} className="w-full">
                 <option value="all">All families ({families.length ? included.length : reach ?? 0})</option>
                 <option value="listing">Families on a listing</option>
                 <option value="one">A single address</option>
+                <option value="none">None — I&apos;ll add recipients myself</option>
               </Select>
             </div>
             {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
