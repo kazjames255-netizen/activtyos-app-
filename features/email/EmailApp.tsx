@@ -883,7 +883,6 @@ export function EmailApp() {
   };
 
   // Append a plain-text block to the HTML body (converted to HTML).
-  const appendBody = (block: string) => setBody((b) => { const h = mdToHtml(block); return b.trim() ? `${b}<br><br>${h}` : h; });
 
   function patchImage(id: string, partial: Partial<SavedImage>) {
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.map((im) => im.id === id ? { ...im, ...partial } : im) } } });
@@ -892,14 +891,17 @@ export function EmailApp() {
     if (!confirm("Remove this saved image?")) return;
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.filter((im) => im.id !== id) } } });
   }
-  // Add the photo to the email draft, including whatever message/quote is ticked.
+  // Add the photo to the email draft as a real inline image + its message/quote,
+  // so the embed-vs-PDF chooser applies to it.
   function addImageToEmail(im: SavedImage) {
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const { caption, quotes } = resolveSavedText(im);
-    const parts: string[] = [];
-    if (caption) parts.push(caption);
-    for (const q of quotes) parts.push(`“${q.text}” — ${q.byName ?? "a parent"}`);
-    appendBody(parts.length ? `[📷 ${im.childName ?? "Photo"}]\n${parts.join("\n")}` : `[📷 Photo of ${im.childName ?? "the day"}]`);
-    setOk("Added to your email draft. The words drop in now — the image attaches when the visual Email builder ships.");
+    const bits = [`<img src="${im.photoUrl}" alt="${esc(im.childName ?? "")}" style="max-width:100%;border-radius:10px">`];
+    if (caption) bits.push(`<div style="margin-top:6px">${esc(caption)}</div>`);
+    for (const q of quotes) bits.push(`<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`);
+    const block = bits.join("");
+    setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
+    setOk("Photo added — choose Embed inside the email or Attach as PDF at the top.");
   }
 
   const refresh = useCallback(() => {
@@ -946,6 +948,11 @@ export function EmailApp() {
   const signatures = settings.emailSignatures ?? [];
   const effSigId = sigChoice ?? settings.defaultSignatureId ?? "";
   const selectedSig = signatures.find((s) => s.id === effSigId) ?? null;
+  // The "designed" version families can get as embedded HTML or a PDF: a newsletter
+  // hand-off (docHtml), or — for a plain compose — the body once it has photos/rich
+  // formatting, so a photo email can also be embedded or attached as a PDF.
+  const bodyHasMedia = /<(img|h3|blockquote|ul|ol)[\s>]/i.test(body);
+  const designedDoc = docHtml || (bodyHasMedia ? body : "");
   // Insert an uploaded image inline into the rich body.
   async function insertPhoto(f: File) {
     try {
@@ -1043,14 +1050,14 @@ export function EmailApp() {
 
       {tab === "compose" && (<>
       {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#dbe6fb] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-white px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">↩ Undo</button></div>}
-      {docHtml && (
+      {designedDoc && (
         <div className="mb-4 rounded-2xl border-2 border-[#2f6bd8] bg-[#f4f8ff] p-4">
-          <div className="text-[14px] font-extrabold text-[#1d3a8f]">📰 A designed newsletter came from the Newsfeed — how should families get it?</div>
+          <div className="text-[14px] font-extrabold text-[#1d3a8f]">{docHtml ? "📰 A designed newsletter came from the Newsfeed — how should families get it?" : "🖼 This email has photos / formatting — how should families get it?"}</div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {([["embed", "📧 Embed the design inside the email"], ["attach", "📎 Attach it as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
-            <button type="button" onClick={() => printDocHtml(docHtml)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
+            {([["embed", "📧 Embed it inside the email (HTML)"], ["attach", "📎 Attach it as a PDF"]] as const).map(([k, label]) => <button key={k} type="button" onClick={() => setMode(k)} className="rounded-lg border-2 px-3.5 py-2 text-[13px] font-extrabold" style={mode === k ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{mode === k ? "✓ " : ""}{label}</button>)}
+            <button type="button" onClick={() => printDocHtml(designedDoc)} className="ml-auto rounded-lg border border-[#1d3a8f] px-3 py-2 text-[12.5px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">⬇ Preview / download PDF</button>
           </div>
-          <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full designed layout in the email body; the text below is the plain-text fallback." : <span>Families get a short covering email with the newsletter attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
+          <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full layout (photos + formatting) in the email body." : <span>Families get a short covering email with it attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
         </div>
       )}
       <Card className="mb-4 p-4">
