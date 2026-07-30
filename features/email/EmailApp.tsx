@@ -331,40 +331,46 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox actions (star, read, archive, delete, reply, forward) work locally. Sent shows your real send history. Receiving external email needs inbound mail set up — handed to the backend.</div>
       {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-        const toolBtn = "flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]";
+        const toolBtn = "flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#1d3a8f]";
         return (
-        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[5vh]" onClick={() => setOpen(null)}>
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-[var(--line)] px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2"><span className="text-[19px] font-extrabold text-[var(--ink)]">{o.subject}</span>{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}</div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 overflow-x-auto">
-                <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
-                {o.folder && o.folder !== "inbox" && o.folder !== "sent"
-                  ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
-                  : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
-                <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back to your inbox in the Snoozed folder">⏰ Snooze</button>
-                <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
-                <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
-                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[#fdebec] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
-                {o.tag && <span className="ml-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]" title="Which contact list this sender belongs to">🏷 {o.tag}</span>}
-                <button type="button" onClick={() => setShowContact((v) => !v)} className={toolBtn} title="Show this sender's contact card">◐ Contact</button>
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-[#0b1730]/50 p-4 pt-[5vh] backdrop-blur-[2px]" onClick={() => setOpen(null)}>
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#16306e]/10" onClick={(e) => e.stopPropagation()}>
+            {/* blue gradient header */}
+            <div className="px-6 py-4 text-white" style={{ background: "radial-gradient(120% 160% at 8% -30%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#2f6bd8 100%)" }}>
+              <div className="flex items-start gap-2">
+                <span className="text-[19px] font-extrabold leading-snug" style={{ fontFamily: "var(--ff-display)" }}>{o.subject}</span>
+                <button type="button" onClick={() => setOpen(null)} className="ml-auto flex h-7 w-7 flex-none items-center justify-center rounded-full text-[16px] text-white/85 hover:bg-white/20">×</button>
               </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}{o.tag && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-white/90">🏷 {o.tag}</span>}</div>
             </div>
-            <div className="px-5 py-4">
+            {/* toolbar */}
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f5f8fd] px-4 py-2.5">
+              <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
+              {o.folder && o.folder !== "inbox" && o.folder !== "sent"
+                ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
+                : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
+              <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back in the Snoozed folder">⏰ Snooze</button>
+              <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
+              <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
+              <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+              <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ml-auto`} title="Show this sender's contact card">◐ Contact</button>
+            </div>
+            {/* message */}
+            <div className="px-6 py-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials}</span>
-                <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? ` · to ${o.to}` : ""}</div></div>
-                <span className="flex-none text-[12.5px] text-[var(--ink-3)]">{o.time}</span>
+                <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white shadow-[0_2px_6px_rgba(47,107,216,.35)]" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{initials}</span>
+                <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[12.5px] text-[var(--ink-3)]">{o.fromEmail}{o.to ? ` · to ${o.to}` : ""}</div></div>
+                <span className="flex-none text-[12.5px] font-semibold text-[var(--ink-3)]">{o.time}</span>
               </div>
-              {showContact && <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px]"><div className="font-extrabold text-[var(--ink)]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]">List: <b>{o.tag}</b></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Full contact history opens in the CRM once linked (backend).</div></div>}
-              <p className="mt-3 text-[14px] leading-relaxed text-[var(--ink-2)]">{o.body ?? o.preview}</p>
-              {o.attachment && <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
+              {showContact && <div className="mt-3 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-3 text-[12.5px]"><div className="font-extrabold text-[#1d3a8f]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]">List: <b>{o.tag}</b></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Full contact history opens in the CRM once linked (backend).</div></div>}
+              <p className="mt-4 text-[14px] leading-relaxed text-[var(--ink-2)]">{o.body ?? o.preview}</p>
+              {o.attachment && <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
-            {o.quickReplies?.length ? <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-5 py-3">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink-2)] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">{qr}</button>)}</div> : null}
-            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-5 py-3">
-              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>↩ Reply</button>
-              <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↩ Reply all</button>
-              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">↪ Forward</button>
+            {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#fbfdff] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#dbe6fb] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2a3a63] transition-colors hover:border-[#2f6bd8] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">{qr}</button>)}</div></div> : null}
+            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-6 py-3.5">
+              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
+              <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>
+              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
             </div>
           </div>
         </div>
