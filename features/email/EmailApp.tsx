@@ -123,16 +123,26 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
   useEffect(() => { const el = ref.current; if (el && el.innerHTML !== value) el.innerHTML = value; }, [value]);
   const cmd = (c: string, arg?: string) => { ref.current?.focus(); document.execCommand(c, false, arg); if (ref.current) onChange(ref.current.innerHTML); };
   const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white";
+  const sep = <span className="mx-0.5 h-4 w-px bg-[var(--line)]" />;
+  // [command, arg, title, label, extraClass] — plain <button>s (no inline components).
+  const tools: [string, string | undefined, string, string, string][] = [
+    ["formatBlock", "H3", "Heading", "Aa", "font-extrabold"], ["|", undefined, "", "", ""],
+    ["bold", undefined, "Bold", "B", "font-extrabold"], ["italic", undefined, "Italic", "I", "italic"], ["underline", undefined, "Underline", "U", "underline"], ["strikeThrough", undefined, "Strikethrough", "S", "line-through"], ["color", undefined, "", "", ""], ["|", undefined, "", "", ""],
+    ["justifyLeft", undefined, "Align left", "⯇", ""], ["justifyCenter", undefined, "Align centre", "≡", ""], ["justifyRight", undefined, "Align right", "⯈", ""], ["|", undefined, "", "", ""],
+    ["insertOrderedList", undefined, "Numbered list", "1.", ""], ["insertUnorderedList", undefined, "Bullet list", "•", ""], ["outdent", undefined, "Decrease indent", "⇤", ""], ["indent", undefined, "Increase indent", "⇥", ""], ["formatBlock", "blockquote", "Quote", "❝", ""], ["|", undefined, "", "", ""],
+    ["link", undefined, "Insert link", "🔗", ""], ["removeFormat", undefined, "Clear formatting", "🧹", ""],
+  ];
   return (
     <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-      <div className="flex flex-wrap items-center gap-1 rounded-t-lg border-b border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("formatBlock", "H3")} title="Heading" className={`${btn} font-extrabold`}>Aa</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} title="Bold" className={`${btn} font-extrabold`}>B</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} title="Italic" className={`${btn} italic`}>I</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} title="Bullet list" className={btn}>• List</button>
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const u = prompt("Link URL"); if (u) cmd("createLink", u); }} title="Insert link" className={btn}>🔗</button>
+      <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
+        {tools.map(([c, arg, title, label, cls], i) => {
+          if (c === "|") return <span key={i}>{sep}</span>;
+          if (c === "color") return <label key={i} onMouseDown={(e) => e.preventDefault()} title="Text colour" className={`${btn} relative cursor-pointer font-extrabold`} style={{ color: "#2f6bd8" }}>A<input type="color" onChange={(e) => cmd("foreColor", e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" /></label>;
+          if (c === "link") return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { const u = prompt("Link URL"); if (u) cmd("createLink", u); }} title={title} className={btn}>{label}</button>;
+          return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c, arg)} title={title} className={`${btn} ${cls}`}>{label}</button>;
+        })}
       </div>
-      <div ref={ref} contentEditable suppressContentEditableWarning onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }} className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_ul]:list-disc [&_ul]:pl-5" />
+      <div ref={ref} contentEditable suppressContentEditableWarning onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }} className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" />
     </div>
   );
 }
