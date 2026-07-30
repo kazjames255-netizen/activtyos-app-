@@ -274,7 +274,9 @@ const FOLDERS: [string, string][] = [
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
 ];
 
-function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail) => void; history: Sent[] | null }) {
+function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, location?: string) => void; history: Sent[] | null; locations: string[] }) {
+  const [enqFor, setEnqFor] = useState<Mail | null>(null);
+  const [enqLoc, setEnqLoc] = useState("");
   const [items, setItems] = useState<Mail[]>(() => DEMO_MAIL.map((m) => ({ ...m, folder: m.folder ?? "inbox" })));
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
@@ -404,11 +406,33 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
               <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
-              <button type="button" onClick={() => { onEnquiry(o); setOpen(null); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+              <button type="button" onClick={() => { setEnqLoc(""); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
             </div>
           </div>
         </div>
       ); })()}
+      {enqFor && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-[var(--card)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="rounded-t-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+              <div className="text-[15px] font-extrabold">Mark as enquiry</div>
+              <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
+            </div>
+            <div className="p-5">
+              <FieldLabel>Location</FieldLabel>
+              <Select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} className="w-full">
+                <option value="">No specific location</option>
+                {locations.map((l) => <option key={l} value={l}>{l}</option>)}
+              </Select>
+              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">They&apos;ll appear on the New-enquiries board for this location and drop off automatically once they book.</p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setEnqFor(null)} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+                <button type="button" onClick={() => { onEnquiry(enqFor, enqLoc || undefined); setEnqFor(null); setOpen(null); }} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>➕ Add to enquiries</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -553,13 +577,16 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
             <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Whether these are the dates the booking was <b>made</b> or the dates the child <b>attended</b> — or match either.</p>
           </div>
           <div><FieldLabel>Age of child</FieldLabel>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12.5px] text-[var(--ink-2)]">From</span>
-              <Select value={String(lo)} onChange={(e) => set({ ageMin: Number(e.target.value) })} className="w-20">{AGES.map((a) => <option key={a} value={a}>{a}</option>)}</Select>
-              <span className="text-[12.5px] text-[var(--ink-2)]">to</span>
-              <Select value={String(hi)} onChange={(e) => set({ ageMax: Number(e.target.value) })} className="w-20">{AGES.map((a) => <option key={a} value={a}>{a === 18 ? "18+" : a}</option>)}</Select>
-              <button type="button" onClick={() => set({ ageMin: undefined, ageMax: undefined })} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">All ages</button>
-            </div>
+            {(() => { const allAges = f.ageMin == null && f.ageMax == null; return (
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => set({ ageMin: undefined, ageMax: undefined })} className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${allAges ? "bg-[#16306e] text-white shadow-sm" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>All ages (0–18+)</button>
+                <span className="text-[12.5px] text-[var(--ink-3)]">or pick a range:</span>
+                <span className="text-[12.5px] text-[var(--ink-2)]">From</span>
+                <Select value={allAges ? "" : String(lo)} onChange={(e) => set({ ageMin: Number(e.target.value), ageMax: f.ageMax ?? 18 })} className="w-20">{allAges && <option value="">–</option>}{AGES.map((a) => <option key={a} value={a}>{a}</option>)}</Select>
+                <span className="text-[12.5px] text-[var(--ink-2)]">to</span>
+                <Select value={allAges ? "" : String(hi)} onChange={(e) => set({ ageMin: f.ageMin ?? 0, ageMax: Number(e.target.value) })} className="w-20">{allAges && <option value="">–</option>}{AGES.map((a) => <option key={a} value={a}>{a === 18 ? "18+" : a}</option>)}</Select>
+              </div>
+            ); })()}
           </div>
           <div className="rounded-xl border border-[var(--line)] p-3">
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">More filters</div>
@@ -967,8 +994,9 @@ export function EmailApp() {
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
   const [listingIds, setListingIds] = useState<string[]>([]);
-  const [composeListings, setComposeListings] = useState<{ id: string; title: string }[]>([]);
+  const [composeListings, setComposeListings] = useState<{ id: string; title: string; venueId?: string }[]>([]);
   const [composeBookings, setComposeBookings] = useState<Booking[]>([]);
+  const [venueName, setVenueName] = useState<Record<string, string>>({});
   const [composeTemplates, setComposeTemplates] = useState<EmailTemplate[]>([]);
   const [reach, setReach] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
@@ -1033,7 +1061,8 @@ export function EmailApp() {
   const loadRecipients = useCallback(() => { apiGet<{ count: number; families?: { email: string; name: string }[] }>("/api/emails/recipients").then((r) => { setReach(r.count); setFamilies(r.families ?? []); }).catch(() => {}); }, []);
   useEffect(() => { loadRecipients(); }, [loadRecipients]);
   useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing" })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setComposeBookings).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setComposeTemplates).catch(() => {}); }, []);
   useRealtime(["emails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
@@ -1051,6 +1080,8 @@ export function EmailApp() {
   const bookingMatchesSel = (b: Booking) => listingIds.includes(b.listingId || "\0") || listingIds.includes(b.title || "\0") || listingIds.includes(b.listingTitle || "\0");
   // Recipients when targeting by listing: distinct emails booked on any selected
   // listing (a repeat parent across duplicated listings only appears once).
+  const composeLocations = [...new Set(composeListings.map((l) => (l.venueId ? venueName[l.venueId] : undefined)).filter((x): x is string => !!x))].sort();
+  const addEnquiry = (m: Mail, location?: string) => { const email = (m.fromEmail || "").toLowerCase(); if (!email) { setError("This sender has no email address to save."); return; } const list = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES; if (!list.some((e) => e.email.toLowerCase() === email)) writeLS(LS_ENQ, [{ email, name: m.from, location: location || undefined, at: new Date().toISOString().slice(0, 10) }, ...list]); setOk(`✓ ${m.from} added to New enquiries${location ? ` · ${location}` : ""}. They drop off automatically once they book.`); };
   const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
   const audienceFamilies = audience === "listing" ? listingFamilies : families;
@@ -1162,7 +1193,7 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView history={history} onEnquiry={(m) => { const loc = window.prompt("Add to enquiries — which venue / location are they interested in? (optional)"); if (loc === null) return; const list = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES; const email = (m.fromEmail || "").toLowerCase(); if (!email) { setError("This sender has no email address to save."); return; } if (!list.some((e) => e.email.toLowerCase() === email)) writeLS(LS_ENQ, [{ email, name: m.from, location: loc.trim() || undefined, at: new Date().toISOString().slice(0, 10) }, ...list]); setOk(`✓ ${m.from} added to New enquiries${loc.trim() ? ` · ${loc.trim()}` : ""}. They drop off automatically once they book.`); }} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
       {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
