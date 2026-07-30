@@ -142,7 +142,11 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
           return <button key={i} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd(c, arg)} title={title} className={`${btn} ${cls}`}>{label}</button>;
         })}
       </div>
-      <div ref={ref} contentEditable suppressContentEditableWarning onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }} className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" />
+      <div ref={ref} contentEditable suppressContentEditableWarning
+        onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
+        onClick={(e) => { const t = e.target as HTMLElement; if (t.tagName === "IMG") { const img = t as HTMLImageElement; const cur = img.style.width || "100%"; img.style.width = cur === "100%" ? "60%" : cur === "60%" ? "40%" : cur === "40%" ? "25%" : "100%"; img.style.height = "auto"; if (ref.current) onChange(ref.current.innerHTML); } }}
+        className="min-h-[180px] px-3 py-2.5 text-[13px] leading-relaxed outline-none [&_a]:text-[#1d3a8f] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--line)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ink-3)] [&_h3]:mb-1 [&_h3]:text-[16px] [&_h3]:font-extrabold [&_img]:cursor-pointer [&_img]:rounded-lg [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" />
+      <div className="rounded-b-lg border-t border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10.5px] text-[var(--ink-3)]">💡 Tip: click a photo to change its size (full → 60% → 40% → 25%).</div>
     </div>
   );
 }
@@ -901,7 +905,7 @@ export function EmailApp() {
     for (const q of quotes) bits.push(`<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`);
     const block = bits.join("");
     setBody((b) => b.trim() ? `${b}<br><br>${block}` : block);
-    setOk("Photo added — choose Embed inside the email or Attach as PDF at the top.");
+    setOk("✓ Added successfully — it’s embedded in the email. Click the photo to change its size, or choose Embed / PDF at the top.");
   }
 
   const refresh = useCallback(() => {
@@ -1137,7 +1141,7 @@ export function EmailApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
               <label title="Insert a photo into the email" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🖼 Photo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void insertPhoto(f); e.target.value = ""; }} /></label>
-              <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
+              <label title="Attach a file — images are embedded (resizable); other files attach" className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach((f) => { if (f.type.startsWith("image/") && confirm(`“${f.name}” is an image — embed it in the email? (Cancel = attach as a file instead.)`)) void insertPhoto(f); else addAttachment(f); }); e.target.value = ""; }} /></label>
               {composeTemplates.length > 0 && <Select value="" onChange={(e) => { const t = composeTemplates.find((x) => x.id === e.target.value); if (t && templateUsable(t)) { if (t.subject && !subject.trim()) setSubject(t.subject); setBody((b) => b.trim() ? `${b}<br><br>${mdToHtml(t.body)}` : mdToHtml(t.body)); } }} className="text-[12px]"><option value="">＋ Insert template…</option>{composeTemplates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · per-booking only"}</option>; })}</Select>}
             </div>
           </div>
