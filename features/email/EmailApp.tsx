@@ -648,6 +648,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [imgBusy, setImgBusy] = useState(false);
+  const [previewBig, setPreviewBig] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
   const selectedAuds = audIds.map((id) => audiences.find((a) => a.id === id)).filter((a): a is Audience => !!a);
   const primary = selectedAuds[0];
@@ -680,10 +681,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
     onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign ? simpleEmailHtml(layout) : undefined, body: useDesign ? layoutToText(layout) : undefined }, action);
   };
   return (
+    <>
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
-        <div className="max-h-[64vh] space-y-3 overflow-y-auto p-5">
+        <div className="max-h-[80vh] space-y-3 overflow-y-auto p-5">
           {primary && <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
           <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
           <div><FieldLabel>Audiences in this send <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— combine any; recipients are deduped so no one is emailed twice</span></FieldLabel>
@@ -725,7 +727,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
                     <div><FieldLabel>Button label <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— optional</span></FieldLabel><Input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder="Book now" className="w-full" /></div>
                     <div><FieldLabel>Button link</FieldLabel><Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://…" className="w-full" /></div>
                   </div>
-                  {layoutHasContent(layout) && <div><FieldLabel>Preview</FieldLabel><div className="max-h-64 overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-3" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} /></div>}
+                  {layoutHasContent(layout) && <div>
+                    <div className="mb-1 flex items-center"><FieldLabel>Preview</FieldLabel><button type="button" onClick={() => setPreviewBig(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button></div>
+                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in rounded-xl border border-[var(--line)] bg-[#f7f9fc] p-3 text-left"><div className="mx-auto max-h-64 max-w-[560px] overflow-y-auto rounded-lg bg-white p-3 shadow-sm" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} /></button>
+                  </div>}
                 </div>}
           </div>
 
@@ -734,7 +739,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
             <div className="rounded-xl border border-[var(--line)]">
               <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
               {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
-                {people.map((p) => { const off = excluded.has(p.email); return (
+                {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
                   <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3.5 py-2 last:border-0">
                     <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
                     <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
@@ -757,6 +762,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
         </div>
       </div>
     </div>
+    {previewBig && layoutHasContent(layout) && (
+      <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
+        <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
