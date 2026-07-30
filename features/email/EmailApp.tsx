@@ -11,7 +11,7 @@ import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
-import { downscaleImage, type Newsletter } from "@/features/newsfeed/newsletter";
+import { downscaleImage, NewsletterBuilder, NewsletterView, newsletterToHtml, newsletterToText, type Newsletter, type Company } from "@/features/newsfeed/newsletter";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -116,21 +116,6 @@ function mdToHtml(src: string): string {
 function htmlToText(html: string): string {
   return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li)>/gi, "\n").replace(/<li[^>]*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\n{3,}/g, "\n\n").trim();
 }
-// A simple, email-safe layout — banner image, heading, subtitle, body, CTA button.
-// Kept deliberately small: a few named areas, inline styles only (no external CSS).
-interface EmailLayout { heading?: string; subtitle?: string; imageUrl?: string; body?: string; ctaLabel?: string; ctaUrl?: string }
-function layoutHasContent(l: EmailLayout): boolean { return !!(l.heading || l.subtitle || l.imageUrl || l.body || (l.ctaLabel && l.ctaUrl)); }
-function simpleEmailHtml(l: EmailLayout, brand = "#16306e"): string {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const bodyHtml = (l.body ?? "").split(/\n{2,}/).map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#374151">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
-  const cta = l.ctaLabel && l.ctaUrl ? `<div style="margin:22px 0 4px"><a href="${esc(l.ctaUrl)}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:10px">${esc(l.ctaLabel)}</a></div>` : "";
-  const img = l.imageUrl ? `<img src="${esc(l.imageUrl)}" alt="" style="width:100%;max-width:600px;display:block;border-radius:12px;margin:0 0 18px">` : "";
-  const heading = l.heading ? `<h1 style="margin:0 0 6px;font-size:26px;line-height:1.25;color:${brand};font-family:Georgia,'Times New Roman',serif">${esc(l.heading)}</h1>` : "";
-  const subtitle = l.subtitle ? `<div style="margin:0 0 18px;font-size:15px;color:#6b7280;font-weight:600">${esc(l.subtitle)}</div>` : "";
-  return `<div style="max-width:600px;margin:0 auto;padding:8px;font-family:system-ui,-apple-system,Segoe UI,sans-serif">${img}${heading}${subtitle}${bodyHtml}${cta}</div>`;
-}
-function layoutToText(l: EmailLayout): string { return [l.heading, l.subtitle, l.body, l.ctaLabel && l.ctaUrl ? `${l.ctaLabel}: ${l.ctaUrl}` : ""].filter(Boolean).join("\n\n"); }
-
 // A small WYSIWYG editor — Bold/Heading/Italic/List/Link format the text LIVE
 // (contentEditable), and the value is HTML that's emailed as-is.
 function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
@@ -633,7 +618,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, listings, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; listings?: { id: string; title: string }[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -641,13 +626,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(true);
   const [mode, setMode] = useState<"template" | "design">("template");
-  const [heading, setHeading] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [layoutBody, setLayoutBody] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [ctaLabel, setCtaLabel] = useState("");
-  const [ctaUrl, setCtaUrl] = useState("");
-  const [imgBusy, setImgBusy] = useState(false);
+  const [nl, setNl] = useState<Newsletter | null>(null);   // a designed newsletter (10 layouts + palettes + footer)
+  const [designing, setDesigning] = useState(false);
   const [previewBig, setPreviewBig] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
   const selectedAuds = audIds.map((id) => audiences.find((a) => a.id === id)).filter((a): a is Audience => !!a);
@@ -671,14 +651,12 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
   const cusG = availableToAdd.filter((a) => !(a.id === "all" || a.id.startsWith("seg-") || a.id.startsWith("enq-")));
   const addAud = (id: string) => { if (id) setAudIds((xs) => (xs.includes(id) ? xs : [...xs, id])); };
   const removeAud = (id: string) => setAudIds((xs) => (xs.length > 1 ? xs.filter((x) => x !== id) : xs));
-  const layout: EmailLayout = { heading, subtitle, imageUrl, body: layoutBody, ctaLabel, ctaUrl };
-  const useDesign = mode === "design" && layoutHasContent(layout);
-  const uploadBanner = async (f: File) => { setImgBusy(true); try { const small = await downscaleImage(f); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: small }); setImageUrl(url); } catch { /* ignore */ } setImgBusy(false); };
+  const useDesign = mode === "design" && !!nl;
   const submit = (action: CampStatus) => {
     if (!primary) return;
-    const subj = subject.trim() || (mode === "design" ? heading.trim() : template?.subject) || name.trim();
+    const subj = subject.trim() || template?.subject || name.trim();
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
-    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign ? simpleEmailHtml(layout) : undefined, body: useDesign ? layoutToText(layout) : undefined }, action);
+    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && nl ? newsletterToHtml(nl) : undefined, body: useDesign && nl ? newsletterToText(nl) : undefined }, action);
   };
   return (
     <>
@@ -714,24 +692,16 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
             </div>
             {mode === "template"
               ? <><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></>
-              : <div className="space-y-2.5">
-                  <div><FieldLabel>Banner image <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
-                    {imageUrl
-                      ? <div className="flex items-center gap-2"><img src={imageUrl} alt="" className="h-14 w-24 flex-none rounded-lg border border-[var(--line)] object-cover" /><button type="button" onClick={() => setImageUrl("")} className="rounded-full border border-[#f0c9cd] px-3 py-1 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Remove</button></div>
-                      : <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{imgBusy ? "Uploading…" : "⬆ Upload image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadBanner(f); e.target.value = ""; }} /></label><span className="text-[12px] text-[var(--ink-3)]">or</span><Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL" className="min-w-[150px] flex-1" /></div>}
+              : nl
+                ? <div>
+                    <div className="mb-1.5 flex items-center gap-2"><FieldLabel>Your design</FieldLabel><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setNl(null)} className="rounded-lg border border-[#f0c9cd] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#f7f9fc] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg shadow-sm"><NewsletterView data={nl} /></div></button>
                   </div>
-                  <div><FieldLabel>Heading</FieldLabel><Input value={heading} onChange={(e) => setHeading(e.target.value)} placeholder="e.g. Summer places are filling up" className="w-full" /></div>
-                  <div><FieldLabel>Subtitle</FieldLabel><Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g. A quick heads-up for our regulars" className="w-full" /></div>
-                  <div><FieldLabel>Message</FieldLabel><textarea value={layoutBody} onChange={(e) => setLayoutBody(e.target.value)} rows={4} placeholder="Write your message… (blank line starts a new paragraph)" className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[14px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div><FieldLabel>Button label <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— optional</span></FieldLabel><Input value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} placeholder="Book now" className="w-full" /></div>
-                    <div><FieldLabel>Button link</FieldLabel><Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://…" className="w-full" /></div>
-                  </div>
-                  {layoutHasContent(layout) && <div>
-                    <div className="mb-1 flex items-center"><FieldLabel>Preview</FieldLabel><button type="button" onClick={() => setPreviewBig(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button></div>
-                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in rounded-xl border border-[var(--line)] bg-[#f7f9fc] p-3 text-left"><div className="mx-auto max-h-64 max-w-[560px] overflow-y-auto rounded-lg bg-white p-3 shadow-sm" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} /></button>
+                : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7f9fc] p-5 text-center">
+                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Choose a layout</div>
+                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Pick from 10 ready-made layouts, colour palettes and your business footer — the same designer used for newsletters.</p>
+                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Choose a layout &amp; design</button>
                   </div>}
-                </div>}
           </div>
 
           {/* recipient list — trim this send, or remove people from the list for good */}
@@ -762,14 +732,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, onCancel, onBuil
         </div>
       </div>
     </div>
-    {previewBig && layoutHasContent(layout) && (
+    {previewBig && nl && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: simpleEmailHtml(layout) }} />
+          <div className="mx-auto max-w-[600px]"><NewsletterView data={nl} /></div>
         </div>
       </div>
     )}
+    {designing && <div className="relative z-[145]"><NewsletterBuilder initial={nl ?? undefined} initialCompany={company} listings={listings} onCancel={() => setDesigning(false)} onSave={(n) => { setNl(n); setDesigning(false); }} /></div>}
     </>
   );
 }
@@ -794,7 +765,7 @@ function useCampaignData() {
   return { bookings, listings, templates, locations, allAudience };
 }
 
-function CampaignsView({ onSent, seedAudienceId, onSeedConsumed }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void }) {
+function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company> }) {
   const { bookings, listings, templates, locations, allAudience } = useCampaignData();
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
@@ -831,7 +802,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed }: { onSent: () 
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} listings={listings} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
@@ -1385,7 +1356,7 @@ export function EmailApp() {
       )}
 
       {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
-      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} />}
+      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
       {tab === "analytics" && <AnalyticsView />}
