@@ -444,7 +444,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
 // (the true send/track/schedule engine is the backend — see the handoff doc).
 interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string }
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
-interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter }
+interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[] }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
 interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string }
 
@@ -474,18 +474,21 @@ const SEED_AUDIENCES: Audience[] = [
 interface EnquiryRec { email: string; name?: string; location?: string; at?: string }
 const LS_ENQ = "aos.email.enquiries.v1";
 const SEED_ENQUIRIES: EnquiryRec[] = [
-  { email: "dani.obi@outlook.com", name: "Dani Obi", location: "Milton Keynes", at: "2026-07-30" },
-  { email: "r.ahmed@gmail.com", name: "R. Ahmed", location: "Milton Keynes", at: "2026-07-27" },
-  { email: "hello.jkumar@gmail.com", name: "J. Kumar", location: "Aylesbury", at: "2026-07-22" },
+  { email: "dani.obi@outlook.com", name: "Dani Obi", location: "Milton Keynes", at: "2026-07-30" },   // this week
+  { email: "r.ahmed@gmail.com", name: "R. Ahmed", location: "Milton Keynes", at: "2026-07-27" },       // this week
+  { email: "hello.jkumar@gmail.com", name: "J. Kumar", location: "Aylesbury", at: "2026-07-22" },      // within 30d
+  { email: "t.okafor@gmail.com", name: "T. Okafor", location: "Aylesbury", at: "2026-06-10" },         // 30–90d ago
+  { email: "the.wilsons@gmail.com", name: "Wilson family", location: "Milton Keynes", at: "2026-03-15" }, // 90d+ ago
 ];
 // Per-location + all enquiry audiences, EXCLUDING anyone who has since booked.
 function computeEnquiryAudiences(enquiries: EnquiryRec[], bookings: Booking[]): Audience[] {
   const booked = new Set(bookings.map((b) => b.email?.toLowerCase()).filter(Boolean));
   const active = enquiries.filter((e) => e.email && !booked.has(e.email.toLowerCase()));
-  const byLoc = new Map<string, Set<string>>(); const all = new Set<string>();
-  for (const e of active) { const em = e.email.toLowerCase(); all.add(em); const loc = e.location || "No location"; (byLoc.get(loc) ?? byLoc.set(loc, new Set()).get(loc)!).add(em); }
-  const out: Audience[] = [{ id: "enq-all", name: "New enquiries — all", count: all.size, emails: [...all], desc: "Emailed us · never booked" }];
-  for (const [loc, ems] of byLoc) out.push({ id: `enq-${loc}`, name: `New enquiries · ${loc}`, count: ems.size, emails: [...ems], desc: `Enquired about ${loc} · never booked` });
+  const byLoc = new Map<string, Map<string, string>>(); const all = new Map<string, string>(); // email → name
+  for (const e of active) { const em = e.email.toLowerCase(); const nm = e.name || em; all.set(em, nm); const loc = e.location || "No location"; (byLoc.get(loc) ?? byLoc.set(loc, new Map()).get(loc)!).set(em, nm); }
+  const ppl = (m: Map<string, string>) => [...m].map(([email, name]) => ({ email, name }));
+  const out: Audience[] = [{ id: "enq-all", name: "New enquiries — all", count: all.size, emails: [...all.keys()], people: ppl(all), desc: "Emailed us · never booked" }];
+  for (const [loc, ems] of byLoc) out.push({ id: `enq-${loc}`, name: `New enquiries · ${loc}`, count: ems.size, emails: [...ems.keys()], people: ppl(ems), desc: `Enquired about ${loc} · never booked` });
   return out;
 }
 const STATUS_PILL: Record<CampStatus, { bg: string; fg: string; label: string }> = {
@@ -611,33 +614,61 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, onCancel, onBuildAudience, onSubmit }: { audiences: Audience[]; templates: EmailTemplate[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, lockAudience, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; lockAudience?: boolean; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
-  const [audId, setAudId] = useState(audiences[0]?.id ?? "");
+  const [audId, setAudId] = useState(initialAudienceId ?? audiences[0]?.id ?? "");
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [subject, setSubject] = useState("");
+  const [excludedByAud, setExcludedByAud] = useState<Record<string, string[]>>({});
+  const [showList, setShowList] = useState(true);
   const audience = audiences.find((a) => a.id === audId) ?? audiences[0];
   const template = templates.find((t) => t.id === tmplId);
-  const submit = (action: CampStatus) => { if (!audience) return; onSubmit({ name: name.trim() || subject.trim() || "Untitled campaign", audience, template, subject: subject.trim() || template?.subject || name.trim() }, action); };
+  const excluded = new Set(excludedByAud[audId] ?? []);
+  const toggleExclude = (email: string) => setExcludedByAud((m) => { const cur = new Set(m[audId] ?? []); if (cur.has(email)) cur.delete(email); else cur.add(email); return { ...m, [audId]: [...cur] }; });
+  const people = audience?.people?.length ? audience.people : (audience?.emails ?? []).map((e) => ({ email: e, name: e as string | undefined }));
+  const included = people.filter((p) => !excluded.has(p.email));
+  const isEnquiry = !!audience && audience.id.startsWith("enq-");
+  const submit = (action: CampStatus) => { if (!audience) return; onSubmit({ name: name.trim() || subject.trim() || "Untitled campaign", audience: { ...audience, emails: included.map((p) => p.email), count: included.length }, template, subject: subject.trim() || template?.subject || name.trim() }, action); };
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
       <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="border-b border-[var(--line)] px-5 py-3.5"><div className="text-[18px] font-extrabold text-[var(--ink)]">New campaign</div><div className="text-[12.5px] text-[var(--ink-3)]">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
+        <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
         <div className="max-h-[64vh] space-y-3 overflow-y-auto p-5">
+          {audience && <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{audience.name}</span><span className="text-[12.5px] text-[var(--ink-3)]">{audience.desc}</span></div></div>}
           <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div><FieldLabel>Audience</FieldLabel><Select value={audId} onChange={(e) => setAudId(e.target.value)} className="w-full">{audiences.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</Select><button type="button" onClick={onBuildAudience} className="mt-1 text-[12px] font-bold text-[#1d3a8f]">＋ Build a new audience</button></div>
-            <div><FieldLabel>Template</FieldLabel><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
-          </div>
+          {lockAudience
+            ? <div><FieldLabel>Template</FieldLabel><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+            : <div className="grid grid-cols-2 gap-2.5">
+                <div><FieldLabel>Audience</FieldLabel><Select value={audId} onChange={(e) => setAudId(e.target.value)} className="w-full">{audiences.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</Select><button type="button" onClick={onBuildAudience} className="mt-1 text-[12px] font-bold text-[#1d3a8f]">＋ Build a new audience</button></div>
+                <div><FieldLabel>Template</FieldLabel><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+              </div>}
           <div><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" className="w-full" /></div>
-          <div className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-[13px] text-[var(--ink-2)]">Sending to <b>{audience?.count ?? 0}</b> contacts — {audience?.desc ?? "—"}</div>
+
+          {/* recipient list — trim this send, or remove people from the list for good */}
+          {people.length > 0 && (
+            <div className="rounded-xl border border-[var(--line)]">
+              <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
+              {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
+                {people.map((p) => { const off = excluded.has(p.email); return (
+                  <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3.5 py-2 last:border-0">
+                    <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
+                    <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
+                    {isEnquiry && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
+                  </div>
+                ); })}
+              </div>}
+              <div className="border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">{isEnquiry ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."}</div>
+            </div>
+          )}
+
+          <div className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-[13px] text-[var(--ink-2)]">Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {audience?.desc ?? "—"}</div>
           <p className="text-[13px] font-semibold text-[var(--ink)]">Recipients who have opted out of marketing are excluded automatically. A one-click unsubscribe footer is added to every send.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">Cancel</button>
           <button type="button" onClick={() => submit("draft")} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Save draft</button>
           <button type="button" onClick={() => submit("scheduled")} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">⧗ Schedule</button>
-          <button type="button" onClick={() => submit("sent")} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Send now</button>
+          <button type="button" onClick={() => submit("sent")} disabled={included.length === 0} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Send now</button>
         </div>
       </div>
     </div>
@@ -659,23 +690,27 @@ function useCampaignData() {
   const bookings = rawBookings.map((b) => ({ ...b, locationName: b.locationName || locByListing.get(b.listingId || "") }));
   const locations = [...new Set([...listings.map((l) => l.location), ...bookings.map((b) => b.locationName)].filter((x): x is string => !!x))].sort();
   const allEmails = resolveAudience(bookings, {}).emails;
-  const allAudience: Audience = { id: "all", name: "All active families", count: allEmails.length, emails: allEmails, desc: "Has an active or upcoming booking" };
+  const emailName = new Map<string, string>(); for (const b of bookings) { const e = b.email?.toLowerCase(); if (e && !emailName.has(e)) emailName.set(e, b.name || e); }
+  const allAudience: Audience = { id: "all", name: "All active families", count: allEmails.length, emails: allEmails, people: allEmails.map((e) => ({ email: e, name: emailName.get(e.toLowerCase()) })), desc: "Has an active or upcoming booking" };
   return { bookings, listings, templates, locations, allAudience };
 }
 
-function CampaignsView({ onSent }: { onSent: () => void }) {
+function CampaignsView({ onSent, seedAudienceId, onSeedConsumed }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void }) {
   const { bookings, listings, templates, locations, allAudience } = useCampaignData();
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
-  const [enquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES);
-  const [modal, setModal] = useState<null | "campaign" | "audience">(null);
+  const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES);
+  // If we arrived from an audience card's "Use in campaign", open straight into the locked composer.
+  const [modal, setModal] = useState<null | "campaign" | "audience">(() => (seedAudienceId ? "campaign" : null));
   const [detail, setDetail] = useState<Campaign | null>(null);
   useEffect(() => { writeLS(LS_CAMP, campaigns); }, [campaigns]);
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
+  const removeEnquiryPerson = (email: string) => setEnquiries((xs) => { const next = xs.filter((e) => e.email.toLowerCase() !== email.toLowerCase()); writeLS(LS_ENQ, next); return next; });
+  const closeCampaign = () => { setModal(null); onSeedConsumed?.(); };
   const audiences = [allAudience, ...SEED_AUDIENCES, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => {
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name, audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? "scheduled" : action === "sent" ? "just now" : undefined, subject: c.subject };
-    setCampaigns((xs) => [row, ...xs]); setModal(null);
+    setCampaigns((xs) => [row, ...xs]); closeCampaign();
     if (action === "sent" && c.audience.emails.length) {
       try { await apiPost("/api/emails/send", { subject: c.subject || c.name, body: c.template?.body || c.subject || c.name, recipients: c.audience.emails }); } catch { /* surfaced in history */ }
       onSent();
@@ -697,7 +732,7 @@ function CampaignsView({ onSent }: { onSent: () => void }) {
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} onCancel={() => setModal(null)} onBuildAudience={() => setModal("audience")} onSubmit={create} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} lockAudience={!!seedAudienceId} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
@@ -1015,6 +1050,7 @@ export function EmailApp() {
   const undoFired = useRef(false);
   const [undoEnq, setUndoEnq] = useState<{ name: string; location?: string; prev: EnquiryRec[] } | null>(null);
   const [undoEnqLeft, setUndoEnqLeft] = useState(0);
+  const [campaignSeedId, setCampaignSeedId] = useState<string | null>(null); // audience picked from a card's "Use in campaign"
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -1237,8 +1273,8 @@ export function EmailApp() {
       )}
 
       {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
-      {tab === "campaigns" && <CampaignsView onSent={refresh} />}
-      {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
+      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} />}
+      {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
