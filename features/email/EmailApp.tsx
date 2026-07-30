@@ -12,7 +12,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
-import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign } from "@/features/email/campaignTemplates";
+import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign, type Social } from "@/features/email/campaignTemplates";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -619,7 +619,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -741,7 +741,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, onCance
         </div>
       </div>
     )}
-    {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
+    {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} socials={socials} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
     </>
   );
 }
@@ -766,7 +766,7 @@ function useCampaignData() {
   return { bookings, listings, templates, locations, allAudience };
 }
 
-function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company> }) {
+function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, socials }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company>; socials?: Social[] }) {
   const { bookings, listings, templates, locations, allAudience } = useCampaignData();
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
@@ -803,7 +803,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company }: { on
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
@@ -1084,6 +1084,15 @@ function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch
         <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">Which button leads when you open a message in the inbox.</p>
         <div className="flex flex-wrap gap-1.5">{([["reply", "Reply"], ["replyAll", "Reply all"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setP({ defaultReply: v })} className="rounded-full border px-3 py-1 text-[12.5px] font-bold" style={chip((p.defaultReply ?? "reply") === v)}>{l}</button>)}</div>
       </Card>
+      <Card className="p-4">
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">Social links</div>
+        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">Enter your profiles once — they auto-fill the social row on every campaign template, so you never retype them.</p>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {([["facebook", "Facebook"], ["instagram", "Instagram"], ["tiktok", "TikTok"], ["twitter", "X / Twitter"], ["youtube", "YouTube"], ["website", "Website"]] as const).map(([net, label]) => (
+            <div key={net}><FieldLabel>{label}</FieldLabel><Input value={(settings.social?.[net] as string) ?? ""} onChange={(e) => save({ settings: { ...settings, social: { ...settings.social, [net]: e.target.value } } })} placeholder={net === "website" ? "https://…" : "Profile URL"} className="w-full" /></div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
@@ -1357,7 +1366,7 @@ export function EmailApp() {
       )}
 
       {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
-      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} />}
+      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
       {tab === "analytics" && <AnalyticsView />}

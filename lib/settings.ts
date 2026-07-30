@@ -530,6 +530,8 @@ export interface TenantSettings {
     defaultReply?: "reply" | "replyAll"; // which reply action leads in the inbox
     replySignatureId?: string;         // signature to use on replies/forwards ("" = none)
   };
+  /** Social profile links — entered once, auto-filled into campaign social rows. */
+  social?: { facebook?: string; instagram?: string; twitter?: string; tiktok?: string; youtube?: string; website?: string };
 
   /** Inventory — reusable categories, storage locations and seasons. */
   inventory?: {
@@ -845,6 +847,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   emailAssets: { quotes: [], images: [] },
   emailSignatures: [],
   emailPrefs: { undoSeconds: 5, defaultReply: "reply" },
+  social: {},
   registers: {
     timestamps: true,
     fields: { contact: true, emergency: true, password: true, school: true },
@@ -913,6 +916,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
     emailPrefs: { ...DEFAULT_SETTINGS.emailPrefs, ...(s.emailPrefs ?? {}) },
+    social: { ...DEFAULT_SETTINGS.social, ...(s.social ?? {}) },
     staff: { ...DEFAULT_SETTINGS.staff, ...(s.staff ?? {}) },
     learning: { ...DEFAULT_SETTINGS.learning, ...(s.learning ?? {}) },
     meals: { ...DEFAULT_SETTINGS.meals, ...(s.meals ?? {}) },
