@@ -489,7 +489,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               </div>
               <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Width</span>
-                {([["full", "Full"], ["half", "½ Half"], ["third", "⅓ Third"]] as const).map(([w, l]) => <button key={w} type="button" onClick={() => patch(selBlock.k!, { span: w })} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${(selBlock.span || "full") === w ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
+                {([["full", "Full"], ["half", "½ Half"]] as const).map(([w, l]) => <button key={w} type="button" onClick={() => patch(selBlock.k!, { span: w })} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${(selBlock.span === "half" ? "half" : "full") === w ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
                 <span className="ml-auto text-[9.5px] text-[var(--ink-3)]">sits beside the next same-width section</span>
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
