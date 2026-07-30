@@ -5,6 +5,8 @@ import { expireOffers } from "./waitlist";
 import { stripe } from "./stripe";
 import { syncFromStripe, updateMeteredQuantities } from "./billing";
 import { clearSubscriptionCache } from "../middleware/subscription";
+import { AUTO_EMAIL_DEFAULTS, type AutoEmailPrefs } from "./autoEmails";
+import { performEmailSend } from "./emailSend";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -254,6 +256,409 @@ async function tripConsentChase(): Promise<void> {
   }
 }
 
+// ── Automatic emails (Setup → Email → Automatic emails) ──────────────────
+// The sender behind settings.autoEmails: session reminders, payment-due
+// reminders, review requests, and the day-of register alerts. Every one
+// checks the tenant's flag first and delivers exactly once via fireOnce.
+
+const addDaysIso = (iso: string, n: number): string => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** UK wall-clock instants compared on one axis: dates parse as UTC midnight
+ *  on both sides, so the timezone offset cancels out of every comparison. */
+const atAbs = (date: string, minutes: number): number => Date.parse(`${date}T00:00:00Z`) + minutes * 60_000;
+
+const niceDate = (iso: string): string =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
+const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
+
+/** The whole libraries doc per tenant (settings + venues), cached per run. */
+function libraryLoader() {
+  const cache = new Map<string, Record<string, unknown>>();
+  return async (tenantId: string): Promise<Record<string, unknown>> => {
+    const hit = cache.get(tenantId);
+    if (hit) return hit;
+    const doc = await db.collection("libraries").doc(tenantId).get();
+    const data = (doc.data() ?? {}) as Record<string, unknown>;
+    cache.set(tenantId, data);
+    return data;
+  };
+}
+
+const autoEmailsOf = (lib: Record<string, unknown>): AutoEmailPrefs => ({
+  ...AUTO_EMAIL_DEFAULTS,
+  ...(((lib.settings as Record<string, unknown> | undefined)?.autoEmails ?? {}) as Partial<AutoEmailPrefs>),
+});
+
+interface SweepBlock {
+  id: string;
+  tenantId: string;
+  listingId?: string;
+  name?: string;
+  sessions?: { date: string; start: string; end: string }[];
+}
+
+/** Blocks that still have sessions today or later (endDate keeps the query
+ *  cheap; callers filter to the dates they care about). */
+async function upcomingBlocks(today: string): Promise<SweepBlock[]> {
+  const snap = await db.collection("blocks").where("endDate", ">=", today).get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<SweepBlock, "id">) }))
+    .filter((b) => b.tenantId);
+}
+
+type SweepBooking = {
+  ref: string; status?: string; email?: string; booker?: string; child?: string;
+  kids?: { name?: string }[]; days?: string[]; pay?: string; amount?: number; listing?: string;
+};
+
+/** Bookings per block, cached per run. */
+function blockBookingsLoader() {
+  const cache = new Map<string, SweepBooking[]>();
+  return async (blockId: string): Promise<SweepBooking[]> => {
+    const hit = cache.get(blockId);
+    if (hit) return hit;
+    const snap = await db.collection("bookings").where("blockId", "==", blockId).get();
+    const list = snap.docs.map((d) => d.data() as SweepBooking);
+    cache.set(blockId, list);
+    return list;
+  };
+}
+
+/** Is this booking in on this date? (No days field = every session.) */
+const bookedOn = (b: SweepBooking, date: string): boolean => !b.days || b.days.includes(date);
+
+const kidNames = (b: SweepBooking): string =>
+  b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean).join(", ") : (b.child ?? "Your child");
+
+// ── Session reminders ─────────────────────────────────────────────────────
+// sessionTiming hours before each booked session: child, date, times, venue,
+// what to bring, and the outstanding balance (never re-quoted once paid).
+async function sessionReminders(): Promise<void> {
+  const { date: today, minutes } = ukNow();
+  const nowAbs = atAbs(today, minutes);
+  const horizon = addDaysIso(today, 3); // timings top out at 72h
+  const blocks = await upcomingBlocks(today);
+  if (!blocks.length) return;
+  const libFor = libraryLoader();
+  const bookingsFor = blockBookingsLoader();
+  const listingCache = new Map<string, Record<string, unknown> | null>();
+
+  for (const block of blocks) {
+    const due = (block.sessions ?? []).filter((s) => {
+      if (s.date < today || s.date > horizon) return false;
+      const start = toMinutes(s.start);
+      return start !== null;
+    });
+    if (!due.length) continue;
+    const lib = await libFor(block.tenantId);
+    const prefs = autoEmailsOf(lib);
+    if (!prefs.sessionReminder) continue;
+    const leadMs = (Number(prefs.sessionTiming) || 48) * 3_600_000;
+
+    for (const s of due) {
+      const startAbs = atAbs(s.date, toMinutes(s.start)!);
+      // From the reminder point up to the start — late beats silent, but a
+      // reminder after the session began is noise.
+      if (nowAbs < startAbs - leadMs || nowAbs >= startAbs) continue;
+
+      let listing = listingCache.get(block.listingId ?? "");
+      if (listing === undefined) {
+        const snap = block.listingId ? await db.collection("listings").doc(block.listingId).get() : null;
+        listing = snap?.exists ? (snap.data() as Record<string, unknown>) : null;
+        listingCache.set(block.listingId ?? "", listing);
+      }
+      const blockListingName = listing?.title ?? listing?.name;
+      const venues = (lib.venues ?? []) as { id: string; name: string }[];
+      const venue = venues.find((v) => v.id === listing?.venueId)?.name;
+      const bring = typeof listing?.whatToBring === "string" ? listing.whatToBring.trim() : "";
+
+      for (const b of await bookingsFor(block.id)) {
+        if (b.status !== "Confirmed" || !b.email?.includes("@") || !bookedOn(b, s.date)) continue;
+        const owes = b.pay !== "Paid" && (b.amount ?? 0) > 0;
+        // The booking snapshots the listing name — the best fallback when the
+        // block doesn't link to a live listing doc.
+        const listingName = String(blockListingName ?? b.listing ?? "your activity");
+        await fireOnce(`sessrem_${block.tenantId}_${b.ref}_${s.date}`, { tenantId: block.tenantId }, () =>
+          notify({
+            tenantId: block.tenantId,
+            to: { kind: "parent", email: b.email! },
+            category: "booking",
+            title: `Reminder: ${listingName} — ${niceDate(s.date)}, ${s.start}`,
+            body: `${kidNames(b)} is booked in ${s.start}–${s.end}${venue ? ` at ${venue}` : ""}.`,
+            subject: `Reminder: ${listingName} on ${niceDate(s.date)}`,
+            emailHtml:
+              `<p><b>${kidNames(b)}</b> is booked in for <b>${listingName}</b> on <b>${niceDate(s.date)}</b>, ` +
+              `<b>${s.start}–${s.end}</b>${venue ? ` at <b>${venue}</b>` : ""}.</p>` +
+              (bring ? `<p><b>What to bring:</b> ${bring}</p>` : "") +
+              (owes ? `<p><b>Outstanding balance:</b> ${gbp(b.amount!)} — you can pay from My bookings.</p>` : ""),
+            href: "/custdash/bookings",
+            ref: b.ref,
+          }),
+        ).catch((err) => console.error(`[sweeps] session reminder ${b.ref}/${s.date}:`, (err as Error).message));
+      }
+    }
+  }
+}
+
+// ── Payment-due reminders ─────────────────────────────────────────────────
+// paymentDueTiming hours before a balance's due date: unpaid invoices (with
+// their pay link) and voucher bookings approaching their send-by date.
+async function paymentDueReminders(): Promise<void> {
+  const { date: today, minutes } = ukNow();
+  const nowAbs = atAbs(today, minutes);
+  const horizon = addDaysIso(today, 4);
+  const libFor = libraryLoader();
+  const wants = async (tenantId: string) => {
+    const prefs = autoEmailsOf(await libFor(tenantId));
+    return prefs.paymentDue ? (Number(prefs.paymentDueTiming) || 24) * 3_600_000 : null;
+  };
+  // "Due by the 14th" reads as before that day starts — the window opens
+  // paymentDueTiming hours before midnight and closes when the day arrives.
+  const inWindow = (dueDate: string, leadMs: number) => {
+    const dueAbs = atAbs(dueDate, 0);
+    return nowAbs >= dueAbs - leadMs && nowAbs < dueAbs;
+  };
+
+  const invoices = await db.collection("invoices")
+    .where("dueDate", ">=", today).where("dueDate", "<=", horizon).get();
+  for (const d of invoices.docs) {
+    const inv = d.data() as {
+      tenantId?: string; status?: string; dueDate?: string; amount?: number;
+      customerEmail?: string; customerName?: string; payToken?: string;
+    };
+    if (!inv.tenantId || inv.status !== "sent" || !inv.dueDate || !inv.customerEmail?.includes("@")) continue;
+    const leadMs = await wants(inv.tenantId);
+    if (leadMs === null || !inWindow(inv.dueDate, leadMs)) continue;
+    await fireOnce(`paydue_${d.id}_${inv.dueDate}`, { tenantId: inv.tenantId }, () =>
+      notify({
+        tenantId: inv.tenantId!,
+        to: { kind: "parent", email: inv.customerEmail! },
+        category: "billing",
+        title: `Payment due ${niceDate(inv.dueDate!)}: ${gbp(inv.amount ?? 0)}`,
+        body: `Your invoice for ${gbp(inv.amount ?? 0)} is due on ${niceDate(inv.dueDate!)}.`,
+        subject: `Reminder: payment of ${gbp(inv.amount ?? 0)} due ${niceDate(inv.dueDate!)}`,
+        emailHtml:
+          `<p>A friendly reminder that your invoice for <b>${gbp(inv.amount ?? 0)}</b> is due on ` +
+          `<b>${niceDate(inv.dueDate!)}</b>.${inv.payToken ? " You can pay it securely online:" : ""}</p>`,
+        ...(inv.payToken ? { href: `/pay/${inv.payToken}` } : {}),
+        ref: d.id,
+      }),
+    ).catch((err) => console.error(`[sweeps] payment due ${d.id}:`, (err as Error).message));
+  }
+
+  const vouchers = await db.collection("bookings").where("pay", "==", "Awaiting voucher payment").get();
+  for (const d of vouchers.docs) {
+    const b = d.data() as SweepBooking & { tenantId?: string; voucherScheme?: string; voucherSendBy?: string; listing?: string };
+    if (!b.tenantId || !b.email?.includes("@")) continue;
+    if (!b.voucherSendBy || b.voucherSendBy < today || b.voucherSendBy > horizon) continue;
+    if (b.status === "Cancelled" || b.status === "Declined") continue;
+    const leadMs = await wants(b.tenantId);
+    if (leadMs === null || !inWindow(b.voucherSendBy, leadMs)) continue;
+    const scheme = b.voucherScheme ?? "childcare voucher";
+    await fireOnce(`vouchdue_${b.tenantId}_${b.ref}_${b.voucherSendBy}`, { tenantId: b.tenantId }, () =>
+      notify({
+        tenantId: b.tenantId!,
+        to: { kind: "parent", email: b.email! },
+        category: "billing",
+        title: `Reminder: send your ${scheme} payment by ${niceDate(b.voucherSendBy!)}`,
+        body: `${gbp(b.amount ?? 0)} for ${b.listing ?? "your booking"} (${b.ref}) is still to come through ${scheme}.`,
+        subject: `Reminder: ${scheme} payment due by ${niceDate(b.voucherSendBy!)}`,
+        href: "/custdash/bookings",
+        ref: b.ref,
+      }),
+    ).catch((err) => console.error(`[sweeps] voucher due ${b.ref}:`, (err as Error).message));
+  }
+}
+
+// ── Review requests ───────────────────────────────────────────────────────
+// Once, the day after a family's LAST booked session with the provider — a
+// later booking simply moves that day and may earn another ask months on.
+async function reviewRequests(): Promise<void> {
+  const { date: today } = ukNow();
+  const snap = await db.collection("bookings").get();
+  if (snap.empty) return;
+  const libFor = libraryLoader();
+
+  // tenant__email → the latest booked day across every active booking.
+  const lastDay = new Map<string, { tenantId: string; email: string; last: string }>();
+  for (const d of snap.docs) {
+    const b = d.data() as SweepBooking & { tenantId?: string };
+    if (!b.tenantId || !b.email?.includes("@") || b.status !== "Confirmed" || !b.days?.length) continue;
+    const key = `${b.tenantId}__${b.email.toLowerCase()}`;
+    const max = [...b.days].sort().pop()!;
+    const hit = lastDay.get(key);
+    if (!hit || max > hit.last) lastDay.set(key, { tenantId: b.tenantId, email: b.email.toLowerCase(), last: max });
+  }
+
+  for (const { tenantId, email, last } of lastDay.values()) {
+    if (last >= today) continue; // still booked in — not their last session yet
+    const age = Math.floor((Date.parse(today) - Date.parse(last)) / 86_400_000);
+    if (age < 1 || age > 2) continue; // the day after (with one day's grace)
+    if (!autoEmailsOf(await libFor(tenantId)).reviewRequests) continue;
+    await fireOnce(`review_${tenantId}_${email}_${last}`, { tenantId }, () =>
+      notify({
+        tenantId,
+        to: { kind: "parent", email },
+        category: "booking",
+        title: "How did we do? We'd love your feedback",
+        body: `Your last booked session with us was on ${niceDate(last)} — if you have a minute, we'd love to hear how it went.`,
+        subject: "How did we do? We'd love your feedback",
+        emailHtml:
+          `<p>Your last booked session with us was on <b>${niceDate(last)}</b>.</p>` +
+          `<p>If you have a minute, reply to this email with your thoughts — or leave us a review. It genuinely helps a small provider.</p>`,
+        href: "/custdash",
+      }),
+    ).catch((err) => console.error(`[sweeps] review request ${tenantId}/${email}:`, (err as Error).message));
+  }
+}
+
+// ── Day-of register alerts ────────────────────────────────────────────────
+// Three alerts for the team, one scan: registers-open in the morning,
+// not-arrived shortly after a session starts (only when the register is
+// actually in use), and late-collection once a session has ended.
+const REG_OPEN_AT = 7 * 60 + 30;   // 07:30 — before the first session
+const NO_SHOW_GRACE = 15;          // minutes after start before chasing
+const NO_SHOW_STALE = 90;          // stop chasing once the session's long begun
+
+async function dayOfAlerts(): Promise<void> {
+  const { date: today, minutes: now } = ukNow();
+  const blocks = (await upcomingBlocks(today))
+    .map((b) => ({ ...b, todaySessions: (b.sessions ?? []).filter((s) => s.date === today) }))
+    .filter((b) => b.todaySessions.length);
+  if (!blocks.length) return;
+
+  const libFor = libraryLoader();
+  const bookingsFor = blockBookingsLoader();
+  const regSnap = await db.collection("registers").where("date", "==", today).get();
+  type RegEntry = { status?: string; collectedAt?: string | null };
+  const registers = new Map(regSnap.docs.map((d) => [
+    (d.data() as { blockId?: string }).blockId ?? "",
+    d.data() as { entries?: Record<string, RegEntry> },
+  ]));
+  const expected = async (b: (typeof blocks)[number]) =>
+    (await bookingsFor(b.id)).filter(
+      (bk) => (bk.status === "Confirmed" || bk.status === "Approval needed") && bookedOn(bk, today),
+    );
+
+  // Registers open — one morning heads-up per tenant with sessions today.
+  const byTenant = new Map<string, typeof blocks>();
+  for (const b of blocks) byTenant.set(b.tenantId, [...(byTenant.get(b.tenantId) ?? []), b]);
+  for (const [tenantId, tBlocks] of byTenant) {
+    if (now < REG_OPEN_AT) continue;
+    const lib = await libFor(tenantId);
+    if (!autoEmailsOf(lib).dayOf) continue;
+    let count = 0;
+    for (const b of tBlocks) count += (await expected(b)).length;
+    if (!count) continue;
+    await fireOnce(`regopen_${tenantId}_${today}`, { tenantId }, () =>
+      notify({
+        tenantId,
+        to: { kind: "tenant" },
+        category: "register",
+        title: `Registers open — ${count} ${count === 1 ? "child" : "children"} expected today`,
+        body: `${tBlocks.length} ${tBlocks.length === 1 ? "session" : "sessions"} running today. Open the registers to sign children in.`,
+        href: "/company/registers",
+      }),
+    ).catch((err) => console.error(`[sweeps] registers open ${tenantId}:`, (err as Error).message));
+  }
+
+  for (const b of blocks) {
+    const lib = await libFor(b.tenantId);
+    const prefs = autoEmailsOf(lib);
+    const reg = registers.get(b.id);
+    const entries = reg?.entries ?? {};
+
+    // Not arrived — expected children with no mark, once the session's begun.
+    // Only when the register is in use: a tenant not taking attendance in the
+    // app shouldn't be told nobody has arrived.
+    if (prefs.dayOf && reg) {
+      for (const s of b.todaySessions) {
+        const start = toMinutes(s.start);
+        if (start === null || now < start + NO_SHOW_GRACE || now >= start + NO_SHOW_STALE) continue;
+        const missing = (await expected(b)).filter((bk) => !entries[bk.ref]?.status);
+        if (!missing.length) continue;
+        const names = missing.map(kidNames).slice(0, 6).join(", ");
+        await fireOnce(`noshow_${b.id}_${today}`, { tenantId: b.tenantId }, () =>
+          notify({
+            tenantId: b.tenantId,
+            to: { kind: "tenant" },
+            category: "register",
+            title: `${missing.length} expected ${missing.length === 1 ? "child hasn't" : "children haven't"} been signed in — ${b.name ?? "today's session"}`,
+            body: `Not yet marked in: ${names}${missing.length > 6 ? "…" : ""}. Mark them present or absent so the day's numbers are right.`,
+            href: "/company/registers",
+          }),
+        ).catch((err) => console.error(`[sweeps] no-show ${b.id}:`, (err as Error).message));
+      }
+    }
+
+    // Late collection — signed in, not collected, session over + threshold.
+    if (prefs.lateCollection) {
+      const regSettings = ((lib.settings as Record<string, unknown> | undefined)?.registers ?? {}) as { lateThresholdMinutes?: number };
+      const threshold = Number(regSettings.lateThresholdMinutes) > 0 ? Number(regSettings.lateThresholdMinutes) : 15;
+      for (const s of b.todaySessions) {
+        const end = toMinutes(s.end);
+        if (end === null || now < end + threshold) continue;
+        const inRefs = Object.entries(entries).filter(([, e]) => e.status === "in" && !e.collectedAt).map(([ref]) => ref);
+        if (!inRefs.length) continue;
+        const byRef = new Map((await bookingsFor(b.id)).map((bk) => [bk.ref, bk]));
+        for (const ref of inRefs) {
+          const bk = byRef.get(ref);
+          if (!bk || !bookedOn(bk, today)) continue;
+          await fireOnce(`latecol_${b.id}_${today}_${ref}`, { tenantId: b.tenantId }, () =>
+            notify({
+              tenantId: b.tenantId,
+              to: { kind: "tenant" },
+              category: "register",
+              title: `Not collected yet: ${kidNames(bk)} — session ended ${s.end}`,
+              body: `${kidNames(bk)} is still signed in ${threshold}+ minutes after the session ended. Contact the family and log the collection when they arrive.`,
+              href: "/company/registers",
+              ref,
+            }),
+          ).catch((err) => console.error(`[sweeps] late collection ${b.id}/${ref}:`, (err as Error).message));
+        }
+      }
+    }
+  }
+}
+
+// ── Scheduled email sends ─────────────────────────────────────────────────
+// The Email composer's "Schedule send": fire each queued email through the
+// send engine once its UK wall-clock sendAt arrives. The queue doc keeps the
+// full payload (recipients frozen at schedule time), so firing is a straight
+// hand-off; fireOnce makes it exactly-once across instances.
+async function scheduledEmailSends(): Promise<void> {
+  const { date, minutes } = ukNow();
+  const now = `${date}T${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  const snap = await db.collection("scheduledEmails").where("status", "==", "scheduled").get();
+  for (const d of snap.docs) {
+    const s = d.data() as {
+      tenantId?: string; subject?: string; body?: string; html?: string;
+      recipients?: string[]; audience?: "all" | "one"; sendAt?: string;
+      createdBy?: string; createdByName?: string;
+    };
+    if (!s.tenantId || !s.sendAt || s.sendAt > now) continue;
+    await fireOnce(`schedmail_${d.id}`, { tenantId: s.tenantId }, async () => {
+      const sent = await performEmailSend({
+        tenantId: s.tenantId!,
+        subject: s.subject ?? "(no subject)",
+        body: s.body ?? "",
+        html: s.html,
+        recipients: (s.recipients ?? []).filter((r) => r.includes("@")),
+        audience: s.audience ?? "all",
+        sentBy: s.createdBy ?? "operator",
+        sentByName: s.createdByName ?? "Operator",
+        scheduledId: d.id,
+      });
+      await d.ref.set({ status: "sent", sentAt: new Date().toISOString(), emailId: sent.id }, { merge: true });
+    }).catch((err) => console.error(`[sweeps] scheduled email ${d.id}:`, (err as Error).message));
+  }
+}
+
 // ── Subscription sync ─────────────────────────────────────────────────────
 // Backstop for the Stripe webhook: pull every billed tenant's subscription
 // and reconcile status/periods + metered quantities. Keeps dev (no public
@@ -286,4 +691,10 @@ export function startSweeps(): void {
   sweep("waitlist-expiry", 5 * 60_000, expireOffers);
   sweep("subscription-sync", 6 * 60 * 60_000, subscriptionSync);
   sweep("trip-consent-chase", 6 * 60 * 60_000, tripConsentChase);
+  // Automatic emails (Setup → Email → Automatic emails).
+  sweep("session-reminders", 30 * 60_000, sessionReminders);
+  sweep("payment-due", 60 * 60_000, paymentDueReminders);
+  sweep("review-requests", 6 * 60 * 60_000, reviewRequests);
+  sweep("day-of-alerts", 10 * 60_000, dayOfAlerts);
+  sweep("scheduled-emails", 60_000, scheduledEmailSends);
 }

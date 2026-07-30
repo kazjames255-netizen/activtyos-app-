@@ -64,13 +64,21 @@ invites.post("/", async (req, res) => {
     sentTo,
   });
   if (sentTo) {
-    const tenant = await db.collection("tenants").doc(auth.tenantId).get();
+    const [tenant, lib] = await Promise.all([
+      db.collection("tenants").doc(auth.tenantId).get(),
+      db.collection("libraries").doc(auth.tenantId).get(),
+    ]);
+    // Settings → Staff & workforce: a personal welcome line for staff invites.
+    const inviteMessage = invitedRole === "staff"
+      ? (((lib.data()?.settings as { staff?: { inviteMessage?: string } } | undefined)?.staff?.inviteMessage ?? "").trim() || undefined)
+      : undefined;
     emailTeamInvite({
       to: sentTo,
       tenantName: (tenant.data()?.name as string | undefined) ?? "Your provider",
       role: invitedRole,
       link: `${webUrl}/signup?invite=${token}`,
       inviterName: req.user?.name ?? req.user?.email ?? undefined,
+      message: inviteMessage,
     });
   }
   res.status(201).json({ token, url: `/signup?invite=${token}`, sentTo });

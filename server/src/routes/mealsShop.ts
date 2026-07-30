@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { toMinutes, ukNow } from "../lib/scheduler";
 
 // Meal ordering (parent-facing meals shop). Operators publish a menu of
 // orderable meals (name + price); a parent who's booked with that provider
@@ -139,6 +140,35 @@ mealOrders.post("/", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const input = parsed.data;
   if (!(await hasBooking(input.tenantId, email))) { res.status(403).json({ error: "You can only order from a provider you've booked with" }); return; }
+
+  // Settings → Meals: ordering can be switched off entirely, and the order
+  // cut-off (hours before the day's first session) is enforced here — the
+  // kitchen needs final numbers in time.
+  {
+    const lib = await db.collection("libraries").doc(input.tenantId).get();
+    const meals = ((lib.data()?.settings as { meals?: { ordering?: boolean; orderCutoffHours?: number } } | undefined)?.meals ?? {});
+    if (meals.ordering === false) { res.status(403).json({ error: "This provider isn't taking meal orders at the moment" }); return; }
+    const cutoffHours = Number(meals.orderCutoffHours ?? 18);
+    if (cutoffHours > 0 && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+      // The day's earliest session start (09:00 when no block runs that day).
+      const blocks = await db.collection("blocks").where("tenantId", "==", input.tenantId).where("endDate", ">=", input.date).get();
+      let earliest: number | null = null;
+      for (const b of blocks.docs) {
+        for (const s of ((b.data() as { sessions?: { date: string; start: string }[] }).sessions ?? [])) {
+          if (s.date !== input.date) continue;
+          const m = toMinutes(s.start);
+          if (m !== null && (earliest === null || m < earliest)) earliest = m;
+        }
+      }
+      const { date: today, minutes: now } = ukNow();
+      const nowAbs = Date.parse(`${today}T00:00:00Z`) + now * 60_000;
+      const startAbs = Date.parse(`${input.date}T00:00:00Z`) + (earliest ?? 9 * 60) * 60_000;
+      if (nowAbs > startAbs - cutoffHours * 3_600_000) {
+        res.status(409).json({ error: `Meal ordering for that day has closed — orders need to be in ${cutoffHours} hours before the session` });
+        return;
+      }
+    }
+  }
 
   // Resolve every option from the server — the client never sends a price.
   const optionDocs = await db.getAll(...input.items.map((i) => optionsCol.doc(i.optionId)));

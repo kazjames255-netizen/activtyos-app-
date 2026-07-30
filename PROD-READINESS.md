@@ -127,6 +127,13 @@ new fakes the moment they're spotted.
   or branding demands it. (`server/src/lib/mailer.ts`)
 - [x] ~~Staff portal landing page is the legacy iframe~~ — real
   StaffDashApp now (today's sessions, open tasks, day-plan link).
+- [ ] **Inbound email has no provider connected** — the Email Inbox backend
+  is live (`POST /api/emails/inbound`, store + folder/snooze endpoints) but
+  nothing feeds it: pick an inbound-parse provider (Postmark/SES/Mailgun/
+  Cloudflare Email Workers), point it at the webhook, and set
+  `INBOUND_EMAIL_SECRET` (the code falls back to a dev secret when unset —
+  fine only while nothing is deployed). Until then operator inboxes are
+  empty. (`server/src/routes/emails.ts`)
 - [ ] **Firestore has no Storage bucket** — images live as Firestore docs
   served via `/api/images/:id`. Enable Blaze/Storage and swap the backing
   store in `server/src/routes/uploads.ts` before image volume grows.

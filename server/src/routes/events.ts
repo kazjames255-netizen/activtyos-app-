@@ -144,6 +144,8 @@ events.get("/", async (req, res) => {
     listen(db.collection("certifications").where("tenantId", "==", tenantId), "certifications");
     listen(db.collection("discountCodes").where("tenantId", "==", tenantId), "discountCodes");
     listen(db.collection("emails").where("tenantId", "==", tenantId), "emails");
+    listen(db.collection("emailMessages").where("tenantId", "==", tenantId), "emailMessages");
+    listen(db.collection("scheduledEmails").where("tenantId", "==", tenantId), "scheduledEmails");
     listen(db.collection("wallet").where("tenantId", "==", tenantId), "wallet");
     listen(db.collection("notifications").where("tenantId", "==", tenantId), "notifications");
     listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions");

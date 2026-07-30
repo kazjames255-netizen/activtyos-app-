@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
+import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
 
@@ -226,7 +227,8 @@ payments.post("/checkout", async (req, res) => {
         automatic_payment_methods: { enabled: true },
         description: `${tenant.data()?.name ?? "ActivityOS"} — booking${bookings.length > 1 ? "s" : ""} ${bookings.map((b) => b.ref).join(", ")}`,
         metadata: { tenantId, refs: bookings.map((b) => b.ref).join(","), email },
-        receipt_email: email,
+        // Stripe's card receipt is the "payments" automatic email.
+        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}),
       },
       stripeAccount ? { stripeAccount } : undefined,
     );

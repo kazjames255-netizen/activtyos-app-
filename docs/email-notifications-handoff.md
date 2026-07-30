@@ -1,5 +1,23 @@
 # Email client — backend spec (Amir)
 
+> **STATUS — built 30 Jul 2026 (Amir).** Everything below is live except the
+> items marked *deferred*. In short: Inbox has a real store + inbound webhook
+> (`POST /api/emails/inbound`, `x-inbound-secret`; set `INBOUND_EMAIL_SECRET`
+> and point a mail provider's inbound-parse at it — no provider is connected
+> yet, so inboxes are empty until then); schedule-send is server-side
+> (`/api/emails/schedule[d]` + a 60s sweep) and cancellable from Inbox →
+> Scheduled; Audiences are computed live (`GET /api/emails/audiences`);
+> delivery + opens are recorded per send (transport result + a public pixel)
+> and the Campaigns/Analytics tabs read the real numbers; merge fields —
+> including booking-scoped ones — resolve per recipient at send time, so the
+> template lock is lifted. The Automatic-emails sender is built as scheduler
+> sweeps (session reminders, payment-due, review requests, day-of register
+> alerts incl. late collection) and every transactional email checks its
+> `autoEmails` flag first. **Deferred:** real file attachments (needs an
+> upload step + nodemailer `attachments`), header-level Cc/Bcc, click
+> tracking / unsubscribe footer, and a first-class campaign object (send
+> history + scheduled queue serve as the campaign records).
+
 The Email page is now a full client (mirrors the Build Manual): tabs **Inbox ·
 Campaigns · Audiences · Templates · Automatic emails · Analytics · Compose**.
 Front-end is built; these tabs need backend:

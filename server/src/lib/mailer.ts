@@ -47,7 +47,10 @@ function getTransport() {
   return transportPromise;
 }
 
-export async function sendMail(to: string, subject: string, html: string): Promise<void> {
+/** Returns true when the transport accepted the message — the campaign
+ *  history uses it as the "delivered" count. Callers that don't care can
+ *  keep treating this as fire-and-forget. */
+export async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
@@ -60,7 +63,9 @@ export async function sendMail(to: string, subject: string, html: string): Promi
       `[mail] "${subject}" → ${to}` +
         (ethereal ? ` (preview: ${nodemailer.getTestMessageUrl(info)})` : ""),
     );
+    return true;
   } catch (e) {
     console.error(`[mail] failed to send "${subject}" to ${to}:`, e);
+    return false;
   }
 }

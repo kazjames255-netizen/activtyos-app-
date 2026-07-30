@@ -1,4 +1,5 @@
 import type { Booking } from "../../../features/bookings/types";
+import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail } from "./mailer";
 import { webUrl } from "./stripe";
 
@@ -6,6 +7,24 @@ import { webUrl } from "./stripe";
 // and sending domains come with the white-label milestone.
 
 const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
+
+/** Send unless the provider has switched this category of automatic email off
+ *  (Setup → Email → Automatic emails). Same fire-and-forget contract as
+ *  sendMail: a suppressed or failed email never fails the booking. */
+function sendGated(
+  tenantId: string | undefined,
+  key: keyof Pick<AutoEmailPrefs, "bookings" | "payments" | "waitlist">,
+  to: string,
+  subject: string,
+  html: string,
+): void {
+  void autoEmailOn(tenantId, key)
+    .then((on) => {
+      if (!on) { console.log(`[mail] "${subject}" → ${to} skipped (autoEmails.${key} off)`); return; }
+      return sendMail(to, subject, html);
+    })
+    .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
+}
 
 function layout(providerName: string, title: string, bodyHtml: string, b: Booking): string {
   return `
@@ -31,7 +50,9 @@ function layout(providerName: string, title: string, bodyHtml: string, b: Bookin
 }
 
 export function emailBookingRequestReceived(b: Booking, providerName: string): void {
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "bookings",
     b.email,
     `Booking request received — ${b.listing} (${b.ref})`,
     layout(
@@ -45,7 +66,9 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "bookings",
     b.email,
     `Complete your booking — ${b.listing} (${b.ref})`,
     layout(
@@ -60,7 +83,9 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
 }
 
 export function emailBookingConfirmed(b: Booking, providerName: string): void {
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "bookings",
     b.email,
     `Booking confirmed — ${b.listing} (${b.ref})`,
     layout(
@@ -73,7 +98,9 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
 }
 
 export function emailBookingDeclined(b: Booking, providerName: string): void {
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "bookings",
     b.email,
     `Booking update — ${b.listing} (${b.ref})`,
     layout(
@@ -87,7 +114,9 @@ export function emailBookingDeclined(b: Booking, providerName: string): void {
 }
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "payments",
     b.email,
     `Refund approved — ${b.listing} (${b.ref})`,
     layout(
@@ -104,7 +133,9 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
   const until = b.offerExpiresAt
     ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : "";
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "waitlist",
     b.email,
     `A place has opened up — ${b.listing} (${b.ref})`,
     layout(
@@ -169,6 +200,8 @@ export function emailTeamInvite(p: {
   role: "franchise" | "staff";
   link: string;
   inviterName?: string;
+  /** Settings → Staff & workforce: a personal welcome line from the provider. */
+  message?: string;
 }): void {
   const what =
     p.role === "franchise"
@@ -183,6 +216,7 @@ export function emailTeamInvite(p: {
         ${p.inviterName ? `${p.inviterName} has invited you` : "You've been invited"} to ${what}.
         The button below creates your account and links it to theirs — nothing to configure.
       </p>
+      ${p.message ? `<blockquote style="border-left:3px solid #cdddf7;margin:0 0 14px;padding:6px 0 6px 14px;color:#4a4763;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(p.message)}</blockquote>` : ""}
       <p style="margin:0 0 16px">
         <a href="${p.link}" style="display:inline-block;background:#2f6bd8;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Accept the invite</a>
       </p>
@@ -205,7 +239,13 @@ export function emailFamilyBookingCreated(
   const total = bookings.reduce((s, x) => s + x.amount, 0);
   const refs = bookings.map((x) => x.ref).join(", ");
   const payUrl = `${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}`;
-  void sendMail(
+  // When the booking just created their account this email carries the ONLY
+  // set-password link the family will ever get — the bookings toggle can
+  // silence a courtesy confirmation, never account access.
+  const send = opts.accountCreated && opts.passwordLink
+    ? (to: string, subject: string, html: string) => void sendMail(to, subject, html)
+    : (to: string, subject: string, html: string) => sendGated(b.tenantId, "bookings", to, subject, html);
+  send(
     b.email,
     `Your booking with ${providerName} (${refs})`,
     `
@@ -254,7 +294,9 @@ export function emailVoucherInstructions(
   const sendBy = b.voucherSendBy
     ? new Date(`${b.voucherSendBy}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
     : null;
-  void sendMail(
+  sendGated(
+    b.tenantId,
+    "payments",
     b.email,
     `Pay by childcare voucher — ${b.listing} (${b.ref})`,
     layout(

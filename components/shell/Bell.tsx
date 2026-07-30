@@ -33,6 +33,8 @@ const CATEGORY_GLYPH: Record<string, string> = {
   calendar: "🗓️",
   message: "✉️",
   moment: "📸",
+  register: "📋",
+  billing: "💳",
 };
 
 // "5m ago" / "3h ago" / "2d ago" — enough precision for a bell.

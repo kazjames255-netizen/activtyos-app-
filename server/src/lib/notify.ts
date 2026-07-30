@@ -31,6 +31,7 @@ export type NotifyCategory =
   | "calendar"
   | "message"
   | "moment"
+  | "register"
   | "billing";
 
 export interface NotificationDoc {

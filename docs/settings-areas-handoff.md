@@ -1,5 +1,18 @@
 # Settings & features — new tabs (front-end done) + backend spec (Amir)
 
+> **STATUS — enforced 30 Jul 2026 (Amir).** `staff.requireDBS` /
+> `requireCompliance` now block rostering on POST/PUT `/api/shifts` (409 with
+> the reason; only once the certifications register has entries, so a tenant
+> not tracking compliance is never locked out). `staff.assignByLeads` stops
+> the staff role changing ratio-board group cover; `staff.inviteMessage`
+> rides on staff invite emails; `staff.defaultRatioTarget` is returned as
+> `target` by `GET /api/ratios` (front-end can seed the board from it).
+> `meals.ordering` off → 403 on `POST /api/meal-orders`; `orderCutoffHours`
+> is enforced against the day's first session start (409 past cut-off).
+> **Deferred:** the Learning observations store (no UI consumes it yet —
+> build it when the observations screen lands) and tinting customer pages
+> with `brandColor` (front-end follow-up).
+
 Added five tabs to the operator **Settings & features** screen
 (`features/setup/SetupApp.tsx`), matching the Build Manual, in the standard
 title-tab/colouring style. All persist through the existing settings store

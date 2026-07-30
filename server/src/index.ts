@@ -35,7 +35,7 @@ import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
-import { emails } from "./routes/emails";
+import { emails, emailsInbound, emailsOpen } from "./routes/emails";
 import { mealOptions, mealOrders } from "./routes/mealsShop";
 import { documents } from "./routes/documents";
 import { compliance } from "./routes/compliance";
@@ -106,6 +106,10 @@ app.use("/api/events", events);
 // Images are public (<img> tags can't send Authorization; ids are the
 // secret). Uploading them requires an operator account — see routes/uploads.
 app.use("/api/images", images);
+// Email open-tracking pixel — fetched by mail clients, so it can't carry auth.
+app.use("/api/emails/open", emailsOpen);
+// Inbound email webhook — called by a mail platform with a shared secret.
+app.use("/api/emails/inbound", emailsInbound);
 
   // Map tiles are public (proxied so the OS key stays server-side; <img>/map
   // tags can't send auth). See routes/geo.ts.

@@ -5,6 +5,7 @@ import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { DEFAULT_BANDS, bandFor, requiredStaff } from "../lib/ratios";
+import { staffPolicy } from "../lib/staffPolicy";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Ratios & groups — is a session safely staffed, and who's in which group?
@@ -162,7 +163,10 @@ ratios.get("/", async (req, res) => {
     };
   });
   sessions.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.blockName < b.blockName ? -1 : 1));
-  res.json({ date, bands: DEFAULT_BANDS, sessions });
+  // The board's children-per-adult target seeds from Settings → Staff &
+  // workforce (the front-end may still override per day).
+  const { defaultRatioTarget } = await staffPolicy(tenantId!);
+  res.json({ date, bands: DEFAULT_BANDS, target: defaultRatioTarget, sessions });
 });
 
 // ── The day BOARD (handoff §R): the operator's drag overrides (child →
@@ -199,6 +203,15 @@ ratios.put("/board/:date", async (req, res) => {
   if (!validDate(req.params.date)) { res.status(400).json({ error: "Bad date" }); return; }
   const parsed = boardSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // Settings → Staff & workforce "assignByLeads": staff can still run the day
+  // (child → group moves), but changing WHO COVERS a group is management's.
+  if (auth.role === "staff" && (await staffPolicy(auth.tenantId)).assignByLeads) {
+    const existing = (await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get()).data();
+    if (JSON.stringify(parsed.data.groupStaff) !== JSON.stringify(existing?.groupStaff ?? {})) {
+      res.status(403).json({ error: "Assigning staff to groups is limited to leads/managers (Settings → Staff & workforce)" });
+      return;
+    }
+  }
   await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).set({
     tenantId: auth.tenantId,
     date: req.params.date,

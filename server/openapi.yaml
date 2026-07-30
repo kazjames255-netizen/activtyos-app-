@@ -82,6 +82,47 @@ info:
       Online card capture is the same deferred-Stripe piece as the booking
       checkout; not wired here yet. Realtime `mealOptions` / `mealOrders`.
 
+    ## v0.28.0 — Email client backend + automatic emails
+
+    The Email page's backend (docs/email-notifications-handoff.md +
+    docs/settings-areas-handoff.md, built in full):
+    - **Automatic emails honoured** — every transactional send checks the
+      tenant's `settings.autoEmails` flags first (bookings / payments /
+      waitlist / dayOf / lateCollection; defaults all ON, announcements OFF).
+      New scheduler sweeps deliver: session reminders (`sessionTiming` hours
+      before each booked session, with venue + outstanding balance), payment-due
+      reminders (unpaid invoices + voucher send-by dates), review requests (once,
+      the day after a family's LAST booked session), and day-of register alerts
+      (registers open / not-arrived / late collection, category `register`).
+    - **`POST /api/emails/schedule`** — queue a full send for a future UK
+      wall-clock `sendAt` (recipients frozen at schedule time);
+      **`GET /api/emails/scheduled`** lists the queue,
+      **`DELETE /api/emails/scheduled/{id}`** cancels before it fires. A 60s
+      sweep fires due sends through the same engine.
+    - **Inbox** — `emailMessages` store: **`GET /api/emails/messages`**,
+      **`PATCH /api/emails/messages/{id}`** (star/read/labels/folder/snooze —
+      an expired snooze wakes back to inbox on read),
+      **`DELETE /api/emails/messages/{id}`**. Inbound mail lands via
+      **`POST /api/emails/inbound`** (public, `x-inbound-secret` header —
+      point a provider's inbound-parse webhook at it; tenant resolved from the
+      To address or an explicit tenantId).
+    - **`GET /api/emails/audiences`** — live CRM segments (all / active /
+      past customers / waitlisted / new-enquiries-no-booking), membership
+      computed at request time.
+    - **Delivery + open tracking** — every send records `delivered` (transport
+      accepts) and `openedBy` (public pixel `GET /api/emails/open/{id}?r=`)
+      on its `emails` history doc; Campaigns/Analytics read these.
+    - **Per-recipient merge fields** — `{ParentName} {ChildName} {ListingName}
+      {SessionDate} {VenueName} {BookingRef} {ProviderName}` resolve per
+      recipient from each family's most relevant booking at send time (neutral
+      fallbacks otherwise), so booking-scoped templates work in bulk sends.
+    - **Settings enforced server-side** — `staff.requireDBS`/`requireCompliance`
+      block rostering on POST/PUT `/api/shifts` (once the certifications
+      register is in use), `staff.assignByLeads` stops the staff role changing
+      ratio-board group cover, `staff.inviteMessage` rides on staff invites,
+      `staff.defaultRatioTarget` returned as `target` by `GET /api/ratios`,
+      `meals.ordering`/`orderCutoffHours` enforced on `POST /api/meal-orders`.
+
     ## v0.27.0 — Email (the out-of-app channel)
 
     Completes Communication. An operator emails their families through the
@@ -1782,7 +1823,8 @@ paths:
       responses:
         "201": { description: "The created order (placed/Unpaid, server total)" }
         "400": { $ref: "#/components/responses/BadRequest" }
-        "403": { $ref: "#/components/responses/Forbidden" }
+        "403": { description: "Not a parent, no booking with this provider, or the provider has turned meal ordering off (settings.meals.ordering)" }
+        "409": { description: "Past the order cut-off — settings.meals.orderCutoffHours before the day's first session" }
 
   /api/meal-orders/{id}/pay:
     post:
@@ -1891,12 +1933,149 @@ paths:
                 body: { type: string }
                 audience: { type: string, enum: [all, one], default: all }
                 to: { type: string, description: "recipient for audience=one" }
+                recipients: { type: array, items: { type: string }, description: "explicit list (overrides the all audience)" }
+                cc: { type: string, description: "comma-separated; added to the recipient set" }
+                bcc: { type: string, description: "comma-separated; added to the recipient set" }
+                html: { type: string, description: "pre-rendered designed document, sent as-is" }
                 dryRun: { type: boolean, default: false, description: "preview recipients; no send, no record" }
       responses:
         "200": { description: "dry-run: {dryRun:true, recipientCount, sample}" }
-        "201": { description: "sent: the recorded email {recipientCount, …}" }
+        "201": { description: "sent: the recorded email {recipientCount, status:sending, delivered, openedBy, …}; merge fields resolve per recipient" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/audiences:
+    get:
+      tags: [emails]
+      summary: Live CRM segments (all/active/past/waitlisted/enquiries) — operators
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "[{id, name, desc, count, emails[]}] — membership computed at request time" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/schedule:
+    post:
+      tags: [emails]
+      summary: Queue a send for a future UK wall-clock time (operators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body, sendAt]
+              properties:
+                subject: { type: string }
+                body: { type: string }
+                html: { type: string }
+                audience: { type: string, enum: [all, one], default: all }
+                to: { type: string }
+                recipients: { type: array, items: { type: string } }
+                cc: { type: string }
+                bcc: { type: string }
+                sendAt: { type: string, description: "YYYY-MM-DDTHH:MM, UK wall clock; must be in the future" }
+      responses:
+        "201": { description: "the queued send (recipients resolved + frozen now; a 60s sweep fires it at sendAt)" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/scheduled:
+    get:
+      tags: [emails]
+      summary: The scheduled-send queue, soonest first (operators)
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "[{id, subject, recipientCount, sendAt, status: scheduled|sent|cancelled}] — recipient list not exposed" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/scheduled/{id}:
+    delete:
+      tags: [emails]
+      summary: Cancel a scheduled send that hasn't fired yet (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true} — status becomes cancelled" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Already sent }
+
+  /api/emails/messages:
+    get:
+      tags: [emails]
+      summary: The Inbox — received messages, newest first (operators)
+      description: An expired snooze wakes its message back into the inbox (unread) as a side effect of this read.
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "[{id, from, fromEmail?, to?, subject, body, html?, folder, labels[], unread, starred, snoozedUntil, attachments[], at}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/messages/{id}:
+    patch:
+      tags: [emails]
+      summary: Star / read / label / move / snooze a message (operators)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                folder: { type: string, enum: [inbox, archive, snoozed, spam, trash] }
+                unread: { type: boolean }
+                starred: { type: boolean }
+                labels: { type: array, items: { type: string } }
+                snoozedUntil: { type: string, nullable: true, description: "ISO time; setting it moves the message to snoozed" }
+      responses:
+        "200": { description: The updated message }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [emails]
+      summary: Permanently delete a message (operators; the client trashes first)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/emails/inbound:
+    post:
+      tags: [emails]
+      summary: Inbound email webhook (public — authenticated by x-inbound-secret)
+      description: >
+        Point a mail platform's inbound-parse route (SES / Postmark / Mailgun /
+        Cloudflare Email Workers…) here. The tenant is resolved from the To
+        address (matching the tenant's notifyEmail/email) or an explicit
+        tenantId added by the forwarding rule. INBOUND_EMAIL_SECRET must be set
+        in any deployed environment.
+      parameters: [{ name: x-inbound-secret, in: header, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId: { type: string }
+                to: { type: string }
+                from: { type: string }
+                fromEmail: { type: string }
+                subject: { type: string }
+                text: { type: string }
+                html: { type: string }
+                attachments: { type: array, items: { type: object, properties: { name: { type: string }, size: { type: string } } } }
+      responses:
+        "201": { description: "{id, ok:true}" }
+        "401": { description: Bad inbound secret }
+        "404": { description: No provider matches that address }
+
+  /api/emails/open/{id}:
+    get:
+      tags: [emails]
+      summary: Open-tracking pixel (public — embedded in every send)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: r, in: query, required: false, description: recipient email, schema: { type: string } }
+      responses:
+        "200": { description: A 1×1 gif; the open is recorded onto the send's history doc }
 
   /api/splitfees:
     get:
@@ -2694,6 +2873,7 @@ paths:
         "201": { description: The created shift }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Blocked by Settings → Staff & workforce: requireDBS (missing/expired DBS) or requireCompliance (expired first aid / safeguarding cert). Only enforced once the certifications register has entries." }
 
   /api/shifts/{id}:
     put:

@@ -2,9 +2,12 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { staffRosterBlock } from "../lib/staffPolicy";
 
 // Schedule & rota (Run the day) — staff shifts. Operators build the rota;
 // staff read it (they need to know when they're on). Tenant-scoped.
+// Settings → Staff & workforce policy is enforced here: requireDBS /
+// requireCompliance can refuse to roster someone whose checks aren't in order.
 export const shifts = Router();
 const col = db.collection("shifts");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
@@ -40,6 +43,8 @@ shifts.post("/", async (req, res) => {
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = shiftSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const block = await staffRosterBlock(auth.tenantId, parsed.data.staffName);
+  if (block) { res.status(409).json({ error: block }); return; }
   const doc = { ...parsed.data, tenantId: auth.tenantId, createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
@@ -58,6 +63,12 @@ shifts.put("/:id", async (req, res) => {
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Shift not found" }); return; }
   const parsed = shiftSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // Re-rostering to a different person re-runs the compliance policy; edits
+  // that just move times don't.
+  if (parsed.data.staffName && parsed.data.staffName !== o.snap.data()!.staffName) {
+    const block = await staffRosterBlock(req.auth!.tenantId!, parsed.data.staffName);
+    if (block) { res.status(409).json({ error: block }); return; }
+  }
   await o.snap.ref.set(parsed.data, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
