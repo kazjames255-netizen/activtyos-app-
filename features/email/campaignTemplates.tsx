@@ -12,7 +12,7 @@
 // background so any palette stays legible.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { useRef, useState, type PointerEvent as RPE } from "react";
+import { useEffect, useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
 
@@ -209,25 +209,28 @@ export const TEMPLATES: CampaignTemplate[] = [
 
 export const CATEGORIES = ["Offers & bookings", "Announcements", "Welcome", "News & updates", "Seasonal", "Admin & notices"];
 export const templateOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
-// Group consecutive half/third-width blocks into side-by-side rows.
+// A block's width as a fraction of the row.
+export const widthOf = (b: Block) => (b.span === "half" ? 0.5 : b.span === "third" ? 1 / 3 : 1);
+// Flow blocks into rows: full = its own row; half/third pack together until the row is full.
 export function groupRows(blocks: Block[]): Block[][] {
-  const rows: Block[][] = [];
-  for (let i = 0; i < blocks.length;) {
-    const span = blocks[i].span && blocks[i].span !== "full" ? blocks[i].span : null;
-    if (!span) { rows.push([blocks[i]]); i++; continue; }
-    const per = span === "half" ? 2 : 3; const grp = [blocks[i]]; let j = i + 1;
-    while (j < blocks.length && grp.length < per && blocks[j].span === span) { grp.push(blocks[j]); j++; }
-    rows.push(grp); i = j;
+  const rows: Block[][] = []; let cur: Block[] = []; let sum = 0;
+  for (const b of blocks) {
+    const w = widthOf(b);
+    if (w >= 1) { if (cur.length) { rows.push(cur); cur = []; sum = 0; } rows.push([b]); continue; }
+    if (sum + w > 1.001) { rows.push(cur); cur = []; sum = 0; }
+    cur.push(b); sum += w;
   }
+  if (cur.length) rows.push(cur);
   return rows;
 }
 export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 0): string {
   const t = theme(accentHex(d.accent) || d.accent);
   const html = groupRows(d.blocks || []).map((grp) => {
-    if (grp.length === 1 && (!grp[0].span || grp[0].span === "full")) return renderBlock(grp[0], t, c, now);
-    const w = Math.floor(100 / grp.length);
-    const cells = grp.map((g) => `<td valign="top" width="${w}%" style="vertical-align:top"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(g, t, c, now)}</table></td>`).join("");
-    return `<tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>${cells}</tr></table></td></tr>`;
+    if (grp.length === 1 && widthOf(grp[0]) >= 1) return renderBlock(grp[0], t, c, now);
+    let used = 0;
+    const cells = grp.map((g) => { const w = Math.round(widthOf(g) * 100); used += w; return `<td valign="top" width="${w}%" style="vertical-align:top"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(g, t, c, now)}</table></td>`; }).join("");
+    const spacer = used < 99 ? `<td width="${100 - used}%">&nbsp;</td>` : "";
+    return `<tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>${cells}${spacer}</tr></table></td></tr>`;
   }).join("");
   return wrapRows(html);
 }
@@ -298,7 +301,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
   const [history, setHistory] = useState<CampaignDesign[]>([]);
-  const [nowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => { const id = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(id); }, []);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
@@ -420,8 +424,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                   <div className="w-[640px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
                     {groupRows(design.blocks).map((rowBlocks) => (
                       <div key={rowBlocks[0].k} className="flex items-stretch">
-                        {rowBlocks.map((b) => { const i = design.blocks.indexOf(b); return (
-                          <div key={b.k} className="group relative min-w-0 flex-1" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
+                        {rowBlocks.map((b) => { const i = design.blocks.indexOf(b); const fw = `${(widthOf(b) * 100).toFixed(3)}%`; return (
+                          <div key={b.k} className="group relative min-w-0" style={{ flex: `0 0 ${fw}`, maxWidth: fw }} onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
                             <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company, nowMs)}</table>` }} />
                             <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
                             <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
