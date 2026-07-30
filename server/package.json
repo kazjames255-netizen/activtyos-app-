@@ -11,6 +11,7 @@
     "create-admin": "tsx src/createAdmin.ts",
     "test:isolation": "tsx src/isolationTest.mts",
     "e2e-cleanup": "tsx src/e2eCleanup.ts",
+    "e2e-unwall": "tsx src/e2eUnwall.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

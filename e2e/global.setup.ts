@@ -67,6 +67,11 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
       execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-cleanup", "--", "--data-only"], {
         stdio: "pipe",
       });
+      // Keep the standing operators clear of the plan gate (idempotent — see
+      // the provisioning path below for why).
+      const tids = [existing.accounts.freelancer.tenantId, existing.accounts.company.tenantId].filter(Boolean) as string[];
+      if (tids.length)
+        execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", ...tids], { stdio: "pipe" });
       return;
     }
   }
@@ -92,6 +97,16 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
     });
     accounts[role] = { role, email: email(role), uid: s.uid, tenantId: r.tenantId, tenantName };
   }
+
+  // Fresh operator signups are seeded subscription status "none" and would be
+  // walled by the plan gate on every UI login. The suite's standing accounts
+  // must behave like pre-gate tenants (the billing spec mints its own fresh
+  // account to test the gate), so strip the seeded field server-side.
+  execFileSync(
+    "npm",
+    ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", accounts.freelancer.tenantId!, accounts.company.tenantId!],
+    { stdio: "inherit" },
+  );
 
   // Franchise + staff join the company tenant via invite tokens.
   const company = await fbTrySignIn(accounts.company.email);

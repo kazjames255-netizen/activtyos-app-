@@ -29,6 +29,7 @@ const TENANT_SCOPED = [
   "customerGroups", "childFiles", "broadcasts", "wallet", "walletEntries",
   "notifications", "schedulerFired",
   "calendarEvents", "inventory",
+  "emailMessages", "scheduledEmails",
 ];
 
 // Collections owned by a USER (parents have no tenant): field → collection.
@@ -95,6 +96,9 @@ async function main() {
       const snap = await db.collection(col).where("tenantId", "==", tid).get();
       await deleteSnap(col, snap.docs);
     }
+    // HQ support threads key the tenant as providerId, not tenantId.
+    const support = await db.collection("supportThreads").where("providerId", "==", tid).get();
+    await deleteSnap("supportThreads", support.docs);
     if (!DATA_ONLY) {
       await db.recursiveDelete(db.collection("libraries").doc(tid));
       await db.recursiveDelete(db.collection("tenants").doc(tid));
