@@ -840,6 +840,7 @@ export function EmailApp() {
   const [extraInput, setExtraInput] = useState("");
   const [sigChoice, setSigChoice] = useState<string | null>(null); // null = follow default
   const [sigMgr, setSigMgr] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ name: string; email: string } | null>(null); // focused 1:1 reply mode
   const [schedOpen, setSchedOpen] = useState(false);
   const [schedAt, setSchedAt] = useState("");
   const [undoSend, setUndoSend] = useState<{ payload: Record<string, unknown>; count: number; hadAttachments: boolean } | null>(null);
@@ -973,7 +974,7 @@ export function EmailApp() {
     try {
       const r = await apiPost<{ recipientCount: number }>("/api/emails/send", payload);
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${hadAttachments ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
-      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); refresh();
+      setSubject(""); setBody(""); setTo(""); setCc(""); setBcc(""); setExtraTo([]); setAttachments([]); setReplyTo(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
     finally { setSending(false); }
   }, [refresh]);
@@ -1022,7 +1023,7 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
-      {tab === "inbox" && <InboxView history={history} onCompose={() => setTab("compose")} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
       {tab === "audiences" && <AudiencesView onUse={() => setTab("campaigns")} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
@@ -1043,17 +1044,29 @@ export function EmailApp() {
         </div>
       )}
       <Card className="mb-4 p-4">
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          <div>
-            <FieldLabel>Audience</FieldLabel>
-            <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing")} className="w-full">
-              <option value="all">All families ({families.length ? included.length : reach ?? 0})</option>
-              <option value="listing">Families on a listing</option>
-              <option value="one">A single address</option>
-            </Select>
+        {replyTo ? (
+          <div className="rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{replyTo.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
+              <span className="text-[13px] font-bold text-[var(--ink)]">↩ Reply to {replyTo.name}</span>
+              {replyTo.email && <span className="text-[12px] text-[var(--ink-3)]">{replyTo.email}</span>}
+              <button type="button" onClick={() => setReplyTo(null)} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f]">Send to more people →</button>
+            </div>
+            <div className="mt-2"><FieldLabel>To</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>
           </div>
-          {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
-        </div>
+        ) : (
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <div>
+              <FieldLabel>Audience</FieldLabel>
+              <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing")} className="w-full">
+                <option value="all">All families ({families.length ? included.length : reach ?? 0})</option>
+                <option value="listing">Families on a listing</option>
+                <option value="one">A single address</option>
+              </Select>
+            </div>
+            {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
+          </div>
+        )}
         {audience === "listing" && (
           <div className="mt-2">
             <FieldLabel>Listings — everyone booked on the ones you pick ({listingEmails.length})</FieldLabel>
@@ -1073,13 +1086,15 @@ export function EmailApp() {
             </div>
           ) : <button type="button" onClick={() => setShowCcBcc(true)} className="text-[12px] font-bold text-[#1d3a8f]">＋ Add Cc / Bcc</button>}
         </div>
-        <div className="mt-2">
-          <FieldLabel>Also send to — add anyone (yourself, a colleague…)</FieldLabel>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">
-            {extraTo.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setExtraTo((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}
-            <input value={extraInput} onChange={(e) => setExtraInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtra(); } }} onBlur={addExtra} placeholder="name@example.com — Enter to add" className="min-w-[180px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" />
+        {!replyTo && (
+          <div className="mt-2">
+            <FieldLabel>Also send to — add anyone (yourself, a colleague…)</FieldLabel>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">
+              {extraTo.map((e) => <span key={e} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2 py-0.5 text-[12px] font-bold text-[#1d3a8f]">{e}<button type="button" onClick={() => setExtraTo((xs) => xs.filter((x) => x !== e))} className="text-[#1d3a8f]">×</button></span>)}
+              <input value={extraInput} onChange={(e) => setExtraInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addExtra(); } }} onBlur={addExtra} placeholder="name@example.com — Enter to add" className="min-w-[180px] flex-1 bg-transparent px-1.5 py-1 text-[12.5px] outline-none" />
+            </div>
           </div>
-        </div>
+        )}
         {audience !== "one" && audienceFamilies.length > 0 && (
           <div className="mt-2">
             <button type="button" onClick={() => setRecipOpen((o) => !o)} className="text-[12px] font-bold text-[#1d3a8f]">{recipOpen ? "▾" : "▸"} Review the {reachCount} famil{reachCount === 1 ? "y" : "ies"} who’ll get this</button>
