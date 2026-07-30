@@ -314,9 +314,9 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
         ) : (
           // ── Fancy building canvas: the real email fills the space, the editor floats over it ──
           <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: "radial-gradient(1200px 500px at 70% -5%, #eef3fb, #e3e8f1)" }}>
-            {/* full-bleed preview canvas */}
+            {/* full-page preview canvas — the email fills the whole page, tools float on top */}
             <div className="absolute inset-0 overflow-auto">
-              <div className="flex min-h-full justify-center py-10 pr-6" style={{ paddingLeft: 452 }}>
+              <div className="flex min-h-full justify-center px-6 py-10">
                 <div style={{ zoom }} className="h-max">
                   <div className="overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} />
                 </div>
