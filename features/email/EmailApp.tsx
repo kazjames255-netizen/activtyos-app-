@@ -743,13 +743,18 @@ function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
 function AudSection({ title, hint }: { title: string; hint?: string }) {
   return <div className="mb-2 mt-4 first:mt-0"><div className="text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{title}</div>{hint && <div className="text-[11.5px] text-[var(--ink-3)]">{hint}</div>}</div>;
 }
-function AudienceCard({ a, onUse, extra }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode }) {
+const AUD_ACCENT = {
+  segments: "linear-gradient(180deg,#4f8bf5,#2f6bd8)",   // blue — core CRM segments
+  enquiries: "linear-gradient(180deg,#e2586e,#c02a44)",  // red — warm leads to chase
+  custom: "linear-gradient(180deg,#7b61e4,#5a3fc0)",     // violet — your own segments
+} as const;
+function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string }) {
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
       <p className="mt-1 text-[12px] text-[var(--ink-3)]">{a.desc}</p>
       <div className="mt-3 flex items-center gap-2">
-        <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Use in campaign</button>
+        <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: accent }}>Use in campaign</button>
         {extra}
       </div>
     </div>
@@ -762,15 +767,15 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
   const [building, setBuilding] = useState(false);
-  const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("segments");
+  const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("enquiries");
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
   const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
   const SUBS = [
-    { k: "segments" as const, label: "🎯 Segments", count: 1 + SEED_AUDIENCES.length },
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
+    { k: "segments" as const, label: "🎯 Segments", count: 1 + SEED_AUDIENCES.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
   return (
@@ -784,7 +789,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
 
       {sub === "segments" && (<>
         <AudSection title="🎯 Segments" hint="Built-in CRM segments over all your bookings." />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...SEED_AUDIENCES].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button>} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...SEED_AUDIENCES].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={<button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button>} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
@@ -794,14 +799,14 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
         </div>
         {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} />)}</div>}
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
       </>)}
 
       {sub === "custom" && (<>
         <AudSection title="⭐ Your audiences" hint="Custom segments you build. New ones land here." />
         {custom.length === 0
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{custom.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} extra={<><button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{custom.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.custom} extra={<><button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
         <div className="mt-4"><button type="button" onClick={() => setBuilding(true)} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New audience</button></div>
       </>)}
 
