@@ -418,7 +418,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
 // Send now / Schedule / Save draft. Campaigns + custom audiences persist locally
 // (the true send/track/schedule engine is the backend — see the handoff doc).
 interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string }
-interface AudFilter { month?: string; year?: string; age?: string; from?: string; to?: string; listingId?: string; location?: string }
+interface AudFilter { location?: string; listingId?: string; listingTitle?: string; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
 interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string }
@@ -447,34 +447,40 @@ const STATUS_PILL: Record<CampStatus, { bg: string; fg: string; label: string }>
   sent: { bg: "#dff3e6", fg: "#127a3e", label: "Sent" }, sending: { bg: "#fdeccf", fg: "#9a5a00", label: "Sending" },
   scheduled: { bg: "#e4edfd", fg: "#1d3a8f", label: "Scheduled" }, draft: { bg: "var(--panel)", fg: "var(--ink-2)", label: "Draft" },
 };
-const AGE_GROUPS = ["4-6", "7-9", "10-12", "13+"] as const;
-const ageGroupOf = (a?: number) => a == null ? null : a <= 6 ? "4-6" : a <= 9 ? "7-9" : a <= 12 ? "10-12" : "13+";
-const bkDate = (b: Booking) => { const s = b.date || b.createdAt; if (!s) return null; const t = Date.parse(s); return Number.isNaN(t) ? null : new Date(t); };
+const parseDate = (s?: string) => { if (!s) return null; const t = Date.parse(s); return Number.isNaN(t) ? null : new Date(t); };
+const bookedDate = (b: Booking) => parseDate(b.createdAt);           // when the booking was MADE
+const sessionDate = (b: Booking) => parseDate(b.date || b.createdAt); // when the child ATTENDS
+const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""; };
 function matchBooking(b: Booking, f: AudFilter): boolean {
-  if (f.listingId && b.listingId !== f.listingId) return false;
   if (f.location && (b.locationName || "") !== f.location) return false;
-  if (f.age && ageGroupOf(b.age) !== f.age) return false;
-  if (f.month || f.year || f.from || f.to) {
-    const dt = bkDate(b); if (!dt) return false;
-    if (f.month && String(dt.getMonth() + 1) !== f.month) return false;
-    if (f.year && String(dt.getFullYear()) !== f.year) return false;
-    if (f.from && dt < new Date(f.from)) return false;
-    if (f.to && dt > new Date(`${f.to}T23:59:59`)) return false;
+  if (f.listingId && b.listingId !== f.listingId && (b.title || "") !== (f.listingTitle || "\0") && (b.listingTitle || "") !== (f.listingTitle || "\0")) return false;
+  if (f.ageMin != null && b.age != null && b.age < f.ageMin) return false;
+  if (f.ageMax != null && f.ageMax < 18 && b.age != null && b.age > f.ageMax) return false;
+  if (f.from || f.to) {
+    const inR = (d: Date | null) => !!d && (!f.from || d >= new Date(f.from)) && (!f.to || d <= new Date(`${f.to}T23:59:59`));
+    const bd = bookedDate(b), sd = sessionDate(b);
+    const ok = f.dateType === "session" ? inR(sd) : f.dateType === "either" ? (inR(bd) || inR(sd)) : inR(bd);
+    if (!ok) return false;
   }
+  if (f.when && f.when !== "any") { const sd = sessionDate(b); if (!sd) return false; const future = sd.getTime() >= Date.now(); if (f.when === "upcoming" && !future) return false; if (f.when === "past" && future) return false; }
   return true;
 }
 function resolveAudience(bookings: Booking[], f: AudFilter): { emails: string[]; count: number } {
-  const set = new Set<string>();
-  for (const b of bookings) if (b.email && matchBooking(b, f)) set.add(b.email.toLowerCase());
-  const emails = [...set]; return { emails, count: emails.length };
+  const cnt = new Map<string, number>();
+  for (const b of bookings) if (b.email && matchBooking(b, f)) { const e = b.email.toLowerCase(); cnt.set(e, (cnt.get(e) ?? 0) + 1); }
+  let emails = [...cnt.keys()];
+  if (f.repeatOnly) emails = emails.filter((e) => (cnt.get(e) ?? 0) >= 2);
+  return { emails, count: emails.length };
 }
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-function filterDesc(f: AudFilter, listingTitle?: string): string {
-  const bits: string[] = [];
-  if (f.listingId) bits.push(listingTitle || "one listing"); if (f.location) bits.push(f.location);
-  if (f.age) bits.push(`${f.age} yrs`); if (f.month) bits.push(MONTHS[Number(f.month) - 1]); if (f.year) bits.push(f.year);
-  if (f.from || f.to) bits.push(`${f.from || "…"}–${f.to || "…"}`);
-  return bits.length ? bits.join(" · ") : "All customers";
+function filterDesc(f: AudFilter): string {
+  const b: string[] = [];
+  if (f.location) b.push(f.location);
+  if (f.listingId) b.push(f.listingTitle || "a listing");
+  if (f.ageMin != null || f.ageMax != null) { const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18; if (!(lo === 0 && hi === 18)) b.push(`ages ${lo}–${hi >= 18 ? "18+" : hi}`); }
+  if (f.from || f.to) { const w = f.dateType === "session" ? "attending" : f.dateType === "either" ? "booked/attending" : "booked"; b.push(`${w} ${f.from || "…"}–${f.to || "…"}`); }
+  if (f.when === "upcoming") b.push("upcoming sessions"); if (f.when === "past") b.push("past attendees");
+  if (f.repeatOnly) b.push("repeat customers");
+  return b.length ? b.join(" · ") : "All customers";
 }
 
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
@@ -484,15 +490,25 @@ function FunnelBar({ label, n, max, color }: { label: string; n: number; max: nu
   return <div className="mb-2.5"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)]">{label}</span><span className="font-bold text-[var(--ink)]">{n}</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${max ? Math.round((n / max) * 100) : 0}%`, background: color }} /></div></div>;
 }
 
-function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: { bookings: Booking[]; listings: { id: string; title: string }[]; locations: string[]; onCancel: () => void; onCreate: (a: Audience, useNow: boolean) => void }) {
+function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: { bookings: Booking[]; listings: { id: string; title: string; runFrom?: string; runTo?: string }[]; locations: string[]; onCancel: () => void; onCreate: (a: Audience, useNow: boolean) => void }) {
   const [f, setF] = useState<AudFilter>({});
   const [name, setName] = useState("");
   const seq = useRef(0);
   const set = (p: Partial<AudFilter>) => setF((x) => ({ ...x, ...p }));
   const { emails, count } = resolveAudience(bookings, f);
-  const listingTitle = listings.find((l) => l.id === f.listingId)?.title;
-  const years = [...new Set(bookings.map((b) => bkDate(b)?.getFullYear()).filter(Boolean))].sort() as number[];
-  const mk = (): Audience => ({ id: `aud-${name.trim() || "seg"}-${seq.current++}`, name: name.trim() || filterDesc(f, listingTitle), count, emails, desc: filterDesc(f, listingTitle), filter: f });
+  // Listings for the chosen location (via their bookings), each with its run dates.
+  const listingsHere = listings.filter((l) => !f.location || bookings.some((b) => b.listingId === l.id && (b.locationName || "") === f.location));
+  const runLabel = (l: { id: string; runFrom?: string; runTo?: string }) => {
+    if (l.runFrom || l.runTo) return `${fmtD(l.runFrom) || "…"} – ${fmtD(l.runTo) || "…"}`;
+    const ds = bookings.filter((b) => b.listingId === l.id).map((b) => sessionDate(b)).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
+    return ds.length ? `${ds[0].toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${ds[ds.length - 1].toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "dates n/a";
+  };
+  const AGES = Array.from({ length: 19 }, (_, i) => i); // 0..18 (18 = 18+)
+  const lo = f.ageMin ?? 0, hi = f.ageMax ?? 18;
+  const mk = (): Audience => ({ id: `aud-${name.trim() || "seg"}-${seq.current++}`, name: name.trim() || filterDesc(f), count, emails, desc: filterDesc(f), filter: f });
+  const seg = (opts: [string, string][], val: string, on: (v: string) => void) => (
+    <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)]">{opts.map(([v, l]) => <button key={v} type="button" onClick={() => on(v)} className="px-3 py-1.5 text-[12px] font-bold transition-colors" style={val === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+  );
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
       <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -501,21 +517,33 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
           <div><div className="text-[16px] font-extrabold text-[var(--ink)]">Build an audience</div><div className="text-[12px] text-[var(--ink-3)]">Filter your customers — the count updates live.</div></div>
           <button type="button" onClick={onCancel} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button>
         </div>
-        <div className="max-h-[62vh] space-y-3 overflow-y-auto p-5">
-          <div className="grid grid-cols-2 gap-2.5">
-            <div><FieldLabel>Booking month</FieldLabel><Select value={f.month ?? ""} onChange={(e) => set({ month: e.target.value })} className="w-full"><option value="">Any</option>{MONTHS.map((m, i) => <option key={m} value={String(i + 1)}>{m}</option>)}</Select></div>
-            <div><FieldLabel>Year</FieldLabel><Select value={f.year ?? ""} onChange={(e) => set({ year: e.target.value })} className="w-full"><option value="">Any</option>{years.map((y) => <option key={y} value={String(y)}>{y}</option>)}</Select></div>
+        <div className="max-h-[62vh] space-y-3.5 overflow-y-auto p-5">
+          <div><FieldLabel>Location</FieldLabel><Select value={f.location ?? ""} onChange={(e) => set({ location: e.target.value, listingId: undefined, listingTitle: undefined })} className="w-full"><option value="">Any location</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+          <div><FieldLabel>Listing (dates it ran)</FieldLabel><Select value={f.listingId ?? ""} onChange={(e) => { const l = listingsHere.find((x) => x.id === e.target.value); set({ listingId: e.target.value || undefined, listingTitle: l?.title }); }} className="w-full"><option value="">Any listing{f.location ? ` in ${f.location}` : ""}</option>{listingsHere.map((l) => <option key={l.id} value={l.id}>{l.title} — {runLabel(l)}</option>)}</Select></div>
+          <div className="rounded-xl border border-[var(--line)] p-3">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Date range</FieldLabel>{seg([["booked", "Booking made"], ["session", "Sessions attended"], ["either", "Either"]], f.dateType ?? "booked", (v) => set({ dateType: v as AudFilter["dateType"] }))}</div>
+            <div className="grid grid-cols-2 gap-2.5"><Input type="date" value={f.from ?? ""} onChange={(e) => set({ from: e.target.value })} className="w-full" /><Input type="date" value={f.to ?? ""} onChange={(e) => set({ to: e.target.value })} className="w-full" /></div>
+            <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Whether these are the dates the booking was <b>made</b> or the dates the child <b>attended</b> — or match either.</p>
           </div>
-          <div><FieldLabel>Age group</FieldLabel><div className="flex flex-wrap gap-1.5">{AGE_GROUPS.map((g) => <button key={g} type="button" onClick={() => set({ age: f.age === g ? undefined : g })} className="rounded-lg border px-3.5 py-2 text-[13px] font-bold" style={f.age === g ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{g}</button>)}</div></div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div><FieldLabel>Date from</FieldLabel><Input type="date" value={f.from ?? ""} onChange={(e) => set({ from: e.target.value })} className="w-full" /></div>
-            <div><FieldLabel>Date to</FieldLabel><Input type="date" value={f.to ?? ""} onChange={(e) => set({ to: e.target.value })} className="w-full" /></div>
+          <div><FieldLabel>Age of child</FieldLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12.5px] text-[var(--ink-2)]">From</span>
+              <Select value={String(lo)} onChange={(e) => set({ ageMin: Number(e.target.value) })} className="w-20">{AGES.map((a) => <option key={a} value={a}>{a}</option>)}</Select>
+              <span className="text-[12.5px] text-[var(--ink-2)]">to</span>
+              <Select value={String(hi)} onChange={(e) => set({ ageMax: Number(e.target.value) })} className="w-20">{AGES.map((a) => <option key={a} value={a}>{a === 18 ? "18+" : a}</option>)}</Select>
+              <button type="button" onClick={() => set({ ageMin: undefined, ageMax: undefined })} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">All ages</button>
+            </div>
           </div>
-          <div><FieldLabel>Listing (with location)</FieldLabel><Select value={f.listingId ?? ""} onChange={(e) => set({ listingId: e.target.value })} className="w-full"><option value="">Any listing</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</Select></div>
-          <div><FieldLabel>Location</FieldLabel><Select value={f.location ?? ""} onChange={(e) => set({ location: e.target.value })} className="w-full"><option value="">Any location</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+          <div className="rounded-xl border border-[var(--line)] p-3">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">More filters</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12.5px] text-[var(--ink-2)]">Sessions</span>{seg([["any", "Any"], ["upcoming", "Upcoming"], ["past", "Past"]], f.when ?? "any", (v) => set({ when: v as AudFilter["when"] }))}
+              <label className="ml-2 flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={!!f.repeatOnly} onChange={(e) => set({ repeatOnly: e.target.checked })} /> Repeat customers only (2+)</label>
+            </div>
+          </div>
           <div className="flex items-center gap-3 rounded-xl bg-[var(--panel)] p-3.5">
             <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Matching</div><div className="text-[30px] font-extrabold leading-none text-[#2f6bd8]" style={{ fontVariantNumeric: "tabular-nums" }}>{count}</div><div className="text-[10px] text-[var(--ink-3)]">customers</div></div>
-            <div className="text-[13px] font-semibold text-[var(--ink-2)]">{filterDesc(f, listingTitle)}</div>
+            <div className="text-[13px] font-semibold text-[var(--ink-2)]">{filterDesc(f)}</div>
           </div>
           <div><FieldLabel>Audience name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New audience" className="w-full" /></div>
         </div>
@@ -564,10 +592,10 @@ function NewCampaign({ audiences, templates, onCancel, onBuildAudience, onSubmit
 
 function useCampaignData() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
+  const [listings, setListings] = useState<{ id: string; title: string; runFrom?: string; runTo?: string }[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setBookings).catch(() => {}); }, []);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing" })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; runFrom?: string; runTo?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", runFrom: x.runFrom, runTo: x.runTo })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
   const locations = [...new Set(bookings.map((b) => b.locationName).filter((x): x is string => !!x))].sort();
   const allEmails = resolveAudience(bookings, {}).emails;
