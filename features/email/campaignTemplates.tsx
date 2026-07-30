@@ -16,11 +16,11 @@ import { useRef, useState, type PointerEvent as RPE } from "react";
 import { post as apiPost } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
 
-export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact";
+export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact" | "countdown" | "graph";
 export interface Card { image?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -61,7 +61,7 @@ export const SOC_NETS = Object.keys(SOC);
 const DEFAULT_SOCIALS: Social[] = [{ net: "facebook" }, { net: "instagram" }, { net: "tiktok" }, { net: "website" }];
 
 // ── one block → email-safe html (theme-aware, cropped images) ───────────────
-function renderBlock(b: Block, t: Theme, c?: Partial<Company>): string {
+function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string {
   const brand = b.heading || c?.name || "Your business";
   switch (b.t) {
     case "header":
@@ -136,6 +136,19 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>): string {
       const bits = [b.footerPhone || c?.phone, b.footerEmail || c?.email, b.footerWeb, b.footerAddress || c?.address].map((x) => x?.trim()).filter(Boolean) as string[];
       return row(`${b.heading ? `<div style="font-size:13px;font-weight:800;color:${t.onA};text-align:center${bits.length ? ";margin-bottom:6px" : ""}">${esc(b.heading)}</div>` : ""}${bits.length ? `<div style="text-align:center;font-size:13px;font-weight:600;color:${t.onA}">${bits.map((x) => esc(x)).join(" &nbsp;•&nbsp; ")}</div>` : ""}`, `background:${t.a};padding:16px 24px`);
     }
+    case "countdown": {
+      const target = b.date ? Date.parse(`${b.date}T23:59:59`) : NaN;
+      const days = !isNaN(target) && now > 0 ? Math.max(0, Math.ceil((target - now) / 86400000)) : null;
+      const dateStr = !isNaN(target) ? new Date(target).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) : "";
+      return row(`<div style="text-align:center"><div style="font-size:14px;font-weight:800;letter-spacing:.5px;color:${t.onA}">${esc(b.heading || "Hurry — offer ends soon")}</div>${days != null ? `<div style="margin:12px 0 2px;font-size:54px;font-weight:900;line-height:1;color:${t.onA}">${days}</div><div style="font-size:14px;font-weight:700;color:${t.onAMut}">${days === 0 ? "last chance — ends today!" : days === 1 ? "day to go" : "days to go"}</div>` : ""}${dateStr ? `<div style="margin-top:8px;font-size:13px;color:${t.onAMut}">Ends ${esc(dateStr)}</div>` : `<div style="margin-top:8px;font-size:12px;color:${t.onAMut}">Pick a date in the editor</div>`}${b.label ? `<div style="margin-top:16px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}</div>`, `background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});padding:26px 26px 30px`);
+    }
+    case "graph": {
+      const cs = (b.cards || []).slice(0, 6);
+      const vals = cs.map((cd) => parseFloat((cd.caption || "").replace(/[^0-9.]/g, "")) || 0);
+      const max = Math.max(1, ...vals);
+      const bars = cs.map((cd, i) => `<tr><td style="padding:6px 0;font-size:12.5px;font-weight:600;color:${t.ink};width:32%">${esc(cd.title)}</td><td style="padding:6px 8px 6px 0;width:56%"><div style="background:${t.aSoft};border-radius:6px;height:20px"><div style="background:${t.a};background-image:linear-gradient(90deg,${t.a},${shade(t.a, 25)});height:20px;border-radius:6px;width:${Math.max(Math.round((vals[i] / max) * 100), 3)}%"></div></div></td><td style="padding:6px 0;text-align:right;font-size:13px;font-weight:800;color:${t.a};width:12%">${esc(cd.caption)}</td></tr>`).join("");
+      return row(`${b.heading ? `<h3 style="margin:0 0 14px;font-size:19px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h3>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;width:100%">${bars}</table>`, "padding:20px 30px");
+    }
     case "divider":
       return row(`<div style="height:1px;background:${t.line}"></div>`, "padding:4px 26px");
     case "footer":
@@ -193,7 +206,7 @@ export const TEMPLATES: CampaignTemplate[] = [
 
 export const CATEGORIES = ["Offers & bookings", "Announcements", "Welcome", "News & updates", "Seasonal", "Admin & notices"];
 export const templateOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
-export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>): string { return wrapRows((d.blocks || []).map((b) => renderBlock(b, theme(accentHex(d.accent) || d.accent), c)).join("")); }
+export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 0): string { return wrapRows((d.blocks || []).map((b) => renderBlock(b, theme(accentHex(d.accent) || d.accent), c, now)).join("")); }
 export function renderDesignText(d: CampaignDesign): string { const out: string[] = []; for (const b of d.blocks || []) { [b.heading, b.subheading, b.body, b.label].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); (b.cards || []).forEach((cd) => { [cd.title, cd.caption, cd.price].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); }); } return out.join("\n\n"); }
 const withSocials = (blocks: Block[], seed?: Social[]): Block[] => (seed && seed.length ? blocks.map((b) => (b.t === "social" && (!b.socials || b.socials.every((s) => !s.url)) ? { ...b, socials: seed } : b)) : blocks);
 export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const blocks = withSocials(t.blocks(), seed).map((b) => (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: c?.name || "" } : b); return { templateId, accent: t.accentId, blocks }; };
@@ -207,7 +220,8 @@ const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | 
   { icon: "✅", label: "What's included", hint: "A tick-list of perks", make: () => B("checklist", { heading: "Every day includes", item1: "Qualified, DBS-checked coaches", item2: "A hot lunch & snacks", item3: "Free early & late care", item4: "All equipment provided" }) },
   { icon: "🎟", label: "Discount code", hint: "A promo code box", make: () => B("code", { subheading: "Use code", heading: "SUMMER15", body: "15% off your next booking — this week only." }) },
   { icon: "📞", label: "Contact strip", hint: "Phone · email · address", make: () => B("contact", { heading: "Get in touch" }) },
-  { icon: "⏰", label: "Countdown offer", hint: "Urgency banner", make: () => B("band", { heading: "⏳ Early-bird ends Sunday at midnight", label: "Book before it's gone" }) },
+  { icon: "⏰", label: "Countdown timer", hint: "Counts down to your date", make: () => B("countdown", { heading: "Early-bird ends in", label: "Book before it's gone" }) },
+  { icon: "📈", label: "Graph", hint: "A fancy bar chart", make: () => B("graph", { heading: "Our year in numbers", cards: [C("Camps run", "", "48"), C("Happy kids", "", "2000"), C("5-star reviews", "", "480")].map((cd) => ({ title: cd.title, caption: cd.price })) }) },
   { icon: "✍️", label: "Heading", hint: "A titled section", make: () => B("heading", { heading: "Section heading", subheading: "An optional supporting line" }) },
   { icon: "📝", label: "Text", hint: "A paragraph (+ optional button)", make: () => B("text", { body: "Write your message here." }) },
   { icon: "🏞", label: "Image + text", hint: "Photo beside words", make: () => B("split", { heading: "Tell them about it", body: "A short, friendly paragraph that sits neatly beside the photo.", label: "Find out more" }) },
@@ -223,7 +237,7 @@ const ADDABLE: { icon: string; label: string; hint: string; make: () => Block | 
   { icon: "➖", label: "Divider", hint: "A thin line", make: () => B("divider") },
   { icon: "📍", label: "Footer", hint: "Name + address", make: () => foot() },
 ];
-const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", logo: "Logo", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer", quote: "Testimonial", stats: "Stats", checklist: "Checklist", code: "Discount code", contact: "Contact strip" };
+const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", logo: "Logo", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer", quote: "Testimonial", stats: "Stats", checklist: "Checklist", code: "Discount code", contact: "Contact strip", countdown: "Countdown timer", graph: "Graph" };
 
 // ── crop control — drag anywhere to reposition (object-position pan) + zoom ───
 const clamp01 = (v: number) => Math.max(0, Math.min(100, v));
@@ -260,6 +274,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
   const [history, setHistory] = useState<CampaignDesign[]>([]);
+  const [nowMs] = useState(() => Date.now());
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
@@ -330,6 +345,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       case "checklist": return <div className="space-y-1.5">{hd("Heading", b.heading)}{(["item1", "item2", "item3", "item4", "item5", "item6"] as const).map((key, i) => <input key={key} placeholder={`Item ${i + 1}${i > 2 ? " (optional)" : ""}`} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} />)}</div>;
       case "code": return <div className="space-y-1.5">{hd("The code", b.heading)}{hd("Label above it", b.subheading, "subheading")}{ta("Description")}</div>;
       case "stats": return <div className="space-y-2">{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Stat {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="space-y-1"><input placeholder="Number (e.g. 2,000+)" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Label (e.g. happy children)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add stat</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4.</div>}</div>;
+      case "countdown": return <div className="space-y-1.5">{hd("Heading", b.heading)}<div><div className={lbl}>Count down to this date</div><input type="date" value={b.date ?? ""} onChange={(e) => patch(k, { date: e.target.value })} className={inputCls} /><div className="mt-1 text-[10px] text-[var(--ink-3)]">Shows the number of days left until this date.</div></div>{hd("Button label (optional)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
+      case "graph": return <div className="space-y-2">{hd("Chart title", b.heading)}{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Bar {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="grid grid-cols-2 gap-1"><input placeholder="Label" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Value (number)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 6 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add bar</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 6 bars.</div>}</div>;
       case "contact": return <div className="space-y-1.5">{hd("Heading (optional)", b.heading)}<div className="grid grid-cols-2 gap-2"><input autoComplete="off" data-lpignore="true" placeholder="Phone" value={b.footerPhone ?? ""} onChange={(e) => patch(k, { footerPhone: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Email" value={b.footerEmail ?? ""} onChange={(e) => patch(k, { footerEmail: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Website" value={b.footerWeb ?? ""} onChange={(e) => patch(k, { footerWeb: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Address" value={b.footerAddress ?? ""} onChange={(e) => patch(k, { footerAddress: e.target.value })} className={inputCls} /></div><div className="text-[10px] text-[var(--ink-3)]">Leave blank to use your saved business details.</div></div>;
       default: return null;
     }
@@ -364,7 +381,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             <div className="grid min-h-0 flex-1 gap-4 aos-scroll overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
               {shown.map((t) => (
                 <button key={t.id} type="button" onClick={() => start(t.id)} className="group overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
-                  <div className="h-60 overflow-hidden bg-[#f3f6fb]"><div style={{ width: 600, transform: "scale(0.46)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company) }} /></div>
+                  <div className="h-60 overflow-hidden bg-[#f3f6fb]"><div style={{ width: 600, transform: "scale(0.46)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
                   <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t.category} · {t.blocks().length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
                 </button>
               ))}
@@ -379,7 +396,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                   <div className="w-[640px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
                     {design.blocks.map((b, i) => (
                       <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
-                        <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company)}</table>` }} />
+                        <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company, nowMs)}</table>` }} />
                         <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
                         <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                           <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>

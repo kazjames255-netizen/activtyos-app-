@@ -629,6 +629,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [mode, setMode] = useState<"template" | "design">("template");
   const [design, setDesign] = useState<CampaignDesign | null>(null);   // a designed email (rich template gallery)
   const [designing, setDesigning] = useState(false);
+  const [nowMs] = useState(() => Date.now());
   const [previewBig, setPreviewBig] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
   const selectedAuds = audIds.map((id) => audiences.find((a) => a.id === id)).filter((a): a is Audience => !!a);
@@ -657,7 +658,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     if (!primary) return;
     const subj = subject.trim() || template?.subject || name.trim();
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
-    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company) : undefined, body: useDesign && design ? renderDesignText(design) : undefined }, action);
+    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : undefined }, action);
   };
   return (
     <>
@@ -696,7 +697,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
               : design
                 ? <div>
                     <div className="mb-1.5 flex items-center gap-2"><FieldLabel>Your design</FieldLabel><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
-                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} /></button>
+                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                   </div>
                 : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7f9fc] p-5 text-center">
                     <div className="text-[13px] font-extrabold text-[var(--ink)]">Choose a template</div>
@@ -737,7 +738,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company) }} />
+          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} />
         </div>
       </div>
     )}
