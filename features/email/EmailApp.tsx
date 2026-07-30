@@ -261,7 +261,7 @@ type MailFolder = "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive"
 interface Mail { id: string; from: string; fromEmail?: string; to?: string; cc?: string[]; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: MailFolder }
 // Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
 const DEMO_MAIL: Mail[] = [
-  { id: "m1", from: "Sarah Khan", fromEmail: "sarah.khan@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", body: "Just so you have it on file — Jack’s now also reacting to sesame as well as his existing nut allergy. His EpiPen is in date. Happy to send the updated care plan if useful.", time: "09:18", starred: true, thread: true, labels: ["urgent", "follow"], quickReplies: ["Thanks — noted on Jack’s file.", "Could you send the updated care plan?", "We’ll make sure all staff are aware."] },
+  { id: "m1", from: "Sarah Khan", fromEmail: "sarah.khan@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", body: "Just so you have it on file — Jack’s now also reacting to sesame as well as his existing nut allergy. His EpiPen is in date. Happy to send the updated care plan if useful.", time: "09:18", unread: true, starred: true, thread: true, labels: ["urgent", "follow"], quickReplies: ["Thanks — noted on Jack’s file.", "Could you send the updated care plan?", "We’ll make sure all staff are aware."] },
   { id: "m2", from: "MK Council HAF Team", fromEmail: "haf@milton-keynes.gov.uk", to: "bookings@apf", cc: ["finance@apfactivitycamps.com", "haf-admin@milton-keynes.gov.uk"], tag: "Schools & councils", subject: "HAF claim — May sessions (PO #MK-4471)", preview: "Please find the signed PO attached for May’s funded places.", body: "Please find the approved PO attached for the May HAF sessions. Submit your claim with attendance evidence by month end.", time: "Mon", starred: true, thread: true, labels: ["haf"], attachment: "PO-MK-4471.pdf", attachmentSize: "84 KB", quickReplies: ["Thank you — received, we’ll action this.", "Could you confirm the deadline?", "Invoice to follow shortly."] },
   { id: "m3", from: "Fuel Catering Ltd", fromEmail: "orders@fuelcatering.co.uk", to: "bookings@apf", tag: "Suppliers", subject: "Re: Lunch order cut-off this week", preview: "Cut-off is 6pm the day before — send final numbers by then.", body: "Cut-off is 6pm the day before — send final numbers by then and we’ll have it prepped for the morning.", time: "Tue", starred: true, quickReplies: ["Thanks — will confirm numbers by 5pm.", "Can we push the cut-off to 7pm?", "Noted, thank you."] },
   { id: "m4", from: "Dani Obi", fromEmail: "dani.obi@outlook.com", to: "bookings@apf", tag: "Parents", subject: "Enquiry: places for August football camp?", preview: "Hi — do you have any spaces left for the week of the 12th?", body: "Hi! Do you still have spaces for the August football camp for a 10-year-old? And do you offer sibling discounts? Thanks, Dani.", time: "08:02", unread: true, starred: true, thread: true, labels: ["enquiry"], quickReplies: ["Thanks — noted, all set!", "We’ll keep an eye out, thank you.", "Could you confirm your booking reference?"] },
@@ -341,11 +341,12 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, history }: { o
           </div>
           {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here.</div>
           : list.map((m) => (
-            <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`}>
+            <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`} style={m.unread ? { background: "#f2f7ff" } : undefined}>
+              <span className="flex-none" style={{ width: 6 }}>{m.unread && <span className="block h-2 w-2 rounded-full" style={{ background: "#2f6bd8" }} />}</span>
               <button type="button" onClick={() => patch(m.id, { starred: !m.starred })} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
               <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
-                <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-semibold text-[var(--ink)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
+                <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
+                <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
                 {m.labels?.map((l) => <span key={l} className="flex-none rounded-md px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}
                 {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
                 <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
@@ -583,7 +584,6 @@ function CampaignsView({ onSent }: { onSent: () => void }) {
   useEffect(() => { writeLS(LS_CAMP, campaigns); }, [campaigns]);
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   const audiences = [allAudience, ...SEED_AUDIENCES, ...custom];
-  const duplicate = (c: Campaign) => { setCampaigns((xs) => [{ ...c, id: `c${Date.now()}`, name: `${c.name} (copy)`, status: "draft", statusDate: undefined, opens: undefined, clicks: undefined }, ...xs]); setDetail(null); };
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string }, action: CampStatus) => {
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name, audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? "scheduled" : action === "sent" ? "just now" : undefined, subject: c.subject };
     setCampaigns((xs) => [row, ...xs]); setModal(null);
@@ -610,12 +610,12 @@ function CampaignsView({ onSent }: { onSent: () => void }) {
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
       {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} onCancel={() => setModal(null)} onBuildAudience={() => setModal("audience")} onSubmit={create} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
-      {detail && <CampaignDetail c={detail} onDuplicate={() => duplicate(detail)} onClose={() => setDetail(null)} />}
+      {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
 
-function CampaignDetail({ c, onDuplicate, onClose }: { c: Campaign; onDuplicate: () => void; onClose: () => void }) {
+function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
   const tracked = c.opens != null;
   const sent = c.recipients;
   const delivered = tracked ? Math.round(sent * 0.987) : sent;
@@ -644,7 +644,6 @@ function CampaignDetail({ c, onDuplicate, onClose }: { c: Campaign; onDuplicate:
           <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Opens/clicks are tracked via the marketing pipeline (pixel + wrapped links). A one-click unsubscribe footer is added automatically; opt-outs sync back to the contact and are excluded from future sends. {!tracked && <b>Tracking begins once this campaign sends through the pipeline (backend).</b>}</div>
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={onDuplicate} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Duplicate</button>
           <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Close</button>
         </div>
       </div>
