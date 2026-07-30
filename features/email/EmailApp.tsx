@@ -235,7 +235,7 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
         <div className="mt-2 flex gap-1.5">
           <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: BROWN }}>➕ Add to email</button>
           <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title="Download this image (with everything shown in the preview)">⬇</button>
-          <button type="button" onClick={onRemove} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-3)]" title="Remove from Email area">✕</button>
+          <button type="button" onClick={onRemove} className="rounded-md border border-[#f6c9cc] px-2 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]" title="Delete this photo from your Email library">🗑</button>
         </div>
       </div>
     </div>
@@ -887,7 +887,7 @@ export function EmailApp() {
   const [composeTemplates, setComposeTemplates] = useState<EmailTemplate[]>([]);
   const [reach, setReach] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
-  const [assetsOpen, setAssetsOpen] = useState(true);
+  const [assetsOpen, setAssetsOpen] = useState(false);
   const [moments, setMoments] = useState<LiveMoment[] | null>(null);
   const { settings, save } = useSettings();
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
@@ -910,7 +910,7 @@ export function EmailApp() {
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.map((im) => im.id === id ? { ...im, ...partial } : im) } } });
   }
   function removeImage(id: string) {
-    if (!confirm("Remove this saved image?")) return;
+    if (!confirm("Delete this photo from your Email library?\n\nThe original Moment isn’t affected — but you’d need to re-add it here to use it again.")) return;
     save({ settings: { ...settings, emailAssets: { ...(settings.emailAssets ?? {}), images: savedImages.filter((im) => im.id !== id) } } });
   }
   // Add the photo to the email draft as ONE composed image — the message + quote
@@ -1210,8 +1210,8 @@ export function EmailApp() {
       {savedImages.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
           <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left">
-            <span className="text-[13px] font-extrabold" style={{ color: BROWN, fontFamily: "var(--ff-display)" }}>📷 Photos from Moments <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your own message, add the quote, set size/crop/colour. The preview updates live before you add or download.</span></span>
-            <span className="flex-none text-[12px] text-[var(--ink-3)]">{assetsOpen ? "▲ Close" : "▼ Open"}</span>
+            <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: BROWN, fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} Photos from Moments <span className="rounded-full bg-[#f6e2a8] px-2 py-0.5 text-[11px] font-extrabold text-[#8a5a00]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your message, add the quote, set size/crop/colour.</span>}</span>
+            <span className="flex-none rounded-full border border-[#f0d488] px-2.5 py-0.5 text-[11.5px] font-bold text-[#8a5a00]">{assetsOpen ? "▲ Close folder" : "▼ Open folder"}</span>
           </button>
           {assetsOpen && (
             <div className="mt-2.5 grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))" }}>
