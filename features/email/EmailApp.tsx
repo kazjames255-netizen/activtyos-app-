@@ -1421,7 +1421,12 @@ export function EmailApp() {
           <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{mode === "embed" ? "Families get the full layout (photos + formatting) in the email body." : <span>Families get a short covering email with it attached as a PDF. <b className="text-[#8a6d1a]">Auto-attach is a backend step — grab the PDF here for now.</b></span>}</div>
         </div>
       )}
-      <Card className="mb-4 p-4">
+      <Card className="mb-4 overflow-hidden p-0">
+        <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-white/15 text-[17px]">✉️</span>
+          <div><div className="text-[14.5px] font-extrabold">Compose your email</div><div className="text-[11.5px] text-white/80">Choose who gets it, write your message, then send or schedule.</div></div>
+        </div>
+        <div className="p-4">
         {replyTo ? (
           <div className="rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1493,6 +1498,7 @@ export function EmailApp() {
             ); })()}
           </div>
         )}
+        <div className="-mx-4 my-3.5 flex items-center gap-2 border-t border-[var(--line)] bg-[#f7f9fc] px-4 py-2"><span className="text-[13px]">✏️</span><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Your message</span></div>
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
@@ -1529,6 +1535,7 @@ export function EmailApp() {
             )}
           </div>
           {reachCount === 0 && extraTo.length === 0 && audience !== "one" && <span className="text-[11.5px] text-[var(--ink-3)]">No recipients yet.</span>}
+        </div>
         </div>
       </Card>
 
