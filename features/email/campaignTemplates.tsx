@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState, type PointerEvent as RPE } from "react";
-import { post as apiPost } from "@/lib/api";
+import { post as apiPost, get as apiGet } from "@/lib/api";
 import { downscaleImage, type Company } from "@/features/newsfeed/newsletter";
 
 export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text" | "image" | "cards" | "tiers" | "split" | "button" | "social" | "divider" | "footer" | "quote" | "stats" | "checklist" | "code" | "contact" | "countdown" | "graph";
@@ -326,6 +326,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [future, setFuture] = useState<CampaignDesign[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(id); }, []);
+  const [codes, setCodes] = useState<string[]>([]);
+  useEffect(() => { apiGet<{ code?: string }[]>("/api/discounts").then((r) => setCodes([...new Set((r || []).map((x) => x.code).filter((x): x is string => !!x))])).catch(() => {}); }, []);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
@@ -395,7 +397,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
         <div className="flex items-start gap-4"><div><div className={lbl}>Size</div><div className="flex gap-1">{(["s", "m", "full"] as const).map((s) => <button key={s} type="button" onClick={() => patch(k, { size: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.size || "m") === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{s === "s" ? "Small" : s === "m" ? "Medium" : "Large"}</button>)}</div></div><div><div className={lbl}>Align</div><div className="flex gap-1">{(["left", "center", "right"] as const).map((al) => <button key={al} type="button" onClick={() => patch(k, { align: al })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.align || "center") === al ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{al[0].toUpperCase()}</button>)}</div></div></div></div>;
       case "quote": return <div className="space-y-1.5">{ta("Review / quote")}{hd("Who said it", b.heading)}</div>;
       case "checklist": return <div className="space-y-1.5">{hd("Heading", b.heading)}{(["item1", "item2", "item3", "item4", "item5", "item6"] as const).map((key, i) => <input key={key} placeholder={`Item ${i + 1}${i > 2 ? " (optional)" : ""}`} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} />)}</div>;
-      case "code": return <div className="space-y-1.5">{hd("The code", b.heading)}{hd("Label above it", b.subheading, "subheading")}{ta("Description")}</div>;
+      case "code": return <div className="space-y-1.5"><div><div className={lbl}>The code {codes.length > 0 && <span className="font-normal normal-case text-[#127a3e]">· {codes.length} live code{codes.length === 1 ? "" : "s"}</span>}</div>{codes.length > 0 ? <><input list={`codes-${k}`} value={b.heading ?? ""} onChange={(e) => patch(k, { heading: e.target.value })} placeholder="Pick a live code or type your own" className={inputCls} /><datalist id={`codes-${k}`}>{codes.map((code) => <option key={code} value={code} />)}</datalist></> : <input value={b.heading ?? ""} onChange={(e) => patch(k, { heading: e.target.value })} placeholder="e.g. SUMMER15" className={inputCls} />}</div>{hd("Label above it", b.subheading, "subheading")}{ta("Description")}</div>;
       case "stats": return <div className="space-y-2">{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Stat {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="space-y-1"><input placeholder="Number (e.g. 2,000+)" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Label (e.g. happy children)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add stat</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4.</div>}</div>;
       case "countdown": return <div className="space-y-1.5">{hd("Heading", b.heading)}<div><div className={lbl}>Count down to (date &amp; time)</div><input type="datetime-local" step={1} value={b.date ?? ""} onChange={(e) => patch(k, { date: e.target.value })} className={inputCls} /><div className="mt-1 text-[10px] text-[var(--ink-3)]">Shows days · hrs · mins · secs left, set when the email is sent. (Email can&apos;t tick live.)</div></div>{hd("Button label (optional)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "graph": return <div className="space-y-2">{hd("Chart title", b.heading)}
@@ -433,10 +435,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             <div className="flex flex-wrap gap-1.5 border-b border-[var(--line)] px-5 py-3">
               {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => setCat(k)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
             </div>
-            <div className="grid min-h-0 flex-1 gap-4 aos-scroll overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid min-h-0 flex-1 justify-center gap-4 aos-scroll overflow-y-auto p-5" style={{ gridTemplateColumns: "repeat(auto-fill, 300px)" }}>
               {shown.map((t) => (
-                <button key={t.id} type="button" onClick={() => start(t.id)} className="group overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
-                  <div className="h-60 overflow-hidden bg-[#f3f6fb]"><div style={{ width: 600, transform: "scale(0.46)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
+                <button key={t.id} type="button" onClick={() => start(t.id)} className="group w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
+                  <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
                   <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t.category} · {t.blocks().length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
                 </button>
               ))}
