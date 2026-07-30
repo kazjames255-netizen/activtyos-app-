@@ -688,7 +688,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             <div className="mb-2.5 flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</span>
               <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">
-                {([["template", "📄 Template"], ["design", "🎨 Simple layout"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+                {([["template", "📄 Worded templates"], ["design", "🎨 Choose templates"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
               </div>
             </div>
             {mode === "template"
