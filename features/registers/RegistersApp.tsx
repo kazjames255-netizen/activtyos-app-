@@ -73,7 +73,7 @@ function ListingPicker({ listings, active, activeName, onPick }: { listings: [st
   const shown = listings.filter(([, n]) => n.toLowerCase().includes(q.trim().toLowerCase()));
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || "Choose listing"} <span className="text-[9px]">▾</span></button>
+      <button type="button" aria-label="Choose listing" onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || "Choose listing"} <span className="text-[9px]">▾</span></button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
         <div className="absolute left-0 z-20 mt-1 w-[260px] rounded-xl border border-[var(--line)] bg-white p-1.5 shadow-xl">
@@ -573,7 +573,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, selected, onSele
   const inAt = showTimes && a.attendance?.inAt ? timeOf(a.attendance.inAt) : "";
   const outAt = showTimes && a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
   return (
-    <div className="grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] px-4 py-3 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]" style={selected ? { background: "#eef4fd" } : undefined}>
+    <div data-ui="card" className="grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] px-4 py-3 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]" style={selected ? { background: "#eef4fd" } : undefined}>
       <div className="flex min-w-0 items-center gap-2.5">
         <input type="checkbox" checked={selected} onChange={onSelect} aria-label={`Select ${kid?.name}`} className="h-4 w-4 flex-none accent-[#1d3a8f]" />
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">

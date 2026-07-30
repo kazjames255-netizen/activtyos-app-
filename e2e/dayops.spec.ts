@@ -27,45 +27,51 @@ test.describe("operator day ops", () => {
 
   test("register shows the booked child; check-in sticks", async ({ page }) => {
     await page.goto("/company/admin-registers");
-    await expect(page.getByRole("heading", { level: 2, name: "Registers" })).toBeVisible();
-    // Jump to the session day (the booking sits on the listing's first day).
+    // The rebuilt register (July 2026) is a single-listing, single-day hero
+    // view — the only level-1 heading is the top bar's nav label.
+    await expect(page.getByRole("heading", { level: 1, name: "Registers" })).toBeVisible();
+    await expect(page.getByLabel("Previous day")).toBeVisible({ timeout: 15_000 });
+
+    // Point the register at OUR listing — other runs leave listings behind,
+    // which turns the hero name into a dropdown picker. (Never target a bare
+    // "▾": the sidebar's collapsible group headers carry the same caret.)
+    if (!(await page.getByText(listing.title).first().isVisible().catch(() => false))) {
+      await page.getByLabel("Choose listing").click();
+      await page.getByPlaceholder("Search listings…").fill(listing.title);
+      await page.getByRole("button", { name: listing.title }).click();
+    }
+    // Jump to the session day via the 📅 overlay input (the booking sits on
+    // the listing's first day).
     await page.locator('input[type="date"]').fill(listing.runFrom);
 
-    await expect(page.getByText(listing.title).first()).toBeVisible({ timeout: 15_000 });
-    // Attendee rows render children as "Name (age)".
-    const attendee = page.getByText(`${childName} (8)`);
-    await expect(attendee).toBeVisible();
+    // Rows carry data-ui="card"; the child renders by bare name (age sits in
+    // the subtitle now, so no "(8)" suffix).
+    const row = page.locator('[data-ui="card"]').filter({ hasText: childName }).last();
+    await expect(row).toBeVisible({ timeout: 15_000 });
 
-    // Mark them in — the innermost div holding both the child and an In
-    // button is their row (a bare .last() after one filter lands on the
-    // text node's own wrapper, which has no buttons).
-    await page
-      .locator("div")
-      .filter({ has: attendee })
-      .filter({ has: page.getByRole("button", { name: "In", exact: true }) })
-      .last()
-      .getByRole("button", { name: "In", exact: true })
-      .click();
-    // The In-time must land in OUR listing's register section — other runs'
+    // Mark them in. The In-time must land in OUR child's row — other runs'
     // listings share the same session date and may hold checked-in children.
-    await expect(cardWith(page, `${childName} (8)`, /In · \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
+    await row.getByRole("button", { name: "In", exact: true }).click();
+    await expect(cardWith(page, childName, /In \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
 
-    // Check them out again — the row keeps the in-time for the day's audit trail.
-    await page
-      .locator("div")
-      .filter({ has: attendee })
-      .filter({ has: page.getByRole("button", { name: "Out", exact: true }) })
-      .last()
-      .getByRole("button", { name: "Out", exact: true })
-      .click();
-    await expect(cardWith(page, `${childName} (8)`, /Out · \d{2}:\d{2} \(in \d{2}:\d{2}\)/)).toBeVisible({ timeout: 15_000 });
+    // Collect them (the old check-out) — the row keeps the in-time for the
+    // day's audit trail.
+    await row.getByRole("button", { name: "Collect", exact: true }).click();
+    await expect(cardWith(page, childName, /In \d{2}:\d{2} · Out \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
   });
 
   test("newsfeed post reaches the booked family", async ({ page, browser }) => {
     const body = `Bring wellies tomorrow! (${stamp})`;
     await page.goto("/company/newsfeed");
-    await page.getByPlaceholder("Bring wellies and a packed lunch…").fill(body);
-    await page.getByRole("button", { name: "Post to families" }).click();
+    // Posting starts from a template tile now. "Announcement" also names a
+    // filter chip, so pick the tile by its unique hint line.
+    await page.getByRole("button", { name: "General news for families" }).click();
+    await page.getByPlaceholder("e.g. Early pick-up today at 3pm").fill(`Wellies day (${stamp})`);
+    await page.getByPlaceholder("Write the update families will see…").fill(body);
+    await page.getByRole("button", { name: "Post to Newsfeed" }).click();
+    // The composer closing proves the POST succeeded — asserting the body
+    // text alone could match the composer's own textarea mirror.
+    await expect(page.getByPlaceholder("Write the update families will see…")).toBeHidden({ timeout: 15_000 });
     await expect(page.getByText(body).first()).toBeVisible({ timeout: 15_000 });
 
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
@@ -95,16 +101,23 @@ test.describe("operator day ops", () => {
   test("task can be added, completed and lands in Done", async ({ page }) => {
     const title = `E2E task ${stamp}`;
     await page.goto("/company/tasks");
-    await page.getByPlaceholder("Add a task…").fill(title);
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByPlaceholder(/Quick add…/).fill(title);
+    await page.getByRole("button", { name: "Quick add", exact: true }).click();
 
-    const row = page.locator("div").filter({ has: page.getByText(title, { exact: true }) }).last();
-    await expect(row).toBeVisible({ timeout: 15_000 });
-    // click(), not check(): the checkbox is React-controlled and only flips
-    // once the PUT round-trips, which check()'s immediate verification fails.
-    // The checked state IS the round-trip proof — a "Done (n)" section header
-    // shows for any old completed task and proves nothing about this one.
-    await row.locator('input[type="checkbox"]').click();
-    await expect(row.locator('input[type="checkbox"]')).toBeChecked({ timeout: 15_000 });
+    // Quick-adds land unassigned, so they show on the Board (not "My tasks").
+    await page.getByRole("button", { name: "Board", exact: true }).click();
+    const card = page.locator('[data-ui="card"]').filter({ hasText: title }).last();
+    await expect(card).toBeVisible({ timeout: 15_000 });
+
+    // Every board card has a "Done" button; ours flips to "✓ Done" when the
+    // PUT lands (exact:true keeps the pre-click match off the flipped label).
+    await card.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(cardWith(page, title, "✓ Done")).toBeVisible({ timeout: 15_000 });
+
+    // Reload proves the completion persisted server-side rather than living
+    // only in the optimistic local state.
+    await page.reload();
+    await page.getByRole("button", { name: "Board", exact: true }).click();
+    await expect(cardWith(page, title, "✓ Done")).toBeVisible({ timeout: 15_000 });
   });
 });

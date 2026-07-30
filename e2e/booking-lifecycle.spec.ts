@@ -79,9 +79,14 @@ test.describe("approval flow", () => {
     await opPage.goto("/company/bookings");
     await opPage.getByText(approveKid).first().click();
     await opPage.getByRole("button", { name: "Approve", exact: true }).click();
+    // Wait for the flip to land in the operator UI before navigating away —
+    // a goto (or context close) aborts the in-flight POST, which is exactly
+    // how this test lost approvals under full-suite load.
+    await expect(cardWith(opPage, approveKid, "Confirmed")).toBeVisible({ timeout: 15_000 });
     await opPage.goto("/company/bookings");
     await opPage.getByText(declineKid).first().click();
     await opPage.getByRole("button", { name: "Decline", exact: true }).click();
+    await expect(cardWith(opPage, declineKid, "Declined")).toBeVisible({ timeout: 15_000 });
     await opCtx.close();
 
     // Parent's cards flip to the two outcomes.

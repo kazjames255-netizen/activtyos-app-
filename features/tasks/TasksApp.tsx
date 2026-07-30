@@ -431,7 +431,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
   const mon = t.due ? new Date(`${t.due}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }).toUpperCase() : "";
   const rel = done ? "Done" : isOverdue ? "Overdue" : (dueLabel(t.due, today)?.text ?? "");
   return (
-    <div className="flex h-[52px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:shadow-md">
+    <div data-ui="card" className="flex h-[52px] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:shadow-md">
       {/* Date rail — compact */}
       <div className="flex w-[58px] flex-none flex-col items-center justify-center px-1 text-center leading-none text-white" style={{ background: t.due ? railBg : "linear-gradient(160deg,#8a93a6,#aab0be)" }}>
         {t.due ? <>
@@ -488,7 +488,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
           const isOverdue = t.status !== "done" && !!t.due && daysBetween(today, t.due) < 0;
           const accent = isOverdue ? "#c02636" : PRIO[t.prio ?? "med"].dot;
           return (
-          <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)}
+          <div key={t.id} draggable onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(t.id)} data-ui="card"
             className="cursor-grab overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing">
             <div className="border-l-[3px] p-2.5" style={{ borderColor: accent }}>
               <div className="flex items-start gap-1.5">

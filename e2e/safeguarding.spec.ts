@@ -40,7 +40,8 @@ test.describe("accidents", () => {
 
   test("operator logs an accident through the wizard; the record and its bell reach the parent", async ({ page, browser }) => {
     await page.goto("/company/accidents");
-    await page.getByRole("button", { name: /Log an accident/ }).click();
+    // The view was renamed Accidents → "First aid" (July 2026 manual pass).
+    await page.getByRole("button", { name: /Log first aid/ }).click();
 
     // Step 1 — who and where. Picking the BOOKED child is what links the
     // record to the parent's account; the picker's "not a booked child" row
@@ -188,16 +189,22 @@ test.describe("moments", () => {
       "base64",
     );
     await page.locator('input[type="file"]').setInputFiles({ name: "e2e.png", mimeType: "image/png", buffer: png });
+    // The upload opens a full-screen square-crop modal (z-60) — it must be
+    // confirmed, or it silently swallows every later click (fills still land,
+    // which is why only the click steps ever failed).
+    await page.getByRole("button", { name: "Use photo" }).click();
     await page.getByPlaceholder("A quick highlight for the parents…").fill(caption);
-    // Consent enforcement: both children are in today's session, and both are
-    // listed — but the one without photo consent is shown disabled and badged,
-    // so staff can see who's there without being able to put them in a photo.
-    // (`/api/moments` rejects the tag server-side too, so this is UX, not the
-    // safeguard itself.)
+    // Consent enforcement. Tagging is a focus-gated SEARCH dropdown now (12
+    // rows max), so each child must be searched by their run-stamped name —
+    // the consented one is clickable, the no-consent one renders disabled
+    // with a "no photos" badge. (`/api/moments` rejects the tag server-side
+    // too, so this is UX, not the safeguard itself.)
+    const childSearch = page.getByPlaceholder("Search child, parent or email…");
+    await childSearch.fill(childName);
     await expect(page.getByRole("button", { name: childName })).toBeEnabled({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: noConsentChild })).toBeDisabled();
-    // Tag our consented child — the button is the child's name.
     await page.getByRole("button", { name: childName }).click();
+    await childSearch.fill(noConsentChild);
+    await expect(page.getByRole("button", { name: noConsentChild })).toBeDisabled({ timeout: 15_000 });
     await page.getByRole("button", { name: /Post moment/ }).click();
     await expect(page.getByText(caption).first()).toBeVisible({ timeout: 20_000 });
 

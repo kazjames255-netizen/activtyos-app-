@@ -65,9 +65,16 @@ test.describe("bug report → support inbox", () => {
     // card AND the conversation bubble — any one proves the thread landed.
     await expect(hqPage.getByText(bugSteps).first()).toBeVisible({ timeout: 15_000 });
 
-    await hqPage.getByPlaceholder(/Write a reply…/).fill("Thanks — fix incoming.");
+    // The reply MUST be run-stamped: an unstamped "Thanks — fix incoming."
+    // matches stale list-row previews from earlier runs instantly, so the
+    // resolve click below races the still-in-flight reply POST — and the
+    // server reopens a thread on every reply, cancelling the resolve.
+    // The stamped bubble only renders from server data, so its visibility
+    // proves the POST (and the refetch) completed first.
+    const replyText = `Thanks — fix incoming. (${stamp})`;
+    await hqPage.getByPlaceholder(/Write a reply…/).fill(replyText);
     await hqPage.getByRole("button", { name: "Send", exact: true }).click();
-    await expect(hqPage.getByText("Thanks — fix incoming.").first()).toBeVisible({ timeout: 15_000 });
+    await expect(hqPage.getByText(replyText).first()).toBeVisible({ timeout: 15_000 });
 
     await hqPage.getByRole("button", { name: "✓ Mark resolved" }).click();
     await expect(hqPage.getByRole("button", { name: "↩︎ Reopen" })).toBeVisible({ timeout: 15_000 });

@@ -27,7 +27,9 @@ test.describe("team invites", () => {
     const ctx = await browser.newContext();
     const joinPage = await ctx.newPage();
     await joinPage.goto(inviteUrl);
-    await expect(joinPage.getByRole("heading", { name: /^Join / })).toBeVisible();
+    // The join hero renders as "🎉 Join <company>" — the emoji is part of the
+    // heading's accessible name, so don't anchor the regex to the start.
+    await expect(joinPage.getByRole("heading", { name: /Join / })).toBeVisible();
     await joinPage.getByLabel("Your name").fill("E2E Invited Staff");
     await joinPage.getByLabel("Email").fill(invitee);
     await joinPage.getByLabel("Password").fill(TEST_PASSWORD);
@@ -49,7 +51,7 @@ test.describe("team invites", () => {
     const reusePage = await reuseCtx.newPage();
     await reusePage.goto(inviteUrl);
     await expect(reusePage.getByRole("heading", { name: "Invite problem" })).toBeVisible({ timeout: 15_000 });
-    await expect(reusePage.getByRole("heading", { name: /^Join / })).toBeHidden();
+    await expect(reusePage.getByRole("heading", { name: /Join / })).toBeHidden();
     await reuseCtx.close();
   });
 });
