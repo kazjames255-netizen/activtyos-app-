@@ -990,6 +990,8 @@ export function EmailApp() {
   const [undoSend, setUndoSend] = useState<{ payload: Record<string, unknown>; count: number; hadAttachments: boolean } | null>(null);
   const [undoLeft, setUndoLeft] = useState(0);
   const undoFired = useRef(false);
+  const [undoEnq, setUndoEnq] = useState<{ name: string; location?: string; prev: EnquiryRec[] } | null>(null);
+  const [undoEnqLeft, setUndoEnqLeft] = useState(0);
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -1081,7 +1083,7 @@ export function EmailApp() {
   // Recipients when targeting by listing: distinct emails booked on any selected
   // listing (a repeat parent across duplicated listings only appears once).
   const composeLocations = [...new Set(composeListings.map((l) => (l.venueId ? venueName[l.venueId] : undefined)).filter((x): x is string => !!x))].sort();
-  const addEnquiry = (m: Mail, location?: string) => { const email = (m.fromEmail || "").toLowerCase(); if (!email) { setError("This sender has no email address to save."); return; } const list = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES; if (!list.some((e) => e.email.toLowerCase() === email)) writeLS(LS_ENQ, [{ email, name: m.from, location: location || undefined, at: new Date().toISOString().slice(0, 10) }, ...list]); setOk(`✓ ${m.from} added to New enquiries${location ? ` · ${location}` : ""}. They drop off automatically once they book.`); };
+  const addEnquiry = (m: Mail, location?: string) => { const email = (m.fromEmail || "").toLowerCase(); if (!email) { setError("This sender has no email address to save."); return; } const prev = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES; if (prev.some((e) => e.email.toLowerCase() === email)) { setError(null); setOk(`${m.from} is already on your New-enquiries board.`); return; } writeLS(LS_ENQ, [{ email, name: m.from, location: location || undefined, at: new Date().toISOString().slice(0, 10) }, ...prev]); setError(null); setOk(null); setUndoEnq({ name: m.from, location, prev }); setUndoEnqLeft(5); };
   const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
   const audienceFamilies = audience === "listing" ? listingFamilies : families;
@@ -1156,6 +1158,13 @@ export function EmailApp() {
     if (!undoFired.current) { undoFired.current = true; const u = undoSend; setUndoSend(null); void dispatchSend(u.payload, u.hadAttachments); }
   }, [undoSend, undoLeft, dispatchSend]);
 
+  // Undo-enquiry window: the add already happened; tick down, then dismiss.
+  useEffect(() => {
+    if (!undoEnq) return;
+    const t = setTimeout(() => { if (undoEnqLeft <= 1) setUndoEnq(null); else setUndoEnqLeft((n) => n - 1); }, 1000);
+    return () => clearTimeout(t);
+  }, [undoEnq, undoEnqLeft]);
+
   function send() {
     const bodyText = htmlToText(body);
     if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
@@ -1192,6 +1201,17 @@ export function EmailApp() {
       <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["compose", "Compose"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
+      {undoEnq && (
+        <div className="fixed bottom-6 left-1/2 z-[140] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[#bfe6cf] bg-white px-4 py-3 shadow-[0_12px_40px_-8px_rgba(18,122,62,.4)]">
+          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>✓</span>
+          <span className="text-[13px] font-semibold text-[var(--ink)]">Added <b>{undoEnq.name}</b> to New enquiries{undoEnq.location ? <> · <b>{undoEnq.location}</b></> : ""}</span>
+          <span className="relative flex h-7 w-7 flex-none items-center justify-center">
+            <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90"><circle cx="18" cy="18" r="15" fill="none" stroke="#eafaf0" strokeWidth="4" /><circle cx="18" cy="18" r="15" fill="none" stroke="#127a3e" strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 15} strokeDashoffset={2 * Math.PI * 15 * (1 - undoEnqLeft / 5)} style={{ transition: "stroke-dashoffset 1s linear" }} /></svg>
+            <span className="text-[11px] font-extrabold tabular-nums text-[#127a3e]">{undoEnqLeft}</span>
+          </span>
+          <button type="button" onClick={() => { writeLS(LS_ENQ, undoEnq.prev); setUndoEnq(null); setUndoEnqLeft(0); setOk("Undone — not added to enquiries."); }} className="flex-none rounded-lg px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>↩ Undo</button>
+        </div>
+      )}
 
       {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} />}
