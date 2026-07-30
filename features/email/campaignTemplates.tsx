@@ -42,10 +42,12 @@ export const accentHex = (id: string) => TPL_ACCENTS.find((a) => a.id === id)?.h
 
 // ── html helpers ──────────────────────────────────────────────────────────
 const para = (s: string | undefined, style: string) => (s ?? "").split(/\n{2,}/).filter(Boolean).map((p) => `<p style="${style}">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
-// A cropped image: fixed-height frame + object-fit cover + pan/zoom transform (same model as newsletters — renders in every modern inbox).
-const cropImg = (b: { image?: string; ix?: number; iy?: number; iz?: number }, h: string, radius: string, ph: string) => (b.image
-  ? `<div style="height:${h};overflow:hidden;border-radius:${radius}"><img src="${esc(b.image)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:translate(${b.ix ?? 0}%,${b.iy ?? 0}%) scale(${b.iz ?? 1});transform-origin:center"></div>`
-  : `<div style="height:${h};border-radius:${radius};background:${ph}"></div>`);
+// A cropped image: fixed-height frame + object-fit cover. Pan is object-position
+// (0–100%, works at any zoom with no gaps) and zoom scales from the same anchor —
+// email-safe and renders in every modern inbox.
+const cropImg = (b: { image?: string; ix?: number; iy?: number; iz?: number }, h: string, radius: string, ph: string) => { const x = b.ix ?? 50, y = b.iy ?? 50, z = b.iz ?? 1; return b.image
+  ? `<div style="height:${h};overflow:hidden;border-radius:${radius}"><img src="${esc(b.image)}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;display:block"></div>`
+  : `<div style="height:${h};border-radius:${radius};background:${ph}"></div>`; };
 const btn = (bg: string, fg: string, label?: string, url?: string) => `<a href="${esc(url || "#")}" style="display:inline-block;background:${bg};color:${fg};text-decoration:none;font-weight:800;font-size:14px;padding:12px 28px;border-radius:26px">${esc(label || "Learn more")}</a>`;
 const btnSm = (bg: string, fg: string, label?: string, url?: string) => `<a href="${esc(url || "#")}" style="display:inline-block;background:${bg};color:${fg};text-decoration:none;font-weight:800;font-size:11px;padding:7px 14px;border-radius:14px">${esc(label || "More")}</a>`;
 const row = (inner: string, style = "") => `<tr><td style="${style}">${inner}</td></tr>`;
@@ -177,20 +179,20 @@ const ADDABLE: { t: BlockType; label: string; make: () => Block }[] = [
 ];
 const BLOCK_LABEL: Record<BlockType, string> = { header: "Header", hero: "Hero", band: "Colour band", heading: "Heading", text: "Text", image: "Image", cards: "Cards", tiers: "Pricing tiers", split: "Image + text", button: "Button", social: "Social icons", divider: "Divider", footer: "Footer" };
 
-// ── crop control (drag to reposition + zoom) — same model as newsletters ─────
-const clampPan = (v: number, z: number) => { const m = ((z - 1) / 2) * 100; return Math.max(-m, Math.min(m, v)); };
-function CropBox({ url, ix = 0, iy = 0, iz = 1, onChange }: { url: string; ix?: number; iy?: number; iz?: number; onChange: (p: { ix?: number; iy?: number; iz?: number }) => void }) {
+// ── crop control — drag anywhere to reposition (object-position pan) + zoom ───
+const clamp01 = (v: number) => Math.max(0, Math.min(100, v));
+function CropBox({ url, ix = 50, iy = 50, iz = 1, onChange }: { url: string; ix?: number; iy?: number; iz?: number; onChange: (p: { ix?: number; iy?: number; iz?: number }) => void }) {
   const drag = useRef<{ sx: number; sy: number; x: number; y: number; w: number; h: number } | null>(null);
   const down = (e: RPE<HTMLDivElement>) => { drag.current = { sx: e.clientX, sy: e.clientY, x: ix, y: iy, w: e.currentTarget.clientWidth || 1, h: e.currentTarget.clientHeight || 1 }; e.currentTarget.setPointerCapture(e.pointerId); };
-  const move = (e: RPE<HTMLDivElement>) => { const d = drag.current; if (!d) return; onChange({ ix: clampPan(d.x + ((e.clientX - d.sx) / d.w) * 100, iz), iy: clampPan(d.y + ((e.clientY - d.sy) / d.h) * 100, iz) }); };
+  const move = (e: RPE<HTMLDivElement>) => { const d = drag.current; if (!d) return; onChange({ ix: clamp01(d.x - ((e.clientX - d.sx) / d.w) * 100), iy: clamp01(d.y - ((e.clientY - d.sy) / d.h) * 100) }); };
   const up = () => { drag.current = null; };
   return (
-    <div className="space-y-1">
-      <div onPointerDown={down} onPointerMove={move} onPointerUp={up} className="relative h-28 w-full cursor-move touch-none overflow-hidden rounded-lg bg-[#0b1020]">
-        <img src={url} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", transform: `translate(${ix}%, ${iy}%) scale(${iz})`, transformOrigin: "center" }} />
-        <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[9.5px] font-bold text-white">drag to reposition</span>
+    <div className="space-y-1.5">
+      <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} className="relative h-44 w-full cursor-move touch-none select-none overflow-hidden rounded-lg bg-[#0b1020]">
+        <img src={url} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ix}% ${iy}%`, transform: `scale(${iz})`, transformOrigin: `${ix}% ${iy}%` }} />
+        <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">✥ drag to reposition</span>
       </div>
-      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-[var(--ink-3)]">Zoom</span><input type="range" min={1} max={3} step={0.05} value={iz} onChange={(e) => { const z = Number(e.target.value); onChange({ iz: z, ix: clampPan(ix, z), iy: clampPan(iy, z) }); }} className="flex-1" /></div>
+      <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-[var(--ink-3)]">Zoom</span><input type="range" min={1} max={3} step={0.02} value={iz} onChange={(e) => onChange({ iz: Number(e.target.value) })} className="flex-1" /><span className="w-8 text-right text-[10px] tabular-nums text-[var(--ink-3)]">{iz.toFixed(1)}×</span></div>
     </div>
   );
 }
@@ -223,7 +225,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
 
   const imgField = (id: string, o: { image?: string; ix?: number; iy?: number; iz?: number }, apply: (p: Partial<Block> & Partial<Card>) => void) => (
     o.image
-      ? <div className="space-y-1.5"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Image</span><button type="button" onClick={() => apply({ image: "", ix: 0, iy: 0, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><CropBox url={o.image} ix={o.ix} iy={o.iy} iz={o.iz} onChange={apply} /></div>
+      ? <div className="space-y-1.5"><div className="flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Image — drag to crop</span><button type="button" onClick={() => apply({ image: "", ix: 50, iy: 50, iz: 1 })} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><CropBox url={o.image} ix={o.ix} iy={o.iy} iz={o.iz} onChange={apply} /></div>
       : <div className="flex flex-wrap items-center gap-1.5"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{busyKey === id ? "…" : "⬆ Add image"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(id, (u) => apply({ image: u }), f); e.target.value = ""; }} /></label><input placeholder="or paste URL" value={o.image ?? ""} onChange={(e) => apply({ image: e.target.value })} className={`${inputCls} min-w-[110px] flex-1`} /></div>
   );
 
@@ -257,8 +259,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-3 pt-[3vh]" onClick={onCancel}>
-      <div className="flex w-full max-w-[1060px] flex-col overflow-hidden rounded-3xl bg-[var(--card,#fff)] shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ maxHeight: "94vh" }}>
+    <div className="fixed inset-0 z-50 flex bg-black/50" onClick={onCancel}>
+      <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--card,#fff)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <div><div className="text-[16px] font-extrabold">{design ? "Design your email" : "Choose a template"}</div><div className="text-[12px] text-white/75">{design ? "Every section can be moved ↑↓, duplicated ⧉ or deleted 🗑 — and every image drags to crop + zoom." : "30 detailed, camp-ready designs. Pick one, then make it yours block by block."}</div></div>
           <div className="flex items-center gap-2">{design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">Use this design</button>}<button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button></div>
@@ -279,7 +281,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             </div>
           </>
         ) : (
-          <div className="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_430px]">
+          <div className="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[420px_1fr]">
             <div className="min-h-0 space-y-2.5 overflow-y-auto border-r border-[var(--line)] p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">← Templates</button>
