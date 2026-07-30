@@ -20,7 +20,7 @@ export type BlockType = "header" | "hero" | "band" | "heading" | "text" | "image
 export interface Card { image?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[] }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[] }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -72,24 +72,25 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>): string {
     case "band":
       return row(`<h2 style="margin:0;font-size:17px;font-weight:800;color:${t.onA};text-align:center">${esc(b.heading)}</h2>${b.body ? `<div style="margin-top:5px;font-size:13px;color:${t.onAMut};text-align:center">${esc(b.body)}</div>` : ""}${b.label ? `<div style="text-align:center;margin-top:12px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}`, `background:${t.a};padding:16px 24px`);
     case "heading":
-      return row(`<h2 style="margin:0;font-size:23px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h2>${b.subheading ? `<div style="text-align:center;margin-top:4px;font-size:13.5px;color:${t.mut}">${esc(b.subheading)}</div>` : ""}<div style="height:3px;width:54px;background:${t.a};margin:12px auto 0"></div>`, "padding:24px 26px 6px");
+      return row(`<h2 style="margin:0;font-size:23px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h2>${b.subheading ? `<div style="text-align:center;margin-top:4px;font-size:13.5px;color:${t.mut}">${esc(b.subheading)}</div>` : ""}<div style="height:3px;width:54px;background:${t.a};margin:12px auto 0"></div>${b.label ? `<div style="text-align:center;margin-top:16px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:24px 26px 6px");
     case "text":
-      return row(para(b.body, `margin:0 0 10px;font-size:14px;line-height:1.7;color:${t.mut}`), "padding:8px 30px");
+      return row(`${para(b.body, `margin:0 0 10px;font-size:14px;line-height:1.7;color:${t.mut}`)}${b.label ? `<div style="text-align:center;margin-top:10px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:8px 30px");
     case "image": {
       const al = b.align || "center"; const shape = b.shape || "landscape";
       const hasText = !!(b.heading || b.body);
       const capHtml = b.caption ? `<div style="margin-top:6px;font-size:12px;color:${t.mut}">${esc(b.caption)}</div>` : "";
+      const cta = b.label ? btn(t.a, t.onA, b.label, b.url) : "";
       // Smart: when the image isn't full width AND there's copy, flow it beside the image.
       if (b.size !== "full" && hasText) {
-        const fracImg = b.size === "s" ? 38 : 52;
+        const fracImg = Math.max(25, Math.min(70, b.splitPct ?? (b.size === "s" ? 38 : 52)));
         const H = imgHeight(shape, Math.round(600 * fracImg / 100));
         const imgTd = `<td valign="middle" width="${fracImg}%" style="padding-${al === "right" ? "left" : "right"}:14px">${cropImg(b, `${H}px`, "12px", t.aDark)}</td>`;
-        const txtTd = `<td valign="middle" style="padding-${al === "right" ? "right" : "left"}:14px">${b.heading ? `<h3 style="margin:0 0 7px;font-size:17px;font-weight:800;color:${t.ink}">${esc(b.heading)}</h3>` : ""}${para(b.body, `margin:0;font-size:13px;line-height:1.6;color:${t.mut}`)}${capHtml}</td>`;
+        const txtTd = `<td valign="middle" style="padding-${al === "right" ? "right" : "left"}:14px">${b.heading ? `<h3 style="margin:0 0 7px;font-size:17px;font-weight:800;color:${t.ink}">${esc(b.heading)}</h3>` : ""}${para(b.body, `margin:0;font-size:13px;line-height:1.6;color:${t.mut}`)}${capHtml}${cta ? `<div style="margin-top:12px">${cta}</div>` : ""}</td>`;
         return row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>${al === "right" ? txtTd + imgTd : imgTd + txtTd}</tr></table>`, "padding:14px 26px");
       }
       const frac = b.size === "s" ? 42 : b.size === "m" ? 64 : 100;
       const H = imgHeight(shape, Math.round(600 * frac / 100));
-      return row(`<div style="text-align:${al}"><div style="display:inline-block;width:${frac}%;max-width:100%">${cropImg(b, `${H}px`, "12px", t.aDark)}</div>${capHtml}</div>`, "padding:12px 26px");
+      return row(`<div style="text-align:${al}"><div style="display:inline-block;width:${frac}%;max-width:100%">${cropImg(b, `${H}px`, "12px", t.aDark)}</div>${capHtml}${cta ? `<div style="margin-top:12px">${cta}</div>` : ""}</div>`, "padding:12px 26px");
     }
     case "cards": {
       const per = b.cols || 3, cs = b.cards || []; let inner = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>`;
@@ -252,12 +253,13 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       case "header": return <div className="space-y-1.5">{hd("Business name", b.heading)}{hd("Tagline (optional)", b.subheading, "subheading")}</div>;
       case "hero": return <div className="space-y-1.5"><div><div className={lbl}>Image</div>{imgField(`${k}-img`, b, (p) => patch(k, p))}</div>{hd("Heading", b.heading)}{hd("Sub-heading", b.subheading, "subheading")}{ta("Body")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "band": return <div className="space-y-1.5">{hd("Heading", b.heading)}{ta("Text (optional)")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
-      case "heading": return <div className="space-y-1.5">{hd("Heading", b.heading)}{hd("Sub-heading (optional)", b.subheading, "subheading")}</div>;
-      case "text": return ta("Text");
+      case "heading": return <div className="space-y-1.5">{hd("Heading", b.heading)}{hd("Sub-heading (optional)", b.subheading, "subheading")}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
+      case "text": return <div className="space-y-1.5">{ta("Text")}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "image": { const beside = b.size !== "full"; return <div className="space-y-2">{imgField(`${k}-img`, b, (p) => patch(k, p))}
         <div><div className={lbl}>Shape</div><div className="flex flex-wrap gap-1">{([["landscape", "Rectangle"], ["square", "Square"], ["portrait", "Portrait"], ["wide", "Banner"]] as const).map(([s, l]) => <button key={s} type="button" onClick={() => patch(k, { shape: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.shape || "landscape") === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{l}</button>)}</div></div>
         <div className="flex items-start gap-4"><div><div className={lbl}>Size</div><div className="flex gap-1">{(["s", "m", "full"] as const).map((s) => <button key={s} type="button" onClick={() => patch(k, { size: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${b.size === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{s === "s" ? "Small" : s === "m" ? "Medium" : "Full"}</button>)}</div></div><div><div className={lbl}>{beside && (b.heading || b.body) ? "Image side" : "Align"}</div><div className="flex gap-1">{(["left", "center", "right"] as const).map((al) => <button key={al} type="button" onClick={() => patch(k, { align: al })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.align || "center") === al ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{al[0].toUpperCase()}</button>)}</div></div></div>
-        {beside ? <div className="space-y-1.5 rounded-lg border border-dashed border-[#bcd3f5] bg-[#f6f9ff] p-2.5"><div className="text-[11px] font-bold text-[#1d3a8f]">✎ Text beside the image <span className="font-normal text-[var(--ink-3)]">— there's room, so fill it (optional)</span></div>{hd("Heading", b.heading)}{ta("Body")}</div> : <div className="text-[10.5px] text-[var(--ink-3)]">Tip: switch to Small or Medium and a text area appears to sit beside the image.</div>}
+        {beside ? <div className="space-y-1.5 rounded-lg border border-dashed border-[#bcd3f5] bg-[#f6f9ff] p-2.5"><div className="text-[11px] font-bold text-[#1d3a8f]">✎ Text beside the image <span className="font-normal text-[var(--ink-3)]">— there's room, so fill it (optional)</span></div>{hd("Heading", b.heading)}{ta("Body")}{(b.heading || b.body) && <div><div className={lbl}>Image / text split — drag to keep the image bigger</div><input type="range" min={25} max={70} step={1} value={b.splitPct ?? (b.size === "s" ? 38 : 52)} onChange={(e) => patch(k, { splitPct: Number(e.target.value) })} className="w-full" /><div className="text-[10px] text-[var(--ink-3)]">Image {b.splitPct ?? (b.size === "s" ? 38 : 52)}% · text fills the rest</div></div>}</div> : <div className="text-[10.5px] text-[var(--ink-3)]">Tip: switch to Small or Medium and a text area appears to sit beside the image.</div>}
+        {hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}
         {hd("Caption (optional)", b.caption, "caption")}</div>; }
       case "split": return <div className="space-y-1.5">{imgField(`${k}-img`, b, (p) => patch(k, p))}<label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={!!b.flip} onChange={(e) => patch(k, { flip: e.target.checked })} /> Image on the right</label>{hd("Heading", b.heading)}{ta("Body")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "button": return <div className="space-y-1.5">{hd("Label", b.label, "label")}{hd("Link", b.url, "url")}</div>;
