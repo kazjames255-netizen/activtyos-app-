@@ -234,6 +234,9 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
 
   const tpl = design ? templateOf(design.templateId || "") : null;
   const shown = TEMPLATES.filter((t) => t.category === cat);
+  const selBlock = design ? (design.blocks.find((b) => b.k === selKey) ?? null) : null;
+  const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
+  const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30";
   const start = (id: string) => { const d = newDesign(id, company, socials); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
   const setBlocks = (fn: (bs: Block[]) => Block[]) => setDesign((d) => (d ? { ...d, blocks: fn(d.blocks) } : d));
   const patch = (k: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.k === k ? { ...b, ...p } : b)));
@@ -313,20 +316,16 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               ))}
             </div>
           </>
-        ) : (() => {
-          const selBlock = design.blocks.find((b) => b.k === selKey) || null;
-          const t2 = theme(accentHex(design.accent) || design.accent);
-          const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30";
-          return (
+        ) : (
           // ── In-place builder: controls live ON each section of the working email ──
           <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: "radial-gradient(1200px 500px at 70% -5%, #eef3fb, #e3e8f1)" }}>
             <div className="absolute inset-0 overflow-auto" onClick={() => { setSelKey(null); setAddOpen(false); }}>
               <div className="flex min-h-full justify-center px-6 pb-28 pt-16">
                 <div style={{ zoom }} className="h-max">
-                  <div className="w-[600px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)" }} onClick={(e) => e.stopPropagation()}>
+                  <div className="w-[600px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
                     {design.blocks.map((b, i) => (
                       <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
-                        <div dangerouslySetInnerHTML={{ __html: renderBlock(b, t2, company) }} />
+                        <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company)}</table>` }} />
                         <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
                         <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white/95 px-1 py-0.5 shadow-lg ring-1 ring-black/10 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                           <span className="px-1 text-[10px] font-extrabold text-[var(--ink-3)]">{BLOCK_LABEL[b.t]}</span>
@@ -346,6 +345,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             {/* top-left toolbar */}
             <div className="absolute left-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2.5 py-1.5 shadow-lg backdrop-blur">
               <button type="button" onClick={() => setDesign(null)} className="text-[12px] font-bold text-[var(--ink-2)] hover:text-[#1d3a8f]">← Templates</button>
+              {tpl && <span className="max-w-[130px] truncate text-[12px] font-extrabold text-[var(--ink)]">{tpl.name}</span>}
               <span className="h-4 w-px bg-[var(--line)]" />
               <div className="flex items-center gap-1">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => setDesign((d) => (d ? { ...d, accent: a.id } : d))} title={a.name} className={`rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow"}`} style={{ background: a.hex, height: 18, width: 18 }} />)}</div>
             </div>
@@ -369,21 +369,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
             </div>}
 
             {/* inspector for the selected section — floats over the preview */}
-            {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[372px] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white shadow-2xl">
-              <div className="flex items-center gap-1.5 border-b border-[var(--line)] bg-gradient-to-r from-[#f3f6fc] to-[#eef2f9] px-3.5 py-2.5">
-                <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{BLOCK_LABEL[selBlock.t]}</span>
-                <div className="ml-auto flex items-center gap-0.5">
-                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className={ctrlBtn}>↑</button>
-                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className={ctrlBtn}>↓</button>
-                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className={ctrlBtn}>⧉</button>
-                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
-                  <button type="button" title="Close" onClick={() => setSelKey(null)} className={`${ctrlBtn} text-[15px]`}>×</button>
+            {selBlock && <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[384px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-20px_rgba(20,30,60,.55)] ring-1 ring-black/10">
+              <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+                <span className="text-[11px]">✎</span><span className="text-[13px] font-extrabold">Editing: {BLOCK_LABEL[selBlock.t]}</span>
+                <div className="ml-auto flex items-center gap-0.5 text-white">
+                  <button type="button" title="Move up" onClick={() => move(selBlock.k!, -1)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">↑</button>
+                  <button type="button" title="Move down" onClick={() => move(selBlock.k!, 1)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">↓</button>
+                  <button type="button" title="Duplicate" onClick={() => dup(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] text-white/85 hover:bg-white/20">⧉</button>
+                  <button type="button" title="Delete" onClick={() => del(selBlock.k!)} className="flex h-6 w-6 items-center justify-center rounded text-[13px] hover:bg-white/20">🗑</button>
+                  <button type="button" title="Close" onClick={() => setSelKey(null)} className="flex h-6 w-6 items-center justify-center rounded text-[16px] text-white/85 hover:bg-white/20">×</button>
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
             </div>}
           </div>
-          ); })()}
+          )}
       </div>
     </div>
   );
