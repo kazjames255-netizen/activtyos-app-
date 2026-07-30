@@ -20,7 +20,7 @@ export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text"
 export interface Card { image?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third" }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -137,10 +137,13 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
       return row(`${b.heading ? `<div style="font-size:13px;font-weight:800;color:${t.onA};text-align:center${bits.length ? ";margin-bottom:6px" : ""}">${esc(b.heading)}</div>` : ""}${bits.length ? `<div style="text-align:center;font-size:13px;font-weight:600;color:${t.onA}">${bits.map((x) => esc(x)).join(" &nbsp;•&nbsp; ")}</div>` : ""}`, `background:${t.a};padding:16px 24px`);
     }
     case "countdown": {
-      const target = b.date ? Date.parse(`${b.date}T23:59:59`) : NaN;
-      const days = !isNaN(target) && now > 0 ? Math.max(0, Math.ceil((target - now) / 86400000)) : null;
-      const dateStr = !isNaN(target) ? new Date(target).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) : "";
-      return row(`<div style="text-align:center"><div style="font-size:14px;font-weight:800;letter-spacing:.5px;color:${t.onA}">${esc(b.heading || "Hurry — offer ends soon")}</div>${days != null ? `<div style="margin:12px 0 2px;font-size:54px;font-weight:900;line-height:1;color:${t.onA}">${days}</div><div style="font-size:14px;font-weight:700;color:${t.onAMut}">${days === 0 ? "last chance — ends today!" : days === 1 ? "day to go" : "days to go"}</div>` : ""}${dateStr ? `<div style="margin-top:8px;font-size:13px;color:${t.onAMut}">Ends ${esc(dateStr)}</div>` : `<div style="margin-top:8px;font-size:12px;color:${t.onAMut}">Pick a date in the editor</div>`}${b.label ? `<div style="margin-top:16px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}</div>`, `background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});padding:26px 26px 30px`);
+      const target = b.date ? Date.parse(b.date) : NaN;
+      const diff = !isNaN(target) && now > 0 ? Math.max(0, target - now) : null;
+      const parts: [string, number][] = diff != null ? [["Days", Math.floor(diff / 86400000)], ["Hrs", Math.floor((diff % 86400000) / 3600000)], ["Mins", Math.floor((diff % 3600000) / 60000)], ["Secs", Math.floor((diff % 60000) / 1000)]] : [];
+      const boxFg = readable(t.onA);
+      const boxes = parts.map(([lab, v]) => `<td style="padding:0 4px"><div style="background:${t.onA};color:${boxFg};border-radius:12px;padding:10px 4px;min-width:54px"><div style="font-size:27px;font-weight:900;line-height:1">${String(v).padStart(2, "0")}</div><div style="font-size:9.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.72">${lab}</div></div></td>`).join("");
+      const dateStr = !isNaN(target) ? new Date(target).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      return row(`<div style="text-align:center"><div style="font-size:14px;font-weight:800;letter-spacing:.5px;color:${t.onA}">${esc(b.heading || "Hurry — offer ends soon")}</div>${diff != null ? `<table role="presentation" align="center" style="margin:14px auto 2px;border-collapse:separate"><tr>${boxes}</tr></table>` : `<div style="margin-top:8px;font-size:12px;color:${t.onAMut}">Pick a date &amp; time in the editor</div>`}${dateStr ? `<div style="margin-top:8px;font-size:12.5px;color:${t.onAMut}">Ends ${esc(dateStr)}</div>` : ""}${b.label ? `<div style="margin-top:14px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}</div>`, `background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});padding:24px 26px 28px`);
     }
     case "graph": {
       const cs = (b.cards || []).slice(0, 6);
@@ -206,7 +209,28 @@ export const TEMPLATES: CampaignTemplate[] = [
 
 export const CATEGORIES = ["Offers & bookings", "Announcements", "Welcome", "News & updates", "Seasonal", "Admin & notices"];
 export const templateOf = (id: string) => TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
-export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 0): string { return wrapRows((d.blocks || []).map((b) => renderBlock(b, theme(accentHex(d.accent) || d.accent), c, now)).join("")); }
+// Group consecutive half/third-width blocks into side-by-side rows.
+export function groupRows(blocks: Block[]): Block[][] {
+  const rows: Block[][] = [];
+  for (let i = 0; i < blocks.length;) {
+    const span = blocks[i].span && blocks[i].span !== "full" ? blocks[i].span : null;
+    if (!span) { rows.push([blocks[i]]); i++; continue; }
+    const per = span === "half" ? 2 : 3; const grp = [blocks[i]]; let j = i + 1;
+    while (j < blocks.length && grp.length < per && blocks[j].span === span) { grp.push(blocks[j]); j++; }
+    rows.push(grp); i = j;
+  }
+  return rows;
+}
+export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 0): string {
+  const t = theme(accentHex(d.accent) || d.accent);
+  const html = groupRows(d.blocks || []).map((grp) => {
+    if (grp.length === 1 && (!grp[0].span || grp[0].span === "full")) return renderBlock(grp[0], t, c, now);
+    const w = Math.floor(100 / grp.length);
+    const cells = grp.map((g) => `<td valign="top" width="${w}%" style="vertical-align:top"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(g, t, c, now)}</table></td>`).join("");
+    return `<tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>${cells}</tr></table></td></tr>`;
+  }).join("");
+  return wrapRows(html);
+}
 export function renderDesignText(d: CampaignDesign): string { const out: string[] = []; for (const b of d.blocks || []) { [b.heading, b.subheading, b.body, b.label].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); (b.cards || []).forEach((cd) => { [cd.title, cd.caption, cd.price].forEach((s) => { if (s && s.trim()) out.push(s.trim()); }); }); } return out.join("\n\n"); }
 const withSocials = (blocks: Block[], seed?: Social[]): Block[] => (seed && seed.length ? blocks.map((b) => (b.t === "social" && (!b.socials || b.socials.every((s) => !s.url)) ? { ...b, socials: seed } : b)) : blocks);
 export const newDesign = (templateId: string, c?: Partial<Company>, seed?: Social[]): CampaignDesign => { const t = templateOf(templateId); const blocks = withSocials(t.blocks(), seed).map((b) => (b.t === "header" || b.t === "footer") && !b.heading ? { ...b, heading: c?.name || "" } : b); return { templateId, accent: t.accentId, blocks }; };
@@ -345,7 +369,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
       case "checklist": return <div className="space-y-1.5">{hd("Heading", b.heading)}{(["item1", "item2", "item3", "item4", "item5", "item6"] as const).map((key, i) => <input key={key} placeholder={`Item ${i + 1}${i > 2 ? " (optional)" : ""}`} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} />)}</div>;
       case "code": return <div className="space-y-1.5">{hd("The code", b.heading)}{hd("Label above it", b.subheading, "subheading")}{ta("Description")}</div>;
       case "stats": return <div className="space-y-2">{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Stat {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="space-y-1"><input placeholder="Number (e.g. 2,000+)" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Label (e.g. happy children)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 4 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add stat</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 4.</div>}</div>;
-      case "countdown": return <div className="space-y-1.5">{hd("Heading", b.heading)}<div><div className={lbl}>Count down to this date</div><input type="date" value={b.date ?? ""} onChange={(e) => patch(k, { date: e.target.value })} className={inputCls} /><div className="mt-1 text-[10px] text-[var(--ink-3)]">Shows the number of days left until this date.</div></div>{hd("Button label (optional)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
+      case "countdown": return <div className="space-y-1.5">{hd("Heading", b.heading)}<div><div className={lbl}>Count down to (date &amp; time)</div><input type="datetime-local" step={1} value={b.date ?? ""} onChange={(e) => patch(k, { date: e.target.value })} className={inputCls} /><div className="mt-1 text-[10px] text-[var(--ink-3)]">Shows days · hrs · mins · secs left, set when the email is sent. (Email can&apos;t tick live.)</div></div>{hd("Button label (optional)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "graph": return <div className="space-y-2">{hd("Chart title", b.heading)}{(b.cards || []).map((cd, i) => <div key={i} className="rounded-lg border border-[var(--line)] p-2"><div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold text-[var(--ink-3)]">Bar {i + 1}</span><button type="button" onClick={() => delCard(k, i)} className="text-[11px] font-bold text-[#c02636]">Remove</button></div><div className="grid grid-cols-2 gap-1"><input placeholder="Label" value={cd.title ?? ""} onChange={(e) => setCard(k, i, { title: e.target.value })} className={inputCls} /><input placeholder="Value (number)" value={cd.caption ?? ""} onChange={(e) => setCard(k, i, { caption: e.target.value })} className={inputCls} /></div></div>)}{(b.cards?.length ?? 0) < 6 ? <button type="button" onClick={() => addCard(k)} className="rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[11.5px] font-bold text-[#1d3a8f]">＋ Add bar</button> : <div className="text-[10.5px] text-[var(--ink-3)]">Up to 6 bars.</div>}</div>;
       case "contact": return <div className="space-y-1.5">{hd("Heading (optional)", b.heading)}<div className="grid grid-cols-2 gap-2"><input autoComplete="off" data-lpignore="true" placeholder="Phone" value={b.footerPhone ?? ""} onChange={(e) => patch(k, { footerPhone: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Email" value={b.footerEmail ?? ""} onChange={(e) => patch(k, { footerEmail: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Website" value={b.footerWeb ?? ""} onChange={(e) => patch(k, { footerWeb: e.target.value })} className={inputCls} /><input autoComplete="off" data-lpignore="true" placeholder="Address" value={b.footerAddress ?? ""} onChange={(e) => patch(k, { footerAddress: e.target.value })} className={inputCls} /></div><div className="text-[10px] text-[var(--ink-3)]">Leave blank to use your saved business details.</div></div>;
       default: return null;
@@ -394,18 +418,22 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <div className="flex min-h-full justify-center px-6 pb-28 pt-16">
                 <div style={{ zoom }} className="h-max">
                   <div className="w-[640px] max-w-full overflow-hidden rounded-[18px] bg-white ring-1 ring-black/5" style={{ boxShadow: "0 40px 90px -30px rgba(20,30,60,.45)", fontFamily: "system-ui,-apple-system,'Segoe UI',sans-serif" }} onClick={(e) => e.stopPropagation()}>
-                    {design.blocks.map((b, i) => (
-                      <div key={b.k} className="group relative" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
-                        <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company, nowMs)}</table>` }} />
-                        <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
-                        <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                          <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>
-                          <button type="button" title="Move up" onClick={(e) => { e.stopPropagation(); move(b.k!, -1); }} disabled={i === 0} className={ctrlBtn}>↑</button>
-                          <button type="button" title="Move down" onClick={(e) => { e.stopPropagation(); move(b.k!, 1); }} disabled={i === design.blocks.length - 1} className={ctrlBtn}>↓</button>
-                          <button type="button" title="Duplicate" onClick={(e) => { e.stopPropagation(); dup(b.k!); }} className={ctrlBtn}>⧉</button>
-                          <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); del(b.k!); }} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
-                        </div>
-                        <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setSelKey(null); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-[#2f6bd8] px-4 py-2 text-[12.5px] font-extrabold leading-none text-white opacity-0 shadow-[0_8px_20px_-4px_rgba(47,107,216,.75)] ring-2 ring-white transition hover:bg-[#1d3a8f] group-hover:opacity-100"><span className="text-[16px] leading-none">＋</span> Add section</button>
+                    {groupRows(design.blocks).map((rowBlocks) => (
+                      <div key={rowBlocks[0].k} className="flex items-stretch">
+                        {rowBlocks.map((b) => { const i = design.blocks.indexOf(b); return (
+                          <div key={b.k} className="group relative min-w-0 flex-1" onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
+                            <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company, nowMs)}</table>` }} />
+                            <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
+                            <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                              <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>
+                              <button type="button" title="Move up" onClick={(e) => { e.stopPropagation(); move(b.k!, -1); }} disabled={i === 0} className={ctrlBtn}>↑</button>
+                              <button type="button" title="Move down" onClick={(e) => { e.stopPropagation(); move(b.k!, 1); }} disabled={i === design.blocks.length - 1} className={ctrlBtn}>↓</button>
+                              <button type="button" title="Duplicate" onClick={(e) => { e.stopPropagation(); dup(b.k!); }} className={ctrlBtn}>⧉</button>
+                              <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); del(b.k!); }} className={`${ctrlBtn} text-[#c02636]`}>🗑</button>
+                            </div>
+                            <button type="button" title="Add a section here" onClick={(e) => { e.stopPropagation(); setSelKey(null); setAddIndex(i + 1); setAddOpen(true); }} className="absolute -bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-[#2f6bd8] px-3.5 py-1.5 text-[12px] font-extrabold leading-none text-white opacity-0 shadow-[0_8px_20px_-4px_rgba(47,107,216,.75)] ring-2 ring-white transition hover:bg-[#1d3a8f] group-hover:opacity-100"><span className="text-[15px] leading-none">＋</span> Add</button>
+                          </div>
+                        ); })}
                       </div>
                     ))}
                   </div>
@@ -446,6 +474,11 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                   <button type="button" title="Delete section" onClick={() => del(selBlock.k!)} className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[14px] font-extrabold text-[#c02636] shadow-sm hover:bg-[#fdecec]">🗑</button>
                   <button type="button" onClick={() => setSelKey(null)} className="ml-1 rounded-md bg-white px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm hover:bg-[#eef4fd]">✓ Done</button>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Width</span>
+                {([["full", "Full"], ["half", "½ Half"], ["third", "⅓ Third"]] as const).map(([w, l]) => <button key={w} type="button" onClick={() => patch(selBlock.k!, { span: w })} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${(selBlock.span || "full") === w ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
+                <span className="ml-auto text-[9.5px] text-[var(--ink-3)]">sits beside the next same-width section</span>
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
               <div className="border-t border-[var(--line)] p-2.5"><button type="button" onClick={() => setSelKey(null)} className="w-full rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✓ Done editing</button></div>
