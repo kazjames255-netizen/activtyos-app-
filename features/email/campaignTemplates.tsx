@@ -466,6 +466,8 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const [selKey, setSelKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [colourOpen, setColourOpen] = useState(false);
+  const [frameOpen, setFrameOpen] = useState(false);
+  const [seasonOpen, setSeasonOpen] = useState(false);
   const [history, setHistory] = useState<CampaignDesign[]>([]);
   const [future, setFuture] = useState<CampaignDesign[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -708,13 +710,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                 <button type="button" onClick={() => patch(selBlock.k!, { accent: "" })} title="Use the email's colour" className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${!selBlock.accent ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>Match email</button>
                 {TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => patch(selBlock.k!, { accent: a.id })} title={`Just this section: ${a.name}`} className={`h-5 w-5 flex-none rounded-full transition ${selBlock.accent === a.id ? "ring-2 ring-[#16306e] ring-offset-1" : "ring-1 ring-black/10 hover:ring-black/30"}`} style={{ background: a.hex }} />)}
               </div>
-              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
-                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Frame</span>
-                {BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${(selBlock.border || "none") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
+              <div className="border-b border-[var(--line)] bg-[var(--panel)]">
+                <button type="button" onClick={() => setFrameOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-left hover:bg-white/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Frame</span>
+                  {(BORDERS.find(([v]) => v === selBlock.border && v !== "none")) && <span className="rounded-full bg-[#e7eefb] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{BORDERS.find(([v]) => v === selBlock.border)![1]}</span>}
+                  <span className="ml-auto text-[9px] text-[var(--ink-3)]">{frameOpen ? "▲ hide" : "▼ show"}</span>
+                </button>
+                {frameOpen && <div className="flex flex-wrap items-center gap-1 px-3.5 pb-2.5">{BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${(selBlock.border || "none") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}</div>}
               </div>
-              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
-                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Seasonal &amp; fun</span>
-                {SEASONAL_BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${selBlock.border === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
+              <div className="border-b border-[var(--line)] bg-[var(--panel)]">
+                <button type="button" onClick={() => setSeasonOpen((v) => !v)} className="flex w-full items-center gap-1.5 px-3.5 py-2 text-left hover:bg-white/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Seasonal &amp; fun</span>
+                  {(SEASONAL_BORDERS.find(([v]) => v === selBlock.border)) && <span className="rounded-full bg-[#e7eefb] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{SEASONAL_BORDERS.find(([v]) => v === selBlock.border)![1]}</span>}
+                  <span className="ml-auto text-[9px] text-[var(--ink-3)]">{seasonOpen ? "▲ hide" : "▼ show"}</span>
+                </button>
+                {seasonOpen && <div className="flex flex-wrap items-center gap-1 px-3.5 pb-2.5">{SEASONAL_BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${selBlock.border === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}</div>}
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
               <div className="flex gap-2 border-t border-[var(--line)] p-2.5"><button type="button" onClick={() => del(selBlock.k!)} className="flex-none rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2.5 text-[12.5px] font-extrabold text-[#c02636] transition hover:bg-[#fbe3e5]">🗑 Remove</button><button type="button" onClick={() => setSelKey(null)} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✓ Done editing</button></div>
