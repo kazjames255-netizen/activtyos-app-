@@ -150,6 +150,12 @@ test.describe("meal shop", () => {
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/meals");
     await parentPage.getByPlaceholder("Who’s eating?").fill(childName);
+    // Order for a comfortably-future day: the provider's order cut-off
+    // (settings.meals.orderCutoffHours, default 18h before the session day)
+    // is enforced server-side, so "today" — and late in the day even
+    // "tomorrow" — would 409.
+    const mealDay = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+    await parentPage.locator('input[type="date"]').fill(mealDay);
     await expect(parentPage.getByText(`E2E Hot lunch ${stamp}`).first()).toBeVisible({ timeout: 15_000 });
     const optionRow = parentPage
       .locator("div")

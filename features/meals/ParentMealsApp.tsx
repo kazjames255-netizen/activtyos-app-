@@ -20,7 +20,10 @@ export function ParentMealsApp() {
   const [options, setOptions] = useState<Option[]>([]);
   const [basket, setBasket] = useState<Record<string, number>>({});
   const [childName, setChildName] = useState("");
-  const [date, setDate] = useState(todayIso());
+  // Default to tomorrow: kitchens take orders ahead (the provider's cut-off —
+  // settings.meals.orderCutoffHours — is enforced server-side, and same-day is
+  // closed under the default 18h). The date stays editable either way.
+  const [date, setDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); });
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);

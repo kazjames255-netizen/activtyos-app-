@@ -151,7 +151,9 @@ mealOrders.post("/", async (req, res) => {
     const cutoffHours = Number(meals.orderCutoffHours ?? 18);
     if (cutoffHours > 0 && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
       // The day's earliest session start (09:00 when no block runs that day).
-      const blocks = await db.collection("blocks").where("tenantId", "==", input.tenantId).where("endDate", ">=", input.date).get();
+      // Single-field query only — tenantId== plus an endDate range would need
+      // a composite index; a tenant's block list is small enough to filter here.
+      const blocks = await db.collection("blocks").where("tenantId", "==", input.tenantId).get();
       let earliest: number | null = null;
       for (const b of blocks.docs) {
         for (const s of ((b.data() as { sessions?: { date: string; start: string }[] }).sessions ?? [])) {
