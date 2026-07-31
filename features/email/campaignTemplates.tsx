@@ -339,6 +339,24 @@ export function groupRows(blocks: Block[]): Block[][] {
 }
 // ── section frames / borders — colour derives from the section's accent ──────
 export const BORDERS: [string, string][] = [["none", "None"], ["shadow", "Elegant card"], ["photo", "Photo frame"], ["gold", "Luxury"], ["polaroid", "Polaroid"], ["double", "Double line"], ["corners", "Corners"], ["neon", "Neon glow"], ["ribbon", "Ribbon"], ["sparkle", "Sparkle"], ["confetti", "Confetti"]];
+// Illustrated seasonal & fun frames — emoji render reliably & colourfully across email clients.
+const SEASONAL: Record<string, { label: string; border: string; bg: string; top: string; bottom: string }> = {
+  christmas: { label: "🎄 Christmas", border: "#c62828", bg: "#ffffff", top: "🎄 ❄️ 🎁 ⭐ 🎄 ❄️ 🎁 ⭐ 🎄 ❄️ 🎁 ⭐ 🎄", bottom: "🔴 🟢 🔴 🟢 🔴 🟢 🔴 🟢 🔴 🟢 🔴 🟢 🔴" },
+  snow: { label: "❄️ Snow", border: "#8fb8de", bg: "#f5faff", top: "❄️ ❅ ❆ ❄️ ❅ ❆ ❄️ ❅ ❆ ❄️ ❅ ❆ ❄️", bottom: "⛄ ❄️ ❅ ⛄ ❄️ ❅ ⛄ ❄️ ❅ ⛄ ❄️ ❅ ⛄" },
+  autumn: { label: "🍂 Autumn", border: "#c9711f", bg: "#fff9f2", top: "🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂", bottom: "🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁 🍂 🍁" },
+  flowers: { label: "🌸 Flowers", border: "#e589b3", bg: "#fff6fa", top: "🌸 🌼 🌷 🌺 🌸 🌼 🌷 🌺 🌸 🌼 🌷 🌺 🌸", bottom: "🌷 🌺 🌸 🌼 🌷 🌺 🌸 🌼 🌷 🌺 🌸 🌼 🌷" },
+  balloons: { label: "🎈 Balloons", border: "#4a90d9", bg: "#ffffff", top: "🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈 🎈", bottom: "🎂 🎈 🎉 🎁 🎂 🎈 🎉 🎁 🎂 🎈 🎉 🎁 🎂" },
+  party: { label: "🎉 Party", border: "#7b52d1", bg: "#ffffff", top: "🎉 🎊 ✨ 🎈 🎉 🎊 ✨ 🎈 🎉 🎊 ✨ 🎈 🎉", bottom: "🎊 ✨ 🎉 🥳 🎊 ✨ 🎉 🥳 🎊 ✨ 🎉 🥳 🎊" },
+  halloween: { label: "🎃 Halloween", border: "#e8791b", bg: "#fff6ec", top: "🎃 🦇 🕸️ 👻 🎃 🦇 🕸️ 👻 🎃 🦇 🕸️ 👻 🎃", bottom: "🕷️ 🦇 🎃 👻 🕷️ 🦇 🎃 👻 🕷️ 🦇 🎃 👻 🕷️" },
+  valentine: { label: "❤️ Valentine's", border: "#e0507a", bg: "#fff5f8", top: "❤️ 🌹 💕 ❤️ 🌹 💕 ❤️ 🌹 💕 ❤️ 🌹 💕 ❤️", bottom: "💗 💖 💝 💗 💖 💝 💗 💖 💝 💗 💖 💝 💗" },
+  easter: { label: "🐣 Easter", border: "#6fb86f", bg: "#f6fff2", top: "🐣 🥚 🐰 🌷 🐣 🥚 🐰 🌷 🐣 🥚 🐰 🌷 🐣", bottom: "🌷 🥚 🐰 🐣 🌷 🥚 🐰 🐣 🌷 🥚 🐰 🐣 🌷" },
+  summer: { label: "☀️ Summer", border: "#f0b429", bg: "#fffdf3", top: "☀️ 🌊 🏖️ 🍦 ☀️ 🌊 🏖️ 🍦 ☀️ 🌊 🏖️ 🍦 ☀️", bottom: "🐚 🌊 ☀️ 🕶️ 🐚 🌊 ☀️ 🕶️ 🐚 🌊 ☀️ 🕶️ 🐚" },
+  tropical: { label: "🌴 Tropical", border: "#1fae8b", bg: "#f2fffb", top: "🌴 🌺 🍍 🥥 🌴 🌺 🍍 🥥 🌴 🌺 🍍 🥥 🌴", bottom: "🌺 🌴 🥥 🍹 🌺 🌴 🥥 🍹 🌺 🌴 🥥 🍹 🌺" },
+  children: { label: "🌈 Children", border: "#5aa9e6", bg: "#ffffff", top: "🌈 ⭐ ☁️ 😊 🌈 ⭐ ☁️ 😊 🌈 ⭐ ☁️ 😊 🌈", bottom: "⭐ 🌈 ☁️ 🎈 ⭐ 🌈 ☁️ 🎈 ⭐ 🌈 ☁️ 🎈 ⭐" },
+  fireworks: { label: "🎆 Fireworks", border: "#3a3f8f", bg: "#f6f7ff", top: "🎆 🎇 ✨ 🎆 🎇 ✨ 🎆 🎇 ✨ 🎆 🎇 ✨ 🎆", bottom: "✨ 🎇 🎆 🌟 ✨ 🎇 🎆 🌟 ✨ 🎇 🎆 🌟 ✨" },
+  sparkleglam: { label: "✨ Glitter", border: "#d4af37", bg: "#fffdf5", top: "✨ 💫 ⭐ 🌟 ✨ 💫 ⭐ 🌟 ✨ 💫 ⭐ 🌟 ✨", bottom: "💫 ✨ 🌟 ⭐ 💫 ✨ 🌟 ⭐ 💫 ✨ 🌟 ⭐ 💫" },
+};
+export const SEASONAL_BORDERS: [string, string][] = Object.entries(SEASONAL).map(([k, v]) => [k, v.label]);
 function frameWrap(inner: string, kind: string | undefined, t: Theme): string {
   if (!kind || kind === "none") return inner;
   const R = 16;
@@ -346,6 +364,8 @@ function frameWrap(inner: string, kind: string | undefined, t: Theme): string {
   const box = (divStyle: string, deco = "", pad = "16px 18px", radius = R, innerR = R - 4) => `<tr><td style="padding:${pad}"><div style="position:relative;border-radius:${radius}px;${divStyle}">${tbl(Math.max(innerR, 4))}${deco}</div></td></tr>`;
   const bracket = (corner: "tl" | "tr" | "bl" | "br", col: string) => { const m = { tl: `top:7px;left:7px;border-top:2px solid ${col};border-left:2px solid ${col};border-top-left-radius:7px`, tr: `top:7px;right:7px;border-top:2px solid ${col};border-right:2px solid ${col};border-top-right-radius:7px`, bl: `bottom:7px;left:7px;border-bottom:2px solid ${col};border-left:2px solid ${col};border-bottom-left-radius:7px`, br: `bottom:7px;right:7px;border-bottom:2px solid ${col};border-right:2px solid ${col};border-bottom-right-radius:7px` }; return `<div style="position:absolute;width:20px;height:20px;${m[corner]}"></div>`; };
   const corners4 = (col: string) => bracket("tl", col) + bracket("tr", col) + bracket("bl", col) + bracket("br", col);
+  const sea = SEASONAL[kind];
+  if (sea) { const strip = (emo: string, top: boolean) => `<div style="position:absolute;left:6px;right:6px;${top ? "top:3px" : "bottom:3px"};text-align:center;font-size:15px;line-height:1;white-space:nowrap;overflow:hidden">${emo}</div>`; return box(`background:${sea.bg};border:2px solid ${sea.border};box-shadow:0 18px 40px -22px rgba(20,33,58,.5)`, strip(sea.top, true) + strip(sea.bottom, false), "30px 16px", R, 10); }
   switch (kind) {
     case "shadow": return box(`background:#fff;border:1px solid ${t.line};box-shadow:0 22px 46px -24px rgba(20,33,58,.5)`, `<div style="position:absolute;top:0;left:0;right:0;height:4px;background:${t.a};background-image:linear-gradient(90deg,${t.a},${shade(t.a, 40)});border-radius:${R}px ${R}px 0 0"></div>`);
     case "photo": return box(`background:#fff;padding:12px;border:1px solid ${shade(t.line, -8)};box-shadow:0 20px 44px -22px rgba(20,33,58,.55)`, "", "16px 20px", R, 8);
@@ -691,6 +711,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
                 <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Frame</span>
                 {BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${(selBlock.border || "none") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
+              </div>
+              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Seasonal &amp; fun</span>
+                {SEASONAL_BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${selBlock.border === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
               <div className="flex gap-2 border-t border-[var(--line)] p-2.5"><button type="button" onClick={() => del(selBlock.k!)} className="flex-none rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2.5 text-[12.5px] font-extrabold text-[#c02636] transition hover:bg-[#fbe3e5]">🗑 Remove</button><button type="button" onClick={() => setSelKey(null)} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✓ Done editing</button></div>
