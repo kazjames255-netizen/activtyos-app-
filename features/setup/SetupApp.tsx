@@ -70,7 +70,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1218,7 +1218,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1256,6 +1256,7 @@ export function SetupApp() {
   const TABS: [Tab, string][] = [
     ["features", "Features"],
     ["company", "Company setup"],
+    ["seasons", "Seasons"],
     ["branding", "Branding"],
     ["people", "Child questions"],
     ["staff", "Staff & workforce"],
@@ -2094,14 +2095,17 @@ export function SetupApp() {
 
       {tab === "notifications" && <NotificationsTab />}
 
+      {tab === "seasons" && (
+        <Section
+          title="Seasons"
+          lede="Your trading periods — terms and holiday camps. Set them up once and pages across the app (bookings, money, audiences, campaigns) get a “this season” filter, worked out from each booking’s dates. You don’t tag anything by hand."
+        >
+          <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
+        </Section>
+      )}
+
       {tab === "bookings" && (
         <>
-          <Section
-            title="Seasons"
-            lede="Your trading periods — terms and holiday camps. Set them up once and pages across the app (bookings, money, registers, audiences) can filter to “this season” automatically, worked out from each booking’s dates. You don’t tag anything by hand."
-          >
-            <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
-          </Section>
           <Section
             title="How parents pay"
             lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
