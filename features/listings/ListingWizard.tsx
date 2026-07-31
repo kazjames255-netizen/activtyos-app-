@@ -1509,60 +1509,69 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
     setAiN((n) => n + 1);
   }
   return (
-    <div className="max-w-[720px]">
+    <div className="max-w-[900px]">
       <StepHead n={2} kicker="STEP 2 · CONTENT" title="Describe your activity" lede="A clear description helps parents choose. Add sections and learning outcomes." />
-      <div className="mb-1 flex flex-wrap items-end gap-2">
-        <div className="flex-1"><FieldLabel>Section title — editable</FieldLabel>
-          <Input value={d.descriptionSection} onChange={(e) => upd({ descriptionSection: e.target.value })} placeholder="e.g. Summary, When you arrive, Our curriculum" className="w-full max-w-[300px]" />
-        </div>
-        <Button sm onClick={writeAI} className="mb-[1px]">✨ Write with AI</Button>
-      </div>
-      <div className="mb-1.5 flex flex-wrap gap-1">
-        {SECTION_TYPES.map((t) => <button key={t} type="button" onClick={() => upd({ descriptionSection: t })} className="rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)] hover:border-[var(--brand)]">{t}</button>)}
-      </div>
-      <textarea value={d.description} maxLength={300} onChange={(e) => upd({ description: e.target.value })}
-        placeholder="Type a few words (e.g. dodgeball, arts, new friends) then ✨ Write with AI…"
-        className="mb-1 h-[100px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-      <div className="mb-3 text-[11px] text-[var(--ink-3)]">{d.description.length}/300 · “Write with AI” turns your words into a paragraph for the <b>{d.descriptionSection || "section"}</b> section — press again for a fresh version.</div>
-
-      <SectionHead icon="📝">Additional sections</SectionHead>
-      <div className="mb-2 flex flex-col gap-1.5">
-        {d.sections.map((s) => (
-          <div key={s.id} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
-            <div className="mb-1 flex items-center gap-2">
-              <Input value={s.type} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, type: e.target.value } : x) })} placeholder="Section title (e.g. When you arrive)" className="flex-1 font-bold" />
-              <button type="button" onClick={() => upd({ sections: d.sections.filter((x) => x.id !== s.id) })} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <RichCard icon="📝" title="Main description" subtitle="The intro parents read first">
+          <div className="mb-1.5 flex flex-wrap items-end gap-2">
+            <div className="flex-1"><FieldLabel>Section title — editable</FieldLabel>
+              <Input value={d.descriptionSection} onChange={(e) => upd({ descriptionSection: e.target.value })} placeholder="e.g. Summary" className="w-full" />
             </div>
-            <Input value={s.text} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, text: e.target.value } : x) })} placeholder="Section text…" className="w-full" />
+            <Button sm variant="primary" onClick={writeAI} className="mb-[1px]">✨ Write with AI</Button>
           </div>
-        ))}
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {SECTION_TYPES.map((t) => <button key={t} type="button" onClick={() => upd({ descriptionSection: t })} className="rounded-full border border-[var(--line)] bg-white px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)] hover:border-[var(--brand)]">{t}</button>)}
+          </div>
+          <textarea value={d.description} maxLength={300} onChange={(e) => upd({ description: e.target.value })}
+            placeholder="Type a few words (e.g. dodgeball, arts, new friends) then ✨ Write with AI…"
+            className="h-[120px] w-full rounded-lg border border-[var(--line)] bg-white p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">{d.description.length}/300 · “Write with AI” turns your words into a paragraph for the <b>{d.descriptionSection || "section"}</b> — press again for a fresh version.</div>
+        </RichCard>
+        <div className="flex flex-col gap-4">
+          <RichCard icon="➕" title="Additional sections" subtitle="Optional extra blurbs" tint="violet">
+            <div className="mb-2 flex flex-col gap-1.5">
+              {d.sections.map((s) => (
+                <div key={s.id} className="rounded-lg border border-[var(--line)] bg-white p-2.5">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Input value={s.type} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, type: e.target.value } : x) })} placeholder="Section title (e.g. When you arrive)" className="flex-1 font-bold" />
+                    <button type="button" onClick={() => upd({ sections: d.sections.filter((x) => x.id !== s.id) })} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                  </div>
+                  <Input value={s.text} onChange={(e) => upd({ sections: d.sections.map((x) => x.id === s.id ? { ...x, text: e.target.value } : x) })} placeholder="Section text…" className="w-full" />
+                </div>
+              ))}
+            </div>
+            <Select value="" onChange={(e) => e.target.value && upd({ sections: [...d.sections, { id: uid(), type: e.target.value, text: "" }] })} className="w-full">
+              <option value="">＋ Add a section…</option>
+              {SECTION_TYPES.map((s) => <option key={s}>{s}</option>)}
+            </Select>
+          </RichCard>
+          <RichCard icon="🌟" title="Learning outcomes" subtitle="What children gain" tint="teal">
+            <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
+            <HeadingFields d={d} upd={upd} sectionKey="learn" />
+          </RichCard>
+        </div>
       </div>
-      <Select value="" onChange={(e) => e.target.value && upd({ sections: [...d.sections, { id: uid(), type: e.target.value, text: "" }] })} className="mb-3 w-[220px]">
-        <option value="">＋ Add a section…</option>
-        {SECTION_TYPES.map((s) => <option key={s}>{s}</option>)}
-      </Select>
-
-      <SectionHead icon="🌟">Learning outcomes</SectionHead>
-      <HeadingFields d={d} upd={upd} sectionKey="learn" />
-      <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
     </div>
   );
 }
 
-// A rich, blue-shaded section card — the wizard's classy building block.
-function RichCard({ icon, title, tint = "blue", children, className = "" }: { icon: string; title: string; tint?: "blue" | "teal" | "violet"; children: React.ReactNode; className?: string }) {
+// The wizard's classy building block — a deep-header card, light body.
+function RichCard({ icon, title, subtitle, tint = "blue", children, className = "" }: { icon: string; title: string; subtitle?: string; tint?: "blue" | "teal" | "violet"; children: React.ReactNode; className?: string }) {
   const T = {
-    blue: { head: "linear-gradient(120deg,#e9f1fe,#d6e4fb)", chip: "linear-gradient(135deg,#3f78d8,#16306e)", border: "#cbdbf6", ring: "rgba(31,84,163,.26)" },
-    teal: { head: "linear-gradient(120deg,#e2f4f7,#cfe9f1)", chip: "linear-gradient(135deg,#2f9fb8,#12586e)", border: "#bfe2ea", ring: "rgba(20,110,140,.24)" },
-    violet: { head: "linear-gradient(120deg,#eee9fe,#ded6fb)", chip: "linear-gradient(135deg,#7c5cd8,#3a2a8e)", border: "#d6cef7", ring: "rgba(90,60,180,.24)" },
+    blue: { head: "linear-gradient(120deg,#122a63 0%,#274f9e 55%,#3f78d8 100%)", border: "#b6cbef", ring: "rgba(18,41,95,.36)" },
+    teal: { head: "linear-gradient(120deg,#0c4a5e 0%,#157b95 55%,#2fa6bf 100%)", border: "#b7dde7", ring: "rgba(12,74,94,.34)" },
+    violet: { head: "linear-gradient(120deg,#2b1f66 0%,#5a3fb0 55%,#8064d8 100%)", border: "#cbc0f0", ring: "rgba(43,31,102,.34)" },
   }[tint];
   return (
-    <div className={`overflow-hidden rounded-2xl border bg-white ${className}`} style={{ borderColor: T.border, boxShadow: `0 14px 34px -16px ${T.ring}` }}>
-      <div className="flex items-center gap-2 px-3.5 py-2.5" style={{ background: T.head }}>
-        <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[14px] text-white shadow-[0_2px_7px_rgba(31,84,163,.35)]" style={{ background: T.chip }}>{icon}</span>
-        <span className="text-[13px] font-extrabold tracking-[-0.01em] text-[#16306e]">{title}</span>
+    <div className={`overflow-hidden rounded-2xl border bg-white ${className}`} style={{ borderColor: T.border, boxShadow: `0 20px 44px -20px ${T.ring}` }}>
+      <div className="flex items-center gap-2.5 px-4 py-2.5 text-white" style={{ background: T.head }}>
+        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-white/15 text-[15px] ring-1 ring-white/25">{icon}</span>
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-extrabold leading-tight tracking-[-0.01em]">{title}</div>
+          {subtitle && <div className="truncate text-[10.5px] font-semibold text-white/70">{subtitle}</div>}
+        </div>
       </div>
-      <div className="p-3.5" style={{ background: "linear-gradient(180deg,#ffffff,#f3f8ff)" }}>{children}</div>
+      <div className="p-4" style={{ background: "linear-gradient(180deg,#ffffff,#eef4fd)" }}>{children}</div>
     </div>
   );
 }
