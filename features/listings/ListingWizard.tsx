@@ -1244,26 +1244,24 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
       <FieldLabel>Listing title · up to 70 characters</FieldLabel>
       <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder="e.g. Summer Multi-Activity Camp" className="mb-3 w-full" />
 
-      <div className="grid gap-x-6 md:grid-cols-2">
-        <div>
-          <SectionHead icon="🖼️">Main image</SectionHead>
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <RichCard icon="🖼️" title="Main image" subtitle="Layout + the hero photo">
           <div className="mb-2 flex flex-wrap gap-1.5">
             {LAYOUTS.map((l) => (
               <button key={l.key} type="button" onClick={() => upd({ layout: l.key })} className="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold"
-                style={d.layout === l.key ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                style={d.layout === l.key ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>
                 {l.label}
               </button>
             ))}
           </div>
           <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" />
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Crop to fit — the preview matches the customer page. Add more than one and it rotates as a carousel.</div>
-        </div>
-        <div>
-          <SectionHead icon="📸">Gallery</SectionHead>
-          <HeadingFields d={d} upd={upd} sectionKey="gallery" />
+        </RichCard>
+        <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
           <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Extra photos — shown as a gallery at the bottom of the customer page.</div>
-        </div>
+          <HeadingFields d={d} upd={upd} sectionKey="gallery" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as a gallery at the bottom of the customer page.</div>
+        </RichCard>
       </div>
     </div>
   );
@@ -1276,8 +1274,8 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   return (
     <div className="max-w-[820px]">
       <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
-      <div className="grid gap-x-7 md:grid-cols-2">
-      <div>
+      <div className="grid items-start gap-4 md:grid-cols-2">
+      <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & on-the-day contact">
       <div className="mb-3 flex gap-3">
         <div className="w-[110px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
         <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
@@ -1303,9 +1301,10 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
       <div className="mb-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Shown to parents on the listing <b>only while the camp is running</b> — a number to reach staff during session days. Hidden before it starts and after it ends.</div>
 
-      </div>
-      <div>
-      <SectionHead icon="🏷️">Categories</SectionHead>
+      </RichCard>
+      <RichCard icon="🏷️" title="Categories & capacity" subtitle="What it is, and how many can come" tint="teal">
+      <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+      <div className="mb-1 text-[11.5px] font-bold text-[#16306e]">Categories</div>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {local.categories.map((c) => (
@@ -1364,6 +1363,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       {/* patchLocal is unused here but kept for signature symmetry with other steps */}
       <span className="hidden">{typeof patchLocal}</span>
       </div>
+      </RichCard>
       </div>
     </div>
   );
@@ -1695,7 +1695,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
     <div className="mx-auto max-w-[880px]">
       <StepHead n={6} kicker="STEP 6 · TICKETS & PRICING" title="Tickets & pricing" lede="Pick a block you built in the Blocks area — its passes & prices become this listing's tickets." />
       <RichCard icon="🎟️" title="Choose a block" subtitle="Its passes & prices become this listing's tickets">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
       {blocks.loading ? (
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">Loading your blocks…</Card>
       ) : blocks.error ? (
@@ -1871,7 +1871,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
     <div className="mx-auto max-w-[820px]">
       <StepHead n={7} kicker="STEP 7 · DISCOUNTS" title="Automatic discounts" lede="Rules that come off the price by themselves at checkout — no codes for parents to remember." />
       <RichCard icon="🏷️" title="Discount rules" subtitle="Come off the price automatically at checkout — no codes to remember" tint="violet">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
 
       {/* Create / edit panel */}
       <Card className="mb-4 overflow-hidden p-0">
@@ -2160,7 +2160,7 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
     <div className="mx-auto max-w-[840px]">
       <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
       <RichCard icon="🧩" title="Add-ons" subtitle="Per-day, whole-block or one-off extras — reusable on any listing" tint="teal">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
       <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
@@ -2259,7 +2259,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
     <div className="mx-auto max-w-[840px]">
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
       <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
       <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 flex flex-col gap-2">
         {local.staff.map((m) => {
@@ -2346,7 +2346,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
     <div className="mx-auto max-w-[840px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
       <RichCard icon="📋" title="Policy & publish" subtitle="Booking style, visibility & cancellation — then hit Publish">
-        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
       <SectionHead icon="👁️">Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
