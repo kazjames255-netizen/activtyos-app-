@@ -7,6 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
+import { seasonSpan } from "@/lib/seasons";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -208,17 +209,20 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
 
   const ovSeasonObj = seasons.find((s) => s.id === ovSeason);
+  // Money isn't per-location, so scope to the season's WIDEST window (covers
+  // every city's dates). See lib/seasons.ts.
+  const ovSpan = ovSeasonObj ? seasonSpan(ovSeasonObj) : null;
   // Period-scoped set that drives the two overview breakdown cards.
   const ovItems = useMemo(() => allItems.filter((x) => {
     const d = x.date || "";
-    if (ovSeasonObj && (d < ovSeasonObj.from || d > ovSeasonObj.to)) return false;
+    if (ovSpan && (d < ovSpan.from || d > ovSpan.to)) return false;
     if (ovRange === "month" && d.slice(0, 7) !== thisMonthKey) return false;
     if (ovRange === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
     if (ovRange === "year" && d.slice(0, 4) !== thisYear) return false;
     if (ovFrom && d < ovFrom) return false;
     if (ovTo && d > ovTo) return false;
     return true;
-  }), [allItems, ovSeasonObj, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
+  }), [allItems, ovSpan, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
   const ovTotal = useMemo(() => ovItems.reduce((s, x) => s + x.amount, 0), [ovItems]);
   const ovCats = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};

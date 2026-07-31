@@ -26,7 +26,7 @@ import {
   type RatioGroup,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
-import { defaultUKSeasons, fmtSeasonRange, sortSeasons, seasonKindLabel, type Season, type SeasonKind } from "@/lib/seasons";
+import { defaultUKSeasons, fmtSeasonRange, sortSeasons, seasonKindLabel, type Season, type SeasonKind, type SeasonOverride } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
@@ -403,6 +403,10 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
 // ── Seasons — the trading periods pages scope to (lib/seasons.ts) ────────────
 function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: Season[]) => void }) {
   const sorted = sortSeasons(items);
+  // The provider's locations, so a city with different council holiday dates can
+  // be picked (rather than typed and mistyped). Names, matching booking data.
+  const [venues, setVenues] = useState<string[]>([]);
+  useEffect(() => { apiGet<{ venues?: { name?: string; city?: string }[] }>("/api/library").then((lib) => setVenues([...new Set((lib?.venues ?? []).map((v) => (v.name || v.city || "").trim()).filter(Boolean))])).catch(() => {}); }, []);
   const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
   const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nNothing dated is deleted — it just stops being offered as a filter.`)) onChange(items.filter((s) => s.id !== id)); };
   const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season", from: "", to: "", kind: "holiday" }]);
@@ -411,6 +415,9 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
     const have = new Set(items.map((s) => s.id));
     onChange([...items, ...defaultUKSeasons(year).filter((s) => !have.has(s.id))]);
   };
+  const addOverride = (s: Season) => patch(s.id, (x) => ({ ...x, byLocation: [...(x.byLocation ?? []), { location: venues.find((v) => !(x.byLocation ?? []).some((o) => o.location === v)) ?? "", from: x.from, to: x.to }] }));
+  const patchOverride = (id: string, i: number, fn: (o: SeasonOverride) => SeasonOverride) => patch(id, (x) => ({ ...x, byLocation: (x.byLocation ?? []).map((o, n) => (n === i ? fn(o) : o)) }));
+  const removeOverride = (id: string, i: number) => patch(id, (x) => ({ ...x, byLocation: (x.byLocation ?? []).filter((_, n) => n !== i) }));
   const KINDS: SeasonKind[] = ["holiday", "term"];
   if (!items.length) {
     return (
@@ -438,11 +445,31 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
               <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
-              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">From <Input type="date" value={s.from} onChange={(e) => patch(s.id, (x) => ({ ...x, from: e.target.value }))} className="w-[150px]" /></label>
+              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">{s.byLocation?.length ? "Default from" : "From"} <Input type="date" value={s.from} onChange={(e) => patch(s.id, (x) => ({ ...x, from: e.target.value }))} className="w-[150px]" /></label>
               <label className="flex items-center gap-1.5 text-[var(--ink-3)]">to <Input type="date" value={s.to} onChange={(e) => patch(s.id, (x) => ({ ...x, to: e.target.value }))} className="w-[150px]" /></label>
               {bad ? <span className="text-[11.5px] font-bold text-[var(--red,#e21d27)]">End is before start</span>
                 : s.from && s.to ? <span className="text-[11px] text-[var(--ink-3)]">· {fmtSeasonRange(s)}</span> : null}
             </div>
+            {/* Per-city date overrides — for councils whose holidays differ. */}
+            {(s.byLocation ?? []).map((o, i) => {
+              const oBad = o.from && o.to && o.from > o.to;
+              return (
+                <div key={i} className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#e6ecf6] bg-[#f7faff] px-2.5 py-1.5 text-[12px]">
+                  <span className="text-[13px]">📍</span>
+                  {venues.length ? (
+                    <select value={o.location} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, location: e.target.value }))} className="rounded-lg border border-[var(--line)] bg-white px-2 py-1.5 text-[12px] font-semibold text-[var(--ink)] outline-none">
+                      <option value="">Pick a location…</option>
+                      {venues.map((v) => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  ) : <Input value={o.location} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, location: e.target.value }))} placeholder="Location name" className="w-[150px]" />}
+                  <label className="flex items-center gap-1.5 text-[var(--ink-3)]">From <Input type="date" value={o.from} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, from: e.target.value }))} className="w-[140px]" /></label>
+                  <label className="flex items-center gap-1.5 text-[var(--ink-3)]">to <Input type="date" value={o.to} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, to: e.target.value }))} className="w-[140px]" /></label>
+                  {oBad && <span className="text-[11px] font-bold text-[var(--red,#e21d27)]">End before start</span>}
+                  <button type="button" aria-label="Remove override" onClick={() => removeOverride(s.id, i)} className="ml-auto px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => addOverride(s)} className="mt-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Different dates in a city</button>
           </div>
         );
       })}

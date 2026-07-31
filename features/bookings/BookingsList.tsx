@@ -23,7 +23,7 @@ import {
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
-import type { Season } from "@/lib/seasons";
+import { seasonSpan, type Season } from "@/lib/seasons";
 import type { Booking } from "./types";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
@@ -91,13 +91,17 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   // window. Sessions are labels like "Mon 28 Jul 2027 · 09:00 – 17:30"; parse
   // the date part to an ISO day and compare. (Attendance-based, which is what
   // "bookings for Summer 2026" means — not when it was booked.)
-  const inSeason = (b: Booking, s: Season): boolean =>
-    (b.sessions ?? []).some((sess) => {
+  const inSeason = (b: Booking, s: Season): boolean => {
+    // Bookings don't carry a city, so use the season's WIDEST window (across
+    // every location's dates) — no city's bookings get missed.
+    const { from, to } = seasonSpan(s);
+    return (b.sessions ?? []).some((sess) => {
       const d = new Date(sess.split(" · ")[0].replace(/^[A-Za-z]{3,}\s+/, ""));
       if (Number.isNaN(d.getTime())) return false;
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      return iso >= s.from && iso <= s.to;
+      return iso >= from && iso <= to;
     });
+  };
 
   const list = bookings
     .filter(

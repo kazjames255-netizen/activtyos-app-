@@ -7,6 +7,7 @@ import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { SeasonPicker } from "@/components/SeasonPicker";
+import { seasonSpan } from "@/lib/seasons";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -120,6 +121,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const seasons = settings.seasons ?? [];
   const [season, setSeason] = useState("");
   const seasonObj = seasons.find((s) => s.id === season);
+  // Money isn't per-location → scope to the season's widest window.
+  const seasonWin = seasonObj ? seasonSpan(seasonObj) : null;
   const [sort, setSort] = useState<Sort>("date");
   // Receipts-tab filters
   const [rCat, setRCat] = useState("all");
@@ -243,7 +246,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (catFilter !== "all" && (x.category || "Other") !== catFilter) return false;
       if (receiptFilter === "with" && !x.receiptUrl) return false;
       if (receiptFilter === "without" && x.receiptUrl) return false;
-      if (seasonObj && (d < seasonObj.from || d > seasonObj.to)) return false;
+      if (seasonWin && (d < seasonWin.from || d > seasonWin.to)) return false;
       if (range === "month" && d.slice(0, 7) !== thisMonthKey) return false;
       if (range === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
       if (range === "year" && d.slice(0, 4) !== thisYear) return false;
@@ -257,7 +260,7 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       amount: (a, b) => b.amount - a.amount, amountAsc: (a, b) => a.amount - b.amount,
     };
     return [...rows].sort(cmp[sort]);
-  }, [allItems, q, catFilter, receiptFilter, seasonObj, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear, tab]);
+  }, [allItems, q, catFilter, receiptFilter, seasonWin, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear, tab]);
   const filteredTotal = filtered.reduce((s, x) => s + x.amount, 0);
   const activeFilters = (catFilter !== "all" ? 1 : 0) + (receiptFilter !== "all" ? 1 : 0) + (seasonObj ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
   const clearFilters = () => { setQ(""); setCatFilter("all"); setReceiptFilter("all"); setRange("all"); setFrom(""); setTo(""); setSeason(""); };

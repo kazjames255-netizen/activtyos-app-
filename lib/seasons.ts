@@ -16,15 +16,50 @@
 
 export type SeasonKind = "holiday" | "term";
 
+/** A city/location whose council sets different holiday dates for this season. */
+export interface SeasonOverride {
+  /** Location NAME (matches a booking's locationName / a venue name). */
+  location: string;
+  from: string;
+  to: string;
+}
+
 export interface Season {
   id: string;
   /** Human name, usually carrying the year — "Summer Holidays 2026". */
   name: string;
-  /** Inclusive ISO date (YYYY-MM-DD). */
+  /** Inclusive ISO date (YYYY-MM-DD) — the DEFAULT window. */
   from: string;
   /** Inclusive ISO date (YYYY-MM-DD). */
   to: string;
   kind: SeasonKind;
+  /**
+   * Per-location date overrides. UK school-holiday dates vary by council, so a
+   * provider running in several cities can give a season different dates in
+   * each. A location with no override just uses the default from/to above.
+   */
+  byLocation?: SeasonOverride[];
+}
+
+/** The date window a season applies for a given location: the location's
+ *  override if it has one, else the season's default. */
+export function seasonRange(s: Season, location?: string | null): { from: string; to: string } {
+  if (location && s.byLocation?.length) {
+    const o = s.byLocation.find((x) => x.location === location);
+    if (o && o.from && o.to) return { from: o.from, to: o.to };
+  }
+  return { from: s.from, to: s.to };
+}
+
+/** The WIDEST window across the default + every override — used where a row
+ *  has no location to key off (money, campaigns), so nothing is missed. */
+export function seasonSpan(s: Season): { from: string; to: string } {
+  let from = s.from, to = s.to;
+  for (const o of s.byLocation ?? []) {
+    if (o.from && (!from || o.from < from)) from = o.from;
+    if (o.to && (!to || o.to > to)) to = o.to;
+  }
+  return { from, to };
 }
 
 /** A date string (any parseable form) reduced to YYYY-MM-DD, or "" if unusable. */
@@ -55,10 +90,13 @@ export function seasonForDate(seasons: Season[], date?: string | null): Season |
   return best;
 }
 
-/** True when a date sits within a season. */
-export function inSeason(season: Season, date?: string | null): boolean {
+/** True when a date sits within a season — for the given location's window if
+ *  one is set, else the season's default window. */
+export function inSeason(season: Season, date?: string | null, location?: string | null): boolean {
   const day = isoDay(date);
-  return !!day && season.from <= day && day <= season.to;
+  if (!day) return false;
+  const { from, to } = seasonRange(season, location);
+  return from <= day && day <= to;
 }
 
 /**

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import { type Season } from "@/lib/seasons";
+import { seasonRange, seasonSpan, type Season } from "@/lib/seasons";
 import { SeasonPicker } from "@/components/SeasonPicker";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
@@ -982,9 +982,10 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
     const m = /^c(\d+)$/.exec(c.id);
     return m ? new Date(Number(m[1])).toISOString().slice(0, 10) : "";
   };
+  const campSpan = campSeasonObj ? seasonSpan(campSeasonObj) : null;
   const rows = allRows.filter((c) => {
     if (cq && !`${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) return false;
-    if (campSeasonObj) { const d = rowDay(c); if (d && (d < campSeasonObj.from || d > campSeasonObj.to)) return false; }
+    if (campSpan) { const d = rowDay(c); if (d && (d < campSpan.from || d > campSpan.to)) return false; }
     return true;
   });
   return (
@@ -1216,7 +1217,8 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const season = seasons.find((s) => s.id === segSeason);
   const segFiltered = !!(segLoc || segListing || segPay || season);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
-  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined, ...(season ? { from: season.from, to: season.to, dateType: "session" as const } : {}) };
+  const segRange = season ? seasonRange(season, segLoc || undefined) : null;
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined, ...(segRange ? { from: segRange.from, to: segRange.to, dateType: "session" as const } : {}) };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
     ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season ? `Attended in ${season.name}` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
