@@ -487,7 +487,8 @@ interface Campaign { id: string; name: string; subtitle?: string; audienceName: 
 // Only the campaign DESIGNS live locally (drafts + content for reuse) — the
 // send/schedule/tracking state is the server's (`emails` history +
 // `scheduledEmails`), linked back by emailId/schedId.
-const LS_CAMP = "aos.email.campaigns.v1", LS_AUD = "aos.email.audiences.v1";
+const LS_CAMP = "aos.email.campaigns.v1", LS_AUD = "aos.email.audiences.v1", LS_SAVEDD = "aos.email.saveddesigns.v1";
+type SavedDesign = { id: string; name: string; subject?: string; design: CampaignDesign };
 function readLS<T>(k: string, fb: T): T { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : fb; } catch { return fb; } }
 function writeLS(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } }
 
@@ -630,7 +631,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, socials, pastCampaigns, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; pastCampaigns?: Campaign[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -677,8 +678,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<CampStatus | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
-  const STEPS = ["Name", "Audience", "Subject", "Content", "Review"];
-  const nextDisabled = !!busy || (step === 1 && !primary) || (step === 3 && !contentReady);
+  const [sentOk, setSentOk] = useState(false);
+  const [savedDesigns, setSavedDesigns] = useState<SavedDesign[]>(() => readLS<SavedDesign[]>(LS_SAVEDD, []));
+  const STEPS = ["Name", "Audience", "Subject", "Content"];
+  const lastStep = STEPS.length - 1;
+  const nextDisabled = !!busy || (step === 1 && !primary);
   const submit = async (action: CampStatus) => {
     if (!primary) { setSendErr("Pick an audience for this send first."); return; }
     if (action === "scheduled" && !schedAt) { setSendErr("Pick a date & time to schedule the send."); return; }
@@ -688,6 +692,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     try {
       const html = useDesign && design ? renderDesignHtml(design, company, nowMs) : (mode === "template" && wordedHasCountdown ? renderDesignHtml(wordedDesign(), company, nowMs) : undefined);
       await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), design: useDesign ? (design ?? undefined) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+      if (action === "sent") { if (useDesign) setSentOk(true); else onCancel(); }   // designed send → offer to save; worded → just close
     } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
     finally { setBusy(null); }
   };
@@ -702,9 +707,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     finally { setAiBusy(false); }
   };
   // Reuse a previous campaign — pull its content across, then edit via the steps.
-  // Reuse a previous designed campaign — load its design so it can be edited.
-  const pastDesigns = (pastCampaigns ?? []).filter((c) => c.design);
-  const reuseDesign = (c: Campaign) => { if (!c.design) return; if (!name.trim()) setName(c.name ? `${c.name} (copy)` : ""); if (!subject.trim() && c.subject) setSubject(c.subject); setMode("design"); setDesign(c.design); };
+  // Reuse a previously-saved design — load it so it can be edited.
+  const reuseSaved = (s: SavedDesign) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); if (!subject.trim() && s.subject) setSubject(s.subject); setMode("design"); setDesign(s.design); };
+  const saveCurrentDesign = () => { if (!design) return; const item: SavedDesign = { id: `sd-${nowMs}`, name: name.trim() || subject.trim() || "Saved campaign", subject: subject.trim() || undefined, design }; const next = [item, ...savedDesigns.filter((x) => x.name !== item.name)]; setSavedDesigns(next); writeLS(LS_SAVEDD, next); };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
   const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); if (wordedHasCountdown) blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
@@ -716,7 +721,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
         <div className="rounded-t-2xl px-6 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0"><div className="text-[19px] font-extrabold">New campaign</div><div className="truncate text-[12.5px] text-white/80">{primary ? <>To <b className="font-extrabold text-white">{primary.name}</b>{selectedAuds.length > 1 ? ` +${selectedAuds.length - 1} more` : ""} · {included.length} recipient{included.length === 1 ? "" : "s"}</> : "Branded-domain send with tracking + unsubscribe."}</div></div>
-            <div className="flex-none text-[12px] font-bold text-white/85">Step {step + 1} of {STEPS.length}</div>
+            <div className="flex flex-none items-center gap-3"><span className="text-[12px] font-bold text-white/85">Step {step + 1} of {STEPS.length}</span><button type="button" onClick={onCancel} disabled={!!busy} title="Cancel" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold hover:bg-white/30 disabled:opacity-40">×</button></div>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
             {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25"}`} /></button>)}
@@ -774,18 +779,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                       <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">Start a fresh design in the builder, or pick up a previous designed campaign and tweak it.</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
                         <button type="button" onClick={() => setDesigning(true)} className="rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Go to new builder</button>
-                        {pastDesigns.length > 0 && <Select value="" onChange={(e) => { const c = pastDesigns.find((x) => x.id === e.target.value); if (c) reuseDesign(c); }} className="max-w-[260px]"><option value="">📋 Use a previous one…</option>{pastDesigns.map((c) => <option key={c.id} value={c.id}>{c.name}{c.subject ? ` — ${c.subject}` : ""}</option>)}</Select>}
+                        {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">📋 Use a saved one…</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}{s.subject ? ` — ${s.subject}` : ""}</option>)}</Select>}
                       </div>
                     </div>}
-            </div>}
-            {step === 4 && <div className="space-y-4">
-              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Ready to send?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">A last look before it goes out.</p></div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{name.trim() || subject.trim() || "Untitled campaign"}</div></div>
-                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{useDesign ? "Designed email" : (template?.name || "Worded email")}{!useDesign && wordedHasCountdown ? " · ⏱ countdown" : ""}</div></div>
-              </div>
-              {((useDesign && design) || tmplBody.trim() || wordedHasCountdown) && <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3 text-left"><div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Preview — this is what sends</div><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} /></button>}
-              <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[14px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
+              <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
               {people.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
                   <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
@@ -801,7 +798,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                   <div className="border-t border-[var(--line)] px-4 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."} Duplicate addresses are merged automatically.</div>
                 </div>
               )}
-              <p className="text-[12.5px] text-[var(--ink-3)]">Opted-out recipients are excluded automatically, and a one-click unsubscribe footer is added to every send.</p>
+              <p className="text-[12px] text-[var(--ink-3)]">Opted-out recipients are excluded automatically; a one-click unsubscribe footer is added to every send.</p>
             </div>}
           </div>
         </div>
@@ -809,12 +806,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-6 py-3.5">
           <button type="button" onClick={() => (step === 0 ? onCancel() : setStep(step - 1))} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
           <div className="ml-auto flex items-center gap-2">
-            {step < STEPS.length - 1
-              ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>{step === 3 && !contentReady ? "Pick content to continue" : "Next →"}</button>
+            {step < lastStep
+              ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>Next →</button>
               : <>
-                  <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
-                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy || !contentReady} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
+                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !contentReady || !!busy} className="rounded-lg px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
                 </>}
           </div>
         </div>
@@ -829,6 +825,19 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
       </div>
     )}
     {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} socials={socials} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
+    {sentOk && (
+      <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f6ee] text-[24px]">✅</div>
+          <div className="text-[18px] font-extrabold text-[var(--ink)]">Sent to {included.length} {included.length === 1 ? "family" : "families"}!</div>
+          <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">Save this design so you can reuse it next time?</p>
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[var(--line)] px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">No thanks</button>
+            <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>Yes, save it</button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
@@ -903,7 +912,8 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
       const r = await apiPost<{ id: string }>("/api/emails/schedule", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
       row.schedId = r.id;
     }
-    setCampaigns((xs) => [row, ...xs]); closeCampaign(); load();
+    setCampaigns((xs) => [row, ...xs]); load();
+    if (action !== "sent") closeCampaign();   // a send stays open so the modal can offer to save; scheduled/draft close now
   };
   // Live status/opens for linked rows, plus rows for server sends made
   // elsewhere (the composer, an earlier device) so nothing goes missing.
@@ -945,7 +955,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} pastCampaigns={campaigns.filter((c) => c.html || c.body || c.design)} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
