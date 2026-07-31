@@ -19,6 +19,11 @@ export function ParentMealsApp() {
   const [tenantId, setTenantId] = useState("");
   const [options, setOptions] = useState<Option[]>([]);
   const [basket, setBasket] = useState<Record<string, number>>({});
+  // The parent's registered child profiles — one tap picks a child and links
+  // the order to their record (childId → allergies/dietary on the operator
+  // side). Typing a name instead stays possible for an unregistered child.
+  const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [childId, setChildId] = useState("");
   const [childName, setChildName] = useState("");
   // Default to tomorrow: kitchens take orders ahead (the provider's cut-off —
   // settings.meals.orderCutoffHours — is enforced server-side, and same-day is
@@ -31,6 +36,11 @@ export function ParentMealsApp() {
   const loadOrders = useCallback(() => { apiGet<Order[]>("/api/meal-orders").then(setOrders).catch(() => {}); }, []);
   useEffect(() => {
     apiGet<Provider[]>("/api/my/providers").then((ps) => { setProviders(ps); if (ps[0]) setTenantId((t) => t || ps[0].tenantId); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    // An only child is preselected — most families never touch the field.
+    apiGet<{ id: string; name: string }[]>("/api/my/children").then((cs) => {
+      setChildren(cs);
+      if (cs.length === 1) { setChildId(cs[0].id); setChildName((n) => n || cs[0].name); }
+    }).catch(() => {});
     loadOrders();
   }, [loadOrders]);
   useEffect(() => {
@@ -50,7 +60,7 @@ export function ParentMealsApp() {
     if (lines.length === 0) { setError("Your basket is empty."); return; }
     setError(null); setOk(null);
     try {
-      await apiPost("/api/meal-orders", { tenantId, date, childName, items: lines.map((o) => ({ optionId: o.id, qty: qty(o.id) })) });
+      await apiPost("/api/meal-orders", { tenantId, date, childName, ...(childId ? { childId } : {}), items: lines.map((o) => ({ optionId: o.id, qty: qty(o.id) })) });
       setBasket({}); setOk("Order placed — pay the provider at drop-off."); loadOrders();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t place the order"); }
   }
@@ -72,7 +82,18 @@ export function ParentMealsApp() {
         <Card className="mb-4 p-4">
           <div className="grid gap-2.5 sm:grid-cols-3">
             <div><FieldLabel>Provider</FieldLabel><Select value={tenantId} onChange={(e) => { setTenantId(e.target.value); setBasket({}); }} className="w-full">{providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}</Select></div>
-            <div><FieldLabel>Child</FieldLabel><Input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder="Who’s eating?" className="w-full" /></div>
+            <div>
+              <FieldLabel>Child</FieldLabel>
+              {children.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap gap-1.5">
+                  {children.map((c) => { const on = childId === c.id; return (
+                    <button key={c.id} type="button" onClick={() => { setChildId(c.id); setChildName(c.name); }} className="rounded-full border px-2.5 py-1 text-[12px] font-bold" style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{c.name}</button>
+                  ); })}
+                </div>
+              )}
+              {/* Typing a name (an unregistered child) clears the profile link. */}
+              <Input value={childName} onChange={(e) => { setChildName(e.target.value); setChildId(""); }} placeholder="Who’s eating?" className="w-full" />
+            </div>
             <div><FieldLabel>Date</FieldLabel><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
           </div>
 

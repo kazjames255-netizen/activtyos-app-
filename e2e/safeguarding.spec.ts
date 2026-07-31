@@ -149,7 +149,10 @@ test.describe("meal shop", () => {
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/meals");
-    await parentPage.getByPlaceholder("Who’s eating?").fill(childName);
+    // Registered children are one-tap chips (linking the order to the child's
+    // record); the free-text box remains for unregistered names.
+    await parentPage.getByRole("button", { name: childName, exact: true }).click();
+    await expect(parentPage.getByPlaceholder("Who’s eating?")).toHaveValue(childName);
     // Order for a comfortably-future day: the provider's order cut-off
     // (settings.meals.orderCutoffHours, default 18h before the session day)
     // is enforced server-side, so "today" — and late in the day even
