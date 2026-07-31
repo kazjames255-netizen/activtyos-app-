@@ -678,6 +678,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [busy, setBusy] = useState<CampStatus | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
   const [sentOk, setSentOk] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const [savedDesigns, setSavedDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const STEPS = ["Name", "Audience", "Subject", "Content"];
   const lastStep = STEPS.length - 1;
@@ -691,7 +692,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     try {
       const html = useDesign && design ? renderDesignHtml(design, company, nowMs) : (mode === "template" && wordedHasCountdown ? renderDesignHtml(wordedDesign(), company, nowMs) : undefined);
       await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), design: useDesign ? (design ?? undefined) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
-      if (action === "sent") { if (useDesign) setSentOk(true); else onCancel(); }   // designed send → offer to save; worded → just close
+      if (action === "sent") { if (useDesign) { setSaveName(name.trim() || subject.trim() || "My design"); setSentOk(true); } else onCancel(); }   // designed send → offer to save; worded → just close
     } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
     finally { setBusy(null); }
   };
@@ -709,9 +710,13 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   // Reuse a previously-saved design — load it so it can be edited. Shared with the
   // designer's ⭐ My templates store, so a post-send save shows up in both places.
   const reuseSaved = (s: SavedTemplate) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); setMode("design"); setDesign({ templateId: "", accent: s.accent, blocks: s.blocks }); };
-  const saveCurrentDesign = () => { if (!design) return; const item: SavedTemplate = { id: `sv-${nowMs}`, name: name.trim() || subject.trim() || "Saved campaign", accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== item.name)]; setSavedDesigns(next); persistMyTemplates(next); };
+  const saveCurrentDesign = () => { if (!design) return; const nm = saveName.trim() || "Saved design"; const item: SavedTemplate = { id: `sv-${nowMs}`, name: nm, accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== nm)]; setSavedDesigns(next); persistMyTemplates(next); };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
+  // Countdown status for the current content — so "no clock in the email" is obvious before sending.
+  const designCd = useDesign ? design?.blocks.find((b) => b.t === "countdown") : undefined;
+  const cdMissingDate = (!!designCd && !designCd.date) || (mode === "template" && cdOn && !cdDate);
+  const cdIncluded = (!!designCd && !!designCd.date) || (mode === "template" && wordedHasCountdown);
   const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); if (wordedHasCountdown) blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
   return (
     <>
@@ -782,6 +787,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                         {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">📋 Use a saved one…</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}
                       </div>
                     </div>}
+              {cdMissingDate && <div className="rounded-xl border border-[#f2c4c9] bg-[#fdf0f1] px-4 py-3 text-[13px] font-semibold text-[#c02636]">⚠ Your countdown has no date set, so the clock won&apos;t appear. Open the {useDesign ? "designer" : "⏱ Countdown panel"} and set a date &amp; time.</div>}
+              {cdIncluded && <div className="rounded-xl border border-[#bfe6cf] bg-[#eafaf0] px-4 py-3 text-[13px] font-semibold text-[#127a3e]">⏱ Countdown included — it&apos;ll send as a big clock in the email.</div>}
               <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
               {people.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
@@ -830,10 +837,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
         <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f6ee] text-[24px]">✅</div>
           <div className="text-[18px] font-extrabold text-[var(--ink)]">Sent to {included.length} {included.length === 1 ? "family" : "families"}!</div>
-          <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">Save this design so you can reuse it next time?</p>
-          <div className="mt-5 flex gap-2">
+          <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">Save this design to reuse it next time? Give it a name:</p>
+          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Summer camp email" className="mt-3 w-full rounded-lg border-2 border-[var(--line)] bg-white px-3.5 py-2.5 text-center text-[14px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]" />
+          <div className="mt-4 flex gap-2">
             <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[var(--line)] px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">No thanks</button>
-            <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>Yes, save it</button>
+            <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} disabled={!saveName.trim()} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>Save it</button>
           </div>
         </div>
       </div>
