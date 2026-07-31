@@ -712,7 +712,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
-  const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
+  const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); if (wordedHasCountdown) blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
   return (
     <>
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
@@ -774,7 +774,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                       </div>}
                       {attachments.length > 0 && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] bg-[#fafbfe] px-3 py-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
                     </div>
-                    <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send. (File attachments send once the backend attach step is wired.)</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
@@ -791,8 +791,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Ready to send?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">A last look before it goes out.</p></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{name.trim() || subject.trim() || "Untitled campaign"}</div></div>
-                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{useDesign ? "Designed email" : (template?.name || "No template")}</div></div>
+                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{useDesign ? "Designed email" : (template?.name || "Worded email")}{!useDesign && wordedHasCountdown ? " · ⏱ countdown" : ""}</div></div>
               </div>
+              {((useDesign && design) || tmplBody.trim() || wordedHasCountdown) && <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3 text-left"><div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Preview — this is what sends</div><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} /></button>}
               <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[14px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
               {people.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
@@ -828,11 +829,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
         </div>
       </div>
     </div>
-    {previewBig && design && (
+    {previewBig && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
         <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} />
+          <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} />
         </div>
       </div>
     )}
