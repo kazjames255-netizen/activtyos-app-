@@ -1035,22 +1035,50 @@ const AUD_ACCENT = {
   enquiries: "linear-gradient(180deg,#e2586e,#c02a44)",  // red — warm leads to chase
   custom: "linear-gradient(180deg,#7b61e4,#5a3fc0)",     // violet — your own segments
 } as const;
-function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string }) {
+// Plain-English explanations for the built-in Groups (server descs are terse).
+const SEG_DESCS: Record<string, string> = {
+  "All active families": "Everyone with a booking on now or coming up — your main mailing list.",
+  "Active families": "Families with a current or upcoming booking (live from your CRM).",
+  "Past customers": "Booked with you before, but nothing on now or upcoming — great for win-back offers.",
+  "Waitlisted": "On a waiting list or holding an unconfirmed offer for a place.",
+  "New enquiries (no booking)": "On your customer list but have never booked — cold leads to convert.",
+  "New enquiries — all": "Emailed you and you marked them as an enquiry, but they've never booked.",
+};
+function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemovePerson }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string; onRemovePerson?: (email: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const people = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
-      <p className="mt-1 text-[12px] text-[var(--ink-3)]">{a.desc}</p>
-      <div className="mt-3 flex items-center gap-2">
+      <p className="mt-1 text-[12px] text-[var(--ink-3)]">{SEG_DESCS[a.name] ?? a.desc}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: accent }}>Use in campaign</button>
+        <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{open ? "▲ Hide" : `👁 View ${a.count}`}</button>
         {extra}
       </div>
+      {open && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
+          <div className="max-h-52 overflow-y-auto bg-white">
+            {people.length === 0 ? <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">No recipients in this list.</div>
+              : people.map((p) => (
+                  <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3 py-2 last:border-0">
+                    <div className="min-w-0 flex-1 truncate text-[12.5px] text-[var(--ink)]">{p.name && p.name !== p.email ? <><b className="font-semibold">{p.name}</b> · </> : null}<span className="text-[var(--ink-3)]">{p.email}</span></div>
+                    {onRemovePerson && <button type="button" title="Remove this person" onClick={() => { if (window.confirm(`Remove ${p.email} from this list?`)) onRemovePerson(p.email); }} className="flex-none text-[13px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕</button>}
+                  </div>
+                ))}
+          </div>
+          {onRemovePerson && people.length > 0 && <button type="button" onClick={() => { if (window.confirm(`Remove all ${people.length} ${people.length === 1 ? "person" : "people"} from this list? This can’t be undone.`)) people.forEach((p) => onRemovePerson(p.email)); }} className="w-full border-t border-[#f2c4c9] bg-[#fdf0f1] py-2.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fbe3e5]">🗑 Remove all {people.length} from this list</button>}
+        </div>
+      )}
     </div>
   );
 }
 function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
-  const [enquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
+  const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
+  useEffect(() => { writeLS(LS_ENQ, enquiries); }, [enquiries]);
+  const removeEnquiryPerson = (email: string) => setEnquiries((xs) => xs.filter((e) => (e.email || "").toLowerCase() !== email.toLowerCase()));
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
   const [building, setBuilding] = useState(false);
@@ -1117,7 +1145,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
         {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}</div>}
       </>)}
 
       {sub === "custom" && (<>
