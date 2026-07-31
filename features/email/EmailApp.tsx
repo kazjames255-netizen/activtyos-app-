@@ -881,7 +881,7 @@ function useCampaignData() {
   // "enquiries" segment — customer list, never booked — complements the
   // marked-from-inbox enquiry boards below; both are real, different sources.)
   useEffect(() => {
-    apiGet<{ id: string; name: string; desc: string; count: number; emails: string[] }[]>("/api/emails/audiences")
+    apiGet<{ id: string; name: string; desc: string; count: number; emails: string[]; people?: { email: string; name?: string }[] }[]>("/api/emails/audiences")
       .then((s) => setSegments(s.filter((x) => x.id !== "all").map((x) => ({ ...x, id: `seg-${x.id}` }))))
       .catch(() => {});
   }, []);
@@ -1086,6 +1086,12 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   useEffect(() => { writeLS(LS_ENQ, enquiries); }, [enquiries]);
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => xs.filter((e) => (e.email || "").toLowerCase() !== email.toLowerCase()));
+  // Removing a server-side family (added under New Family / synced) means
+  // suppressing them from marketing — reversible, leaves the record intact.
+  const [suppressed, setSuppressed] = useState<Set<string>>(() => new Set());
+  const suppressPerson = (email: string) => { const e = email.toLowerCase(); setSuppressed((s) => { const n = new Set(s); n.add(e); return n; }); apiPost("/api/emails/suppress", { email: e }).catch(() => {}); };
+  // The merged "Not booked yet" card spans both sources, so removing spans both.
+  const removeFromNotBooked = (email: string) => { removeEnquiryPerson(email); suppressPerson(email); };
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
   const [sub, setSub] = useState<"segments" | "enquiries">("enquiries");
@@ -1113,7 +1119,6 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
-  const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
   // Hide server segments that duplicate the lead card (active families) or the Enquiries tab (never-booked).
   // Only hide the server "Active families" (the lead 'All active families' card already covers it).
   // "New enquiries (no booking)" stays — that's how families you add in New Family (not yet booked) surface.
@@ -1123,6 +1128,26 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   const groupSegs = liveSegments.filter((s) => !HIDDEN_SEGS.has(s.name));
   // The server "added but not booked" segment (New Family / sign-ups) — shown under Enquiries.
   const addedNotBooked = liveSegments.find((s) => s.name === "New enquiries (no booking)");
+  // Both "added under New Family" (server) and "emailed & marked as an enquiry"
+  // (inbox) describe the same thing: someone interested who hasn't booked. Merge
+  // them into ONE card, deduped by email (prefer the entry that carries a name),
+  // so operators don't see two near-identical "all" lists.
+  const combinedNotBooked: Audience | null = (() => {
+    const parts = [addedNotBooked, enquiryAuds[0]].filter(Boolean) as Audience[];
+    if (!parts.length) return null;
+    const map = new Map<string, { email: string; name?: string }>();
+    for (const seg of parts) {
+      const ppl = seg.people?.length ? seg.people : seg.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
+      for (const p of ppl) {
+        const k = p.email.toLowerCase();
+        if (suppressed.has(k)) continue;
+        const ex = map.get(k);
+        if (!ex || (!ex.name && p.name)) map.set(k, { email: p.email, name: p.name ?? ex?.name });
+      }
+    }
+    const people = [...map.values()];
+    return { id: "enq-all", name: "Not booked yet", desc: "Everyone interested who hasn’t booked yet — added under New Family, signed up, or emailed you and marked as an enquiry. They drop off automatically once they book.", count: people.length, emails: people.map((p) => p.email), people };
+  })();
   // Computed groups from bookings (client-side). Aggregate per family (email).
   const DAY = 86_400_000;
   const nameByEmail = new Map<string, string>();
@@ -1150,7 +1175,7 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   ];
   const hasPayData = bookings.some((b) => !!b.method);
   const SUBS = [
-    { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal + (addedNotBooked?.count ?? 0) },
+    { k: "enquiries" as const, label: "📩 Enquiries", count: combinedNotBooked?.count ?? 0 },
     { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
   ];
   // Groups tab: build a live family group from the location + listing filters (both preset to "All").
@@ -1195,11 +1220,11 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
           </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
-        {(enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0 && !addedNotBooked?.count)
+        {!combinedNotBooked?.count
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {enqLoc === "all" && addedNotBooked && addedNotBooked.count > 0 && matchAud(addedNotBooked) && <AudienceCard key="added" a={addedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} />}
-              {(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}
+              {enqLoc === "all" && combinedNotBooked && matchAud(combinedNotBooked) && <AudienceCard key="notbooked" a={combinedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />}
+              {(enqLoc === "all" ? enquiryAuds.slice(1) : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}
             </div>}
       </>)}
 

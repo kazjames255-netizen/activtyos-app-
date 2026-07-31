@@ -121,6 +121,22 @@ emails.get("/audiences", async (req, res) => {
   const emailsOf = (pick: (f: { active: boolean; past: boolean; waitlisted: boolean }) => boolean) =>
     [...families.entries()].filter(([, f]) => pick(f)).map(([e]) => e);
 
+  // email → display name, so the audience cards can show a person, not just an
+  // address. Booker name (from a booking) wins; else the customer-record name.
+  const nameOf = new Map<string, string>();
+  for (const d of bookings.docs) {
+    const b = d.data() as { email?: string; booker?: string };
+    const e = b.email?.toLowerCase();
+    if (e && b.booker?.trim() && !nameOf.has(e)) nameOf.set(e, b.booker.trim());
+  }
+  for (const d of customers.docs) {
+    const c = d.data() as { email?: string; name?: string; firstName?: string; lastName?: string };
+    const e = c.email?.toLowerCase();
+    if (!e || nameOf.has(e)) continue;
+    const nm = c.name?.trim() || [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
+    if (nm) nameOf.set(e, nm);
+  }
+
   const all = emailsOf((f) => f.active || f.past);
   const past = emailsOf((f) => f.past && !f.active);
   const waitlisted = emailsOf((f) => f.waitlisted);
@@ -137,7 +153,10 @@ emails.get("/audiences", async (req, res) => {
   const sup = await suppressCol.where("tenantId", "==", tenantId).get();
   for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) blocked.add(e.toLowerCase()); }
   const keep = (es: string[]) => es.filter((e) => !blocked.has(e));
-  const seg = (id: string, name: string, desc: string, es: string[]) => ({ id, name, desc, count: keep(es).length, emails: keep(es) });
+  const seg = (id: string, name: string, desc: string, es: string[]) => {
+    const kept = keep(es);
+    return { id, name, desc, count: kept.length, emails: kept, people: kept.map((e) => ({ email: e, name: nameOf.get(e) })) };
+  };
   res.json([
     seg("all", "All families", "Everyone who has booked with you (not cancelled)", all),
     seg("active", "Active families", "Has a current or upcoming booking", emailsOf((f) => f.active)),
@@ -153,6 +172,22 @@ emails.get("/recipients", async (req, res) => {
   if (!tenantId) return;
   const list = await familyRecipients(tenantId);
   res.json({ count: list.length, families: list, sample: list.slice(0, 20).map((r) => r.email) });
+});
+
+// POST /api/emails/suppress — the operator removes a family from marketing
+// (the ✕ in an audience card). Reversible: adds to the suppression list and
+// flips the customer's marketing consent off, so they stop appearing in every
+// audience — but the customer record itself is untouched.
+emails.post("/suppress", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const email = String((req.body as { email?: string }).email ?? "").trim().toLowerCase();
+  if (!email.includes("@")) { res.status(400).json({ error: "A valid email is required" }); return; }
+  const existing = await suppressCol.where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
+  if (existing.empty) await suppressCol.add({ tenantId, email, at: new Date().toISOString(), by: "operator" });
+  const cust = await db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
+  if (!cust.empty) await cust.docs[0].ref.set({ marketingOptIn: false }, { merge: true });
+  res.json({ ok: true, email });
 });
 
 // GET /api/emails — the send history (operators).
