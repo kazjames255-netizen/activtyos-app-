@@ -20,7 +20,7 @@ export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text"
 export interface Card { image?: string; video?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; video?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string; variant?: string; logoH?: number; noNote?: boolean; time?: string; noPhone?: boolean; noEmail?: boolean; noWeb?: boolean; noAddr?: boolean }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; video?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string; variant?: string; logoH?: number; noNote?: boolean; time?: string; noPhone?: boolean; noEmail?: boolean; noWeb?: boolean; noAddr?: boolean; font?: string; fontSize?: number; bold?: boolean; italic?: boolean }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -46,7 +46,10 @@ const theme = (hex: string): Theme => { const a = hex, aDark = shade(hex, -42), 
 export const accentHex = (id: string) => TPL_ACCENTS.find((a) => a.id === id)?.hex ?? id;
 
 // ── html helpers ──────────────────────────────────────────────────────────
-const para = (s: string | undefined, style: string) => (s ?? "").split(/\n{2,}/).filter(Boolean).map((p) => `<p style="${style}">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+const para = (s: string | undefined, style: string) => (s ?? "").split(/\n{2,}/).filter(Boolean).map((p) => `<p style="${style};word-break:break-word;overflow-wrap:break-word">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+const FONTS: Record<string, string> = { sans: "Arial,'Helvetica Neue',Helvetica,sans-serif", serif: "Georgia,'Times New Roman',serif", trebuchet: "'Trebuchet MS','Segoe UI',Tahoma,sans-serif", verdana: "Verdana,Geneva,sans-serif", elegant: "'Palatino Linotype','Book Antiqua',Palatino,Georgia,serif", mono: "'Courier New',Courier,monospace" };
+const FONT_OPTS: [string, string][] = [["", "Default"], ["serif", "Serif"], ["trebuchet", "Trebuchet"], ["verdana", "Verdana"], ["elegant", "Elegant"], ["mono", "Mono"]];
+const fam = (f?: string) => (f && FONTS[f] ? `;font-family:${FONTS[f]}` : "");
 // A cropped image: fixed-height frame + object-fit cover. Pan is object-position
 // (0–100%, works at any zoom with no gaps) and zoom scales from the same anchor —
 // email-safe and renders in every modern inbox.
@@ -96,10 +99,16 @@ function renderBlock(b: Block, t: Theme, c?: Partial<Company>, now = 0): string 
         row(`<h1 style="margin:0;font-size:32px;line-height:1.05;font-weight:900;color:${t.onA}">${esc(b.heading)}</h1>${b.subheading ? `<div style="margin-top:8px;font-size:16px;font-weight:600;color:${t.onAMut}">${esc(b.subheading)}</div>` : ""}${para(b.body, `margin:12px 0 ${b.label ? "16px" : "0"};font-size:14px;line-height:1.6;color:${t.onAMut}`)}${b.label ? btn(t.onA, readable(t.onA), b.label, b.url) : ""}`, `background:${t.a};background-image:linear-gradient(160deg,${t.a},${t.aDark});padding:26px 26px 30px;text-align:center`);
     case "band":
       return row(`<h2 style="margin:0;font-size:17px;font-weight:800;color:${t.onA};text-align:center">${esc(b.heading)}</h2>${b.body ? `<div style="margin-top:5px;font-size:13px;color:${t.onAMut};text-align:center">${esc(b.body)}</div>` : ""}${b.label ? `<div style="text-align:center;margin-top:12px">${btn(t.onA, readable(t.onA), b.label, b.url)}</div>` : ""}`, `background:${t.a};padding:16px 24px`);
-    case "heading":
-      return row(`<h2 style="margin:0;font-size:23px;font-weight:800;color:${t.ink};text-align:center">${esc(b.heading)}</h2>${b.subheading ? `<div style="text-align:center;margin-top:4px;font-size:13.5px;color:${t.mut}">${esc(b.subheading)}</div>` : ""}<div style="height:3px;width:54px;background:${t.a};margin:12px auto 0"></div>${b.label ? `<div style="text-align:center;margin-top:16px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:24px 26px 6px");
-    case "text":
-      return row(`${para(b.body, `margin:0 0 10px;font-size:14px;line-height:1.7;color:${t.mut}`)}${b.label ? `<div style="text-align:center;margin-top:10px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:8px 30px");
+    case "heading": {
+      const al = b.align || "center"; const hs = b.fontSize || 23;
+      const barMargin = al === "center" ? "12px auto 0" : al === "right" ? "12px 0 0 auto" : "12px 0 0 0";
+      return row(`<h2 style="margin:0;font-size:${hs}px;font-weight:800;color:${t.ink};text-align:${al};word-break:break-word;overflow-wrap:break-word${fam(b.font)}${b.italic ? ";font-style:italic" : ""}">${esc(b.heading)}</h2>${b.subheading ? `<div style="text-align:${al};margin-top:4px;font-size:13.5px;color:${t.mut}${fam(b.font)}">${esc(b.subheading)}</div>` : ""}<div style="height:3px;width:54px;background:${t.a};margin:${barMargin}"></div>${b.label ? `<div style="text-align:${al};margin-top:16px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:24px 26px 6px");
+    }
+    case "text": {
+      const al = b.align || "left"; const fs = b.fontSize || 14;
+      const st = `margin:0 0 10px;font-size:${fs}px;line-height:1.7;color:${t.mut};text-align:${al}${fam(b.font)}${b.bold ? ";font-weight:800" : ""}${b.italic ? ";font-style:italic" : ""}`;
+      return row(`${para(b.body, st)}${b.label ? `<div style="text-align:${al};margin-top:10px">${btn(t.a, t.onA, b.label, b.url)}</div>` : ""}`, "padding:8px 30px");
+    }
     case "image": {
       const al = b.align || "center"; const shape = b.shape || "landscape";
       const hasText = !!(b.heading || b.body);
@@ -449,12 +458,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
     const k = b.k!;
     const hd = (label: string, val?: string, key: keyof Block = "heading") => <div><div className={lbl}>{label}</div><input value={(val ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
     const ta = (label: string, key: keyof Block = "body") => <div><div className="mb-0.5 flex items-center gap-2"><span className={lbl.replace("mb-0.5 ", "")}>{label}</span><button type="button" onClick={() => aiWrite(k, key, b.heading)} className="ml-auto text-[10.5px] font-extrabold text-[#7c3aed] hover:underline">{aiBusy === `${k}-${String(key)}` ? "✨ Writing…" : "✨ Help me write"}</button></div><textarea rows={3} value={(b[key] ?? "") as string} onChange={(e) => patch(k, { [key]: e.target.value })} className={inputCls} /></div>;
+    const styleBar = (defSize: number, defAlign: "left" | "center" | "right", showBold: boolean) => <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <select value={b.font ?? ""} onChange={(e) => patch(k, { font: e.target.value })} className={`${inputCls} h-8 flex-1 py-0`}>{FONT_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+        <div className="flex overflow-hidden rounded-md border border-[var(--line)]">{(["left", "center", "right"] as const).map((a) => <button key={a} type="button" onClick={() => patch(k, { align: a })} title={a} className={`px-2 py-1 text-[11px] font-extrabold ${(b.align || defAlign) === a ? "bg-[#16306e] text-white" : "bg-white text-[var(--ink-2)]"}`}>{a[0].toUpperCase()}</button>)}</div>
+        {showBold && <button type="button" onClick={() => patch(k, { bold: !b.bold })} className={`h-8 w-8 rounded-md border text-[13px] font-black ${b.bold ? "border-[#16306e] bg-[#16306e] text-white" : "border-[var(--line)] text-[var(--ink-2)]"}`}>B</button>}
+        <button type="button" onClick={() => patch(k, { italic: !b.italic })} className={`h-8 w-8 rounded-md border text-[13px] font-black italic ${b.italic ? "border-[#16306e] bg-[#16306e] text-white" : "border-[var(--line)] text-[var(--ink-2)]"}`}>I</button>
+      </div>
+      <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Size</span><input type="range" min={11} max={40} step={1} value={b.fontSize || defSize} onChange={(e) => patch(k, { fontSize: Number(e.target.value) })} className="flex-1 accent-[#2f6bd8]" /><span className="w-9 text-right text-[10.5px] font-extrabold text-[var(--ink-2)]">{b.fontSize || defSize}px</span></div>
+    </div>;
     switch (b.t) {
       case "header": return <div className="space-y-1.5">{hd("Business name", b.heading)}{hd("Tagline (optional)", b.subheading, "subheading")}</div>;
       case "hero": return <div className="space-y-1.5"><div><div className={lbl}>Image</div>{imgField(`${k}-img`, b, (p) => patch(k, p))}</div>{hd("Heading", b.heading)}{hd("Sub-heading", b.subheading, "subheading")}{ta("Body")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "band": return <div className="space-y-1.5">{hd("Heading", b.heading)}{ta("Text (optional)")}{hd("Button label (blank = none)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
-      case "heading": return <div className="space-y-1.5">{hd("Heading", b.heading)}{hd("Sub-heading (optional)", b.subheading, "subheading")}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
-      case "text": return <div className="space-y-1.5">{ta("Text")}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
+      case "heading": return <div className="space-y-1.5">{hd("Heading", b.heading)}{hd("Sub-heading (optional)", b.subheading, "subheading")}{styleBar(23, "center", false)}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
+      case "text": return <div className="space-y-1.5">{ta("Text")}{styleBar(14, "left", true)}{hd("Button label (optional — e.g. Book now)", b.label, "label")}{hd("Button link", b.url, "url")}</div>;
       case "image": { const beside = b.size !== "full"; return <div className="space-y-2">{imgField(`${k}-img`, b, (p) => patch(k, p))}
         <div><div className={lbl}>Shape</div><div className="flex flex-wrap gap-1">{([["landscape", "Rectangle"], ["square", "Square"], ["portrait", "Portrait"], ["wide", "Banner"]] as const).map(([s, l]) => <button key={s} type="button" onClick={() => patch(k, { shape: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.shape || "landscape") === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{l}</button>)}</div></div>
         <div className="flex items-start gap-4"><div><div className={lbl}>Size</div><div className="flex gap-1">{(["s", "m", "full"] as const).map((s) => <button key={s} type="button" onClick={() => patch(k, { size: s })} className={`rounded px-2 py-1 text-[11px] font-bold ${b.size === s ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{s === "s" ? "Small" : s === "m" ? "Medium" : "Full"}</button>)}</div></div><div><div className={lbl}>{beside && (b.heading || b.body) ? "Image side" : "Align"}</div><div className="flex gap-1">{(["left", "center", "right"] as const).map((al) => <button key={al} type="button" onClick={() => patch(k, { align: al })} className={`rounded px-2 py-1 text-[11px] font-bold ${(b.align || "center") === al ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)]"}`}>{al[0].toUpperCase()}</button>)}</div></div></div>
