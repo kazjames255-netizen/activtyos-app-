@@ -668,8 +668,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const useDesign = mode === "design" && !!design;
   const contentReady = mode === "template" || useDesign;   // send actions show once there's content
   const [schedAt, setSchedAt] = useState("");
+  const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<CampStatus | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
+  const STEPS = ["Name", "Audience", "Subject", "Content", "Review"];
+  const nextDisabled = !!busy || (step === 1 && !primary) || (step === 3 && !contentReady);
   const submit = async (action: CampStatus) => {
     if (!primary) { setSendErr("Pick an audience for this send first."); return; }
     if (action === "scheduled" && !schedAt) { setSendErr("Pick a date & time to schedule the send."); return; }
@@ -686,79 +689,87 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
       <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <style>{`.camp-scroll{overflow-y:scroll}.camp-scroll::-webkit-scrollbar{width:14px}.camp-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.camp-scroll::-webkit-scrollbar-thumb{background:#8aa0c6;border-radius:8px;border:3px solid #e7ecf4;min-height:44px}.camp-scroll::-webkit-scrollbar-thumb:hover{background:#5f7cab}`}</style>
-        <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
-        <div className="camp-scroll max-h-[80vh] space-y-4 bg-[#f4f7fc] p-5">
-          {primary && <div className="rounded-xl border-l-4 border-[#3f78d8] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
-          <div className="space-y-3 rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm">
-          <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
-          <div><FieldLabel>Audiences in this send <span className="font-normal normal-case tracking-normal text-[var(--ink-3)]">— combine any; recipients are deduped so no one is emailed twice</span></FieldLabel>
-            <div className="flex flex-wrap gap-1.5">
-              {selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[12px] font-bold text-[#1d3a8f]">{a.name} ({a.count}){selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}
-            </div>
-            {availableToAdd.length > 0 && <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <Select value="" onChange={(e) => addAud(e.target.value)} className="max-w-[280px]">
-                <option value="">＋ Add another audience…</option>
-                {segG.length > 0 && <optgroup label="🎯 Segments">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
-                {enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
-                {cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
-              </Select>
+        <div className="rounded-t-2xl px-6 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0"><div className="text-[19px] font-extrabold">New campaign</div><div className="truncate text-[12.5px] text-white/80">{primary ? <>To <b className="font-extrabold text-white">{primary.name}</b>{selectedAuds.length > 1 ? ` +${selectedAuds.length - 1} more` : ""} · {included.length} recipient{included.length === 1 ? "" : "s"}</> : "Branded-domain send with tracking + unsubscribe."}</div></div>
+            <div className="flex-none text-[12px] font-bold text-white/85">Step {step + 1} of {STEPS.length}</div>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5">
+            {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25"}`} /></button>)}
+          </div>
+        </div>
+        <div className="camp-scroll max-h-[74vh] bg-[#f4f7fc] px-8 py-9">
+          <div className="mx-auto flex min-h-[340px] max-w-2xl flex-col">
+            {step === 0 && <div className="space-y-5">
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
+            </div>}
+            {step === 1 && <div className="space-y-5">
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
+              <div className="flex flex-wrap gap-2">{selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#eef4fd] px-4 py-2 text-[14px] font-bold text-[#1d3a8f]">{a.name} <span className="rounded-full bg-white/70 px-1.5 text-[12px]">{a.count}</span>{selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}</div>
+              {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">＋ Add another audience…</option>{segG.length > 0 && <optgroup label="🎯 Segments">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}</Select>}
+              <div className="rounded-xl border border-[#cfe0f7] bg-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 This send reaches <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}.</div>
+            </div>}
+            {step === 2 && <div className="space-y-5">
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">What&apos;s the subject line?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">The first thing people read in their inbox — make it count.</p></div>
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. ☀️ August camp places are open!" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
+            </div>}
+            {step === 3 && <div className="space-y-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">How should it look?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Use a ready-worded template, or design your own branded email.</p></div>
+                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-4 py-2.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+              </div>
+              {mode === "template"
+                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-2 text-[12.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></div>
+                : design
+                  ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
+                      <div className="mb-2 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
+                    </div>
+                  : <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm">
+                      <div className="text-[16px] font-extrabold text-[var(--ink)]">Design your own email</div>
+                      <p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Start from a beautiful, ready-made design — recolour it, add frames, and drop in your own words and photos. Or reuse one you saved.</p>
+                      <button type="button" onClick={() => setDesigning(true)} className="mt-4 rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Open the designer</button>
+                    </div>}
+            </div>}
+            {step === 4 && <div className="space-y-4">
+              <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Ready to send?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">A last look before it goes out.</p></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{name.trim() || subject.trim() || "Untitled campaign"}</div></div>
+                <div className="rounded-xl border border-[var(--line)] bg-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</div><div className="mt-0.5 text-[15px] font-extrabold text-[var(--ink)]">{useDesign ? "Designed email" : (template?.name || "No template")}</div></div>
+              </div>
+              <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[14px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
+              {people.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+                  <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
+                  {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
+                    {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
+                      <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-2 last:border-0">
+                        <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
+                        <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
+                        {enqEmails.has(p.email.toLowerCase()) && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
+                      </div>
+                    ); })}
+                  </div>}
+                  <div className="border-t border-[var(--line)] px-4 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."} Duplicate addresses are merged automatically.</div>
+                </div>
+              )}
+              <p className="text-[12.5px] text-[var(--ink-3)]">Opted-out recipients are excluded automatically, and a one-click unsubscribe footer is added to every send.</p>
             </div>}
           </div>
-          <div><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" className="w-full" /></div>
-          </div>
-
-          {/* Content — pick an uploaded template, or design a simple branded layout */}
-          <div className="rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm">
-            <div className="mb-2.5 flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</span>
-              <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">
-                {([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
-              </div>
-            </div>
-            {mode === "template"
-              ? <><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></>
-              : design
-                ? <div>
-                    <div className="mb-1.5 flex items-center gap-2"><FieldLabel>Your design</FieldLabel><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
-                    <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
-                  </div>
-                : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7f9fc] p-5 text-center">
-                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Design your own email</div>
-                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Start from a beautiful, ready-made design — recolour it, add frames, and drop in your own words and photos. Or reuse one you saved.</p>
-                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Open the designer</button>
-                  </div>}
-          </div>
-
-          {/* recipient list — trim this send, or remove people from the list for good */}
-          {people.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
-              <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
-              {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
-                {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
-                  <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3.5 py-2 last:border-0">
-                    <div className="min-w-0 flex-1"><div className={`truncate text-[13px] font-semibold ${off ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{p.name || p.email}</div>{p.name && p.name !== p.email && <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.email}</div>}</div>
-                    <button type="button" onClick={() => toggleExclude(p.email)} className={`flex-none rounded-full border px-2.5 py-1 text-[11px] font-bold ${off ? "border-[#bfe6cf] text-[#127a3e] hover:bg-[#eafaf0]" : "border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{off ? "↩ Add back" : "Skip this send"}</button>
-                    {enqEmails.has(p.email.toLowerCase()) && onRemovePerson && <button type="button" onClick={() => onRemovePerson(p.email)} className="flex-none rounded-full border border-[#f0c9cd] px-2.5 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdecec]" title="Remove from the enquiries list for good">🗑 Remove</button>}
-                  </div>
-                ); })}
-              </div>}
-              <div className="border-t border-[var(--line)] px-3.5 py-2 text-[11px] text-[var(--ink-3)]">{hasEnquiryAud ? "“Skip this send” leaves them on the list for next time. “Remove” takes them off the enquiries board entirely." : "“Skip this send” excludes them from this campaign only."} Duplicate addresses across audiences are merged automatically.</div>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
-          <p className="text-[13px] font-semibold text-[var(--ink)]">Recipients who have opted out of marketing are excluded automatically. A one-click unsubscribe footer is added to every send.</p>
         </div>
-        {sendErr && <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={onCancel} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)] disabled:opacity-40">Cancel</button>
-          {contentReady
-            ? <>
-                <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
-                <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
-                <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
-              </>
-            : <span className="ml-auto text-[12px] font-semibold text-[var(--ink-3)]">Pick or design your content above to send →</span>}
+        {sendErr && <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
+        <div className="flex items-center gap-2 border-t border-[var(--line)] px-6 py-3.5">
+          <button type="button" onClick={() => (step === 0 ? onCancel() : setStep(step - 1))} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
+          <div className="ml-auto flex items-center gap-2">
+            {step < STEPS.length - 1
+              ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>{step === 3 && !contentReady ? "Pick content to continue" : "Next →"}</button>
+              : <>
+                  <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
+                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+                </>}
+          </div>
         </div>
       </div>
     </div>
