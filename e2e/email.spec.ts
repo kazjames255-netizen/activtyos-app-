@@ -100,13 +100,16 @@ test.describe("email client", () => {
     await page.getByRole("button", { name: "Campaigns", exact: true }).click();
     await page.getByRole("button", { name: /New campaign/ }).click();
     await page.getByPlaceholder("e.g. August football camp").fill(name);
-    // The segment option renders once the live audiences load; selectOption waits.
-    await page.locator('select:has-text("New enquiries")').selectOption("enquiries");
+    // Audiences are chips now: add the live "New enquiries (no booking)"
+    // segment, then drop the default "All active families" chip so our
+    // arranged customer is the only recipient.
+    await page.locator('select:has-text("Add another audience")').selectOption("seg-enquiries");
+    await page.locator("span").filter({ hasText: /^All active families/ }).getByTitle("Remove from this send").click();
     await page.getByPlaceholder("Subject line").fill(name);
     await page.getByRole("button", { name: "Send now" }).click();
 
-    // The row that appears is the SERVER's send record, with a live status —
-    // "Sending" until the transport hand-off settles, then "Sent".
+    // The row that appears links to the SERVER's send record, with a live
+    // status — "Sending" until the transport hand-off settles, then "Sent".
     const row = page.locator("div.grid").filter({ hasText: name }).last();
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(row.getByText(/Sent|Sending/)).toBeVisible();

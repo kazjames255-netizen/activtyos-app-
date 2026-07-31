@@ -9,7 +9,7 @@ import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
-import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
+import { MERGE_FIELDS } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
 import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign, type Social } from "@/features/email/campaignTemplates";
@@ -169,7 +169,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
     </div>
   );
 }
-interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string }
+interface Sent { id: string; subject: string; audience: string; recipientCount: number; sentByName?: string; createdAt?: string; status?: "sending" | "sent"; delivered?: number; openedBy?: string[] }
 interface LiveMoment { id: string; caption?: string; comments?: { role?: string; text: string; byName?: string; marketing?: boolean }[] }
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const BROWN = "#9a5a00", BLUE = "#1d3a8f", GREEN = "#047857";
@@ -259,26 +259,44 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
   system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
 };
 type MailFolder = "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" | "snoozed" | "trash";
-interface Mail { id: string; from: string; fromEmail?: string; to?: string; cc?: string[]; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: MailFolder }
-// Demo inbox — stands in until inbound email is wired. Mirrors the manual's sample.
-const DEMO_MAIL: Mail[] = [
-  { id: "m1", from: "Sarah Khan", fromEmail: "sarah.khan@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Allergy update for Jack before Summer camp", preview: "Just so you have it on file — Jack’s now also reacting to sesame…", body: "Just so you have it on file — Jack’s now also reacting to sesame as well as his existing nut allergy. His EpiPen is in date. Happy to send the updated care plan if useful.", time: "09:18", unread: true, starred: true, thread: true, labels: ["urgent", "follow"], quickReplies: ["Thanks — noted on Jack’s file.", "Could you send the updated care plan?", "We’ll make sure all staff are aware."] },
-  { id: "m2", from: "MK Council HAF Team", fromEmail: "haf@milton-keynes.gov.uk", to: "bookings@apf", cc: ["finance@apfactivitycamps.com", "haf-admin@milton-keynes.gov.uk"], tag: "Schools & councils", subject: "HAF claim — May sessions (PO #MK-4471)", preview: "Please find the signed PO attached for May’s funded places.", body: "Please find the approved PO attached for the May HAF sessions. Submit your claim with attendance evidence by month end.", time: "Mon", starred: true, thread: true, labels: ["haf"], attachment: "PO-MK-4471.pdf", attachmentSize: "84 KB", quickReplies: ["Thank you — received, we’ll action this.", "Could you confirm the deadline?", "Invoice to follow shortly."] },
-  { id: "m3", from: "Fuel Catering Ltd", fromEmail: "orders@fuelcatering.co.uk", to: "bookings@apf", tag: "Suppliers", subject: "Re: Lunch order cut-off this week", preview: "Cut-off is 6pm the day before — send final numbers by then.", body: "Cut-off is 6pm the day before — send final numbers by then and we’ll have it prepped for the morning.", time: "Tue", starred: true, quickReplies: ["Thanks — will confirm numbers by 5pm.", "Can we push the cut-off to 7pm?", "Noted, thank you."] },
-  { id: "m4", from: "Dani Obi", fromEmail: "dani.obi@outlook.com", to: "bookings@apf", tag: "Parents", subject: "Enquiry: places for August football camp?", preview: "Hi — do you have any spaces left for the week of the 12th?", body: "Hi! Do you still have spaces for the August football camp for a 10-year-old? And do you offer sibling discounts? Thanks, Dani.", time: "08:02", unread: true, starred: true, thread: true, labels: ["enquiry"], quickReplies: ["Thanks — noted, all set!", "We’ll keep an eye out, thank you.", "Could you confirm your booking reference?"] },
-  { id: "m5", from: "Marcus B.", fromEmail: "marcus.b@apf.staff", to: "bookings@apf", tag: "Team", subject: "Shift swap request — Friday PM", preview: "Could I swap my Friday afternoon with Priya this week?", body: "Could I swap my Friday afternoon with Priya this week? She’s happy to cover — just needs your sign-off.", time: "Wed", starred: true, quickReplies: ["Approved — I’ll update the rota.", "Let me check cover and come back to you.", "Can you both confirm in writing?"] },
-  { id: "m6", from: "ActivityOS", fromEmail: "no-reply@activityos.uk", to: "bookings@apf", tag: "System", subject: "Booking confirmed — APF-10293 (Jack Khan)", preview: "A new booking has been confirmed and paid.", body: "A new booking has been confirmed and paid: APF-10293 — Jack Khan, Summer Multi-Activity, week of 12 Aug.", time: "4 Jun", starred: true, labels: ["system"] },
-  { id: "m7", from: "Aisha Patel", fromEmail: "aisha.patel@gmail.com", to: "bookings@apf", tag: "Parents", subject: "Welcome to Summer Camp — what to bring", preview: "Hi Aisha, we can’t wait to see you! Here’s what to pack…", body: "Hi Aisha, we can’t wait to see you! Here’s what to pack: sun cream, a water bottle, a packed lunch and trainers.", time: "2 Jun", starred: true, quickReplies: ["You’re welcome — see you Monday!", "Let us know if you have any questions.", "Anything else we can help with?"] },
-];
+interface Mail { id: string; from: string; fromEmail?: string; to?: string; cc?: string[]; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: MailFolder; schedId?: string }
+
+// A received message as the API stores it (see server routes/emails.ts —
+// `emailMessages`, filled by the inbound webhook).
+interface ServerMail { id: string; from: string; fromEmail?: string; to?: string; subject: string; body?: string; html?: string; labels?: string[]; attachments?: { name: string; size?: string }[]; unread?: boolean; starred?: boolean; snoozedUntil?: string | null; folder?: string; at?: string }
+// A queued send (POST /api/emails/schedule) waiting for its sendAt.
+interface Scheduled { id: string; subject: string; body?: string; recipientCount: number; sendAt: string; status: "scheduled" | "sent" | "cancelled"; emailId?: string }
+
+const KNOWN_LABELS = new Set<string>(["urgent", "follow", "haf", "enquiry", "system"]);
+const toMail = (m: ServerMail): Mail => ({
+  id: m.id,
+  from: m.from,
+  fromEmail: m.fromEmail,
+  to: m.to,
+  subject: m.subject,
+  preview: (m.body ?? "").replace(/\s+/g, " ").slice(0, 120),
+  body: m.body,
+  time: when(m.at),
+  unread: m.unread,
+  starred: m.starred,
+  labels: (m.labels ?? []).filter((l): l is LabelTone => KNOWN_LABELS.has(l)),
+  attachment: m.attachments?.[0]?.name,
+  attachmentSize: m.attachments?.[0]?.size,
+  folder: (["inbox", "archive", "snoozed", "spam", "trash"].includes(m.folder ?? "") ? m.folder : "inbox") as MailFolder,
+});
+// "Sends Fri 1 Aug, 09:00" — sendAt is a local datetime string, not ISO+tz.
+const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const FOLDERS: [string, string][] = [
   ["inbox", "Inbox"], ["starred", "Starred"], ["snoozed", "Snoozed"], ["sent", "Sent"],
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
 ];
 
-function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[] }) {
+function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
   const [enqLocs, setEnqLocs] = useState<string[]>([]);
-  const [items, setItems] = useState<Mail[]>(() => DEMO_MAIL.map((m) => ({ ...m, folder: m.folder ?? "inbox" })));
+  // Server messages, patched optimistically — the realtime refresh reconciles.
+  const [items, setItems] = useState<Mail[]>([]);
+  useEffect(() => { setItems((messages ?? []).map(toMail)); }, [messages]);
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
   const [density, setDensity] = useState<"cozy" | "compact">("cozy");
@@ -286,24 +304,32 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
   const [open, setOpen] = useState<Mail | null>(null);
   const [showContact, setShowContact] = useState(false);
 
+  // A row is a real stored message unless it's a derived Sent/Scheduled one.
+  const isMsg = (id: string) => !id.startsWith("sent-") && !id.startsWith("sch-");
+  const persist = (id: string, p: Record<string, unknown>) => { if (isMsg(id)) void api(`/api/emails/messages/${id}`, { method: "PATCH", body: JSON.stringify(p) }).catch(() => onRefresh()); };
   const patch = (id: string, p: Partial<Mail>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const drop = (id: string) => setItems((xs) => xs.filter((x) => x.id !== id));
-  const move = (m: Mail, f: MailFolder) => { patch(m.id, { folder: f }); setOpen(null); };
-  const openMail = (m: Mail) => { if (m.unread) patch(m.id, { unread: false }); setOpen(m); };
+  const move = (m: Mail, f: MailFolder) => { patch(m.id, { folder: f }); persist(m.id, { folder: f }); setOpen(null); };
+  const openMail = (m: Mail) => { if (m.unread) { patch(m.id, { unread: false }); persist(m.id, { unread: false }); } setOpen(m); };
+  const star = (m: Mail) => { patch(m.id, { starred: !m.starred }); persist(m.id, { starred: !m.starred }); };
   const archive = (m: Mail) => move(m, "archive");
-  const snooze = (m: Mail) => move(m, "snoozed");
+  // Snooze = hide until tomorrow 08:00; the server wakes it back into the inbox.
+  const snooze = (m: Mail) => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); patch(m.id, { folder: "snoozed" }); persist(m.id, { snoozedUntil: d.toISOString() }); setOpen(null); };
   const spam = (m: Mail) => move(m, "spam");
-  const restore = (m: Mail) => move(m, "inbox");
+  const restore = (m: Mail) => { patch(m.id, { folder: "inbox" }); persist(m.id, { folder: "inbox", snoozedUntil: null }); setOpen(null); };
   // First delete → Trash (recoverable). Deleting from Trash removes it for good.
-  const del = (m: Mail) => { if ((m.folder ?? "inbox") === "trash") drop(m.id); else move(m, "trash"); };
+  const del = (m: Mail) => { if ((m.folder ?? "inbox") === "trash") { drop(m.id); if (isMsg(m.id)) void api(`/api/emails/messages/${m.id}`, { method: "DELETE" }).catch(() => onRefresh()); setOpen(null); } else move(m, "trash"); };
+  const cancelScheduled = (m: Mail) => { if (!m.schedId || !confirm(`Cancel the scheduled send "${m.subject}"?`)) return; void api(`/api/emails/scheduled/${m.schedId}`, { method: "DELETE" }).then(() => onRefresh()).catch(() => onRefresh()); setOpen(null); };
   const reply = (m: Mail) => { setOpen(null); onReply(m); };
   const forward = (m: Mail) => { setOpen(null); onForward(m); };
-  const markUnread = (m: Mail) => { patch(m.id, { unread: true }); setOpen(null); };
+  const markUnread = (m: Mail) => { patch(m.id, { unread: true }); persist(m.id, { unread: true }); setOpen(null); };
   const quickReply = (m: Mail, text: string) => { setOpen(null); onQuickReply(m, text); };
 
   // Real sent history shows in the Sent folder as mail rows.
   const sentMail: Mail[] = (history ?? []).map((h) => ({ id: `sent-${h.id}`, from: "You", subject: h.subject, preview: h.audience === "one" ? "Sent to 1 address" : `Sent to ${h.recipientCount} families`, time: when(h.createdAt), folder: "sent" }));
-  const pool = folder === "sent" ? sentMail : items;
+  // The server-side scheduled queue shows in Scheduled, cancellable until it fires.
+  const schedMail: Mail[] = (scheduled ?? []).filter((s) => s.status === "scheduled").map((s) => ({ id: `sch-${s.id}`, schedId: s.id, from: "You", subject: s.subject, preview: `Sends ${whenSched(s.sendAt)} · to ${s.recipientCount} recipient${s.recipientCount === 1 ? "" : "s"}`, body: s.body, time: whenSched(s.sendAt), folder: "scheduled" }));
+  const pool = folder === "sent" ? sentMail : folder === "scheduled" ? schedMail : items;
   const inFolder = (m: Mail) => {
     if (folder === "all") return m.folder !== "spam" && m.folder !== "trash";
     if (folder === "starred") return !!m.starred && m.folder !== "spam" && m.folder !== "trash";
@@ -314,7 +340,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
   const list = pool.filter(inFolder)
     .filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
     .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); });
-  const count = (k: string) => k === "sent" ? sentMail.length : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length
+  const count = (k: string) => k === "sent" ? sentMail.length : k === "scheduled" ? schedMail.length || undefined : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length
     : k === "starred" ? items.filter((m) => m.starred && m.folder !== "spam" && m.folder !== "trash").length
     : (k === "archive" || k === "snoozed" || k === "spam" || k === "trash") ? items.filter((m) => m.folder === k).length || undefined : undefined;
   const pad = density === "cozy" ? "py-3" : "py-1.5";
@@ -342,11 +368,11 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
             <span className="ml-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
           </div>
-          {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">Nothing here.</div>
+          {list.length === 0 ? <div className="px-4 py-14 text-center text-[13px] text-[var(--ink-3)]">{folder === "inbox" && !items.length ? "No mail yet. Email sent to your connected address lands here — sends and replies still work from Compose." : "Nothing here."}</div>
           : list.map((m) => (
             <div key={m.id} className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 last:border-0 hover:bg-[#f7faff] ${pad}`} style={m.unread ? { background: "#f2f7ff" } : undefined}>
               <span className="flex-none" style={{ width: 6 }}>{m.unread && <span className="block h-2 w-2 rounded-full" style={{ background: "#2f6bd8" }} />}</span>
-              <button type="button" onClick={() => patch(m.id, { starred: !m.starred })} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
+              <button type="button" onClick={() => star(m)} className="flex-none text-[15px]" style={{ color: m.starred ? "#f4b400" : "var(--ink-3)" }} aria-label={m.starred ? "Unstar" : "Star"}>{m.starred ? "★" : "☆"}</button>
               <button type="button" onClick={() => openMail(m)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <span className={`w-[140px] flex-none truncate text-[13.5px] ${m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}`}>{m.from}{m.thread && <span className="text-[var(--ink-3)]"> »</span>}</span>
                 <span className="min-w-0 flex-1 truncate text-[13.5px]"><span className={m.unread ? "font-extrabold text-[var(--ink)]" : "font-normal text-[var(--ink-2)]"}>{m.subject}</span> <span className="text-[var(--ink-3)]">— {m.preview}</span></span>
@@ -354,7 +380,9 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                 {m.attachment && <span className="flex-none text-[13px] text-[var(--ink-3)]" title={m.attachment}>📎</span>}
                 <span className="flex-none text-[12px] font-semibold text-[var(--ink-3)]">{m.time}</span>
               </button>
-              {folder === "sent" ? null : restorable ? <>
+              {folder === "sent" ? null : folder === "scheduled" ? (
+                <button type="button" onClick={() => cancelScheduled(m)} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)] hover:border-[#e2b4b8] hover:text-[#c02636]" title="Cancel this scheduled send">✕ Cancel</button>
+              ) : restorable ? <>
                 <button type="button" onClick={() => restore(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]" title="Move to Inbox">↩</button>
                 <button type="button" onClick={() => del(m)} className="flex-none text-[13px] text-[var(--ink-3)] hover:text-[#c02636]" title={folder === "trash" ? "Delete forever" : "Move to Trash"}>🗑</button>
               </> : <>
@@ -365,7 +393,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
           ))}
         </div>
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Inbox actions (star, read, archive, delete, reply, forward) work locally. Sent shows your real send history. Receiving external email needs inbound mail set up — handed to the backend.</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Star, read, folders, snooze and delete are saved to your account. Sent shows your real send history; Scheduled shows queued sends you can still cancel. Receiving mail here needs your mailbox forwarded to ActivityOS (ask support to connect it).</div>
       {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
         const toolBtn = "flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#1d3a8f]";
         return (
@@ -379,16 +407,19 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">{o.labels?.map((l) => <span key={l} className="rounded-md px-2 py-0.5 text-[11px] font-extrabold" style={{ background: LABEL_STYLE[l].bg, color: LABEL_STYLE[l].fg }}>{LABEL_STYLE[l].text}</span>)}{o.tag && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-white/90">🏷 {o.tag}</span>}</div>
             </div>
-            {/* toolbar */}
+            {/* toolbar — file/flag actions only exist for real stored messages */}
             <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f5f8fd] px-4 py-2.5">
               <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
-              {o.folder && o.folder !== "inbox" && o.folder !== "sent"
-                ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
-                : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
-              <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back in the Snoozed folder">⏰ Snooze</button>
-              <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
-              <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
-              <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+              {o.folder === "scheduled" && <button type="button" onClick={() => cancelScheduled(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">✕ Cancel send</button>}
+              {isMsg(o.id) && <>
+                {o.folder && o.folder !== "inbox"
+                  ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
+                  : <button type="button" onClick={() => archive(o)} className={toolBtn}>🗄 Archive</button>}
+                <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back tomorrow morning">⏰ Snooze</button>
+                <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
+                <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
+                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+              </>}
               <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ml-auto`} title="Show this sender's contact card">◐ Contact</button>
             </div>
             {/* message */}
@@ -403,12 +434,12 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               {o.attachment && <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
             {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#fbfdff] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#dbe6fb] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2a3a63] transition-colors hover:border-[#2f6bd8] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">{qr}</button>)}</div></div> : null}
-            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-6 py-3.5">
+            {isMsg(o.id) && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-6 py-3.5">
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
               <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
               <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
-            </div>
+            </div>}
           </div>
         </div>
       ); })()}
@@ -451,40 +482,20 @@ interface Booking { id?: string; email?: string; name?: string; child?: string; 
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[] }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
-interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; scheduledAt?: string; recipientEmails?: string[] }
+interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; scheduledAt?: string; recipientEmails?: string[]; emailId?: string; schedId?: string; delivered?: number; opened?: number }
 
+// Only the campaign DESIGNS live locally (drafts + content for reuse) — the
+// send/schedule/tracking state is the server's (`emails` history +
+// `scheduledEmails`), linked back by emailId/schedId.
 const LS_CAMP = "aos.email.campaigns.v1", LS_AUD = "aos.email.audiences.v1";
 function readLS<T>(k: string, fb: T): T { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : fb; } catch { return fb; } }
 function writeLS(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } }
-const SEED_CAMPAIGNS: Campaign[] = [
-  { id: "seed1", name: "Summer early-bird", subtitle: "Early-bird launch", audienceName: "All active families", recipients: 312, status: "sent", statusDate: "2 Jun", opens: 65, clicks: 29 },
-  { id: "seed2", name: "August football camp", subtitle: "Holiday programme", audienceName: "Summer Camp 2026", recipients: 168, status: "sent", statusDate: "8 Jun", opens: 72, clicks: 39 },
-  { id: "seed3", name: "Win-back — spring lapsed", subtitle: "Win-back lapsed", audienceName: "Lapsed (no booking 6m+)", recipients: 240, status: "sending", statusDate: "today", opens: 28, clicks: 7 },
-  { id: "seed4", name: "June newsletter", subtitle: "Monthly newsletter", audienceName: "All active families", recipients: 312, status: "scheduled", statusDate: "Fri 9am" },
-  { id: "seed5", name: "HAF reminder", subtitle: "Welcome / what to bring", audienceName: "HAF / funded", recipients: 96, status: "draft" },
-];
-// Demo CRM segments so Audiences reads like the manual out of the box. Real
-// membership is computed from bookings at send time (backend) — these carry a
-// headline count + description; "All active families" below is computed for real.
-const SEED_AUDIENCES: Audience[] = [
-  { id: "seg-summer", name: "Summer Camp 2026", count: 168, emails: [], desc: "Booked any Summer Multi-Activity week" },
-  { id: "seg-lapsed", name: "Lapsed (no booking 6m+)", count: 240, emails: [], desc: "Last booking over 6 months ago" },
-  { id: "seg-haf", name: "HAF / funded", count: 96, emails: [], desc: "Eligible for or using HAF funding" },
-  { id: "seg-mk", name: "Milton Keynes venues", count: 121, emails: [], desc: "Any booking at an MK venue" },
-];
 
 // ── Enquiries (potential customers who emailed but never booked). Stored locally
 // (front-end); backend later swaps this for a real enquiries table + inbound link.
 // They're a LIVE segment: once someone books, they drop out automatically.
 interface EnquiryRec { email: string; name?: string; location?: string; at?: string }
 const LS_ENQ = "aos.email.enquiries.v1";
-const SEED_ENQUIRIES: EnquiryRec[] = [
-  { email: "dani.obi@outlook.com", name: "Dani Obi", location: "Milton Keynes", at: "2026-07-30" },   // this week
-  { email: "r.ahmed@gmail.com", name: "R. Ahmed", location: "Milton Keynes", at: "2026-07-27" },       // this week
-  { email: "hello.jkumar@gmail.com", name: "J. Kumar", location: "Aylesbury", at: "2026-07-22" },      // within 30d
-  { email: "t.okafor@gmail.com", name: "T. Okafor", location: "Aylesbury", at: "2026-06-10" },         // 30–90d ago
-  { email: "the.wilsons@gmail.com", name: "Wilson family", location: "Milton Keynes", at: "2026-03-15" }, // 90d+ ago
-];
 // Per-location + all enquiry audiences, EXCLUDING anyone who has since booked.
 function computeEnquiryAudiences(enquiries: EnquiryRec[], bookings: Booking[]): Audience[] {
   const booked = new Set(bookings.map((b) => b.email?.toLowerCase()).filter(Boolean));
@@ -756,7 +767,17 @@ function useCampaignData() {
   const [rawListings, setRawListings] = useState<{ id: string; title: string; venueId?: string; runFrom?: string; runTo?: string }[]>([]);
   const [venueName, setVenueName] = useState<Record<string, string>>({}); // venueId → name
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [segments, setSegments] = useState<Audience[] | null>(null);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setRawBookings).catch(() => {}); }, []);
+  // Live CRM segments, membership computed server-side at request time. The
+  // "seg-" prefix keeps them in the composer's Segments optgroup. (The server's
+  // "enquiries" segment — customer list, never booked — complements the
+  // marked-from-inbox enquiry boards below; both are real, different sources.)
+  useEffect(() => {
+    apiGet<{ id: string; name: string; desc: string; count: number; emails: string[] }[]>("/api/emails/audiences")
+      .then((s) => setSegments(s.filter((x) => x.id !== "all").map((x) => ({ ...x, id: `seg-${x.id}` }))))
+      .catch(() => {});
+  }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
@@ -768,37 +789,82 @@ function useCampaignData() {
   const allEmails = resolveAudience(bookings, {}).emails;
   const emailName = new Map<string, string>(); for (const b of bookings) { const e = b.email?.toLowerCase(); if (e && !emailName.has(e)) emailName.set(e, b.name || e); }
   const allAudience: Audience = { id: "all", name: "All active families", count: allEmails.length, emails: allEmails, people: allEmails.map((e) => ({ email: e, name: emailName.get(e.toLowerCase()) })), desc: "Has an active or upcoming booking" };
-  return { bookings, listings, templates, locations, allAudience };
+  const liveSegments = segments ?? [];
+  return { bookings, listings, templates, locations, allAudience, liveSegments };
 }
 
 function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, socials }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company>; socials?: Social[] }) {
-  const { bookings, listings, templates, locations, allAudience } = useCampaignData();
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
+  const { bookings, listings, templates, locations, allAudience, liveSegments } = useCampaignData();
+  // Local rows hold the DESIGN (drafts + reusable content); live status,
+  // delivery and opens come from the server records they link to.
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => (readLS<Campaign[] | null>(LS_CAMP, null) ?? []).filter((c) => !c.id.startsWith("seed")));
+  const [hist, setHist] = useState<Sent[] | null>(null);
+  const [sched, setSched] = useState<Scheduled[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
-  const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES);
+  const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   // If we arrived from an audience card's "Use in campaign", open straight into the locked composer.
   const [modal, setModal] = useState<null | "campaign" | "audience">(() => (seedAudienceId ? "campaign" : null));
   const [detail, setDetail] = useState<Campaign | null>(null);
   useEffect(() => { writeLS(LS_CAMP, campaigns); }, [campaigns]);
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
+  const load = useCallback(() => {
+    apiGet<Sent[]>("/api/emails").then(setHist).catch(() => setHist([]));
+    apiGet<Scheduled[]>("/api/emails/scheduled").then(setSched).catch(() => setSched([]));
+  }, []);
+  useEffect(() => { load(); }, [load]);
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => { const next = xs.filter((e) => e.email.toLowerCase() !== email.toLowerCase()); writeLS(LS_ENQ, next); return next; });
   const closeCampaign = () => { setModal(null); onSeedConsumed?.(); };
-  const audiences = [allAudience, ...SEED_AUDIENCES, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
+  const audiences = [allAudience, ...liveSegments, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => {
+    setErr(null);
     const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
-    setCampaigns((xs) => [row, ...xs]); closeCampaign();
-    if (action === "sent" && c.audience.emails.length) {
-      try { await apiPost("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails }); } catch { /* surfaced in history */ }
-      onSent();
-    }
+    if (action !== "draft" && !c.audience.emails.length) { setErr("That audience has nobody in it yet."); return; }
+    try {
+      // The send/queue is the server's; the local row keeps the design and
+      // links to the server record for live status + open tracking.
+      if (action === "sent") {
+        const r = await apiPost<{ id: string }>("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails });
+        row.emailId = r.id;
+        onSent();
+      } else if (action === "scheduled") {
+        const r = await apiPost<{ id: string }>("/api/emails/schedule", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
+        row.schedId = r.id;
+      }
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t send"); return; }
+    setCampaigns((xs) => [row, ...xs]); closeCampaign(); load();
   };
+  // Live status/opens for linked rows, plus rows for server sends made
+  // elsewhere (the composer, an earlier device) so nothing goes missing.
+  const histById = new Map((hist ?? []).map((h) => [h.id, h]));
+  const schedById = new Map((sched ?? []).map((s) => [s.id, s]));
+  const linked = campaigns.map((c): Campaign => {
+    const s = c.schedId ? schedById.get(c.schedId) : undefined;
+    // A fired queue doc records the history id it became — follow the link.
+    const h = histById.get(c.emailId ?? "") ?? (s?.emailId ? histById.get(s.emailId) : undefined);
+    if (h) return { ...c, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), recipients: h.recipientCount, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined };
+    if (s) return { ...c, status: s.status === "scheduled" ? "scheduled" : s.status === "sent" ? "sent" : "draft", statusDate: s.status === "cancelled" ? "cancelled" : whenSched(s.sendAt) };
+    return c;
+  });
+  const knownEmailIds = new Set([
+    ...campaigns.map((c) => c.emailId),
+    // A fired queue doc's history id counts as covered by its campaign row.
+    ...campaigns.map((c) => (c.schedId ? schedById.get(c.schedId)?.emailId : undefined)),
+  ].filter(Boolean));
+  const knownSchedIds = new Set(campaigns.map((c) => c.schedId).filter(Boolean));
+  const serverOnly: Campaign[] = [
+    ...(sched ?? []).filter((s) => s.status === "scheduled" && !knownSchedIds.has(s.id)).map((s): Campaign => ({ id: `sch-${s.id}`, schedId: s.id, name: s.subject, audienceName: "Recipient list frozen at schedule time", recipients: s.recipientCount, status: "scheduled", statusDate: whenSched(s.sendAt), subject: s.subject })),
+    ...(hist ?? []).filter((h) => !knownEmailIds.has(h.id)).map((h): Campaign => ({ id: `h-${h.id}`, emailId: h.id, name: h.subject, audienceName: h.audience === "one" ? "One address" : "Families list", recipients: h.recipientCount, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), subject: h.subject, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined })),
+  ];
+  const rows = [...linked, ...serverOnly];
   return (
     <div>
       <div className="mb-3 flex items-center justify-between"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><button type="button" onClick={() => setModal("campaign")} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
-        {campaigns.map((c) => { const p = STATUS_PILL[c.status]; return (
+        {rows.map((c) => { const p = STATUS_PILL[c.status]; return (
           <div key={c.id} className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] items-center gap-2 border-b border-[var(--line)] px-4 py-3 last:border-0">
             <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{c.name}</div>{c.subtitle && <div className="truncate text-[12px] text-[var(--ink-3)]">{c.subtitle}</div>}</div>
             <div className="min-w-0"><div className="truncate text-[13px] text-[var(--ink-2)]">{c.audienceName}</div><div className="text-[12px] text-[var(--ink-3)]">{c.recipients} recipients</div></div>
@@ -808,7 +874,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
           </div>
         ); })}
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are built live from your bookings. “Send now” emails the matched families for real; scheduling, open/click tracking and the branded-domain pipeline are the backend’s job.</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
       {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
@@ -817,13 +883,13 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
 }
 
 function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
-  const tracked = c.opens != null;
+  // Real numbers from the send engine: delivered = accepted by the mail
+  // transport, opened = distinct recipients whose client loaded the pixel.
+  const tracked = c.status === "sent" && c.delivered != null;
   const sent = c.recipients;
-  const delivered = tracked ? Math.round(sent * 0.987) : sent;
-  const opened = tracked ? Math.round(delivered * (c.opens ?? 0) / 100) : 0;
-  const clicked = tracked ? Math.round(delivered * (c.clicks ?? 0) / 100) : 0;
-  const bounces = sent - delivered;
-  const unsubs = tracked ? Math.max(1, Math.round(sent * 0.01)) : 0;
+  const delivered = c.delivered ?? (c.status === "sent" ? sent : 0);
+  const opened = c.opened ?? 0;
+  const bounces = tracked ? sent - delivered : 0;
   const p = STATUS_PILL[c.status];
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
@@ -833,16 +899,14 @@ function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
           <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>
         </div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
-          <div className="grid grid-cols-3 gap-3"><StatCard label="Open rate" value={tracked ? `${c.opens}%` : "—"} tone="#16a34a" /><StatCard label="Click rate" value={tracked ? `${c.clicks}%` : "—"} tone="#16a34a" /><StatCard label="Bounces" value={tracked ? String(bounces) : "—"} tone="#ea580c" /></div>
-          <div className="mt-3"><StatCard label="Unsubscribes" value={tracked ? String(unsubs) : "—"} tone="#ea580c" /></div>
+          <div className="grid grid-cols-3 gap-3"><StatCard label="Open rate" value={tracked && delivered ? `${Math.round((opened / delivered) * 100)}%` : "—"} sub={tracked ? `${opened} of ${delivered}` : undefined} tone="#16a34a" /><StatCard label="Delivered" value={tracked ? String(delivered) : "—"} sub={tracked ? `of ${sent} sent` : undefined} tone="#16306e" /><StatCard label="Not delivered" value={tracked ? String(bounces) : "—"} tone="#ea580c" /></div>
           <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Delivery funnel</div>
           <div className="mt-2">
             <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
             <FunnelBar label="Delivered" n={delivered} max={sent} color="#16306e" />
             <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
-            <FunnelBar label="Clicked" n={clicked} max={sent} color="#16a34a" />
           </div>
-          <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Opens/clicks are tracked via the marketing pipeline (pixel + wrapped links). A one-click unsubscribe footer is added automatically; opt-outs sync back to the contact and are excluded from future sends. {!tracked && <b>Tracking begins once this campaign sends through the pipeline (backend).</b>}</div>
+          <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Opens count once per recipient, via a tracking pixel — mail clients that block images won’t register. Click tracking (wrapped links) and one-click unsubscribe are still to come. {!tracked && <b>Numbers appear once this campaign has sent.</b>}</div>
         </div>
         <div className="flex justify-end gap-2 border-t border-[var(--line)] px-5 py-3">
           <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Close</button>
@@ -873,9 +937,9 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments }: { a: Au
   );
 }
 function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
-  const { bookings, listings, locations, allAudience } = useCampaignData();
+  const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
-  const [enquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES);
+  const [enquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
   const [building, setBuilding] = useState(false);
@@ -887,7 +951,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
-    { k: "segments" as const, label: "🎯 Segments", count: 1 + SEED_AUDIENCES.length },
+    { k: "segments" as const, label: "🎯 Segments", count: 1 + liveSegments.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
   return (
@@ -900,8 +964,8 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
       </div>
 
       {sub === "segments" && (<>
-        <AudSection title="🎯 Segments" hint="Built-in CRM segments over all your bookings." />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...SEED_AUDIENCES].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={<button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button>} />)}</div>
+        <AudSection title="🎯 Segments" hint="Built-in CRM segments, membership computed live from your bookings & customer list." />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...liveSegments].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
@@ -968,7 +1032,7 @@ function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
             <button type="button" onClick={() => del(t)} className="flex-none rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button>
           </div>
         ))}</div>}
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically. Booking-specific ones ({"{SessionDate}"}, {"{VenueName}"}) only work when sending from a booking, so they’re locked in bulk Email sends.</p>
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically — in bulk Email sends each family’s fields resolve from their most relevant booking ({"{SessionDate}"}, {"{VenueName}"} included), with neutral wording for anyone we can’t match.</p>
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
           <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -987,38 +1051,38 @@ function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
 }
 
 function AnalyticsView() {
-  const [campaigns] = useState<Campaign[]>(() => readLS<Campaign[] | null>(LS_CAMP, null) ?? SEED_CAMPAIGNS);
-  const tracked = campaigns.filter((c) => c.opens != null);
+  // Straight off the send engine's records: recipientCount (sent), delivered
+  // (accepted by the transport), openedBy (distinct pixel loads). Sends from
+  // before delivery tracking carry no counts — treated as delivered.
+  const [hist, setHist] = useState<Sent[] | null>(null);
+  useEffect(() => { apiGet<Sent[]>("/api/emails").then(setHist).catch(() => setHist([])); }, []);
+  const rows = (hist ?? []).map((h) => ({ ...h, deliveredN: h.delivered ?? (h.status === "sending" ? 0 : h.recipientCount), openedN: h.openedBy?.length ?? 0 }));
   const [sel, setSel] = useState<string>("all");
-  const active = sel === "all" ? null : (tracked.find((c) => c.id === sel) ?? null);
-  const base = active ? [active] : tracked;
-  const sent = base.reduce((n, c) => n + c.recipients, 0);
-  const delivered = Math.round(sent * 0.987);
-  const wAvg = (pick: (c: Campaign) => number) => sent ? Math.round(base.reduce((n, c) => n + pick(c) * c.recipients, 0) / sent) : 0;
-  const openRate = active ? (active.opens ?? 0) : wAvg((c) => c.opens ?? 0);
-  const clickRate = active ? (active.clicks ?? 0) : wAvg((c) => c.clicks ?? 0);
+  const active = sel === "all" ? null : (rows.find((c) => c.id === sel) ?? null);
+  const base = active ? [active] : rows;
+  const sent = base.reduce((n, c) => n + c.recipientCount, 0);
+  const delivered = base.reduce((n, c) => n + c.deliveredN, 0);
+  const opened = base.reduce((n, c) => n + c.openedN, 0);
+  const openRate = delivered ? Math.round((opened / delivered) * 100) : 0;
   const bounces = sent - delivered;
-  const unsubs = Math.round(sent * 0.008);
-  const opened = Math.round(sent * openRate / 100);
-  const clicked = Math.round(sent * clickRate / 100);
   return (
     <div>
-      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per campaign or across all. Delivered, opens, clicks, bounces &amp; unsubscribes, tracked through the marketing pipeline. 1:1 inbox mail isn’t tracked (no pixels on personal correspondence).</div>
+      <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Email analytics</b> — per send or across all. Delivery straight from the mail transport, opens from a once-per-recipient tracking pixel (image-blocking clients won’t count). Click tracking &amp; unsubscribes are still to come.</div>
       {/* campaign selector */}
       <div className="mb-4 flex items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Campaign</span>
         <Select value={sel} onChange={(e) => setSel(e.target.value)} className="max-w-[340px] font-bold text-[#1d3a8f]">
-          <option value="all">📊 All campaigns ({tracked.length})</option>
-          {tracked.map((c) => <option key={c.id} value={c.id}>{c.name} — {c.opens}% open</option>)}
+          <option value="all">📊 All sends ({rows.length})</option>
+          {rows.map((c) => <option key={c.id} value={c.id}>{c.subject} — {when(c.createdAt)}</option>)}
         </Select>
       </div>
-      {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.name}</span>{active.subject && <span className="text-[12.5px] text-[var(--ink-3)]">“{active.subject}”</span>}{active.statusDate && <span className="ml-auto text-[12px] text-[var(--ink-3)]">{active.statusDate}</span>}</div>}
+      {active && <div className="mb-3 flex items-baseline gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{active.subject}</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{when(active.createdAt)}</span></div>}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of ${sent} sent` : undefined} />
+        <StatCard label="Sent" value={String(sent)} sub={`${base.length} send${base.length === 1 ? "" : "s"}`} />
+        <StatCard label="Delivered" value={String(delivered)} sub={sent ? `${Math.round((delivered / sent) * 100)}% of sent` : undefined} />
         <StatCard label="Open rate" value={`${openRate}%`} sub={`${opened} opened`} tone="#16a34a" />
-        <StatCard label="Click rate" value={`${clickRate}%`} sub={`${clicked} clicked`} tone="#16a34a" />
-        <StatCard label="Bounces" value={String(bounces)} sub={sent ? `${Math.round((bounces / sent) * 100)}%` : undefined} tone="#ea580c" />
-        <StatCard label="Unsubscribes" value={String(unsubs)} tone="#ea580c" />
+        <StatCard label="Not delivered" value={String(bounces)} sub={sent ? `${Math.round((bounces / sent) * 100)}%` : undefined} tone="#ea580c" />
+        <StatCard label="Click rate" value="—" sub="link tracking to come" />
       </div>
       {active
         ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
@@ -1027,15 +1091,14 @@ function AnalyticsView() {
               <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
               <FunnelBar label="Delivered" n={delivered} max={sent} color="#16306e" />
               <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
-              <FunnelBar label="Clicked" n={clicked} max={sent} color="#0f9d58" />
             </div>
           </div>
         : <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by campaign <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
-            {tracked.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sent campaigns yet.</div>
-            : tracked.map((c) => (
-              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-left last:mb-0"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.name}</span><span className="font-bold text-[var(--ink)]">{c.opens}% open · {c.clicks}% click</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${c.opens}%`, background: "#16306e" }} /></div></button>
-            ))}
+            <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by send <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
+            {rows.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sends yet.</div>
+            : rows.filter((c) => c.deliveredN > 0).slice(0, 10).map((c) => { const pct = Math.round((c.openedN / c.deliveredN) * 100); return (
+              <button key={c.id} type="button" onClick={() => setSel(c.id)} className="mb-3 block w-full text-left last:mb-0"><div className="flex justify-between text-[13px]"><span className="truncate pr-3 text-[var(--ink-2)] hover:text-[#1d3a8f]">{c.subject}</span><span className="flex-none font-bold text-[var(--ink)]">{pct}% open</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: "#16306e" }} /></div></button>
+            ); })}
           </div>}
     </div>
   );
@@ -1141,6 +1204,8 @@ export function EmailApp() {
   const [recipOpen, setRecipOpen] = useState(false);
   const [recipQuery, setRecipQuery] = useState("");
   const [history, setHistory] = useState<Sent[] | null>(null);
+  const [messages, setMessages] = useState<ServerMail[] | null>(null);
+  const [scheduled, setScheduled] = useState<Scheduled[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [audience, setAudience] = useState<"all" | "one" | "listing" | "none">(presetTo ? "one" : "all");
@@ -1227,6 +1292,8 @@ export function EmailApp() {
 
   const refresh = useCallback(() => {
     apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<ServerMail[]>("/api/emails/messages").then(setMessages).catch(() => {});
+    apiGet<Scheduled[]>("/api/emails/scheduled").then(setScheduled).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   // Consume the newsletter hand-off once so it doesn't re-fill on a later visit.
@@ -1238,7 +1305,7 @@ export function EmailApp() {
   useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setComposeBookings).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setComposeTemplates).catch(() => {}); }, []);
-  useRealtime(["emails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
+  useRealtime(["emails", "emailMessages", "scheduledEmails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
   const included = families.filter((f) => !excluded.has(f.email));
   // Listing options for targeting: LIVE listings + any PAST listing still referenced
   // by a booking. Duplicating a listing makes a new id, so a parent booked on the
@@ -1257,7 +1324,7 @@ export function EmailApp() {
   const addEnquiry = (m: Mail, locations: string[]) => {
     const email = (m.fromEmail || "").toLowerCase();
     if (!email) { setError("This sender has no email address to save."); return; }
-    const prev = readLS<EnquiryRec[] | null>(LS_ENQ, null) ?? SEED_ENQUIRIES;
+    const prev = readLS<EnquiryRec[]>(LS_ENQ, []);
     const at = new Date().toISOString().slice(0, 10);
     const wanted = locations.length ? locations : [undefined]; // no selection → one "no specific location" record
     const additions = wanted
@@ -1281,7 +1348,11 @@ export function EmailApp() {
   // this send. Email is a bulk/no-booking context, so booking-scoped fields
   // ({SessionDate}, {VenueName}, {BookingRef}) can't be filled — those templates are
   // locked here and must be sent per-booking. ({ListingName} is OK on a listing send.)
-  const emailAllowed = new Set(mergeFieldsFor(audience === "listing" ? "listing" : "family").map((f) => f.token.toLowerCase()));
+  // Every template is usable: the send engine resolves merge fields PER
+  // RECIPIENT at send time ({SessionDate}, {VenueName}, {BookingRef} etc. fill
+  // from each family's most relevant booking, with neutral wording for a
+  // family it can't match) — so booking-scoped templates are no longer locked.
+  const emailAllowed = new Set(MERGE_FIELDS.map((f) => f.token.toLowerCase()));
   const emailKnown = new Set(MERGE_FIELDS.map((f) => f.token.toLowerCase()));
   const templateUsable = (t: EmailTemplate) => (`${t.subject ?? ""} ${t.body}`.match(/\{[A-Za-z]+\}/g) ?? []).map((x) => x.toLowerCase()).every((tok) => !emailKnown.has(tok) || emailAllowed.has(tok));
   // Signature: the operator's pick, or the tenant default until they choose.
@@ -1363,7 +1434,11 @@ export function EmailApp() {
     const payload: Record<string, unknown> = {
       subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
       html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
-      audience: "all", recipients: finalRecipients, cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
+      // "one" is recorded as such in the history ("Sent to 1 address");
+      // everything else sends the explicit recipient list.
+      audience: audience === "one" && finalRecipients.length === 1 ? "one" : "all",
+      ...(audience === "one" && finalRecipients.length === 1 ? { to: finalRecipients[0] } : {}),
+      recipients: finalRecipients, cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
     };
     const secs = settings.emailPrefs?.undoSeconds ?? 5;
     if (secs > 0) { setError(null); setOk(null); setUndoSend({ payload, count, hadAttachments: attachments.length > 0 }); setUndoLeft(secs); return; }
@@ -1371,17 +1446,27 @@ export function EmailApp() {
     void dispatchSend(payload, attachments.length > 0);
   }
 
-  // Schedule the email for later. Held in a local queue with the composed content;
-  // the timed send itself is a backend job (see the handoff doc).
-  function scheduleSend() {
+  // Schedule the email for later: the full composed payload is queued
+  // server-side and a background job fires it at sendAt. Cancellable from the
+  // Inbox → Scheduled folder until then.
+  async function scheduleSend() {
     const bodyText = htmlToText(body);
     if (!subject.trim() || !bodyText.trim()) { setError("A subject and a message are required."); return; }
     if (finalRecipients.length === 0) { setError("No recipients selected to send to."); return; }
     if (!schedAt || new Date(schedAt) <= new Date()) { setError("Pick a future date & time to schedule."); return; }
-    const item = { id: `sch-${schedAt}-${finalRecipients.length}`, subject, recipientCount: finalRecipients.length, sendAt: schedAt };
-    writeLS("aos.email.scheduled.v1", [item, ...readLS<typeof item[]>("aos.email.scheduled.v1", [])]);
-    setOk(`Scheduled for ${new Date(schedAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} — held until the timed-send job runs (backend).`);
-    setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setSchedAt("");
+    setSending(true); setError(null); setOk(null);
+    try {
+      await apiPost("/api/emails/schedule", {
+        subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
+        html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
+        audience: "all", recipients: finalRecipients,
+        cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
+        sendAt: schedAt,
+      });
+      setOk(`Scheduled for ${whenSched(schedAt)} — you can cancel it from Inbox → Scheduled until it sends.`);
+      setSchedOpen(false); setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setSchedAt(""); refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t schedule"); }
+    finally { setSending(false); }
   }
 
   return (
@@ -1401,7 +1486,7 @@ export function EmailApp() {
         </div>
       )}
 
-      {tab === "inbox" && <InboxView history={history} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
