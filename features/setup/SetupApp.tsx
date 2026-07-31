@@ -405,7 +405,7 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
   const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
   const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nListings set to it just become “no season”.`)) onChange(items.filter((s) => s.id !== id)); };
   const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season" }]);
-  const restore = () => { const have = new Set(items.map((s) => s.id)); onChange([...items, ...defaultSeasonNames().filter((s) => !have.has(s.id))]); };
+  const reset = () => { if (confirm("Replace your seasons with the standard UK set?\n\nThe 6 term half-terms + all 6 holidays (Oct, Christmas, Feb, Easter, May, Summer) + Full year. Any listing already set to one of your current seasons will need re-picking its season.")) onChange(defaultSeasonNames()); };
   return (
     <div className="flex flex-col gap-1.5">
       <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
@@ -417,7 +417,7 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
       ))}
       <div className="mt-1 flex flex-wrap gap-2">
         <Button sm onClick={add}>＋ Add a season</Button>
-        {items.length === 0 && <Button sm variant="ghost" onClick={restore}>Restore the standard names</Button>}
+        <Button sm variant="ghost" onClick={reset}>↺ Reset to standard UK seasons</Button>
       </div>
     </div>
   );
