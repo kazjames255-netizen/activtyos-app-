@@ -758,10 +758,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
               {!chooseView && <>
               {mode === "template"
                 ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                    <div className="mt-3"><FieldLabel>Subject line</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. A quick reminder about your booking" className="w-full" /></div>
                     <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
                       <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
                         <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
-                        <button type="button" onClick={() => setCdOn((v) => !v)} className={`rounded-md border px-2 py-1 text-[11.5px] font-bold ${cdOn ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>⏱ Countdown</button>
+                        <button type="button" onClick={() => { const on = !cdOn; if (on && !cdDate) { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); setCdDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`); setCdTime("18:00"); } setCdOn(on); }} className={`rounded-md border px-2 py-1 text-[11.5px] font-bold ${cdOn ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>⏱ Countdown</button>
                         <span className="mx-1 h-4 w-px bg-[var(--line)]" />
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
                         {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
@@ -1084,11 +1085,25 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
 }
 
 interface EmailTemplate { id: string; name: string; subject?: string; body: string }
-function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
+function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) => void; company?: Partial<Company>; socials?: Social[] }) {
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
   const [edit, setEdit] = useState<EmailTemplate | null>(null); // the one being edited/created
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Designed (builder) templates — the same ⭐ My templates store the campaign designer uses.
+  const [designs, setDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
+  const [designer, setDesigner] = useState<{ mode: "new" } | { mode: "edit"; item: SavedTemplate } | null>(null);
+  const [dNow] = useState(() => Date.now());
+  const saveDesign = (d: CampaignDesign) => {
+    setDesigns((xs) => {
+      let next: SavedTemplate[];
+      if (designer?.mode === "edit") next = xs.map((x) => (x.id === designer.item.id ? { ...x, accent: d.accent, blocks: d.blocks } : x));
+      else { const nm = window.prompt("Name this design template:", "My design") || "My design"; next = [{ id: `td-${dNow}-${xs.length}`, name: nm.trim() || "My design", accent: d.accent, blocks: d.blocks }, ...xs]; }
+      persistMyTemplates(next); return next;
+    });
+    setDesigner(null);
+  };
+  const delDesign = (item: SavedTemplate) => { if (!confirm(`Delete the design “${item.name}”?`)) return; setDesigns((xs) => { const next = xs.filter((x) => x.id !== item.id); persistMyTemplates(next); return next; }); };
   const load = useCallback(() => apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])), []);
   useEffect(() => { load(); }, [load]);
   async function saveTmpl() {
@@ -1111,7 +1126,7 @@ function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-[var(--ink-2)]">Reusable email templates — shared with Messages</span>
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">✍️ Worded templates — shared with Messages</span>
         <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
@@ -1125,6 +1140,23 @@ function TemplatesView({ onUse }: { onUse: (t: EmailTemplate) => void }) {
           </div>
         ))}</div>}
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically — in bulk Email sends each family’s fields resolve from their most relevant booking ({"{SessionDate}"}, {"{VenueName}"} included), with neutral wording for anyone we can’t match.</p>
+
+      {/* ── Designed (builder) templates — full visual designs ── */}
+      <div className="mb-3 mt-8 flex items-center justify-between">
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">🎨 Designed templates — build & save branded emails</span>
+        <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New design</button>
+      </div>
+      {designs.length === 0
+        ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No designs yet. Hit <b>＋ New design</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</Card>
+        : <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>{designs.map((s) => (
+            <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-white">
+              <div className="h-44 w-full overflow-hidden border-b border-[var(--line)] bg-white"><div style={{ width: 640, transform: "scale(0.375)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, dNow) }} /></div>
+              <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button></div>
+            </div>
+          ))}</div>}
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">To send one: go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
+      {designer && <div className="relative z-[130]"><CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} /></div>}
+
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
           <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -1532,7 +1564,7 @@ export function EmailApp() {
       ...(audience === "one" && finalRecipients.length === 1 ? { to: finalRecipients[0] } : {}),
       recipients: finalRecipients, cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
     };
-    const secs = settings.emailPrefs?.undoSeconds ?? 5;
+    const secs = settings.emailPrefs?.undoSeconds ?? 0;   // instant send by default; opt into a grace period in Settings
     if (secs > 0) { setError(null); setOk(null); setUndoSend({ payload, count, hadAttachments: attachments.length > 0 }); setUndoLeft(secs); return; }
     if (!confirm(`Send this email to ${count} recipient${count === 1 ? "" : "s"}?`)) return;
     void dispatchSend(payload, attachments.length > 0);
@@ -1581,7 +1613,7 @@ export function EmailApp() {
       {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
-      {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} />}
+      {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
       {tab === "settings" && <EmailPrefs settings={settings} save={save} />}
