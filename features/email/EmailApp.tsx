@@ -635,7 +635,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [tmplBody, setTmplBody] = useState(() => templates[0]?.body ?? "");   // editable copy of the worded template
-  const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
   const [cdOn, setCdOn] = useState(false);   // add a big countdown clock to a worded email
   const [cdDate, setCdDate] = useState("");
@@ -694,7 +693,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   };
   const pickTemplate = (id: string) => { setTmplId(id); setTmplBody(templates.find((t) => t.id === id)?.body ?? ""); };
   const insertMerge = (token: string) => setTmplBody((b) => `${b}${b && !b.endsWith(" ") ? " " : ""}${token}`);
-  const addAttachment = (f: File) => { const kb = Math.max(1, Math.round(f.size / 1024)); setAttachments((xs) => [...xs, { name: f.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB` }]); };
   const aiWrite = async () => {
     const notes = window.prompt("What should this email say? A line or two — the writer turns it into a friendly email.");
     if (!notes?.trim()) return;
@@ -704,12 +702,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     finally { setAiBusy(false); }
   };
   // Reuse a previous campaign — pull its content across, then edit via the steps.
-  const reuseCampaign = (c: Campaign) => {
-    setName(c.name ? `${c.name} (copy)` : "");
-    setSubject(c.subject || "");
-    if (c.design) { setMode("design"); setDesign(c.design); }
-    else { setMode("template"); setTmplId(""); setTmplBody(c.body || ""); }
-  };
+  // Reuse a previous designed campaign — load its design so it can be edited.
+  const pastDesigns = (pastCampaigns ?? []).filter((c) => c.design);
+  const reuseDesign = (c: Campaign) => { if (!c.design) return; if (!name.trim()) setName(c.name ? `${c.name} (copy)` : ""); if (!subject.trim() && c.subject) setSubject(c.subject); setMode("design"); setDesign(c.design); };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
   const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); if (wordedHasCountdown) blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
@@ -732,11 +727,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             {step === 0 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
-              {pastCampaigns && pastCampaigns.length > 0 && <div className="rounded-xl border border-[#cfe0f7] bg-[#f4f8ff] p-4">
-                <div className="text-[13px] font-extrabold text-[#1d3a8f]">📋 Or reuse a past campaign</div>
-                <p className="mb-2 mt-0.5 text-[12px] text-[#5877b8]">Pulls the subject and content across — then edit anything through the steps.</p>
-                <Select value="" onChange={(e) => { const c = pastCampaigns.find((x) => x.id === e.target.value); if (c) reuseCampaign(c); }} className="w-full"><option value="">Start fresh…</option>{pastCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name}{c.subject ? ` — ${c.subject}` : ""}</option>)}</Select>
-              </div>}
             </div>}
             {step === 1 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
@@ -758,7 +748,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                     <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
                       <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
                         <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
-                        <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
                         <button type="button" onClick={() => setCdOn((v) => !v)} className={`rounded-md border px-2 py-1 text-[11.5px] font-bold ${cdOn ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>⏱ Countdown</button>
                         <span className="mx-1 h-4 w-px bg-[var(--line)]" />
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
@@ -772,7 +761,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                           ? <div className="mt-3 overflow-hidden rounded-lg" dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: "blue", blocks: [{ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }] as Block[] }, company, nowMs) }} />
                           : <p className="mt-2 text-[11px] font-semibold text-[#9a6b00]">Pick a date so the big clock appears in your email.</p>}
                       </div>}
-                      {attachments.length > 0 && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] bg-[#fafbfe] px-3 py-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
                   </div>
@@ -783,8 +771,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                     </div>
                   : <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm">
                       <div className="text-[16px] font-extrabold text-[var(--ink)]">Design your own email</div>
-                      <p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Start from a beautiful, ready-made design — recolour it, add frames, and drop in your own words and photos. Or reuse one you saved.</p>
-                      <button type="button" onClick={() => setDesigning(true)} className="mt-4 rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Open the designer</button>
+                      <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">Start a fresh design in the builder, or pick up a previous designed campaign and tweak it.</p>
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+                        <button type="button" onClick={() => setDesigning(true)} className="rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Go to new builder</button>
+                        {pastDesigns.length > 0 && <Select value="" onChange={(e) => { const c = pastDesigns.find((x) => x.id === e.target.value); if (c) reuseDesign(c); }} className="max-w-[260px]"><option value="">📋 Use a previous one…</option>{pastDesigns.map((c) => <option key={c.id} value={c.id}>{c.name}{c.subject ? ` — ${c.subject}` : ""}</option>)}</Select>}
+                      </div>
                     </div>}
             </div>}
             {step === 4 && <div className="space-y-4">
