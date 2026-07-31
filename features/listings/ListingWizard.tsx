@@ -32,6 +32,7 @@ import type { ResolvedPricing } from "@/features/blocks/blocksApi";
 
 const STEPS = [
   { key: "basics", label: "Basics", stage: "About" },
+  { key: "details", label: "Details", stage: "About" },
   { key: "content", label: "Content", stage: "About" },
   { key: "provided", label: "Provided", stage: "About" },
   { key: "safety", label: "Safety & SEND", stage: "About" },
@@ -358,7 +359,7 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
   const at = (key: string) => Math.max(0, STEPS.findIndex((x) => x.key === key));
   const out: { step: number; what: string }[] = [];
   if (!d.title.trim()) out.push({ step: at("basics"), what: "Give the listing a name" });
-  if (!d.venueId) out.push({ step: at("basics"), what: "Choose where it runs (or pick your online option)" });
+  if (!d.venueId) out.push({ step: at("details"), what: "Choose where it runs (or pick your online option)" });
   if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: "Set the dates it runs between" });
   else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: "The end date is before the start date" });
   else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
@@ -888,8 +889,15 @@ export function ListingWizard({
       if (!quiet) setBusy(false);
       return true;
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Save failed");
-      if (!quiet) setBusy(false);
+      // Autosaves fail silently — the blockers strip already says what's missing,
+      // and a half-built draft failing validation shouldn't nag mid-typing.
+      if (!quiet) {
+        const raw = e instanceof Error ? e.message : "";
+        // Server validation comes back as a raw JSON issues array — never show that.
+        const looksLikeValidation = /\[\{|"code"|too_small|"path"/.test(raw);
+        setMsg(looksLikeValidation ? (d.title.trim() ? "Couldn’t save — please check your entries." : "Give the listing a name first.") : (raw || "Save failed"));
+        setBusy(false);
+      }
       return false;
     }
   }
@@ -938,7 +946,7 @@ export function ListingWizard({
         <div className="mx-auto flex max-w-[900px] flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create a listing"}</div>
-            <div className="truncate text-[12.5px] text-white/80">{STEPS[step].stage} · {d.title?.trim() || "Untitled listing"}</div>
+            <div className="truncate text-[12.5px] text-white/80">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</div>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             {(() => {
@@ -960,25 +968,22 @@ export function ListingWizard({
         </div>
       </div>
 
-      {/* Compact "where am I / what's left" strip. */}
-      <div className="flex-none border-b border-[var(--line)] bg-[var(--surface)] px-5 py-2 sm:px-6">
-        <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[12.5px] font-extrabold text-[#16306e]">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</span>
-          {msg && <span className="text-[11.5px] text-[var(--red)]">{msg}</span>}
-          {blockers.length > 0 ? (
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold" style={{ color: "#9a3412" }}>
-              <span className="rounded-full bg-[#fff7ed] px-2 py-0.5 font-extrabold">{blockers.length} to finish before publishing:</span>
-              {blockers.slice(0, 3).map((bl, i) => <button key={i} type="button" onClick={() => setStep(bl.step)} className="underline underline-offset-2">{bl.what}</button>)}
-              {blockers.length > 3 && <span>+{blockers.length - 3} more</span>}
-            </span>
-          ) : (
-            <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold text-[#1d3a8f]">✓ Ready to publish</span>
-          )}
+      {/* Only appears when there's something to fix — otherwise no wasted band. */}
+      {(blockers.length > 0 || msg) && (
+        <div className="flex-none border-b border-[#f4d9b3] bg-[#fff7ed] px-5 py-1.5 sm:px-6">
+          <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px]">
+            {msg && <span className="font-bold text-[var(--red)]">{msg}</span>}
+            {blockers.length > 0 && (<>
+              <span className="font-extrabold text-[#9a3412]">{blockers.length} to finish before publishing:</span>
+              {blockers.slice(0, 3).map((bl, i) => <button key={i} type="button" onClick={() => setStep(bl.step)} className="font-semibold text-[#9a3412] underline underline-offset-2">{bl.what}</button>)}
+              {blockers.length > 3 && <span className="text-[#9a3412]">+{blockers.length - 3} more</span>}
+            </>)}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Big centered slide — ONLY this area scrolls (no whole-page scroll). */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5" style={{ background: "radial-gradient(1100px 460px at 50% -10%, #cfe0fa 0%, rgba(207,224,250,0) 62%), linear-gradient(180deg,#e7effb,#eef4fd)" }}>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5" style={{ backgroundColor: "#e8f0fb", backgroundImage: "radial-gradient(760px 380px at 12% -14%, #c9dcf8 0%, rgba(201,220,248,0) 55%), radial-gradient(760px 380px at 100% -6%, #d4e4fb 0%, rgba(212,228,251,0) 55%), radial-gradient(rgba(31,84,163,.055) 1px, transparent 1.4px)", backgroundSize: "auto, auto, 22px 22px" }}>
         <div className="mx-auto w-full max-w-[860px]">
           <div className={stepKey === "preview"
             ? "mx-auto w-full"
@@ -987,6 +992,7 @@ export function ListingWizard({
             {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
             <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
+            {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1246,28 +1252,45 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   return (
-    <div className="max-w-[720px]">
-      <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name, a hook and a big, bright photo — pick a layout to see how it looks." />
+    <div className="max-w-[760px]">
+      <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name and a big, bright photo — pick a layout to see how it looks." />
       <FieldLabel>Listing title · up to 70 characters</FieldLabel>
       <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder="e.g. Summer Multi-Activity Camp" className="mb-3 w-full" />
 
-      <SectionHead icon="🖼️">Main image</SectionHead>
-      <div className="mb-2 flex flex-wrap gap-1.5">
-        {LAYOUTS.map((l) => (
-          <button key={l.key} type="button" onClick={() => upd({ layout: l.key })} className="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold"
-            style={d.layout === l.key ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-            {l.label}
-          </button>
-        ))}
+      <div className="grid gap-x-6 md:grid-cols-2">
+        <div>
+          <SectionHead icon="🖼️">Main image</SectionHead>
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {LAYOUTS.map((l) => (
+              <button key={l.key} type="button" onClick={() => upd({ layout: l.key })} className="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold"
+                style={d.layout === l.key ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Crop to fit — the preview matches the customer page. Add more than one and it rotates as a carousel.</div>
+        </div>
+        <div>
+          <SectionHead icon="📸">Gallery</SectionHead>
+          <HeadingFields d={d} upd={upd} sectionKey="gallery" />
+          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Extra photos — shown as a gallery at the bottom of the customer page.</div>
+        </div>
       </div>
-      <div className="mb-1 text-[11px] text-[var(--ink-3)]">Crop each photo to fit — the crop preview matches the customer page exactly. Add more than one and the main image rotates as a carousel.</div>
-      <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" />
+    </div>
+  );
+}
 
-      <SectionHead icon="📸">Gallery</SectionHead>
-      <div className="mb-1 text-[11px] text-[var(--ink-3)]">Extra photos — shown as a gallery at the bottom of the customer page.</div>
-      <HeadingFields d={d} upd={upd} sectionKey="gallery" />
-      <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
-
+// ── Step: Details (venue, ages, season, categories, capacity) ────────────────
+function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
+  return (
+    <div className="max-w-[820px]">
+      <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
+      <div className="grid gap-x-7 md:grid-cols-2">
+      <div>
       <div className="mb-3 flex gap-3">
         <div className="w-[110px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
         <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
@@ -1293,6 +1316,8 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
       <div className="mb-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Shown to parents on the listing <b>only while the camp is running</b> — a number to reach staff during session days. Hidden before it starts and after it ends.</div>
 
+      </div>
+      <div>
       <SectionHead icon="🏷️">Categories</SectionHead>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
       <div className="mb-3 flex flex-wrap gap-1.5">
@@ -1351,6 +1376,8 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">ⓘ These are defaults — each ticket can amend its own age &amp; capacity in <b>Tickets &amp; pricing</b>.</div>
       {/* patchLocal is unused here but kept for signature symmetry with other steps */}
       <span className="hidden">{typeof patchLocal}</span>
+      </div>
+      </div>
     </div>
   );
 }
@@ -3520,7 +3547,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: string; lede: string }) {
   return (
     <div className="mb-3.5 text-center">
-      <div className="inline-flex items-center rounded-full px-2.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{kicker}</div>
+      <div className="inline-flex items-center rounded-full px-2.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{kicker.replace(/^STEP\s+\d+\s*·\s*/i, "")}</div>
       <h3 className="mt-1.5 text-[23px] font-extrabold leading-[1.12] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)", background: "linear-gradient(115deg,#16306e 10%,#3f78d8 60%,#6aa0ee)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>{title}</h3>
       <p className="mx-auto mt-1 max-w-[520px] text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{lede}</p>
     </div>
