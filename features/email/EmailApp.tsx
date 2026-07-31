@@ -1117,8 +1117,12 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   // Hide server segments that duplicate the lead card (active families) or the Enquiries tab (never-booked).
   // Only hide the server "Active families" (the lead 'All active families' card already covers it).
   // "New enquiries (no booking)" stays — that's how families you add in New Family (not yet booked) surface.
-  const HIDDEN_SEGS = new Set(["Active families", "All active families"]);
+  // Booked parents = only families with bookings. Non-booked people (added via New
+  // Family, or marked from the inbox) belong in Enquiries, so hide them from Groups.
+  const HIDDEN_SEGS = new Set(["Active families", "All active families", "New enquiries (no booking)", "New enquiries"]);
   const groupSegs = liveSegments.filter((s) => !HIDDEN_SEGS.has(s.name));
+  // The server "added but not booked" segment (New Family / sign-ups) — shown under Enquiries.
+  const addedNotBooked = liveSegments.find((s) => s.name === "New enquiries (no booking)");
   // Computed groups from bookings (client-side). Aggregate per family (email).
   const DAY = 86_400_000;
   const nameByEmail = new Map<string, string>();
@@ -1146,7 +1150,7 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   ];
   const hasPayData = bookings.some((b) => !!b.method);
   const SUBS = [
-    { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
+    { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal + (addedNotBooked?.count ?? 0) },
     { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
   ];
   // Groups tab: build a live family group from the location + listing filters (both preset to "All").
@@ -1191,9 +1195,12 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
           </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
-        {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
-          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}</div>}
+        {(enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0 && !addedNotBooked?.count)
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {enqLoc === "all" && addedNotBooked && addedNotBooked.count > 0 && matchAud(addedNotBooked) && <AudienceCard key="added" a={addedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} />}
+              {(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}
+            </div>}
       </>)}
 
     </div>
