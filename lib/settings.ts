@@ -865,7 +865,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     lowStockAlert: true,
   },
 
-  payMethods: ["Card", "Bank transfer", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)", "Free place", "Cash on the day"],
+  payMethods: ["Card", "Bank transfer", "Cash on the day", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
   voucherProviders: DEFAULT_VOUCHERS,
   voucherHoldDays: 7,
@@ -934,7 +934,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     },
     emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
-    payMethods: s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods,
+    payMethods: (s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods).filter((m) => m !== "Free place"),
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not
     // something to make them type again.

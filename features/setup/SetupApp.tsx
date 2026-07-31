@@ -348,6 +348,57 @@ function ListEditor({
   );
 }
 
+// ── How parents pay — fixed rails (toggle on/off) + your own labels ──────────
+// Each standard method shows the payment state a booking lands in, so it's clear
+// which ones sit as "awaiting payment" vs paid straight away.
+const PAY_STANDARD: { label: string; behaviour: string; tone: "paid" | "pending" | "funded"; note: string }[] = [
+  { label: "Card", behaviour: "Paid instantly", tone: "paid", note: "Routes to Stripe — the booking is marked Paid the moment it goes through." },
+  { label: "Bank transfer", behaviour: "Awaiting payment", tone: "pending", note: "Sits as awaiting payment until you reconcile the transfer." },
+  { label: "Cash on the day", behaviour: "Awaiting payment", tone: "pending", note: "Unpaid until they pay you on arrival." },
+  { label: "Tax-Free Childcare", behaviour: "Awaiting payment", tone: "pending", note: "Awaiting the scheme's money (a few days in transit)." },
+  { label: "Childcare vouchers", behaviour: "Awaiting payment", tone: "pending", note: "Awaiting the voucher scheme's payment." },
+  { label: "HAF (funded £0)", behaviour: "Funded · £0", tone: "funded", note: "A £0 funded place — no payment is taken." },
+];
+const PAY_TONE: Record<string, { bg: string; fg: string }> = {
+  paid: { bg: "#dff3e6", fg: "#127a3e" },
+  pending: { bg: "#f7ead0", fg: "#9a5a00" },
+  funded: { bg: "#e4edfd", fg: "#1d3a8f" },
+};
+function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const standard = new Set(PAY_STANDARD.map((m) => m.label));
+  const enabled = new Set(items);
+  const customs = items.filter((x) => !standard.has(x) && x !== "Free place");
+  const strip = (xs: string[]) => xs.filter((x) => x !== "Free place");
+  const toggle = (label: string, on: boolean) => onChange(on ? [...strip(items.filter((x) => x !== label)), label] : strip(items.filter((x) => x !== label)));
+  const addCustom = () => { const v = draft.trim(); if (!v || items.includes(v)) return; onChange([...strip(items), v]); setDraft(""); };
+  const badge = (tone: string, text: string) => <span className="flex-none rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PAY_TONE[tone].bg, color: PAY_TONE[tone].fg }}>{text}</span>;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {PAY_STANDARD.map((m) => (
+        <div key={m.label} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2">
+          <span className="text-[13px] font-semibold text-[var(--ink)]">{m.label}</span>
+          {badge(m.tone, m.behaviour)}
+          <span className="hidden text-[11px] text-[var(--ink-3)] lg:inline">· {m.note}</span>
+          <div className="ml-auto"><Toggle on={enabled.has(m.label)} onChange={(v) => toggle(m.label, v)} /></div>
+        </div>
+      ))}
+      {customs.length > 0 && <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Your own methods</div>}
+      {customs.map((it) => (
+        <div key={it} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2">
+          <Input value={it} onChange={(e) => onChange(items.map((x) => (x === it ? e.target.value : x)))} className="flex-1" />
+          {badge("pending", "Awaiting payment")}
+          <button type="button" aria-label={`Remove ${it}`} onClick={() => { if (!confirm(`Remove “${it}”?\n\nBookings already recorded against it keep the method; it just stops being offered on new ones.`)) return; onChange(items.filter((x) => x !== it)); }} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+        </div>
+      ))}
+      <div className="mt-1 flex gap-1.5">
+        <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Add your own — e.g. Standing order" className="flex-1" />
+        <Button onClick={addCustom}>＋ Add</Button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * A control whose value is stored but not yet read by the screen it governs.
  *
@@ -1994,22 +2045,12 @@ export function SetupApp() {
             title="How parents pay"
             lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."
           >
-            <ListEditor
-              items={settings.payMethods}
-              onChange={(v) => set("payMethods", v)}
-              placeholder="e.g. Standing order"
-              warn="Bookings already recorded against it keep the method. It just stops being offered on new ones."
-            />
+            <PayMethodEditor items={settings.payMethods} onChange={(v) => set("payMethods", v)} />
             <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              <b className="text-[var(--ink-2)]">Parents booking online see a different list</b> —
-              Card, Bank transfer and Cash on the day. Those three are payment rails rather than
-              labels: &ldquo;Card&rdquo; sends them to Stripe and the others don&rsquo;t, so renaming
-              them here would break where the money goes. The list above is for bookings
-              <i> you</i> record.
+              The <b className="text-[var(--ink-2)]">standard methods are fixed</b> — toggle them on or off; the badge shows the state a booking lands in (Card is paid instantly, the rest sit <b>awaiting payment</b> until you reconcile). &ldquo;Card&rdquo; routes to Stripe, so it can&rsquo;t be renamed. Add <i>your own</i> labels below for anything else you record by hand.
               <br />
               <br />
-              A booking that comes to <b>£0</b> &mdash; a funded or free place &mdash; skips payment
-              entirely. No invoice, no payment link.
+              There&rsquo;s <b>no &ldquo;Free place&rdquo;</b> method — a booking that comes to <b>£0</b> (a funded or free place) skips payment entirely on its own: no invoice, no payment link, marked <b>Funded</b>.
             </div>
           </Section>
         </>
