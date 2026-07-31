@@ -698,8 +698,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25"}`} /></button>)}
           </div>
         </div>
-        <div className="camp-scroll max-h-[74vh] bg-[#f4f7fc] px-8 py-9">
-          <div className="mx-auto flex min-h-[340px] max-w-2xl flex-col">
+        <div className="camp-scroll max-h-[64vh] bg-[#f4f7fc] px-8 py-6">
+          <div className="mx-auto flex min-h-[210px] max-w-2xl flex-col">
             {step === 0 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
