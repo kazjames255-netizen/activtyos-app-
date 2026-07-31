@@ -783,7 +783,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
-                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span>{!designCd && <button type="button" onClick={addCountdownToDesign} className="ml-auto rounded-lg border border-[#bfe0c9] bg-[#f0faf3] px-3 py-1.5 text-[12px] font-bold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add countdown</button>}<button type="button" onClick={() => setDesigning(true)} className={`rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd] ${designCd ? "ml-auto" : ""}`}>✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      {designCd
+                        ? <div className="mb-2 rounded-lg border border-[#bfe6cf] bg-[#eafaf0] px-3 py-2 text-[12.5px] font-bold text-[#127a3e]">⏱ Countdown clock is in this email — it&apos;ll send as a big ticking clock.</div>
+                        : <button type="button" onClick={addCountdownToDesign} className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-3 text-[13.5px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add a big countdown clock to this email</button>}
                       <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                     </div>
                   : <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm">
@@ -1045,6 +1048,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [building, setBuilding] = useState(false);
   const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("enquiries");
   const [q, setQ] = useState("");
+  const [enqLoc, setEnqLoc] = useState("all");
   const [folders, setFolders] = useState<string[]>(() => readLS<string[]>(LS_AUD_FOLDERS, []));
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   useEffect(() => { writeLS(LS_AUD_FOLDERS, folders); }, [folders]);
@@ -1080,12 +1084,15 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
       {sub === "enquiries" && (<>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <AudSection title="📩 Enquiries — by location" hint="Emailed you but never booked. They drop off automatically once they book." />
-          <div className="flex items-center gap-2"><span className="text-[11.5px] font-bold text-[var(--ink-3)]">Enquired within</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d", "past 30 days"], ["90", "Last 90d", "past 90 days"], ["all", "All time", "ever"]] as const).map(([v, l, t]) => <button key={v} type="button" title={`Show enquiries received in the ${t}`} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enquiryAuds.slice(1).map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
+            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Enquired within</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d", "past 30 days"], ["90", "Last 90d", "past 90 days"], ["all", "All time", "ever"]] as const).map(([v, l, t]) => <button key={v} type="button" title={`Show enquiries received in the ${t}`} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+          </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
         {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
       </>)}
 
       {sub === "custom" && (<>
