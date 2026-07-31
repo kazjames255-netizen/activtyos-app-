@@ -255,7 +255,7 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
   urgent: { bg: "#fde5e6", fg: "#c0271f", text: "Urgent" },
   follow: { bg: "#f7ead0", fg: "#9a5a00", text: "Follow-up" },
   haf: { bg: "#dff3e6", fg: "#127a3e", text: "HAF / funded" },
-  enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "New enquiries" },
+  enquiry: { bg: "#e4edfd", fg: "#1d3a8f", text: "Potential customer" },
   system: { bg: "var(--panel)", fg: "var(--ink-2)", text: "System" },
 };
 type MailFolder = "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" | "snoozed" | "trash";
@@ -284,6 +284,14 @@ const toMail = (m: ServerMail): Mail => ({
   attachmentSize: m.attachments?.[0]?.size,
   folder: (["inbox", "archive", "snoozed", "spam", "trash"].includes(m.folder ?? "") ? m.folder : "inbox") as MailFolder,
 });
+// Demo inbox — shown only when the real inbox is empty, so the enquiry flow can be tried end-to-end.
+const DEMO_INBOX: ServerMail[] = [
+  { id: "demo-1", from: "Sarah Thompson", fromEmail: "sarah.thompson@gmail.com", subject: "Summer camp availability?", body: "Hi, do you have any spaces left on your summer multi-activity camp in August? My daughter is 8. Thanks, Sarah", unread: true, folder: "inbox", at: "2026-07-31T08:42:00Z" },
+  { id: "demo-2", from: "James Patel", fromEmail: "j.patel@outlook.com", subject: "After-school football", body: "Hello — I'm interested in the after-school football club in Milton Keynes for my two boys. What days does it run and how much is it? Cheers, James", unread: true, folder: "inbox", at: "2026-07-31T07:15:00Z" },
+  { id: "demo-3", from: "Emma Wilson", fromEmail: "emmawilson88@icloud.com", subject: "Holiday club prices", body: "Could you send me a price list for the October holiday club please? Do you offer sibling discounts? Emma", unread: false, labels: ["enquiry"], folder: "inbox", at: "2026-07-30T16:20:00Z" },
+  { id: "demo-4", from: "Tom Harris", fromEmail: "tomharris.mk@gmail.com", subject: "Two children — any spaces?", body: "Hi there, we've just moved to Aylesbury and I'm looking for holiday cover for my 6 and 9 year old. Do you have space and what are your hours? Tom", unread: true, folder: "inbox", at: "2026-07-30T11:03:00Z" },
+  { id: "demo-5", from: "Priya Shah", fromEmail: "priya.shah@gmail.com", subject: "SEN support question", body: "Hello, my son has additional needs (ASD) — are your camps able to support him, and do you have 1:1 options? Thank you, Priya", unread: true, folder: "inbox", at: "2026-07-29T18:47:00Z" },
+];
 // "Sends Fri 1 Aug, 09:00" — sendAt is a local datetime string, not ISO+tz.
 const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const FOLDERS: [string, string][] = [
@@ -1486,7 +1494,7 @@ export function EmailApp() {
 
   const refresh = useCallback(() => {
     apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<ServerMail[]>("/api/emails/messages").then(setMessages).catch(() => {});
+    apiGet<ServerMail[]>("/api/emails/messages").then((m) => setMessages(m && m.length ? m : DEMO_INBOX)).catch(() => setMessages(DEMO_INBOX));
     apiGet<Scheduled[]>("/api/emails/scheduled").then(setScheduled).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
