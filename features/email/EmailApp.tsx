@@ -486,7 +486,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
 // location, age group, dates); campaigns pick an audience + a saved Template and
 // Send now / Schedule / Save draft. Campaigns + custom audiences persist locally
 // (the true send/track/schedule engine is the backend — see the handoff doc).
-interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string; paymentMethod?: string }
+interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string; method?: string }
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean; paymentMethod?: string }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[]; folder?: string }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
@@ -504,7 +504,6 @@ function writeLS(k: string, v: unknown) { try { localStorage.setItem(k, JSON.str
 // They're a LIVE segment: once someone books, they drop out automatically.
 interface EnquiryRec { email: string; name?: string; location?: string; at?: string }
 const LS_ENQ = "aos.email.enquiries.v1";
-const LS_AUD_FOLDERS = "aos.email.audfolders.v1";
 // Per-location + all enquiry audiences, EXCLUDING anyone who has since booked.
 function computeEnquiryAudiences(enquiries: EnquiryRec[], bookings: Booking[]): Audience[] {
   const booked = new Set(bookings.map((b) => b.email?.toLowerCase()).filter(Boolean));
@@ -526,7 +525,7 @@ const sessionDate = (b: Booking) => parseDate(b.date || b.createdAt); // when th
 const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""; };
 function matchBooking(b: Booking, f: AudFilter): boolean {
   if (f.location && (b.locationName || "") !== f.location) return false;
-  if (f.paymentMethod && (b.paymentMethod || "") !== f.paymentMethod) return false;
+  if (f.paymentMethod && (b.method || "") !== f.paymentMethod) return false;
   if (f.listingIds?.length) { const ok = f.listingIds.includes(b.listingId || "\0") || (!!b.title && !!f.listingTitles?.includes(b.title)) || (!!b.listingTitle && !!f.listingTitles?.includes(b.listingTitle)); if (!ok) return false; }
   if (f.ageMin != null && b.age != null && b.age < f.ageMin) return false;
   if (f.ageMax != null && f.ageMax < 18 && b.age != null && b.age > f.ageMax) return false;
@@ -1078,29 +1077,35 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
     </div>
   );
 }
-function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
+function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => void; payMethods?: string[] }) {
   const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
-  const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   useEffect(() => { writeLS(LS_ENQ, enquiries); }, [enquiries]);
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => xs.filter((e) => (e.email || "").toLowerCase() !== email.toLowerCase()));
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
-  const [building, setBuilding] = useState(false);
-  const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("enquiries");
+  const [sub, setSub] = useState<"segments" | "enquiries">("enquiries");
   const [q, setQ] = useState("");
   const [enqLoc, setEnqLoc] = useState("all");
   const [segLoc, setSegLoc] = useState("");
   const [segListing, setSegListing] = useState("");
   const [segPay, setSegPay] = useState("");
-  const [folders, setFolders] = useState<string[]>(() => readLS<string[]>(LS_AUD_FOLDERS, []));
-  useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
-  useEffect(() => { writeLS(LS_AUD_FOLDERS, folders); }, [folders]);
+  const [newDays, setNewDays] = useState(() => readLS<number>("aos.email.seg.newDays", 90));
+  const [endDays, setEndDays] = useState(() => readLS<number>("aos.email.seg.endDays", 14));
+  const [lapsedMonths, setLapsedMonths] = useState(() => readLS<number>("aos.email.seg.lapsedMonths", 6));
+  useEffect(() => { writeLS("aos.email.seg.newDays", newDays); }, [newDays]);
+  useEffect(() => { writeLS("aos.email.seg.endDays", endDays); }, [endDays]);
+  useEffect(() => { writeLS("aos.email.seg.lapsedMonths", lapsedMonths); }, [lapsedMonths]);
   const ql = q.trim().toLowerCase();
   const matchAud = (a: Audience) => !ql || `${a.name} ${a.desc}`.toLowerCase().includes(ql);
-  const newFolder = () => { const n = window.prompt("Name the folder:"); if (!n?.trim()) return; setFolders((f) => (f.includes(n.trim()) ? f : [...f, n.trim()])); };
-  const moveToFolder = (id: string, folder: string) => setCustom((xs) => xs.map((x) => (x.id === id ? { ...x, folder: folder || undefined } : x)));
-  const delFolder = (name: string) => { setFolders((f) => f.filter((x) => x !== name)); setCustom((xs) => xs.map((x) => (x.folder === name ? { ...x, folder: undefined } : x))); };
+  // Editable time window on the date-based Group cards — the count updates & saves automatically.
+  const numBox = (val: number, set: (n: number) => void, min: number, max: number) => <input type="number" min={min} max={max} value={val} onChange={(e) => set(Math.max(min, Math.min(max, Number(e.target.value) || min)))} className="w-14 rounded-md border border-[var(--line)] px-1.5 py-1 text-center text-[12px] font-bold text-[var(--ink)]" />;
+  const periodEditor = (id: string): React.ReactNode => {
+    if (id === "g-new") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">last {numBox(newDays, setNewDays, 7, 365)} days</span>;
+    if (id === "g-ending") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">next {numBox(endDays, setEndDays, 1, 90)} days</span>;
+    if (id === "g-lapsed") return <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{numBox(lapsedMonths, setLapsedMonths, 1, 36)} months+</span>;
+    return null;
+  };
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
@@ -1112,30 +1117,31 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const DAY = 86_400_000;
   const nameByEmail = new Map<string, string>();
   for (const b of bookings) { const e = b.email?.toLowerCase(); if (e && !nameByEmail.has(e)) nameByEmail.set(e, b.name || e); }
-  const agg = new Map<string, { first: number; last: number; future: boolean; soon: boolean; children: Set<string>; count: number }>();
+  type Agg = { first: number; last: number; futureAt: number; future: boolean; children: Set<string>; count: number };
+  const agg = new Map<string, Agg>();
   for (const b of bookings) {
     const e = b.email?.toLowerCase(); if (!e) continue;
-    const a = agg.get(e) ?? { first: Infinity, last: 0, future: false, soon: false, children: new Set<string>(), count: 0 };
+    const a = agg.get(e) ?? { first: Infinity, last: 0, futureAt: Infinity, future: false, children: new Set<string>(), count: 0 };
     a.count++;
     const made = bookedDate(b)?.getTime(); if (made != null) a.first = Math.min(a.first, made);
     const sd = sessionDate(b)?.getTime();
-    if (sd != null) { a.last = Math.max(a.last, sd); if (sd >= nowMs) a.future = true; if (sd >= nowMs && sd <= nowMs + 14 * DAY) a.soon = true; }
+    if (sd != null) { a.last = Math.max(a.last, sd); if (sd >= nowMs) { a.future = true; a.futureAt = Math.min(a.futureAt, sd); } }
     if (b.child) a.children.add(b.child.toLowerCase());
     agg.set(e, a);
   }
-  const mkGroup = (id: string, name: string, desc: string, pred: (a: { first: number; last: number; future: boolean; soon: boolean; children: Set<string>; count: number }) => boolean): Audience => { const ems = [...agg].filter(([, a]) => pred(a)).map(([e]) => e); return { id, name, desc, count: ems.length, emails: ems, people: ems.map((e) => ({ email: e, name: nameByEmail.get(e) })) }; };
+  const mkGroup = (id: string, name: string, desc: string, pred: (a: Agg) => boolean): Audience => { const ems = [...agg].filter(([, a]) => pred(a)).map(([e]) => e); return { id, name, desc, count: ems.length, emails: ems, people: ems.map((e) => ({ email: e, name: nameByEmail.get(e) })) }; };
+  const soonEnd = nowMs + endDays * DAY;
   const computedGroups: Audience[] = [
-    mkGroup("g-new", "New this season", "First booked in the last 90 days — welcome them and upsell the next block.", (a) => a.first !== Infinity && a.first >= nowMs - 90 * DAY),
+    mkGroup("g-new", `New this season`, `First booked in the last ${newDays} days — welcome them and upsell the next block.`, (a) => a.first !== Infinity && a.first >= nowMs - newDays * DAY),
     mkGroup("g-repeat", "Repeat families", "Have booked with you 2+ times — your loyal regulars.", (a) => a.count >= 2),
     mkGroup("g-multi", "Multi-child families", "Have 2+ children booked — sibling deals land well here.", (a) => a.children.size >= 2),
-    mkGroup("g-ending", "Ending soon", "Have a session in the next 14 days — perfect to sell the next block.", (a) => a.soon),
-    mkGroup("g-lapsed", "Lapsed families", "Last attended over 6 months ago with nothing upcoming — win them back.", (a) => a.last > 0 && a.last < nowMs - 180 * DAY && !a.future),
+    mkGroup("g-ending", "Ending soon", `Have a session in the next ${endDays} days — perfect to sell the next block.`, (a) => a.last > 0 && a.futureAt >= nowMs && a.futureAt <= soonEnd),
+    mkGroup("g-lapsed", "Lapsed families", `Last attended over ${lapsedMonths} months ago with nothing upcoming — win them back.`, (a) => a.last > 0 && a.last < nowMs - lapsedMonths * 30 * DAY && !a.future),
   ];
-  const payMethods = [...new Set(bookings.map((b) => b.paymentMethod).filter((x): x is string => !!x))].sort();
+  const hasPayData = bookings.some((b) => !!b.method);
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
-    { k: "segments" as const, label: "🎯 Groups", count: 1 + computedGroups.length + groupSegs.length },
-    { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
+    { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
   ];
   // Groups tab: build a live family group from the location + listing filters (both preset to "All").
   const segFiltered = !!(segLoc || segListing || segPay);
@@ -1162,12 +1168,12 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{(payMethods.length ? payMethods : ["Card", "Bank transfer", "Cash", "Childcare vouchers", "Tax-Free Childcare"]).map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
-          {payMethods.length === 0 && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Payment method isn&apos;t recorded on bookings yet — this filter will work once it is (backend).</p>}
+          {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Options come from your <b>Setup → “How parents pay”</b> list. Filtering needs the method saved on each booking — it works the moment bookings include it (backend).</p>}
           {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} onRemovePerson={undefined} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={periodEditor(a.id)} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
@@ -1184,29 +1190,6 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(enqLoc === "all" ? enquiryAuds : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}</div>}
       </>)}
 
-      {sub === "custom" && (<>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <AudSection title="⭐ Your audiences" hint="Custom segments you build — organise them into folders." />
-          <button type="button" onClick={newFolder} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🗂 New folder</button>
-        </div>
-        {custom.length === 0 && folders.length === 0
-          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one, or <b>🗂 New folder</b> to organise.</div>
-          : ["", ...folders].map((f) => {
-              const items = custom.filter(matchAud).filter((a) => (a.folder || "") === f);
-              if (f === "" && items.length === 0) return null;
-              return (
-                <div key={f || "unfiled"} className="mb-5">
-                  <div className="mb-2 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{f ? `🗂 ${f}` : "📂 Unfiled"}</span><span className="rounded-full bg-[var(--line)] px-1.5 text-[11px] text-[var(--ink-3)] tabular-nums">{items.length}</span>{f && <button type="button" onClick={() => delFolder(f)} className="ml-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete folder</button>}</div>
-                  {items.length === 0
-                    ? <div className="rounded-lg border border-dashed border-[var(--line)] bg-white px-3 py-4 text-center text-[11.5px] text-[var(--ink-3)]">Empty — move an audience here with its folder dropdown.</div>
-                    : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{items.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.custom} extra={<><select value={a.folder || ""} onChange={(e) => moveToFolder(a.id, e.target.value)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><option value="">📂 No folder</option>{folders.map((fo) => <option key={fo} value={fo}>🗂 {fo}</option>)}</select><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
-                </div>
-              );
-            })}
-        <div className="mt-4"><button type="button" onClick={() => setBuilding(true)} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New audience</button></div>
-      </>)}
-
-      {building && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setBuilding(false)} onCreate={(a) => { setCustom((xs) => [...xs, a]); setBuilding(false); setSub("custom"); }} />}
     </div>
   );
 }
@@ -1754,7 +1737,7 @@ export function EmailApp() {
 
       {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
-      {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} />}
+      {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
