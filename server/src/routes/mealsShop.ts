@@ -141,6 +141,32 @@ mealOrders.post("/", async (req, res) => {
   const input = parsed.data;
   if (!(await hasBooking(input.tenantId, email))) { res.status(403).json({ error: "You can only order from a provider you've booked with" }); return; }
 
+  // The meal must be for one of the family's OWN children: a profile on the
+  // account (childId, or a name matching one), or a child named on one of
+  // their bookings with this provider. Free-typed strangers are rejected —
+  // the operator side joins allergies/dietary off this identity.
+  {
+    const uid = req.user!.uid;
+    let ok = false;
+    if (input.childId) {
+      const c = await db.collection("children").doc(input.childId).get();
+      ok = c.exists && c.data()!.parentUid === uid;
+      if (!ok) { res.status(403).json({ error: "That child isn't on your account" }); return; }
+    } else {
+      const name = input.childName.trim().toLowerCase();
+      const kids = await db.collection("children").where("parentUid", "==", uid).get();
+      ok = kids.docs.some((d) => ((d.data() as { name?: string }).name ?? "").trim().toLowerCase() === name);
+      if (!ok) {
+        const bs = await db.collection("bookings").where("tenantId", "==", input.tenantId).where("email", "==", email.toLowerCase()).get();
+        ok = bs.docs.some((d) => {
+          const b = d.data() as { child?: string; kids?: { name?: string }[] };
+          return (b.child ?? "").trim().toLowerCase() === name || (b.kids ?? []).some((k) => (k.name ?? "").trim().toLowerCase() === name);
+        });
+      }
+      if (!ok) { res.status(400).json({ error: "Pick one of your children — add their profile under My children if they're not listed" }); return; }
+    }
+  }
+
   // Settings → Meals: ordering can be switched off entirely, and the order
   // cut-off (hours before the day's first session) is enforced here — the
   // kitchen needs final numbers in time.

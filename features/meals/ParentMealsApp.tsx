@@ -19,10 +19,12 @@ export function ParentMealsApp() {
   const [tenantId, setTenantId] = useState("");
   const [options, setOptions] = useState<Option[]>([]);
   const [basket, setBasket] = useState<Record<string, number>>({});
-  // The parent's registered child profiles — one tap picks a child and links
-  // the order to their record (childId → allergies/dietary on the operator
-  // side). Typing a name instead stays possible for an unregistered child.
+  // A meal order is always for one of the family's own children: registered
+  // profiles (linked by childId → allergies/dietary on the operator side)
+  // plus any child named on their bookings with this provider who never got
+  // a profile. No free-typing — the server enforces the same rule.
   const [children, setChildren] = useState<{ id: string; name: string }[]>([]);
+  const [bookedKids, setBookedKids] = useState<{ tenantId?: string; names: string[] }[]>([]);
   const [childId, setChildId] = useState("");
   const [childName, setChildName] = useState("");
   // Default to tomorrow: kitchens take orders ahead (the provider's cut-off —
@@ -41,6 +43,9 @@ export function ParentMealsApp() {
       setChildren(cs);
       if (cs.length === 1) { setChildId(cs[0].id); setChildName((n) => n || cs[0].name); }
     }).catch(() => {});
+    apiGet<{ tenantId?: string; child?: string; kids?: { name?: string }[] }[]>("/api/my/bookings")
+      .then((bs) => setBookedKids(bs.map((b) => ({ tenantId: b.tenantId, names: [b.child, ...(b.kids ?? []).map((k) => k.name)].filter((n): n is string => !!n?.trim()) }))))
+      .catch(() => {});
     loadOrders();
   }, [loadOrders]);
   useEffect(() => {
@@ -56,7 +61,7 @@ export function ParentMealsApp() {
 
   async function place() {
     if (!tenantId) { setError("Choose a provider."); return; }
-    if (!childName.trim()) { setError("Whose meal is this? Add a child’s name."); return; }
+    if (!childName.trim()) { setError("Pick which child the meal is for."); return; }
     if (lines.length === 0) { setError("Your basket is empty."); return; }
     setError(null); setOk(null);
     try {
@@ -84,15 +89,24 @@ export function ParentMealsApp() {
             <div><FieldLabel>Provider</FieldLabel><Select value={tenantId} onChange={(e) => { setTenantId(e.target.value); setBasket({}); }} className="w-full">{providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}</Select></div>
             <div>
               <FieldLabel>Child</FieldLabel>
-              {children.length > 0 && (
-                <div className="mb-1.5 flex flex-wrap gap-1.5">
-                  {children.map((c) => { const on = childId === c.id; return (
-                    <button key={c.id} type="button" onClick={() => { setChildId(c.id); setChildName(c.name); }} className="rounded-full border px-2.5 py-1 text-[12px] font-bold" style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{c.name}</button>
-                  ); })}
-                </div>
-              )}
-              {/* Typing a name (an unregistered child) clears the profile link. */}
-              <Input value={childName} onChange={(e) => { setChildName(e.target.value); setChildId(""); }} placeholder="Who’s eating?" className="w-full" />
+              {(() => {
+                // Profiles first (they carry the record link), then any child
+                // booked with this provider who has no profile yet.
+                const profileNames = new Set(children.map((c) => c.name.trim().toLowerCase()));
+                const bookedOnly = [...new Set(bookedKids.filter((b) => b.tenantId === tenantId).flatMap((b) => b.names))]
+                  .filter((n) => !profileNames.has(n.trim().toLowerCase()));
+                const chip = (key: string, name: string, on: boolean, pick: () => void) => (
+                  <button key={key} type="button" onClick={pick} className="rounded-full border px-2.5 py-1 text-[12px] font-bold" style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{name}</button>
+                );
+                if (children.length + bookedOnly.length === 0)
+                  return <p className="py-1 text-[12px] text-[var(--ink-3)]">No children on your account yet — add a profile under <b>My children</b> first.</p>;
+                return (
+                  <div className="flex flex-wrap gap-1.5 py-0.5">
+                    {children.map((c) => chip(c.id, c.name, childId === c.id, () => { setChildId(c.id); setChildName(c.name); }))}
+                    {bookedOnly.map((n) => chip(`b-${n}`, n, !childId && childName === n, () => { setChildId(""); setChildName(n); }))}
+                  </div>
+                );
+              })()}
             </div>
             <div><FieldLabel>Date</FieldLabel><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
           </div>

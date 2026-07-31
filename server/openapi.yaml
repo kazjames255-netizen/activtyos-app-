@@ -1822,8 +1822,8 @@ paths:
                     properties: { optionId: { type: string }, qty: { type: integer } }
       responses:
         "201": { description: "The created order (placed/Unpaid, server total)" }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "403": { description: "Not a parent, no booking with this provider, or the provider has turned meal ordering off (settings.meals.ordering)" }
+        "400": { description: "Invalid input, or the child isn't one of the family's own (must be a profile on the account or a child named on their bookings with this provider — free-typed names are rejected)" }
+        "403": { description: "Not a parent, no booking with this provider, a childId the account doesn't own, or the provider has turned meal ordering off (settings.meals.ordering)" }
         "409": { description: "Past the order cut-off — settings.meals.orderCutoffHours before the day's first session" }
 
   /api/meal-orders/{id}/pay:
