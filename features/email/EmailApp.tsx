@@ -1111,7 +1111,9 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
   const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
   // Hide server segments that duplicate the lead card (active families) or the Enquiries tab (never-booked).
-  const HIDDEN_SEGS = new Set(["Active families", "All active families", "New enquiries (no booking)", "New enquiries"]);
+  // Only hide the server "Active families" (the lead 'All active families' card already covers it).
+  // "New enquiries (no booking)" stays — that's how families you add in New Family (not yet booked) surface.
+  const HIDDEN_SEGS = new Set(["Active families", "All active families"]);
   const groupSegs = liveSegments.filter((s) => !HIDDEN_SEGS.has(s.name));
   // Computed groups from bookings (client-side). Aggregate per family (email).
   const DAY = 86_400_000;
