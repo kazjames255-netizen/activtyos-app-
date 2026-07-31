@@ -1052,7 +1052,12 @@ export function CustomersApp() {
           narrows the list to it — the count is the point, so it may as well
           be the control. */}
       {customers && customers.length > 0 && (
-        <div className="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          <button type="button" title="Everyone — clear the filter" onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "#1d3a8f" } : { border: "1px solid var(--line)", borderLeft: "5px solid #1d3a8f" }}>
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]" style={{ color: stage === "" ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}>All families</div>
+            <div className="text-[24px] font-extrabold leading-tight tabular-nums">{customers.length}</div>
+            <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>Everyone on your list</div>
+          </button>
           {STAGES.map((st) => {
             const n = customers.filter((c) => stageOf(c) === st.key).length;
             const on = stage === st.key;

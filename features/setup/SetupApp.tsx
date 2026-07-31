@@ -2047,10 +2047,10 @@ export function SetupApp() {
           >
             <PayMethodEditor items={settings.payMethods} onChange={(v) => set("payMethods", v)} />
             <div className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-              The <b className="text-[var(--ink-2)]">standard methods are fixed</b> — toggle them on or off; the badge shows the state a booking lands in (Card is paid instantly, the rest sit <b>awaiting payment</b> until you reconcile). &ldquo;Card&rdquo; routes to Stripe, so it can&rsquo;t be renamed. Add <i>your own</i> labels below for anything else you record by hand.
+              <b className="text-[var(--ink-2)]">&ldquo;Awaiting payment&rdquo; is about the money, not the place.</b> The booking is <b>confirmed straight away</b> either way — the place is held, the child is on the register. The badge only tells you whether the cash has landed: Card is paid on the spot; bank transfer, cash and vouchers sit <b>awaiting payment</b> until you reconcile them (nothing is un-booked in the meantime). So a cash booking is <i>Booked · payment outstanding</i>, exactly as you&rsquo;d expect.
               <br />
               <br />
-              There&rsquo;s <b>no &ldquo;Free place&rdquo;</b> method — a booking that comes to <b>£0</b> (a funded or free place) skips payment entirely on its own: no invoice, no payment link, marked <b>Funded</b>.
+              Standard methods are fixed (toggle on/off); &ldquo;Card&rdquo; routes to Stripe so it can&rsquo;t be renamed. Add <i>your own</i> labels below for anything else you record by hand. There&rsquo;s no &ldquo;Free place&rdquo; — a <b>£0</b> booking skips payment on its own and is marked <b>Funded</b>.
             </div>
           </Section>
         </>
