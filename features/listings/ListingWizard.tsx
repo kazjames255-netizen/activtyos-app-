@@ -1103,11 +1103,12 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
 
 function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode }) {
   return (
-    <div className="max-w-[720px]">
+    <div className="mx-auto max-w-[640px]">
       <StepHead n={n} kicker={kicker} title={title} lede={lede} />
-      {headings}
-      <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
-      <div className="mt-2 text-[11px] text-[var(--ink-3)]">Add options (pick an emoji), delete with ✕ — saved and offered on every listing.</div>
+      <RichCard icon="🎒" title={title} subtitle="Tick everything included — saved for every listing">
+        <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
+        {headings}
+      </RichCard>
     </div>
   );
 }
@@ -1606,68 +1607,72 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   // (Step 6) impossible — so a structural change clears them, and the note
   // tells the operator to set them again.
   const updRun = (patch: Partial<WizardDraft>) => upd({ ...patch, ...(hadRules ? { bookRules: {} } : {}) });
+  const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Days it runs{weekly ? " · locked to Mon–Fri" : ""}</span>;
   return (
-    <div className="max-w-[720px]">
-      <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — including weekends. The calendar builds itself." />
+    <div className="max-w-[900px]">
+      <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — the calendar builds itself." />
       {hadRules && (
         <div className="mb-3 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
           ⚠️ Changing the dates or weekly days here resets <b>“How parents can book each pass”</b> (Step 6) — pop back there and set it again after.
         </div>
       )}
-      <div className="mb-3 flex gap-3">
-        <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Camp runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => updRun({ runFrom: e.target.value })} className="w-full" /></div>
-        <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Camp runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => updRun({ runTo: e.target.value })} className="w-full" /></div>
-      </div>
-      <SectionHead icon="▥">Block size</SectionHead>
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
-          <button key={k} type="button" onClick={() => updRun({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
-            style={d.blockMode === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{label}</button>
-        ))}
-      </div>
-      <SectionHead>Choose the days of the week it runs{weekly ? " (locked to Mon–Fri)" : ""}</SectionHead>
-      <div className="flex flex-wrap gap-1.5">
-        {WEEKDAYS.map(([n, label]) => {
-          const on = d.days.includes(n);
-          return (
-            <button key={n} type="button" disabled={weekly} onClick={() => updRun({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
-              style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{label}</button>
-          );
-        })}
-      </div>
-
-      <div className="mt-4">
-        <SectionHead>Calendar — {weeks.length} {weeks.length === 1 ? "week" : "weeks"} · {live} bookable dates live</SectionHead>
-        {dates.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
-            Set the from/to dates (and pick weekdays) and the calendar builds itself here. Tap any day to switch it off.
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <RichCard icon="🗓️" title="Dates & pattern" subtitle="When it runs and on which days">
+          <div className="mb-3 flex gap-3">
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => updRun({ runFrom: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => updRun({ runTo: e.target.value })} className="w-full" /></div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {weeks.map((w, i) => {
-              const col = WEEK_PAL[i % WEEK_PAL.length];
+          <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Block size</span>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => updRun({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
+                style={d.blockMode === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{label}</button>
+            ))}
+          </div>
+          {dayLabel}
+          <div className="flex flex-wrap gap-1.5">
+            {WEEKDAYS.map(([n, label]) => {
+              const on = d.days.includes(n);
               return (
-                <div key={w.mon} className="overflow-hidden rounded-xl border border-[var(--line)]">
-                  <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-extrabold text-white" style={{ background: col }}>
-                    Week {w.n} <span className="font-semibold opacity-80">· from {fmtDate(w.mon)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 p-2.5">
-                    {w.days.map((iso) => {
-                      const off = d.datesOff.includes(iso);
-                      return (
-                        <button key={iso} type="button" onClick={() => upd({ datesOff: off ? d.datesOff.filter((x) => x !== iso) : [...d.datesOff, iso] })}
-                          className="rounded-lg border px-2.5 py-1 text-[11px] font-bold"
-                          style={off ? { borderColor: "var(--line)", color: "var(--ink-3)", textDecoration: "line-through", background: "#fff" } : { borderColor: col, color: col, background: "#fff" }}>
-                          {fmtDate(iso)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <button key={n} type="button" disabled={weekly} onClick={() => updRun({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
+                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{label}</button>
               );
             })}
           </div>
-        )}
+        </RichCard>
+
+        <RichCard icon="📆" title={`Calendar · ${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`} subtitle={`${live} bookable dates live · tap a day to switch it off`} tint="teal">
+          {dates.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">
+              Set the from/to dates (and pick weekdays) and the calendar builds itself here.
+            </div>
+          ) : (
+            <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto pr-1">
+              {weeks.map((w, i) => {
+                const col = WEEK_PAL[i % WEEK_PAL.length];
+                return (
+                  <div key={w.mon} className="overflow-hidden rounded-xl border border-[var(--line)]">
+                    <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-extrabold text-white" style={{ background: col }}>
+                      Week {w.n} <span className="font-semibold opacity-80">· from {fmtDate(w.mon)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 p-2.5">
+                      {w.days.map((iso) => {
+                        const off = d.datesOff.includes(iso);
+                        return (
+                          <button key={iso} type="button" onClick={() => upd({ datesOff: off ? d.datesOff.filter((x) => x !== iso) : [...d.datesOff, iso] })}
+                            className="rounded-lg border px-2.5 py-1 text-[11px] font-bold"
+                            style={off ? { borderColor: "var(--line)", color: "var(--ink-3)", textDecoration: "line-through", background: "#fff" } : { borderColor: col, color: col, background: "#fff" }}>
+                            {fmtDate(iso)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </RichCard>
       </div>
     </div>
   );
