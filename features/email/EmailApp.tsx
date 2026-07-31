@@ -1039,7 +1039,7 @@ const AUD_ACCENT = {
 const SEG_DESCS: Record<string, string> = {
   "All active families": "Everyone with a booking on now or coming up — your main mailing list.",
   "Active families": "Families with a current or upcoming booking (live from your CRM).",
-  "Past customers": "Booked with you before, but nothing on now or upcoming — great for win-back offers.",
+  "Past customers": "Have booked before but have nothing booked right now — perfect for a “we miss you” win-back email or a returning-family discount.",
   "Waitlisted": "On a waiting list or holding an unconfirmed offer for a place.",
   "New enquiries (no booking)": "On your customer list but have never booked — cold leads to convert.",
   "New enquiries — all": "Emailed you and you marked them as an enquiry, but they've never booked.",
@@ -1103,9 +1103,12 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
   const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
+  // Hide server segments that duplicate the lead card (active families) or the Enquiries tab (never-booked).
+  const HIDDEN_SEGS = new Set(["Active families", "All active families", "New enquiries (no booking)", "New enquiries"]);
+  const groupSegs = liveSegments.filter((s) => !HIDDEN_SEGS.has(s.name));
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
-    { k: "segments" as const, label: "🎯 Groups", count: 1 + liveSegments.length },
+    { k: "segments" as const, label: "🎯 Groups", count: 1 + groupSegs.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
   // Groups tab: build a live family group from the location + listing filters (both preset to "All").
@@ -1135,7 +1138,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
           </div>
           {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...liveSegments].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
