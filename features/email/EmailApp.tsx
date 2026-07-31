@@ -480,7 +480,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
 // (the true send/track/schedule engine is the backend — see the handoff doc).
 interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string }
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
-interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[] }
+interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[]; folder?: string }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
 interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string; recipientEmails?: string[]; emailId?: string; schedId?: string; delivered?: number; opened?: number }
 
@@ -496,6 +496,7 @@ function writeLS(k: string, v: unknown) { try { localStorage.setItem(k, JSON.str
 // They're a LIVE segment: once someone books, they drop out automatically.
 interface EnquiryRec { email: string; name?: string; location?: string; at?: string }
 const LS_ENQ = "aos.email.enquiries.v1";
+const LS_AUD_FOLDERS = "aos.email.audfolders.v1";
 // Per-location + all enquiry audiences, EXCLUDING anyone who has since booked.
 function computeEnquiryAudiences(enquiries: EnquiryRec[], bookings: Booking[]): Audience[] {
   const booked = new Set(bookings.map((b) => b.email?.toLowerCase()).filter(Boolean));
@@ -896,6 +897,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const [hist, setHist] = useState<Sent[] | null>(null);
   const [sched, setSched] = useState<Scheduled[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [q, setQ] = useState("");
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   // If we arrived from an audience card's "Use in campaign", open straight into the locked composer.
@@ -952,13 +954,16 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
     ...(sched ?? []).filter((s) => s.status === "scheduled" && !knownSchedIds.has(s.id)).map((s): Campaign => ({ id: `sch-${s.id}`, schedId: s.id, name: s.subject, audienceName: "Recipient list frozen at schedule time", recipients: s.recipientCount, status: "scheduled", statusDate: whenSched(s.sendAt), subject: s.subject })),
     ...(hist ?? []).filter((h) => !knownEmailIds.has(h.id)).map((h): Campaign => ({ id: `h-${h.id}`, emailId: h.id, name: h.subject, audienceName: h.audience === "one" ? "One address" : "Families list", recipients: h.recipientCount, status: h.status === "sending" ? "sending" : "sent", statusDate: when(h.createdAt), subject: h.subject, delivered: h.delivered, opened: h.openedBy?.length, opens: h.delivered ? Math.round(((h.openedBy?.length ?? 0) / h.delivered) * 100) : undefined })),
   ];
-  const rows = [...linked, ...serverOnly];
+  const allRows = [...linked, ...serverOnly];
+  const cq = q.trim().toLowerCase();
+  const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><button type="button" onClick={() => setModal("campaign")} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
+        {rows.length === 0 && <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{cq ? `No campaigns match “${q}”.` : "No campaigns yet."}</div>}
         {rows.map((c) => { const p = STATUS_PILL[c.status]; return (
           <div key={c.id} className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] items-center gap-2 border-b border-[var(--line)] px-4 py-3 last:border-0">
             <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{c.name}</div>{c.subtitle && <div className="truncate text-[12px] text-[var(--ink-3)]">{c.subtitle}</div>}</div>
@@ -1039,7 +1044,15 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [nowMs] = useState(() => Date.now());
   const [building, setBuilding] = useState(false);
   const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("enquiries");
+  const [q, setQ] = useState("");
+  const [folders, setFolders] = useState<string[]>(() => readLS<string[]>(LS_AUD_FOLDERS, []));
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
+  useEffect(() => { writeLS(LS_AUD_FOLDERS, folders); }, [folders]);
+  const ql = q.trim().toLowerCase();
+  const matchAud = (a: Audience) => !ql || `${a.name} ${a.desc}`.toLowerCase().includes(ql);
+  const newFolder = () => { const n = window.prompt("Name the folder:"); if (!n?.trim()) return; setFolders((f) => (f.includes(n.trim()) ? f : [...f, n.trim()])); };
+  const moveToFolder = (id: string, folder: string) => setCustom((xs) => xs.map((x) => (x.id === id ? { ...x, folder: folder || undefined } : x)));
+  const delFolder = (name: string) => { setFolders((f) => f.filter((x) => x !== name)); setCustom((xs) => xs.map((x) => (x.folder === name ? { ...x, folder: undefined } : x))); };
   const cutoff = period === "all" ? 0 : nowMs - Number(period) * 86_400_000;
   const enqInPeriod = enquiries.filter((e) => period === "all" || !e.at || Date.parse(e.at) >= cutoff);
   const enquiryAuds = computeEnquiryAudiences(enqInPeriod, bookings);
@@ -1052,6 +1065,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   return (
     <div>
       <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
 
       {/* switch between the three audience areas */}
       <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
@@ -1060,7 +1074,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
 
       {sub === "segments" && (<>
         <AudSection title="🎯 Segments" hint="Built-in CRM segments, membership computed live from your bookings & customer list." />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...liveSegments].map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...liveSegments].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
@@ -1070,14 +1084,28 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
         </div>
         {enquiryAuds.length <= 1 && enquiryAuds[0]?.count === 0
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Open an email in the Inbox and hit <b>➕ Mark as enquiry</b> to add one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
+          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{enquiryAuds.filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} />)}</div>}
       </>)}
 
       {sub === "custom" && (<>
-        <AudSection title="⭐ Your audiences" hint="Custom segments you build. New ones land here." />
-        {custom.length === 0
-          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one.</div>
-          : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{custom.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.custom} extra={<><button type="button" onClick={() => setBuilding(true)} className="rounded-full border border-[var(--line)] px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit rule</button><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <AudSection title="⭐ Your audiences" hint="Custom segments you build — organise them into folders." />
+          <button type="button" onClick={newFolder} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">🗂 New folder</button>
+        </div>
+        {custom.length === 0 && folders.length === 0
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">None yet — hit <b>＋ New audience</b> to build one, or <b>🗂 New folder</b> to organise.</div>
+          : ["", ...folders].map((f) => {
+              const items = custom.filter(matchAud).filter((a) => (a.folder || "") === f);
+              if (f === "" && items.length === 0) return null;
+              return (
+                <div key={f || "unfiled"} className="mb-5">
+                  <div className="mb-2 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{f ? `🗂 ${f}` : "📂 Unfiled"}</span><span className="rounded-full bg-[var(--line)] px-1.5 text-[11px] text-[var(--ink-3)] tabular-nums">{items.length}</span>{f && <button type="button" onClick={() => delFolder(f)} className="ml-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete folder</button>}</div>
+                  {items.length === 0
+                    ? <div className="rounded-lg border border-dashed border-[var(--line)] bg-white px-3 py-4 text-center text-[11.5px] text-[var(--ink-3)]">Empty — move an audience here with its folder dropdown.</div>
+                    : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{items.map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.custom} extra={<><select value={a.folder || ""} onChange={(e) => moveToFolder(a.id, e.target.value)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><option value="">📂 No folder</option>{folders.map((fo) => <option key={fo} value={fo}>🗂 {fo}</option>)}</select><button type="button" onClick={() => setCustom((xs) => xs.filter((x) => x.id !== a.id))} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">Delete</button></>} />)}</div>}
+                </div>
+              );
+            })}
         <div className="mt-4"><button type="button" onClick={() => setBuilding(true)} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New audience</button></div>
       </>)}
 
@@ -1097,6 +1125,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   const [designer, setDesigner] = useState<{ mode: "new" } | { mode: "edit"; item: SavedTemplate } | null>(null);
   const [dNow] = useState(() => Date.now());
   const [sub, setSub] = useState<"worded" | "designed">("worded");
+  const [q, setQ] = useState("");
   const saveDesign = (d: CampaignDesign) => {
     setDesigns((xs) => {
       let next: SavedTemplate[];
@@ -1126,10 +1155,16 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
     catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t delete"); }
   }
   if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+  const tq = q.trim().toLowerCase();
+  const wShown = tq ? templates.filter((t) => `${t.name} ${t.subject ?? ""} ${t.body}`.toLowerCase().includes(tq)) : templates;
+  const dShown = tq ? designs.filter((s) => s.name.toLowerCase().includes(tq)) : designs;
   return (
     <div>
-      <div className="mb-4 inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">
-        {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">
+          {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+        </div>
+        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
 
@@ -1138,8 +1173,8 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
         <span className="text-[13px] font-bold text-[var(--ink-2)]">Reusable worded templates — shared with Messages</span>
         <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
       </div>
-      {templates.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No templates yet. Create one — it’s available here and in Messages.</Card>
-      : <div className="flex flex-col gap-2">{templates.map((t) => (
+      {wShown.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No worded templates match “${q}”.` : "No templates yet. Create one — it’s available here and in Messages."}</Card>
+      : <div className="flex flex-col gap-2">{wShown.map((t) => (
           <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
             <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
             <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
@@ -1155,9 +1190,9 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
         <span className="text-[13px] font-bold text-[var(--ink-2)]">Build & save branded email designs — edit and save here, send from Campaigns</span>
         <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New builder template</button>
       </div>
-      {designs.length === 0
-        ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No designs yet. Hit <b>＋ New design</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</Card>
-        : <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>{designs.map((s) => (
+      {dShown.length === 0
+        ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No builder templates match “${q}”.` : <>No designs yet. Hit <b>＋ New builder template</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</>}</Card>
+        : <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>{dShown.map((s) => (
             <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-white">
               <div className="h-44 w-full overflow-hidden border-b border-[var(--line)] bg-white"><div style={{ width: 640, transform: "scale(0.375)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, dNow) }} /></div>
               <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button></div>
