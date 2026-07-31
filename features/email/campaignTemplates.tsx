@@ -465,6 +465,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const nk = () => `b${uid.current++}`;
   const [design, setDesign] = useState<CampaignDesign | null>(() => (initial ? { ...initial, blocks: withSocials(initial.blocks, socials).map((b, i) => ({ ...b, k: `i${i}` })) } : null));
   const [cat, setCat] = useState(CATEGORIES[0]);
+  const [q, setQ] = useState("");
   const [myTpls, setMyTpls] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
@@ -484,7 +485,9 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   useEffect(() => { apiGet<{ code?: string }[]>("/api/discounts").then((r) => setCodes([...new Set((r || []).map((x) => x.code).filter((x): x is string => !!x))])).catch(() => {}); }, []);
 
   const tpl = design ? templateOf(design.templateId || "") : null;
-  const shown = TEMPLATES.filter((t) => t.category === cat);
+  const ql = q.trim().toLowerCase();
+  const shown = ql ? TEMPLATES.filter((t) => `${t.name} ${t.category}`.toLowerCase().includes(ql)) : TEMPLATES.filter((t) => t.category === cat);
+  const shownMy = ql ? myTpls.filter((s) => s.name.toLowerCase().includes(ql)) : (cat === MY_CAT ? myTpls : []);
   const selBlock = design ? (design.blocks.find((b) => b.k === selKey) ?? null) : null;
   const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
   const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold text-[#33456b] hover:bg-[#e7ecf4] disabled:opacity-30";
@@ -630,27 +633,28 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
 
         {!design ? (
           <>
-            <div className="flex flex-wrap gap-1.5 border-b border-[var(--line)] px-5 py-3">
-              <button type="button" onClick={() => setCat(MY_CAT)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === MY_CAT ? "bg-[#16306e] text-white" : "border border-[#f0d68a] bg-[#fffaf0] text-[#9a6b00] hover:bg-[#fff4d9]"}`}>{MY_CAT}<span className="ml-1 opacity-60">{myTpls.length}</span></button>
-              {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => setCat(k)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] px-5 py-3">
+              <div className="relative mr-1"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-[200px] rounded-full border border-[var(--line)] bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
+              <button type="button" onClick={() => { setQ(""); setCat(MY_CAT); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === MY_CAT ? "bg-[#16306e] text-white" : "border border-[#f0d68a] bg-[#fffaf0] text-[#9a6b00] hover:bg-[#fff4d9]"}`}>{MY_CAT}<span className="ml-1 opacity-60">{myTpls.length}</span></button>
+              {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => { setQ(""); setCat(k); }} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${!ql && cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
             </div>
             <div className="grid min-h-0 flex-1 justify-center gap-4 aos-scroll overflow-y-auto p-5" style={{ gridTemplateColumns: "repeat(auto-fill, 300px)" }}>
-              {cat === MY_CAT
-                ? (myTpls.length ? myTpls.map((s) => (
-                    <div key={s.id} className="group relative w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
-                      <button type="button" onClick={() => startSaved(s)} className="block w-full text-left">
-                        <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, nowMs) }} /></div>
-                        <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">My template · {s.blocks.length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
-                      </button>
-                      <button type="button" onClick={() => delMyTemplate(s.id)} title="Delete this saved template" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-extrabold text-[#c02636] opacity-0 shadow ring-1 ring-black/10 transition group-hover:opacity-100 hover:bg-white">🗑</button>
-                    </div>
-                  )) : <div style={{ gridColumn: "1 / -1" }} className="py-16 text-center text-[13px] text-[var(--ink-3)]">No saved templates yet.<br />Open any design, tweak it, then hit <b>💾 Save as template</b> in the top bar — it&apos;ll appear here.</div>)
-                : shown.map((t) => (
+              {shownMy.map((s) => (
+                <div key={s.id} className="group relative w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
+                  <button type="button" onClick={() => startSaved(s)} className="block w-full text-left">
+                    <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, nowMs) }} /></div>
+                    <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">My template · {s.blocks.length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
+                  </button>
+                  <button type="button" onClick={() => delMyTemplate(s.id)} title="Delete this saved template" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-extrabold text-[#c02636] opacity-0 shadow ring-1 ring-black/10 transition group-hover:opacity-100 hover:bg-white">🗑</button>
+                </div>
+              ))}
+              {(ql || cat !== MY_CAT) && shown.map((t) => (
                 <button key={t.id} type="button" onClick={() => start(t.id)} className="group w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
                   <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
                   <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t.category} · {t.blocks().length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
                 </button>
               ))}
+              {shownMy.length + (ql || cat !== MY_CAT ? shown.length : 0) === 0 && <div style={{ gridColumn: "1 / -1" }} className="py-16 text-center text-[13px] text-[var(--ink-3)]">{ql ? <>No templates match &ldquo;{q}&rdquo;.</> : <>No saved templates yet.<br />Open any design, tweak it, then hit <b>💾 Save as template</b> in the top bar — it&apos;ll appear here.</>}</div>}
             </div>
           </>
         ) : (
