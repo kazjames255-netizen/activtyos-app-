@@ -720,7 +720,14 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                 <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-4 py-2.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
               </div>
               {mode === "template"
-                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select><p className="mt-2 text-[12.5px] text-[var(--ink-3)]">Uses one of your saved Templates as the email body.</p></div>
+                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                    {template
+                      ? <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
+                          <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[#f4f7fc] px-4 py-2 text-[12.5px]"><span className="font-bold text-[var(--ink-3)]">Subject</span><span className="font-semibold text-[var(--ink)]">{template.subject || subject.trim() || "—"}</span></div>
+                          <div className="max-h-60 overflow-y-auto whitespace-pre-wrap px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink-2)]">{template.body || "This template has no body text yet."}</div>
+                        </div>
+                      : <p className="mt-2 text-[12.5px] text-[var(--ink-3)]">Pick a saved template to preview it here — it becomes the email body.</p>}
+                  </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
                       <div className="mb-2 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
