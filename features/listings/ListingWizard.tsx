@@ -978,11 +978,14 @@ export function ListingWizard({
       </div>
 
       {/* Big centered slide — ONLY this area scrolls (no whole-page scroll). */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-6 sm:py-9">
-        <div className="mx-auto w-full max-w-[840px]">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5" style={{ background: "radial-gradient(1100px 460px at 50% -10%, #cfe0fa 0%, rgba(207,224,250,0) 62%), linear-gradient(180deg,#e7effb,#eef4fd)" }}>
+        <div className="mx-auto w-full max-w-[860px]">
           <div className={stepKey === "preview"
             ? "mx-auto w-full"
-            : "rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_14px_50px_rgba(16,35,86,.10)] sm:p-8"}>
+            : "overflow-hidden rounded-[22px] border border-[#cddcf7] shadow-[0_22px_60px_-20px_rgba(31,84,163,.34)]"}
+            style={stepKey === "preview" ? undefined : { background: "linear-gradient(180deg,#ffffff 0%,#f1f6ff 100%)" }}>
+            {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
+            <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
@@ -1018,6 +1021,7 @@ export function ListingWizard({
                 <PolicyStep d={d} upd={upd} />
               </>
             )}
+            </div>
           </div>
         </div>
       </div>
@@ -3515,10 +3519,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 // ── Small shared bits ──────────────────────────────────────────────────────
 function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: string; lede: string }) {
   return (
-    <div className="mb-5 text-center">
-      <div className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[var(--brand-2)]">{kicker}</div>
-      <h3 className="mt-1.5 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h3>
-      <p className="mx-auto mt-1.5 max-w-[460px] text-[13px] leading-[1.55] text-[var(--ink-3)]">{lede}</p>
+    <div className="mb-3.5 text-center">
+      <div className="inline-flex items-center rounded-full px-2.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{kicker}</div>
+      <h3 className="mt-1.5 text-[23px] font-extrabold leading-[1.12] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)", background: "linear-gradient(115deg,#16306e 10%,#3f78d8 60%,#6aa0ee)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>{title}</h3>
+      <p className="mx-auto mt-1 max-w-[520px] text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{lede}</p>
     </div>
   );
 }
@@ -3528,9 +3532,10 @@ function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: 
  */
 function SectionHead({ children, icon }: { children: React.ReactNode; icon?: string }) {
   return (
-    <div className="mb-2.5 mt-5 flex items-center gap-2 border-t border-[var(--line)] pt-4 first:mt-0 first:border-t-0 first:pt-0">
-      {icon && <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-[var(--brand-soft)] text-[14px]">{icon}</span>}
-      <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{children}</div>
+    <div className="mb-2 mt-4 flex items-center gap-2 first:mt-0">
+      {icon && <span className="flex h-6 w-6 flex-none items-center justify-center rounded-lg text-[12px] text-white shadow-[0_2px_6px_rgba(31,84,163,.3)]" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{icon}</span>}
+      <div className="text-[12.5px] font-extrabold tracking-[-0.01em] text-[#16306e]">{children}</div>
+      <div className="ml-1 h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg,var(--brand-line,#cdddf7),transparent)" }} />
     </div>
   );
 }
