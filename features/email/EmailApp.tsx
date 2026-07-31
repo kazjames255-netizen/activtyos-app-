@@ -634,6 +634,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
+  const [tmplBody, setTmplBody] = useState(() => templates[0]?.body ?? "");   // editable copy of the worded template
+  const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
   const [subject, setSubject] = useState("");
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
@@ -680,9 +683,20 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
     setSendErr(null); setBusy(action);
     try {
-      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
     } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
     finally { setBusy(null); }
+  };
+  const pickTemplate = (id: string) => { setTmplId(id); setTmplBody(templates.find((t) => t.id === id)?.body ?? ""); };
+  const insertMerge = (token: string) => setTmplBody((b) => `${b}${b && !b.endsWith(" ") ? " " : ""}${token}`);
+  const addAttachment = (f: File) => { const kb = Math.max(1, Math.round(f.size / 1024)); setAttachments((xs) => [...xs, { name: f.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB` }]); };
+  const aiWrite = async () => {
+    const notes = window.prompt("What should this email say? A line or two — the writer turns it into a friendly email.");
+    if (!notes?.trim()) return;
+    setAiBusy(true); setSendErr(null);
+    try { const r = await apiPost<{ title: string; body: string }>("/api/ai/compose", { kind: "announce", notes: notes.trim(), length: "medium" }); if (r.title && !subject.trim()) setSubject(r.title); if (r.body) setTmplBody((b) => (b.trim() ? `${b}\n\n${r.body}` : r.body)); }
+    catch (e) { setSendErr(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
+    finally { setAiBusy(false); }
   };
   return (
     <>
@@ -720,13 +734,19 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                 <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-4 py-2.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
               </div>
               {mode === "template"
-                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => setTmplId(e.target.value)} className="w-full"><option value="">No template</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
-                    {template
-                      ? <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
-                          <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[#f4f7fc] px-4 py-2 text-[12.5px]"><span className="font-bold text-[var(--ink-3)]">Subject</span><span className="font-semibold text-[var(--ink)]">{template.subject || subject.trim() || "—"}</span></div>
-                          <div className="max-h-60 overflow-y-auto whitespace-pre-wrap px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink-2)]">{template.body || "This template has no body text yet."}</div>
-                        </div>
-                      : <p className="mt-2 text-[12.5px] text-[var(--ink-3)]">Pick a saved template to preview it here — it becomes the email body.</p>}
+                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                    <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
+                      <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
+                        <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
+                        <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
+                        <span className="mx-1 h-4 w-px bg-[var(--line)]" />
+                        <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
+                        {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
+                      </div>
+                      <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-white px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
+                      {attachments.length > 0 && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] bg-[#fafbfe] px-3 py-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
+                    </div>
+                    <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send. (File attachments send once the backend attach step is wired.)</p>
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
