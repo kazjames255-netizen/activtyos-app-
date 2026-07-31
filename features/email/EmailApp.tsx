@@ -486,8 +486,8 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
 // location, age group, dates); campaigns pick an audience + a saved Template and
 // Send now / Schedule / Save draft. Campaigns + custom audiences persist locally
 // (the true send/track/schedule engine is the backend — see the handoff doc).
-interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string }
-interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
+interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string; paymentMethod?: string }
+interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean; paymentMethod?: string }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[]; folder?: string }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
 interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string; recipientEmails?: string[]; emailId?: string; schedId?: string; delivered?: number; opened?: number }
@@ -526,6 +526,7 @@ const sessionDate = (b: Booking) => parseDate(b.date || b.createdAt); // when th
 const fmtD = (s?: string) => { const d = parseDate(s); return d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""; };
 function matchBooking(b: Booking, f: AudFilter): boolean {
   if (f.location && (b.locationName || "") !== f.location) return false;
+  if (f.paymentMethod && (b.paymentMethod || "") !== f.paymentMethod) return false;
   if (f.listingIds?.length) { const ok = f.listingIds.includes(b.listingId || "\0") || (!!b.title && !!f.listingTitles?.includes(b.title)) || (!!b.listingTitle && !!f.listingTitles?.includes(b.listingTitle)); if (!ok) return false; }
   if (f.ageMin != null && b.age != null && b.age < f.ageMin) return false;
   if (f.ageMax != null && f.ageMax < 18 && b.age != null && b.age > f.ageMax) return false;
@@ -1091,6 +1092,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [enqLoc, setEnqLoc] = useState("all");
   const [segLoc, setSegLoc] = useState("");
   const [segListing, setSegListing] = useState("");
+  const [segPay, setSegPay] = useState("");
   const [folders, setFolders] = useState<string[]>(() => readLS<string[]>(LS_AUD_FOLDERS, []));
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   useEffect(() => { writeLS(LS_AUD_FOLDERS, folders); }, [folders]);
@@ -1106,17 +1108,42 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   // Hide server segments that duplicate the lead card (active families) or the Enquiries tab (never-booked).
   const HIDDEN_SEGS = new Set(["Active families", "All active families", "New enquiries (no booking)", "New enquiries"]);
   const groupSegs = liveSegments.filter((s) => !HIDDEN_SEGS.has(s.name));
+  // Computed groups from bookings (client-side). Aggregate per family (email).
+  const DAY = 86_400_000;
+  const nameByEmail = new Map<string, string>();
+  for (const b of bookings) { const e = b.email?.toLowerCase(); if (e && !nameByEmail.has(e)) nameByEmail.set(e, b.name || e); }
+  const agg = new Map<string, { first: number; last: number; future: boolean; soon: boolean; children: Set<string>; count: number }>();
+  for (const b of bookings) {
+    const e = b.email?.toLowerCase(); if (!e) continue;
+    const a = agg.get(e) ?? { first: Infinity, last: 0, future: false, soon: false, children: new Set<string>(), count: 0 };
+    a.count++;
+    const made = bookedDate(b)?.getTime(); if (made != null) a.first = Math.min(a.first, made);
+    const sd = sessionDate(b)?.getTime();
+    if (sd != null) { a.last = Math.max(a.last, sd); if (sd >= nowMs) a.future = true; if (sd >= nowMs && sd <= nowMs + 14 * DAY) a.soon = true; }
+    if (b.child) a.children.add(b.child.toLowerCase());
+    agg.set(e, a);
+  }
+  const mkGroup = (id: string, name: string, desc: string, pred: (a: { first: number; last: number; future: boolean; soon: boolean; children: Set<string>; count: number }) => boolean): Audience => { const ems = [...agg].filter(([, a]) => pred(a)).map(([e]) => e); return { id, name, desc, count: ems.length, emails: ems, people: ems.map((e) => ({ email: e, name: nameByEmail.get(e) })) }; };
+  const computedGroups: Audience[] = [
+    mkGroup("g-new", "New this season", "First booked in the last 90 days — welcome them and upsell the next block.", (a) => a.first !== Infinity && a.first >= nowMs - 90 * DAY),
+    mkGroup("g-repeat", "Repeat families", "Have booked with you 2+ times — your loyal regulars.", (a) => a.count >= 2),
+    mkGroup("g-multi", "Multi-child families", "Have 2+ children booked — sibling deals land well here.", (a) => a.children.size >= 2),
+    mkGroup("g-ending", "Ending soon", "Have a session in the next 14 days — perfect to sell the next block.", (a) => a.soon),
+    mkGroup("g-lapsed", "Lapsed families", "Last attended over 6 months ago with nothing upcoming — win them back.", (a) => a.last > 0 && a.last < nowMs - 180 * DAY && !a.future),
+  ];
+  const payMethods = [...new Set(bookings.map((b) => b.paymentMethod).filter((x): x is string => !!x))].sort();
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
-    { k: "segments" as const, label: "🎯 Groups", count: 1 + groupSegs.length },
+    { k: "segments" as const, label: "🎯 Groups", count: 1 + computedGroups.length + groupSegs.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
   // Groups tab: build a live family group from the location + listing filters (both preset to "All").
-  const segFiltered = !!(segLoc || segListing);
+  const segFiltered = !!(segLoc || segListing || segPay);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
-  const segResolved = segFiltered ? resolveAudience(bookings, { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined }) : { emails: allAudience.emails, count: allAudience.count };
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined };
+  const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
-    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `Active or upcoming booking${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}`, filter: { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined }, people: segResolved.emails.map((e) => ({ email: e })) }
+    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `Active or upcoming booking${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
     : allAudience;
   return (
     <div>
@@ -1131,14 +1158,16 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
       {sub === "segments" && (<>
         <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
         <div className="mb-4 rounded-2xl border border-[#cfe0f7] bg-white p-4 shadow-sm">
-          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by location & listing</div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by location, listing & payment</div>
+          <div className="grid gap-3 sm:grid-cols-3">
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{(payMethods.length ? payMethods : ["Card", "Bank transfer", "Cash", "Childcare vouchers", "Tax-Free Childcare"]).map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
-          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
+          {payMethods.length === 0 && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Payment method isn&apos;t recorded on bookings yet — this filter will work once it is (backend).</p>}
+          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} onRemovePerson={undefined} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
