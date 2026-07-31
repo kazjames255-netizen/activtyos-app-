@@ -630,13 +630,13 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
-  const [showList, setShowList] = useState(true);
+  const [showList, setShowList] = useState(false);
   const [mode, setMode] = useState<"template" | "design">("template");
   const [design, setDesign] = useState<CampaignDesign | null>(null);   // a designed email (rich template gallery)
   const [designing, setDesigning] = useState(false);
@@ -666,6 +666,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const addAud = (id: string) => { if (id) setAudIds((xs) => (xs.includes(id) ? xs : [...xs, id])); };
   const removeAud = (id: string) => setAudIds((xs) => (xs.length > 1 ? xs.filter((x) => x !== id) : xs));
   const useDesign = mode === "design" && !!design;
+  const contentReady = mode === "template" || useDesign;   // send actions show once there's content
   const [schedAt, setSchedAt] = useState("");
   const [busy, setBusy] = useState<CampStatus | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
@@ -683,9 +684,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   return (
     <>
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
-      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <style>{`.camp-scroll{overflow-y:scroll}.camp-scroll::-webkit-scrollbar{width:14px}.camp-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.camp-scroll::-webkit-scrollbar-thumb{background:#8aa0c6;border-radius:8px;border:3px solid #e7ecf4;min-height:44px}.camp-scroll::-webkit-scrollbar-thumb:hover{background:#5f7cab}`}</style>
         <div className="rounded-t-2xl px-5 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}><div className="text-[18px] font-extrabold">New campaign</div><div className="text-[12.5px] text-white/80">Sends via your branded-domain marketing pipeline with tracking + unsubscribe.</div></div>
-        <div className="max-h-[80vh] space-y-4 overflow-y-auto bg-[#f4f7fc] p-5">
+        <div className="camp-scroll max-h-[80vh] space-y-4 bg-[#f4f7fc] p-5">
           {primary && <div className="rounded-xl border-l-4 border-[#3f78d8] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 shadow-sm"><div className="text-[11px] font-bold uppercase tracking-wide text-[#5877b8]">Creating a campaign for</div><div className="mt-0.5 flex flex-wrap items-baseline gap-2"><span className="text-[16px] font-extrabold text-[#1d3a8f]">{primary.name}</span>{selectedAuds.length > 1 && <span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[11px] font-extrabold text-white">+{selectedAuds.length - 1} more</span>}<span className="text-[12.5px] text-[var(--ink-3)]">{primary.desc}</span></div></div>}
           <div className="space-y-3 rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm">
           <div><FieldLabel>Campaign name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full" /></div>
@@ -700,7 +702,6 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                 {enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
                 {cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}
               </Select>
-              <button type="button" onClick={onBuildAudience} className="text-[12px] font-bold text-[#1d3a8f]">＋ Build new</button>
             </div>}
           </div>
           <div><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject line" className="w-full" /></div>
@@ -711,7 +712,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             <div className="mb-2.5 flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Content</span>
               <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">
-                {([["template", "📄 Worded templates"], ["design", "🎨 Choose templates"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+                {([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-3 py-1.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
               </div>
             </div>
             {mode === "template"
@@ -722,9 +723,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                     <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-72 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                   </div>
                 : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7f9fc] p-5 text-center">
-                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Choose a template</div>
-                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Pick from a gallery of beautiful, ready-made email designs — recolour them and drop in your own words and photos.</p>
-                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Browse templates</button>
+                    <div className="text-[13px] font-extrabold text-[var(--ink)]">Design your own email</div>
+                    <p className="mx-auto mt-0.5 max-w-sm text-[12px] text-[var(--ink-3)]">Start from a beautiful, ready-made design — recolour it, add frames, and drop in your own words and photos. Or reuse one you saved.</p>
+                    <button type="button" onClick={() => setDesigning(true)} className="mt-3 rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Open the designer</button>
                   </div>}
           </div>
 
@@ -751,9 +752,13 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
         {sendErr && <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
           <button type="button" onClick={onCancel} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)] disabled:opacity-40">Cancel</button>
-          <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
-          <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
-          <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+          {contentReady
+            ? <>
+                <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
+                <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
+                <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+              </>
+            : <span className="ml-auto text-[12px] font-semibold text-[var(--ink-3)]">Pick or design your content above to send →</span>}
         </div>
       </div>
     </div>
@@ -882,7 +887,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onBuildAudience={() => setModal("audience")} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
