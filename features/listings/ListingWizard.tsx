@@ -930,87 +930,59 @@ export function ListingWizard({
   const stepKey = STEPS[step].key;
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[var(--bg,#f5f8fd)] text-[var(--ink)]"
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#eef2f9] text-[var(--ink)]"
       style={{ ["--bg" as string]: "#f5f8fd", ["--surface" as string]: "#fff", ["--panel" as string]: "#fbf8fc", ["--ink" as string]: "#171534", ["--ink-2" as string]: "#4a4763", ["--ink-3" as string]: "#8a86a3", ["--line" as string]: "#ece6f1" } as React.CSSProperties}>
-      {/* Header + progress stick; everything else scrolls with the page. */}
-      <div className="sticky top-0 z-30">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-5 py-3">
-        <div>
-          <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create listing"}</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">Listing → Tickets · tickets are the bookable products</div>
+
+      {/* Fancy blue header + segmented progress — the campaign-wizard slideshow look. */}
+      <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
+        <div className="mx-auto flex max-w-[900px] flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create a listing"}</div>
+            <div className="truncate text-[12.5px] text-white/80">{STEPS[step].stage} · {d.title?.trim() || "Untitled listing"}</div>
+          </div>
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            {(() => {
+              const label = { idle: "", dirty: "Unsaved", saving: "Saving…", saved: "Saved", error: "Save failed" }[saveState];
+              return label ? <span className="mr-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
+            })()}
+            <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">Save draft</button>
+            <button type="button" onClick={() => setFullPreview(true)} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25">👁 Preview</button>
+            <button type="button" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined} className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#16306e] shadow-sm hover:bg-white/90 disabled:opacity-60">Publish{blockers.length > 0 && <span className="ml-1 opacity-70">({blockers.length})</span>}</button>
+            <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {msg && <span className="mr-1 text-[12px] text-[var(--red)]">{msg}</span>}
-          {(() => {
-            const label = { idle: "", dirty: "Unsaved changes", saving: "Saving…", saved: "Saved", error: "Couldn't save" }[saveState];
-            if (!label) return null;
-            const col = saveState === "error" ? "var(--red)" : saveState === "saved" ? "#1d3a8f" : "var(--ink-3)";
-            return <span className="mr-1 text-[11.5px] font-semibold" style={{ color: col }}>{saveState === "saved" ? "✓ " : ""}{label}</span>;
-          })()}
-          <Button sm disabled={busy} onClick={saveDraftAction}>Save draft</Button>
-          <Button sm variant="cta" onClick={() => setFullPreview(true)}>👁 Preview as a parent</Button>
-          <Button sm variant="primary" disabled={busy} onClick={publishAction} title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to do` : undefined}>Publish{blockers.length > 0 && <span className="ml-1 opacity-80">({blockers.length})</span>}</Button>
-          <button type="button" onClick={onClose} aria-label="Close" className="ml-1 text-[20px] leading-none text-[var(--ink-3)]">×</button>
+        <div className="mx-auto mt-3 flex max-w-[900px] items-center gap-1">
+          {STEPS.map((s, i) => (
+            <button key={s.key} type="button" onClick={() => setStep(i)} title={`${i + 1}. ${s.label}`} className="group flex-1">
+              <div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25 group-hover:bg-white/50"}`} />
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Progress ring + what's left, always in view — eleven screens of fields
-          with no sense of distance travelled is what made this a slog. */}
-      <div className="flex flex-wrap items-center gap-4 border-b border-[var(--line)] bg-[var(--panel)] px-5 py-3">
-        {(() => {
-          const pct = Math.round(((step + 1) / STEPS.length) * 100);
-          const r = 15.5, circ = 2 * Math.PI * r;
-          return (
-            <div className="flex items-center gap-3">
-              <svg width="46" height="46" viewBox="0 0 36 36" className="flex-none">
-                <circle cx="18" cy="18" r={r} fill="none" stroke="var(--line)" strokeWidth="4" />
-                <circle cx="18" cy="18" r={r} fill="none" stroke="var(--brand)" strokeWidth="4" strokeLinecap="round"
-                  strokeDasharray={`${(circ * pct) / 100} ${circ}`} transform="rotate(-90 18 18)" />
-                <text x="18" y="21" textAnchor="middle" fontSize="9" fontWeight="800" fill="var(--ink)">{pct}%</text>
-              </svg>
-              <div>
-                <div className="text-[13px] font-extrabold leading-tight">{STEPS[step].label}</div>
-                <div className="text-[11.5px] text-[var(--ink-3)]">Step {step + 1} of {STEPS.length} · {STEPS[step].stage}</div>
-              </div>
-            </div>
-          );
-        })()}
-        {blockers.length > 0 ? (
-          <div className="ml-auto max-w-[420px] rounded-xl border px-3 py-2" style={{ borderColor: "#fed7aa", background: "#fff7ed" }}>
-            <div className="text-[11px] font-extrabold" style={{ color: "#9a3412" }}>
-              {blockers.length} thing{blockers.length === 1 ? "" : "s"} left before you can publish
-            </div>
-            <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10.5px]" style={{ color: "#9a3412" }}>
-              {blockers.slice(0, 3).map((bl, i) => (
-                <button key={i} type="button" onClick={() => setStep(bl.step)} className="underline underline-offset-2">{bl.what}</button>
-              ))}
+      {/* Compact "where am I / what's left" strip. */}
+      <div className="flex-none border-b border-[var(--line)] bg-[var(--surface)] px-5 py-2 sm:px-6">
+        <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-[12.5px] font-extrabold text-[#16306e]">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</span>
+          {msg && <span className="text-[11.5px] text-[var(--red)]">{msg}</span>}
+          {blockers.length > 0 ? (
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold" style={{ color: "#9a3412" }}>
+              <span className="rounded-full bg-[#fff7ed] px-2 py-0.5 font-extrabold">{blockers.length} to finish before publishing:</span>
+              {blockers.slice(0, 3).map((bl, i) => <button key={i} type="button" onClick={() => setStep(bl.step)} className="underline underline-offset-2">{bl.what}</button>)}
               {blockers.length > 3 && <span>+{blockers.length - 3} more</span>}
-            </div>
-          </div>
-        ) : (
-          <div className="ml-auto rounded-xl px-3 py-2 text-[11.5px] font-bold" style={{ background: "#eaf0fc", color: "#1d3a8f" }}>
-            ✓ Everything&rsquo;s ready to publish
-          </div>
-        )}
-      </div>
+            </span>
+          ) : (
+            <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold text-[#1d3a8f]">✓ Ready to publish</span>
+          )}
+        </div>
       </div>
 
-      <div className="flex">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-wrap gap-1 border-b border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-            {STEPS.map((s, i) => (
-              <button key={s.key} type="button" onClick={() => setStep(i)}
-                className="rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors"
-                style={i === step ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>
-                {i + 1} {s.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 bg-[var(--surface)] px-5 py-7">
-            <div className={stepKey === "preview"
-              ? "mx-auto w-full"
-              : "mx-auto w-full max-w-[660px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[0_1px_2px_rgba(16,35,86,.05)]"}>
+      {/* Big centered slide — ONLY this area scrolls (no whole-page scroll). */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-7 sm:px-6 sm:py-9">
+        <div className="mx-auto w-full max-w-[840px]">
+          <div className={stepKey === "preview"
+            ? "mx-auto w-full"
+            : "rounded-3xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_14px_50px_rgba(16,35,86,.10)] sm:p-8"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
@@ -1046,34 +1018,31 @@ export function ListingWizard({
                 <PolicyStep d={d} upd={upd} />
               </>
             )}
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 z-20 flex items-center justify-center gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3.5">
-            <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
-            {step < STEPS.length - 1 ? (
-              <>
-                <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next ›</Button>
-                {/* When editing an existing listing, let them save from any step
-                    instead of walking to the end every time. */}
-                {d.id && (
-                  <Button variant="solid" disabled={busy || blockers.length > 0} onClick={publishAction}
-                    title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to finish first` : "Save your changes now"}>
-                    {blockers.length ? `Save (${blockers.length} left)` : d.status === "live" ? "Save changes" : "Save & publish"}
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction}>
-                {blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} to finish` : "Publish"}
-              </Button>
-            )}
           </div>
         </div>
+      </div>
 
-        <div className="hidden w-[340px] flex-none self-start border-l border-[var(--line)] bg-[var(--panel)] p-4 lg:sticky lg:top-[112px] lg:block">
-          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">↘ Customer page · exactly what parents see</div>
-          <ParentPreview {...previewProps} />
+      {/* Footer nav — big, fixed. */}
+      <div className="flex-none border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[840px] items-center justify-between gap-3">
+          <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
+          {step < STEPS.length - 1 ? (
+            <div className="flex items-center gap-2">
+              {/* When editing an existing listing, let them save from any step
+                  instead of walking to the end every time. */}
+              {d.id && (
+                <Button variant="solid" disabled={busy || blockers.length > 0} onClick={publishAction}
+                  title={blockers.length ? `${blockers.length} thing${blockers.length === 1 ? "" : "s"} left to finish first` : "Save your changes now"}>
+                  {blockers.length ? `Save (${blockers.length} left)` : d.status === "live" ? "Save changes" : "Save & publish"}
+                </Button>
+              )}
+              <Button variant="primary" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} className="min-w-[130px]">Next ›</Button>
+            </div>
+          ) : (
+            <Button variant="primary" disabled={busy || blockers.length > 0} onClick={publishAction} className="min-w-[130px]">
+              {blockers.length ? `${blockers.length} to finish` : "🎉 Publish"}
+            </Button>
+          )}
         </div>
       </div>
 
