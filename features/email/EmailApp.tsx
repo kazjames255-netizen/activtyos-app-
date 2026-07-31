@@ -1046,7 +1046,9 @@ const SEG_DESCS: Record<string, string> = {
 };
 function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemovePerson }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string; onRemovePerson?: (email: string) => void }) {
   const [open, setOpen] = useState(false);
-  const people = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
+  const [pq, setPq] = useState("");
+  const allPeople = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
+  const people = pq.trim() ? allPeople.filter((p) => `${p.name ?? ""} ${p.email}`.toLowerCase().includes(pq.trim().toLowerCase())) : allPeople;
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
@@ -1058,8 +1060,10 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
       </div>
       {open && (
         <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
-          <div className="max-h-52 overflow-y-auto bg-white">
-            {people.length === 0 ? <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">No recipients in this list.</div>
+          <style>{`.aud-scroll{overflow-y:scroll}.aud-scroll::-webkit-scrollbar{width:11px}.aud-scroll::-webkit-scrollbar-track{background:#eef1f6}.aud-scroll::-webkit-scrollbar-thumb{background:#9aa9c4;border-radius:6px;border:2px solid #eef1f6}`}</style>
+          <div className="border-b border-[var(--line)] bg-[var(--panel)] p-2"><input value={pq} onChange={(e) => setPq(e.target.value)} placeholder={`🔍 Search ${allPeople.length} recipient${allPeople.length === 1 ? "" : "s"}…`} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
+          <div className="aud-scroll h-52 bg-white">
+            {people.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{pq.trim() ? `No recipients match “${pq}”.` : "No recipients in this list."}</div>
               : people.map((p) => (
                   <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3 py-2 last:border-0">
                     <div className="min-w-0 flex-1 truncate text-[12.5px] text-[var(--ink)]">{p.name && p.name !== p.email ? <><b className="font-semibold">{p.name}</b> · </> : null}<span className="text-[var(--ink-3)]">{p.email}</span></div>
@@ -1067,7 +1071,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
                   </div>
                 ))}
           </div>
-          {onRemovePerson && people.length > 0 && <button type="button" onClick={() => { if (window.confirm(`Remove all ${people.length} ${people.length === 1 ? "person" : "people"} from this list? This can’t be undone.`)) people.forEach((p) => onRemovePerson(p.email)); }} className="w-full border-t border-[#f2c4c9] bg-[#fdf0f1] py-2.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fbe3e5]">🗑 Remove all {people.length} from this list</button>}
+          {onRemovePerson && people.length > 0 && <button type="button" onClick={() => { if (window.confirm(`Remove ${pq.trim() ? "the " + people.length + " shown" : "all " + people.length} ${people.length === 1 ? "person" : "people"} from this list? This can’t be undone.`)) people.forEach((p) => onRemovePerson(p.email)); }} className="w-full border-t border-[#f2c4c9] bg-[#fdf0f1] py-2.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fbe3e5]">🗑 Remove {pq.trim() ? `${people.length} shown` : `all ${people.length}`}</button>}
         </div>
       )}
     </div>
