@@ -12,7 +12,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
-import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign, type Block, type Social } from "@/features/email/campaignTemplates";
+import { CampaignDesigner, renderDesignHtml, renderDesignText, loadMyTemplates, persistMyTemplates, type CampaignDesign, type Block, type SavedTemplate, type Social } from "@/features/email/campaignTemplates";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -487,8 +487,7 @@ interface Campaign { id: string; name: string; subtitle?: string; audienceName: 
 // Only the campaign DESIGNS live locally (drafts + content for reuse) — the
 // send/schedule/tracking state is the server's (`emails` history +
 // `scheduledEmails`), linked back by emailId/schedId.
-const LS_CAMP = "aos.email.campaigns.v1", LS_AUD = "aos.email.audiences.v1", LS_SAVEDD = "aos.email.saveddesigns.v1";
-type SavedDesign = { id: string; name: string; subject?: string; design: CampaignDesign };
+const LS_CAMP = "aos.email.campaigns.v1", LS_AUD = "aos.email.audiences.v1";
 function readLS<T>(k: string, fb: T): T { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : fb; } catch { return fb; } }
 function writeLS(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } }
 
@@ -679,7 +678,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [busy, setBusy] = useState<CampStatus | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
   const [sentOk, setSentOk] = useState(false);
-  const [savedDesigns, setSavedDesigns] = useState<SavedDesign[]>(() => readLS<SavedDesign[]>(LS_SAVEDD, []));
+  const [savedDesigns, setSavedDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const STEPS = ["Name", "Audience", "Subject", "Content"];
   const lastStep = STEPS.length - 1;
   const nextDisabled = !!busy || (step === 1 && !primary);
@@ -707,9 +706,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     finally { setAiBusy(false); }
   };
   // Reuse a previous campaign — pull its content across, then edit via the steps.
-  // Reuse a previously-saved design — load it so it can be edited.
-  const reuseSaved = (s: SavedDesign) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); if (!subject.trim() && s.subject) setSubject(s.subject); setMode("design"); setDesign(s.design); };
-  const saveCurrentDesign = () => { if (!design) return; const item: SavedDesign = { id: `sd-${nowMs}`, name: name.trim() || subject.trim() || "Saved campaign", subject: subject.trim() || undefined, design }; const next = [item, ...savedDesigns.filter((x) => x.name !== item.name)]; setSavedDesigns(next); writeLS(LS_SAVEDD, next); };
+  // Reuse a previously-saved design — load it so it can be edited. Shared with the
+  // designer's ⭐ My templates store, so a post-send save shows up in both places.
+  const reuseSaved = (s: SavedTemplate) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); setMode("design"); setDesign({ templateId: "", accent: s.accent, blocks: s.blocks }); };
+  const saveCurrentDesign = () => { if (!design) return; const item: SavedTemplate = { id: `sv-${nowMs}`, name: name.trim() || subject.trim() || "Saved campaign", accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== item.name)]; setSavedDesigns(next); persistMyTemplates(next); };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
   const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); if (wordedHasCountdown) blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
@@ -779,7 +779,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                       <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">Start a fresh design in the builder, or pick up a previous designed campaign and tweak it.</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
                         <button type="button" onClick={() => setDesigning(true)} className="rounded-xl px-5 py-2.5 text-[14px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>🎨 Go to new builder</button>
-                        {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">📋 Use a saved one…</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}{s.subject ? ` — ${s.subject}` : ""}</option>)}</Select>}
+                        {savedDesigns.length > 0 && <Select value="" onChange={(e) => { const s = savedDesigns.find((x) => x.id === e.target.value); if (s) reuseSaved(s); }} className="max-w-[260px]"><option value="">📋 Use a saved one…</option>{savedDesigns.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}
                       </div>
                     </div>}
               <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
