@@ -1692,8 +1692,10 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
   const multiDay = tickets.filter((t) => t.days > 1);
   return (
-    <div className="max-w-[720px]">
+    <div className="mx-auto max-w-[880px]">
       <StepHead n={6} kicker="STEP 6 · TICKETS & PRICING" title="Tickets & pricing" lede="Pick a block you built in the Blocks area — its passes & prices become this listing's tickets." />
+      <RichCard icon="🎟️" title="Choose a block" subtitle="Its passes & prices become this listing's tickets">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
       {blocks.loading ? (
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">Loading your blocks…</Card>
       ) : blocks.error ? (
@@ -1837,11 +1839,12 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
           })()}
         </div>
       )}
+        </div>
+      </RichCard>
     </div>
   );
 }
 
-// ── Step: Add-ons (reusable library) ───────────────────────────────────────
 // ── Step: Automatic discounts ──────────────────────────────────────────────
 const DISCOUNT_KINDS: { kind: DiscountKind; title: string; eg: string; icon: string; colour: string }[] = [
   { kind: "person", title: "Multi-person", eg: "Siblings pay £3.50 each, bring a friend pay £10.00 each", icon: "👨‍👩‍👧", colour: "#2f6bd8" },
@@ -1865,8 +1868,10 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   const kindOf = (k: DiscountKind) => DISCOUNT_KINDS.find((x) => x.kind === k)!;
 
   return (
-    <div className="max-w-[760px]">
+    <div className="mx-auto max-w-[820px]">
       <StepHead n={7} kicker="STEP 7 · DISCOUNTS" title="Automatic discounts" lede="Rules that come off the price by themselves at checkout — no codes for parents to remember." />
+      <RichCard icon="🏷️" title="Discount rules" subtitle="Come off the price automatically at checkout — no codes to remember" tint="violet">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
 
       {/* Create / edit panel */}
       <Card className="mb-4 overflow-hidden p-0">
@@ -1998,6 +2003,8 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
       <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11.5px] text-[var(--ink-3)]">
         <b className="text-[var(--ink-2)]">How these stack:</b> multi-session discounts are applied after multi-person ones have been calculated, then early bird. If two rules conflict, the parent is offered the best price.
       </div>
+        </div>
+      </RichCard>
     </div>
   );
 }
@@ -2150,8 +2157,10 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
     clear();
   };
   return (
-    <div className="max-w-[720px]">
+    <div className="mx-auto max-w-[840px]">
       <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <RichCard icon="🧩" title="Add-ons" subtitle="Per-day, whole-block or one-off extras — reusable on any listing" tint="teal">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
       <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
@@ -2222,6 +2231,8 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         <Button variant="primary" onClick={save}>{editing ? "Save changes" : "＋ Add"}</Button>
         {editing && <Button onClick={clear}>Cancel</Button>}
       </div>
+        </div>
+      </RichCard>
     </div>
   );
 }
@@ -2245,8 +2256,10 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
     upd({ staffIds: d.staffIds.filter((x) => x !== id) });
   };
   return (
-    <div className="max-w-[720px]">
+    <div className="mx-auto max-w-[840px]">
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
+      <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
       <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 flex flex-col gap-2">
         {local.staff.map((m) => {
@@ -2278,6 +2291,8 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
         <Button onClick={addMember}>＋ Add staff</Button>
       </div>
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">Staff &amp; bios are saved and reusable on every listing.</div>
+        </div>
+      </RichCard>
     </div>
   );
 }
@@ -2328,8 +2343,10 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   // separately is how they came to disagree.
   const ownPolicies = wizSettings.cancellationPolicies;
   return (
-    <div className="max-w-[720px]">
+    <div className="mx-auto max-w-[840px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
+      <RichCard icon="📋" title="Policy & publish" subtitle="Booking style, visibility & cancellation — then hit Publish">
+        <div className="max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
       <SectionHead icon="👁️">Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
@@ -2395,6 +2412,8 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         there and every listing using this policy follows.
       </div>
       <div className="mt-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] text-[var(--ink-2)]">{d.cancellation}</div>
+        </div>
+      </RichCard>
     </div>
   );
 }
