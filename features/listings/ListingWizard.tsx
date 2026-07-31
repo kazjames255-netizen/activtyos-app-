@@ -943,7 +943,7 @@ export function ListingWizard({
 
       {/* Fancy blue header + segmented progress — the campaign-wizard slideshow look. */}
       <div className="flex-none px-5 py-4 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
-        <div className="mx-auto flex max-w-[900px] flex-wrap items-center justify-between gap-2">
+        <div className="mx-auto flex max-w-[1160px] flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{d.id ? "Edit listing" : "Create a listing"}</div>
             <div className="truncate text-[12.5px] text-white/80">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</div>
@@ -951,7 +951,7 @@ export function ListingWizard({
           <div className="flex flex-none flex-wrap items-center gap-2">
             {msg && <span className="mr-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">{msg}</span>}
             {(() => {
-              const label = { idle: "", dirty: "Unsaved", saving: "Saving…", saved: "Saved", error: "Save failed" }[saveState];
+              const label = { idle: "", dirty: "", saving: "Saving…", saved: "Saved", error: "" }[saveState];
               return label ? <span className="mr-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
             })()}
             <button type="button" disabled={busy} onClick={saveDraftAction} className="rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-white/25 disabled:opacity-40">Save draft</button>
@@ -960,7 +960,7 @@ export function ListingWizard({
             <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px] font-bold hover:bg-white/30">×</button>
           </div>
         </div>
-        <div className="mx-auto mt-3 flex max-w-[900px] items-center gap-1">
+        <div className="mx-auto mt-3 flex max-w-[1160px] items-center gap-1">
           {STEPS.map((s, i) => (
             <button key={s.key} type="button" onClick={() => setStep(i)} title={`${i + 1}. ${s.label}`} className="group flex-1">
               <div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25 group-hover:bg-white/50"}`} />
@@ -972,7 +972,7 @@ export function ListingWizard({
 
       {/* Big centered slide — ONLY this area scrolls (no whole-page scroll). */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5" style={{ backgroundColor: "#e8f0fb", backgroundImage: "radial-gradient(760px 380px at 12% -14%, #c9dcf8 0%, rgba(201,220,248,0) 55%), radial-gradient(760px 380px at 100% -6%, #d4e4fb 0%, rgba(212,228,251,0) 55%), radial-gradient(rgba(31,84,163,.055) 1px, transparent 1.4px)", backgroundSize: "auto, auto, 22px 22px" }}>
-        <div className="mx-auto w-full max-w-[860px]">
+        <div className="mx-auto w-full max-w-[1160px]">
           <div className={stepKey === "preview"
             ? "mx-auto w-full"
             : "overflow-hidden rounded-[22px] border border-[#cddcf7] shadow-[0_22px_60px_-20px_rgba(31,84,163,.34)]"}
@@ -1022,7 +1022,7 @@ export function ListingWizard({
 
       {/* Footer nav — big, fixed. */}
       <div className="flex-none border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-[840px] items-center justify-between gap-3">
+        <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-3">
           <Button disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>‹ Back</Button>
           {step < STEPS.length - 1 ? (
             <div className="flex items-center gap-2">
@@ -1239,7 +1239,7 @@ function genBio(prompt: string, m: StaffMember, variant: number): string {
 // ── Step: Basics ───────────────────────────────────────────────────────────
 function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   return (
-    <div className="max-w-[760px]">
+    <div className="max-w-[1120px]">
       <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name and a big, bright photo — pick a layout to see how it looks." />
       <FieldLabel>Listing title · up to 70 characters</FieldLabel>
       <Input value={d.title} maxLength={70} onChange={(e) => upd({ title: e.target.value })} placeholder="e.g. Summer Multi-Activity Camp" className="mb-3 w-full" />
@@ -1272,7 +1272,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   return (
-    <div className="max-w-[820px]">
+    <div className="max-w-[1120px]">
       <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
       <div className="grid items-start gap-4 md:grid-cols-2">
       <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & on-the-day contact">
@@ -1510,7 +1510,7 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
     setAiN((n) => n + 1);
   }
   return (
-    <div className="max-w-[900px]">
+    <div className="max-w-[1120px]">
       <StepHead n={2} kicker="STEP 2 · CONTENT" title="Describe your activity" lede="A clear description helps parents choose. Add sections and learning outcomes." />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="📝" title="Main description" subtitle="The intro parents read first">
@@ -1579,7 +1579,7 @@ function RichCard({ icon, title, subtitle, tint = "blue", children, className = 
 
 function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
   return (
-    <div className="max-w-[860px]">
+    <div className="max-w-[1120px]">
       <StepHead n={4} kicker="STEP 4 · SAFETY & SEND" title="Safety & inclusion" lede="Show your safety features and the SEND support you offer." />
       <div className="grid gap-4 md:grid-cols-2">
         <RichCard icon="🛡️" title="Safety features">
@@ -1609,7 +1609,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   const updRun = (patch: Partial<WizardDraft>) => upd({ ...patch, ...(hadRules ? { bookRules: {} } : {}) });
   const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Days it runs{weekly ? " · locked to Mon–Fri" : ""}</span>;
   return (
-    <div className="max-w-[900px]">
+    <div className="max-w-[1120px]">
       <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — the calendar builds itself." />
       {hadRules && (
         <div className="mb-3 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
@@ -2256,12 +2256,12 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
     upd({ staffIds: d.staffIds.filter((x) => x !== id) });
   };
   return (
-    <div className="mx-auto max-w-[840px]">
+    <div className="mx-auto max-w-[1120px]">
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
       <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
-        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+        <div className="max-h-[calc(100vh-330px)] overflow-y-auto pr-1">
       <HeadingFields d={d} upd={upd} sectionKey="team" />
-      <div className="mb-3 flex flex-col gap-2">
+      <div className="mb-3 grid items-start gap-2 md:grid-cols-2">
         {local.staff.map((m) => {
           const on = d.staffIds.includes(m.id);
           return (
