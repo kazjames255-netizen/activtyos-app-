@@ -5,6 +5,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_POLICIES, type NamedPolicy } from "@/lib/cancellation";
 import type { WhenTooClose } from "@/lib/vouchers";
+import { defaultUKSeasons, type Season } from "@/lib/seasons";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -642,6 +643,16 @@ export interface TenantSettings {
   /** Longest a parent may write in each free-text child field. */
   charLimits: { allergies: number; medical: number; dietary: number; send: number; likes: number; dislikes: number };
 
+  // ── Seasons ──
+  /**
+   * The trading periods this provider runs on (terms + holiday camps). Defined
+   * once here, then every dated thing — bookings, money, registers — is scoped
+   * to a season by DATE, and pages filter to the current one by default. See
+   * lib/seasons.ts. Empty = the provider hasn't set them up (pages fall back to
+   * "all time").
+   */
+  seasons?: Season[];
+
   // ── Bookings & payments ──
   payMethods: string[];
   cancellationReasons: CancelReason[];
@@ -865,6 +876,9 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     lowStockAlert: true,
   },
 
+  // Empty until the provider sets them up (Setup → Seasons has a one-click
+  // "generate this year's" button). Pages fall back to "all time" meanwhile.
+  seasons: [],
   payMethods: ["Card", "Bank transfer", "Cash on the day", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
   voucherProviders: DEFAULT_VOUCHERS,
@@ -934,6 +948,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     },
     emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
+    seasons: s.seasons ?? DEFAULT_SETTINGS.seasons,
     payMethods: (s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods).filter((m) => m !== "Free place"),
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

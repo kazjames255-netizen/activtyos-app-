@@ -26,6 +26,7 @@ import {
   type RatioGroup,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
+import { defaultUKSeasons, fmtSeasonRange, sortSeasons, seasonKindLabel, type Season, type SeasonKind } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
@@ -394,6 +395,60 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
       <div className="mt-1 flex gap-1.5">
         <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustom()} placeholder="Add your own — e.g. Standing order" className="flex-1" />
         <Button onClick={addCustom}>＋ Add</Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Seasons — the trading periods pages scope to (lib/seasons.ts) ────────────
+function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: Season[]) => void }) {
+  const sorted = sortSeasons(items);
+  const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
+  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nNothing dated is deleted — it just stops being offered as a filter.`)) onChange(items.filter((s) => s.id !== id)); };
+  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season", from: "", to: "", kind: "holiday" }]);
+  const generate = () => {
+    const year = new Date().getFullYear(); // event handler — fine
+    const have = new Set(items.map((s) => s.id));
+    onChange([...items, ...defaultUKSeasons(year).filter((s) => !have.has(s.id))]);
+  };
+  const KINDS: SeasonKind[] = ["holiday", "term"];
+  if (!items.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-5 text-center">
+        <div className="text-[13px] font-bold text-[var(--ink)]">No seasons yet</div>
+        <p className="mx-auto mt-1 max-w-md text-[12px] leading-[1.5] text-[var(--ink-3)]">Set up your trading periods once and every page — bookings, money, registers, audiences — can filter to “this season” automatically. Start from a standard UK year, then tweak the dates.</p>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <Button onClick={generate}>✨ Generate this year’s seasons</Button>
+          <Button variant="ghost" onClick={add}>＋ Add one manually</Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      {sorted.map((s) => {
+        const bad = s.from && s.to && s.from > s.to;
+        return (
+          <div key={s.id} className="rounded-xl border border-[var(--line)] bg-white px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
+              <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11.5px] font-bold">
+                {KINDS.map((k) => <button key={k} type="button" onClick={() => patch(s.id, (x) => ({ ...x, kind: k }))} className="px-2.5 py-1.5" style={s.kind === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-3)" }}>{seasonKindLabel(k)}</button>)}
+              </div>
+              <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
+              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">From <Input type="date" value={s.from} onChange={(e) => patch(s.id, (x) => ({ ...x, from: e.target.value }))} className="w-[150px]" /></label>
+              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">to <Input type="date" value={s.to} onChange={(e) => patch(s.id, (x) => ({ ...x, to: e.target.value }))} className="w-[150px]" /></label>
+              {bad ? <span className="text-[11.5px] font-bold text-[var(--red,#e21d27)]">End is before start</span>
+                : s.from && s.to ? <span className="text-[11px] text-[var(--ink-3)]">· {fmtSeasonRange(s)}</span> : null}
+            </div>
+          </div>
+        );
+      })}
+      <div className="mt-1 flex flex-wrap gap-2">
+        <Button sm onClick={add}>＋ Add a season</Button>
+        <Button sm variant="ghost" onClick={generate}>✨ Add this year’s standard set</Button>
       </div>
     </div>
   );
@@ -2041,6 +2096,12 @@ export function SetupApp() {
 
       {tab === "bookings" && (
         <>
+          <Section
+            title="Seasons"
+            lede="Your trading periods — terms and holiday camps. Set them up once and pages across the app (bookings, money, registers, audiences) can filter to “this season” automatically, worked out from each booking’s dates. You don’t tag anything by hand."
+          >
+            <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
+          </Section>
           <Section
             title="How parents pay"
             lede="How you record payment when you take a booking yourself — over the phone, or for a funded or free place. These are stored on the booking and drive the funding column in your exports."

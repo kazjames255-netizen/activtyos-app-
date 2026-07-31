@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
+import { type Season } from "@/lib/seasons";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -1081,7 +1082,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
     </div>
   );
 }
-function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => void; payMethods?: string[] }) {
+function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Audience) => void; payMethods?: string[]; seasons?: Season[] }) {
   const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   useEffect(() => { writeLS(LS_ENQ, enquiries); }, [enquiries]);
@@ -1100,6 +1101,7 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
   const [segLoc, setSegLoc] = useState("");
   const [segListing, setSegListing] = useState("");
   const [segPay, setSegPay] = useState("");
+  const [segSeason, setSegSeason] = useState("");
   const [newDays, setNewDays] = useState(() => readLS<number>("aos.email.seg.newDays", 90));
   const [endDays, setEndDays] = useState(() => readLS<number>("aos.email.seg.endDays", 14));
   const [lapsedMonths, setLapsedMonths] = useState(() => readLS<number>("aos.email.seg.lapsedMonths", 6));
@@ -1190,13 +1192,16 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
     { k: "enquiries" as const, label: "📩 Enquiries", count: combinedNotBooked?.count ?? 0 },
     { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
   ];
-  // Groups tab: build a live family group from the location + listing filters (both preset to "All").
-  const segFiltered = !!(segLoc || segListing || segPay);
+  // Groups tab: build a live family group from the location + listing + season
+  // filters (all preset to "All"). A season is just a session-date window, so it
+  // reuses the existing from/to/dateType machinery.
+  const season = seasons.find((s) => s.id === segSeason);
+  const segFiltered = !!(segLoc || segListing || segPay || season);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
-  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined };
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined, ...(season ? { from: season.from, to: season.to, dateType: "session" as const } : {}) };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
-    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `Active or upcoming booking${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
+    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season ? `Attended in ${season.name}` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
     : allAudience;
   return (
     <div>
@@ -1211,14 +1216,15 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
       {sub === "segments" && (<>
         <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
         <div className="mb-4 rounded-2xl border border-[#cfe0f7] bg-white p-4 shadow-sm">
-          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by location, listing & payment</div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by {seasons.length ? "season, " : ""}location, listing & payment</div>
+          <div className={`grid gap-3 sm:grid-cols-2 ${seasons.length ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All seasons</option>{[...seasons].sort((a, b) => (a.from < b.from ? 1 : -1)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
           {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Options come from your <b>Setup → “How parents pay”</b> list. Filtering needs the method saved on each booking — it works the moment bookings include it (backend).</p>}
-          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
+          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); setSegSeason(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={periodEditor(a.id)} />)}</div>
       </>)}
@@ -1788,7 +1794,7 @@ export function EmailApp() {
 
       {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
-      {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} />}
+      {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} seasons={settings.seasons ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "analytics" && <AnalyticsView />}
       {tab === "automatic" && <AutoEmails settings={settings} save={save} />}
