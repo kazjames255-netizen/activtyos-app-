@@ -12,7 +12,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import { MERGE_FIELDS } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
-import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign, type Social } from "@/features/email/campaignTemplates";
+import { CampaignDesigner, renderDesignHtml, renderDesignText, type CampaignDesign, type Block, type Social } from "@/features/email/campaignTemplates";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -482,7 +482,7 @@ interface Booking { id?: string; email?: string; name?: string; child?: string; 
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[] }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
-interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; scheduledAt?: string; recipientEmails?: string[]; emailId?: string; schedId?: string; delivered?: number; opened?: number }
+interface Campaign { id: string; name: string; subtitle?: string; audienceName: string; recipients: number; status: CampStatus; statusDate?: string; opens?: number; clicks?: number; subject?: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string; recipientEmails?: string[]; emailId?: string; schedId?: string; delivered?: number; opened?: number }
 
 // Only the campaign DESIGNS live locally (drafts + content for reuse) — the
 // send/schedule/tracking state is the server's (`emails` history +
@@ -630,13 +630,17 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, socials, pastCampaigns, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; pastCampaigns?: Campaign[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [tmplBody, setTmplBody] = useState(() => templates[0]?.body ?? "");   // editable copy of the worded template
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
+  const [cdOn, setCdOn] = useState(false);   // add a big countdown clock to a worded email
+  const [cdDate, setCdDate] = useState("");
+  const [cdTime, setCdTime] = useState("");
+  const [cdHeading, setCdHeading] = useState("Hurry — offer ends soon");
   const [subject, setSubject] = useState("");
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
@@ -683,7 +687,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
     setSendErr(null); setBusy(action);
     try {
-      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+      const html = useDesign && design ? renderDesignHtml(design, company, nowMs) : (mode === "template" && wordedHasCountdown ? renderDesignHtml(wordedDesign(), company, nowMs) : undefined);
+      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html, body: useDesign && design ? renderDesignText(design) : (mode === "template" ? tmplBody.trim() || undefined : undefined), design: useDesign ? (design ?? undefined) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
     } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
     finally { setBusy(null); }
   };
@@ -698,6 +703,16 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     catch (e) { setSendErr(e instanceof Error ? e.message : "The writer couldn’t draft that — try again."); }
     finally { setAiBusy(false); }
   };
+  // Reuse a previous campaign — pull its content across, then edit via the steps.
+  const reuseCampaign = (c: Campaign) => {
+    setName(c.name ? `${c.name} (copy)` : "");
+    setSubject(c.subject || "");
+    if (c.design) { setMode("design"); setDesign(c.design); }
+    else { setMode("template"); setTmplId(""); setTmplBody(c.body || ""); }
+  };
+  // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
+  const wordedHasCountdown = cdOn && !!cdDate;
+  const wordedDesign = (): CampaignDesign => { const blocks: Block[] = []; if (tmplBody.trim()) blocks.push({ t: "text", body: tmplBody }); blocks.push({ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }); return { accent: "blue", blocks }; };
   return (
     <>
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
@@ -717,6 +732,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             {step === 0 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
+              {pastCampaigns && pastCampaigns.length > 0 && <div className="rounded-xl border border-[#cfe0f7] bg-[#f4f8ff] p-4">
+                <div className="text-[13px] font-extrabold text-[#1d3a8f]">📋 Or reuse a past campaign</div>
+                <p className="mb-2 mt-0.5 text-[12px] text-[#5877b8]">Pulls the subject and content across — then edit anything through the steps.</p>
+                <Select value="" onChange={(e) => { const c = pastCampaigns.find((x) => x.id === e.target.value); if (c) reuseCampaign(c); }} className="w-full"><option value="">Start fresh…</option>{pastCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name}{c.subject ? ` — ${c.subject}` : ""}</option>)}</Select>
+              </div>}
             </div>}
             {step === 1 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
@@ -739,11 +759,19 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                       <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
                         <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
                         <label title="Attach a file" className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">📎 Attach<input type="file" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addAttachment); e.target.value = ""; }} /></label>
+                        <button type="button" onClick={() => setCdOn((v) => !v)} className={`rounded-md border px-2 py-1 text-[11.5px] font-bold ${cdOn ? "border-[#1d3a8f] bg-[#eef4fd] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>⏱ Countdown</button>
                         <span className="mx-1 h-4 w-px bg-[var(--line)]" />
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
                         {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
                       </div>
                       <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-white px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
+                      {cdOn && <div className="border-t border-[var(--line)] bg-[#f7f9fc] px-3 py-3">
+                        <div className="mb-2 flex items-center gap-2"><span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">⏱ Countdown clock</span><button type="button" onClick={() => setCdOn(false)} className="ml-auto text-[11px] font-bold text-[#c02636] hover:underline">Remove</button></div>
+                        <div className="grid gap-2 sm:grid-cols-3"><input value={cdHeading} onChange={(e) => setCdHeading(e.target.value)} placeholder="Heading" className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px]" /><input type="date" value={cdDate} onChange={(e) => setCdDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px]" /><input type="time" value={cdTime} onChange={(e) => setCdTime(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px]" /></div>
+                        {wordedHasCountdown
+                          ? <div className="mt-3 overflow-hidden rounded-lg" dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: "blue", blocks: [{ t: "countdown", date: cdDate, time: cdTime, heading: cdHeading, label: "" }] as Block[] }, company, nowMs) }} />
+                          : <p className="mt-2 text-[11px] font-semibold text-[#9a6b00]">Pick a date so the big clock appears in your email.</p>}
+                      </div>}
                       {attachments.length > 0 && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] bg-[#fafbfe] px-3 py-2">{attachments.map((a, i) => <span key={i} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1 text-[12px] font-bold">📎 {a.name} <span className="font-normal text-[var(--ink-3)]">{a.size}</span><button type="button" onClick={() => setAttachments((xs) => xs.filter((_, j) => j !== i))} className="text-[var(--ink-3)] hover:text-[#c02636]">×</button></span>)}</div>}
                     </div>
                     <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send. (File attachments send once the backend attach step is wired.)</p>
@@ -867,10 +895,10 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => { const next = xs.filter((e) => e.email.toLowerCase() !== email.toLowerCase()); writeLS(LS_ENQ, next); return next; });
   const closeCampaign = () => { setModal(null); onSeedConsumed?.(); };
   const audiences = [allAudience, ...liveSegments, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
-  const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => {
+  const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => {
     setErr(null);
     const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
-    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
+    const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, design: c.design, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
     if (action !== "draft" && !c.audience.emails.length) throw new Error("That audience has nobody in it yet — add recipients first.");
     // The send/queue is the server's; the local row keeps the design and
     // links to the server record for live status + open tracking. Errors
@@ -925,7 +953,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} pastCampaigns={campaigns.filter((c) => c.html || c.body || c.design)} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
