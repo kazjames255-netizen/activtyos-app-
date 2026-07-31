@@ -630,7 +630,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => void; onRemovePerson?: (email: string) => void }) {
+function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onBuildAudience, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onBuildAudience: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
   const [name, setName] = useState("");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
@@ -667,12 +667,18 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const removeAud = (id: string) => setAudIds((xs) => (xs.length > 1 ? xs.filter((x) => x !== id) : xs));
   const useDesign = mode === "design" && !!design;
   const [schedAt, setSchedAt] = useState("");
-  const submit = (action: CampStatus) => {
-    if (!primary) return;
-    if (action === "scheduled" && !schedAt) { window.alert("Pick a date & time to schedule the send."); return; }
+  const [busy, setBusy] = useState<CampStatus | null>(null);
+  const [sendErr, setSendErr] = useState<string | null>(null);
+  const submit = async (action: CampStatus) => {
+    if (!primary) { setSendErr("Pick an audience for this send first."); return; }
+    if (action === "scheduled" && !schedAt) { setSendErr("Pick a date & time to schedule the send."); return; }
     const subj = subject.trim() || template?.subject || name.trim();
     const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
-    onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+    setSendErr(null); setBusy(action);
+    try {
+      await onSubmit({ name: name.trim() || subj || "Untitled campaign", audience: combined, template: mode === "template" ? template : undefined, subject: subj, html: useDesign && design ? renderDesignHtml(design, company, nowMs) : undefined, body: useDesign && design ? renderDesignText(design) : undefined, scheduledAt: action === "scheduled" ? schedAt : undefined }, action);
+    } catch (e) { setSendErr(e instanceof Error ? e.message : "Couldn’t send — please try again."); }
+    finally { setBusy(null); }
   };
   return (
     <>
@@ -742,11 +748,12 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
           <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""} — {selectedAuds.length > 1 ? `deduped across ${selectedAuds.length} audiences` : (primary?.desc ?? "—")}</div>
           <p className="text-[13px] font-semibold text-[var(--ink)]">Recipients who have opted out of marketing are excluded automatically. A one-click unsubscribe footer is added to every send.</p>
         </div>
+        {sendErr && <div className="mx-5 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-5 py-3">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)]">Cancel</button>
-          <button type="button" onClick={() => submit("draft")} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Save draft</button>
-          <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110">⧗ Schedule</button></div>
-          <button type="button" onClick={() => submit("sent")} disabled={included.length === 0} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>Send now</button>
+          <button type="button" onClick={onCancel} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-3)] disabled:opacity-40">Cancel</button>
+          <button type="button" onClick={() => submit("draft")} disabled={!!busy} className="ml-auto rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{busy === "draft" ? "Saving…" : "Save draft"}</button>
+          <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
+          <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !!busy} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
         </div>
       </div>
     </div>
@@ -821,19 +828,18 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
     setErr(null);
     const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
     const row: Campaign = { id: `c${Date.now()}`, name: c.name, subtitle: c.template?.name ?? (c.html ? "Designed email" : undefined), audienceName: c.audience.name, recipients: c.audience.count, status: action, statusDate: action === "scheduled" ? schedLabel : action === "sent" ? "just now" : undefined, subject: c.subject, html: c.html, body: c.body, scheduledAt: c.scheduledAt, recipientEmails: c.audience.emails };
-    if (action !== "draft" && !c.audience.emails.length) { setErr("That audience has nobody in it yet."); return; }
-    try {
-      // The send/queue is the server's; the local row keeps the design and
-      // links to the server record for live status + open tracking.
-      if (action === "sent") {
-        const r = await apiPost<{ id: string }>("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails });
-        row.emailId = r.id;
-        onSent();
-      } else if (action === "scheduled") {
-        const r = await apiPost<{ id: string }>("/api/emails/schedule", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
-        row.schedId = r.id;
-      }
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t send"); return; }
+    if (action !== "draft" && !c.audience.emails.length) throw new Error("That audience has nobody in it yet — add recipients first.");
+    // The send/queue is the server's; the local row keeps the design and
+    // links to the server record for live status + open tracking. Errors
+    // propagate to the modal so the reason is shown right where you clicked.
+    if (action === "sent") {
+      const r = await apiPost<{ id: string }>("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails });
+      row.emailId = r.id;
+      onSent();
+    } else if (action === "scheduled") {
+      const r = await apiPost<{ id: string }>("/api/emails/schedule", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
+      row.schedId = r.id;
+    }
     setCampaigns((xs) => [row, ...xs]); closeCampaign(); load();
   };
   // Live status/opens for linked rows, plus rows for server sends made
