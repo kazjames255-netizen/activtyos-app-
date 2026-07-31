@@ -712,6 +712,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   // designer's ⭐ My templates store, so a post-send save shows up in both places.
   const reuseSaved = (s: SavedTemplate) => { if (!name.trim()) setName(s.name ? `${s.name} (copy)` : ""); setMode("design"); setDesign({ templateId: "", accent: s.accent, blocks: s.blocks }); };
   const saveCurrentDesign = () => { if (!design) return; const nm = saveName.trim() || "Saved design"; const item: SavedTemplate = { id: `sv-${nowMs}`, name: nm, accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== nm)]; setSavedDesigns(next); persistMyTemplates(next); };
+  // One-click countdown for the current design (templates don't include one) — adds a dated countdown so the clock shows.
+  const addCountdownToDesign = () => { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; setDesign((dz) => { if (!dz) return dz; const idx = dz.blocks.findIndex((b) => b.t === "countdown"); if (idx >= 0) return { ...dz, blocks: dz.blocks.map((b, i) => (i === idx ? { ...b, date: b.date || dateStr, time: b.time || "18:00" } : b)) }; return { ...dz, blocks: [...dz.blocks, { t: "countdown", heading: "Hurry — offer ends soon", label: "", date: dateStr, time: "18:00" } as Block] }; }); };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
   // Countdown status for the current content — so "no clock in the email" is obvious before sending.
@@ -780,7 +782,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
-                      <div className="mb-2 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
+                      <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span>{!designCd && <button type="button" onClick={addCountdownToDesign} className="ml-auto rounded-lg border border-[#bfe0c9] bg-[#f0faf3] px-3 py-1.5 text-[12px] font-bold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add countdown</button>}<button type="button" onClick={() => setDesigning(true)} className={`rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd] ${designCd ? "ml-auto" : ""}`}>✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
                       <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                     </div>
                   : <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm">
@@ -1094,6 +1096,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   const [designs, setDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const [designer, setDesigner] = useState<{ mode: "new" } | { mode: "edit"; item: SavedTemplate } | null>(null);
   const [dNow] = useState(() => Date.now());
+  const [sub, setSub] = useState<"worded" | "designed">("worded");
   const saveDesign = (d: CampaignDesign) => {
     setDesigns((xs) => {
       let next: SavedTemplate[];
@@ -1125,11 +1128,16 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   if (!templates) return <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-[var(--ink-2)]">✍️ Worded templates — shared with Messages</span>
-        <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
+      <div className="mb-4 inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">
+        {([["worded", "✍️ Worded templates"], ["designed", `🎨 Designed templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
+
+      {sub === "worded" && <>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">Reusable worded templates — shared with Messages</span>
+        <button type="button" onClick={() => setEdit({ id: "", name: "", subject: "", body: "" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New template</button>
+      </div>
       {templates.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No templates yet. Create one — it’s available here and in Messages.</Card>
       : <div className="flex flex-col gap-2">{templates.map((t) => (
           <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
@@ -1140,10 +1148,11 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
           </div>
         ))}</div>}
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Tip: merge fields like {"{ChildName}"} / {"{ListingName}"} fill in automatically — in bulk Email sends each family’s fields resolve from their most relevant booking ({"{SessionDate}"}, {"{VenueName}"} included), with neutral wording for anyone we can’t match.</p>
+      </>}
 
-      {/* ── Designed (builder) templates — full visual designs ── */}
-      <div className="mb-3 mt-8 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-[var(--ink-2)]">🎨 Designed templates — build & save branded emails</span>
+      {sub === "designed" && <>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-bold text-[var(--ink-2)]">Build & save branded email designs — edit and save here, send from Campaigns</span>
         <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New design</button>
       </div>
       {designs.length === 0
@@ -1154,7 +1163,8 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
               <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button></div>
             </div>
           ))}</div>}
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">To send one: go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">These are just for building &amp; saving — <b>to send</b> one, go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
+      </>}
       {designer && <div className="relative z-[130]"><CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} /></div>}
 
       {edit && (
