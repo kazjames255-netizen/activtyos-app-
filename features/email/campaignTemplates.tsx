@@ -453,11 +453,19 @@ function CropBox({ url, ix = 50, iy = 50, iz = 1, onChange }: { url: string; ix?
 const inputCls = "w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]";
 const lbl = "mb-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]";
 
+// ── "My templates": designs the operator saves, kept in the browser ──────────
+export type SavedTemplate = { id: string; name: string; accent: string; blocks: Block[] };
+const MYT_KEY = "aos-email-my-templates";
+const MY_CAT = "⭐ My templates";
+const loadMyTemplates = (): SavedTemplate[] => { try { const s = typeof window !== "undefined" ? window.localStorage.getItem(MYT_KEY) : null; return s ? (JSON.parse(s) as SavedTemplate[]) : []; } catch { return []; } };
+const persistMyTemplates = (xs: SavedTemplate[]) => { try { window.localStorage.setItem(MYT_KEY, JSON.stringify(xs)); } catch { /* storage full or blocked */ } };
+
 export function CampaignDesigner({ initial, company, socials, onCancel, onSave }: { initial?: CampaignDesign | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSave: (d: CampaignDesign) => void }) {
   const uid = useRef(1000);
   const nk = () => `b${uid.current++}`;
   const [design, setDesign] = useState<CampaignDesign | null>(() => (initial ? { ...initial, blocks: withSocials(initial.blocks, socials).map((b, i) => ({ ...b, k: `i${i}` })) } : null));
   const [cat, setCat] = useState(CATEGORIES[0]);
+  const [myTpls, setMyTpls] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -481,6 +489,9 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
   const t2 = theme(accentHex(design?.accent || "blue") || (design?.accent || "blue"));
   const ctrlBtn = "flex h-6 w-6 items-center justify-center rounded text-[13px] font-bold text-[#33456b] hover:bg-[#e7ecf4] disabled:opacity-30";
   const start = (id: string) => { const d = newDesign(id, company, socials); setHistory([]); setFuture([]); setDesign({ ...d, blocks: d.blocks.map((b) => ({ ...b, k: nk() })) }); };
+  const startSaved = (s: SavedTemplate) => { setHistory([]); setFuture([]); setSelKey(null); setDesign({ templateId: "", accent: s.accent, blocks: s.blocks.map((b) => ({ ...b, k: nk() })) }); };
+  const saveAsTemplate = () => { if (!design) return; const nm = window.prompt("Save this design to “⭐ My templates”. Name it:", tpl?.name || "My template"); if (!nm || !nm.trim()) return; const item: SavedTemplate = { id: `my-${nowMs}-${myTpls.length}`, name: nm.trim(), accent: design.accent, blocks: design.blocks.map((b) => ({ ...b })) }; const next = [item, ...myTpls.filter((x) => x.name !== nm.trim())]; setMyTpls(next); persistMyTemplates(next); window.alert("Saved! Tap “← Templates”, then ⭐ My templates, to reuse it any time."); };
+  const delMyTemplate = (id: string) => { const next = myTpls.filter((x) => x.id !== id); setMyTpls(next); persistMyTemplates(next); };
   const snapshot = () => { setHistory((h) => (design ? [...h.slice(-49), design] : h)); setFuture([]); };
   const undo = () => { if (!history.length || !design) return; setFuture((f) => [design, ...f].slice(0, 50)); setDesign(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); setSelKey(null); setAddOpen(false); };
   const redo = () => { if (!future.length || !design) return; setHistory((h) => [...h.slice(-49), design]); setDesign(future[0]); setFuture((f) => f.slice(1)); setSelKey(null); setAddOpen(false); };
@@ -611,6 +622,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
               {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
             </div>}
+            {design && <button type="button" onClick={saveAsTemplate} title="Save this design to reuse later" className="rounded-lg bg-white/15 px-3 py-2 text-[12.5px] font-bold hover:bg-white/25">💾 Save as template</button>}
             {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f]">Use this design</button>}
             <button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button>
           </div>
@@ -619,10 +631,21 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
         {!design ? (
           <>
             <div className="flex flex-wrap gap-1.5 border-b border-[var(--line)] px-5 py-3">
+              <button type="button" onClick={() => setCat(MY_CAT)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === MY_CAT ? "bg-[#16306e] text-white" : "border border-[#f0d68a] bg-[#fffaf0] text-[#9a6b00] hover:bg-[#fff4d9]"}`}>{MY_CAT}<span className="ml-1 opacity-60">{myTpls.length}</span></button>
               {CATEGORIES.map((k) => <button key={k} type="button" onClick={() => setCat(k)} className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition ${cat === k ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k}<span className="ml-1 opacity-60">{TEMPLATES.filter((t) => t.category === k).length}</span></button>)}
             </div>
             <div className="grid min-h-0 flex-1 justify-center gap-4 aos-scroll overflow-y-auto p-5" style={{ gridTemplateColumns: "repeat(auto-fill, 300px)" }}>
-              {shown.map((t) => (
+              {cat === MY_CAT
+                ? (myTpls.length ? myTpls.map((s) => (
+                    <div key={s.id} className="group relative w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
+                      <button type="button" onClick={() => startSaved(s)} className="block w-full text-left">
+                        <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, nowMs) }} /></div>
+                        <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">My template · {s.blocks.length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
+                      </button>
+                      <button type="button" onClick={() => delMyTemplate(s.id)} title="Delete this saved template" className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-extrabold text-[#c02636] opacity-0 shadow ring-1 ring-black/10 transition group-hover:opacity-100 hover:bg-white">🗑</button>
+                    </div>
+                  )) : <div style={{ gridColumn: "1 / -1" }} className="py-16 text-center text-[13px] text-[var(--ink-3)]">No saved templates yet.<br />Open any design, tweak it, then hit <b>💾 Save as template</b> in the top bar — it&apos;ll appear here.</div>)
+                : shown.map((t) => (
                 <button key={t.id} type="button" onClick={() => start(t.id)} className="group w-[300px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left transition hover:-translate-y-0.5 hover:border-[#2f6bd8] hover:shadow-lg">
                   <div className="h-52 w-full overflow-hidden bg-white"><div style={{ width: 640, transform: "scale(0.4625)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: t.accentId, blocks: t.blocks() }, company, nowMs) }} /></div>
                   <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t.category} · {t.blocks().length} sections</div></div><span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">Use →</span></div>
