@@ -22,6 +22,9 @@ import {
 } from "./helpers";
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
+import { useSettings } from "@/lib/settings";
+import type { Season } from "@/lib/seasons";
+import type { Booking } from "./types";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -75,16 +78,34 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const [listing, setListing] = useState("");
   const [day, setDay] = useState("");
   const [range, setRange] = useState<"" | "today" | "yesterday" | "week">("");
+  const [season, setSeason] = useState("");
   const [exporting, setExporting] = useState(false);
+
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
+  const seasonObj = seasons.find((s) => s.id === season);
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
   const bounds = range ? rangeDays(range) : null;
+  // A booking belongs to a season if any of its sessions falls in the season's
+  // window. Sessions are labels like "Mon 28 Jul 2027 · 09:00 – 17:30"; parse
+  // the date part to an ISO day and compare. (Attendance-based, which is what
+  // "bookings for Summer 2026" means — not when it was booked.)
+  const inSeason = (b: Booking, s: Season): boolean =>
+    (b.sessions ?? []).some((sess) => {
+      const d = new Date(sess.split(" · ")[0].replace(/^[A-Za-z]{3,}\s+/, ""));
+      if (Number.isNaN(d.getTime())) return false;
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return iso >= s.from && iso <= s.to;
+    });
+
   const list = bookings
     .filter(
       (b) =>
         matchesFilter(b, filter) &&
         matchesSearch(b, query) &&
         (!listing || b.listing === listing) &&
+        (!seasonObj || inSeason(b, seasonObj)) &&
         (!bounds || (bookedOn(b) >= bounds.from && bookedOn(b) <= bounds.to)) &&
         runsOn(b, day),
     )
@@ -195,6 +216,21 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             />
           </Pill>
 
+          {seasons.length > 0 && (
+            <Pill active={!!season} onClear={() => setSeason("")}>
+              <PillSelect
+                active={!!season}
+                value={season}
+                onChange={setSeason}
+                title="Filter by season"
+                options={[
+                  ["", "📅 All seasons"],
+                  ...[...seasons].sort((a, b) => (a.from < b.from ? 1 : -1)).map((s) => [s.id, s.name] as [string, string]),
+                ]}
+              />
+            </Pill>
+          )}
+
           {/* When the booking was TAKEN, not when the child is in — that's
               what "anything come in yesterday?" means. Attendance by date is
               the "On this day" picker beside it, and the register. */}
@@ -239,7 +275,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
             />
           </Pill>
 
-          {(listing || day || range) && (
+          {(listing || day || range || season) && (
             <>
               <span className="text-[11.5px] text-[var(--ink-3)]">
                 {list.length} of {inScope.length}
@@ -255,6 +291,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   setListing("");
                   setDay("");
                   setRange("");
+                  setSeason("");
                 }}
                 className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline"
               >
