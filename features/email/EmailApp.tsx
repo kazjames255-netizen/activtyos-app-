@@ -1049,6 +1049,8 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const [sub, setSub] = useState<"segments" | "enquiries" | "custom">("enquiries");
   const [q, setQ] = useState("");
   const [enqLoc, setEnqLoc] = useState("all");
+  const [segLoc, setSegLoc] = useState("");
+  const [segListing, setSegListing] = useState("");
   const [folders, setFolders] = useState<string[]>(() => readLS<string[]>(LS_AUD_FOLDERS, []));
   useEffect(() => { writeLS(LS_AUD, custom); }, [custom]);
   useEffect(() => { writeLS(LS_AUD_FOLDERS, folders); }, [folders]);
@@ -1066,6 +1068,13 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
     { k: "segments" as const, label: "🎯 Groups", count: 1 + liveSegments.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
+  // Groups tab: build a live family group from the location + listing filters (both preset to "All").
+  const segFiltered = !!(segLoc || segListing);
+  const segTitle = listings.find((l) => l.id === segListing)?.title;
+  const segResolved = segFiltered ? resolveAudience(bookings, { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined }) : { emails: allAudience.emails, count: allAudience.count };
+  const filteredAudience: Audience = segFiltered
+    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `Active or upcoming booking${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}`, filter: { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined }, people: segResolved.emails.map((e) => ({ email: e })) }
+    : allAudience;
   return (
     <div>
       <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
@@ -1078,7 +1087,15 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
 
       {sub === "segments" && (<>
         <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...liveSegments].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
+        <div className="mb-4 rounded-2xl border border-[#cfe0f7] bg-white p-4 shadow-sm">
+          <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by location & listing</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
+          </div>
+          {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...liveSegments].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
       </>)}
 
       {sub === "enquiries" && (<>
