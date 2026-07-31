@@ -460,7 +460,7 @@ const MY_CAT = "⭐ My templates";
 export const loadMyTemplates = (): SavedTemplate[] => { try { const s = typeof window !== "undefined" ? window.localStorage.getItem(MYT_KEY) : null; return s ? (JSON.parse(s) as SavedTemplate[]) : []; } catch { return []; } };
 export const persistMyTemplates = (xs: SavedTemplate[]) => { try { window.localStorage.setItem(MYT_KEY, JSON.stringify(xs)); } catch { /* storage full or blocked */ } };
 
-export function CampaignDesigner({ initial, company, socials, onCancel, onSave }: { initial?: CampaignDesign | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSave: (d: CampaignDesign) => void }) {
+export function CampaignDesigner({ initial, company, socials, onCancel, onSave, saveLabel }: { initial?: CampaignDesign | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSave: (d: CampaignDesign) => void; saveLabel?: string }) {
   const uid = useRef(1000);
   const nk = () => `b${uid.current++}`;
   const [design, setDesign] = useState<CampaignDesign | null>(() => (initial ? { ...initial, blocks: withSocials(initial.blocks, socials).map((b, i) => ({ ...b, k: `i${i}` })) } : null));
@@ -624,7 +624,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
               <button type="button" onClick={() => setColourOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-[12px] font-bold hover:bg-white/25"><span className="h-4 w-4 rounded-full border border-white/70" style={{ background: accentHex(design.accent) }} />Colour <span className="text-[9px]">{colourOpen ? "▲" : "▼"}</span></button>
               {colourOpen && <div className="absolute right-0 top-full z-[60] mt-2 grid w-[188px] grid-cols-5 gap-1.5 rounded-xl border border-[var(--line)] bg-white p-2.5 shadow-2xl">{TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => { snapshot(); setDesign((d) => (d ? { ...d, accent: a.id } : d)); setColourOpen(false); }} title={a.name} className={`h-6 w-6 rounded-full border-2 transition ${design.accent === a.id ? "scale-110 border-[#0b1730]" : "border-white shadow hover:scale-110"}`} style={{ background: a.hex }} />)}</div>}
             </div>}
-            {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-5 py-2 text-[13px] font-extrabold text-[#1d3a8f]">✓ I&apos;m ready to send</button>}
+            {design && <button type="button" onClick={() => onSave(design)} className="rounded-lg bg-white px-5 py-2 text-[13px] font-extrabold text-[#1d3a8f]">{saveLabel || "✓ I'm ready to send"}</button>}
             <button type="button" onClick={onCancel} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold">×</button>
           </div>
         </div>

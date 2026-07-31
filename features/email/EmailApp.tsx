@@ -1129,7 +1129,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   return (
     <div>
       <div className="mb-4 inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">
-        {([["worded", "✍️ Worded templates"], ["designed", `🎨 Designed templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
+        {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
 
@@ -1153,7 +1153,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
       {sub === "designed" && <>
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[13px] font-bold text-[var(--ink-2)]">Build & save branded email designs — edit and save here, send from Campaigns</span>
-        <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New design</button>
+        <button type="button" onClick={() => setDesigner({ mode: "new" })} className="rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>＋ New builder template</button>
       </div>
       {designs.length === 0
         ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">No designs yet. Hit <b>＋ New design</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</Card>
@@ -1165,7 +1165,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
           ))}</div>}
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">These are just for building &amp; saving — <b>to send</b> one, go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
       </>}
-      {designer && <div className="relative z-[130]"><CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} /></div>}
+      {designer && <div className="relative z-[130]"><CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} saveLabel="💾 Save template" /></div>}
 
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
