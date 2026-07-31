@@ -35,7 +35,7 @@ import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
-import { emails, emailsInbound, emailsOpen } from "./routes/emails";
+import { emails, emailsInbound, emailsOpen, emailsUnsub } from "./routes/emails";
 import { mealOptions, mealOrders } from "./routes/mealsShop";
 import { documents } from "./routes/documents";
 import { compliance } from "./routes/compliance";
@@ -108,6 +108,7 @@ app.use("/api/events", events);
 app.use("/api/images", images);
 // Email open-tracking pixel — fetched by mail clients, so it can't carry auth.
 app.use("/api/emails/open", emailsOpen);
+app.use("/api/emails/unsubscribe", emailsUnsub);
 // Inbound email webhook — called by a mail platform with a shared secret.
 app.use("/api/emails/inbound", emailsInbound);
 

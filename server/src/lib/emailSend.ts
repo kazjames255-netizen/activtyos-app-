@@ -22,6 +22,17 @@ export const bodyHtml = (body: string) =>
 const pixel = (emailId: string, to: string) =>
   `<img src="${apiUrl}/api/emails/open/${emailId}?r=${encodeURIComponent(to)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">`;
 
+// A per-recipient, tamper-evident unsubscribe token (tenant:email, base64url).
+export const unsubToken = (tenantId: string, email: string) => Buffer.from(`${tenantId}:${email.toLowerCase()}`).toString("base64url");
+export const readUnsubToken = (tok: string): { tenantId: string; email: string } | null => {
+  try { const s = Buffer.from(tok, "base64url").toString("utf8"); const i = s.indexOf(":"); if (i < 0) return null; return { tenantId: s.slice(0, i), email: s.slice(i + 1) }; } catch { return null; }
+};
+// Every MARKETING email carries a one-click unsubscribe. Transactional mail (audience "one") doesn't.
+const unsubFooter = (tenantId: string, to: string) => {
+  const u = `${apiUrl}/api/emails/unsubscribe?u=${unsubToken(tenantId, to)}`;
+  return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #e6ebf2;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#8a94a6;text-align:center">You're getting this because you're on our mailing list. <a href="${u}" style="color:#8a94a6;text-decoration:underline">Unsubscribe</a> at any time.</div>`;
+};
+
 // ── Per-recipient merge fields ────────────────────────────────────────────
 // {ParentName}/{ChildName} and the booking-scoped {ListingName}/{SessionDate}/
 // {VenueName}/{BookingRef} resolve per recipient from that family's most
@@ -163,7 +174,8 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
       const ctx = ctxs?.get(to) ?? {};
       const subj = ctxs ? applyTokens(input.subject, ctx) : input.subject;
       const content = ctxs ? applyTokens(html, ctx) : html;
-      if (await sendMail(to, subj, content + pixel(ref.id, to))) delivered++;
+      const footer = input.audience === "all" ? unsubFooter(input.tenantId, to) : "";
+      if (await sendMail(to, subj, content + footer + pixel(ref.id, to))) delivered++;
     }
     await ref.set({ delivered, status: "sent" }, { merge: true });
   })().catch((e) => console.error(`[email] delivery recording failed for ${ref.id}:`, (e as Error).message));

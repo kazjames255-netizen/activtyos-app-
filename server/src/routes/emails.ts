@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import { performEmailSend, recordOpen } from "../lib/emailSend";
+import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
 import { ukNow } from "../lib/scheduler";
 import type { Role } from "../middleware/role";
 
@@ -11,8 +11,23 @@ import type { Role } from "../middleware/role";
 // and every real send is recorded in `emails` for a history/audit trail.
 export const emails = Router();
 const col = db.collection("emails");
+const suppressCol = db.collection("emailSuppressions");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const MAX_RECIPIENTS = 2000;
+
+// Emails that must NOT receive marketing: unsubscribed (suppression list) OR a
+// customer record that explicitly turned marketing consent off. Transactional
+// mail (audience "one") ignores this. Lowercased.
+async function unmarketable(tenantId: string): Promise<Set<string>> {
+  const [sup, cust] = await Promise.all([
+    suppressCol.where("tenantId", "==", tenantId).get(),
+    db.collection("customers").where("tenantId", "==", tenantId).get(),
+  ]);
+  const out = new Set<string>();
+  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) out.add(e.toLowerCase()); }
+  for (const d of cust.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && c.marketingOptIn === false) out.add(c.email.toLowerCase()); }
+  return out;
+}
 
 const sendSchema = z.object({
   subject: z.string().trim().min(1).max(200),
@@ -66,7 +81,12 @@ async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSch
   // Cc/Bcc are added to the recipient set (sends go out individually, so there
   // are no shared Cc/Bcc headers — real header-level Cc/Bcc is a mailer
   // enhancement).
-  return [...new Set([...base, ...splitAddrs(input.cc), ...splitAddrs(input.bcc)])];
+  const set = [...new Set([...base, ...splitAddrs(input.cc), ...splitAddrs(input.bcc)])];
+  // Marketing sends (a blast — anything that isn't a single "one" email) drop
+  // anyone who unsubscribed or turned marketing consent off. PECR compliance.
+  if (input.audience === "one") return set;
+  const blocked = await unmarketable(tenantId);
+  return set.filter((e) => !blocked.has(e));
 }
 
 // GET /api/emails/audiences — live CRM segments, computed from bookings and
@@ -110,7 +130,14 @@ emails.get("/audiences", async (req, res) => {
     .map((d) => ((d.data() as { email?: string }).email ?? "").toLowerCase())
     .filter((e) => e.includes("@") && !families.has(e)))];
 
-  const seg = (id: string, name: string, desc: string, emails: string[]) => ({ id, name, desc, count: emails.length, emails });
+  // Marketing audiences exclude unsubscribed / consent-off emails, so the count
+  // matches who will actually receive a campaign.
+  const blocked = new Set<string>();
+  for (const d of customers.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && c.marketingOptIn === false) blocked.add(c.email.toLowerCase()); }
+  const sup = await suppressCol.where("tenantId", "==", tenantId).get();
+  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) blocked.add(e.toLowerCase()); }
+  const keep = (es: string[]) => es.filter((e) => !blocked.has(e));
+  const seg = (id: string, name: string, desc: string, es: string[]) => ({ id, name, desc, count: keep(es).length, emails: keep(es) });
   res.json([
     seg("all", "All families", "Everyone who has booked with you (not cancelled)", all),
     seg("active", "Active families", "Has a current or upcoming booking", emailsOf((f) => f.active)),
@@ -370,4 +397,22 @@ const GIF = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA
 emailsOpen.get("/:id", async (req, res) => {
   await recordOpen(req.params.id, typeof req.query.r === "string" ? req.query.r : "");
   res.set("Content-Type", "image/gif").set("Cache-Control", "no-store").send(GIF);
+});
+
+// One-click unsubscribe from a marketing email. Public (a mail client carries no
+// token) — mounted before auth. Adds the address to the suppression list and,
+// best-effort, flips the customer's marketing consent off.
+export const emailsUnsub = Router();
+const unsubPage = (title: string, msg: string) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head><body style="font-family:system-ui,-apple-system,Arial,sans-serif;background:#f4f7fc;margin:0;padding:44px 16px"><div style="max-width:440px;margin:0 auto;background:#fff;border-radius:18px;padding:30px;text-align:center;box-shadow:0 16px 44px -22px rgba(20,33,58,.5)"><div style="font-size:42px">✅</div><h1 style="font-size:21px;color:#16306e;margin:10px 0 8px">${title}</h1><p style="font-size:14px;color:#5b6472;line-height:1.55;margin:0">${msg}</p></div></body></html>`;
+emailsUnsub.get("/", async (req, res) => {
+  const parsed = readUnsubToken(typeof req.query.u === "string" ? req.query.u : "");
+  if (!parsed) { res.status(400).set("Content-Type", "text/html").send(unsubPage("Link not valid", "This unsubscribe link couldn't be read. Reply to the email and we'll take you off the list by hand.")); return; }
+  const email = parsed.email.toLowerCase();
+  try {
+    const existing = await suppressCol.where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get();
+    if (existing.empty) await suppressCol.add({ tenantId: parsed.tenantId, email, at: new Date().toISOString() });
+    const cust = await db.collection("customers").where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get();
+    if (!cust.empty) await cust.docs[0].ref.set({ marketingOptIn: false }, { merge: true });
+  } catch (e) { console.error(`[unsubscribe] ${email}:`, (e as Error).message); }
+  res.set("Content-Type", "text/html").send(unsubPage("You're unsubscribed", `<b>${email}</b> won't get any more marketing emails from us. Booking confirmations and payment updates still come through — those aren't marketing.`));
 });
