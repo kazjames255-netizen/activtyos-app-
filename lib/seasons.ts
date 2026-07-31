@@ -14,33 +14,27 @@
 
 export interface Season {
   id: string;
-  /** Human name — "Summer 1", "Autumn 2", "All year". Freely editable. */
+  /** Human name — "Summer 1", "Oct Half Term", "Full year". Freely editable. */
   name: string;
-  /** Listing ids that belong to this season. A booking is "in" the season when
-   *  its listingId is in here. */
-  listingIds?: string[];
 }
 
-/** A ready-made set of UK term half-names to start from — all editable, and all
- *  begin with no listings assigned. */
+/** A ready-made UK school year for a camp/club business — the six term
+ *  half-terms and the six holiday-camp periods, in calendar order, plus a
+ *  year-round bucket. All editable/removable. */
 export function defaultSeasonNames(): Season[] {
   return [
-    { id: "s-autumn-1", name: "Autumn 1", listingIds: [] },
-    { id: "s-autumn-2", name: "Autumn 2", listingIds: [] },
-    { id: "s-spring-1", name: "Spring 1", listingIds: [] },
-    { id: "s-spring-2", name: "Spring 2", listingIds: [] },
-    { id: "s-summer-1", name: "Summer 1", listingIds: [] },
-    { id: "s-summer-2", name: "Summer 2", listingIds: [] },
-    { id: "s-all-year", name: "All year", listingIds: [] },
+    { id: "s-autumn-1", name: "Autumn 1" },
+    { id: "s-oct-half", name: "Oct Half Term" },
+    { id: "s-autumn-2", name: "Autumn 2" },
+    { id: "s-christmas", name: "Christmas Holidays" },
+    { id: "s-spring-1", name: "Spring 1" },
+    { id: "s-feb-half", name: "Feb Half Term" },
+    { id: "s-spring-2", name: "Spring 2" },
+    { id: "s-easter", name: "Easter Holidays" },
+    { id: "s-summer-1", name: "Summer 1" },
+    { id: "s-may-half", name: "May Half Term" },
+    { id: "s-summer-2", name: "Summer 2" },
+    { id: "s-summer-hols", name: "Summer Holidays" },
+    { id: "s-full-year", name: "Full year" },
   ];
-}
-
-/** True when a booking's listing belongs to this season. */
-export function bookingInSeason(season: Season, listingId?: string | null): boolean {
-  return !!listingId && (season.listingIds ?? []).includes(listingId);
-}
-
-/** The listing ids a season owns (never undefined). */
-export function seasonListingIds(season: Season): string[] {
-  return season.listingIds ?? [];
 }

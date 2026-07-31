@@ -400,45 +400,21 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
   );
 }
 
-// ── Seasons — named buckets you assign listings to (lib/seasons.ts) ──────────
+// ── Seasons — just the names; listings pick their season in the listing builder ──
 function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: Season[]) => void }) {
-  // The provider's listings, to tick which belong to each season.
-  const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((ls) => setListings(ls.map((l) => ({ id: l.id, title: l.title || l.name || "Untitled listing" })))).catch(() => {}); }, []);
   const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
-  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nListings stay put — they just stop being grouped under this season.`)) onChange(items.filter((s) => s.id !== id)); };
-  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season", listingIds: [] }]);
+  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nListings set to it just become “no season”.`)) onChange(items.filter((s) => s.id !== id)); };
+  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season" }]);
   const restore = () => { const have = new Set(items.map((s) => s.id)); onChange([...items, ...defaultSeasonNames().filter((s) => !have.has(s.id))]); };
-  const toggleListing = (id: string, listingId: string) => patch(id, (x) => { const set = new Set(x.listingIds ?? []); if (set.has(listingId)) set.delete(listingId); else set.add(listingId); return { ...x, listingIds: [...set] }; });
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 A season is just a <b>name</b> you tick listings into — no dates. Bookings, audiences and takings then group by which season a listing is in, so different holiday dates across towns don’t matter.</div>
-      {items.map((s) => {
-        const chosen = s.listingIds ?? [];
-        return (
-          <div key={s.id} className="rounded-xl border border-[var(--line)] bg-white px-3 py-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
-              <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">{chosen.length} listing{chosen.length === 1 ? "" : "s"}</span>
-              <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
-            </div>
-            {listings.length === 0 ? (
-              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Create some listings and they’ll show here to tick into this season.</p>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {listings.map((l) => {
-                  const on = chosen.includes(l.id);
-                  return (
-                    <button key={l.id} type="button" onClick={() => toggleListing(s.id, l.id)} className="rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors" style={on ? { background: "#16306e", borderColor: "#16306e", color: "#fff" } : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink-2)" }} title={l.title}>
-                      {on ? "✓ " : "＋ "}{l.title}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
+      {items.map((s) => (
+        <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-2">
+          <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
+          <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+        </div>
+      ))}
       <div className="mt-1 flex flex-wrap gap-2">
         <Button sm onClick={add}>＋ Add a season</Button>
         {items.length === 0 && <Button sm variant="ghost" onClick={restore}>Restore the standard names</Button>}
@@ -2091,7 +2067,7 @@ export function SetupApp() {
       {tab === "seasons" && (
         <Section
           title="Seasons"
-          lede="Your trading periods — just names (Autumn 1, Summer 2, All year…). Tick which listings belong to each, and Bookings, Audiences and takings can group by season. No dates, so different holiday dates across towns don’t matter."
+          lede="Your trading periods — just names (Autumn 1, Summer Holidays, Full year…). Each listing picks its season when you build it, and Bookings, Audiences and takings group by it. No dates, so different holiday dates across towns don’t matter."
         >
           <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
         </Section>

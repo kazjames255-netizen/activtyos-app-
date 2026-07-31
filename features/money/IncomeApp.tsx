@@ -7,7 +7,6 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
-import { bookingInSeason } from "@/lib/seasons";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -105,6 +104,9 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   const [ovSeason, setOvSeason] = useState("");
+  // listingId → seasonId (each listing's season is set in the listing builder).
+  const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
+  useEffect(() => { apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((ls) => setListingSeason(Object.fromEntries(ls.filter((l) => l.seasonId).map((l) => [l.id, l.seasonId as string])))).catch(() => {}); }, []);
   const [ovRange, setOvRange] = useState<Range>("all");
   const [ovFrom, setOvFrom] = useState("");
   const [ovTo, setOvTo] = useState("");
@@ -214,14 +216,14 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   // no listing, so it isn't season-scoped (only shows under "All seasons").
   const ovItems = useMemo(() => allItems.filter((x) => {
     const d = x.date || "";
-    if (ovSeasonObj && !bookingInSeason(ovSeasonObj, x.listingId)) return false;
+    if (ovSeasonObj && (!x.listingId || listingSeason[x.listingId] !== ovSeasonObj.id)) return false;
     if (ovRange === "month" && d.slice(0, 7) !== thisMonthKey) return false;
     if (ovRange === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
     if (ovRange === "year" && d.slice(0, 4) !== thisYear) return false;
     if (ovFrom && d < ovFrom) return false;
     if (ovTo && d > ovTo) return false;
     return true;
-  }), [allItems, ovSeasonObj, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
+  }), [allItems, ovSeasonObj, listingSeason, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
   const ovTotal = useMemo(() => ovItems.reduce((s, x) => s + x.amount, 0), [ovItems]);
   const ovCats = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};

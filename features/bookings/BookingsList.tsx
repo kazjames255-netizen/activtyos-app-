@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { get as apiGet } from "@/lib/api";
 import { useBookingsStore } from "./store";
 import {
   FILTER_TABS,
@@ -23,7 +24,6 @@ import {
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
-import { bookingInSeason } from "@/lib/seasons";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -83,6 +83,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   const seasonObj = seasons.find((s) => s.id === season);
+  // Each listing carries its seasonId (set in the listing builder); map it so a
+  // booking's season is its listing's season.
+  const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
+  useEffect(() => { apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((ls) => setListingSeason(Object.fromEntries(ls.filter((l) => l.seasonId).map((l) => [l.id, l.seasonId as string])))).catch(() => {}); }, []);
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
   const bounds = range ? rangeDays(range) : null;
@@ -92,8 +96,8 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
         matchesFilter(b, filter) &&
         matchesSearch(b, query) &&
         (!listing || b.listing === listing) &&
-        // A booking is "in" a season when its listing is grouped under it.
-        (!seasonObj || bookingInSeason(seasonObj, b.listingId)) &&
+        // A booking is "in" a season when its listing's seasonId matches.
+        (!seasonObj || (!!b.listingId && listingSeason[b.listingId] === seasonObj.id)) &&
         (!bounds || (bookedOn(b) >= bounds.from && bookedOn(b) <= bounds.to)) &&
         runsOn(b, day),
     )

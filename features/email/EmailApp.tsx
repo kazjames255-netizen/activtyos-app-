@@ -872,7 +872,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
 
 function useCampaignData() {
   const [rawBookings, setRawBookings] = useState<Booking[]>([]);
-  const [rawListings, setRawListings] = useState<{ id: string; title: string; venueId?: string; runFrom?: string; runTo?: string }[]>([]);
+  const [rawListings, setRawListings] = useState<{ id: string; title: string; venueId?: string; runFrom?: string; runTo?: string; seasonId?: string | null }[]>([]);
   const [venueName, setVenueName] = useState<Record<string, string>>({}); // venueId → name
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [segments, setSegments] = useState<Audience[] | null>(null);
@@ -886,7 +886,7 @@ function useCampaignData() {
       .then((s) => setSegments(s.filter((x) => x.id !== "all").map((x) => ({ ...x, id: `seg-${x.id}` }))))
       .catch(() => {});
   }, []);
-  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo })))).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo, seasonId: x.seasonId })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
   // A listing's location = its venue's name. A booking inherits its listing's location.
@@ -1198,10 +1198,13 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const season = seasons.find((s) => s.id === segSeason);
   const segFiltered = !!(segLoc || segListing || segPay || season);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
-  // A season is a set of listings, so filtering by it = filtering by those
-  // listing ids. A specific listing pick still wins if both are set.
-  const seasonListings = season?.listingIds?.length ? season.listingIds : undefined;
-  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListings, paymentMethod: segPay || undefined };
+  // A season is the set of listings tagged to it (in the listing builder), so
+  // filtering by season = filtering by those listing ids. A specific listing
+  // pick still wins. A season with no listings yet → a sentinel that matches
+  // nobody (rather than falling through to "everyone").
+  const seasonListings = season ? listings.filter((l) => l.seasonId === season.id).map((l) => l.id) : [];
+  const seasonListingFilter = season ? (seasonListings.length ? seasonListings : ["__none__"]) : undefined;
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListingFilter, paymentMethod: segPay || undefined };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
     ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season && !segListing ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season && !segListing ? `Booked a ${season.name} activity` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }

@@ -251,6 +251,9 @@ export interface WizardDraft {
   ageTo: string;
   categoryIds: string[];
   venueId: string | null;
+  /** Which season this listing runs in (Setup → Seasons). Drives the season
+   *  filter on Bookings, Audiences and money-in. Null = not set. */
+  seasonId?: string | null;
   /** Optional on-the-day contact number, shown to parents ONLY while the camp
    *  is actually running (today within the run dates) — e.g. how to reach staff
    *  during sessions. Blank = not shown. */
@@ -387,7 +390,7 @@ export function emptyDraft(defaults?: {
   const firstLive = (defaults?.cancellationPolicies ?? [])[0];
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
-    categoryIds: [], venueId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
+    categoryIds: [], venueId: null, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
@@ -1267,6 +1270,8 @@ function genBio(prompt: string, m: StaffMember, variant: number): string {
 
 // ── Step: Basics ───────────────────────────────────────────────────────────
 function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
   return (
     <div className="max-w-[720px]">
       <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name, a hook and a big, bright photo — pick a layout to see how it looks." />
@@ -1301,6 +1306,15 @@ function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
       </Select>
       <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in the Locations tab — just pick a venue here.</div>
+
+      {seasons.length > 0 && (<>
+        <SectionHead icon="📅">Season</SectionHead>
+        <Select value={d.seasonId ?? ""} onChange={(e) => upd({ seasonId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
+          <option value="">No season</option>
+          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </Select>
+        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Which trading period this runs in — lets Bookings, Audiences &amp; money-in group by season. Manage the names in Setup → Seasons.</div>
+      </>)}
 
       <FieldLabel>On-the-day contact number <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
       <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
