@@ -5,6 +5,8 @@ import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
+import { SeasonPicker } from "@/components/SeasonPicker";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -99,6 +101,9 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
   const [trendMode, setTrendMode] = useState<"7d" | "month" | "6m" | "9m" | "year">("6m");
   // Overview breakdowns can be scoped to a period (independent of the ledger).
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
+  const [ovSeason, setOvSeason] = useState("");
   const [ovRange, setOvRange] = useState<Range>("all");
   const [ovFrom, setOvFrom] = useState("");
   const [ovTo, setOvTo] = useState("");
@@ -202,16 +207,18 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   }, [allItems, thisYear]);
   const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
 
+  const ovSeasonObj = seasons.find((s) => s.id === ovSeason);
   // Period-scoped set that drives the two overview breakdown cards.
   const ovItems = useMemo(() => allItems.filter((x) => {
     const d = x.date || "";
+    if (ovSeasonObj && (d < ovSeasonObj.from || d > ovSeasonObj.to)) return false;
     if (ovRange === "month" && d.slice(0, 7) !== thisMonthKey) return false;
     if (ovRange === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
     if (ovRange === "year" && d.slice(0, 4) !== thisYear) return false;
     if (ovFrom && d < ovFrom) return false;
     if (ovTo && d > ovTo) return false;
     return true;
-  }), [allItems, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
+  }), [allItems, ovSeasonObj, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
   const ovTotal = useMemo(() => ovItems.reduce((s, x) => s + x.amount, 0), [ovItems]);
   const ovCats = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};
@@ -224,8 +231,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     for (const x of ovItems) { if (x.category !== BOOKINGS_CAT) continue; const m = x.method || "Other"; (by[m] ||= { total: 0, count: 0 }); by[m].total += x.amount; by[m].count++; }
     return Object.entries(by).map(([method, v]) => ({ method, ...v })).sort((a, b) => b.total - a.total);
   }, [ovItems]);
-  const ovActive = ovRange !== "all" || !!ovFrom || !!ovTo;
-  const ovRangeLabel = ovRange === "month" ? "this month" : ovRange === "lastmonth" ? "last month" : ovRange === "year" ? thisYear : ovFrom || ovTo ? "custom range" : "all time";
+  const ovActive = ovRange !== "all" || !!ovFrom || !!ovTo || !!ovSeasonObj;
+  const ovRangeLabel = ovSeasonObj ? ovSeasonObj.name : ovRange === "month" ? "this month" : ovRange === "lastmonth" ? "last month" : ovRange === "year" ? thisYear : ovFrom || ovTo ? "custom range" : "all time";
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -399,14 +406,15 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="text-[13.5px] font-extrabold">Where it comes from</div>
               <div className="flex flex-wrap items-center gap-2">
+                <SeasonPicker seasons={seasons} value={ovSeason} onChange={(id) => { setOvSeason(id); if (id) { setOvRange("all"); setOvFrom(""); setOvTo(""); } }} allLabel="All seasons" />
                 <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11px] font-bold">
                   {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
-                    <button key={k} onClick={() => setOvRange(k)} className="px-2.5 py-1 transition-colors" style={ovRange === k ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                    <button key={k} onClick={() => { setOvRange(k); setOvSeason(""); }} className="px-2.5 py-1 transition-colors" style={ovRange === k && !ovSeasonObj ? { background: ACCENT, color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                   ))}
                 </div>
-                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">From <input type="date" value={ovFrom} onChange={(e) => setOvFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
-                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">to <input type="date" value={ovTo} onChange={(e) => setOvTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
-                {ovActive && <button type="button" onClick={() => { setOvRange("all"); setOvFrom(""); setOvTo(""); }} className="text-[11px] font-bold text-[#16306e] hover:underline">Clear ✕</button>}
+                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">From <input type="date" value={ovFrom} onChange={(e) => { setOvFrom(e.target.value); setOvSeason(""); }} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
+                <label className="flex items-center gap-1 text-[11px] text-[var(--ink-3)]">to <input type="date" value={ovTo} onChange={(e) => { setOvTo(e.target.value); setOvSeason(""); }} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1 text-[11.5px] text-[var(--ink)] outline-none" /></label>
+                {ovActive && <button type="button" onClick={() => { setOvRange("all"); setOvFrom(""); setOvTo(""); setOvSeason(""); }} className="text-[11px] font-bold text-[#16306e] hover:underline">Clear ✕</button>}
               </div>
             </div>
             <div className="mb-2 text-[11px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{money(ovTotal)}</b> in · {ovRangeLabel}</div>
