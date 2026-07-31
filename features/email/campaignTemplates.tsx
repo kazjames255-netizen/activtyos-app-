@@ -20,7 +20,7 @@ export type BlockType = "header" | "logo" | "hero" | "band" | "heading" | "text"
 export interface Card { image?: string; video?: string; ix?: number; iy?: number; iz?: number; title?: string; caption?: string; price?: string; label?: string; url?: string }
 export interface Social { net: string; url?: string }
 export type ImgShape = "landscape" | "square" | "portrait" | "wide";
-export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; video?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string; variant?: string; logoH?: number; noNote?: boolean; time?: string; noPhone?: boolean; noEmail?: boolean; noWeb?: boolean; noAddr?: boolean; font?: string; fontSize?: number; bold?: boolean; italic?: boolean; accent?: string }
+export interface Block { k?: string; t: BlockType; heading?: string; subheading?: string; body?: string; image?: string; video?: string; ix?: number; iy?: number; iz?: number; size?: "s" | "m" | "full"; shape?: ImgShape; splitPct?: number; align?: "left" | "center" | "right"; label?: string; url?: string; caption?: string; cols?: number; cards?: Card[]; flip?: boolean; socials?: Social[]; item1?: string; item2?: string; item3?: string; item4?: string; item5?: string; item6?: string; footerPhone?: string; footerEmail?: string; footerWeb?: string; footerAddress?: string; date?: string; span?: "full" | "half" | "third"; chart?: "bars" | "columns" | "progress" | "stacked" | "pie"; unit?: string; variant?: string; logoH?: number; noNote?: boolean; time?: string; noPhone?: boolean; noEmail?: boolean; noWeb?: boolean; noAddr?: boolean; font?: string; fontSize?: number; bold?: boolean; italic?: boolean; accent?: string; border?: string }
 export interface CampaignDesign { templateId?: string; accent: string; blocks: Block[] }
 
 export const TPL_ACCENTS: { id: string; name: string; hex: string }[] = [
@@ -337,12 +337,40 @@ export function groupRows(blocks: Block[]): Block[][] {
   if (cur.length) rows.push(cur);
   return rows;
 }
+// ── section frames / borders — colour derives from the section's accent ──────
+export const BORDERS: [string, string][] = [["none", "None"], ["shadow", "Elegant card"], ["photo", "Photo frame"], ["gold", "Luxury"], ["polaroid", "Polaroid"], ["double", "Double line"], ["corners", "Corners"], ["neon", "Neon glow"], ["ribbon", "Ribbon"], ["sparkle", "Sparkle"], ["confetti", "Confetti"]];
+function frameWrap(inner: string, kind: string | undefined, t: Theme): string {
+  if (!kind || kind === "none") return inner;
+  const R = 16;
+  const tbl = (radius: number) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;border-radius:${radius}px;overflow:hidden">${inner}</table>`;
+  const box = (divStyle: string, deco = "", pad = "16px 18px", radius = R, innerR = R - 4) => `<tr><td style="padding:${pad}"><div style="position:relative;border-radius:${radius}px;${divStyle}">${tbl(Math.max(innerR, 4))}${deco}</div></td></tr>`;
+  const bracket = (corner: "tl" | "tr" | "bl" | "br", col: string) => { const m = { tl: `top:7px;left:7px;border-top:2px solid ${col};border-left:2px solid ${col};border-top-left-radius:7px`, tr: `top:7px;right:7px;border-top:2px solid ${col};border-right:2px solid ${col};border-top-right-radius:7px`, bl: `bottom:7px;left:7px;border-bottom:2px solid ${col};border-left:2px solid ${col};border-bottom-left-radius:7px`, br: `bottom:7px;right:7px;border-bottom:2px solid ${col};border-right:2px solid ${col};border-bottom-right-radius:7px` }; return `<div style="position:absolute;width:20px;height:20px;${m[corner]}"></div>`; };
+  const corners4 = (col: string) => bracket("tl", col) + bracket("tr", col) + bracket("bl", col) + bracket("br", col);
+  switch (kind) {
+    case "shadow": return box(`background:#fff;border:1px solid ${t.line};box-shadow:0 22px 46px -24px rgba(20,33,58,.5)`, `<div style="position:absolute;top:0;left:0;right:0;height:4px;background:${t.a};background-image:linear-gradient(90deg,${t.a},${shade(t.a, 40)});border-radius:${R}px ${R}px 0 0"></div>`);
+    case "photo": return box(`background:#fff;padding:12px;border:1px solid ${shade(t.line, -8)};box-shadow:0 20px 44px -22px rgba(20,33,58,.55)`, "", "16px 20px", R, 8);
+    case "gold": return box(`background-image:linear-gradient(135deg,${shade(t.a, 55)},${t.a},${shade(t.a, -28)});padding:3px;box-shadow:0 16px 36px -22px rgba(0,0,0,.45)`, corners4("#ffffff"), "16px 18px", 18, 15);
+    case "polaroid": return box(`background:#fff;padding:12px 12px 40px;box-shadow:0 22px 44px -20px rgba(20,33,58,.55)`, `<div style="position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:12px;letter-spacing:3px;color:${t.mut}">• • •</div>`, "16px 20px", 8, 4);
+    case "double": return box(`border:3px double ${t.a};padding:6px`, "", "14px 18px", R, 10);
+    case "corners": return box("padding:13px", corners4(shade(t.a, 12)), "16px 18px", R, 10);
+    case "neon": return box(`border:2px solid ${t.a};box-shadow:0 0 0 1px ${t.a},0 0 14px ${t.a},0 0 30px ${t.a}55;padding:3px`, "", "16px 18px", R, 12);
+    case "ribbon": return box(`background:#fff;border:1px solid ${t.line};box-shadow:0 18px 40px -22px rgba(20,33,58,.5)`, `<div style="position:absolute;top:16px;left:-7px;background:${t.a};background-image:linear-gradient(90deg,${t.a},${shade(t.a, -20)});color:${t.onA};font-size:11px;font-weight:800;letter-spacing:.5px;padding:5px 15px;box-shadow:0 6px 13px -6px rgba(0,0,0,.45)">★ FEATURED</div><div style="position:absolute;top:39px;left:-7px;border:4px solid transparent;border-top-color:${shade(t.a, -45)};border-right-color:${shade(t.a, -45)}"></div>`, "20px 18px", R, 12);
+    case "sparkle": { const s = (pos: string, sz: number) => `<div style="position:absolute;${pos};font-size:${sz}px;line-height:1;color:${t.a}">✦</div>`; return box(`border:1px solid ${t.a};padding:6px`, s("top:1px;left:10px", 16) + s("top:11px;right:14px", 11) + s("bottom:5px;left:16px", 11) + s("bottom:1px;right:10px", 16), "16px 18px", R, 11); }
+    case "confetti": { const cc = chartColors(t.a, 6).concat(chartColors(t.a, 6)); const strip = (top: boolean) => `<div style="position:absolute;left:0;right:0;${top ? "top:5px" : "bottom:5px"};text-align:center;font-size:0;line-height:0">${cc.map((col) => `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin:0 5px"></span>`).join("")}</div>`; return box(`background:#fff;border:1px solid ${t.line};box-shadow:0 18px 40px -22px rgba(20,33,58,.5);padding:12px 0`, strip(true) + strip(false), "16px 18px", R, 10); }
+  }
+  return inner;
+}
+function renderBlockFramed(b: Block, t: Theme, c?: Partial<Company>, now = 0): string {
+  const inner = renderBlock(b, t, c, now);
+  if (!b.border || b.border === "none") return inner;
+  return frameWrap(inner, b.border, b.accent ? theme(accentHex(b.accent) || b.accent) : t);
+}
 export function renderDesignHtml(d: CampaignDesign, c?: Partial<Company>, now = 0): string {
   const t = theme(accentHex(d.accent) || d.accent);
   const html = groupRows(d.blocks || []).map((grp) => {
-    if (grp.length === 1 && widthOf(grp[0]) >= 1) return renderBlock(grp[0], t, c, now);
+    if (grp.length === 1 && widthOf(grp[0]) >= 1) return renderBlockFramed(grp[0], t, c, now);
     let used = 0;
-    const cells = grp.map((g) => { const w = Math.round(widthOf(g) * 100); used += w; return `<td valign="top" width="${w}%" style="vertical-align:top"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(g, t, c, now)}</table></td>`; }).join("");
+    const cells = grp.map((g) => { const w = Math.round(widthOf(g) * 100); used += w; return `<td valign="top" width="${w}%" style="vertical-align:top"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlockFramed(g, t, c, now)}</table></td>`; }).join("");
     const spacer = used < 99 ? `<td width="${100 - used}%">&nbsp;</td>` : "";
     return `<tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>${cells}${spacer}</tr></table></td></tr>`;
   }).join("");
@@ -591,7 +619,7 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                       <div key={rowBlocks[0].k} className="flex items-stretch">
                         {rowBlocks.map((b) => { const i = design.blocks.indexOf(b); const fw = `${(widthOf(b) * 100).toFixed(3)}%`; return (
                           <div key={b.k} className="group relative min-w-0" style={{ flex: `0 0 ${fw}`, maxWidth: fw }} onClick={(e) => { e.stopPropagation(); setSelKey(b.k!); }}>
-                            <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlock(b, t2, company, nowMs)}</table>` }} />
+                            <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%">${renderBlockFramed(b, t2, company, nowMs)}</table>` }} />
                             <div className={`pointer-events-none absolute inset-0 transition ${selKey === b.k ? "ring-[3px] ring-inset ring-[#2f6bd8]" : "ring-2 ring-inset ring-transparent group-hover:ring-[#2f6bd8]/45"}`} />
                             <div className={`absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-lg bg-white px-1 py-0.5 shadow-lg ring-1 ring-black/15 transition ${selKey === b.k ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                               <span className="px-1 text-[10px] font-extrabold text-[#5b6472]">{BLOCK_LABEL[b.t]}</span>
@@ -659,6 +687,10 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave }
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Colour</span>
                 <button type="button" onClick={() => patch(selBlock.k!, { accent: "" })} title="Use the email's colour" className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${!selBlock.accent ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>Match email</button>
                 {TPL_ACCENTS.map((a) => <button key={a.id} type="button" onClick={() => patch(selBlock.k!, { accent: a.id })} title={`Just this section: ${a.name}`} className={`h-5 w-5 flex-none rounded-full transition ${selBlock.accent === a.id ? "ring-2 ring-[#16306e] ring-offset-1" : "ring-1 ring-black/10 hover:ring-black/30"}`} style={{ background: a.hex }} />)}
+              </div>
+              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2">
+                <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Frame</span>
+                {BORDERS.map(([v, l]) => <button key={v} type="button" onClick={() => patch(selBlock.k!, { border: v })} className={`rounded-md px-2 py-1 text-[10.5px] font-bold ${(selBlock.border || "none") === v ? "bg-[#16306e] text-white" : "border border-[var(--line)] text-[var(--ink-2)] hover:bg-white"}`}>{l}</button>)}
               </div>
               <div className="min-h-0 flex-1 aos-scroll overflow-y-auto p-3.5">{blockEditor(selBlock)}</div>
               <div className="flex gap-2 border-t border-[var(--line)] p-2.5"><button type="button" onClick={() => del(selBlock.k!)} className="flex-none rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2.5 text-[12.5px] font-extrabold text-[#c02636] transition hover:bg-[#fbe3e5]">🗑 Remove</button><button type="button" onClick={() => setSelKey(null)} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-md transition hover:brightness-110" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>✓ Done editing</button></div>
