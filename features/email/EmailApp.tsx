@@ -679,6 +679,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [sendErr, setSendErr] = useState<string | null>(null);
   const [sentOk, setSentOk] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [chooseView, setChooseView] = useState(false);   // Content step: show just the two options (Worded / Design)
   const [savedDesigns, setSavedDesigns] = useState<SavedTemplate[]>(() => loadMyTemplates());
   const STEPS = ["Name", "Audience", "Subject", "Content"];
   const lastStep = STEPS.length - 1;
@@ -751,8 +752,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             {step === 3 && <div className="space-y-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">How should it look?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Use a ready-worded template, or design your own branded email.</p></div>
-                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setMode(k)} className="px-4 py-2.5" style={mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setMode(k); setChooseView(false); }} className="px-4 py-2.5" style={!chooseView && mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
               </div>
+              {chooseView && <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm"><div className="text-[15px] font-extrabold text-[var(--ink)]">How should your email look?</div><p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Tap <b>📄 Worded templates</b> or <b>🎨 Design your own</b> above to choose.</p></div>}
+              {!chooseView && <>
               {mode === "template"
                 ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
                     <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
@@ -806,18 +809,19 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                 </div>
               )}
               <p className="text-[12px] text-[var(--ink-3)]">Opted-out recipients are excluded automatically; a one-click unsubscribe footer is added to every send.</p>
+              </>}
             </div>}
           </div>
         </div>
         {sendErr && <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-[#f2c4c9] bg-[#fdf0f1] px-3 py-2 text-[12.5px] font-semibold text-[#c02636]"><span>⚠</span><span>{sendErr}</span></div>}
         <div className="flex items-center gap-2 border-t border-[var(--line)] px-6 py-3.5">
-          <button type="button" onClick={() => (step === 0 ? onCancel() : setStep(step - 1))} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
+          <button type="button" onClick={() => { if (step === 0) return onCancel(); if (step === lastStep && !chooseView) return setChooseView(true); setChooseView(false); setStep(step - 1); }} disabled={!!busy} className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40">{step === 0 ? "Cancel" : "← Back"}</button>
           <div className="ml-auto flex items-center gap-2">
             {step < lastStep
               ? <button type="button" onClick={() => setStep(step + 1)} disabled={nextDisabled} className="rounded-lg px-6 py-2 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(180deg,#3f78d8,#1d3a8f)" }}>Next →</button>
               : <>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy || !contentReady} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
-                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !contentReady || !!busy} className="rounded-lg px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-1.5 py-1"><input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} title="Schedule for" className="rounded bg-transparent px-1 py-1 text-[12px] text-[var(--ink)] outline-none" /><button type="button" onClick={() => submit("scheduled")} disabled={!!busy || !contentReady || chooseView} className="rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{busy === "scheduled" ? "Scheduling…" : "⧗ Schedule"}</button></div>
+                  <button type="button" onClick={() => submit("sent")} disabled={included.length === 0 || !contentReady || chooseView || !!busy} className="rounded-lg px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>{busy === "sent" ? "Sending…" : "Send now"}</button>
                 </>}
           </div>
         </div>
