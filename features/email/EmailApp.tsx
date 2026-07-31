@@ -6,6 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { type Season } from "@/lib/seasons";
+import { SeasonPicker } from "@/components/SeasonPicker";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -910,6 +911,9 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const [sched, setSched] = useState<Scheduled[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
+  const [campSeason, setCampSeason] = useState("");
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   // If we arrived from an audience card's "Use in campaign", open straight into the locked composer.
@@ -968,10 +972,24 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   ];
   const allRows = [...linked, ...serverOnly];
   const cq = q.trim().toLowerCase();
-  const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
+  const campSeasonObj = seasons.find((s) => s.id === campSeason);
+  // The day a campaign was sent — from its linked server record, else parsed
+  // from the local row id (`c<ms>`). Drafts with no date stay visible.
+  const histCreatedById = new Map((hist ?? []).map((h) => [h.id, h.createdAt]));
+  const rowDay = (c: Campaign): string => {
+    const iso = c.emailId ? histCreatedById.get(c.emailId) : undefined;
+    if (iso) return iso.slice(0, 10);
+    const m = /^c(\d+)$/.exec(c.id);
+    return m ? new Date(Number(m[1])).toISOString().slice(0, 10) : "";
+  };
+  const rows = allRows.filter((c) => {
+    if (cq && !`${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) return false;
+    if (campSeasonObj) { const d = rowDay(c); if (d && (d < campSeasonObj.from || d > campSeasonObj.to)) return false; }
+    return true;
+  });
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><SeasonPicker seasons={seasons} value={campSeason} onChange={setCampSeason} allLabel="All seasons" className="ml-2" /><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
