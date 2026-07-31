@@ -640,7 +640,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [mode, setMode] = useState<"template" | "design">("template");
   const [design, setDesign] = useState<CampaignDesign | null>(null);   // a designed email (rich template gallery)
   const [designing, setDesigning] = useState(false);
-  const [nowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => { const id = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(id); }, []);
   const [previewBig, setPreviewBig] = useState(false);
   const template = templates.find((t) => t.id === tmplId);
   const selectedAuds = audIds.map((id) => audiences.find((a) => a.id === id)).filter((a): a is Audience => !!a);
