@@ -56,6 +56,7 @@ interface Customer {
   locationId?: string;
   locationName?: string;
   marketingOptIn?: boolean;
+  marketingOptInAt?: string;
   notes?: string;
   children?: Child[];
   /** Set once they've been invited to set a password. */
@@ -69,6 +70,8 @@ interface Draft {
   phone: string;
   locationId: string;
   marketingOptIn: boolean;
+  /** When consent was first recorded — the PECR audit trail. */
+  marketingOptInAt?: string;
   notes: string;
   children: {
     name: string;
@@ -337,6 +340,9 @@ export function CustomersApp() {
       // or removed from the library later.
       locationName: venues.find((v) => v.id === draft.locationId)?.name ?? "",
       marketingOptIn: draft.marketingOptIn,
+      // PECR audit trail: stamp when consent was first recorded, keep the
+      // original date on re-saves, and clear it if consent is withdrawn.
+      marketingOptInAt: draft.marketingOptIn ? (draft.marketingOptInAt ?? new Date().toISOString()) : undefined,
       notes: draft.notes.trim(),
       // Sent back deliberately. `children` has `.default([])` on the server,
       // so leaving it out of a PUT doesn't mean "unchanged" — it means an
@@ -455,6 +461,7 @@ export function CustomersApp() {
       phone: c.phone ?? "",
       locationId: c.locationId ?? "",
       marketingOptIn: !!c.marketingOptIn,
+      marketingOptInAt: c.marketingOptInAt,
       notes: c.notes ?? "",
       children: (c.children ?? []).map((k) => ({
         name: k.name,

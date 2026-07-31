@@ -15,18 +15,42 @@ const suppressCol = db.collection("emailSuppressions");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const MAX_RECIPIENTS = 2000;
 
-// Emails that must NOT receive marketing: unsubscribed (suppression list) OR a
-// customer record that explicitly turned marketing consent off. Transactional
-// mail (audience "one") ignores this. Lowercased.
-async function unmarketable(tenantId: string): Promise<Set<string>> {
-  const [sup, cust] = await Promise.all([
+// Who may receive MARKETING — enforcing UK PECR consent, and it is NOT one
+// rule for everyone (see AGENTS/handoff notes on marketing law):
+//   • Booked families → the "soft opt-in": you sold them a place, so you may
+//     market similar activities UNLESS they opted out. On by default.
+//   • Not booked (enquiries / added under New Family / synced) → no sale, so
+//     they need EXPLICIT opt-in (marketingOptIn === true). Off by default.
+//   • A suppression (one-click unsubscribe) or marketingOptIn === false always
+//     blocks, for everyone.
+// Transactional mail (audience "one" — confirmations, payment links) ignores
+// all of this. Returns a predicate; email is lowercased by the caller/inside.
+async function marketBlock(tenantId: string): Promise<(email: string) => boolean> {
+  const [sup, cust, bk] = await Promise.all([
     suppressCol.where("tenantId", "==", tenantId).get(),
     db.collection("customers").where("tenantId", "==", tenantId).get(),
+    db.collection("bookings").where("tenantId", "==", tenantId).get(),
   ]);
-  const out = new Set<string>();
-  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) out.add(e.toLowerCase()); }
-  for (const d of cust.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && c.marketingOptIn === false) out.add(c.email.toLowerCase()); }
-  return out;
+  const suppressed = new Set<string>();
+  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) suppressed.add(e.toLowerCase()); }
+  const optIn = new Map<string, boolean>();
+  for (const d of cust.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && typeof c.marketingOptIn === "boolean") optIn.set(c.email.toLowerCase(), c.marketingOptIn); }
+  // "Booked" = holds or held a real place. Waitlisted / Offered is not a sale,
+  // so those still need explicit opt-in.
+  const booked = new Set<string>();
+  for (const d of bk.docs) {
+    const b = d.data() as { email?: string; status?: string };
+    if (!b.email) continue;
+    if (b.status === "Cancelled" || b.status === "Declined" || b.status === "Waitlisted" || b.status === "Offered") continue;
+    booked.add(b.email.toLowerCase());
+  }
+  return (email: string): boolean => {
+    const e = email.toLowerCase();
+    if (suppressed.has(e)) return true;      // unsubscribed — always blocked
+    if (optIn.get(e) === false) return true; // explicit opt-out — always blocked
+    if (booked.has(e)) return false;         // soft opt-in — on unless opted out
+    return optIn.get(e) !== true;            // never booked — needs explicit opt-in
+  };
 }
 
 const sendSchema = z.object({
@@ -85,8 +109,8 @@ async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSch
   // Marketing sends (a blast — anything that isn't a single "one" email) drop
   // anyone who unsubscribed or turned marketing consent off. PECR compliance.
   if (input.audience === "one") return set;
-  const blocked = await unmarketable(tenantId);
-  return set.filter((e) => !blocked.has(e));
+  const blocked = await marketBlock(tenantId);
+  return set.filter((e) => !blocked(e));
 }
 
 // GET /api/emails/audiences — live CRM segments, computed from bookings and
@@ -146,13 +170,23 @@ emails.get("/audiences", async (req, res) => {
     .map((d) => ((d.data() as { email?: string }).email ?? "").toLowerCase())
     .filter((e) => e.includes("@") && !families.has(e)))];
 
-  // Marketing audiences exclude unsubscribed / consent-off emails, so the count
-  // matches who will actually receive a campaign.
-  const blocked = new Set<string>();
-  for (const d of customers.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && c.marketingOptIn === false) blocked.add(c.email.toLowerCase()); }
+  // Marketing audiences exclude anyone who can't lawfully be marketed to, so the
+  // count matches who will actually receive a campaign. Same split as the send
+  // path (marketBlock): booked = soft opt-in (on unless opted out); never-booked
+  // = needs explicit opt-in. Suppression / opt-out always blocks.
+  const optIn = new Map<string, boolean>();
+  for (const d of customers.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && typeof c.marketingOptIn === "boolean") optIn.set(c.email.toLowerCase(), c.marketingOptIn); }
   const sup = await suppressCol.where("tenantId", "==", tenantId).get();
-  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) blocked.add(e.toLowerCase()); }
-  const keep = (es: string[]) => es.filter((e) => !blocked.has(e));
+  const suppressed = new Set<string>();
+  for (const d of sup.docs) { const e = (d.data() as { email?: string }).email; if (e) suppressed.add(e.toLowerCase()); }
+  const blockedFor = (e: string): boolean => {
+    if (suppressed.has(e)) return true;
+    if (optIn.get(e) === false) return true;
+    const f = families.get(e);
+    if (f && (f.active || f.past)) return false; // booked → soft opt-in
+    return optIn.get(e) !== true;                // never booked → needs explicit opt-in
+  };
+  const keep = (es: string[]) => es.filter((e) => !blockedFor(e));
   const seg = (id: string, name: string, desc: string, es: string[]) => {
     const kept = keep(es);
     return { id, name, desc, count: kept.length, emails: kept, people: kept.map((e) => ({ email: e, name: nameOf.get(e) })) };

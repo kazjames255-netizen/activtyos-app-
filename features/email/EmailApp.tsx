@@ -1232,6 +1232,7 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
           </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
+        <div className="mb-3 rounded-lg border-l-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Law (UK PECR):</b> enquiries haven’t bought anything, so you can only <b>market</b> to them once they’ve <b>opted in</b> (the “yes to hearing about activities” tick on their family record). Anyone who hasn’t opted in is automatically skipped on a send. You can always reply to their enquiry directly — that’s not marketing.</div>
         {!combinedNotBooked?.count
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
