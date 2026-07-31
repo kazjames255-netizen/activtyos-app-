@@ -949,6 +949,7 @@ export function ListingWizard({
             <div className="truncate text-[12.5px] text-white/80">Step {step + 1} of {STEPS.length} · {STEPS[step].label}</div>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            {msg && <span className="mr-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">{msg}</span>}
             {(() => {
               const label = { idle: "", dirty: "Unsaved", saving: "Saving…", saved: "Saved", error: "Save failed" }[saveState];
               return label ? <span className="mr-0.5 text-[11.5px] font-semibold text-white/85">{saveState === "saved" ? "✓ " : ""}{label}</span> : null;
@@ -968,19 +969,6 @@ export function ListingWizard({
         </div>
       </div>
 
-      {/* Only appears when there's something to fix — otherwise no wasted band. */}
-      {(blockers.length > 0 || msg) && (
-        <div className="flex-none border-b border-[#f4d9b3] bg-[#fff7ed] px-5 py-1.5 sm:px-6">
-          <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px]">
-            {msg && <span className="font-bold text-[var(--red)]">{msg}</span>}
-            {blockers.length > 0 && (<>
-              <span className="font-extrabold text-[#9a3412]">{blockers.length} to finish before publishing:</span>
-              {blockers.slice(0, 3).map((bl, i) => <button key={i} type="button" onClick={() => setStep(bl.step)} className="font-semibold text-[#9a3412] underline underline-offset-2">{bl.what}</button>)}
-              {blockers.length > 3 && <span className="text-[#9a3412]">+{blockers.length - 3} more</span>}
-            </>)}
-          </div>
-        </div>
-      )}
 
       {/* Big centered slide — ONLY this area scrolls (no whole-page scroll). */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5" style={{ backgroundColor: "#e8f0fb", backgroundImage: "radial-gradient(760px 380px at 12% -14%, #c9dcf8 0%, rgba(201,220,248,0) 55%), radial-gradient(760px 380px at 100% -6%, #d4e4fb 0%, rgba(212,228,251,0) 55%), radial-gradient(rgba(31,84,163,.055) 1px, transparent 1.4px)", backgroundSize: "auto, auto, 22px 22px" }}>
@@ -991,7 +979,7 @@ export function ListingWizard({
             style={stepKey === "preview" ? undefined : { background: "linear-gradient(180deg,#ffffff 0%,#f1f6ff 100%)" }}>
             {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
             <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
-            {stepKey === "basics" && <BasicsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
+            {stepKey === "basics" && <BasicsStep d={d} upd={upd} />}
             {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
@@ -1086,9 +1074,9 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
         const on = sel.includes(o);
         const em = showEmoji ? chipEmoji(o) : "";
         return (
-          <span key={o} className="inline-flex items-center overflow-hidden rounded-full border" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
-            <button type="button" onClick={() => onToggle(o)} className="py-1.5 pl-3 text-[12px] font-bold" style={{ color: on ? "var(--brand-ink)" : "var(--ink-3)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
-            {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={`Delete ${o}`} className="px-2 text-[11px] text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>}
+          <span key={o} className="inline-flex items-center overflow-hidden rounded-full border" style={on ? { borderColor: "transparent", background: "linear-gradient(120deg,#3f78d8,#1b3f8f)", boxShadow: "0 4px 12px -3px rgba(31,84,163,.55)" } : { borderColor: "var(--line)", background: "#fff" }}>
+            <button type="button" onClick={() => onToggle(o)} className="py-1.5 pl-3 text-[12px] font-bold" style={{ color: on ? "#fff" : "var(--ink-2)" }}>{on && check ? "✓ " : ""}{em ? em + " " : ""}{o}</button>
+            {onDelete && <button type="button" onClick={() => onDelete(o)} aria-label={`Delete ${o}`} className="px-2 text-[11px]" style={{ color: on ? "rgba(255,255,255,.7)" : "var(--ink-3)" }}>✕</button>}
             {!onDelete && <span className="pr-3" />}
           </span>
         );
@@ -1248,9 +1236,7 @@ function genBio(prompt: string, m: StaffMember, variant: number): string {
 }
 
 // ── Step: Basics ───────────────────────────────────────────────────────────
-function BasicsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
-  const { settings } = useSettings();
-  const seasons = settings.seasons ?? [];
+function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   return (
     <div className="max-w-[760px]">
       <StepHead n={1} kicker="STEP 1 · BASICS" title="Make a great first impression" lede="A clear name and a big, bright photo — pick a layout to see how it looks." />
@@ -1563,16 +1549,38 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   );
 }
 
+// A rich, blue-shaded section card — the wizard's classy building block.
+function RichCard({ icon, title, tint = "blue", children, className = "" }: { icon: string; title: string; tint?: "blue" | "teal" | "violet"; children: React.ReactNode; className?: string }) {
+  const T = {
+    blue: { head: "linear-gradient(120deg,#e9f1fe,#d6e4fb)", chip: "linear-gradient(135deg,#3f78d8,#16306e)", border: "#cbdbf6", ring: "rgba(31,84,163,.26)" },
+    teal: { head: "linear-gradient(120deg,#e2f4f7,#cfe9f1)", chip: "linear-gradient(135deg,#2f9fb8,#12586e)", border: "#bfe2ea", ring: "rgba(20,110,140,.24)" },
+    violet: { head: "linear-gradient(120deg,#eee9fe,#ded6fb)", chip: "linear-gradient(135deg,#7c5cd8,#3a2a8e)", border: "#d6cef7", ring: "rgba(90,60,180,.24)" },
+  }[tint];
+  return (
+    <div className={`overflow-hidden rounded-2xl border bg-white ${className}`} style={{ borderColor: T.border, boxShadow: `0 14px 34px -16px ${T.ring}` }}>
+      <div className="flex items-center gap-2 px-3.5 py-2.5" style={{ background: T.head }}>
+        <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[14px] text-white shadow-[0_2px_7px_rgba(31,84,163,.35)]" style={{ background: T.chip }}>{icon}</span>
+        <span className="text-[13px] font-extrabold tracking-[-0.01em] text-[#16306e]">{title}</span>
+      </div>
+      <div className="p-3.5" style={{ background: "linear-gradient(180deg,#ffffff,#f3f8ff)" }}>{children}</div>
+    </div>
+  );
+}
+
 function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
   return (
-    <div className="max-w-[720px]">
+    <div className="max-w-[860px]">
       <StepHead n={4} kicker="STEP 4 · SAFETY & SEND" title="Safety & inclusion" lede="Show your safety features and the SEND support you offer." />
-      <SectionHead icon="🛡️">Safety features</SectionHead>
-      <HeadingFields d={d} upd={upd} sectionKey="safety" />
-      <div className="mb-3"><EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check /></div>
-      <SectionHead icon="🤝">SEND &amp; accessibility</SectionHead>
-      <HeadingFields d={d} upd={upd} sectionKey="send" />
-      <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
+      <div className="grid gap-4 md:grid-cols-2">
+        <RichCard icon="🛡️" title="Safety features">
+          <EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check />
+          <HeadingFields d={d} upd={upd} sectionKey="safety" />
+        </RichCard>
+        <RichCard icon="🤝" title="SEND & accessibility" tint="teal">
+          <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
+          <HeadingFields d={d} upd={upd} sectionKey="send" />
+        </RichCard>
+      </div>
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">New options you add here are saved and offered on every listing.</div>
     </div>
   );
@@ -1986,21 +1994,21 @@ function HeadingFields({ d, upd, sectionKey }: { d: WizardDraft; upd: (p: Partia
   const def = SECTION_KEYS.find((s) => s.key === sectionKey);
   if (!def) return null;
   const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
+  const customised = !!(d.headings?.[`${sectionKey}.eyebrow`] || d.headings?.[`${sectionKey}.title`]);
   return (
-    <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-      <div className="text-[11.5px] font-bold">How this appears on the customer page</div>
-      <div className="mb-2 text-[11px] text-[var(--ink-3)]">Leave blank to use the wording shown.</div>
-      <div className="flex flex-wrap gap-2">
-        <div className="min-w-[150px] flex-1">
+    <details className="mt-2.5" open={customised}>
+      <summary className="cursor-pointer list-none text-[11px] font-bold text-[#2f6bd8] [&::-webkit-details-marker]:hidden">✏️ Customise the wording <span className="font-normal text-[var(--ink-3)]">— optional{customised ? " · edited" : ""}</span></summary>
+      <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-[#dbe7fb] bg-[#f4f9ff] p-2.5">
+        <div className="min-w-[140px] flex-1">
           <FieldLabel>Small label above</FieldLabel>
           <Input value={d.headings?.[`${sectionKey}.eyebrow`] ?? ""} onChange={(e) => set(`${sectionKey}.eyebrow`, e.target.value)} placeholder={def.eyebrow} className="w-full text-[12px]" />
         </div>
-        <div className="min-w-[150px] flex-1">
+        <div className="min-w-[140px] flex-1">
           <FieldLabel>Heading</FieldLabel>
           <Input value={d.headings?.[`${sectionKey}.title`] ?? ""} onChange={(e) => set(`${sectionKey}.title`, e.target.value)} placeholder={sectionKey === "about" ? d.descriptionSection || def.title : def.title} className="w-full text-[12px]" />
         </div>
       </div>
-    </div>
+    </details>
   );
 }
 
