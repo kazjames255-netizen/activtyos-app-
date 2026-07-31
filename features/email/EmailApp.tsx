@@ -1146,7 +1146,19 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
       }
     }
     const people = [...map.values()];
-    return { id: "enq-all", name: "Not booked yet", desc: "Everyone interested who hasn’t booked yet — added under New Family, signed up, or emailed you and marked as an enquiry. They drop off automatically once they book.", count: people.length, emails: people.map((p) => p.email), people };
+    return { id: "enq-all", name: "New enquiries — everyone", desc: "Everyone interested who hasn’t booked yet — added under New Family, signed up, or emailed you and marked as an enquiry. They drop off automatically once they book.", count: people.length, emails: people.map((p) => p.email), people };
+  })();
+  // Break the "everyone" total down by location — a true PARTITION, so the
+  // per-location cards always sum back to the headline total. Each person lands
+  // in exactly one bucket: their (first) enquiry location, else "No location"
+  // (which is where added-under-New-Family families with no location sit).
+  const enqLocOf = new Map<string, string>();
+  for (const e of enqInPeriod) { const em = e.email?.toLowerCase(); if (em && !enqLocOf.has(em)) enqLocOf.set(em, e.location || "No location"); }
+  const enqBreakdown: Audience[] = (() => {
+    if (!combinedNotBooked?.people?.length) return [];
+    const buckets = new Map<string, { email: string; name?: string }[]>();
+    for (const p of combinedNotBooked.people) { const loc = enqLocOf.get(p.email.toLowerCase()) || "No location"; (buckets.get(loc) ?? buckets.set(loc, []).get(loc)!).push(p); }
+    return [...buckets].map(([loc, ppl]) => ({ id: `enq-${loc}`, name: `New enquiries · ${loc}`, count: ppl.length, emails: ppl.map((x) => x.email), people: ppl, desc: loc === "No location" ? "Added under New Family or enquired without a location · never booked" : `Enquired about ${loc} · never booked` }));
   })();
   // Computed groups from bookings (client-side). Aggregate per family (email).
   const DAY = 86_400_000;
@@ -1213,9 +1225,9 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
 
       {sub === "enquiries" && (<>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <AudSection title="📩 Enquiries — by location" hint="Emailed you but never booked. They drop off automatically once they book." />
+          <AudSection title="📩 New enquiries" hint="Everyone interested who hasn’t booked. The first card is the full total; the rest split it by location and always add back up to it. All drop off automatically once they book." />
           <div className="flex flex-wrap items-center gap-2">
-            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enquiryAuds.slice(1).map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
+            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enqBreakdown.map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
             <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Enquired within</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d", "past 30 days"], ["90", "Last 90d", "past 90 days"], ["all", "All time", "ever"]] as const).map(([v, l, t]) => <button key={v} type="button" title={`Show enquiries received in the ${t}`} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
           </div>
         </div>
@@ -1224,7 +1236,7 @@ function AudiencesView({ onUse, payMethods = [] }: { onUse: (a: Audience) => voi
           ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {enqLoc === "all" && combinedNotBooked && matchAud(combinedNotBooked) && <AudienceCard key="notbooked" a={combinedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />}
-              {(enqLoc === "all" ? enquiryAuds.slice(1) : enquiryAuds.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeEnquiryPerson} />)}
+              {(enqLoc === "all" ? enqBreakdown : enqBreakdown.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />)}
             </div>}
       </>)}
 
