@@ -7,7 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
-import { seasonSpan } from "@/lib/seasons";
+import { bookingInSeason } from "@/lib/seasons";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -15,11 +15,11 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 
 type Repeat = "weekly" | "fortnightly" | "monthly";
-interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean }
+interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean; listingId?: string }
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
 interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean }
 interface InvPayload { items: Invoice[] }
-interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string }
+interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string; listingId?: string }
 
 const CATEGORIES = ["Sessions", "Camps", "Memberships", "Merchandise", "Grants", "Fundraising", "Deposits", "Other"];
 const INVOICE_CAT = "Invoices";
@@ -139,7 +139,7 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
       return { b, paid };
     })
     .filter(({ paid }) => paid > 0)
-    .map(({ b, paid }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true })), [bookings]);
+    .map(({ b, paid }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings]);
 
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.
@@ -209,20 +209,19 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const monthLabel = (key: string) => key ? new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
 
   const ovSeasonObj = seasons.find((s) => s.id === ovSeason);
-  // Money isn't per-location, so scope to the season's WIDEST window (covers
-  // every city's dates). See lib/seasons.ts.
-  const ovSpan = ovSeasonObj ? seasonSpan(ovSeasonObj) : null;
-  // Period-scoped set that drives the two overview breakdown cards.
+  // A season is a set of listings, so scoping to one = keeping only booking
+  // income whose listing is in that season. Invoice/manually-logged income has
+  // no listing, so it isn't season-scoped (only shows under "All seasons").
   const ovItems = useMemo(() => allItems.filter((x) => {
     const d = x.date || "";
-    if (ovSpan && (d < ovSpan.from || d > ovSpan.to)) return false;
+    if (ovSeasonObj && !bookingInSeason(ovSeasonObj, x.listingId)) return false;
     if (ovRange === "month" && d.slice(0, 7) !== thisMonthKey) return false;
     if (ovRange === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
     if (ovRange === "year" && d.slice(0, 4) !== thisYear) return false;
     if (ovFrom && d < ovFrom) return false;
     if (ovTo && d > ovTo) return false;
     return true;
-  }), [allItems, ovSpan, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
+  }), [allItems, ovSeasonObj, ovRange, ovFrom, ovTo, thisMonthKey, lastMonthKey, thisYear]);
   const ovTotal = useMemo(() => ovItems.reduce((s, x) => s + x.amount, 0), [ovItems]);
   const ovCats = useMemo(() => {
     const by: Record<string, { total: number; count: number }> = {};

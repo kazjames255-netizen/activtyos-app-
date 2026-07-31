@@ -23,8 +23,7 @@ import {
 import { Badge, Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
-import { seasonSpan, type Season } from "@/lib/seasons";
-import type { Booking } from "./types";
+import { bookingInSeason } from "@/lib/seasons";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -87,29 +86,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
   const bounds = range ? rangeDays(range) : null;
-  // A booking belongs to a season if any of its sessions falls in the season's
-  // window. Sessions are labels like "Mon 28 Jul 2027 · 09:00 – 17:30"; parse
-  // the date part to an ISO day and compare. (Attendance-based, which is what
-  // "bookings for Summer 2026" means — not when it was booked.)
-  const inSeason = (b: Booking, s: Season): boolean => {
-    // Bookings don't carry a city, so use the season's WIDEST window (across
-    // every location's dates) — no city's bookings get missed.
-    const { from, to } = seasonSpan(s);
-    return (b.sessions ?? []).some((sess) => {
-      const d = new Date(sess.split(" · ")[0].replace(/^[A-Za-z]{3,}\s+/, ""));
-      if (Number.isNaN(d.getTime())) return false;
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      return iso >= from && iso <= to;
-    });
-  };
-
   const list = bookings
     .filter(
       (b) =>
         matchesFilter(b, filter) &&
         matchesSearch(b, query) &&
         (!listing || b.listing === listing) &&
-        (!seasonObj || inSeason(b, seasonObj)) &&
+        // A booking is "in" a season when its listing is grouped under it.
+        (!seasonObj || bookingInSeason(seasonObj, b.listingId)) &&
         (!bounds || (bookedOn(b) >= bounds.from && bookedOn(b) <= bounds.to)) &&
         runsOn(b, day),
     )
@@ -229,7 +213,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 title="Filter by season"
                 options={[
                   ["", "📅 All seasons"],
-                  ...[...seasons].sort((a, b) => (a.from < b.from ? 1 : -1)).map((s) => [s.id, s.name] as [string, string]),
+                  ...seasons.map((s) => [s.id, s.name] as [string, string]),
                 ]}
               />
             </Pill>

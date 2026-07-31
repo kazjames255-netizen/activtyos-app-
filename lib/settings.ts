@@ -5,7 +5,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_POLICIES, type NamedPolicy } from "@/lib/cancellation";
 import type { WhenTooClose } from "@/lib/vouchers";
-import { defaultUKSeasons, type Season } from "@/lib/seasons";
+import { defaultSeasonNames, type Season } from "@/lib/seasons";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -876,9 +876,9 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     lowStockAlert: true,
   },
 
-  // Empty until the provider sets them up (Setup → Seasons has a one-click
-  // "generate this year's" button). Pages fall back to "all time" meanwhile.
-  seasons: [],
+  // A ready-made set of editable names (Autumn 1/2, Spring 1/2, Summer 1/2, All
+  // year). The provider renames them and ticks which listings belong to each.
+  seasons: defaultSeasonNames(),
   payMethods: ["Card", "Bank transfer", "Cash on the day", "Tax-Free Childcare", "Childcare vouchers", "HAF (funded £0)"],
   cancellationReasons: DEFAULT_CANCEL_REASONS,
   voucherProviders: DEFAULT_VOUCHERS,

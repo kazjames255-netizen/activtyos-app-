@@ -26,7 +26,7 @@ import {
   type RatioGroup,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
-import { defaultUKSeasons, fmtSeasonRange, sortSeasons, seasonKindLabel, type Season, type SeasonKind, type SeasonOverride } from "@/lib/seasons";
+import { defaultSeasonNames, type Season } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
@@ -400,82 +400,48 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
   );
 }
 
-// ── Seasons — the trading periods pages scope to (lib/seasons.ts) ────────────
+// ── Seasons — named buckets you assign listings to (lib/seasons.ts) ──────────
 function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: Season[]) => void }) {
-  const sorted = sortSeasons(items);
-  // The provider's locations, so a city with different council holiday dates can
-  // be picked (rather than typed and mistyped). Names, matching booking data.
-  const [venues, setVenues] = useState<string[]>([]);
-  useEffect(() => { apiGet<{ venues?: { name?: string; city?: string }[] }>("/api/library").then((lib) => setVenues([...new Set((lib?.venues ?? []).map((v) => (v.name || v.city || "").trim()).filter(Boolean))])).catch(() => {}); }, []);
+  // The provider's listings, to tick which belong to each season.
+  const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => { apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((ls) => setListings(ls.map((l) => ({ id: l.id, title: l.title || l.name || "Untitled listing" })))).catch(() => {}); }, []);
   const patch = (id: string, fn: (s: Season) => Season) => onChange(items.map((s) => (s.id === id ? fn(s) : s)));
-  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nNothing dated is deleted — it just stops being offered as a filter.`)) onChange(items.filter((s) => s.id !== id)); };
-  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season", from: "", to: "", kind: "holiday" }]);
-  const generate = () => {
-    const year = new Date().getFullYear(); // event handler — fine
-    const have = new Set(items.map((s) => s.id));
-    onChange([...items, ...defaultUKSeasons(year).filter((s) => !have.has(s.id))]);
-  };
-  const addOverride = (s: Season) => patch(s.id, (x) => ({ ...x, byLocation: [...(x.byLocation ?? []), { location: venues.find((v) => !(x.byLocation ?? []).some((o) => o.location === v)) ?? "", from: x.from, to: x.to }] }));
-  const patchOverride = (id: string, i: number, fn: (o: SeasonOverride) => SeasonOverride) => patch(id, (x) => ({ ...x, byLocation: (x.byLocation ?? []).map((o, n) => (n === i ? fn(o) : o)) }));
-  const removeOverride = (id: string, i: number) => patch(id, (x) => ({ ...x, byLocation: (x.byLocation ?? []).filter((_, n) => n !== i) }));
-  const KINDS: SeasonKind[] = ["holiday", "term"];
-  if (!items.length) {
-    return (
-      <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] p-5 text-center">
-        <div className="text-[13px] font-bold text-[var(--ink)]">No seasons yet</div>
-        <p className="mx-auto mt-1 max-w-md text-[12px] leading-[1.5] text-[var(--ink-3)]">Set up your trading periods once and every page — bookings, money, registers, audiences — can filter to “this season” automatically. Start from a standard UK year, then tweak the dates.</p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <Button onClick={generate}>✨ Generate this year’s seasons</Button>
-          <Button variant="ghost" onClick={add}>＋ Add one manually</Button>
-        </div>
-      </div>
-    );
-  }
+  const remove = (name: string, id: string) => { if (confirm(`Remove “${name}”?\n\nListings stay put — they just stop being grouped under this season.`)) onChange(items.filter((s) => s.id !== id)); };
+  const add = () => onChange([...items, { id: `s-${uid()}`, name: "New season", listingIds: [] }]);
+  const restore = () => { const have = new Set(items.map((s) => s.id)); onChange([...items, ...defaultSeasonNames().filter((s) => !have.has(s.id))]); };
+  const toggleListing = (id: string, listingId: string) => patch(id, (x) => { const set = new Set(x.listingIds ?? []); if (set.has(listingId)) set.delete(listingId); else set.add(listingId); return { ...x, listingIds: [...set] }; });
   return (
     <div className="flex flex-col gap-1.5">
-      {sorted.map((s) => {
-        const bad = s.from && s.to && s.from > s.to;
+      <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 A season is just a <b>name</b> you tick listings into — no dates. Bookings, audiences and takings then group by which season a listing is in, so different holiday dates across towns don’t matter.</div>
+      {items.map((s) => {
+        const chosen = s.listingIds ?? [];
         return (
           <div key={s.id} className="rounded-xl border border-[var(--line)] bg-white px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
-              <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[11.5px] font-bold">
-                {KINDS.map((k) => <button key={k} type="button" onClick={() => patch(s.id, (x) => ({ ...x, kind: k }))} className="px-2.5 py-1.5" style={s.kind === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-3)" }}>{seasonKindLabel(k)}</button>)}
-              </div>
+              <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">{chosen.length} listing{chosen.length === 1 ? "" : "s"}</span>
               <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
-              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">{s.byLocation?.length ? "Default from" : "From"} <Input type="date" value={s.from} onChange={(e) => patch(s.id, (x) => ({ ...x, from: e.target.value }))} className="w-[150px]" /></label>
-              <label className="flex items-center gap-1.5 text-[var(--ink-3)]">to <Input type="date" value={s.to} onChange={(e) => patch(s.id, (x) => ({ ...x, to: e.target.value }))} className="w-[150px]" /></label>
-              {bad ? <span className="text-[11.5px] font-bold text-[var(--red,#e21d27)]">End is before start</span>
-                : s.from && s.to ? <span className="text-[11px] text-[var(--ink-3)]">· {fmtSeasonRange(s)}</span> : null}
-            </div>
-            {/* Per-city date overrides — for councils whose holidays differ. */}
-            {(s.byLocation ?? []).map((o, i) => {
-              const oBad = o.from && o.to && o.from > o.to;
-              return (
-                <div key={i} className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#e6ecf6] bg-[#f7faff] px-2.5 py-1.5 text-[12px]">
-                  <span className="text-[13px]">📍</span>
-                  {venues.length ? (
-                    <select value={o.location} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, location: e.target.value }))} className="rounded-lg border border-[var(--line)] bg-white px-2 py-1.5 text-[12px] font-semibold text-[var(--ink)] outline-none">
-                      <option value="">Pick a location…</option>
-                      {venues.map((v) => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  ) : <Input value={o.location} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, location: e.target.value }))} placeholder="Location name" className="w-[150px]" />}
-                  <label className="flex items-center gap-1.5 text-[var(--ink-3)]">From <Input type="date" value={o.from} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, from: e.target.value }))} className="w-[140px]" /></label>
-                  <label className="flex items-center gap-1.5 text-[var(--ink-3)]">to <Input type="date" value={o.to} onChange={(e) => patchOverride(s.id, i, (x) => ({ ...x, to: e.target.value }))} className="w-[140px]" /></label>
-                  {oBad && <span className="text-[11px] font-bold text-[var(--red,#e21d27)]">End before start</span>}
-                  <button type="button" aria-label="Remove override" onClick={() => removeOverride(s.id, i)} className="ml-auto px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
-                </div>
-              );
-            })}
-            <button type="button" onClick={() => addOverride(s)} className="mt-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Different dates in a city</button>
+            {listings.length === 0 ? (
+              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Create some listings and they’ll show here to tick into this season.</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {listings.map((l) => {
+                  const on = chosen.includes(l.id);
+                  return (
+                    <button key={l.id} type="button" onClick={() => toggleListing(s.id, l.id)} className="rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors" style={on ? { background: "#16306e", borderColor: "#16306e", color: "#fff" } : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--ink-2)" }} title={l.title}>
+                      {on ? "✓ " : "＋ "}{l.title}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
       <div className="mt-1 flex flex-wrap gap-2">
         <Button sm onClick={add}>＋ Add a season</Button>
-        <Button sm variant="ghost" onClick={generate}>✨ Add this year’s standard set</Button>
+        {items.length === 0 && <Button sm variant="ghost" onClick={restore}>Restore the standard names</Button>}
       </div>
     </div>
   );
@@ -2125,7 +2091,7 @@ export function SetupApp() {
       {tab === "seasons" && (
         <Section
           title="Seasons"
-          lede="Your trading periods — terms and holiday camps. Set them up once and pages across the app (bookings, money, audiences, campaigns) get a “this season” filter, worked out from each booking’s dates. You don’t tag anything by hand."
+          lede="Your trading periods — just names (Autumn 1, Summer 2, All year…). Tick which listings belong to each, and Bookings, Audiences and takings can group by season. No dates, so different holiday dates across towns don’t matter."
         >
           <SeasonsEditor items={settings.seasons ?? []} onChange={(v) => set("seasons", v)} />
         </Section>

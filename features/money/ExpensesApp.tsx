@@ -6,8 +6,6 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
-import { SeasonPicker } from "@/components/SeasonPicker";
-import { seasonSpan } from "@/lib/seasons";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -118,11 +116,6 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [range, setRange] = useState<Range>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const seasons = settings.seasons ?? [];
-  const [season, setSeason] = useState("");
-  const seasonObj = seasons.find((s) => s.id === season);
-  // Money isn't per-location → scope to the season's widest window.
-  const seasonWin = seasonObj ? seasonSpan(seasonObj) : null;
   const [sort, setSort] = useState<Sort>("date");
   // Receipts-tab filters
   const [rCat, setRCat] = useState("all");
@@ -246,7 +239,6 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       if (catFilter !== "all" && (x.category || "Other") !== catFilter) return false;
       if (receiptFilter === "with" && !x.receiptUrl) return false;
       if (receiptFilter === "without" && x.receiptUrl) return false;
-      if (seasonWin && (d < seasonWin.from || d > seasonWin.to)) return false;
       if (range === "month" && d.slice(0, 7) !== thisMonthKey) return false;
       if (range === "lastmonth" && d.slice(0, 7) !== lastMonthKey) return false;
       if (range === "year" && d.slice(0, 4) !== thisYear) return false;
@@ -260,10 +252,10 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
       amount: (a, b) => b.amount - a.amount, amountAsc: (a, b) => a.amount - b.amount,
     };
     return [...rows].sort(cmp[sort]);
-  }, [allItems, q, catFilter, receiptFilter, seasonWin, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear, tab]);
+  }, [allItems, q, catFilter, receiptFilter, range, from, to, sort, thisMonthKey, lastMonthKey, thisYear, tab]);
   const filteredTotal = filtered.reduce((s, x) => s + x.amount, 0);
-  const activeFilters = (catFilter !== "all" ? 1 : 0) + (receiptFilter !== "all" ? 1 : 0) + (seasonObj ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
-  const clearFilters = () => { setQ(""); setCatFilter("all"); setReceiptFilter("all"); setRange("all"); setFrom(""); setTo(""); setSeason(""); };
+  const activeFilters = (catFilter !== "all" ? 1 : 0) + (receiptFilter !== "all" ? 1 : 0) + (range !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (q.trim() ? 1 : 0);
+  const clearFilters = () => { setQ(""); setCatFilter("all"); setReceiptFilter("all"); setRange("all"); setFrom(""); setTo(""); };
 
   const recent = useMemo(() => [...allItems].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5), [allItems]);
   const catOptions = useMemo(() => Array.from(new Set([...CATEGORIES, ...registry, ...items.map((x) => x.category)])), [registry, items]);
@@ -513,14 +505,13 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); if (id) { setRange("all"); setFrom(""); setTo(""); } }} allLabel="All seasons" />
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                 {([["all", "All time"], ["month", "This month"], ["lastmonth", "Last month"], ["year", "This year"]] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => { setRange(k); setSeason(""); }} className="px-3 py-1.5 transition-colors" style={range === k && !seasonObj ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+                  <button key={k} onClick={() => setRange(k)} className="px-3 py-1.5 transition-colors" style={range === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
                 ))}
               </div>
-              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setSeason(""); }} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
-              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setSeason(""); }} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
+              <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] text-[var(--ink)] outline-none" /></label>
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[11.5px] font-bold">
                 {([["date", "Newest"], ["oldest", "Oldest"], ["amount", "Largest"], ["amountAsc", "Smallest"]] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setSort(k)} className="px-3 py-1.5 transition-colors" style={sort === k ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>

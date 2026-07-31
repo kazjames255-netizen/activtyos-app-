@@ -5,8 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import { seasonRange, seasonSpan, type Season } from "@/lib/seasons";
-import { SeasonPicker } from "@/components/SeasonPicker";
+import { type Season } from "@/lib/seasons";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -911,9 +910,6 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const [sched, setSched] = useState<Scheduled[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const { settings } = useSettings();
-  const seasons = settings.seasons ?? [];
-  const [campSeason, setCampSeason] = useState("");
   const [custom, setCustom] = useState<Audience[]>(() => readLS<Audience[]>(LS_AUD, []));
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
   // If we arrived from an audience card's "Use in campaign", open straight into the locked composer.
@@ -972,25 +968,10 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   ];
   const allRows = [...linked, ...serverOnly];
   const cq = q.trim().toLowerCase();
-  const campSeasonObj = seasons.find((s) => s.id === campSeason);
-  // The day a campaign was sent — from its linked server record, else parsed
-  // from the local row id (`c<ms>`). Drafts with no date stay visible.
-  const histCreatedById = new Map((hist ?? []).map((h) => [h.id, h.createdAt]));
-  const rowDay = (c: Campaign): string => {
-    const iso = c.emailId ? histCreatedById.get(c.emailId) : undefined;
-    if (iso) return iso.slice(0, 10);
-    const m = /^c(\d+)$/.exec(c.id);
-    return m ? new Date(Number(m[1])).toISOString().slice(0, 10) : "";
-  };
-  const campSpan = campSeasonObj ? seasonSpan(campSeasonObj) : null;
-  const rows = allRows.filter((c) => {
-    if (cq && !`${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) return false;
-    if (campSpan) { const d = rowDay(c); if (d && (d < campSpan.from || d > campSpan.to)) return false; }
-    return true;
-  });
+  const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><SeasonPicker seasons={seasons} value={campSeason} onChange={setCampSeason} allLabel="All seasons" className="ml-2" /><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
@@ -1217,11 +1198,13 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const season = seasons.find((s) => s.id === segSeason);
   const segFiltered = !!(segLoc || segListing || segPay || season);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
-  const segRange = season ? seasonRange(season, segLoc || undefined) : null;
-  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : undefined, paymentMethod: segPay || undefined, ...(segRange ? { from: segRange.from, to: segRange.to, dateType: "session" as const } : {}) };
+  // A season is a set of listings, so filtering by it = filtering by those
+  // listing ids. A specific listing pick still wins if both are set.
+  const seasonListings = season?.listingIds?.length ? season.listingIds : undefined;
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListings, paymentMethod: segPay || undefined };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
-    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season ? `Attended in ${season.name}` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
+    ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season && !segListing ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season && !segListing ? `Booked a ${season.name} activity` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
     : allAudience;
   return (
     <div>
@@ -1238,7 +1221,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
         <div className="mb-4 rounded-2xl border border-[#cfe0f7] bg-white p-4 shadow-sm">
           <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by {seasons.length ? "season, " : ""}location, listing & payment</div>
           <div className={`grid gap-3 sm:grid-cols-2 ${seasons.length ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All seasons</option>{[...seasons].sort((a, b) => (a.from < b.from ? 1 : -1)).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
+            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All seasons</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
