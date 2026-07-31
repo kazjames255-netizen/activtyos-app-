@@ -745,7 +745,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
             {step === 1 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
               <div className="flex flex-wrap gap-2">{selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#eef4fd] px-4 py-2 text-[14px] font-bold text-[#1d3a8f]">{a.name} <span className="rounded-full bg-white/70 px-1.5 text-[12px]">{a.count}</span>{selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}</div>
-              {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">＋ Add another audience…</option>{segG.length > 0 && <optgroup label="🎯 Segments">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}</Select>}
+              {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">＋ Add another audience…</option>{segG.length > 0 && <optgroup label="🎯 Groups">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}</Select>}
               <div className="rounded-xl border border-[#cfe0f7] bg-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 This send reaches <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}.</div>
             </div>}
             {step === 2 && <div className="space-y-5">
@@ -1063,7 +1063,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
   const enqTotal = computeEnquiryAudiences(enquiries.filter((e) => e.email), bookings)[0]?.count ?? 0;
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: enqTotal },
-    { k: "segments" as const, label: "🎯 Segments", count: 1 + liveSegments.length },
+    { k: "segments" as const, label: "🎯 Groups", count: 1 + liveSegments.length },
     { k: "custom" as const, label: "⭐ Your audiences", count: custom.length },
   ];
   return (
@@ -1077,7 +1077,7 @@ function AudiencesView({ onUse }: { onUse: (a: Audience) => void }) {
       </div>
 
       {sub === "segments" && (<>
-        <AudSection title="🎯 Segments" hint="Built-in CRM segments, membership computed live from your bookings & customer list." />
+        <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[allAudience, ...liveSegments].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} />)}</div>
       </>)}
 
