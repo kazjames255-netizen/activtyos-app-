@@ -64,4 +64,51 @@ test.describe("email client", () => {
     await page.getByRole("button", { name: "✕ Cancel", exact: true }).click();
     await expect(page.getByText(schedSubject)).toBeHidden({ timeout: 15_000 });
   });
+
+  test("the composer sends for real; the send lands in the Sent folder", async ({ page }) => {
+    const stamp = Date.now().toString(36);
+    const subject = `E2E compose ${stamp}`;
+
+    await page.goto("/company/email");
+    // TabStrip "Compose" (exact — the Inbox sidebar has its own "✎ Compose").
+    await page.getByRole("button", { name: "Compose", exact: true }).click();
+    await page.locator('select:has-text("A single address")').selectOption("one");
+    await page.getByPlaceholder("name@example.com", { exact: true }).fill(`e2e-compose-${stamp}@${TEST_EMAIL_DOMAIN}`);
+    await page.locator('div:has(> label:text-is("Subject")) input').fill(subject);
+    await page.locator('[contenteditable="true"]').fill(`Hello from the e2e run ${stamp}.`);
+    await page.getByRole("button", { name: /^Send to 1 recipient$/ }).click();
+
+    // The undo window (default 5s) counts down, then the send actually fires.
+    await expect(page.getByText(/^Sent to 1 recipient/)).toBeVisible({ timeout: 25_000 });
+
+    // It's in the real history — the Inbox's Sent folder lists it.
+    await page.getByRole("button", { name: "Inbox", exact: true }).click();
+    await page.getByRole("button", { name: /^Sent/ }).click();
+    await expect(page.getByText(subject)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("a campaign to a live segment sends and shows a real status", async ({ page }) => {
+    const stamp = Date.now().toString(36);
+    const name = `E2E campaign ${stamp}`;
+    const manifest = loadAccounts();
+
+    // Arrange: one customer with no booking — the "New enquiries" segment.
+    const op = await fbSignIn(manifest.accounts.company.email);
+    await apiPost("/api/customers", op.idToken, { name: `E2E Enquirer ${stamp}`, email: `e2e-enquiry-${stamp}@${TEST_EMAIL_DOMAIN}` });
+
+    await page.goto("/company/email");
+    await page.getByRole("button", { name: "Campaigns", exact: true }).click();
+    await page.getByRole("button", { name: /New campaign/ }).click();
+    await page.getByPlaceholder("e.g. August football camp").fill(name);
+    // The segment option renders once the live audiences load; selectOption waits.
+    await page.locator('select:has-text("New enquiries")').selectOption("enquiries");
+    await page.getByPlaceholder("Subject line").fill(name);
+    await page.getByRole("button", { name: "Send now" }).click();
+
+    // The row that appears is the SERVER's send record, with a live status —
+    // "Sending" until the transport hand-off settles, then "Sent".
+    const row = page.locator("div.grid").filter({ hasText: name }).last();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(row.getByText(/Sent|Sending/)).toBeVisible();
+  });
 });

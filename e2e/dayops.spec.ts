@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
-import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp } from "./helpers/accounts";
+import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiFetch, apiPost, fbSignIn, fbSignUp } from "./helpers/accounts";
 import { bookViaApi, provisionLiveListing, type ProvisionedListing } from "./helpers/tenantData";
 import { cardWith } from "./helpers/ui";
 
@@ -119,5 +119,31 @@ test.describe("operator day ops", () => {
     await page.reload();
     await page.getByRole("button", { name: "Board", exact: true }).click();
     await expect(cardWith(page, title, "✓ Done")).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+// Settings → Staff & workforce, enforced server-side: once the certifications
+// register is in use, an expired DBS blocks rostering — and the rota surfaces
+// the API's reason instead of silently saving. The rota view only exists on
+// the freelancer/franchise/staff portals (company has no schedule slug), so
+// this runs as the freelancer.
+test.describe("staff & workforce policy", () => {
+  test.use({ storageState: statePath("freelancer") });
+
+  test("an expired DBS blocks adding a shift, with the reason shown", async ({ page }) => {
+    const who = `E2E Coach ${stamp}`;
+    const op = await fbSignIn(accounts.freelancer.email);
+    const cert = await apiPost<{ id: string }>("/api/compliance", op.idToken, {
+      staffName: who, type: "DBS check", expiry: "2020-01-01",
+    });
+
+    await page.goto("/freelancer/schedule");
+    await page.getByRole("button", { name: /Add a shift/ }).click();
+    await page.locator('div:has(> label:text-is("Staff member")) input').fill(who);
+    await page.getByRole("button", { name: "Save shift" }).click();
+    await expect(page.getByText(/DBS has expired/)).toBeVisible({ timeout: 15_000 });
+
+    // Remove the fixture so no later test is policy-gated by it.
+    await apiFetch(`/api/compliance/${cert.id}`, op.idToken, { method: "DELETE" });
   });
 });
