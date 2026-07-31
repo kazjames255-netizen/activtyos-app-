@@ -1041,8 +1041,12 @@ const SEG_DESCS: Record<string, string> = {
   "Active families": "Families with a current or upcoming booking (live from your CRM).",
   "Past customers": "Have booked before but have nothing booked right now — perfect for a “we miss you” win-back email or a returning-family discount.",
   "Waitlisted": "On a waiting list or holding an unconfirmed offer for a place.",
-  "New enquiries (no booking)": "On your customer list but have never booked — cold leads to convert.",
+  "New enquiries (no booking)": "Families you added under New Family (or who signed up) who haven’t booked yet. Consent must be ticked for them to appear here.",
   "New enquiries — all": "Emailed you and you marked them as an enquiry, but they've never booked.",
+};
+// Display-name overrides so the server's "New enquiries" segment doesn't clash with the Enquiries tab.
+const SEG_NAMES: Record<string, string> = {
+  "New enquiries (no booking)": "Added families · not booked yet",
 };
 function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemovePerson }: { a: Audience; onUse: (a: Audience) => void; extra?: React.ReactNode; accent?: string; onRemovePerson?: (email: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -1051,7 +1055,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
   const people = pq.trim() ? allPeople.filter((p) => `${p.name ?? ""} ${p.email}`.toLowerCase().includes(pq.trim().toLowerCase())) : allPeople;
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-      <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
+      <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{SEG_NAMES[a.name] ?? a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
       <p className="mt-1 text-[12px] text-[var(--ink-3)]">{SEG_DESCS[a.name] ?? a.desc}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => onUse(a)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm" style={{ background: accent }}>Use in campaign</button>
