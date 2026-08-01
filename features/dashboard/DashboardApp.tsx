@@ -64,16 +64,22 @@ const GRAD = {
   amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
   violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
 } as const;
-function Tile({ label, value, sub, grad, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; children?: React.ReactNode }) {
+function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
       <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
-      <div className="relative">
-        <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">{label}</div>
-        <div className="mt-1 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
-        {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
-        {children}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
+            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
+            <span className="truncate">{label}</span>
+          </div>
+          <div className="mt-1.5 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
+          {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
+        </div>
+        {aside && <div className="flex-none">{aside}</div>}
       </div>
+      {children}
     </div>
   );
 }
@@ -116,6 +122,55 @@ function MiniBars({ data, labels, caption }: { data: number[]; labels: string[];
         ))}
       </div>
       <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-white/70">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+    </div>
+  );
+}
+
+// A single-percentage ring gauge — white on a coloured KPI tile (à la the "Tasks 33%" dial).
+function Ring({ pct, size = 62, label, stroke = "#fff", track = "rgba(255,255,255,.22)" }: { pct: number; size?: number; label: string; stroke?: string; track?: string }) {
+  const sw = 7, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
+  const dash = c * Math.min(1, Math.max(0, pct / 100));
+  return (
+    <div className="relative flex-none" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={sw} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${dash.toFixed(1)} ${c.toFixed(1)}`} />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-[13px] font-extrabold tabular-nums">{label}</div>
+    </div>
+  );
+}
+
+// A multi-segment doughnut with a centre figure + side legend — the reference's "Conversion / Buyers" wheel, on a light card.
+function Donut({ segments, center, sub, size = 116 }: { segments: { label: string; value: number; color: string }[]; center: string; sub?: string; size?: number }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const sw = 15, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
+  const shown = segments.filter((s) => s.value > 0);
+  const lens = shown.map((s) => c * (s.value / total));
+  const offsets = lens.map((_, i) => lens.slice(0, i).reduce((sum, l) => sum + l, 0));
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--panel)" strokeWidth={sw} />
+          {shown.map((s, i) => (
+            <circle key={s.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${lens[i].toFixed(1)} ${(c - lens[i]).toFixed(1)}`} strokeDashoffset={(-offsets[i]).toFixed(1)} />
+          ))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-[19px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{center}</div>
+          {sub && <div className="mt-0.5 text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{sub}</div>}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {segments.map((s) => (
+          <div key={s.label} className="flex items-center gap-2 text-[11.5px]">
+            <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate font-semibold">{s.label}</span>
+            <span className="tabular-nums font-bold text-[var(--ink-3)]">{s.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -291,6 +346,12 @@ export function DashboardApp() {
     };
   }, [bookings, months, nowMs, listingSeason, seasons]);
 
+  // Doughnut centres: total booked, and paid share of all bookings.
+  const statusTotal = a.byStatus.reduce((s, x) => s + x.value, 0);
+  const payTotal = a.payMix.reduce((s, x) => s + x.value, 0);
+  const paidCount = a.payMix.filter((p) => p.label === "Paid" || p.label === "Funded").reduce((s, x) => s + x.value, 0);
+  const paidPct = payTotal ? Math.round((paidCount / payTotal) * 100) : 0;
+
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!d) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
 
@@ -315,20 +376,23 @@ export function DashboardApp() {
 
       {/* Live operational KPIs (from /api/dashboard) */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="New bookings" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub="in the last 5 weeks" grad={GRAD.blue}>
+        <Tile label="New bookings" icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub="in the last 5 weeks" grad={GRAD.blue}>
           {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="per week" />}
         </Tile>
         <Tile
           label="Spaces left · live listings"
+          icon="🎟️"
           value={`${Math.max(0, d.occupancy.capacity - d.occupancy.booked)}`}
           sub={`${100 - d.occupancy.pct}% not filled · ${d.occupancy.booked}/${d.occupancy.capacity} taken on open runs`}
           grad={GRAD.teal}
+          aside={<Ring pct={d.occupancy.pct} label={`${d.occupancy.pct}%`} />}
         />
-        <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
+        <Tile label="Taken this week" icon="💷" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
           {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption="Collected · last 5 weeks" />}
         </Tile>
         <Tile
           label="Outstanding"
+          icon="⏳"
           value={money(d.money.outstanding)}
           sub={
             d.money.overdueVouchers ? `${d.money.overdueVouchers} overdue voucher${d.money.overdueVouchers === 1 ? "" : "s"}`
@@ -444,10 +508,10 @@ export function DashboardApp() {
       ) : (
         <>
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Income collected" value={money(a.kpis.collected)} sub={`last ${months}m · net of refunds`} grad={GRAD.green} />
-            <Tile label="Bookings" value={`${a.kpis.bookings}`} sub={`booked in last ${months}m (excl. cancelled)`} grad={GRAD.blue} />
-            <Tile label="Families" value={`${a.kpis.families}`} sub={`unique customers · last ${months}m`} grad={GRAD.violet} />
-            <Tile label="Avg booking" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
+            <Tile label="Income collected" icon="💰" value={money(a.kpis.collected)} sub={`last ${months}m · net of refunds`} grad={GRAD.green} />
+            <Tile label="Bookings" icon="🎫" value={`${a.kpis.bookings}`} sub={`booked in last ${months}m (excl. cancelled)`} grad={GRAD.blue} />
+            <Tile label="Families" icon="👨‍👩‍👧" value={`${a.kpis.families}`} sub={`unique customers · last ${months}m`} grad={GRAD.violet} />
+            <Tile label="Avg booking" icon="🧮" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -472,14 +536,14 @@ export function DashboardApp() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Panel title="📊 Bookings & payments">
-              <div className="flex flex-col gap-4">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <div className="mb-2 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">By status</div>
-                  <Breakdown entries={a.byStatus} />
+                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">By status</div>
+                  {statusTotal ? <Donut segments={a.byStatus} center={`${statusTotal}`} sub="booked" /> : <Empty>Nothing yet.</Empty>}
                 </div>
-                <div className="border-t border-[var(--line)] pt-4">
-                  <div className="mb-2 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Payment mix</div>
-                  <Breakdown entries={a.payMix} />
+                <div className="sm:border-l sm:border-[var(--line)] sm:pl-5">
+                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Payment mix</div>
+                  {payTotal ? <Donut segments={a.payMix} center={`${paidPct}%`} sub="paid" /> : <Empty>Nothing yet.</Empty>}
                 </div>
               </div>
             </Panel>
