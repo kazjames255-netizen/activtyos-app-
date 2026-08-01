@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money, refundedTotal } from "@/features/bookings/helpers";
@@ -19,6 +20,13 @@ interface Dash {
   money: { takenThisWeek: number; outstanding: number; overdueVouchers: number; awaitingVoucher: number };
   counts: { listings: number; activeBlocks: number };
 }
+
+// Just the task fields the dashboard's "Tasks today" card needs (full model lives in features/tasks).
+interface DashTask { id: string; t: string; status?: "backlog" | "todo" | "prog" | "done"; time?: string | null; due?: string | null; archived?: boolean; link?: { k: string; v: string; href?: string } | null }
+const TASK_STATUS: Record<string, { label: string; color: string }> = {
+  backlog: { label: "Backlog", color: "#8a93a6" }, todo: { label: "To do", color: "#3b82f6" },
+  prog: { label: "In progress", color: "#f59e0b" }, done: { label: "Done", color: "#16b364" },
+};
 
 // ── shared bits (visual system lifted from the HQ provider-analytics page) ──
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
@@ -191,6 +199,7 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
 export function DashboardApp() {
   const [d, setD] = useState<Dash | null>(null);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [tasks, setTasks] = useState<DashTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(6);
   const [nowMs] = useState(() => Date.now());
@@ -198,16 +207,28 @@ export function DashboardApp() {
   const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
+  const router = useRouter();
+  const portal = (usePathname() ?? "/").split("/")[1] || "app";
 
   const load = useCallback(() => {
     apiGet<Dash>("/api/dashboard").then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<Booking[]>("/api/bookings").then(setBookings).catch(() => {});
+    apiGet<DashTask[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => setTasks([]));
     apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1")
       .then((ls) => setListingSeason(Object.fromEntries((ls ?? []).filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string]))))
       .catch(() => {});
   }, []);
   useEffect(load, [load]);
-  useRealtime(["bookings", "blocks", "listings", "payments"], load);
+  useRealtime(["bookings", "blocks", "listings", "payments", "tasks"], load);
+
+  // Today's outstanding tasks (due today, not done/archived) — most urgent by time first.
+  const todayTasks = useMemo(() => {
+    const today = d?.today.date;
+    if (!today || !tasks) return [];
+    return tasks
+      .filter((t) => t.due === today && t.status !== "done" && !t.archived)
+      .sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
+  }, [tasks, d?.today.date]);
 
   // Everything analytical, computed from the tenant's own bookings.
   const a = useMemo(() => {
@@ -430,12 +451,37 @@ export function DashboardApp() {
                 </div>
               </div>
             </Panel>
-            <Panel title="✅ Tasks today">
-              <div className="flex h-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-10 text-center">
-                <div className="text-[22px]">🗓️</div>
-                <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Tasks coming here</div>
-                <div className="max-w-[200px] text-[11px] text-[var(--ink-3)]">Today&rsquo;s to-dos from your Task manager will show up on this card.</div>
-              </div>
+            <Panel
+              title="✅ Tasks today"
+              right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{todayTasks.length} due</Badge> : undefined}
+            >
+              {tasks === null ? (
+                <Empty>Loading…</Empty>
+              ) : todayTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
+                  <div className="text-[20px]">🎉</div>
+                  <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Nothing due today</div>
+                  <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager</button>
+                </div>
+              ) : (
+                <div className="flex flex-col divide-y divide-[var(--line)]">
+                  {todayTasks.map((t) => {
+                    const st = TASK_STATUS[t.status ?? "todo"] ?? TASK_STATUS.todo;
+                    const go = () => router.push(t.link?.href ?? `/${portal}/tasks`);
+                    return (
+                      <button key={t.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
+                        <span className="flex items-start gap-2.5">
+                          <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
+                          <span className="min-w-0 flex-1 font-semibold">{t.t}</span>
+                          <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{t.time ?? "Today"}</span>
+                        </span>
+                        {t.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{t.link.v}</span>}
+                      </button>
+                    );
+                  })}
+                  <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager →</button>
+                </div>
+              )}
             </Panel>
             <Panel title="🆕 Newest bookings">
               {a.recent.length ? (
