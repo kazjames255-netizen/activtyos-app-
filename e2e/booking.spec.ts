@@ -45,13 +45,19 @@ test.describe("operator publishes a listing via the wizard", () => {
     const savePricing = page.getByRole("button", { name: "Save pricing" }).first();
     if (await savePricing.isVisible().catch(() => false)) await savePricing.click();
 
-    // Wizard: title + venue (step 1), dates (step 5), block (step 6), publish.
+    // Wizard (full-page slideshow): title + venue (Basics), dates (When it
+    // runs), block (Tickets & pricing), publish. The step nav is a segmented
+    // progress bar whose buttons carry only a title ("7. When it runs") — no
+    // accessible name — so navigate by title, without the number (steps get
+    // renumbered when Kaz splits one).
     await page.goto("/freelancer/listings");
     await page.getByRole("button", { name: /New listing/ }).click();
     await page.getByPlaceholder("e.g. Summer Multi-Activity Camp").fill(title);
+    // The venue lives on the Details step since the Basics→Details split.
+    await page.getByTitle(/\. Details$/).click();
     await page.locator("select").filter({ hasText: "Select a venue…" }).selectOption({ index: 1 });
 
-    await page.getByRole("button", { name: "5 When it runs" }).click();
+    await page.getByTitle(/\. When it runs$/).click();
     const from = new Date();
     from.setDate(from.getDate() + (((8 - from.getDay()) % 7) || 7)); // next Monday
     const to = new Date(from);
@@ -61,14 +67,17 @@ test.describe("operator publishes a listing via the wizard", () => {
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     // getByLabel, NOT input[type=date] — the listings page behind the overlay
     // has a "Runs on" date filter that a bare locator matches first.
-    await page.getByLabel("Camp runs from").fill(iso(from));
-    await page.getByLabel("Camp runs to").fill(iso(to));
+    await page.getByLabel("Runs from").fill(iso(from));
+    await page.getByLabel("Runs to").fill(iso(to));
 
     // Pick OUR block — leftover blocks from earlier runs may sit first.
-    await page.getByRole("button", { name: "6 Tickets & pricing" }).click();
+    await page.getByTitle(/\. Tickets & pricing$/).click();
     await page.getByRole("button", { name: blockName }).click();
 
-    await expect(page.getByText("Everything’s ready to publish")).toBeVisible({ timeout: 15_000 });
+    // The header Publish button carries the blocker count in its name
+    // ("Publish (2)") until the listing is ready — so an exact-name match
+    // doubles as the readiness wait (the old "ready to publish" band is gone).
+    await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Publish", exact: true }).click();
 
     // Back on the list: THIS listing's card shows Published (any old listing

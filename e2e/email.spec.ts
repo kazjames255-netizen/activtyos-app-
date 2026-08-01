@@ -4,9 +4,11 @@ import { TEST_EMAIL_DOMAIN, apiPost, fbSignIn } from "./helpers/accounts";
 
 // The Email client's backend round trips: an inbound email (webhook → store)
 // shows in the Inbox and can be filed; a scheduled send lists under Inbox →
-// Scheduled and can be cancelled before it fires. The send engine itself
-// (delivery counts, open pixel, merge fields) is covered at the API layer —
-// this spec proves the UI is wired to the real store, not local state.
+// Scheduled and can be cancelled before it fires; the 4-step campaign wizard
+// (Name → Audience → Subject → Content) sends both a worded email and a
+// designed one for real. The send engine itself (delivery counts, open pixel,
+// merge fields) is covered at the API layer — this spec proves the UI is
+// wired to the real store, not local state.
 //
 // Assertion anchors: every subject carries this run's stamp, so a match can
 // only be OUR row (rows here aren't shared-Card, so cardWith doesn't apply).
@@ -87,31 +89,94 @@ test.describe("email client", () => {
     await expect(page.getByText(subject)).toBeVisible({ timeout: 15_000 });
   });
 
-  test("a campaign to a live segment sends and shows a real status", async ({ page }) => {
-    const stamp = Date.now().toString(36);
-    const name = `E2E campaign ${stamp}`;
+  // The campaign modal is a 4-step wizard (Name → Audience → Subject →
+  // Content); Send lives on the Content step. Shared helper: walk to the
+  // Content step with our stamped name + the live "New enquiries" segment as
+  // the only audience (a stamped customer with no booking is arranged first).
+  async function walkToContent(page: import("@playwright/test").Page, stamp: string, name: string) {
     const manifest = loadAccounts();
-
-    // Arrange: one customer with no booking — the "New enquiries" segment.
     const op = await fbSignIn(manifest.accounts.company.email);
-    await apiPost("/api/customers", op.idToken, { name: `E2E Enquirer ${stamp}`, email: `e2e-enquiry-${stamp}@${TEST_EMAIL_DOMAIN}` });
+    // marketingOptIn: never-booked contacts need EXPLICIT opt-in to receive
+    // marketing (UK PECR split-default) — without it the send filters them out.
+    await apiPost("/api/customers", op.idToken, { name: `E2E Enquirer ${stamp}`, email: `e2e-enquiry-${stamp}@${TEST_EMAIL_DOMAIN}`, marketingOptIn: true });
 
     await page.goto("/company/email");
     await page.getByRole("button", { name: "Campaigns", exact: true }).click();
     await page.getByRole("button", { name: /New campaign/ }).click();
+
+    // Step 1 — Name.
     await page.getByPlaceholder("e.g. August football camp").fill(name);
-    // Audiences are chips now: add the live "New enquiries (no booking)"
-    // segment, then drop the default "All active families" chip so our
-    // arranged customer is the only recipient.
+    await page.getByRole("button", { name: "Next →" }).click();
+
+    // Step 2 — Audience chips: add the enquiries segment, drop the default
+    // "All active families" chip so our arranged customer drives the send.
     await page.locator('select:has-text("Add another audience")').selectOption("seg-enquiries");
     await page.locator("span").filter({ hasText: /^All active families/ }).getByTitle("Remove from this send").click();
-    await page.getByPlaceholder("Subject line").fill(name);
+    await page.getByRole("button", { name: "Next →" }).click();
+
+    // Step 3 — Subject (stamped, so history rows are anchorable).
+    await page.getByPlaceholder("e.g. ☀️ August camp places are open!").fill(name);
+    await page.getByRole("button", { name: "Next →" }).click();
+  }
+
+  test("the campaign wizard sends a worded email (with countdown) to a live segment", async ({ page }) => {
+    const stamp = Date.now().toString(36);
+    const name = `E2E campaign ${stamp}`;
+    await walkToContent(page, stamp, name);
+
+    // Step 4 — Content: worded template is the default mode. Write a body and
+    // add the big countdown (toggling it self-fills a date two weeks out, so
+    // the "included" banner proves the email will render the HTML clock).
+    await page.locator("textarea").fill(`Hello from the e2e wizard ${stamp}.`);
+    await page.getByRole("button", { name: "⏱ Countdown" }).click();
+    await expect(page.getByText(/Countdown included/)).toBeVisible();
     await page.getByRole("button", { name: "Send now" }).click();
 
-    // The row that appears links to the SERVER's send record, with a live
-    // status — "Sending" until the transport hand-off settles, then "Sent".
+    // A worded send closes the modal on success; the list shows the SERVER's
+    // send record with a live status — "Sending" until the transport hand-off
+    // settles, then "Sent".
     const row = page.locator("div.grid").filter({ hasText: name }).last();
-    await expect(row).toBeVisible({ timeout: 15_000 });
-    await expect(row.getByText(/Sent|Sending/)).toBeVisible();
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByText(/Sent|Sending/)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("a designed campaign sends, saves as a ⭐ My template and is reusable", async ({ page }) => {
+    const stamp = Date.now().toString(36);
+    const name = `E2E design ${stamp}`;
+    const savedName = `E2E saved ${stamp}`;
+    await walkToContent(page, stamp, name);
+
+    // Step 4 — Content: switch to the designer and start from a gallery
+    // template (the card footer name is unique; the click lands on the card).
+    await page.getByRole("button", { name: "🎨 Design your own" }).click();
+    await page.getByRole("button", { name: "🎨 Go to new builder" }).click();
+    await page.getByText("Multi-activity camp", { exact: true }).click();
+    await page.getByRole("button", { name: "✓ I'm ready to send" }).click();
+
+    // Back in the wizard with the design attached; send it.
+    await expect(page.getByText("Your design", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Send now" }).click();
+
+    // A designed send offers to save the design under a name before closing.
+    await expect(page.getByText(/^Sent to \d+ (family|families)!/)).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder("e.g. Summer camp email").fill(savedName);
+    await page.getByRole("button", { name: "Save it" }).click();
+
+    // The send is in the server's history with a live status…
+    const row = page.locator("div.grid").filter({ hasText: name }).last();
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByText(/Sent|Sending/)).toBeVisible({ timeout: 15_000 });
+
+    // …and the saved design round-trips: a fresh wizard lists it under
+    // Design your own → "Use a saved one", and picking it attaches the design.
+    // (Saved designs live in localStorage — same browser context, so visible.)
+    await page.getByRole("button", { name: /New campaign/ }).click();
+    await page.getByRole("button", { name: "Next →" }).click();
+    await page.getByRole("button", { name: "Next →" }).click();
+    await page.getByRole("button", { name: "Next →" }).click();
+    await page.getByRole("button", { name: "🎨 Design your own" }).click();
+    await page.locator('select:has-text("Use a saved one")').selectOption({ label: savedName });
+    await expect(page.getByText("Your design", { exact: true })).toBeVisible();
+    await page.getByTitle("Cancel").click();
   });
 });
