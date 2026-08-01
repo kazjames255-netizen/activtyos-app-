@@ -5,6 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
+import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { Badge } from "@/components/ui";
 
@@ -181,43 +182,6 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
     </div>
   );
 }
-function BookingBars({ data }: { data: { month: string; count: number; cumulative: number }[] }) {
-  const maxC = Math.max(1, ...data.map((x) => x.count));
-  const maxCum = Math.max(1, ...data.map((x) => x.cumulative));
-  const W = 640, H = 170, BOT = 14;
-  const plot = H - 24 - BOT;
-  const bw = (W - 16) / Math.max(1, data.length);
-  const barW = Math.min(bw * 0.6, 46);
-  const by = (v: number) => H - BOT - (v / maxC) * plot;
-  const cy = (v: number) => H - BOT - (v / maxCum) * plot;
-  const cx = (i: number) => 8 + i * bw + bw / 2;
-  const total = data[data.length - 1]?.cumulative ?? 0;
-  const cumPath = data.map((x, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(x.cumulative)}`).join(" ");
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: "visible" }}>
-        <defs>
-          <linearGradient id="dbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5aa0f0" /><stop offset="1" stopColor={LIGHTB} /></linearGradient>
-          <linearGradient id="darea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={BLUE} stopOpacity="0.12" /><stop offset="1" stopColor={BLUE} stopOpacity="0" /></linearGradient>
-        </defs>
-        {[0.5, 1].map((g) => { const yy = by(maxC * g); return <line key={g} x1={8} x2={W - 8} y1={yy} y2={yy} stroke="var(--line)" strokeWidth="1" />; })}
-        {data.map((x, i) => {
-          if (x.count === 0) return <rect key={i} x={cx(i) - 10} y={H - BOT - 3} width={20} height={3} rx={1.5} fill="var(--line)" />;
-          const h = (x.count / maxC) * plot; const top = H - BOT - h;
-          return <g key={i}>
-            <rect x={cx(i) - barW / 2} y={top} width={barW} height={h} rx={6} fill="url(#dbar)"><title>{`${monthLabel(x.month)}: ${x.count}`}</title></rect>
-            {h > 22 ? <text x={cx(i)} y={top + 15} fontSize="11" fontWeight="800" fill="#fff" textAnchor="middle">{x.count}</text> : <text x={cx(i)} y={top - 5} fontSize="10" fontWeight="800" fill={LIGHTB} textAnchor="middle">{x.count}</text>}
-          </g>;
-        })}
-        <path d={`${cumPath} L${cx(data.length - 1)},${H - BOT} L${cx(0)},${H - BOT} Z`} fill="url(#darea)" />
-        <path d={cumPath} fill="none" stroke={BLUE} strokeWidth="2.5" strokeLinejoin="round" />
-        <circle cx={cx(data.length - 1)} cy={cy(total)} r="3.5" fill={BLUE} />
-        <text x={Math.min(W - 2, cx(data.length - 1))} y={cy(total) - 9} fontSize="11" fontWeight="800" fill={BLUE} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="end">{total} total</text>
-      </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((x, i) => <span key={i}>{monthLabel(x.month)}</span>)}</div>
-    </div>
-  );
-}
 
 export function DashboardApp() {
   const [d, setD] = useState<Dash | null>(null);
@@ -225,10 +189,17 @@ export function DashboardApp() {
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(6);
   const [nowMs] = useState(() => Date.now());
+  // listingId → seasonId, so bookings can be grouped by season (names in settings).
+  const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
 
   const load = useCallback(() => {
     apiGet<Dash>("/api/dashboard").then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<Booking[]>("/api/bookings").then(setBookings).catch(() => {});
+    apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1")
+      .then((ls) => setListingSeason(Object.fromEntries((ls ?? []).filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string]))))
+      .catch(() => {});
   }, []);
   useEffect(load, [load]);
   useRealtime(["bookings", "blocks", "listings", "payments"], load);
@@ -249,8 +220,9 @@ export function DashboardApp() {
 
     const income = keys.map((k) => ({ label: k, value: 0 }));
     const booked = keys.map((k) => ({ label: k, value: 0 }));
-    const perMonthNew = new Map<string, number>(keys.map((k) => [k, 0]));
     const byAct = new Map<string, number>();
+    const bySeason = new Map<string, number>();
+    const seasonName = (b: Booking) => seasons.find((s) => s.id === (b.listingId ? listingSeason[b.listingId] : undefined))?.name ?? "No season";
     const byStatus = new Map<string, number>();
     const payMix = new Map<string, number>();
     const families = new Set<string>();
@@ -268,7 +240,6 @@ export function DashboardApp() {
       const i = keys.indexOf(m);
       income[i].value += collectedOf(b);
       if (!isCancelled(b)) booked[i].value += b.amount;
-      perMonthNew.set(m, (perMonthNew.get(m) ?? 0) + 1);
       totalCollected += collectedOf(b);
       if (isPaid(b)) paidCount++;
       if (!isCancelled(b)) bookingsCount++;
@@ -276,23 +247,23 @@ export function DashboardApp() {
       byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
       payMix.set(b.pay || "—", (payMix.get(b.pay || "—") ?? 0) + 1);
       if (!isCancelled(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedOf(b));
+      if (!isCancelled(b)) bySeason.set(seasonName(b), (bySeason.get(seasonName(b)) ?? 0) + collectedOf(b));
     }
-    let cum = 0;
-    const newBk = keys.map((k) => { cum += perMonthNew.get(k) ?? 0; return { month: k, count: perMonthNew.get(k) ?? 0, cumulative: cum }; });
     const acts = [...byAct.entries()].sort((x, y) => y[1] - x[1]);
+    const seasonRows = [...bySeason.entries()].filter(([, v]) => v > 0 || bySeason.size <= 6).sort((x, y) => y[1] - x[1]);
     const recent = [...list].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6);
 
     return {
-      income, booked, newBk, weekly, weeklyIncome,
+      income, booked, weekly, weeklyIncome,
       weeklyLabels: wkStarts.map((ms) => { const dt = new Date(ms); return `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`; }),
       kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
-      topActivities: acts.slice(0, 6),
+      bySeason: seasonRows.slice(0, 8).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       byStatus: [...byStatus.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: STATUS_C[label] ?? "#8a86a3" })),
       payMix: [...payMix.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: PAY_C[label] ?? "#8a86a3" })),
       recent,
     };
-  }, [bookings, months, nowMs]);
+  }, [bookings, months, nowMs, listingSeason, seasons]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!d) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
@@ -417,8 +388,10 @@ export function DashboardApp() {
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Panel title="New bookings" right={<span className="text-[11.5px] text-[var(--ink-3)]">bars = new · line = total</span>}>
-              <BookingBars data={a.newBk} />
+            <Panel title="Revenue by season">
+              {seasons.length === 0
+                ? <Empty>Set up your seasons in Setup to see this.</Empty>
+                : <Breakdown entries={a.bySeason} />}
             </Panel>
             <Panel title="Revenue by activity">
               <Breakdown entries={a.byActivity} />
