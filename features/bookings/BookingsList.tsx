@@ -101,6 +101,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const openRef = useBookingsStore((s) => s.openRef);
   const openCreate = useBookingsStore((s) => s.openCreate);
   const act = useBookingsStore((s) => s.act);
+  const resolveMove = useBookingsStore((s) => s.resolveMove);
 
   // Local, not in the store: a listing and a day are how you narrow the list
   // while working, not a view worth remembering between visits.
@@ -481,7 +482,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="ml-auto flex items-center gap-1.5">
                     <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
                       className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
-                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-deny"); }} title="Decline — the booking is unchanged and the family is told"
+                    <button onClick={(e) => { e.stopPropagation(); const reason = window.prompt("Why are you declining this date change? The family will see this. (Leave blank to decline without a reason.)"); if (reason === null) return; resolveMove(b.ref, false, reason.trim() || undefined); }} title="Decline — the booking is unchanged and the family is told (with your reason)"
                       className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
                   </span>
                 </div>
