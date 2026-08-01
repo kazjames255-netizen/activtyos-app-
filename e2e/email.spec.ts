@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { API_URL, loadAccounts, statePath } from "./helpers/env";
 import { TEST_EMAIL_DOMAIN, apiPost, fbSignIn } from "./helpers/accounts";
+import { arrangeEnquirer, wizardToContent } from "./helpers/email";
 
 // The Email client's backend round trips: an inbound email (webhook → store)
 // shows in the Inbox and can be filed; a scheduled send lists under Inbox →
@@ -61,9 +62,12 @@ test.describe("email client", () => {
     await page.getByRole("button", { name: /^Scheduled/ }).click();
     await expect(page.getByText(schedSubject)).toBeVisible();
     // Cancel it (confirm dialog) — the row goes, and the queue records the
-    // cancellation server-side.
+    // cancellation server-side. Scope to OUR row: other specs also queue
+    // scheduled sends for this tenant, so a bare "✕ Cancel" goes ambiguous
+    // under the parallel run.
     page.once("dialog", (d) => void d.accept());
-    await page.getByRole("button", { name: "✕ Cancel", exact: true }).click();
+    await page.locator("div.flex").filter({ hasText: schedSubject }).last()
+      .getByRole("button", { name: "✕ Cancel", exact: true }).click();
     await expect(page.getByText(schedSubject)).toBeHidden({ timeout: 15_000 });
   });
 
@@ -90,33 +94,13 @@ test.describe("email client", () => {
   });
 
   // The campaign modal is a 4-step wizard (Name → Audience → Subject →
-  // Content); Send lives on the Content step. Shared helper: walk to the
-  // Content step with our stamped name + the live "New enquiries" segment as
-  // the only audience (a stamped customer with no booking is arranged first).
+  // Content); Send lives on the Content step. Shared steps live in
+  // helpers/email.ts: arrange an opted-in enquirer (PECR split-default —
+  // without explicit opt-in the send filters a never-booked contact out),
+  // then walk to Content with the enquiries segment as the only audience.
   async function walkToContent(page: import("@playwright/test").Page, stamp: string, name: string) {
-    const manifest = loadAccounts();
-    const op = await fbSignIn(manifest.accounts.company.email);
-    // marketingOptIn: never-booked contacts need EXPLICIT opt-in to receive
-    // marketing (UK PECR split-default) — without it the send filters them out.
-    await apiPost("/api/customers", op.idToken, { name: `E2E Enquirer ${stamp}`, email: `e2e-enquiry-${stamp}@${TEST_EMAIL_DOMAIN}`, marketingOptIn: true });
-
-    await page.goto("/company/email");
-    await page.getByRole("button", { name: "Campaigns", exact: true }).click();
-    await page.getByRole("button", { name: /New campaign/ }).click();
-
-    // Step 1 — Name.
-    await page.getByPlaceholder("e.g. August football camp").fill(name);
-    await page.getByRole("button", { name: "Next →" }).click();
-
-    // Step 2 — Audience chips: add the enquiries segment, drop the default
-    // "All active families" chip so our arranged customer drives the send.
-    await page.locator('select:has-text("Add another audience")').selectOption("seg-enquiries");
-    await page.locator("span").filter({ hasText: /^All active families/ }).getByTitle("Remove from this send").click();
-    await page.getByRole("button", { name: "Next →" }).click();
-
-    // Step 3 — Subject (stamped, so history rows are anchorable).
-    await page.getByPlaceholder("e.g. ☀️ August camp places are open!").fill(name);
-    await page.getByRole("button", { name: "Next →" }).click();
+    await arrangeEnquirer(stamp);
+    await wizardToContent(page, name);
   }
 
   test("the campaign wizard sends a worded email (with countdown) to a live segment", async ({ page }) => {

@@ -1055,7 +1055,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
   const allPeople = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
   const people = pq.trim() ? allPeople.filter((p) => `${p.name ?? ""} ${p.email}`.toLowerCase().includes(pq.trim().toLowerCase())) : allPeople;
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+    <div data-ui="card" className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{SEG_NAMES[a.name] ?? a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
       <p className="mt-1 text-[12px] text-[var(--ink-3)]">{SEG_DESCS[a.name] ?? a.desc}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1270,10 +1270,14 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   const [sub, setSub] = useState<"worded" | "designed">("worded");
   const [q, setQ] = useState("");
   const saveDesign = (d: CampaignDesign) => {
+    // Prompt OUTSIDE the updater — React double-invokes updaters in dev
+    // (StrictMode), which showed the prompt twice and kept the second
+    // (auto-dismissed) answer.
+    const nm = designer?.mode === "edit" ? null : (window.prompt("Name this design template:", "My design") || "My design");
     setDesigns((xs) => {
       let next: SavedTemplate[];
       if (designer?.mode === "edit") next = xs.map((x) => (x.id === designer.item.id ? { ...x, accent: d.accent, blocks: d.blocks } : x));
-      else { const nm = window.prompt("Name this design template:", "My design") || "My design"; next = [{ id: `td-${dNow}-${xs.length}`, name: nm.trim() || "My design", accent: d.accent, blocks: d.blocks }, ...xs]; }
+      else next = [{ id: `td-${dNow}-${xs.length}`, name: (nm ?? "My design").trim() || "My design", accent: d.accent, blocks: d.blocks }, ...xs];
       persistMyTemplates(next); return next;
     });
     setDesigner(null);

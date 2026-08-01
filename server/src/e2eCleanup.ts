@@ -29,7 +29,7 @@ const TENANT_SCOPED = [
   "customerGroups", "childFiles", "broadcasts", "wallet", "walletEntries",
   "notifications", "schedulerFired",
   "calendarEvents", "inventory",
-  "emailMessages", "scheduledEmails",
+  "emailMessages", "scheduledEmails", "emailSuppressions",
 ];
 
 // Collections owned by a USER (parents have no tenant): field → collection.
