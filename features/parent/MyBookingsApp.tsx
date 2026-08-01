@@ -20,7 +20,6 @@ function genderTone(sex?: string): { bg: string; fg: string; on: string } {
   if (s.startsWith("g") || s === "female" || s === "f") return { bg: "#fdeaf3", fg: "#b0186a", on: "#c81e77" };
   return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
 }
-const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
 
 // Booking-card hero colours — same palette as the operator bookings list
 // (Confirmed = deep blue, Waitlisted/Offered = deep green, etc.).
@@ -594,6 +593,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const optionsFor = (iso: string) => {
     const others = new Set(days.filter((d2) => d2 !== iso).map((d2) => moves[d2] ?? d2));
     return available.filter((dt) => {
+      if (dt === iso) return false; // its own date — that's "Keep this date"
+      if (days.includes(dt)) return false; // a date already on this booking
       if (others.has(dt)) return false; // don't let two days land on the same date
       if (rule === "week" && keptWeeks.size === 1 && weekKey(dt) !== [...keptWeeks][0]) return false;
       return true;
@@ -1110,32 +1111,26 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
       .then((cs) => setKidsSex(Object.fromEntries((cs ?? []).map((c) => [c.name.trim(), (c.sex ?? "").toLowerCase()]))))
       .catch(() => {});
   }, []);
-  // Each provider's listings once (deduped by tenant) so every card can show
-  // its venue/address in the row without its own fetch, and feed the amend flow.
-  const [tenantListings, setTenantListings] = useState<Record<string, AmendListing[]>>({});
-  useEffect(() => {
-    const tids = [...new Set((bookings ?? []).map((b) => b.tenantId).filter(Boolean) as string[])];
-    tids.filter((t) => !tenantListings[t]).forEach((t) => {
-      apiPublic<AmendListing[]>(`/api/listings?tenantId=${encodeURIComponent(t)}`)
-        .then((ls) => setTenantListings((m) => ({ ...m, [t]: ls ?? [] })))
-        .catch(() => {});
-    });
-  }, [bookings, tenantListings]);
-  const listingOf = (b: Booking) => {
-    const ls = tenantListings[b.tenantId ?? ""] ?? [];
-    return ls.find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null;
-  };
-  // Venue/address per listing from the detail endpoint (works even for archived
-  // listings the public storefront feed drops) — for the row under the listing.
-  const [venueById, setVenueById] = useState<Record<string, { location?: string | null; address?: string | null; city?: string | null }>>({});
+  // The full listing detail per booked listing (matched by listingId — reliable,
+  // and it carries the blocks+session availability the amend flow needs plus the
+  // venue for the row). Blocks live in a separate collection, so ?tenantId= list
+  // rows don't have them — /api/listings/:id (withBlocks) does, even for
+  // archived listings.
+  type ListingDetail = AmendListing & { library?: { venue?: { name?: string; address?: string; city?: string } | null } };
+  const [detailById, setDetailById] = useState<Record<string, ListingDetail>>({});
   useEffect(() => {
     const ids = [...new Set((bookings ?? []).map((b) => b.listingId).filter(Boolean) as string[])];
-    ids.filter((id) => !venueById[id]).forEach((id) => {
-      apiGet<{ library?: { venue?: { name?: string; address?: string; city?: string } | null } }>(`/api/listings/${encodeURIComponent(id)}`)
-        .then((l) => setVenueById((m) => ({ ...m, [id]: { location: l.library?.venue?.name ?? null, address: l.library?.venue?.address ?? null, city: l.library?.venue?.city ?? null } })))
+    ids.filter((id) => !detailById[id]).forEach((id) => {
+      apiGet<ListingDetail>(`/api/listings/${encodeURIComponent(id)}`)
+        .then((l) => setDetailById((m) => ({ ...m, [id]: l })))
         .catch(() => {});
     });
-  }, [bookings, venueById]);
+  }, [bookings, detailById]);
+  const listingOf = (b: Booking): AmendListing | null => (b.listingId ? detailById[b.listingId] ?? null : null);
+  const venueOf = (b: Booking) => {
+    const v = b.listingId ? detailById[b.listingId]?.library?.venue : null;
+    return v ? { location: v.name ?? null, address: v.address ?? null, city: v.city ?? null } : undefined;
+  };
   // The payment-link email deep-links here as ?pay=REF; the schedule's
   // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
   const params = useSearchParams();
@@ -1328,7 +1323,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={b.listingId ? venueById[b.listingId] : undefined} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={venueOf(b)} />
                     ))}
                   </div>
                 )}
