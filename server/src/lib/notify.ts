@@ -86,12 +86,17 @@ export async function setMuted(email: string, category: NotifyCategory, muted: b
 
 /** The address a provider wants operational mail on, falling back to the
  *  account address. Mirrors what routes/messages.ts already does. */
-async function tenantContact(tenantId: string): Promise<{ email?: string; name: string }> {
+async function tenantContact(tenantId: string): Promise<{ email?: string; name: string; portal?: string }> {
   const t = await db.collection("tenants").doc(tenantId).get();
   if (!t.exists) return { name: "Your activity provider" };
+  // The tenant's operator portal (freelancer / company / franchise), from its
+  // plan/type — so notification links point at the portal this team uses.
+  const plan = ((t.get("subscription") as { plan?: string } | undefined)?.plan || (t.get("type") as string) || "").toLowerCase();
+  const portal = plan.includes("freelanc") ? "freelancer" : plan.includes("franchis") ? "franchise" : plan.includes("company") ? "company" : undefined;
   return {
     email: (t.get("notifyEmail") as string) || (t.get("email") as string) || undefined,
     name: (t.get("name") as string) || "Your activity provider",
+    portal,
   };
 }
 
@@ -138,6 +143,15 @@ export async function notify(input: NotifyInput): Promise<void> {
     const parentEmail = input.to.kind === "parent" ? key(input.to.email) : undefined;
     if (input.to.kind === "parent" && !parentEmail) return;
 
+    const provider = await tenantContact(input.tenantId);
+    // Point operator links at the portal this team actually uses (a freelancer
+    // tenant's link shouldn't say /company/). Parent links (/custdash/) are left
+    // alone. The in-app bell still re-maps per viewer; this fixes the email too.
+    const href =
+      input.href && input.to.kind === "tenant" && provider.portal
+        ? input.href.replace(/^\/(company|franchise|freelancer|staff)\//, `/${provider.portal}/`)
+        : input.href;
+
     await col().add({
       tenantId: input.tenantId,
       audience: input.to.kind,
@@ -145,7 +159,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       category: input.category,
       title: input.title,
       body: input.body,
-      ...(input.href ? { href: input.href } : {}),
+      ...(href ? { href } : {}),
       ...(input.ref ? { ref: input.ref } : {}),
       readAt: null,
       at: new Date().toISOString(),
@@ -153,7 +167,6 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     if (input.bellOnly) return;
 
-    const provider = await tenantContact(input.tenantId);
     let to: string | undefined;
     let footer: string | undefined;
     if (parentEmail) {
@@ -169,7 +182,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     await sendMail(
       to,
       input.subject ?? input.title,
-      layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, input.href, footer),
+      layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer),
     );
   } catch (e) {
     console.error("[notify] failed:", (e as Error).message);
