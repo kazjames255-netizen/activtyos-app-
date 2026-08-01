@@ -518,18 +518,23 @@ function DateChangePanel({ booking }: { booking: Booking }) {
           </div>
         ))}
       </div>
-      {declineN > 0 && (
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={`Why ${declineN === 1 ? "that date isn't" : "those dates aren't"} approved (optional) — the family sees this`}
-          className="mt-2.5 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-      )}
+      {/* Always available — an operator can add a reason whether they decline
+          everything or just some. Shown to the family on declined dates. */}
+      <input value={reason} onChange={(e) => setReason(e.target.value)}
+        placeholder={
+          declineN > 0
+            ? `Why ${declineN === 1 ? "that date isn't" : "those dates aren't"} approved (optional) — the family sees this`
+            : "Reason if you decline (optional) — the family sees this"
+        }
+        className="mt-2.5 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
       <div className="mt-2.5 flex flex-wrap gap-2">
         {approveN > 0 && (
           <Button variant="primary" onClick={() => resolveMove(booking.ref, true, reason, declineN > 0 ? picked : undefined)}
             title="Move the ticked dates — the family's schedule updates and they're told">
-            {declineN > 0 ? `Approve ${approveN}, decline ${declineN}` : "Approve & move dates"}
+            {declineN > 0 ? `Approve ${approveN}, decline ${declineN}` : req.moves.length === 1 ? "Approve & move date" : "Approve & move dates"}
           </Button>
         )}
-        <Button variant="danger" onClick={() => resolveMove(booking.ref, false, reason)}>Decline all</Button>
+        <Button variant="danger" onClick={() => resolveMove(booking.ref, false, reason)}>{req.moves.length === 1 ? "Decline" : "Decline all"}</Button>
       </div>
       <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Approved dates move on the family&rsquo;s schedule automatically and they&rsquo;re emailed &amp; notified; declined ones stay put (with your reason).</div>
     </div>
