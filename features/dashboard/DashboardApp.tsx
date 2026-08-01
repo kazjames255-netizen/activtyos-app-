@@ -418,8 +418,25 @@ export function DashboardApp() {
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <Panel title="Bookings by status"><Breakdown entries={a.byStatus} /></Panel>
-            <Panel title="Payment mix"><Breakdown entries={a.payMix} /></Panel>
+            <Panel title="📊 Bookings & payments">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <div className="mb-2 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">By status</div>
+                  <Breakdown entries={a.byStatus} />
+                </div>
+                <div className="border-t border-[var(--line)] pt-4">
+                  <div className="mb-2 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Payment mix</div>
+                  <Breakdown entries={a.payMix} />
+                </div>
+              </div>
+            </Panel>
+            <Panel title="✅ Tasks today">
+              <div className="flex h-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-10 text-center">
+                <div className="text-[22px]">🗓️</div>
+                <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Tasks coming here</div>
+                <div className="max-w-[200px] text-[11px] text-[var(--ink-3)]">Today&rsquo;s to-dos from your Task manager will show up on this card.</div>
+              </div>
+            </Panel>
             <Panel title="🆕 Newest bookings">
               {a.recent.length ? (
                 <div className="flex flex-col divide-y divide-[var(--line)]">
