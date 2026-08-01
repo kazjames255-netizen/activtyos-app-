@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money, payLabelFor, payTone, statusTone } from "@/features/bookings/helpers";
+import { money, payLabelFor, payTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -21,6 +21,36 @@ function genderTone(sex?: string): { bg: string; fg: string; on: string } {
   return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
 }
 const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+
+// Booking-card hero colours — same palette as the operator bookings list
+// (Confirmed = deep blue, Waitlisted/Offered = deep green, etc.).
+const PHERO_GRAD: Record<string, string> = {
+  "Confirmed": "linear-gradient(140deg,#3d7fe6,#1749a8)",
+  "Approval needed": "linear-gradient(140deg,#f2a231,#cf7208)",
+  "Waitlisted": "linear-gradient(140deg,#25ad68,#0b8446)",
+  "Offered": "linear-gradient(140deg,#25ad68,#0b8446)",
+  "Cancelled": "linear-gradient(140deg,#ee6d6d,#c93030)",
+  "Declined": "linear-gradient(140deg,#ee6d6d,#c93030)",
+};
+const pHeroGrad = (s: string) => PHERO_GRAD[s] || "linear-gradient(140deg,#4f78e0,#2140a0)";
+const PHERO_TONE: Record<string, { bg: string; fg: string }> = {
+  "Confirmed": { bg: "#e1eafb", fg: "#1749a8" },
+  "Approval needed": { bg: "#fbe6c6", fg: "#a85f08" },
+  "Waitlisted": { bg: "#dbf2e6", fg: "#0b8446" },
+  "Offered": { bg: "#dbf2e6", fg: "#0b8446" },
+  "Cancelled": { bg: "#fbdede", fg: "#c53030" },
+  "Declined": { bg: "#fbdede", fg: "#c53030" },
+};
+const pHeroTone = (s: string) => PHERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0" };
+// A labelled fixed-width column, matching the operator row.
+function PCol({ label, w, children }: { label: string; w: string; children: ReactNode }) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${w}`}>
+      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
+      <div>{children}</div>
+    </div>
+  );
+}
 
 // A month calendar that shows, at a glance, which dates a booking can move to:
 // green = a running date with space (clickable), blue = the one chosen, faint =
@@ -764,25 +794,36 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
     b.pay !== "Paid" && b.pay !== "Refunded" && b.pay !== "Awaiting voucher payment" &&
     (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
 
+  const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);
+  const sessCount = b.sessions?.length || b.days?.length || 0;
+  const childCount = b.kids?.length || 1;
+
   return (
-    <Card id={`booking-${b.ref}`} className="p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="text-[14.5px] font-extrabold">{b.listing}</div>
-          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
-            {b.child} · {b.pass} · {b.dates} · Ref {b.ref}
+    <Card id={`booking-${b.ref}`} className="overflow-hidden p-0" style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}>
+      {/* Identity hero row — colour = booking status (matches operator list) */}
+      <div className="flex items-stretch">
+        <div onClick={() => setExpanded((x) => !x)} className="relative flex w-[140px] flex-none cursor-pointer items-center gap-2.5 p-2.5 text-white sm:w-[210px]" style={{ background: pHeroGrad(b.status) }}>
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/25 text-[15px] font-extrabold ring-1 ring-white/25" style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
+            {(kidNames[0] || "?").charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kidNames.join(" & ") || "—"}</div>
+            <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>Ref {b.ref}</div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          {pendingMove ? <Badge tone={{ bg: "#fdf3d8", fg: "#8a5300" }}>Date change pending</Badge> : <Badge tone={statusTone(b.status)}>{b.status}</Badge>}
-          {b.cancel?.refund === "pending" && (
-            <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
-          )}
-          {!cancelled && <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>}
-          <span className="ml-1 text-[14px] font-extrabold">{money(b.amount)}</span>
+        <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
+          <PCol label="🎟 Listing" w="min-w-[120px] flex-1"><span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span></PCol>
+          <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}</span></PCol>
+          <PCol label="Status" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? "Date change" : b.status}</span></PCol>
+          {!cancelled && <PCol label="Payment" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
+          <div className="ml-auto flex-none text-right">
+            <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
+            <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
+          </div>
         </div>
       </div>
 
+      <div className="px-4 pb-4 pt-1">
       {clash && !cancelled && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
           <span aria-hidden>⚠️</span>
@@ -976,6 +1017,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
           }}
         />
       )}
+      </div>
     </Card>
   );
 }
