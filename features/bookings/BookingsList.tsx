@@ -21,12 +21,22 @@ import {
   sessionCount,
   statusTone,
 } from "./helpers";
-import { Badge, Button, Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
+
+// A labelled square tile — the building block of a booking row.
+function Cell({ label, bg, fg, ring, title, children }: { label: string; bg: string; fg: string; ring?: string; title?: string; children: React.ReactNode }) {
+  return (
+    <span title={title} className="flex min-w-[96px] max-w-[190px] flex-none flex-col justify-center rounded-xl px-2.5 py-1.5" style={{ background: bg, color: fg, boxShadow: ring ? `inset 0 0 0 1px ${ring}` : undefined }}>
+      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] opacity-70">{label}</span>
+      <span className="truncate text-[12px] font-extrabold leading-tight">{children}</span>
+    </span>
+  );
+}
 
 /**
  * The list. With a booking open it becomes the left rail of a split view:
@@ -436,24 +446,15 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   </span>
                 </span>
 
-                <span className="hidden min-w-0 flex-1 sm:block">
-                  <span className="mb-1 flex flex-wrap items-center gap-1.5">
-                    <span className="max-w-full truncate rounded-full px-2 py-[3px] text-[11px] font-extrabold ring-1 ring-inset" style={{ background: "linear-gradient(120deg,#eaf1fe,#dbe8fb)", color: "#16306e", boxShadow: "inset 0 0 0 1px #cfe0f7" }} title={b.listing}>🎟 {b.listing || "—"}</span>
-                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full px-2 py-[3px] text-[10.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>📅 {seasonNameOf(b.listingId)}</span>}
-                  </span>
-                  <span className="block truncate text-[12.5px] text-[var(--ink)]">{b.dates}</span>
-                  <span className="block truncate text-[11px] text-[var(--ink-3)]">
-                    {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · Ref {b.ref}
-                  </span>
-                </span>
-
-                <span className="hidden flex-none flex-wrap justify-end gap-1 md:flex">
-                  <Badge tone={statusTone(b.status)}>{b.status}</Badge>
-                  <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
-                  {refundPending && (
-                    <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>Refund pending</Badge>
-                  )}
-                </span>
+                <div className="hidden flex-[3] flex-wrap items-stretch gap-1.5 lg:flex">
+                  <Cell label="🎟 Listing" bg="linear-gradient(120deg,#eaf1fe,#dbe8fb)" fg="#16306e" ring="#cfe0f7" title={b.listing}>{b.listing || "—"}</Cell>
+                  {seasonNameOf(b.listingId) && <Cell label="📅 Season" bg="linear-gradient(120deg,#2f9fb8,#12586e)" fg="#ffffff">{seasonNameOf(b.listingId)}</Cell>}
+                  <Cell label="📆 Dates" bg="var(--panel)" fg="var(--ink)" title={b.dates}>{b.dates}</Cell>
+                  <Cell label="Group" bg="var(--panel)" fg="var(--ink-2)">{att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sess</Cell>
+                  {(() => { const t = statusTone(b.status); return <Cell label="Status" bg={t.bg} fg={t.fg}>{b.status}</Cell>; })()}
+                  {(() => { const t = payTone(b.pay); return <Cell label="Payment" bg={t.bg} fg={t.fg}>{payLabelFor(b)}</Cell>; })()}
+                  {refundPending && <Cell label="Refund" bg="#fdebec" fg="#bb1620">Pending</Cell>}
+                </div>
 
                 {/* Voucher money arrives outside the app — reconcile it right
                     here without opening the booking. */}

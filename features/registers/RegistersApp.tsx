@@ -202,6 +202,10 @@ export function RegistersApp() {
   const [ready, setReady] = useState(false);
   const [date, setDate] = useState(anchor);
   const [activeListing, setActiveListing] = useState<string>("");
+  const seasons = settings.seasons ?? [];
+  const [regSeason, setRegSeason] = useState("");
+  const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
+  useEffect(() => { apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((ls) => setListingSeason(Object.fromEntries((ls ?? []).filter((l) => l.seasonId).map((l) => [l.id, l.seasonId as string])))).catch(() => {}); }, []);
   const [error, setError] = useState<string | null>(null);
   const [busyRef, setBusyRef] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
@@ -279,11 +283,15 @@ export function RegistersApp() {
   const whatsappFor = (a: Attendee) => { const n = waNumber(a.phone); if (!n) { setError(`No phone on file for ${a.booker}.`); return; } const el = document.createElement("a"); el.href = `https://wa.me/${n}`; el.target = "_blank"; el.rel = "noopener noreferrer"; document.body.appendChild(el); el.click(); el.remove(); };
 
   // Listings that run somewhere in the window; pick the active one.
-  const listingsAll = useMemo(() => {
+  const listingsEvery = useMemo(() => {
     const m = new Map<string, string>(); for (const d of Object.keys(days)) for (const s of days[d] ?? []) m.set(s.listingId, s.listingName); return [...m.entries()];
   }, [days]);
-  const active = activeListing || listingsAll[0]?.[0] || "";
+  // Narrow the listing picker to the chosen season (a listing's seasonId).
+  const seasonObj = seasons.find((s) => s.id === regSeason);
+  const listingsAll = seasonObj ? listingsEvery.filter(([id]) => listingSeason[id] === seasonObj.id) : listingsEvery;
+  const active = (listingsAll.some(([id]) => id === activeListing) ? activeListing : "") || listingsAll[0]?.[0] || "";
   const activeName = listingsAll.find(([id]) => id === active)?.[1] ?? "";
+  const activeSeason = seasons.find((s) => s.id === listingSeason[active])?.name;
   const sessionsOn = (d: string) => (days[d] ?? []).filter((s) => s.listingId === active);
   const daySessions = sessionsOn(date);
 
@@ -391,9 +399,19 @@ export function RegistersApp() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📋</span>Register</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {seasons.length > 0 && (
+                    <span className="relative inline-flex items-center">
+                      <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title="Filter listings by season" className="appearance-none rounded-lg bg-white/90 py-1.5 pl-2.5 pr-7 text-[12.5px] font-extrabold text-[#1d3a8f] outline-none">
+                        <option value="">📅 All seasons</option>
+                        {seasons.map((s) => <option key={s.id} value={s.id}>📅 {s.name}</option>)}
+                      </select>
+                      <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-[#1d3a8f]">▾</span>
+                    </span>
+                  )}
                   {listingsAll.length > 1
                     ? <ListingPicker listings={listingsAll} active={active} activeName={activeName} onPick={setActiveListing} />
-                    : <span className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName}</span>}
+                    : <span className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">🎟 {activeName || "—"}</span>}
+                  {activeSeason && <span className="rounded-lg px-2.5 py-1.5 text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>📅 {activeSeason}</span>}
                   <div className="flex items-center gap-0.5 rounded-lg bg-white/90 px-1 py-0.5 text-[#1d3a8f]">
                     <button type="button" onClick={() => goDay(-1)} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none hover:bg-[#eaf1fb]">‹</button>
                     <span className="min-w-[168px] px-1 text-center text-[12.5px] font-extrabold" style={{ fontVariantNumeric: "tabular-nums" }}>{rel(date)} · {dow(date)}{dayCounts(date).booked ? ` — ${dayCounts(date).booked} booked` : ""}</span>
