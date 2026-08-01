@@ -23,51 +23,102 @@ const CATS: [Cat | "all", string, string][] = [
   ["all", "All plays", "🎯"], ["fill", "Fill empty spaces", "🎟️"], ["retain", "Win back & keep", "🔁"], ["grow", "Grow your audience", "📣"], ["revenue", "Boost revenue", "💷"],
 ];
 
+type Phase = "early" | "mid" | "end";
+const PHASES: { k: Phase; n: string; label: string; sub: string; grad: string }[] = [
+  { k: "early", n: "1", label: "Build buzz & launch", sub: "Get seen and open bookings with early momentum.", grad: GRAD.blue },
+  { k: "mid", n: "2", label: "Keep it selling", sub: "Sustain demand and grow every booking while it runs.", grad: GRAD.violet },
+  { k: "end", n: "3", label: "Close strong & keep them", sub: "Fill the last places and turn bookers into regulars.", grad: GRAD.green },
+];
+
 interface Play {
-  id: string; icon: string; title: string; goal: string; grad: string; cats: Cat[];
+  id: string; icon: string; title: string; goal: string; grad: string; cats: Cat[]; phase: Phase;
   effort: "Low" | "Medium"; impact: "Medium" | "High"; channel: string; audience?: string; chan: string;
   steps: string[]; cta: { label: string; view: string }; secondary?: { label: string; view: string };
 }
 const PLAYS: Play[] = [
-  { id: "earlybird", icon: "⏰", title: "Early-bird launch", goal: "Sell out a new run before it even starts.", grad: GRAD.blue, cats: ["fill", "revenue"], effort: "Low", impact: "High", channel: "Codes + Email", chan: "email",
-    steps: ["Pick the upcoming listing you want to fill", "Create a time-limited % code (e.g. 15% off)", "Set an expiry 1–2 weeks out so it feels urgent", "Email your families the offer is live"],
-    cta: { label: "Create the code", view: "marketing" }, secondary: { label: "Email families", view: "email" } },
-  { id: "fill-session", icon: "🎟️", title: "Fill this session", goal: "Rescue a half-empty session that runs soon.", grad: GRAD.teal, cats: ["fill"], effort: "Low", impact: "Medium", channel: "Codes + Email", chan: "email",
-    steps: ["Spot the sessions under half full (see opportunities above)", "Make a small last-minute code scoped to that listing", "Broadcast it to your list", "Watch the spaces fill in Bookings"],
-    cta: { label: "Make a session code", view: "marketing" }, secondary: { label: "Message families", view: "email" } },
-  { id: "siblings", icon: "👨‍👩‍👧", title: "Sibling & group offer", goal: "Win the whole family — no code needed.", grad: GRAD.violet, cats: ["fill", "revenue"], effort: "Low", impact: "Medium", channel: "Automatic discount", audience: "Multi-child families", chan: "email",
-    steps: ["Turn on an automatic multi-person discount", "Set £ or % off from the 2nd child", "Choose which listings it applies to", "Siblings get it automatically at checkout"],
-    cta: { label: "Set up auto discount", view: "marketing" } },
-  { id: "winback", icon: "🔁", title: "Win back lapsed families", goal: "Bring back families who’ve gone quiet.", grad: GRAD.pink, cats: ["retain"], effort: "Medium", impact: "High", channel: "Groups + Email", audience: "Lapsed families", chan: "email",
-    steps: ["Find families who haven’t booked in 60+ days", "Save them together as a parent group", "Reserve a welcome-back code for that group", "Follow up with a friendly email"],
-    cta: { label: "Build the group", view: "marketing" }, secondary: { label: "Email them", view: "email" } },
-  { id: "referral", icon: "📣", title: "Refer-a-friend drive", goal: "Turn happy parents into your sales team.", grad: GRAD.green, cats: ["grow"], effort: "Low", impact: "High", channel: "Referrals", chan: "social",
-    steps: ["Switch on referral rewards", "Set the reward (credit, % off or a free add-on)", "Announce it to your families", "Track invited → joined → rewarded"],
-    cta: { label: "Open referrals", view: "referrals" }, secondary: { label: "Announce it", view: "email" } },
-  { id: "announce", icon: "🆕", title: "Announce new listings", goal: "Get eyes on what you’ve just launched.", grad: GRAD.blue, cats: ["grow"], effort: "Low", impact: "Medium", channel: "Newsfeed + Email", chan: "social",
+  // ── Build buzz & launch ──
+  { id: "announce", icon: "🆕", title: "Announce new listings", goal: "Get eyes on what you’ve just launched.", grad: GRAD.blue, cats: ["grow"], phase: "early", effort: "Low", impact: "Medium", channel: "Newsfeed + Email", chan: "social",
     steps: ["Publish the new listing", "Post it to your newsfeed", "Send a campaign to your audience", "Pin it so it stays top of mind"],
     cta: { label: "Post an update", view: "newsfeed" }, secondary: { label: "Email a campaign", view: "email" } },
-  { id: "waitlist", icon: "📝", title: "Convert your waitlist", goal: "Fill freed-up places with people already keen.", grad: GRAD.amber, cats: ["fill", "revenue"], effort: "Low", impact: "High", channel: "Bookings", chan: "event",
-    steps: ["Check who’s waitlisted (see opportunities above)", "Free a space or open another session", "Offer waitlisted families first refusal", "Hold their place for 24h to decide"],
+  { id: "earlybird", icon: "⏰", title: "Early-bird launch", goal: "Sell out a new run before it even starts.", grad: GRAD.teal, cats: ["fill", "revenue"], phase: "early", effort: "Low", impact: "High", channel: "Codes + Email", chan: "email",
+    steps: ["Pick the upcoming listing you want to fill", "Create a time-limited % code (e.g. 15% off)", "Set an expiry 1–2 weeks out so it feels urgent", "Email your families the offer is live"],
+    cta: { label: "Create the code", view: "marketing" }, secondary: { label: "Email families", view: "email" } },
+  { id: "save-date", icon: "📅", title: "Save-the-date teaser", goal: "Get families excited before bookings open.", grad: GRAD.pink, cats: ["grow"], phase: "early", effort: "Low", impact: "Medium", channel: "Social", chan: "social",
+    steps: ["Tease the dates with a bold graphic", "Post to your social channels and stories", "Ask people to comment to be notified", "Follow up the moment bookings open"],
+    cta: { label: "Grab a photo", view: "moments" } },
+  { id: "interest-list", icon: "🙋", title: "Open an interest list", goal: "Gauge demand and build a warm list to sell to.", grad: GRAD.violet, cats: ["grow", "fill"], phase: "early", effort: "Low", impact: "Medium", channel: "Waitlist", chan: "event",
+    steps: ["Open a waitlist / interest list on the listing", "Share the sign-up link everywhere", "Collect names before you commit dates", "Email the list first when you launch"],
     cta: { label: "Go to bookings", view: "bookings" } },
-  { id: "loyalty", icon: "🏅", title: "Reward loyal families", goal: "Keep your best customers coming back.", grad: GRAD.teal, cats: ["retain", "revenue"], effort: "Medium", impact: "Medium", channel: "Groups + Email", audience: "Repeat families", chan: "email",
-    steps: ["Spot repeat bookers (Dashboard → repeat customers)", "Reserve a thank-you code for them as a group", "Send a personal note with it", "Invite them to book next season first"],
-    cta: { label: "Reserve a code", view: "marketing" }, secondary: { label: "Say thanks", view: "email" } },
-  { id: "enquiries", icon: "📩", title: "Chase your enquiries", goal: "Turn interested-but-never-booked into first bookings.", grad: GRAD.violet, cats: ["grow", "fill"], effort: "Low", impact: "High", channel: "Email", audience: "Enquiries", chan: "email",
-    steps: ["Open the Enquiries audience — people who asked but never booked", "Send a warm nudge with a first-timer code", "Point them at a session that still has space", "They drop off this list automatically once they book"],
-    cta: { label: "Email enquiries", view: "email" }, secondary: { label: "Make a welcome code", view: "marketing" } },
-  { id: "welcome-new", icon: "👋", title: "Welcome new families", goal: "Turn a first booking into a second.", grad: GRAD.green, cats: ["retain", "revenue"], effort: "Low", impact: "Medium", channel: "Email", audience: "New this season", chan: "email",
-    steps: ["Open the New-this-season audience", "Send a friendly welcome and what to expect", "Suggest the next block or a sibling place", "Ask for a review after their first session"],
-    cta: { label: "Email new families", view: "email" } },
-  { id: "next-block", icon: "⏭️", title: "Sell the next block", goal: "Re-book families before their sessions end.", grad: GRAD.blue, cats: ["revenue", "retain", "fill"], effort: "Low", impact: "High", channel: "Email", audience: "Ending soon", chan: "email",
-    steps: ["Open the Ending-soon audience — a session in the next couple of weeks", "Email them the next block is open", "Offer a returning-family perk", "Make re-booking one tap"],
-    cta: { label: "Email them", view: "email" }, secondary: { label: "Create a perk code", view: "marketing" } },
-  { id: "social-post", icon: "📱", title: "Social media post", goal: "Show up in the feed where parents already are.", grad: GRAD.pink, cats: ["grow"], effort: "Low", impact: "Medium", channel: "Social", chan: "social",
-    steps: ["Grab a great photo or a Moment", "Write a short, warm caption with the key details", "Add a booking link", "Post across your channels and pin it"],
+  { id: "local-groups", icon: "📍", title: "Post in local groups", goal: "Reach nearby parents where they chat.", grad: GRAD.green, cats: ["grow"], phase: "early", effort: "Medium", impact: "High", channel: "Social", chan: "social",
+    steps: ["Find local parent & community Facebook groups", "Write a friendly, non-spammy post", "Add dates, venue and a booking link", "Reply quickly to every comment"],
+    cta: { label: "Grab your link", view: "listings" } },
+  { id: "reel", icon: "🎬", title: "Behind-the-scenes reel", goal: "Show the fun — video sells activities.", grad: GRAD.amber, cats: ["grow"], phase: "early", effort: "Medium", impact: "High", channel: "Social", chan: "social",
+    steps: ["Film 15–30s of a past session", "Add captions and upbeat music", "End with the dates and ‘book now’", "Post as a Reel / TikTok / Short"],
     cta: { label: "Grab a Moment", view: "moments" } },
-  { id: "flyers", icon: "🖨️", title: "Flyers & posters", goal: "Reach local families offline.", grad: GRAD.amber, cats: ["grow", "fill"], effort: "Medium", impact: "Medium", channel: "Print", chan: "print",
+  { id: "flyers", icon: "🖨️", title: "Flyers & posters", goal: "Reach local families offline.", grad: GRAD.blue, cats: ["grow", "fill"], phase: "early", effort: "Medium", impact: "Medium", channel: "Print", chan: "print",
     steps: ["Design a simple flyer with a QR to the listing", "Drop at schools, cafés and libraries", "Ask a few venues to display a poster", "Track a code so you know it worked"],
     cta: { label: "Make a tracking code", view: "marketing" } },
+  { id: "school-partner", icon: "🏫", title: "Partner with a school", goal: "Let a trusted school spread the word for you.", grad: GRAD.teal, cats: ["grow"], phase: "early", effort: "Medium", impact: "High", channel: "In-person", chan: "event",
+    steps: ["Offer the school a flyer or newsletter blurb", "Give them a school-only code to share", "Provide a QR poster for the gate", "Thank them with a report of sign-ups"],
+    cta: { label: "Make a school code", view: "marketing" } },
+
+  // ── Keep it selling ──
+  { id: "fill-session", icon: "🎟️", title: "Fill this session", goal: "Rescue a half-empty session that runs soon.", grad: GRAD.teal, cats: ["fill"], phase: "mid", effort: "Low", impact: "Medium", channel: "Codes + Email", chan: "email",
+    steps: ["Spot the sessions under half full (see opportunities above)", "Make a small last-minute code scoped to that listing", "Broadcast it to your list", "Watch the spaces fill in Bookings"],
+    cta: { label: "Make a session code", view: "marketing" }, secondary: { label: "Message families", view: "email" } },
+  { id: "siblings", icon: "👨‍👩‍👧", title: "Sibling & group offer", goal: "Win the whole family — no code needed.", grad: GRAD.violet, cats: ["fill", "revenue"], phase: "mid", effort: "Low", impact: "Medium", channel: "Automatic discount", audience: "Multi-child families", chan: "email",
+    steps: ["Turn on an automatic multi-person discount", "Set £ or % off from the 2nd child", "Choose which listings it applies to", "Siblings get it automatically at checkout"],
+    cta: { label: "Set up auto discount", view: "marketing" } },
+  { id: "enquiries", icon: "📩", title: "Chase your enquiries", goal: "Turn interested-but-never-booked into first bookings.", grad: GRAD.pink, cats: ["grow", "fill"], phase: "mid", effort: "Low", impact: "High", channel: "Email", audience: "Enquiries", chan: "email",
+    steps: ["Open the Enquiries audience — people who asked but never booked", "Send a warm nudge with a first-timer code", "Point them at a session that still has space", "They drop off this list automatically once they book"],
+    cta: { label: "Email enquiries", view: "email" }, secondary: { label: "Make a welcome code", view: "marketing" } },
+  { id: "referral", icon: "📣", title: "Refer-a-friend drive", goal: "Turn happy parents into your sales team.", grad: GRAD.green, cats: ["grow"], phase: "mid", effort: "Low", impact: "High", channel: "Referrals", chan: "social",
+    steps: ["Switch on referral rewards", "Set the reward (credit, % off or a free add-on)", "Announce it to your families", "Track invited → joined → rewarded"],
+    cta: { label: "Open referrals", view: "referrals" }, secondary: { label: "Announce it", view: "email" } },
+  { id: "social-post", icon: "📱", title: "Social media post", goal: "Show up in the feed where parents already are.", grad: GRAD.amber, cats: ["grow"], phase: "mid", effort: "Low", impact: "Medium", channel: "Social", chan: "social",
+    steps: ["Grab a great photo or a Moment", "Write a short, warm caption with the key details", "Add a booking link", "Post across your channels and pin it"],
+    cta: { label: "Grab a Moment", view: "moments" } },
+  { id: "review-share", icon: "⭐", title: "Share a glowing review", goal: "Let a happy parent do your selling.", grad: GRAD.blue, cats: ["grow"], phase: "mid", effort: "Low", impact: "Medium", channel: "Social", chan: "social",
+    steps: ["Pick a lovely review or message", "Turn it into a simple quote graphic", "Post it with the booking link", "Tag the parent if they’re happy to be"],
+    cta: { label: "Find a review", view: "messages" } },
+  { id: "parent-photo", icon: "📸", title: "Repost a parent Moment", goal: "Real photos build trust fast.", grad: GRAD.pink, cats: ["grow"], phase: "mid", effort: "Low", impact: "Medium", channel: "Social", chan: "social",
+    steps: ["Ask permission to share a Moment", "Repost it to your feed and stories", "Add a short caption + dates", "Thank the family publicly"],
+    cta: { label: "Open Moments", view: "moments" } },
+  { id: "flash-sale", icon: "⚡", title: "Midweek flash sale", goal: "Create urgency with a 48-hour deal.", grad: GRAD.violet, cats: ["fill", "revenue"], phase: "mid", effort: "Low", impact: "High", channel: "Codes + Email", chan: "email",
+    steps: ["Create a code that expires in 48 hours", "Email + post it on the same morning", "Add a live ‘ends Thursday’ countdown", "Send a final-hours reminder"],
+    cta: { label: "Create the code", view: "marketing" }, secondary: { label: "Email it", view: "email" } },
+  { id: "welcome-new", icon: "👋", title: "Welcome new families", goal: "Turn a first booking into a second.", grad: GRAD.green, cats: ["retain", "revenue"], phase: "mid", effort: "Low", impact: "Medium", channel: "Email", audience: "New this season", chan: "email",
+    steps: ["Open the New-this-season audience", "Send a friendly welcome and what to expect", "Suggest the next block or a sibling place", "Ask for a review after their first session"],
+    cta: { label: "Email new families", view: "email" } },
+  { id: "retarget", icon: "🎯", title: "Retarget with paid ads", goal: "Win back people who looked but didn’t book.", grad: GRAD.teal, cats: ["grow", "fill"], phase: "mid", effort: "Medium", impact: "Medium", channel: "Paid ads", chan: "paid",
+    steps: ["Set a small daily budget on Meta/Google", "Target your local area + parents", "Use a Reel or a strong photo", "Send clicks straight to the listing"],
+    cta: { label: "Grab your link", view: "listings" } },
+
+  // ── Close strong & keep them ──
+  { id: "last-call", icon: "🚨", title: "Last-call for spaces", goal: "Convert the fence-sitters before it runs.", grad: GRAD.pink, cats: ["fill", "revenue"], phase: "end", effort: "Low", impact: "High", channel: "Email + Social", chan: "email",
+    steps: ["Say exactly how many places are left", "Email your list and post it", "Add a clear ‘closes Friday’ deadline", "Send one final reminder on the day"],
+    cta: { label: "Email your list", view: "email" }, secondary: { label: "Post it", view: "newsfeed" } },
+  { id: "waitlist", icon: "📝", title: "Convert your waitlist", goal: "Fill freed-up places with people already keen.", grad: GRAD.amber, cats: ["fill", "revenue"], phase: "end", effort: "Low", impact: "High", channel: "Bookings", chan: "event",
+    steps: ["Check who’s waitlisted (see opportunities above)", "Free a space or open another session", "Offer waitlisted families first refusal", "Hold their place for 24h to decide"],
+    cta: { label: "Go to bookings", view: "bookings" } },
+  { id: "next-block", icon: "⏭️", title: "Sell the next block", goal: "Re-book families before their sessions end.", grad: GRAD.blue, cats: ["revenue", "retain", "fill"], phase: "end", effort: "Low", impact: "High", channel: "Email", audience: "Ending soon", chan: "email",
+    steps: ["Open the Ending-soon audience — a session in the next couple of weeks", "Email them the next block is open", "Offer a returning-family perk", "Make re-booking one tap"],
+    cta: { label: "Email them", view: "email" }, secondary: { label: "Create a perk code", view: "marketing" } },
+  { id: "winback", icon: "🔁", title: "Win back lapsed families", goal: "Bring back families who’ve gone quiet.", grad: GRAD.pink, cats: ["retain"], phase: "end", effort: "Medium", impact: "High", channel: "Groups + Email", audience: "Lapsed families", chan: "email",
+    steps: ["Find families who haven’t booked in 60+ days", "Save them together as a parent group", "Reserve a welcome-back code for that group", "Follow up with a friendly email"],
+    cta: { label: "Build the group", view: "marketing" }, secondary: { label: "Email them", view: "email" } },
+  { id: "loyalty", icon: "🏅", title: "Reward loyal families", goal: "Keep your best customers coming back.", grad: GRAD.teal, cats: ["retain", "revenue"], phase: "end", effort: "Medium", impact: "Medium", channel: "Groups + Email", audience: "Repeat families", chan: "email",
+    steps: ["Spot repeat bookers (Dashboard → repeat customers)", "Reserve a thank-you code for them as a group", "Send a personal note with it", "Invite them to book next season first"],
+    cta: { label: "Reserve a code", view: "marketing" }, secondary: { label: "Say thanks", view: "email" } },
+  { id: "review-request", icon: "🌟", title: "Ask for reviews", goal: "Turn a great session into proof for the next.", grad: GRAD.green, cats: ["grow"], phase: "end", effort: "Low", impact: "Medium", channel: "Email", chan: "email",
+    steps: ["Email parents after their last session", "Make leaving a review one tap", "Thank everyone who does", "Reuse the best in your next campaign"],
+    cta: { label: "Email families", view: "email" } },
+  { id: "thankyou-recap", icon: "🎉", title: "Thank-you recap post", goal: "End on a high and tee up the next run.", grad: GRAD.violet, cats: ["grow", "retain"], phase: "end", effort: "Low", impact: "Medium", channel: "Social", chan: "social",
+    steps: ["Make a photo collage from the sessions", "Post a warm thank-you to families", "Mention what’s coming next", "Add the next booking link"],
+    cta: { label: "Grab Moments", view: "moments" } },
+  { id: "early-access", icon: "🔑", title: "Early access to next season", goal: "Reward this cohort with first dibs.", grad: GRAD.amber, cats: ["retain", "revenue"], phase: "end", effort: "Low", impact: "High", channel: "Email", chan: "email",
+    steps: ["Reserve a priority window for this cohort", "Email them the next dates before anyone else", "Offer a returning-family perk", "Open to everyone a few days later"],
+    cta: { label: "Email them", view: "email" }, secondary: { label: "Make a perk code", view: "marketing" } },
 ];
 const PLAY_BY_ID: Record<string, Play> = Object.fromEntries(PLAYS.map((p) => [p.id, p]));
 
@@ -175,8 +226,20 @@ export function MarketingStrategiesApp() {
               </button>
             ))}
           </div>
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {plays.map((p) => (
+          {PHASES.map((ph) => {
+            const inPhase = plays.filter((p) => p.phase === ph.k);
+            if (!inPhase.length) return null;
+            return (
+              <div key={ph.k} className="mb-6">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(20,30,80,.6)]" style={{ background: ph.grad }}>{ph.n}</span>
+                  <div>
+                    <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{ph.label} <span className="ml-1 text-[12px] font-bold text-[var(--ink-3)]">{inPhase.length}</span></div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{ph.sub}</div>
+                  </div>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                  {inPhase.map((p) => (
               <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
                 <div className="flex items-center gap-2.5 px-4 py-3 text-white" style={{ background: p.grad }}>
                   <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-[18px]">{p.icon}</span>
@@ -200,8 +263,11 @@ export function MarketingStrategiesApp() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </>
       ) : selected ? (
         <CampaignBoard campaign={selected} listingName={listingName} onBack={() => setSelectedId(null)} onDelete={() => deleteCampaign(selected.id)}
