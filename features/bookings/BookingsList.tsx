@@ -102,6 +102,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const openCreate = useBookingsStore((s) => s.openCreate);
   const act = useBookingsStore((s) => s.act);
   const resolveMove = useBookingsStore((s) => s.resolveMove);
+  // Which request row has its "reason for declining" box open, and its text.
+  const [denyingRef, setDenyingRef] = useState<string | null>(null);
+  const [denyReason, setDenyReason] = useState("");
+  const submitDeny = (ref: string) => { resolveMove(ref, false, denyReason.trim() || undefined); setDenyingRef(null); setDenyReason(""); };
 
   // Local, not in the store: a listing and a day are how you narrow the list
   // while working, not a view worth remembering between visits.
@@ -470,21 +474,39 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               {/* Date-change request on its own full-width line so nothing is
                   cramped — the exact swap, then approve/deny without opening. */}
               {moveReq && (
-                <div onClick={() => open(b.ref)} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5 hover:bg-[#fdf3d8]">
-                  <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
-                  {moveReq.moves.length === 1 ? (
-                    <span className="text-[12.5px] text-[var(--ink)]">
-                      <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
-                    </span>
-                  ) : (
-                    <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
+                <div className="border-t border-[#f5e2b8] bg-[#fffaf0] px-4 py-2.5">
+                  <div onClick={() => open(b.ref)} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 hover:opacity-90">
+                    <span className="text-[12px] font-extrabold text-[#8a5300]">📅 Date change requested</span>
+                    {moveReq.moves.length === 1 ? (
+                      <span className="text-[12.5px] text-[var(--ink)]">
+                        <span className="text-[var(--ink-3)]">From</span> <b>{fmtRowDate(moveReq.moves[0].from)}</b> <span className="text-[var(--ink-3)]">→ To</span> <b>{fmtRowDate(moveReq.moves[0].to)}</b>
+                      </span>
+                    ) : (
+                      <span className="text-[12.5px] text-[var(--ink)]">{moveReq.moves.length} date changes — <span className="font-semibold text-[var(--brand-2)]">open to view all</span></span>
+                    )}
+                    {denyingRef !== b.ref && (
+                      <span className="ml-auto flex items-center gap-1.5">
+                        <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
+                          className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setDenyingRef(b.ref); setDenyReason(""); }} title="Decline — the booking is unchanged and the family is told"
+                          className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
+                      </span>
+                    )}
+                  </div>
+                  {denyingRef === b.ref && (
+                    <div onClick={(e) => e.stopPropagation()} className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <input
+                        autoFocus
+                        value={denyReason}
+                        onChange={(e) => setDenyReason(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") submitDeny(b.ref); if (e.key === "Escape") { setDenyingRef(null); setDenyReason(""); } }}
+                        placeholder="Reason for declining — the family will see this (optional)"
+                        className="min-w-[220px] flex-1 rounded-lg border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#c0392b]"
+                      />
+                      <button onClick={() => submitDeny(b.ref)} className="whitespace-nowrap rounded-full bg-[#c0392b] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Confirm decline</button>
+                      <button onClick={() => { setDenyingRef(null); setDenyReason(""); }} className="whitespace-nowrap rounded-full border border-[var(--line)] bg-white px-3 py-[6px] text-[11.5px] font-bold text-[var(--ink-3)]">Cancel</button>
+                    </div>
                   )}
-                  <span className="ml-auto flex items-center gap-1.5">
-                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "move-approve"); }} title="Approve all — dates move and the family is told"
-                      className="whitespace-nowrap rounded-full bg-[#0f7a43] px-3.5 py-[6px] text-[11.5px] font-bold text-white hover:brightness-110">Approve{moveReq.moves.length > 1 ? " all" : ""}</button>
-                    <button onClick={(e) => { e.stopPropagation(); const reason = window.prompt("Why are you declining this date change? The family will see this. (Leave blank to decline without a reason.)"); if (reason === null) return; resolveMove(b.ref, false, reason.trim() || undefined); }} title="Decline — the booking is unchanged and the family is told (with your reason)"
-                      className="whitespace-nowrap rounded-full border border-[#e6b3b3] bg-white px-3.5 py-[6px] text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deny</button>
-                  </span>
                 </div>
               )}
               </div>
