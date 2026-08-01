@@ -1115,6 +1115,26 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       ...(parsed.data.message || parsed.data.msg ? { note: (parsed.data.message || parsed.data.msg)!.trim() } : {}),
     },
   }, { merge: true });
+
+  // Tell the provider a change is waiting for them — bell + email.
+  if (booking.tenantId) {
+    const parts: string[] = [];
+    if (moves.length) parts.push(`${moves.length} date${moves.length === 1 ? "" : "s"}`);
+    if (parsed.data.timing) parts.push("timing");
+    const what = parts.join(" + ") || "date/time";
+    const scope = parsed.data.child ? ` for ${parsed.data.child}` : "";
+    void notify({
+      tenantId: booking.tenantId,
+      to: { kind: "tenant" },
+      category: "booking",
+      title: `${booking.booker} requested a ${what} change on ${booking.ref}`,
+      body: `${booking.listing} · ${booking.child}${scope}${parsed.data.timing ? ` → ${parsed.data.timing}` : ""}. Review it to approve or decline.`,
+      subject: `${booking.ref}: ${what} change requested by ${booking.booker}`,
+      href: "/company/bookings",
+      ref: booking.ref,
+    });
+  }
+
   const after = await snap.ref.get();
   res.status(201).json(fromDoc(after.data() as BookingDoc));
 });
