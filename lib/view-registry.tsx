@@ -3,7 +3,7 @@ import type { PortalKey } from "./nav/config";
 import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { BookingsApp } from "@/features/bookings/BookingsApp";
 import { CustomersApp } from "@/features/customers/CustomersApp";
-import { PaymentsApp } from "@/features/payments/PaymentsApp";
+import { FinanceAnalyticsApp } from "@/features/money/FinanceAnalyticsApp";
 import { IncidentsApp } from "@/features/incidents/IncidentsApp";
 import { LogConcernApp } from "@/features/incidents/LogConcernApp";
 import { MealsApp } from "@/features/meals/MealsApp";
@@ -109,7 +109,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
-    finance: PaymentsApp,
+    finance: FinanceAnalyticsApp,
     reconciliation: ReconciliationApp,
     tasks: TasksApp,
     trips: TripsApp,
@@ -164,7 +164,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
-    finance: PaymentsApp,
+    finance: FinanceAnalyticsApp,
     reconciliation: ReconciliationApp,
     tasks: TasksApp,
     trips: TripsApp,
@@ -207,7 +207,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
-    finance: PaymentsApp,
+    finance: FinanceAnalyticsApp,
     reconciliation: ReconciliationApp,
     tasks: TasksApp,
     trips: TripsApp,
