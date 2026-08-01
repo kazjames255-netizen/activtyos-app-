@@ -430,7 +430,8 @@ function AddActivity({ onCancel, onAdd }: { onCancel: () => void; onAdd: (a: Omi
   };
   return (
     <div className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Start from a strategy</div>
+      <div className="mb-2.5 rounded-lg bg-[#eef2fb] px-3 py-2 text-[11.5px] leading-snug text-[#1d3a8f]">Add one marketing move to the plan: <b>pick a ready strategy</b> to fill it in (optional), <b>choose how it goes out</b>, then <b>set a date</b>.</div>
+      <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">1 · Start from a strategy <span className="font-normal normal-case">— optional shortcut</span></div>
       <div className="-mx-1 mt-1.5 flex gap-2 overflow-x-auto px-1 pb-1">
         {PLAYS.map((p) => (
           <button key={p.id} type="button" onClick={() => pick(p)} className="flex w-[150px] flex-none flex-col gap-1 rounded-xl border p-2 text-left transition-colors" style={playId === p.id ? { borderColor: "#2f6bd8", background: "#eef2fb" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
@@ -441,7 +442,7 @@ function AddActivity({ onCancel, onAdd }: { onCancel: () => void; onAdd: (a: Omi
         ))}
       </div>
 
-      <div className="mt-3 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Channel</div>
+      <div className="mt-3 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">2 · How does it go out?</div>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {CHANNELS.map((c) => (
           <button key={c.k} type="button" onClick={() => setChannelKey(c.k)} className="rounded-full px-2.5 py-1 text-[11.5px] font-bold text-white transition-transform hover:-translate-y-px" style={{ background: c.grad, opacity: channelKey === c.k ? 1 : 0.45 }}>{c.icon} {c.label}</button>
@@ -449,7 +450,7 @@ function AddActivity({ onCancel, onAdd }: { onCancel: () => void; onAdd: (a: Omi
       </div>
 
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-        <div className="sm:col-span-2"><label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">What are you doing?</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`e.g. ${ch.label} post about the camp`} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" /></div>
+        <div className="sm:col-span-2"><label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">3 · What are you doing?</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`e.g. ${ch.label} post about the camp`} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" /></div>
         <div><label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" /></div>
         <div><label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Time <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" /></div>
         <div className="sm:col-span-2"><label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Note <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></label><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any detail to remember" className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#3f78d8]" /></div>
