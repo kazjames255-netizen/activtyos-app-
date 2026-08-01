@@ -18,6 +18,7 @@ export function PlatformEngagementApp() {
   const [d, setD] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
+  const [order, setOrder] = useState<"high" | "low">("high");
 
   const load = useCallback(() => {
     apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -25,6 +26,7 @@ export function PlatformEngagementApp() {
   useEffect(load, [load]);
 
   const maxAvg = d ? Math.max(1, ...d.rows.map((r) => r.avgSeconds)) : 1;
+  const rows = d ? [...d.rows].sort((a, b) => (order === "high" ? b.views - a.views : a.views - b.views)) : [];
 
   return (
     <div className="text-[var(--ink)]">
@@ -54,12 +56,19 @@ export function PlatformEngagementApp() {
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <div className="mb-3 flex items-center justify-between text-[12px]">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[12px]">
             <span className="font-bold text-[var(--ink-2)]">Most popular pages{type !== "all" ? ` · ${pretty(type)}` : ""}</span>
-            <span className="text-[var(--ink-3)]">{d.totalViews.toLocaleString("en-GB")} visits · avg time on page · vs prev 3 mo</span>
+            <div className="flex items-center gap-2.5">
+              <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 text-[11px] font-bold">
+                {([["high", "Highest"], ["low", "Lowest"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setOrder(v)} className="rounded-full px-2.5 py-0.5 transition-colors" style={order === v ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
+                ))}
+              </div>
+              <span className="text-[var(--ink-3)]">{d.totalViews.toLocaleString("en-GB")} visits · by visits · vs prev 3 mo</span>
+            </div>
           </div>
           <div className="flex flex-col divide-y divide-[var(--line)]">
-            {d.rows.map((r, i) => {
+            {rows.map((r, i) => {
               const up = r.deltaPct != null && r.deltaPct > 0.02;
               const down = r.deltaPct != null && r.deltaPct < -0.02;
               return (
