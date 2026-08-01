@@ -8,6 +8,7 @@ import { PublishPanel } from "./PublishPanel";
 import { printTimetable } from "./printHtml";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
+import { OperatorPage } from "@/components/OperatorPage";
 
 let didInit = false;
 
@@ -44,24 +45,18 @@ export function TimetableApp() {
     saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved to your account" : saveState === "error" ? "Couldn’t save — retrying on next change" : "";
 
   return (
-    <div className="text-[var(--ink)]">
-      {/* Header */}
-      <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h3 className="m-0 flex items-center gap-2 font-[var(--ff-display)] text-[20px] font-extrabold text-[var(--ink)]">
-            Activity timetable builder
-          </h3>
-          <div className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Build each day from your activity bank, then publish to staff &amp; parents
-          </div>
-        </div>
-        {saveLabel && (
-          <span className={`text-[11.5px] ${saveState === "error" ? "font-bold text-[var(--red,#e21d27)]" : "text-[var(--ink-3)]"}`}>
+    <OperatorPage
+      title="Activity timetable builder"
+      lede="Build each day from your activity bank, then publish to staff & parents"
+      icon="▦"
+      actions={
+        saveLabel ? (
+          <span className={`text-[11.5px] ${saveState === "error" ? "font-bold text-[#ffdada]" : "text-white/85"}`}>
             {saveLabel}
           </span>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {loading && <div className="text-[13px] text-[var(--ink-3)]">Loading your listings…</div>}
       {!loading && loadError && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[13px]">
@@ -144,6 +139,6 @@ export function TimetableApp() {
           {tab === 2 && <PublishPanel />}
         </>
       )}
-    </div>
+    </OperatorPage>
   );
 }
