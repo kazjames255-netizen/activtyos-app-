@@ -278,20 +278,26 @@ export function DashboardApp() {
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📊 Dashboard</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Today at a glance, plus income, bookings and where they&rsquo;re coming from.</p>
           </div>
+          {/* On-site-today summary, on the right of the title banner. */}
+          <div className="rounded-2xl bg-white/12 px-4 py-3 text-right ring-1 ring-white/15">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">On site today</div>
+            <div className="text-[30px] font-extrabold leading-none text-white" style={{ fontFamily: "var(--ff-display)" }}>{d.today.booked}</div>
+            <div className="mt-1 text-[11.5px] font-semibold text-white/85">{d.today.sessions.length} session{d.today.sessions.length === 1 ? "" : "s"} running</div>
+          </div>
         </div>
       </div>
 
       {/* Live operational KPIs (from /api/dashboard) */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="On site today" value={`${d.today.booked}`} sub={`${d.today.sessions.length} session${d.today.sessions.length === 1 ? "" : "s"} running`} grad={GRAD.blue} />
+        <Tile label="New bookings" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub="in the last 5 weeks" grad={GRAD.blue}>
+          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="per week" />}
+        </Tile>
         <Tile
           label="Spaces left · live listings"
           value={`${Math.max(0, d.occupancy.capacity - d.occupancy.booked)}`}
           sub={`${100 - d.occupancy.pct}% not filled · ${d.occupancy.booked}/${d.occupancy.capacity} taken on open runs`}
           grad={GRAD.teal}
-        >
-          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="New bookings · last 5 weeks" />}
-        </Tile>
+        />
         <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
           {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption="Collected · last 5 weeks" />}
         </Tile>
