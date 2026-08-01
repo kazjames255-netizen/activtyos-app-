@@ -87,6 +87,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   // booking's season is its listing's season.
   const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
   useEffect(() => { apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((ls) => setListingSeason(Object.fromEntries(ls.filter((l) => l.seasonId).map((l) => [l.id, l.seasonId as string])))).catch(() => {}); }, []);
+  const seasonNameOf = (listingId?: string) => { const id = listingId ? listingSeason[listingId] : undefined; return id ? seasons.find((s) => s.id === id)?.name : undefined; };
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
   const bounds = range ? rangeDays(range) : null;
@@ -436,6 +437,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 </span>
 
                 <span className="hidden min-w-0 flex-1 sm:block">
+                  <span className="mb-0.5 flex flex-wrap items-center gap-1.5">
+                    <span className="max-w-full truncate rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]" title={b.listing}>🎟 {b.listing || "—"}</span>
+                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📅 {seasonNameOf(b.listingId)}</span>}
+                  </span>
                   <span className="block truncate text-[12.5px] text-[var(--ink)]">{b.dates}</span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">
                     {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · Ref {b.ref}
