@@ -29,6 +29,8 @@ const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0f7a43", Unpa
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+// Compact money for the narrow sparkline columns: £1.2k, £320, £0.
+const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
 
 // A stable colour per activity name, and an availability tone (green→amber→red).
 const actColor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
@@ -79,6 +81,7 @@ function MiniLine({ data, labels, caption }: { data: number[]; labels: string[];
   return (
     <div className="mt-3">
       <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white/60">{caption}</div>
+      <div className="mb-0.5 flex gap-1 text-[8.5px] font-extrabold tabular-nums text-white/85">{data.map((v, i) => <span key={i} className="flex-1 text-center" style={{ opacity: i === data.length - 1 ? 1 : 0.7 }}>{compactMoney(v)}</span>)}</div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 42 }} preserveAspectRatio="none">
         <defs><linearGradient id="mlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".28" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
         <path d={area} fill="url(#mlg)" />
@@ -96,10 +99,11 @@ function MiniBars({ data, labels, caption }: { data: number[]; labels: string[];
   return (
     <div className="mt-2.5">
       <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-white/70">{caption}</div>
-      <div className="flex items-end gap-1" style={{ height: 26 }}>
+      <div className="flex items-end gap-1" style={{ height: 40 }}>
         {data.map((v, i) => (
-          <div key={i} className="flex flex-1 items-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
-            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(10, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
+          <div key={i} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
+            <span className="mb-0.5 text-[9px] font-extrabold tabular-nums" style={{ opacity: i === data.length - 1 ? 1 : 0.75 }}>{v}</span>
+            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
           </div>
         ))}
       </div>
@@ -256,7 +260,7 @@ export function DashboardApp() {
 
     return {
       income, booked, weekly, weeklyIncome,
-      weeklyLabels: wkStarts.map((ms) => { const dt = new Date(ms); return `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`; }),
+      weeklyLabels: wkStarts.map((ms) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })),
       kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       bySeason: seasonRows.slice(0, 8).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
