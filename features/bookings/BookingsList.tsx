@@ -18,7 +18,6 @@ import {
   rangeDays,
   runsOn,
   sessionCount,
-  statusTone,
 } from "./helpers";
 import { Button, Card } from "@/components/ui";
 import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
@@ -38,6 +37,16 @@ const HERO_GRAD: Record<string, string> = {
   "Declined": "linear-gradient(140deg,#ff9a9a,#e05555)",
 };
 const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#7fa8ff,#3f66d8)";
+// The Status pill wears the SAME colour as the hero, so green hero ⇢ green pill.
+const HERO_TONE: Record<string, { bg: string; fg: string }> = {
+  "Confirmed": { bg: "#e2f7ec", fg: "#12995a" },
+  "Approval needed": { bg: "#fdefd6", fg: "#c9791a" },
+  "Waitlisted": { bg: "#e6f1fd", fg: "#1f78c0" },
+  "Offered": { bg: "#e6f1fd", fg: "#1f78c0" },
+  "Cancelled": { bg: "#fde8e8", fg: "#d94a4a" },
+  "Declined": { bg: "#fde8e8", fg: "#d94a4a" },
+};
+const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e9eefc", fg: "#3f66d8" };
 
 // A fixed-width labelled column, so every row's cells line up down the page.
 function Col({ label, w, children }: { label: string; w: string; children: React.ReactNode }) {
@@ -434,7 +443,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <Col label="🎟 Listing" w="min-w-0 flex-1"><span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span></Col>
                   <Col label="📅 Season" w="w-[124px]">{seasonNameOf(b.listingId) ? <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>}</Col>
                   <Col label="📆 Dates" w="w-[158px]"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
-                  <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
+                  <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span></Col>
                   <Col label="Payment" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
 
                   {b.pay === "Awaiting voucher payment" && !off && (
