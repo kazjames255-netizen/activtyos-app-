@@ -340,8 +340,8 @@ export function DashboardApp() {
         />
       </div>
 
-      {/* Today + Coming up (unchanged) */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+      {/* Today · Live listings · Tasks today — three across */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <Panel title={`☀️ Today · ${fmtDay(d.today.date)}`} right={d.bookings.waitlist > 0 ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge> : undefined}>
           {d.today.sessions.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing running today.</div>
@@ -395,6 +395,38 @@ export function DashboardApp() {
             </div>
           )}
         </Panel>
+        <Panel
+          title="✅ Tasks today"
+          right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{todayTasks.length} due</Badge> : undefined}
+        >
+          {tasks === null ? (
+            <Empty>Loading…</Empty>
+          ) : todayTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
+              <div className="text-[20px]">🎉</div>
+              <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Nothing due today</div>
+              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager</button>
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {todayTasks.map((t) => {
+                const st = TASK_STATUS[t.status ?? "todo"] ?? TASK_STATUS.todo;
+                const go = () => router.push(t.link?.href ?? `/${portal}/tasks`);
+                return (
+                  <button key={t.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
+                    <span className="flex items-start gap-2.5">
+                      <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
+                      <span className="min-w-0 flex-1 font-semibold">{t.t}</span>
+                      <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{t.time ?? "Today"}</span>
+                    </span>
+                    {t.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{t.link.v}</span>}
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager →</button>
+            </div>
+          )}
+        </Panel>
       </div>
 
       {/* ── Business analytics (computed from your bookings) ── */}
@@ -438,7 +470,7 @@ export function DashboardApp() {
             </Panel>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Panel title="📊 Bookings & payments">
               <div className="flex flex-col gap-4">
                 <div>
@@ -450,38 +482,6 @@ export function DashboardApp() {
                   <Breakdown entries={a.payMix} />
                 </div>
               </div>
-            </Panel>
-            <Panel
-              title="✅ Tasks today"
-              right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{todayTasks.length} due</Badge> : undefined}
-            >
-              {tasks === null ? (
-                <Empty>Loading…</Empty>
-              ) : todayTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
-                  <div className="text-[20px]">🎉</div>
-                  <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Nothing due today</div>
-                  <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager</button>
-                </div>
-              ) : (
-                <div className="flex flex-col divide-y divide-[var(--line)]">
-                  {todayTasks.map((t) => {
-                    const st = TASK_STATUS[t.status ?? "todo"] ?? TASK_STATUS.todo;
-                    const go = () => router.push(t.link?.href ?? `/${portal}/tasks`);
-                    return (
-                      <button key={t.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
-                        <span className="flex items-start gap-2.5">
-                          <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
-                          <span className="min-w-0 flex-1 font-semibold">{t.t}</span>
-                          <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{t.time ?? "Today"}</span>
-                        </span>
-                        {t.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{t.link.v}</span>}
-                      </button>
-                    );
-                  })}
-                  <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager →</button>
-                </div>
-              )}
             </Panel>
             <Panel title="🆕 Newest bookings">
               {a.recent.length ? (
