@@ -990,7 +990,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
 
 type BookingFilter = "all" | "upcoming" | "past" | "cancelled";
 
-export function MyBookingsApp() {
+export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<BookingFilter>("all");
@@ -1016,19 +1016,21 @@ export function MyBookingsApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            My bookings
-          </h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">
-            Your family’s places — status updates as the provider confirms.
-          </p>
+      {!hideHeader && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              My bookings
+            </h2>
+            <p className="text-[12.5px] text-[var(--ink-3)]">
+              Your family’s places — status updates as the provider confirms.
+            </p>
+          </div>
+          <Link href="/custdash/browse">
+            <Button variant="primary">+ Book an activity</Button>
+          </Link>
         </div>
-        <Link href="/custdash/browse">
-          <Button variant="primary">+ Book an activity</Button>
-        </Link>
-      </div>
+      )}
       {(() => {
         const waiting = bookings.filter((b) => b.status === "Waitlisted");
         const rest = bookings.filter((b) => b.status !== "Waitlisted");
