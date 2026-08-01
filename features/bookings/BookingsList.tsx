@@ -27,6 +27,16 @@ import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
 
+// A labelled detail column in the booking row's white body.
+function Col({ label, grow, children }: { label: string; grow?: boolean; children: React.ReactNode }) {
+  return (
+    <span className={"flex min-w-0 flex-col justify-center " + (grow ? "flex-[1.4]" : "flex-none")}>
+      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
+      <span className="mt-1 block truncate leading-tight">{children}</span>
+    </span>
+  );
+}
+
 /**
  * The list. With a booking open it becomes the left rail of a split view:
  * same filters and search, rows compressed to a name, an activity and an
@@ -390,104 +400,51 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               <div
                 key={b.ref}
                 className={
-                  "overflow-hidden rounded-2xl border transition-all " +
-                  (on ? "border-[#4a86e6]" : "border-[#26365e]") +
-                  (off ? " opacity-55" : "")
+                  "overflow-hidden rounded-2xl border bg-[var(--surface)] transition-all " +
+                  (on ? "border-[var(--brand-2)]" : "border-[var(--line)]") +
+                  (off ? " opacity-60" : "")
                 }
-                style={{ background: "linear-gradient(120deg,#0f1830,#18294a)", boxShadow: "0 16px 38px -20px rgba(0,0,0,.6)" }}
+                style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}
               >
-              <div
-                onClick={() => open(b.ref)}
-                className="flex cursor-pointer items-center gap-3.5 px-4 py-3 hover:-translate-y-px hover:shadow-[0_8px_20px_-14px_rgba(9,20,44,.55)]"
-              >
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSel(b.ref);
-                  }}
-                  className={
-                    "h-4 w-4 flex-none rounded border-[1.5px] " +
-                    (on ? "border-[#4a86e6] bg-[#4a86e6]" : "border-[#3a4a70]")
-                  }
-                />
-                {/* The child's initial, not the payer's — a photo goes here
-                    once a booking carries the child's id (handoff §I). */}
-                <span
-                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-[#04202a]"
-                  style={{ background: "linear-gradient(135deg,#43d9c0,#1c7f9e)", boxShadow: "0 0 0 1px rgba(255,255,255,.14), 0 6px 16px -6px rgba(38,220,190,.5)" }}
-                >
-                  {lead.charAt(0).toUpperCase()}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  {/* The child leads. A provider's list of bookings that names
-                      only the payer can't answer "is Sophie in on Thursday" —
-                      and a family booking three children read as three
-                      identical rows. */}
-                  <span className="block truncate text-[13.5px] font-extrabold text-white">
-                    {kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}
-                    <span className="ml-1.5 whitespace-nowrap text-[11px] font-bold text-[#9cc0ff]">View details ›</span>
-                  </span>
-                  <span className="block truncate text-[11px] text-[#8ea0c8]">
-                    {/* On the row, not behind a click — "when did this come
-                        in" is the first thing asked of a bookings list. */}
-                    {b.createdAt ? `Booked ${prettyBookedOn(b)} · ` : ""}
-                    by {b.booker} · {b.pass}
-                  </span>
-                </span>
-
-                <div className="hidden min-w-0 flex-[2.4] flex-col justify-center gap-1.5 lg:flex">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="max-w-full truncate rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: "rgba(120,170,255,.15)", color: "#bcd4ff", boxShadow: "inset 0 0 0 1px rgba(120,170,255,.3)" }} title={b.listing}>🎟 {b.listing || "—"}</span>
-                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-extrabold text-[#04202a]" style={{ background: "linear-gradient(120deg,#37d1bd,#128199)" }}>📅 {seasonNameOf(b.listingId)}</span>}
+              <div className="flex items-stretch">
+                {/* Gradient identity hero */}
+                <div onClick={() => open(b.ref)} className="relative flex w-[132px] flex-none cursor-pointer flex-col justify-center gap-2 p-4 text-white sm:w-[210px]" style={{ background: "linear-gradient(140deg,#2f6bd8,#122a63)" }}>
+                  <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute left-3 top-3 h-4 w-4 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/50")} />
+                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white/15 text-[17px] font-extrabold ring-1 ring-white/20">{lead.charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0">
+                    <div className="truncate text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}</div>
+                    <div className="text-[11px] font-bold text-white/75">View details ›</div>
                   </div>
-                  <div className="truncate text-[12px]"><span className="num font-bold text-[#dfe7ff]">{b.dates}</span> <span className="text-[#8ea0c8]">· {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · {b.ref}</span></div>
+                  <div className="truncate text-[10.5px] text-white/70">Ref {b.ref}{b.createdAt ? ` · booked ${prettyBookedOn(b)}` : ""}</div>
                 </div>
 
-                <div className="hidden flex-none flex-wrap items-center justify-end gap-1.5 md:flex">
-                  <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span>
-                  <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
-                  {refundPending && <span className="whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-extrabold text-[#bb1620]">Refund pending</span>}
+                {/* Detail columns */}
+                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 hover:bg-[var(--panel)]">
+                  <Col label="🎟 Listing" grow><span className="block truncate text-[13px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
+                  {seasonNameOf(b.listingId) && <Col label="📅 Season"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span></Col>}
+                  <Col label="📆 Dates"><span className="num text-[13px] font-extrabold text-[var(--ink)]">{b.dates}</span></Col>
+                  <Col label="Group"><span className="text-[12px] font-bold text-[var(--ink-2)]">{att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sess</span></Col>
+                  <Col label="Status"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
+                  <Col label="Payment"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
+
+                  {b.pay === "Awaiting voucher payment" && !off && (
+                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
+                      className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Mark voucher received</button>
+                  )}
+                  {refundPending && (
+                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
+                      className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
+                  )}
+                  {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
+                    <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
+                      className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">Refund {money(b.cancel.amount)}</span>
+                  )}
+
+                  <div className="ml-auto flex-none text-right">
+                    <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
+                    <b className="text-[18px] tabular-nums text-[var(--ink)]">{money(b.amount)}</b>
+                  </div>
                 </div>
-
-                {/* Voucher money arrives outside the app — reconcile it right
-                    here without opening the booking. */}
-                {b.pay === "Awaiting voucher payment" && !off && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }}
-                    title="Confirm the voucher money has arrived — marks it paid and tells the family"
-                    className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
-                  >
-                    Mark voucher received
-                  </button>
-                )}
-
-                {/* Refund owed on a cancellation — action it from the row. For a
-                    voucher it's an out-of-app reimbursement the operator confirms. */}
-                {refundPending && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }}
-                    title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
-                    className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110"
-                  >
-                    {isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}
-                  </button>
-                )}
-
-                {/* Once issued there's no action button — show the amount clearly
-                    so it isn't lost in the truncated meta line. */}
-                {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
-                  <span
-                    title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
-                    className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]"
-                  >
-                    Refund {money(b.cancel.amount)}
-                  </span>
-                )}
-
-                <b className="flex-none text-right text-[16px] tabular-nums text-white">
-                  {money(b.amount)}
-                </b>
               </div>
 
               {/* Date-change request on its own full-width line so nothing is
