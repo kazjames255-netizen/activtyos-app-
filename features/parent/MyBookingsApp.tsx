@@ -12,6 +12,16 @@ import { filledDetails, type VoucherProvider } from "@/lib/settings";
 import { refundFor, policyById, policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 
+// Boy → blue, Girl → pink, unknown → house grey. Same convention as the
+// registers gender chips and the old schedule's per-child pills.
+function genderTone(sex?: string): { bg: string; fg: string; on: string } {
+  const s = (sex ?? "").toLowerCase();
+  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "#1d3a8f", on: "#1d3a8f" };
+  if (s.startsWith("g") || s === "female" || s === "f") return { bg: "#fdeaf3", fg: "#b0186a", on: "#c81e77" };
+  return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
+}
+const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+
 // A month calendar that shows, at a glance, which dates a booking can move to:
 // green = a running date with space (clickable), blue = the one chosen, faint =
 // nothing on / already taken. Beats a native date input, which looks identical
@@ -656,7 +666,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean }) {
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(!!autoCancel);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -674,6 +684,17 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
       .then((ls) => setInfo((ls ?? []).find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null))
       .catch(() => {});
   }, [expanded, amending, cancelling, info, b.tenantId, b.blockId]);
+
+  // Concrete times + staff onsite — the extra detail the old schedule showed.
+  const [detail, setDetail] = useState<{ staff: { name: string }[]; periods: { title: string; start?: string; finish?: string }[] } | null>(null);
+  useEffect(() => {
+    if (!expanded || detail || !b.listingId) return;
+    apiGet<{ library?: { staff?: { name: string }[] }; bundle?: { periods?: { title: string; start?: string; finish?: string }[] } }>(`/api/listings/${encodeURIComponent(b.listingId)}`)
+      .then((l) => setDetail({ staff: l.library?.staff ?? [], periods: l.bundle?.periods ?? [] }))
+      .catch(() => {});
+  }, [expanded, detail, b.listingId]);
+  const period = detail?.periods.find((p) => p.title === b.timing) ?? (detail?.periods.length === 1 ? detail.periods[0] : undefined);
+  const times = period?.start && period?.finish ? `${period.start}–${period.finish}` : null;
 
   // For a voucher booking, the scheme's reference details (Edenred account
   // number etc.) the provider entered — what the parent quotes to pay.
@@ -761,6 +782,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           <span className="ml-1 text-[14px] font-extrabold">{money(b.amount)}</span>
         </div>
       </div>
+
+      {clash && !cancelled && (
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
+          <span aria-hidden>⚠️</span>
+          <span>{b.child} is booked onto more than one session on a day here — check this is right; you may want to move or cancel one.</span>
+        </div>
+      )}
 
       {dateChange?.status === "pending" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
@@ -881,12 +909,16 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel }: { b: Bookin
           <DefRow label="Child" value={b.child} />
           <DefRow label="Pass" value={b.pass} />
           {b.timing && <DefRow label="Timing" value={b.timing} />}
-          {(info?.location || info?.address) && (
+          {(info?.location || info?.address || times || (detail?.staff && detail.staff.length > 0)) && (
             <>
-              <SectionHead>Where</SectionHead>
-              {info.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
-              {(info.address || info.city) && (
+              <SectionHead>Where &amp; when</SectionHead>
+              {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
+              {(info?.address || info?.city) && (
                 <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
+              )}
+              {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
+              {detail?.staff && detail.staff.length > 0 && (
+                <div className="py-[2px] text-[12.5px]">👤 Staff onsite: {detail.staff.map((s) => s.name).join(", ")}</div>
               )}
             </>
           )}
@@ -999,6 +1031,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const [listingF, setListingF] = useState("");
   const [fromF, setFromF] = useState("");
   const [toF, setToF] = useState("");
+  const [kidsSex, setKidsSex] = useState<Record<string, string>>({});
 
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
@@ -1008,6 +1041,12 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
 
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
+  // The family's children, coloured by gender for the per-child pill filter.
+  useEffect(() => {
+    apiGet<{ name: string; sex?: string }[]>("/api/my/children")
+      .then((cs) => setKidsSex(Object.fromEntries((cs ?? []).map((c) => [c.name.trim(), (c.sex ?? "").toLowerCase()]))))
+      .catch(() => {});
+  }, []);
   // The payment-link email deep-links here as ?pay=REF; the schedule's
   // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
   const params = useSearchParams();
@@ -1074,6 +1113,22 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         const filtersOn = !!(childF || listingF || fromF || toF);
         const restF = rest.filter(passF);
 
+        // Flag a child double-booked on the same day (across all bookings, not
+        // just the filtered view) — the schedule's overlap warning, per card.
+        const clashRefs = new Set<string>();
+        {
+          const byChildDay = new Map<string, string[]>();
+          for (const bk of rest) {
+            if (isCancelled(bk)) continue;
+            const names = bk.kids && bk.kids.length ? bk.kids.map((k) => k.name) : [bk.child];
+            for (const nm of names) for (const day of bk.days ?? []) {
+              const key = `${nm}|${day}`;
+              byChildDay.set(key, [...(byChildDay.get(key) ?? []), bk.ref]);
+            }
+          }
+          for (const refs of byChildDay.values()) if (new Set(refs).size > 1) refs.forEach((r) => clashRefs.add(r));
+        }
+
         const counts = {
           all: restF.length,
           upcoming: restF.filter(isUpcoming).length,
@@ -1120,14 +1175,25 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
             {rest.length > 0 && (
               <>
                 {waiting.length > 0 && <SectionHead>My bookings</SectionHead>}
+                {childOptions.length > 1 && (
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+                      style={!childF ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                      All children
+                    </button>
+                    {childOptions.map((name) => {
+                      const t = genderTone(kidsSex[name]);
+                      const on = childF === name;
+                      return (
+                        <button key={name} type="button" onClick={() => setChildF(on ? "" : name)} className="rounded-full border-2 px-3.5 py-1.5 text-[12.5px] font-extrabold transition-colors"
+                          style={on ? { borderColor: t.on, background: t.on, color: "#fff" } : { borderColor: t.bg, background: t.bg, color: t.fg }}>
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="mb-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Child</span>
-                    <select value={childF} onChange={(e) => setChildF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
-                      <option value="">All children</option>
-                      {childOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Activity</span>
                     <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[190px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
@@ -1173,7 +1239,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} />
                     ))}
                   </div>
                 )}

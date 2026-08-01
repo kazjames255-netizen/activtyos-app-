@@ -2,31 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui";
 import { MyBookingsApp } from "./MyBookingsApp";
-import { ScheduleApp } from "./ScheduleApp";
 import { PaymentsApp } from "./PaymentsApp";
 
-// custdash — the family's bookings, schedule and payments as one area with
-// three tabs. Replaces the separate "My schedule" page. Serves both the
-// /custdash/bookings and /custdash/schedule routes: the schedule route opens
-// the Schedule tab, ?tab=payments opens Payments, otherwise Bookings.
-type Tab = "bookings" | "schedule" | "payments";
+// custdash — the family's bookings and payments as two tabs of one area. The
+// old "My schedule" page is gone; its detail (venue, times, staff, overlap
+// warnings, edit/cancel) now lives on the booking cards themselves.
+// ?tab=payments opens Payments; otherwise Bookings.
+type Tab = "bookings" | "payments";
 
 export function BookingsHubApp() {
-  const pathname = usePathname();
   const params = useSearchParams();
-  const initial: Tab =
-    pathname?.endsWith("/schedule") ? "schedule" : params.get("tab") === "payments" ? "payments" : "bookings";
+  const initial: Tab = params.get("tab") === "payments" ? "payments" : "bookings";
   const [tab, setTab] = useState<Tab>(initial);
 
   const meta: Record<Tab, { label: string; lede: string }> = {
-    bookings: { label: "My bookings", lede: "Your family’s places — status updates as the provider confirms." },
-    schedule: { label: "My schedule", lede: "Every day your family is booked in, with venue, times and staff." },
+    bookings: { label: "My bookings", lede: "Your family’s places, days and details — status updates as the provider confirms." },
     payments: { label: "My payments", lede: "Everything your family owes and has paid — download receipts as proof of purchase." },
   };
-  const tabs: Tab[] = ["bookings", "schedule", "payments"];
+  const tabs: Tab[] = ["bookings", "payments"];
 
   return (
     <div className="text-[var(--ink)]">
@@ -54,9 +50,7 @@ export function BookingsHubApp() {
         ))}
       </div>
 
-      {tab === "bookings" && <MyBookingsApp hideHeader />}
-      {tab === "schedule" && <ScheduleApp hideHeader />}
-      {tab === "payments" && <PaymentsApp hideHeader />}
+      {tab === "bookings" ? <MyBookingsApp hideHeader /> : <PaymentsApp hideHeader />}
     </div>
   );
 }
