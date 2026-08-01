@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { OperatorPage } from "@/components/OperatorPage";
 import type { DayInfo, PlanRow } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -123,12 +124,7 @@ export function StaffTimetableApp() {
   const week = weeks?.[Math.min(wi, (weeks?.length ?? 1) - 1)];
 
   return (
-    <div className="text-[var(--ink)]">
-      <div className="mb-3.5">
-        <h3 className="m-0 font-[var(--ff-display)] text-[20px] font-extrabold">Timetable</h3>
-        <div className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">The day plans your organiser has published</div>
-      </div>
-
+    <OperatorPage title="Timetable" lede="The day plans your organiser has published" icon="▦">
       {error && <div className="text-[13px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
       {!error && weeks === null && <div className="text-[13px] text-[var(--ink-3)]">Loading…</div>}
       {!error && weeks !== null && !weeks.length && (
@@ -168,6 +164,6 @@ export function StaffTimetableApp() {
           </div>
         </>
       )}
-    </div>
+    </OperatorPage>
   );
 }

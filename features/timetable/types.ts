@@ -30,6 +30,9 @@ export interface Listing {
   /** Every ISO date the listing's blocks actually run — days in the range
    * with no session start excluded in the builder. */
   sessionDates?: string[];
+  /** The season this listing is tagged to (Setup › Seasons); used to filter
+   * the picker so a busy operator can narrow to one season. */
+  seasonId?: string | null;
 }
 
 export interface Group {

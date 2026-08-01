@@ -35,6 +35,7 @@ interface ApiListing {
   title?: string;
   archived?: boolean;
   venueId?: string;
+  seasonId?: string | null;
   blocks: { id: string; name: string; startDate: string; endDate: string; sessions: { date: string; start: string; end: string }[] }[];
 }
 interface LibraryDoc {
@@ -84,6 +85,7 @@ function toBuilderListing(l: ApiListing, venueName: string): Listing | null {
     signin: [first.start],
     signout: [first.end],
     sessionDates: blocks.flatMap((b) => b.sessions.map((s) => s.date)),
+    seasonId: l.seasonId ?? null,
   };
 }
 

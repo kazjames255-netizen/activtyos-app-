@@ -5,6 +5,7 @@ import { useTimetableStore } from "./store";
 import { buildAllDays } from "./engine";
 import { ActivityLibrary } from "./ActivityLibrary";
 import { FieldLabel, Panel, Button, Input, Select, inputCls } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
 
 // Step chrome follows the operator's brand theme (was a fixed rainbow that
 // clashed on non-blue themes). Activity-block colours stay varied — see engine.
@@ -94,6 +95,21 @@ function DayCalendar() {
 export function SetupWizard() {
   const s = useTimetableStore();
   const step = s.wstep;
+  const { settings } = useSettings();
+  const seasons = settings.seasons ?? [];
+  const [seasonFilter, setSeasonFilter] = useState("");
+  const seasonName = (id?: string | null) => seasons.find((x) => x.id === id)?.name;
+  // Options are {listing, its real index in LISTINGS} so the picker's value
+  // stays the true index even when the season filter hides some rows.
+  const listingOpts = s.LISTINGS.map((l, i) => ({ l, i })).filter(({ l }) => !seasonFilter || l.seasonId === seasonFilter);
+  const onSeason = (v: string) => {
+    setSeasonFilter(v);
+    // If the current pick isn't in the chosen season, jump to the first that is.
+    if (v && s.curListing?.seasonId !== v) {
+      const first = s.LISTINGS.findIndex((l) => l.seasonId === v);
+      if (first >= 0) s.pickListing(first);
+    }
+  };
 
   return (
     <div>
@@ -127,6 +143,19 @@ export function SetupWizard() {
       {step === 1 && (
         <Panel title="1 · Listing & dates">
           <div className="flex flex-wrap items-end gap-3">
+            {seasons.length > 0 && (
+              <div className="min-w-[160px]">
+                <FieldLabel>Season</FieldLabel>
+                <Select value={seasonFilter} onChange={(e) => onSeason(e.target.value)} className="w-full">
+                  <option value="">All seasons</option>
+                  {seasons.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="min-w-[230px] flex-1">
               <FieldLabel>Listing</FieldLabel>
               <Select
@@ -134,11 +163,12 @@ export function SetupWizard() {
                 onChange={(e) => s.pickListing(+e.target.value)}
                 className="w-full"
               >
-                {s.LISTINGS.map((l, i) => (
+                {listingOpts.map(({ l, i }) => (
                   <option key={i} value={i}>
                     {l.name}
                   </option>
                 ))}
+                {listingOpts.length === 0 && <option value={s.listingIndex}>No listings in this season</option>}
               </Select>
             </div>
             <div>
@@ -150,10 +180,17 @@ export function SetupWizard() {
               <Input type="date" value={s.dateTo} onChange={(e) => s.setDates(s.dateFrom, e.target.value)} />
             </div>
           </div>
-          <div className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
-            {s.curListing
-              ? `Pulled from listing: ${s.curListing.dates} · ${s.start}–${s.end} · ${s.curListing.venue} · ${s.dayList.length} days`
-              : `Dates edited · ${s.dayList.length} days · ${s.start}–${s.end}`}
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-2)]">
+            {seasonName(s.curListing?.seasonId) && (
+              <span className="rounded-full px-2 py-0.5 text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>
+                📅 {seasonName(s.curListing?.seasonId)}
+              </span>
+            )}
+            <span>
+              {s.curListing
+                ? `Pulled from listing: ${s.curListing.dates} · ${s.start}–${s.end} · ${s.curListing.venue} · ${s.dayList.length} days`
+                : `Dates edited · ${s.dayList.length} days · ${s.start}–${s.end}`}
+            </span>
           </div>
           <FieldLabel>
             <span className="mt-3 inline-block">Dates in this camp</span>
