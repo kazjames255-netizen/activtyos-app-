@@ -30,9 +30,9 @@ import { HowItWorks } from "@/components/HowItWorks";
 // A labelled detail column in the booking row's white body.
 function Col({ label, grow, children }: { label: string; grow?: boolean; children: React.ReactNode }) {
   return (
-    <span className={"flex min-w-0 flex-col justify-center " + (grow ? "flex-[1.4]" : "flex-none")}>
-      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
-      <span className="mt-1 block truncate leading-tight">{children}</span>
+    <span className={"flex flex-col justify-center " + (grow ? "min-w-[130px] flex-[1.4]" : "flex-none")}>
+      <span className="text-[8px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
+      <span className="mt-[3px] block leading-[1.2]">{children}</span>
     </span>
   );
 }
@@ -407,23 +407,21 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}
               >
               <div className="flex items-stretch">
-                {/* Gradient identity hero */}
-                <div onClick={() => open(b.ref)} className="relative flex w-[132px] flex-none cursor-pointer flex-col justify-center gap-2 p-4 text-white sm:w-[210px]" style={{ background: "linear-gradient(140deg,#2f6bd8,#122a63)" }}>
-                  <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute left-3 top-3 h-4 w-4 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/50")} />
-                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white/15 text-[17px] font-extrabold ring-1 ring-white/20">{lead.charAt(0).toUpperCase()}</span>
+                {/* Gradient identity hero — compact */}
+                <div onClick={() => open(b.ref)} className="relative flex w-[150px] flex-none cursor-pointer items-center gap-2.5 p-2.5 pr-5 text-white sm:w-[236px]" style={{ background: "linear-gradient(140deg,#2f6bd8,#122a63)" }}>
+                  <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute right-2 top-2 h-3.5 w-3.5 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/45")} />
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/15 text-[15px] font-extrabold ring-1 ring-white/20">{lead.charAt(0).toUpperCase()}</span>
                   <div className="min-w-0">
-                    <div className="truncate text-[16px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}</div>
-                    <div className="text-[11px] font-bold text-white/75">View details ›</div>
+                    <div className="text-[13.5px] font-extrabold leading-[1.15]" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}</div>
+                    <div className="truncate text-[10px] text-white/70">Ref {b.ref}{b.createdAt ? ` · ${prettyBookedOn(b)}` : ""}</div>
                   </div>
-                  <div className="truncate text-[10.5px] text-white/70">Ref {b.ref}{b.createdAt ? ` · booked ${prettyBookedOn(b)}` : ""}</div>
                 </div>
 
-                {/* Detail columns */}
-                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 hover:bg-[var(--panel)]">
-                  <Col label="🎟 Listing" grow><span className="block truncate text-[13px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
+                {/* Detail columns — compact, full names, sessions spelled out */}
+                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-5 gap-y-1 px-4 py-1.5 hover:bg-[var(--panel)]">
+                  <Col label="🎟 Listing" grow><span className="text-[12.5px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
                   {seasonNameOf(b.listingId) && <Col label="📅 Season"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span></Col>}
-                  <Col label="📆 Dates"><span className="num text-[13px] font-extrabold text-[var(--ink)]">{b.dates}</span></Col>
-                  <Col label="Group"><span className="text-[12px] font-bold text-[var(--ink-2)]">{att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sess</span></Col>
+                  <Col label="📆 Dates"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
                   <Col label="Status"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
                   <Col label="Payment"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
 
