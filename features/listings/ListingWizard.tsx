@@ -33,6 +33,7 @@ import type { ResolvedPricing } from "@/features/blocks/blocksApi";
 const STEPS = [
   { key: "basics", label: "Basics", stage: "About" },
   { key: "details", label: "Details", stage: "About" },
+  { key: "capacity", label: "Capacity", stage: "About" },
   { key: "content", label: "Content", stage: "About" },
   { key: "provided", label: "Provided", stage: "About" },
   { key: "safety", label: "Safety & SEND", stage: "About" },
@@ -980,7 +981,8 @@ export function ListingWizard({
             {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
             <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} />}
-            {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
+            {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} />}
+            {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
@@ -1268,13 +1270,13 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
 }
 
 // ── Step: Details (venue, ages, season, categories, capacity) ────────────────
-function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState }) {
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   return (
     <div className="max-w-[1120px]">
       <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
-      <div className="grid items-start gap-4 md:grid-cols-3">
+      <div className="grid items-start gap-4 md:grid-cols-2">
       <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & contact">
       <div className="mb-3 flex gap-3">
         <div className="w-[110px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
@@ -1345,27 +1347,34 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
 
       </div>
       </RichCard>
-      <RichCard icon="👧👦" title="Capacity" subtitle="Places & spaces" tint="violet">
-      <div>
-      <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
-      <div className="my-2 flex flex-wrap items-end gap-2">
-        <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
-        <div className="flex gap-1 pb-[3px]">
-          {[["day", "Per day"], ["listing", "Whole listing"]].map(([k, l]) => (
-            <button key={k} type="button" onClick={() => upd({ capacityScope: k as "day" | "listing" })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
-              style={d.capacityScope === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{l}</button>
-          ))}
-        </div>
       </div>
-      <YesNo label="Show remaining spaces to parents?" value={d.showSpaces} onChange={(v) => upd({ showSpaces: v })} help="Displays “X spaces left” on the listing." />
+    </div>
+  );
+}
 
-      <AgeCaps d={d} upd={upd} />
-
-      <div className="mt-2 text-[11px] text-[var(--ink-3)]">ⓘ These are defaults — each ticket can amend its own age &amp; capacity in <b>Tickets &amp; pricing</b>.</div>
-      {/* patchLocal is unused here but kept for signature symmetry with other steps */}
-      <span className="hidden">{typeof patchLocal}</span>
-      </div>
-      </RichCard>
+// ── Step: Capacity (its own page — the age-caps make it tall) ─────────────────
+function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <StepHead n={3} kicker="STEP · CAPACITY" title="How many can come" lede="The size, whether out-of-range children can request a place, and any per-age caps." />
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <RichCard icon="👧👦" title="Places & spaces">
+          <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
+          <div className="my-2 flex flex-wrap items-end gap-2">
+            <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
+            <div className="flex gap-1 pb-[3px]">
+              {[["day", "Per day"], ["listing", "Whole listing"]].map(([k, l]) => (
+                <button key={k} type="button" onClick={() => upd({ capacityScope: k as "day" | "listing" })} className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                  style={d.capacityScope === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <YesNo label="Show remaining spaces to parents?" value={d.showSpaces} onChange={(v) => upd({ showSpaces: v })} help="Displays “X spaces left” on the listing." />
+          <div className="mt-2 text-[11px] text-[var(--ink-3)]">ⓘ These are defaults — each ticket can amend its own age &amp; capacity in <b>Tickets &amp; pricing</b>.</div>
+        </RichCard>
+        <RichCard icon="🎚️" title="Per-age caps" subtitle="Optional — limit places by age group" tint="violet">
+          <AgeCaps d={d} upd={upd} />
+        </RichCard>
       </div>
     </div>
   );
