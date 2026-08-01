@@ -174,6 +174,28 @@ function Donut({ segments, center, sub, size = 116 }: { segments: { label: strin
     </div>
   );
 }
+// A centred booking-lifecycle funnel — each tier's width is its share of the first tier.
+function Funnel({ stages }: { stages: { label: string; value: number; color: string }[] }) {
+  const top = Math.max(1, stages[0]?.value ?? 1);
+  if (!stages.some((s) => s.value > 0)) return <Empty>No bookings yet.</Empty>;
+  return (
+    <div className="flex flex-col gap-2 py-1">
+      {stages.map((s) => {
+        const w = Math.max(14, (s.value / top) * 100);
+        const pct = Math.round((s.value / top) * 100);
+        return (
+          <div key={s.label} className="flex items-center gap-3">
+            <div className="w-20 flex-none text-right text-[12px] font-semibold text-[var(--ink-2)]">{s.label}</div>
+            <div className="flex-1">
+              <div className="mx-auto flex h-9 items-center justify-center rounded-md text-[13px] font-extrabold text-white shadow-[0_6px_16px_-10px_rgba(20,30,80,.6)]" style={{ width: `${w}%`, background: s.color }}>{s.value}</div>
+            </div>
+            <div className="w-9 flex-none text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{pct}%</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function Panel({ title, right, children, className = "" }: { title: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
     <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 ${className}`}>
@@ -307,6 +329,7 @@ export function DashboardApp() {
     const byStatus = new Map<string, number>();
     const payMix = new Map<string, number>();
     const families = new Set<string>();
+    const famCount = new Map<string, number>();   // bookings per family → repeat-customer share
     let totalCollected = 0, paidCount = 0, bookingsCount = 0;
 
     for (const b of list) {
@@ -324,7 +347,9 @@ export function DashboardApp() {
       totalCollected += collectedOf(b);
       if (isPaid(b)) paidCount++;
       if (!isCancelled(b)) bookingsCount++;
-      families.add((b.email || b.booker || "").toLowerCase());
+      const fam = (b.email || b.booker || "").toLowerCase();
+      families.add(fam);
+      if (fam && !isCancelled(b)) famCount.set(fam, (famCount.get(fam) ?? 0) + 1);
       byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
       payMix.set(b.pay || "—", (payMix.get(b.pay || "—") ?? 0) + 1);
       if (!isCancelled(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedOf(b));
@@ -333,6 +358,16 @@ export function DashboardApp() {
     const acts = [...byAct.entries()].sort((x, y) => y[1] - x[1]);
     const seasonRows = [...bySeason.entries()].filter(([, v]) => v > 0 || bySeason.size <= 6).sort((x, y) => y[1] - x[1]);
     const recent = [...list].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6);
+    // Booking lifecycle funnel + repeat-customer share, from the same windowed bookings.
+    const confirmed = byStatus.get("Confirmed") ?? 0;
+    const funnel = [
+      { label: "Bookings", value: bookingsCount, color: LIGHTB },
+      { label: "Confirmed", value: confirmed, color: BLUE },
+      { label: "Paid", value: paidCount, color: GREEN },
+    ];
+    const famTotal = famCount.size;
+    const repeatCount = [...famCount.values()].filter((n) => n > 1).length;
+    const repeat = { total: famTotal, repeat: repeatCount, pct: famTotal ? Math.round((repeatCount / famTotal) * 100) : 0 };
 
     return {
       income, booked, weekly, weeklyIncome,
@@ -342,6 +377,7 @@ export function DashboardApp() {
       bySeason: seasonRows.slice(0, 8).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       byStatus: [...byStatus.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: STATUS_C[label] ?? "#8a86a3" })),
       payMix: [...payMix.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: PAY_C[label] ?? "#8a86a3" })),
+      funnel, repeat,
       recent,
     };
   }, [bookings, months, nowMs, listingSeason, seasons]);
@@ -531,6 +567,31 @@ export function DashboardApp() {
             </Panel>
             <Panel title="Revenue by activity">
               <Breakdown entries={a.byActivity} />
+            </Panel>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <Panel title="🔻 Booking funnel" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">last {months}m</span>}>
+              <Funnel stages={a.funnel} />
+              <div className="mt-3 border-t border-[var(--line)] pt-2.5 text-[11.5px] text-[var(--ink-3)]">
+                {a.funnel[0].value > 0
+                  ? <><b className="text-[var(--ink-2)]">{Math.round((a.funnel[2].value / a.funnel[0].value) * 100)}%</b> of bookings are paid · <b className="text-[var(--ink-2)]">{Math.round((a.funnel[1].value / a.funnel[0].value) * 100)}%</b> confirmed</>
+                  : "No bookings in this window yet."}
+              </div>
+            </Panel>
+            <Panel title="🔁 Repeat customers" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">last {months}m</span>}>
+              {a.repeat.total > 0 ? (
+                <>
+                  <Donut
+                    segments={[{ label: "Repeat families", value: a.repeat.repeat, color: "#e2225f" }, { label: "One booking", value: a.repeat.total - a.repeat.repeat, color: LIGHTB }]}
+                    center={`${a.repeat.pct}%`}
+                    sub="repeat"
+                  />
+                  <div className="mt-3 border-t border-[var(--line)] pt-2.5 text-[11.5px] text-[var(--ink-3)]">
+                    <b className="text-[var(--ink-2)]">{a.repeat.repeat}</b> of {a.repeat.total} families have booked more than once.
+                  </div>
+                </>
+              ) : <Empty>No customers yet.</Empty>}
             </Panel>
           </div>
 
