@@ -60,11 +60,12 @@ function Tile({ label, value, sub, grad, children }: { label: string; value: str
   );
 }
 // A white mini bar chart drawn on a coloured tile — the last few weeks at a glance.
-function MiniBars({ data, labels }: { data: number[]; labels: string[] }) {
+function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
   const max = Math.max(1, ...data);
   return (
     <div className="mt-2.5">
-      <div className="flex items-end gap-1" style={{ height: 28 }}>
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-white/70">{caption}</div>
+      <div className="flex items-end gap-1" style={{ height: 26 }}>
         {data.map((v, i) => (
           <div key={i} className="flex flex-1 items-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
             <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(10, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
@@ -285,7 +286,7 @@ export function DashboardApp() {
           sub={`${100 - d.occupancy.pct}% not filled · ${d.occupancy.booked}/${d.occupancy.capacity} taken on open runs`}
           grad={GRAD.teal}
         >
-          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} />}
+          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="New bookings · last 5 weeks" />}
         </Tile>
         <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green} />
         <Tile
