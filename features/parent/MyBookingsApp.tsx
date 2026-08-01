@@ -824,7 +824,6 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
         </div>
       </div>
 
-      {(clash || expanded) && (
       <div className="px-4 pb-4 pt-1">
       {clash && !cancelled && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
@@ -832,8 +831,6 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
           <span>{b.child} is booked onto more than one session on a day here — check this is right; you may want to move or cancel one.</span>
         </div>
       )}
-
-      {expanded && (<>
 
       {dateChange?.status === "pending" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
@@ -1021,9 +1018,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
           }}
         />
       )}
-      </>)}
       </div>
-      )}
     </Card>
   );
 }
