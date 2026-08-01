@@ -28,6 +28,12 @@ const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateStri
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
+// A stable colour per activity name, and an availability tone (green→amber→red).
+const actColor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
+const availTone = (left: number, cap: number) =>
+  left <= 0 ? { bg: "#fdebec", fg: "#c0392b", label: "full" }
+  : left <= Math.max(3, cap * 0.15) ? { bg: "#fdf3d8", fg: "#9a5a00", label: `${left} left` }
+  : { bg: "#e2f5ea", fg: "#0b8446", label: `${left} left` };
 const isPaid = (b: Booking) => b.pay === "Paid" || b.pay === "Funded";
 const collectedOf = (b: Booking) => (isPaid(b) ? Math.max(0, b.amount - refundedTotal(b)) : 0);
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
@@ -330,34 +336,48 @@ export function DashboardApp() {
 
       {/* Today + Coming up (unchanged) */}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <Panel title={`Today · ${fmtDay(d.today.date)}`} right={d.bookings.waitlist > 0 ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge> : undefined}>
+        <Panel title={`☀️ Today · ${fmtDay(d.today.date)}`} right={d.bookings.waitlist > 0 ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge> : undefined}>
           {d.today.sessions.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing running today.</div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {d.today.sessions.map((s, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
-                  <span className="text-[12px] font-bold tabular-nums">{s.start}–{s.end}</span>
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{s.listing}</span>
-                  <span className="text-[11.5px] text-[var(--ink-3)]">{s.booked}/{s.capacity}</span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-2">
+              {d.today.sessions.map((s, i) => {
+                const c = actColor(s.listing);
+                const pct = s.capacity ? Math.round((s.booked / s.capacity) * 100) : 0;
+                return (
+                  <div key={i} className="flex items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${c}` }}>
+                    <span className="rounded-lg px-2 py-1 text-[11.5px] font-extrabold tabular-nums text-white" style={{ background: c }}>{s.start}–{s.end}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.listing}</div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: c }} /></div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{s.booked}/{s.capacity}</div>
+                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{pct}% full</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </Panel>
-        <Panel title="Coming up">
+        <Panel title="🗓️ Coming up">
           {d.upcoming.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No upcoming sessions.</div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {d.upcoming.map((s, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
-                  <span className="w-[92px] shrink-0 text-[11.5px] font-bold text-[var(--ink-2)]">{fmtDay(s.date)}</span>
-                  <span className="text-[12px] tabular-nums text-[var(--ink-2)]">{s.start}</span>
-                  <span className="min-w-0 flex-1 truncate text-[12.5px]">{s.listing}</span>
-                  {s.spotsLeft === 0 ? <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>full</Badge> : <span className="text-[11px] text-[var(--ink-3)]">{s.spotsLeft} left</span>}
-                </div>
-              ))}
+            <div className="flex flex-col gap-2">
+              {d.upcoming.map((s, i) => {
+                const c = actColor(s.listing);
+                const t = availTone(s.spotsLeft, s.spotsLeft + 1);
+                return (
+                  <div key={i} className="flex items-center gap-2.5 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2" style={{ borderLeft: `4px solid ${c}` }}>
+                    <span className="w-[86px] shrink-0 text-[11.5px] font-extrabold text-[var(--ink-2)]">{fmtDay(s.date)}</span>
+                    <span className="rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums" style={{ background: `${c}1f`, color: c }}>{s.start}</span>
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--ink)]">{s.listing}</span>
+                    <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: t.bg, color: t.fg }}>{t.label}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </Panel>
