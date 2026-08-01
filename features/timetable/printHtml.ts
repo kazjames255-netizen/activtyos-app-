@@ -102,16 +102,75 @@ interface PrintArgs {
   dayList: DayInfo[];
   groups: string[];
   FAC: string[];
+  /** The operator's own name — headers the document instead of "ActivityOS". */
+  brandName?: string;
 }
 
-export function printTimetable({ view, plan, cur, dayList, groups, FAC }: PrintArgs) {
-  const title = view === "week" ? "Weekly timetable" : view === "month" ? "4-week overview" : "Daily timetable";
+// A self-contained, branded document shell. `brandName` is the operator's
+// business/display name so a downloaded or printed sheet reads as theirs, not
+// the platform's.
+function docShell(brandName: string, subtitle: string, body: string, autoprint: boolean): string {
+  const brand = esc(brandName || "Activity timetable");
+  const print = autoprint ? `<script>window.onload=function(){window.print();}<\/script>` : "";
+  return (
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<title>${brand} — ${esc(subtitle)}</title></head>` +
+    `<body style="font-family:-apple-system,Segoe UI,Arial,sans-serif;padding:20px;color:#171534;max-width:1000px;margin:0 auto">` +
+    `<div style="border-bottom:3px solid #2f6bd8;padding-bottom:10px;margin-bottom:16px">` +
+    `<div style="font-size:22px;font-weight:800;color:#16306e">${brand}</div>` +
+    `<div style="font-size:13px;color:#555;font-weight:600">${esc(subtitle)}</div>` +
+    `</div>${body}${print}</body></html>`
+  );
+}
+
+// The whole plan, one titled table per day — the shape people actually want to
+// keep or hand out.
+function allDaysHtml(plan: Plan, dayList: DayInfo[], groups: string[], FAC: string[]): string {
+  return dayList
+    .map((d, di) => `<h3 style="margin:18px 0 6px;color:#16306e;font-size:14px">${esc(d.n)} ${esc(d.d)}</h3>${dayHtml(plan, di, dayList, groups, FAC)}`)
+    .join("");
+}
+
+const fileSafe = (s: string) => s.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "timetable";
+
+/** Opens a print window (kept for the "Print" action). */
+export function printTimetable({ view, plan, cur, dayList, groups, FAC, brandName }: PrintArgs) {
+  const subtitle = view === "week" ? "Weekly timetable" : view === "month" ? "4-week overview" : "Daily timetable";
   const body =
     view === "week" ? weekHtml(plan, cur, dayList, groups, FAC) : view === "month" ? monthHtml(plan, dayList, FAC) : dayHtml(plan, cur, dayList, groups, FAC);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body style="font-family:Arial,sans-serif;padding:16px"><h2 style="color:#1d3a8f">ActivityOS · ${title}</h2>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const html = docShell(brandName ?? "", subtitle, body, true);
   const w = window.open("", "_blank");
   if (w) {
     w.document.write(html);
     w.document.close();
   }
+}
+
+interface DownloadArgs {
+  name: string;
+  plan: Plan;
+  dayList: DayInfo[];
+  groups: string[];
+  FAC: string[];
+  brandName?: string;
+}
+
+/**
+ * Saves the full week as a self-contained, branded .html file the operator can
+ * keep, email or open anywhere — the nice HTML view, but as a real file, headed
+ * with the company name rather than "ActivityOS".
+ */
+export function downloadTimetableHtml({ name, plan, dayList, groups, FAC, brandName }: DownloadArgs) {
+  const brand = brandName || "Activity timetable";
+  const subtitle = name ? `${name} · timetable` : "Timetable";
+  const html = docShell(brand, subtitle, allDaysHtml(plan, dayList, groups, FAC), false);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${fileSafe(brand)}-${fileSafe(name || "timetable")}.html`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

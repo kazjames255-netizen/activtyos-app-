@@ -158,6 +158,16 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const unread = useUnreadMessages(portal);
   // Live count of usable discount codes for the Coupons nav badge (custdash).
   const coupons = useCouponCount(portal);
+  // Parents only see the Activity timetable tab once a provider has actually
+  // published one for them — otherwise it's an empty page, so hide it. Starts
+  // hidden so it never flashes before we know.
+  const [hasTimetable, setHasTimetable] = useState(false);
+  useEffect(() => {
+    if (portal !== "custdash") return;
+    apiGet<unknown[]>("/api/timetables/published")
+      .then((w) => setHasTimetable((w?.length ?? 0) > 0))
+      .catch(() => {});
+  }, [portal]);
   // What to hide from this nav:
   //  • custdash — sections the provider switched off (Customer area) + Simple mode.
   //  • operator — modules the operator switched off (Setup → Features).
@@ -169,6 +179,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
     portal === "custdash"
       ? [
           ...Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view),
+          ...(hasTimetable ? [] : ["timetable"]),
           ...(customerArea.simpleMode
             ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
             : []),

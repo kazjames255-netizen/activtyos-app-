@@ -5,10 +5,12 @@ import { useTimetableStore } from "./store";
 import { SetupWizard } from "./SetupWizard";
 import { TimetableGrid } from "./TimetableGrid";
 import { PublishPanel } from "./PublishPanel";
-import { printTimetable } from "./printHtml";
+import { SavedTimetables } from "./SavedTimetables";
+import { printTimetable, downloadTimetableHtml } from "./printHtml";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
+import { useSettings } from "@/lib/settings";
 
 let didInit = false;
 
@@ -21,10 +23,13 @@ export function TimetableApp() {
   const loadError = useTimetableStore((s) => s.loadError);
   const listings = useTimetableStore((s) => s.LISTINGS);
   const saveState = useTimetableStore((s) => s.saveState);
+  const saved = useTimetableStore((s) => s.saved);
   const setTab = useTimetableStore((s) => s.setTab);
   const setView = useTimetableStore((s) => s.setView);
   const showDay = useTimetableStore((s) => s.showDay);
   const generate = useTimetableStore((s) => s.generate);
+  const { settings } = useSettings();
+  const brand = settings.providerName || settings.billing?.businessName || "";
 
   useEffect(() => {
     if (!didInit) {
@@ -38,7 +43,11 @@ export function TimetableApp() {
 
   const doPrint = () => {
     const s = useTimetableStore.getState();
-    printTimetable({ view: s.view, plan: s.plan, cur: s.cur, dayList: s.dayList, groups: s.groups(), FAC: s.FAC });
+    printTimetable({ view: s.view, plan: s.plan, cur: s.cur, dayList: s.dayList, groups: s.groups(), FAC: s.FAC, brandName: brand });
+  };
+  const doDownload = () => {
+    const s = useTimetableStore.getState();
+    downloadTimetableHtml({ name: s.curListing?.name || "Timetable", plan: s.plan, dayList: s.dayList, groups: s.groups(), FAC: s.FAC, brandName: brand });
   };
 
   const saveLabel =
@@ -57,21 +66,39 @@ export function TimetableApp() {
         ) : undefined
       }
     >
-      {loading && <div className="text-[13px] text-[var(--ink-3)]">Loading your listings…</div>}
-      {!loading && loadError && (
+      {/* Top-level switch: build vs the folder of saved weeks. */}
+      <div className="mb-3.5 inline-flex gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
+        <button
+          onClick={() => { if (tab === 3) setTab(0); }}
+          className={`rounded-full px-4 py-1.5 text-[12.5px] font-bold ${tab !== 3 ? "bg-[var(--brand)] text-white" : "text-[var(--ink-2)]"}`}
+        >
+          Builder
+        </button>
+        <button
+          onClick={() => setTab(3)}
+          className={`rounded-full px-4 py-1.5 text-[12.5px] font-bold ${tab === 3 ? "bg-[var(--brand)] text-white" : "text-[var(--ink-2)]"}`}
+        >
+          My timetables{saved.length ? ` (${saved.length})` : ""}
+        </button>
+      </div>
+
+      {tab === 3 && <SavedTimetables />}
+
+      {tab !== 3 && loading && <div className="text-[13px] text-[var(--ink-3)]">Loading your listings…</div>}
+      {tab !== 3 && !loading && loadError && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[13px]">
           <span className="font-bold text-[var(--red,#e21d27)]">{loadError}</span>
           <Button className="ml-3" onClick={() => void useTimetableStore.getState().init()}>Try again</Button>
         </div>
       )}
-      {!loading && !loadError && !listings.length && (
+      {tab !== 3 && !loading && !loadError && !listings.length && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-2)]">
           No listings with dates yet — the picker fills in once you&rsquo;ve created one. You can still build a week over
           custom dates below.
         </div>
       )}
 
-      {!loading && !loadError && (
+      {tab !== 3 && !loading && !loadError && (
         <>
           {tab === 0 && <SetupWizard />}
 
@@ -80,7 +107,8 @@ export function TimetableApp() {
               <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
                 <Button onClick={() => setTab(0)}>← Back to setup</Button>
                 <div className="flex gap-2">
-                  <Button onClick={doPrint}>↓ Download PDF</Button>
+                  <Button onClick={doDownload}>↓ Download</Button>
+                  <Button onClick={doPrint}>🖨 Print</Button>
                   <Button variant="solid" onClick={() => setTab(2)}>
                     Publish →
                   </Button>

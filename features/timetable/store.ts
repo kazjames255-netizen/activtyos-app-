@@ -13,7 +13,7 @@ import type {
 } from "./types";
 import { CATEGORIES, DEFAULT_GROUPS, FACILITIES } from "./data";
 import { blankWeek, buildAllDays, buildDays, genWeek } from "./engine";
-import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
+import { get as apiGet, post as apiPost, put as apiPut, del as apiDel } from "@/lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Fully server-backed:
@@ -137,6 +137,8 @@ interface TimetableState {
   // Publish
   share: Record<string, boolean>;
   audience: "booked" | "everyone";
+  notifyEmail: boolean;
+  notifyPush: boolean;
   pubStatus: string | null;
   publishing: boolean;
 
@@ -187,6 +189,9 @@ interface TimetableState {
 
   toggleShare: (key: string) => void;
   setAudience: (a: "booked" | "everyone") => void;
+  setNotify: (patch: Partial<{ email: boolean; push: boolean }>) => void;
+  openSaved: (id: string) => void;
+  deleteSaved: (id: string) => void;
   publish: () => Promise<void>;
 }
 
@@ -274,6 +279,8 @@ export const useTimetableStore = create<TimetableState>()(
 
     share: {},
     audience: "booked",
+    notifyEmail: true,
+    notifyPush: true,
     pubStatus: null,
     publishing: false,
 
@@ -677,6 +684,60 @@ export const useTimetableStore = create<TimetableState>()(
 
     toggleShare: (key) => set((s) => void (s.share[key] = !s.share[key])),
     setAudience: (a) => set((s) => void (s.audience = a)),
+    setNotify: (patch) =>
+      set((s) => {
+        if (patch.email !== undefined) s.notifyEmail = patch.email;
+        if (patch.push !== undefined) s.notifyPush = patch.push;
+      }),
+
+    // Load a saved timetable back into the builder (mirrors pickListing's
+    // resume-a-draft branch) and drop the operator onto the built grid.
+    openSaved: (id) => {
+      const t = get().saved.find((x) => x.id === id);
+      if (!t) return;
+      set((s) => {
+        s.timetableId = t.id;
+        const li = s.LISTINGS.findIndex((l) => l.id === t.listingId);
+        if (li >= 0) {
+          s.listingIndex = li;
+          s.curListing = s.LISTINGS[li];
+        } else {
+          s.curListing = null;
+        }
+        s.dateFrom = t.dateFrom;
+        s.dateTo = t.dateTo;
+        s.excluded = Object.fromEntries(t.excluded.map((d) => [d, true]));
+        s.start = t.config.start;
+        s.end = t.config.end;
+        s.perDay = t.config.perDay;
+        s.breaks = t.config.breaks;
+        s.lunch = t.config.lunch;
+        s.signin = t.config.signin.slice();
+        s.signout = t.config.signout.slice();
+        s.wholeTimes = t.config.wholeTimes.slice();
+        s.dayList = t.dayList;
+        s.plan = t.plan;
+        s.mode = t.mode;
+        s.cur = 0;
+        s.share = t.published ? { staff: t.published.staff, parents: t.published.parents } : {};
+        s.audience = t.published?.audience ?? "booked";
+        s.pubStatus = t.published
+          ? `Published ${new Date(t.published.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+          : null;
+        s.wstep = 1;
+        s.tab = 1;
+      });
+    },
+
+    deleteSaved: (id) => {
+      set((s) => {
+        s.saved = s.saved.filter((t) => t.id !== id);
+        if (s.timetableId === id) s.timetableId = null;
+      });
+      apiDel(`/api/timetables/${id}`).catch(() => {
+        /* best-effort; the next load re-syncs if it failed */
+      });
+    },
     publish: async () => {
       if (get().publishing) return;
       set((s) => {
@@ -696,6 +757,9 @@ export const useTimetableStore = create<TimetableState>()(
           staff: !!s0.share.staff,
           parents: !!s0.share.parents,
           audience: s0.audience,
+          // Only meaningful when sharing to parents; backend sends on publish.
+          notifyEmail: !!s0.share.parents && s0.notifyEmail,
+          notifyPush: !!s0.share.parents && s0.notifyPush,
         });
         set((s) => {
           const i = s.saved.findIndex((t) => t.id === doc.id);

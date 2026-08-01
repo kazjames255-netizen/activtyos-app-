@@ -6,7 +6,6 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { statusTone } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
-import { PublishedDayGrid, type PublishedWeek } from "@/features/timetable/PublishedTimetable";
 import { Badge, Button, Card } from "@/components/ui";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -180,18 +179,9 @@ function SessionRow({ s, detail, clash }: { s: Session; detail?: ListingDetail; 
   );
 }
 
-/** The provider's published plan for one date, shown under that day's sessions. */
-interface DayPlan {
-  provider: string;
-  rows: PublishedWeek["plan"][number];
-  groups: string[];
-  dayLabel: string;
-}
-
 const toMin = (t?: string) => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
-function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; sessions: Session[]; today: string; plan?: DayPlan; detailByRef: Record<string, ListingDetail> }) {
+function DayGroup({ date, sessions, today, detailByRef }: { date: string; sessions: Session[]; today: string; detailByRef: Record<string, ListingDetail> }) {
   const rel = date === today ? "Today" : date === addDaysISO(today, 1) ? "Tomorrow" : null;
-  const [showPlan, setShowPlan] = useState(false);
 
   // A child booked onto two sessions the same day whose times overlap (or whose
   // times we can't rule out) — almost always a mistake worth flagging.
@@ -227,15 +217,6 @@ function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; 
         <span className="text-[12px] text-[var(--ink-3)]">
           {sessions.length} session{sessions.length === 1 ? "" : "s"}
         </span>
-        {plan && (
-          <button
-            type="button"
-            onClick={() => setShowPlan((v) => !v)}
-            className="ml-auto rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]"
-          >
-            {showPlan ? "Hide day plan" : "Day plan ▾"}
-          </button>
-        )}
       </div>
       {clashChildren.size > 0 && (
         <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
@@ -246,16 +227,6 @@ function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; 
       {[...sessions].sort(sortSessions).map((s) => (
         <SessionRow key={s.key} s={s} detail={detailByRef[s.ref]} clash={clashKeys.has(s.key)} />
       ))}
-      {plan && showPlan && (
-        <div className="mt-3">
-          <div className="mb-1.5 text-[11.5px] font-bold text-[var(--ink-3)]">
-            What {plan.provider} has planned for the day
-          </div>
-          <div className="overflow-x-auto">
-            <PublishedDayGrid rows={plan.rows} groups={plan.groups} dayLabel={plan.dayLabel} />
-          </div>
-        </div>
-      )}
     </Card>
   );
 }
@@ -263,7 +234,6 @@ function DayGroup({ date, sessions, today, plan, detailByRef }: { date: string; 
 /** custdash/schedule — the signed-in parent's booked sessions, by date. */
 export function ScheduleApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
-  const [plans, setPlans] = useState<PublishedWeek[]>([]);
   const [tenantRows, setTenantRows] = useState<Record<string, ListingRow[]>>({});
   const [details, setDetails] = useState<Record<string, ListingDetail>>({});
   const [kids, setKids] = useState<Record<string, string>>({}); // child name → sex
@@ -276,11 +246,6 @@ export function ScheduleApp() {
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load your schedule"));
-    // Day plans providers have published for this family — optional garnish,
-    // so a failure never blocks the schedule itself.
-    apiGet<PublishedWeek[]>("/api/timetables/published")
-      .then(setPlans)
-      .catch(() => {});
     // The family's children — for the per-child tabs, coloured by gender.
     apiGet<{ name: string; sex?: string }[]>("/api/my/children")
       .then((cs) => setKids(Object.fromEntries(cs.map((c) => [c.name.trim(), (c.sex ?? "").toLowerCase()]))))
@@ -288,7 +253,7 @@ export function ScheduleApp() {
   }, []);
 
   useEffect(refresh, [refresh]);
-  useRealtime(["bookings", "timetables", "children"], refresh);
+  useRealtime(["bookings", "children"], refresh);
 
   // Resolve each booking's listing the way the amend flow does — by blockId
   // against the tenant's listing list (bookings don't always carry listingId).
@@ -343,18 +308,6 @@ export function ScheduleApp() {
     }
     return out;
   }, [listingForRef, details]);
-
-  // iso date → that day's published plan (first provider wins on a clash).
-  const planByDate = useMemo(() => {
-    const m = new Map<string, DayPlan>();
-    for (const w of plans) {
-      w.dayList.forEach((d, i) => {
-        if (d.iso && w.plan[i] && !m.has(d.iso))
-          m.set(d.iso, { provider: w.tenantName ?? "Your provider", rows: w.plan[i], groups: w.config.groups, dayLabel: d.n });
-      });
-    }
-    return m;
-  }, [plans]);
 
   const today = todayISO();
   const { upcoming, past, undated, childNames } = useMemo(() => {
@@ -456,7 +409,7 @@ export function ScheduleApp() {
             </Card>
           ) : (
             searchGroups.map((g) => (
-              <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} detailByRef={detailByRef} />
+              <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} detailByRef={detailByRef} />
             ))
           )}
         </div>
@@ -491,7 +444,7 @@ export function ScheduleApp() {
           )}
 
           {upcoming.map((g) => (
-            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} plan={planByDate.get(g.date)} detailByRef={detailByRef} />
+            <DayGroup key={g.date} date={g.date} sessions={g.sessions} today={today} detailByRef={detailByRef} />
           ))}
 
           {past.length > 0 && (

@@ -55,6 +55,12 @@ const publishSchema = z.object({
   staff: z.boolean(),
   parents: z.boolean(),
   audience: z.enum(["booked", "everyone"]).default("booked"),
+  // Whether to actively notify parents when publishing to them. Captured here;
+  // the actual send (email digest + in-app notification to the booked/everyone
+  // audience) is TODO(amir) — see the handoff note. Not part of the frozen
+  // `published` snapshot, so pulled off before it's stored.
+  notifyEmail: z.boolean().optional(),
+  notifyPush: z.boolean().optional(),
 });
 
 // Firestore forbids directly nested arrays, and a Plan is Day[] = row-array

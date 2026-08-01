@@ -61,6 +61,7 @@ import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
+import { ParentTimetableApp } from "@/features/timetable/ParentTimetable";
 import { planned } from "@/features/planned/PlannedApp";
 import { AiAssistant } from "@/features/ai/AiApp";
 
@@ -285,6 +286,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   },
   custdash: {
     browse: BrowseApp,
+    timetable: ParentTimetableApp,
     payments: ParentPaymentsApp,
     wallet: WalletApp,
     coupons: CouponsApp,
