@@ -1039,6 +1039,11 @@ const amendSchema = z.object({
     z.record(z.string().max(10)),
   ]).optional(),
   preferredDate: z.string().max(10).optional(),
+  // A timing change — the pass's period title (e.g. "Full Day"); the UI only
+  // offers the block bundle's listed periods, never a free time.
+  timing: z.string().max(80).optional(),
+  // Scope a date/time change to one child ("" / absent = the whole booking).
+  child: z.string().max(80).optional(),
   message: z.string().max(500).optional(),
   msg: z.string().max(500).optional(),
 });
@@ -1058,7 +1063,7 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       : m && typeof m === "object" ? Object.entries(m).map(([from, to]) => ({ from, to, childName: booking.child }))
         : [];
   if (parsed.data.preferredDate) moves.push({ from: "", to: parsed.data.preferredDate, childName: booking.child });
-  if (moves.length === 0) { res.status(400).json({ error: "No date change was specified" }); return; }
+  if (moves.length === 0 && !parsed.data.timing) { res.status(400).json({ error: "No date or time change was specified" }); return; }
 
   // Validate before recording, so the operator is never shown a move they
   // couldn't approve. A `from` of "" is the undated "preferred date" shape —
@@ -1092,6 +1097,8 @@ my.post("/bookings/:ref/amend", async (req, res) => {
   await snap.ref.set({
     dateChangeRequest: {
       moves,
+      ...(parsed.data.timing ? { timing: parsed.data.timing } : {}),
+      ...(parsed.data.child ? { child: parsed.data.child } : {}),
       status: "pending",
       requestedAt: new Date().toISOString(),
       ...(parsed.data.message || parsed.data.msg ? { note: (parsed.data.message || parsed.data.msg)!.trim() } : {}),

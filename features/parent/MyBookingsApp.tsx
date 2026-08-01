@@ -506,6 +506,9 @@ type AmendListing = {
   city?: string | null;
   /** Which cancellation policy this listing uses — to state the refund due. */
   cancellationPolicyId?: string;
+  /** The block bundle's defined timings (periods) — the ONLY timings a booking
+   * can move to. A parent picks from these, never a free time. */
+  bundle?: { periods?: { id?: string; title: string; start?: string; finish?: string }[] } | null;
 };
 // Monday of an ISO date's week — the key a "one week" pass rule groups by.
 const weekKey = (iso: string) => {
@@ -526,6 +529,13 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   // parsed from session strings) — so the per-date "Your dates" layout shows
   // instead of the single preferred-date fallback whenever dates exist.
   const days = bookingDays(booking);
+  // Which child the change applies to ("" = all). Multi-child bookings can move
+  // just one child's dates/times without touching the others.
+  const kidsList = (booking.kids ?? []).map((k) => k.name).filter(Boolean);
+  const [who, setWho] = useState<string>("");
+  // A new timing — ONLY the block bundle's listed periods, never a free time.
+  const periods = listing?.bundle?.periods ?? [];
+  const [newTiming, setNewTiming] = useState<string>(""); // "" = keep current
 
   useEffect(() => {
     if (!booking.tenantId) return;
@@ -538,7 +548,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setMoves((m) => { const n = { ...m }; if (newIso) n[oldIso] = newIso; else delete n[oldIso]; return n; });
 
   const selfService = policy.amendSelfService;
-  const hasChanges = Object.keys(moves).length > 0 || !!preferredDate || !!msg.trim();
+  const hasChanges = Object.keys(moves).length > 0 || !!preferredDate || !!newTiming || !!msg.trim();
   // Where any money back goes, mirroring the provider's Money-back settings.
   const letChoose = policy.amendAllowCheaper && policy.allowCardRefund && policy.refundLetCustomerChoose;
   const cheaper = policy.amendAllowCheaper
@@ -554,8 +564,13 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setError(null);
     try {
       await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, {
-        moves,
+        // Per-child moves carry the child's name; a whole-booking change sends
+        // the plain oldISO→newISO map.
+        moves: who ? Object.entries(moves).map(([from, to]) => ({ from, to, childName: who })) : moves,
         preferredDate: preferredDate || undefined,
+        // A timing change is one of the pass's listed periods; scoped to `who`.
+        timing: newTiming || undefined,
+        child: who || undefined,
         message: msg.trim() || undefined,
         ...(letChoose ? { refundTo } : {}),
       });
@@ -635,6 +650,26 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             {!selfService && <div className="mt-1 text-[var(--ink-3)]">Your provider reviews change requests before they&rsquo;re applied.</div>}
           </div>
 
+          {/* Whose booking to change — multi-child bookings can move just one. */}
+          {kidsList.length > 1 && (
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Change this for</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[["", "All children"], ...kidsList.map((n) => [n, n] as [string, string])].map(([val, label]) => {
+                  const on = who === val;
+                  return (
+                    <button key={val || "all"} type="button" onClick={() => setWho(val)}
+                      className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
+                      style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-2)", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{who ? `Only ${who}'s dates/time will change.` : "Applies to every child on this booking."}</div>
+            </div>
+          )}
+
           {days.length > 0 ? (
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your dates</div>
@@ -684,6 +719,21 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                   className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" />
               )}
               <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the date you&rsquo;d like — your provider confirms it. {available.length > 0 ? "Only dates with a space are shown." : "This booking&rsquo;s dates aren&rsquo;t set yet, so pick your preferred day."}</div>
+            </div>
+          )}
+
+          {/* Timing — ONLY the pass's listed periods, never a free time. */}
+          {periods.length > 0 && (
+            <div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Timing{who ? ` · ${who}` : ""}</div>
+              <select value={newTiming} onChange={(e) => setNewTiming(e.target.value)}
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label="Timing">
+                <option value="">Keep current{booking.timing ? ` (${booking.timing})` : ""}</option>
+                {periods.filter((p) => p.title !== booking.timing).map((p) => (
+                  <option key={p.id ?? p.title} value={p.title}>{p.title}{p.start && p.finish ? ` · ${p.start}–${p.finish}` : ""}</option>
+                ))}
+              </select>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Only the timings this pass offers are shown — your provider confirms the switch.</div>
             </div>
           )}
 
