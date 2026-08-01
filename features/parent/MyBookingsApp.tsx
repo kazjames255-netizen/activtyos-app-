@@ -905,7 +905,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
         <Button sm onClick={() => setExpanded((x) => !x)}>
           {expanded ? "Hide details" : "Details"}
         </Button>
-        {b.status === "Confirmed" && (
+        {(b.status === "Confirmed" || b.status === "Approval needed") && (
           <Button sm onClick={() => setAmending(true)}>
             {pendingMove ? "Edit date change…" : "Change dates…"}
           </Button>
