@@ -27,16 +27,17 @@ import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
 
-// Status → identity-panel gradient, so a booking's state reads at a glance.
+// Status → identity-panel gradient. Same hue family as the status pill, but a
+// brighter, friendlier version (with a text shadow so white stays legible).
 const HERO_GRAD: Record<string, string> = {
-  "Confirmed": "linear-gradient(140deg,#22a35b,#0d5c34)",        // green
-  "Approval needed": "linear-gradient(140deg,#e0902f,#9a4f10)",  // amber
-  "Waitlisted": "linear-gradient(140deg,#7c5cd8,#392a86)",       // violet
-  "Offered": "linear-gradient(140deg,#7c5cd8,#392a86)",
-  "Cancelled": "linear-gradient(140deg,#6a7488,#3a4152)",        // slate
-  "Declined": "linear-gradient(140deg,#6a7488,#3a4152)",
+  "Confirmed": "linear-gradient(140deg,#37cf83,#13a35f)",        // fresh green (matches green pill)
+  "Approval needed": "linear-gradient(140deg,#ffc25a,#e88f1f)",  // sunny amber
+  "Waitlisted": "linear-gradient(140deg,#63b0f2,#2278c0)",       // sky blue (matches blue pill)
+  "Offered": "linear-gradient(140deg,#63b0f2,#2278c0)",
+  "Cancelled": "linear-gradient(140deg,#ff9a9a,#e05555)",        // soft coral (matches red pill)
+  "Declined": "linear-gradient(140deg,#ff9a9a,#e05555)",
 };
-const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#2f6bd8,#122a63)";
+const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#7fa8ff,#3f66d8)";
 
 // A fixed-width labelled column, so every row's cells line up down the page.
 function Col({ label, w, children }: { label: string; w: string; children: React.ReactNode }) {
@@ -421,16 +422,16 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 {/* Identity hero — colour = booking status */}
                 <div onClick={() => open(b.ref)} className="relative flex w-[150px] flex-none cursor-pointer items-center gap-2.5 p-2.5 pr-5 text-white sm:w-[236px]" style={{ background: heroGrad(b.status) }}>
                   <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute right-2 top-2 h-3.5 w-3.5 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/45")} />
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/15 text-[15px] font-extrabold ring-1 ring-white/20">{lead.charAt(0).toUpperCase()}</span>
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/25 text-[15px] font-extrabold ring-1 ring-white/25" style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{lead.charAt(0).toUpperCase()}</span>
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-extrabold leading-[1.15]" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
-                    <div className="truncate text-[10px] text-white/70">Ref {b.ref}{b.createdAt ? ` · ${prettyBookedOn(b)}` : ""}</div>
+                    <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
+                    <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>Ref {b.ref}{b.createdAt ? ` · ${prettyBookedOn(b)}` : ""}</div>
                   </div>
                 </div>
 
                 {/* Detail columns — fixed widths so every row lines up */}
                 <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer items-center gap-4 overflow-hidden px-4 py-1.5 hover:bg-[var(--panel)]">
-                  <Col label="🎟 Listing" w="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
+                  <Col label="🎟 Listing" w="min-w-0 flex-1"><span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span></Col>
                   <Col label="📅 Season" w="w-[124px]">{seasonNameOf(b.listingId) ? <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>}</Col>
                   <Col label="📆 Dates" w="w-[158px]"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
                   <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
