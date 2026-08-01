@@ -6,7 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
-import { Badge, Card } from "@/components/ui";
+import { Badge } from "@/components/ui";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -20,7 +20,7 @@ interface Dash {
 
 // ── shared bits (visual system lifted from the HQ provider-analytics page) ──
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
-const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GOLD = "#f0b100", PINK = "#EE1F63", GREEN = "#0f7a43";
+const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43";
 const ACT_C = ["#3f78d8", "#0f7a43", "#e2225f", "#7c3aed", "#e88f1f", "#0ea5a0", "#c81e77", "#1d3a8f"];
 const STATUS_C: Record<string, string> = { Confirmed: "#1749a8", "Approval needed": "#a85f08", Waitlisted: "#0b8446", Offered: "#0b8446", Cancelled: "#c53030", Declined: "#c53030" };
 const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0f7a43", Unpaid: "#c9791a", "Invoice sent": "#a85f08", Refunded: "#c53030", "Partially refunded": "#c53030" };
@@ -37,15 +37,41 @@ const monthOf = (b: Booking): string | null => {
   return /^\d{4}-\d{2}$/.test(m) ? m : null;
 };
 
-function Stat({ label, value, sub, tone, accent }: { label: string; value: string; sub?: string; tone?: "warn"; accent?: string }) {
+// Rich, colourful KPI tile — a dark gradient with white figures.
+const GRAD = {
+  blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
+  teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
+  green: "linear-gradient(135deg,#0b6b3a 0%,#2fb56f 100%)",
+  pink: "linear-gradient(135deg,#9c1458 0%,#ee1f63 100%)",
+  amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
+  violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
+} as const;
+function Tile({ label, value, sub, grad, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; children?: React.ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="absolute left-0 top-0 h-full w-1" style={{ background: tone === "warn" ? "var(--red,#e21d27)" : accent ?? BLUE }} />
-      <div className="pl-1.5">
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{label}</div>
-        <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: tone === "warn" ? "var(--red,#e21d27)" : "var(--ink)" }}>{value}</div>
-        {sub && <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>}
+    <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
+      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="relative">
+        <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">{label}</div>
+        <div className="mt-1 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
+        {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
+        {children}
       </div>
+    </div>
+  );
+}
+// A white mini bar chart drawn on a coloured tile — the last few weeks at a glance.
+function MiniBars({ data, labels }: { data: number[]; labels: string[] }) {
+  const max = Math.max(1, ...data);
+  return (
+    <div className="mt-2.5">
+      <div className="flex items-end gap-1" style={{ height: 28 }}>
+        {data.map((v, i) => (
+          <div key={i} className="flex flex-1 items-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
+            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(10, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-white/70">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
     </div>
   );
 }
@@ -184,6 +210,11 @@ export function DashboardApp() {
     const keys: string[] = [];
     for (let i = months - 1; i >= 0; i--) keys.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
     const inWindow = new Set(keys);
+    // Last 5 ISO weeks (Mon-start) for the occupancy tile's mini graph.
+    const wkMs = (ms: number) => { const dt = new Date(ms); const off = (dt.getUTCDay() + 6) % 7; return Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate() - off); };
+    const wkStarts: number[] = [];
+    for (let i = 4; i >= 0; i--) wkStarts.push(wkMs(nowMs) - i * 7 * 86400000);
+    const weekly = wkStarts.map(() => 0);
 
     const income = keys.map((k) => ({ label: k, value: 0 }));
     const booked = keys.map((k) => ({ label: k, value: 0 }));
@@ -208,6 +239,9 @@ export function DashboardApp() {
         if (!isCancelled(b)) booked[i].value += b.amount;
         perMonthNew.set(m, (perMonthNew.get(m) ?? 0) + 1);
       }
+      const ws = b.createdAt || b.days?.[0] || "";
+      const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
+      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; break; } }
     }
     let cum = 0;
     const newBk = keys.map((k) => { cum += perMonthNew.get(k) ?? 0; return { month: k, count: perMonthNew.get(k) ?? 0, cumulative: cum }; });
@@ -215,7 +249,8 @@ export function DashboardApp() {
     const recent = [...list].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6);
 
     return {
-      income, booked, newBk,
+      income, booked, newBk, weekly,
+      weeklyLabels: wkStarts.map((ms) => { const dt = new Date(ms); return `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`; }),
       kpis: { collected: totalCollected, bookings: list.filter((b) => !isCancelled(b)).length, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       topActivities: acts.slice(0, 6),
@@ -243,10 +278,27 @@ export function DashboardApp() {
 
       {/* Live operational KPIs (from /api/dashboard) */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="On site today" value={`${d.today.booked}`} sub={`${d.today.sessions.length} session${d.today.sessions.length === 1 ? "" : "s"} running`} accent={LIGHTB} />
-        <Stat label="Occupancy" value={`${d.occupancy.pct}%`} sub={`${d.occupancy.booked}/${d.occupancy.capacity} places, open runs`} accent={GREEN} />
-        <Stat label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} accent={BLUE} />
-        <Stat label="Outstanding" value={money(d.money.outstanding)} sub={d.money.overdueVouchers ? `${d.money.overdueVouchers} overdue voucher${d.money.overdueVouchers === 1 ? "" : "s"}` : d.money.awaitingVoucher ? `${d.money.awaitingVoucher} awaiting voucher` : "all settled"} tone={d.money.overdueVouchers ? "warn" : undefined} accent={GOLD} />
+        <Tile label="On site today" value={`${d.today.booked}`} sub={`${d.today.sessions.length} session${d.today.sessions.length === 1 ? "" : "s"} running`} grad={GRAD.blue} />
+        <Tile
+          label="Spaces left · live listings"
+          value={`${Math.max(0, d.occupancy.capacity - d.occupancy.booked)}`}
+          sub={`${100 - d.occupancy.pct}% not filled · ${d.occupancy.booked}/${d.occupancy.capacity} taken on open runs`}
+          grad={GRAD.teal}
+        >
+          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} />}
+        </Tile>
+        <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green} />
+        <Tile
+          label="Outstanding"
+          value={money(d.money.outstanding)}
+          sub={
+            d.money.overdueVouchers ? `${d.money.overdueVouchers} overdue voucher${d.money.overdueVouchers === 1 ? "" : "s"}`
+            : d.money.awaitingVoucher ? `${d.money.awaitingVoucher} awaiting voucher payment`
+            : d.money.outstanding > 0 ? "unpaid / invoiced — awaiting payment"
+            : "all settled"
+          }
+          grad={d.money.outstanding > 0 ? GRAD.pink : GRAD.green}
+        />
       </div>
 
       {/* Today + Coming up (unchanged) */}
@@ -299,10 +351,10 @@ export function DashboardApp() {
       ) : (
         <>
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Income collected" value={money(a.kpis.collected)} sub="paid bookings, net of refunds" accent={GREEN} />
-            <Stat label="Bookings" value={`${a.kpis.bookings}`} sub="live + past (excl. cancelled)" accent={BLUE} />
-            <Stat label="Families" value={`${a.kpis.families}`} sub="unique customers" accent={LIGHTB} />
-            <Stat label="Avg booking" value={money(a.kpis.avg)} sub="per paid booking" accent={GOLD} />
+            <Tile label="Income collected" value={money(a.kpis.collected)} sub="paid bookings, net of refunds" grad={GRAD.green} />
+            <Tile label="Bookings" value={`${a.kpis.bookings}`} sub="live + past (excl. cancelled)" grad={GRAD.blue} />
+            <Tile label="Families" value={`${a.kpis.families}`} sub="unique customers" grad={GRAD.violet} />
+            <Tile label="Avg booking" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
