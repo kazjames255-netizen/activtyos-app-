@@ -6,14 +6,16 @@ import { buildAllDays } from "./engine";
 import { ActivityLibrary } from "./ActivityLibrary";
 import { FieldLabel, Panel, Button, Input, Select, inputCls } from "@/components/ui";
 
-const PILLS: [number, string, string][] = [
-  [1, "Dates", "#3551c9"],
-  [2, "The day", "#0EA5A0"],
-  [3, "Arrivals", "#F97316"],
-  [4, "Spaces", "#E91E63"],
-  [5, "Groups", "#7A5AF8"],
-  [6, "Activities", "#3f78d8"],
-  [7, "Build", "#9333EA"],
+// Step chrome follows the operator's brand theme (was a fixed rainbow that
+// clashed on non-blue themes). Activity-block colours stay varied — see engine.
+const PILLS: [number, string][] = [
+  [1, "Dates"],
+  [2, "The day"],
+  [3, "Arrivals"],
+  [4, "Spaces"],
+  [5, "Groups"],
+  [6, "Activities"],
+  [7, "Build"],
 ];
 
 function Chips({ times, onDel }: { times: string[]; onDel: (i: number) => void }) {
@@ -97,7 +99,7 @@ export function SetupWizard() {
     <div>
       {/* Pills */}
       <div className="mb-3.5 flex flex-wrap gap-2">
-        {PILLS.map(([n, lbl, color]) => {
+        {PILLS.map(([n, lbl]) => {
           const on = n === step;
           const done = n < step;
           return (
@@ -112,7 +114,7 @@ export function SetupWizard() {
             >
               <span
                 className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-extrabold text-white"
-                style={{ background: color, opacity: done ? 0.5 : 1 }}
+                style={{ background: "var(--brand)", opacity: done ? 0.5 : 1 }}
               >
                 {n}
               </span>
