@@ -232,7 +232,7 @@ function DayGroup({ date, sessions, today, detailByRef }: { date: string; sessio
 }
 
 /** custdash/schedule — the signed-in parent's booked sessions, by date. */
-export function ScheduleApp() {
+export function ScheduleApp({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [tenantRows, setTenantRows] = useState<Record<string, ListingRow[]>>({});
   const [details, setDetails] = useState<Record<string, ListingDetail>>({});
@@ -351,19 +351,21 @@ export function ScheduleApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            My schedule
-          </h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">
-            Every day your family is booked in — newest first, live as the provider confirms.
-          </p>
+      {!hideHeader && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+              My schedule
+            </h2>
+            <p className="text-[12.5px] text-[var(--ink-3)]">
+              Every day your family is booked in — newest first, live as the provider confirms.
+            </p>
+          </div>
+          <Link href="/custdash/browse">
+            <Button variant="primary">+ Book an activity</Button>
+          </Link>
         </div>
-        <Link href="/custdash/browse">
-          <Button variant="primary">+ Book an activity</Button>
-        </Link>
-      </div>
+      )}
 
       {childNames.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
