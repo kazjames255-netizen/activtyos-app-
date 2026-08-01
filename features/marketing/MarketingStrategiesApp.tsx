@@ -78,6 +78,19 @@ const PLAYS: Play[] = [
   },
 ];
 
+const PLAY_BY_ID: Record<string, Play> = Object.fromEntries(PLAYS.map((p) => [p.id, p]));
+
+// A ready-made 6-week run — which plays fire when, and why in that order.
+interface Week { theme: string; focus: string; why: string; playIds: string[]; grad: string }
+const CAMPAIGN: Week[] = [
+  { theme: "Launch & get seen", focus: "Awareness", grad: GRAD.blue, why: "Open loud: put the new season in front of everyone and reward the fastest bookers.", playIds: ["announce", "earlybird"] },
+  { theme: "Spread the word", focus: "Growth", grad: GRAD.green, why: "While the early-bird buzz is live, turn happy families into referrers.", playIds: ["referral"] },
+  { theme: "Grow the basket", focus: "Value", grad: GRAD.violet, why: "Nudge families to book more than one child or session while intent is high.", playIds: ["siblings"] },
+  { theme: "Mid-run push", focus: "Fill spaces", grad: GRAD.teal, why: "Half-way check: target the sessions that are lagging before they run.", playIds: ["fill-session"] },
+  { theme: "Re-engage quiet families", focus: "Retention", grad: GRAD.pink, why: "Reach the families who’ve gone quiet with a warm welcome-back.", playIds: ["winback"] },
+  { theme: "Close strong", focus: "Convert & keep", grad: GRAD.amber, why: "Mop up the keen ones on the waitlist and thank your loyal regulars.", playIds: ["waitlist", "loyalty"] },
+];
+
 const bookerKey = (b: Booking) => (b.email || b.booker || "").trim().toLowerCase();
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
 
@@ -86,6 +99,7 @@ export function MarketingStrategiesApp() {
   const [dash, setDash] = useState<Dash | null>(null);
   const [codes, setCodes] = useState<Code[]>([]);
   const [cat, setCat] = useState<Cat | "all">("all");
+  const [view, setView] = useState<"plays" | "campaign">("plays");
   const [nowMs] = useState(() => Date.now());
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
@@ -121,6 +135,15 @@ export function MarketingStrategiesApp() {
   const plays = cat === "all" ? PLAYS : PLAYS.filter((p) => p.cats.includes(cat));
   const loading = bookings === null;
 
+  // Week date ranges for the campaign, starting this week's Monday, rolling forward.
+  const weeks = useMemo(() => {
+    const d = new Date(nowMs);
+    const dow = (d.getUTCDay() + 6) % 7;
+    const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow);
+    const fmt = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    return CAMPAIGN.map((c, i) => { const start = monday + i * 7 * 86400000; return { ...c, label: `${fmt(start)} – ${fmt(start + 6 * 86400000)}` }; });
+  }, [nowMs]);
+
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <PageHero
@@ -137,6 +160,51 @@ export function MarketingStrategiesApp() {
         <Tile label="Active offers" icon="🏷️" grad={GRAD.green} value={loading ? "…" : String(ops.activeCodes)} sub="codes running now" />
       </div>
 
+      {/* View toggle — browse all plays, or see them sequenced into a 6-week run */}
+      <div className="mb-4 inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold">
+        {([["plays", "🃏 Playbooks"], ["campaign", "🗓️ 6-week campaign"]] as const).map(([v, label]) => (
+          <button key={v} type="button" onClick={() => setView(v)} className="rounded-full px-3.5 py-1.5 transition-colors" style={view === v ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>
+        ))}
+      </div>
+
+      {view === "campaign" ? (
+        <div className="flex flex-col">
+          <p className="mb-4 max-w-[640px] text-[12.5px] leading-[1.5] text-[var(--ink-3)]">A proven order to run the plays in — six weeks from this Monday. Do one focus a week; each step launches straight into the tool. Dates roll forward automatically.</p>
+          {weeks.map((w, i) => (
+            <div key={i} className="relative flex gap-3 sm:gap-4">
+              <div className="flex flex-none flex-col items-center">
+                <div className="grid h-11 w-11 flex-none place-items-center rounded-full text-[15px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(20,30,80,.6)]" style={{ background: w.grad }}>{i + 1}</div>
+                {i < weeks.length - 1 && <div className="my-1 w-0.5 flex-1 bg-[var(--line)]" />}
+              </div>
+              <div className="mb-4 flex-1 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Week {i + 1} <span className="font-normal text-[var(--ink-3)]">· {w.theme}</span></div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{w.label}</div>
+                  </div>
+                  <Chip label={w.focus} tone="#2f6bd8" />
+                </div>
+                <div className="px-4 py-3">
+                  <p className="mb-3 text-[12px] leading-snug text-[var(--ink-2)]">{w.why}</p>
+                  <div className="flex flex-col gap-2">
+                    {w.playIds.map((pid) => { const p = PLAY_BY_ID[pid]; if (!p) return null; return (
+                      <div key={pid} className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+                        <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px] text-white" style={{ background: p.grad }}>{p.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12.5px] font-extrabold">{p.title}</div>
+                          <div className="truncate text-[11.5px] text-[var(--ink-3)]">{p.goal}</div>
+                        </div>
+                        <button type="button" onClick={() => go(p.cta.view)} className="flex-none rounded-full px-3.5 py-1.5 text-[12px] font-bold text-white transition-transform hover:-translate-y-px" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{p.cta.label} →</button>
+                      </div>
+                    ); })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       {/* Category filter */}
       <div className="mb-4 flex flex-wrap gap-1.5">
         {CATS.map(([v, label, ic]) => (
@@ -181,6 +249,8 @@ export function MarketingStrategiesApp() {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
