@@ -696,8 +696,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listingInfo }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean; listingInfo?: AmendListing | null }) {
+  const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay));
   const [cancelling, setCancelling] = useState(!!autoCancel);
   const [withdrawing, setWithdrawing] = useState(false);
   const [amending, setAmending] = useState(!!autoAmend);
@@ -705,15 +705,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
-  // The listing this booking is on — matched by its block — for the venue in
-  // the detail and the live schedule + pass rules the amend modal needs.
-  const [info, setInfo] = useState<AmendListing | null>(null);
-  useEffect(() => {
-    if (!(expanded || amending || cancelling) || info || !b.tenantId) return;
-    apiPublic<AmendListing[]>(`/api/listings?tenantId=${encodeURIComponent(b.tenantId)}`)
-      .then((ls) => setInfo((ls ?? []).find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null))
-      .catch(() => {});
-  }, [expanded, amending, cancelling, info, b.tenantId, b.blockId]);
+  // The listing this booking is on (venue/address for the row + the live
+  // schedule + pass rules the amend modal needs) — fetched once at list level.
+  const info = listingInfo ?? null;
 
   // Concrete times + staff onsite — the extra detail the old schedule showed.
   const [detail, setDetail] = useState<{ staff: { name: string }[]; periods: { title: string; start?: string; finish?: string }[] } | null>(null);
@@ -795,6 +789,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
     (b.status === "Confirmed" || b.pay === "Invoice sent") && b.amount > 0;
 
   const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);
+  const initials = kidNames.length ? kidNames.map((n) => (n || "?").charAt(0).toUpperCase()).join(" & ") : "?";
   const sessCount = b.sessions?.length || b.days?.length || 0;
   const childCount = b.kids?.length || 1;
 
@@ -803,8 +798,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
       {/* Identity hero row — colour = booking status (matches operator list) */}
       <div className="flex items-stretch">
         <div onClick={() => setExpanded((x) => !x)} className="relative flex w-[140px] flex-none cursor-pointer items-center gap-2.5 p-2.5 text-white sm:w-[210px]" style={{ background: pHeroGrad(b.status) }}>
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/25 text-[15px] font-extrabold ring-1 ring-white/25" style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
-            {(kidNames[0] || "?").charAt(0).toUpperCase()}
+          <span className={`flex h-9 min-w-9 flex-none items-center justify-center rounded-xl bg-white/25 px-1.5 font-extrabold ring-1 ring-white/25 ${kidNames.length > 1 ? "text-[11px]" : "text-[15px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
+            {initials}
           </span>
           <div className="min-w-0">
             <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kidNames.join(" & ") || "—"}</div>
@@ -812,7 +807,11 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
           </div>
         </div>
         <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
-          <PCol label="🎟 Listing" w="min-w-[120px] flex-1"><span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span></PCol>
+          <PCol label="🎟 Listing" w="min-w-[120px] flex-1">
+            <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
+            {info?.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {info.location}</span>}
+            {(info?.address || info?.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(", ")}</span>}
+          </PCol>
           <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}</span></PCol>
           <PCol label="Status" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? "Date change" : b.status}</span></PCol>
           {!cancelled && <PCol label="Payment" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
@@ -820,9 +819,11 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
             <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
           </div>
+          <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? "Close" : "Open"}>▾</span>
         </div>
       </div>
 
+      {(clash || expanded) && (
       <div className="px-4 pb-4 pt-1">
       {clash && !cancelled && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
@@ -830,6 +831,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
           <span>{b.child} is booked onto more than one session on a day here — check this is right; you may want to move or cancel one.</span>
         </div>
       )}
+
+      {expanded && (<>
 
       {dateChange?.status === "pending" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
@@ -1017,7 +1020,9 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash }: { b:
           }}
         />
       )}
+      </>)}
       </div>
+      )}
     </Card>
   );
 }
@@ -1089,6 +1094,21 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
       .then((cs) => setKidsSex(Object.fromEntries((cs ?? []).map((c) => [c.name.trim(), (c.sex ?? "").toLowerCase()]))))
       .catch(() => {});
   }, []);
+  // Each provider's listings once (deduped by tenant) so every card can show
+  // its venue/address in the row without its own fetch, and feed the amend flow.
+  const [tenantListings, setTenantListings] = useState<Record<string, AmendListing[]>>({});
+  useEffect(() => {
+    const tids = [...new Set((bookings ?? []).map((b) => b.tenantId).filter(Boolean) as string[])];
+    tids.filter((t) => !tenantListings[t]).forEach((t) => {
+      apiPublic<AmendListing[]>(`/api/listings?tenantId=${encodeURIComponent(t)}`)
+        .then((ls) => setTenantListings((m) => ({ ...m, [t]: ls ?? [] })))
+        .catch(() => {});
+    });
+  }, [bookings, tenantListings]);
+  const listingOf = (b: Booking) => {
+    const ls = tenantListings[b.tenantId ?? ""] ?? [];
+    return ls.find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null;
+  };
   // The payment-link email deep-links here as ?pay=REF; the schedule's
   // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
   const params = useSearchParams();
@@ -1281,7 +1301,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} />
                     ))}
                   </div>
                 )}
