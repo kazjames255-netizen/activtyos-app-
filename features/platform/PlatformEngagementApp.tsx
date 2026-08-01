@@ -19,14 +19,16 @@ export function PlatformEngagementApp() {
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState("all");
   const [order, setOrder] = useState<"high" | "low">("high");
+  const [metric, setMetric] = useState<"visits" | "time">("visits");
 
   const load = useCallback(() => {
     apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, [type]);
   useEffect(load, [load]);
 
-  const maxAvg = d ? Math.max(1, ...d.rows.map((r) => r.avgSeconds)) : 1;
-  const rows = d ? [...d.rows].sort((a, b) => (order === "high" ? b.views - a.views : a.views - b.views)) : [];
+  const val = (r: Row) => (metric === "visits" ? r.views : r.avgSeconds);
+  const maxVal = d ? Math.max(1, ...d.rows.map(val)) : 1;
+  const rows = d ? [...d.rows].sort((a, b) => (order === "high" ? val(b) - val(a) : val(a) - val(b))) : [];
 
   return (
     <div className="text-[var(--ink)]">
@@ -58,13 +60,18 @@ export function PlatformEngagementApp() {
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[12px]">
             <span className="font-bold text-[var(--ink-2)]">Most popular pages{type !== "all" ? ` · ${pretty(type)}` : ""}</span>
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 text-[11px] font-bold">
+                {([["visits", "Visits"], ["time", "Time"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setMetric(v)} className="rounded-full px-2.5 py-0.5 transition-colors" style={metric === v ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
+                ))}
+              </div>
               <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 text-[11px] font-bold">
                 {([["high", "Highest"], ["low", "Lowest"]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setOrder(v)} className="rounded-full px-2.5 py-0.5 transition-colors" style={order === v ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>
                 ))}
               </div>
-              <span className="text-[var(--ink-3)]">{d.totalViews.toLocaleString("en-GB")} visits · by visits · vs prev 3 mo</span>
+              <span className="text-[var(--ink-3)]">by {metric === "visits" ? "visits" : "time on page"} · vs prev 3 mo</span>
             </div>
           </div>
           <div className="flex flex-col divide-y divide-[var(--line)]">
@@ -77,11 +84,15 @@ export function PlatformEngagementApp() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate font-extrabold">{pretty(r.view)}</span>
-                      <span className="shrink-0 tabular-nums"><b>{dur(r.avgSeconds)}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">avg</span></span>
+                      <span className="shrink-0 tabular-nums">
+                        {metric === "visits"
+                          ? <><b>{r.views.toLocaleString("en-GB")}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">visits</span></>
+                          : <><b>{dur(r.avgSeconds)}</b> <span className="text-[11px] font-normal text-[var(--ink-3)]">avg</span></>}
+                      </span>
                     </div>
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(r.avgSeconds / maxAvg) * 100}%`, background: `linear-gradient(90deg,${BLUE},#3f78d8)` }} /></div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(val(r) / maxVal) * 100}%`, background: `linear-gradient(90deg,${BLUE},#3f78d8)` }} /></div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[var(--ink-3)]">
-                      <span>{r.views.toLocaleString("en-GB")} visits</span>
+                      <span>{metric === "visits" ? `${dur(r.avgSeconds)} avg time` : `${r.views.toLocaleString("en-GB")} visits`}</span>
                       {r.deltaPct != null && (
                         <span className="font-bold" style={{ color: up ? "#0f7a43" : down ? "#c02636" : "var(--ink-3)" }}>
                           {up ? "▲" : down ? "▼" : "•"} {Math.abs(Math.round(r.deltaPct * 100))}% vs prev 3 mo

@@ -54,6 +54,7 @@ import { BookingsHubApp } from "@/features/parent/BookingsHub";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
+import { PlatformFeaturesApp } from "@/features/platform/PlatformFeaturesApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
 import { SalesApp } from "@/features/platform/SalesApp";
 import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
@@ -324,11 +325,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     // Platform tooling on the roadmap — these need PLATFORM-scoped
     // backends (a platform account has no tenant, so the operator
     // components can't run here).
-    features: planned({
-      title: "Provider features",
-      blurb: "Turn features on and off per provider from HQ — trials, staged rollouts, plans.",
-      links: [{ href: "/platform/providers", label: "Providers", hint: "each tenant's live state" }],
-    }),
+    features: PlatformFeaturesApp,
     billing: ProvidersApp, // merged into Providers & billing
     pricing: ProvidersApp, // Pricing is now a tab on Providers & billing
     support: SupportInboxApp,

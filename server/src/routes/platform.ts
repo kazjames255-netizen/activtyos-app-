@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { db, auth } from "../firebase";
 import type { BookingDoc } from "../lib/bookingDoc";
 
@@ -164,10 +165,26 @@ platform.get("/providers", async (req, res) => {
         : null,
       subscription: (t.subscription as Record<string, unknown>) ?? null,
       staffCount: staffByTenant[d.id] ?? 0,
+      // Per-provider feature flags (Setup → Features); HQ toggles these too.
+      features: (s.features as Record<string, boolean>) ?? {},
     };
   }));
   providers.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
   res.json({ providers });
+});
+
+// PATCH /api/platform/providers/:id/features — HQ turns a page/feature on or
+// off for one provider. Writes settings.features on the tenant's library, the
+// same store the operator app + Sidebar already read (featureOff = === false).
+platform.patch("/providers/:id/features", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const parsed = z.object({ view: z.string().min(1).max(60), on: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  await db.collection("libraries").doc(req.params.id).set(
+    { settings: { features: { [parsed.data.view]: parsed.data.on } } },
+    { merge: true },
+  );
+  res.json({ ok: true });
 });
 
 // GET /api/platform/page-engagement — average time providers spend on each
