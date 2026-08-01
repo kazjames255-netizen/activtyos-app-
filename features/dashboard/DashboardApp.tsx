@@ -254,25 +254,28 @@ export function DashboardApp() {
     const byStatus = new Map<string, number>();
     const payMix = new Map<string, number>();
     const families = new Set<string>();
-    let totalCollected = 0, paidCount = 0;
+    let totalCollected = 0, paidCount = 0, bookingsCount = 0;
 
     for (const b of list) {
+      // The last-5-weeks mini graphs are fixed windows, independent of 3/6/12m.
+      const ws = b.createdAt || b.days?.[0] || "";
+      const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
+      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedOf(b); break; } }
+
+      // Everything else honours the selected 3/6/12-month period.
       const m = monthOf(b);
+      if (!m || !inWindow.has(m)) continue;
+      const i = keys.indexOf(m);
+      income[i].value += collectedOf(b);
+      if (!isCancelled(b)) booked[i].value += b.amount;
+      perMonthNew.set(m, (perMonthNew.get(m) ?? 0) + 1);
       totalCollected += collectedOf(b);
       if (isPaid(b)) paidCount++;
+      if (!isCancelled(b)) bookingsCount++;
       families.add((b.email || b.booker || "").toLowerCase());
       byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
       payMix.set(b.pay || "—", (payMix.get(b.pay || "—") ?? 0) + 1);
       if (!isCancelled(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedOf(b));
-      if (m && inWindow.has(m)) {
-        const i = keys.indexOf(m);
-        income[i].value += collectedOf(b);
-        if (!isCancelled(b)) booked[i].value += b.amount;
-        perMonthNew.set(m, (perMonthNew.get(m) ?? 0) + 1);
-      }
-      const ws = b.createdAt || b.days?.[0] || "";
-      const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
-      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedOf(b); break; } }
     }
     let cum = 0;
     const newBk = keys.map((k) => { cum += perMonthNew.get(k) ?? 0; return { month: k, count: perMonthNew.get(k) ?? 0, cumulative: cum }; });
@@ -282,7 +285,7 @@ export function DashboardApp() {
     return {
       income, booked, newBk, weekly, weeklyIncome,
       weeklyLabels: wkStarts.map((ms) => { const dt = new Date(ms); return `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`; }),
-      kpis: { collected: totalCollected, bookings: list.filter((b) => !isCancelled(b)).length, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
+      kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       topActivities: acts.slice(0, 6),
       byStatus: [...byStatus.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: STATUS_C[label] ?? "#8a86a3" })),
@@ -398,9 +401,9 @@ export function DashboardApp() {
       ) : (
         <>
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Income collected" value={money(a.kpis.collected)} sub="paid bookings, net of refunds" grad={GRAD.green} />
-            <Tile label="Bookings" value={`${a.kpis.bookings}`} sub="live + past (excl. cancelled)" grad={GRAD.blue} />
-            <Tile label="Families" value={`${a.kpis.families}`} sub="unique customers" grad={GRAD.violet} />
+            <Tile label="Income collected" value={money(a.kpis.collected)} sub={`last ${months}m · net of refunds`} grad={GRAD.green} />
+            <Tile label="Bookings" value={`${a.kpis.bookings}`} sub={`booked in last ${months}m (excl. cancelled)`} grad={GRAD.blue} />
+            <Tile label="Families" value={`${a.kpis.families}`} sub={`unique customers · last ${months}m`} grad={GRAD.violet} />
             <Tile label="Avg booking" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
           </div>
 
