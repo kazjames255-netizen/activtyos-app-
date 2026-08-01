@@ -44,15 +44,30 @@ dashboard.get("/", async (req, res) => {
   type Sess = { date: string; start: string; end: string; capacity: number; booked: number; spotsLeft: number; listing: string; open: boolean };
   const sessions: Sess[] = [];
   let openCapacity = 0, openBooked = 0;
+  // Overall occupancy per LISTING across its open runs (not per pass/session).
+  const perListing = new Map<string, { capacity: number; booked: number; spotsLeft: number; nextDate: string }>();
   for (const d of blocksSnap.docs) {
     const doc = d.data() as BlockDoc;
     const sum = blockSummary(d.id, doc);
     const listing = title.get(doc.listingId) ?? "Untitled";
+    const future = sum.sessions.filter((s) => s.date >= today);
     // Occupancy counts only runs still selling with sessions yet to happen.
-    if (sum.open && sum.sessions.some((s) => s.date >= today)) { openCapacity += sum.capacity; openBooked += sum.bookedCount; }
+    if (sum.open && future.length) {
+      openCapacity += sum.capacity; openBooked += sum.bookedCount;
+      const cur = perListing.get(listing) ?? { capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
+      cur.capacity += sum.capacity; cur.booked += sum.bookedCount; cur.spotsLeft += sum.spotsLeft;
+      const nd = future.map((s) => s.date).sort()[0];
+      if (nd < cur.nextDate) cur.nextDate = nd;
+      perListing.set(listing, cur);
+    }
     for (const s of sum.sessions) sessions.push({ date: s.date, start: s.start, end: s.end, capacity: s.capacity, booked: s.bookedCount, spotsLeft: s.spotsLeft, listing, open: sum.open });
   }
   sessions.sort((a, b) => (`${a.date} ${a.start}` < `${b.date} ${b.start}` ? -1 : 1));
+
+  const byListing = [...perListing.entries()]
+    .map(([listing, v]) => ({ listing, capacity: v.capacity, booked: v.booked, spotsLeft: v.spotsLeft, pct: v.capacity ? Math.round((v.booked / v.capacity) * 100) : 0, nextDate: v.nextDate }))
+    .sort((a, b) => (a.nextDate < b.nextDate ? -1 : 1))
+    .slice(0, 8);
 
   const todaySessions = sessions.filter((s) => s.date === today);
   const upcoming = sessions.filter((s) => s.date >= today && s.open).slice(0, 6);
@@ -87,6 +102,7 @@ dashboard.get("/", async (req, res) => {
     },
     next: next ? { date: next.date, start: next.start, end: next.end, listing: next.listing } : null,
     upcoming: upcoming.map((s) => ({ date: s.date, start: s.start, end: s.end, listing: s.listing, spotsLeft: s.spotsLeft })),
+    byListing,
     bookings: { live: live.length, newThisWeek, waitlist },
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     money: { takenThisWeek, outstanding, overdueVouchers, awaitingVoucher },

@@ -13,6 +13,7 @@ interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
   next: { date: string; start: string; end: string; listing: string } | null;
   upcoming: { date: string; start: string; end: string; listing: string; spotsLeft: number }[];
+  byListing: { listing: string; capacity: number; booked: number; spotsLeft: number; pct: number; nextDate: string }[];
   bookings: { live: number; newThisWeek: number; waitlist: number };
   occupancy: { booked: number; capacity: number; pct: number };
   money: { takenThisWeek: number; outstanding: number; overdueVouchers: number; awaitingVoucher: number };
@@ -341,19 +342,27 @@ export function DashboardApp() {
             </div>
           )}
         </Panel>
-        <Panel title="🗓️ Coming up">
-          {d.upcoming.length === 0 ? (
-            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No upcoming sessions.</div>
+        <Panel title="🎟️ Live listings · places left">
+          {d.byListing.length === 0 ? (
+            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No open listings running.</div>
           ) : (
             <div className="flex flex-col gap-2">
-              {d.upcoming.map((s, i) => {
-                const c = actColor(s.listing);
-                const t = availTone(s.spotsLeft, s.spotsLeft + 1);
+              {d.byListing.map((l, i) => {
+                const c = actColor(l.listing);
+                const t = availTone(l.spotsLeft, l.capacity);
                 return (
-                  <div key={i} className="flex items-center gap-2.5 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2" style={{ borderLeft: `4px solid ${c}` }}>
-                    <span className="w-[86px] shrink-0 text-[11.5px] font-extrabold text-[var(--ink-2)]">{fmtDay(s.date)}</span>
-                    <span className="rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums" style={{ background: `${c}1f`, color: c }}>{s.start}</span>
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--ink)]">{s.listing}</span>
+                  <div key={i} className="flex items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${c}` }}>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.listing}</div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${l.pct}%`, background: c }} /></div>
+                        <span className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">from {fmtDay(l.nextDate)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{l.booked}/{l.capacity}</div>
+                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{l.pct}% full</div>
+                    </div>
                     <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: t.bg, color: t.fg }}>{t.label}</span>
                   </div>
                 );
