@@ -994,6 +994,11 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<BookingFilter>("all");
+  const [waitOpen, setWaitOpen] = useState(true);
+  const [childF, setChildF] = useState("");
+  const [listingF, setListingF] = useState("");
+  const [fromF, setFromF] = useState("");
+  const [toF, setToF] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<Booking[]>("/api/my/bookings")
@@ -1053,13 +1058,29 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
           : filter === "past" ? isPast(b)
           : isCancelled(b);
 
-        const counts = {
-          all: rest.length,
-          upcoming: rest.filter(isUpcoming).length,
-          past: rest.filter(isPast).length,
-          cancelled: rest.filter(isCancelled).length,
+        // Child / activity / date-range filters (shared shape with Payments).
+        const childOptions = [...new Set(bookings.flatMap((b) => (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child])).filter(Boolean) as string[])].sort();
+        const listingOptions = [...new Set(bookings.map((b) => b.listing).filter(Boolean))].sort();
+        const inRange = (b: Booking) => {
+          if (!fromF && !toF) return true;
+          const ds = b.days ?? [];
+          if (!ds.length) return true;
+          return ds.some((d) => (!fromF || d >= fromF) && (!toF || d <= toF));
         };
-        const shown = rest.filter(match);
+        const passF = (b: Booking) =>
+          (!childF || b.child === childF || (b.kids ?? []).some((k) => k.name === childF)) &&
+          (!listingF || b.listing === listingF) &&
+          inRange(b);
+        const filtersOn = !!(childF || listingF || fromF || toF);
+        const restF = rest.filter(passF);
+
+        const counts = {
+          all: restF.length,
+          upcoming: restF.filter(isUpcoming).length,
+          past: restF.filter(isPast).length,
+          cancelled: restF.filter(isCancelled).length,
+        };
+        const shown = restF.filter(match);
         const tabs: { key: BookingFilter; label: string }[] = [
           { key: "all", label: "All" },
           { key: "upcoming", label: "Upcoming" },
@@ -1070,17 +1091,64 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         return (
           <>
             {waiting.length > 0 && (
-              <div className="mb-5">
-                <SectionHead>My waiting list</SectionHead>
-                <p className="mb-2 text-[12px] text-[var(--ink-3)]">Dates you&rsquo;re queued for — we&rsquo;ll be in touch the moment a place frees up.</p>
-                <div className="flex flex-col gap-2.5">
-                  {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />)}
-                </div>
+              <div className="mb-5 overflow-hidden rounded-2xl border border-[var(--brand-line,#cdddf7)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+                <button
+                  type="button"
+                  onClick={() => setWaitOpen((v) => !v)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-white"
+                  style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white/20 text-[14px]">⏳</span>
+                    <span>
+                      <span className="block text-[14px] font-extrabold">My waiting list</span>
+                      <span className="block text-[11px] text-white/85">Dates you&rsquo;re queued for — we&rsquo;ll message you the moment a place frees up.</span>
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2 text-[12px] font-bold">
+                    <span className="rounded-full bg-white/20 px-2 py-0.5">{waiting.length}</span>
+                    <span className={`transition-transform ${waitOpen ? "rotate-180" : ""}`}>▾</span>
+                  </span>
+                </button>
+                {waitOpen && (
+                  <div className="flex flex-col gap-2.5 bg-[var(--surface)] p-3">
+                    {waiting.map((b) => <WaitlistCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} />)}
+                  </div>
+                )}
               </div>
             )}
             {rest.length > 0 && (
               <>
                 {waiting.length > 0 && <SectionHead>My bookings</SectionHead>}
+                <div className="mb-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Child</span>
+                    <select value={childF} onChange={(e) => setChildF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+                      <option value="">All children</option>
+                      {childOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Activity</span>
+                    <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[190px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+                      <option value="">All activities</option>
+                      {listingOptions.map((l) => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">From</span>
+                    <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">To</span>
+                    <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
+                  </label>
+                  {filtersOn && (
+                    <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <div className="mb-3.5 flex flex-wrap gap-1.5">
                   {tabs.filter((t) => t.key === "all" || counts[t.key] > 0).map((t) => {
                     const active = filter === t.key;
@@ -1101,7 +1169,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                   })}
                 </div>
                 {shown.length === 0 ? (
-                  <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing here right now.</Card>
+                  <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{filtersOn ? "No bookings match these filters." : "Nothing here right now."}</Card>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (

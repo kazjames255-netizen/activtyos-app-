@@ -1,8 +1,7 @@
-// Branded "proof of purchase" receipts for a parent's payments. No PDF library
-// in the app — we build a self-contained, inline-styled HTML document and open
-// it in a print window, where the browser's "Save as PDF" produces the file
-// (same approach as the timetable print). One receipt per booking; bulk mode
-// stacks them with a page break between.
+// Branded "proof of purchase" receipts for a parent's payments, as a REAL
+// downloadable PDF (jsPDF, lazy-loaded so it never bloats the page bundle).
+// Coloured, invoice-style, one receipt per page. Includes the provider's logo
+// when available and always shows the method of payment.
 
 import type { Booking } from "@/features/bookings/types";
 import { money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
@@ -14,10 +13,9 @@ export interface ReceiptCtx {
   providerByTenant?: Record<string, string>;
   /** listingId → venue name/address (from /api/listings/:id), for Location. */
   venueByListing?: Record<string, { location?: string | null; address?: string | null }>;
+  /** Optional logo image URL (settings.billing.logoUrl) embedded top-left. */
+  logoUrl?: string | null;
 }
-
-const esc = (x: unknown) =>
-  String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const fmtDate = (iso?: string) => {
   if (!iso) return "";
@@ -28,12 +26,96 @@ const fmtDate = (iso?: string) => {
 const childrenOf = (b: Booking) =>
   b.kids && b.kids.length ? b.kids.map((k) => k.name).filter(Boolean).join(", ") : b.child || "";
 
-function receiptHtml(b: Booking, ctx: ReceiptCtx): string {
+const fileSafe = (s: string) => s.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "receipt";
+
+// Load a logo URL as {dataUrl,w,h}. Returns null on any failure (missing,
+// CORS-tainted, decode error) so the receipt just omits it.
+async function loadLogo(url?: string | null): Promise<{ dataUrl: string; w: number; h: number } | null> {
+  if (!url) return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const cx = canvas.getContext("2d");
+        if (!cx) return resolve(null);
+        cx.drawImage(img, 0, 0);
+        resolve({ dataUrl: canvas.toDataURL("image/png"), w: img.naturalWidth, h: img.naturalHeight });
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+// jsPDF type is loose here (dynamic import); keep the calls we use typed enough.
+type Doc = {
+  internal: { pageSize: { getWidth: () => number; getHeight: () => number } };
+  setFillColor: (r: number, g: number, b: number) => void;
+  setTextColor: (r: number, g: number, b: number) => void;
+  setDrawColor: (r: number, g: number, b: number) => void;
+  setLineWidth: (n: number) => void;
+  rect: (x: number, y: number, w: number, h: number, style?: string) => void;
+  line: (x1: number, y1: number, x2: number, y2: number) => void;
+  setFont: (family: string, style?: string) => void;
+  setFontSize: (n: number) => void;
+  text: (t: string | string[], x: number, y: number, opts?: { align?: string }) => void;
+  splitTextToSize: (t: string, w: number) => string[];
+  addImage: (data: string, fmt: string, x: number, y: number, w: number, h: number) => void;
+  addPage: () => void;
+  save: (name: string) => void;
+};
+
+function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: string; w: number; h: number } | null) {
   const provider = (b.tenantId && ctx.providerByTenant?.[b.tenantId]) || ctx.brand || "Your activity provider";
   const venue = b.listingId ? ctx.venueByListing?.[b.listingId] : undefined;
   const loc = [venue?.location, venue?.address].filter(Boolean).join(", ");
   const refunded = refundedTotal(b);
+  const pageW = doc.internal.pageSize.getWidth();
+  const M = 40;
+  const contentW = pageW - M * 2;
 
+  // ── Header band ─────────────────────────────────────────────
+  doc.setFillColor(22, 48, 110); // navy
+  doc.rect(0, 0, pageW, 96, "F");
+  doc.setFillColor(47, 107, 216); // accent underline
+  doc.rect(0, 96, pageW, 4, "F");
+
+  let textX = M;
+  if (logo) {
+    const h = 46;
+    const w = Math.min(120, (logo.w / logo.h) * h);
+    try {
+      doc.addImage(logo.dataUrl, "PNG", M, 26, w, h);
+      textX = M + w + 14;
+    } catch {
+      /* corrupt image — fall back to text only */
+    }
+  }
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text(provider, textX, 50);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(200, 214, 242);
+  doc.text("PAYMENT RECEIPT · PROOF OF PURCHASE", textX, 68);
+
+  // Amount, right-aligned
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("AMOUNT PAID", pageW - M, 44, { align: "right" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text(money(b.amount - refunded), pageW - M, 68, { align: "right" });
+
+  // ── Body table ──────────────────────────────────────────────
   const rows: [string, string][] = [
     ["Receipt ref", b.ref],
     ["Activity", b.listing],
@@ -41,54 +123,65 @@ function receiptHtml(b: Booking, ctx: ReceiptCtx): string {
     ["Child", childrenOf(b)],
     ["Dates", b.dates || (b.days ?? []).join(", ") || "—"],
   ];
-  if (b.sessions && b.sessions.length) rows.push(["Sessions / times", b.sessions.join("  ·  ")]);
+  if (b.sessions && b.sessions.length) rows.push(["Sessions / times", b.sessions.join("   ·   ")]);
   if (loc) rows.push(["Location", loc]);
   if (b.addons && b.addons.length) rows.push(["Add-ons", b.addons.join(", ")]);
   rows.push(["Payment status", payLabelFor(b)]);
-  if (b.method && b.method !== "—") rows.push(["Payment method", b.method]);
-  rows.push(["Booked by", `${b.booker || ""}${b.email ? `  ·  ${b.email}` : ""}`]);
+  rows.push(["Payment method", b.method && b.method !== "—" ? b.method : "Card"]);
+  if (refunded > 0) rows.push(["Refunded", `-${money(refunded)}  (of ${money(b.amount)})`]);
+  rows.push(["Booked by", `${b.booker || ""}${b.email ? `   ·   ${b.email}` : ""}`]);
   const issued = fmtDate(b.createdAt);
   if (issued) rows.push(["Date of purchase", issued]);
 
-  const rowsHtml = rows
-    .map(
-      ([k, v]) =>
-        `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;background:#f7f9fd;font-weight:700;white-space:nowrap;color:#4a4763;font-size:12px">${esc(k)}</td>` +
-        `<td style="padding:6px 10px;border:1px solid #e5e7eb;font-size:12px">${esc(v)}</td></tr>`,
-    )
-    .join("");
+  const labelW = 150;
+  const valX = M + labelW + 12;
+  const valW = contentW - labelW - 12;
+  let y = 128;
+  doc.setFontSize(10.5);
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.6);
 
-  const amountBlock =
-    refunded > 0
-      ? `<div>Amount paid: <b>${money(b.amount)}</b></div><div style="color:#b0186a">Refunded: −${money(refunded)}</div><div style="margin-top:2px;font-size:16px">Net: <b>${money(b.amount - refunded)}</b></div>`
-      : `<div style="font-size:16px">Amount: <b>${money(b.amount)}</b></div>`;
+  for (const [k, v] of rows) {
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(String(v || "—"), valW);
+    const rowH = Math.max(24, lines.length * 14 + 10);
+    // label cell
+    doc.setFillColor(240, 244, 252);
+    doc.rect(M, y, labelW, rowH, "F");
+    doc.rect(M, y, labelW, rowH); // border
+    doc.rect(M + labelW, y, valW + 12, rowH); // value cell border
+    doc.setTextColor(22, 48, 110);
+    doc.setFont("helvetica", "bold");
+    doc.text(k, M + 10, y + 16);
+    // value
+    doc.setTextColor(23, 21, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(lines, valX, y + 16);
+    y += rowH;
+  }
 
-  return (
-    `<section style="page-break-after:always;max-width:640px;margin:0 auto 26px">` +
-    `<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2f6bd8;padding-bottom:10px;margin-bottom:14px">` +
-    `<div><div style="font-size:20px;font-weight:800;color:#16306e">${esc(provider)}</div>` +
-    `<div style="font-size:12px;color:#666;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Payment receipt · Proof of purchase</div></div>` +
-    `<div style="text-align:right;font-size:13px;color:#171534">${amountBlock}</div>` +
-    `</div>` +
-    `<table style="width:100%;border-collapse:collapse;font-family:inherit">${rowsHtml}</table>` +
-    `<div style="margin-top:12px;font-size:11px;color:#8a86a3">Keep this receipt as proof of purchase. Issued by ${esc(provider)} via ActivityOS.</div>` +
-    `</section>`
-  );
+  // ── Footer ──────────────────────────────────────────────────
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(138, 134, 163);
+  doc.text(`Keep this receipt as proof of purchase. Issued by ${provider} via ActivityOS.`, M, y + 22);
 }
 
-/** Opens a print window with one or many receipts. Bulk = all supplied bookings. */
-export function printReceipts(bookings: Booking[], ctx: ReceiptCtx) {
+/**
+ * Builds and DOWNLOADS a real .pdf — one page per booking. Bulk = all supplied.
+ */
+export async function downloadReceipts(bookings: Booking[], ctx: ReceiptCtx) {
   if (!bookings.length) return;
-  const title = bookings.length === 1 ? `Receipt ${bookings[0].ref}` : `${bookings.length} receipts`;
-  const body = bookings.map((b) => receiptHtml(b, ctx)).join("");
-  const html =
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
-    `<title>${esc(ctx.brand || "Payments")} — ${esc(title)}</title></head>` +
-    `<body style="font-family:-apple-system,Segoe UI,Arial,sans-serif;padding:20px;color:#171534">` +
-    `${body}<script>window.onload=function(){window.print();}<\/script></body></html>`;
-  const w = window.open("", "_blank");
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-  }
+  const { jsPDF } = await import("jspdf");
+  const logo = await loadLogo(ctx.logoUrl);
+  const doc = new jsPDF({ unit: "pt", format: "a4" }) as unknown as Doc;
+  bookings.forEach((b, i) => {
+    if (i > 0) doc.addPage();
+    drawReceipt(doc, b, ctx, logo);
+  });
+  const name =
+    bookings.length === 1
+      ? `${fileSafe(ctx.brand || "receipt")}-${fileSafe(bookings[0].ref)}.pdf`
+      : `${fileSafe(ctx.brand || "receipts")}-${bookings.length}-receipts.pdf`;
+  doc.save(name);
 }
