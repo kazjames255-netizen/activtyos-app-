@@ -1,25 +1,190 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { get as apiGet } from "@/lib/api";
+import { useRealtime } from "@/lib/realtime";
+import type { Booking } from "@/features/bookings/types";
+import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { Tile, GRAD } from "@/features/money/finance-kit";
 
-const LIGHT_PALETTE = {
-  "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
-  "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
-} as CSSProperties;
+// Marketing → Marketing strategies. Playbooks that turn our existing tools
+// (discount codes, groups, email, referrals, newsfeed, bookings) into concrete
+// campaigns — surfaced next to live "opportunities" computed from the tenant's
+// own bookings so the page tells the operator what to do *now*.
 
-/** Marketing → Marketing strategies. Intentionally blank for now — a shell to
- *  build the strategy playbooks into later. */
+interface DashListing { listing: string; capacity: number; booked: number; spotsLeft: number; pct: number }
+interface Dash { byListing: DashListing[] }
+interface Code { id: string; active?: boolean; expiry?: string; usageLimit?: number; usedCount?: number }
+
+type Cat = "fill" | "retain" | "grow" | "revenue";
+const CATS: [Cat | "all", string, string][] = [
+  ["all", "All plays", "🎯"], ["fill", "Fill empty spaces", "🎟️"], ["retain", "Win back & keep", "🔁"], ["grow", "Grow your audience", "📣"], ["revenue", "Boost revenue", "💷"],
+];
+
+interface Play {
+  id: string; icon: string; title: string; goal: string; grad: string; cats: Cat[];
+  effort: "Low" | "Medium"; impact: "Medium" | "High"; channel: string;
+  steps: string[]; cta: { label: string; view: string }; secondary?: { label: string; view: string };
+}
+const PLAYS: Play[] = [
+  {
+    id: "earlybird", icon: "⏰", title: "Early-bird launch", goal: "Sell out a new run before it even starts.", grad: GRAD.blue, cats: ["fill", "revenue"],
+    effort: "Low", impact: "High", channel: "Codes + Email",
+    steps: ["Pick the upcoming listing you want to fill", "Create a time-limited % code (e.g. 15% off)", "Set an expiry 1–2 weeks out so it feels urgent", "Email your families the offer is live"],
+    cta: { label: "Create the code", view: "marketing" }, secondary: { label: "Email families", view: "email" },
+  },
+  {
+    id: "fill-session", icon: "🎟️", title: "Fill this session", goal: "Rescue a half-empty session that runs soon.", grad: GRAD.teal, cats: ["fill"],
+    effort: "Low", impact: "Medium", channel: "Codes + Email",
+    steps: ["Spot the sessions under half full (see opportunities above)", "Make a small last-minute code scoped to that listing", "Broadcast it to your list", "Watch the spaces fill in Bookings"],
+    cta: { label: "Make a session code", view: "marketing" }, secondary: { label: "Message families", view: "email" },
+  },
+  {
+    id: "siblings", icon: "👨‍👩‍👧", title: "Sibling & group offer", goal: "Win the whole family — no code needed.", grad: GRAD.violet, cats: ["fill", "revenue"],
+    effort: "Low", impact: "Medium", channel: "Automatic discount",
+    steps: ["Turn on an automatic multi-person discount", "Set £ or % off from the 2nd child", "Choose which listings it applies to", "Siblings get it automatically at checkout"],
+    cta: { label: "Set up auto discount", view: "marketing" },
+  },
+  {
+    id: "winback", icon: "🔁", title: "Win back lapsed families", goal: "Bring back families who’ve gone quiet.", grad: GRAD.pink, cats: ["retain"],
+    effort: "Medium", impact: "High", channel: "Groups + Email",
+    steps: ["Find families who haven’t booked in 60+ days", "Save them together as a parent group", "Reserve a welcome-back code for that group", "Follow up with a friendly email"],
+    cta: { label: "Build the group", view: "marketing" }, secondary: { label: "Email them", view: "email" },
+  },
+  {
+    id: "referral", icon: "📣", title: "Refer-a-friend drive", goal: "Turn happy parents into your sales team.", grad: GRAD.green, cats: ["grow"],
+    effort: "Low", impact: "High", channel: "Referrals",
+    steps: ["Switch on referral rewards", "Set the reward (credit, % off or a free add-on)", "Announce it to your families", "Track invited → joined → rewarded"],
+    cta: { label: "Open referrals", view: "referrals" }, secondary: { label: "Announce it", view: "email" },
+  },
+  {
+    id: "announce", icon: "🆕", title: "Announce new listings", goal: "Get eyes on what you’ve just launched.", grad: GRAD.blue, cats: ["grow"],
+    effort: "Low", impact: "Medium", channel: "Newsfeed + Email",
+    steps: ["Publish the new listing", "Post it to your newsfeed", "Send a campaign to your audience", "Pin it so it stays top of mind"],
+    cta: { label: "Post an update", view: "newsfeed" }, secondary: { label: "Email a campaign", view: "email" },
+  },
+  {
+    id: "waitlist", icon: "📝", title: "Convert your waitlist", goal: "Fill freed-up places with people already keen.", grad: GRAD.amber, cats: ["fill", "revenue"],
+    effort: "Low", impact: "High", channel: "Bookings",
+    steps: ["Check who’s waitlisted (see opportunities above)", "Free a space or open another session", "Offer waitlisted families first refusal", "Hold their place for 24h to decide"],
+    cta: { label: "Go to bookings", view: "bookings" },
+  },
+  {
+    id: "loyalty", icon: "🏅", title: "Reward loyal families", goal: "Keep your best customers coming back.", grad: GRAD.teal, cats: ["retain", "revenue"],
+    effort: "Medium", impact: "Medium", channel: "Groups + Email",
+    steps: ["Spot repeat bookers (Dashboard → repeat customers)", "Reserve a thank-you code for them as a group", "Send a personal note with it", "Invite them to book next season first"],
+    cta: { label: "Reserve a code", view: "marketing" }, secondary: { label: "Say thanks", view: "email" },
+  },
+];
+
+const bookerKey = (b: Booking) => (b.email || b.booker || "").trim().toLowerCase();
+const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
+
 export function MarketingStrategiesApp() {
+  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [dash, setDash] = useState<Dash | null>(null);
+  const [codes, setCodes] = useState<Code[]>([]);
+  const [cat, setCat] = useState<Cat | "all">("all");
+  const [nowMs] = useState(() => Date.now());
+  const router = useRouter();
+  const portal = (usePathname() ?? "/").split("/")[1] || "app";
+  const go = (view: string) => router.push(`/${portal}/${view}`);
+
+  const load = useCallback(() => {
+    apiGet<Booking[]>("/api/bookings").then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => setBookings([]));
+    apiGet<Dash>("/api/dashboard").then(setDash).catch(() => {});
+    apiGet<Code[]>("/api/discounts").then((c) => setCodes(Array.isArray(c) ? c : [])).catch(() => {});
+  }, []);
+  useEffect(load, [load]);
+  useRealtime(["bookings", "discountCodes", "blocks"], load);
+
+  // Live opportunities — the "what to do now" signals from the tenant's data.
+  const ops = useMemo(() => {
+    const list = (bookings ?? []).filter((b) => !isCancelled(b));
+    const lastByFamily = new Map<string, number>();
+    let waitlisted = 0;
+    for (const b of list) {
+      if (b.status === "Waitlisted") waitlisted++;
+      const bk = bookerKey(b); if (!bk) continue;
+      const t = Date.parse((b.createdAt || "").length === 10 ? `${b.createdAt}T00:00:00Z` : b.createdAt || "");
+      if (!Number.isNaN(t)) lastByFamily.set(bk, Math.max(lastByFamily.get(bk) ?? 0, t));
+    }
+    const cutoff = nowMs - 60 * 86400000;
+    const lapsed = [...lastByFamily.values()].filter((t) => t < cutoff).length;
+    const lowFill = (dash?.byListing ?? []).filter((l) => l.spotsLeft > 0 && l.pct < 50);
+    const spacesToFill = lowFill.reduce((s, l) => s + l.spotsLeft, 0);
+    const activeCodes = codes.filter((c) => c.active !== false).length;
+    return { lapsed, waitlisted, lowFillCount: lowFill.length, spacesToFill, activeCodes };
+  }, [bookings, dash, codes, nowMs]);
+
+  const plays = cat === "all" ? PLAYS : PLAYS.filter((p) => p.cats.includes(cat));
+  const loading = bookings === null;
+
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-      {/* Hero — matches the other portal pages (blue → white). */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
-        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🎯</span>
-          Marketing strategies
-        </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Playbooks to fill your sessions — coming soon.</p>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      <PageHero
+        icon="🎯"
+        title="Marketing strategies"
+        lede="Ready-to-run playbooks that fill your sessions and keep families coming back — each one launches straight into the tool that does it."
+      />
+
+      {/* Live opportunities from your own data */}
+      <div className="mb-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <Tile label="Spaces to fill" icon="🎟️" grad={GRAD.blue} value={loading ? "…" : String(ops.spacesToFill)} sub={`${ops.lowFillCount} session${ops.lowFillCount === 1 ? "" : "s"} under half full`} />
+        <Tile label="Families to win back" icon="🔁" grad={ops.lapsed > 0 ? GRAD.pink : GRAD.teal} value={loading ? "…" : String(ops.lapsed)} sub="no booking in 60+ days" />
+        <Tile label="On the waitlist" icon="📝" grad={GRAD.amber} value={loading ? "…" : String(ops.waitlisted)} sub="keen and waiting" />
+        <Tile label="Active offers" icon="🏷️" grad={GRAD.green} value={loading ? "…" : String(ops.activeCodes)} sub="codes running now" />
+      </div>
+
+      {/* Category filter */}
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {CATS.map(([v, label, ic]) => (
+          <button key={v} type="button" onClick={() => setCat(v)}
+            className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
+            style={cat === v ? { borderColor: "transparent", background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.55)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+            <span className="mr-1">{ic}</span>{label}
+          </button>
+        ))}
+      </div>
+
+      {/* Playbook cards */}
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {plays.map((p) => (
+          <div key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+            <div className="flex items-center gap-2.5 px-4 py-3 text-white" style={{ background: p.grad }}>
+              <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-[18px]">{p.icon}</span>
+              <div className="min-w-0">
+                <div className="truncate text-[14.5px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>
+                <div className="truncate text-[11.5px] text-white/85">{p.goal}</div>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col p-4">
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                <Chip label={`Effort: ${p.effort}`} tone={p.effort === "Low" ? "#0f7a43" : "#a85f08"} />
+                <Chip label={`Impact: ${p.impact}`} tone={p.impact === "High" ? "#1d3a8f" : "#4a4763"} />
+                <Chip label={p.channel} tone="#5b3fd8" />
+              </div>
+              <ol className="mb-4 flex flex-1 flex-col gap-1.5">
+                {p.steps.map((s, i) => (
+                  <li key={i} className="flex gap-2 text-[12.5px] leading-snug text-[var(--ink-2)]">
+                    <span className="mt-px grid h-[18px] w-[18px] flex-none place-items-center rounded-full bg-[var(--panel)] text-[10px] font-extrabold text-[var(--ink-3)]">{i + 1}</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-auto flex flex-wrap gap-2">
+                <button type="button" onClick={() => go(p.cta.view)} className="rounded-full px-4 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{p.cta.label} →</button>
+                {p.secondary && <button type="button" onClick={() => go(p.secondary!.view)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.secondary.label}</button>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+function Chip({ label, tone }: { label: string; tone: string }) {
+  return <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: `${tone}18`, color: tone }}>{label}</span>;
 }

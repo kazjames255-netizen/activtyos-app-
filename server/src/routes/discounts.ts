@@ -152,6 +152,68 @@ discounts.delete("/groups/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Automatic (no-code) discounts ──────────────────────────────────────────
+// Rules that apply at checkout with no code: "multi-person" (e.g. siblings) and
+// "multi-session". CRUD lives here; the checkout engine applies them (handoff:
+// wire into lib/discountCodes / my.ts pricing — multi-person first, then
+// multi-session, always giving the booker the best price). Routes BEFORE /:id.
+const autoCol = db.collection("autoDiscounts");
+const autoBase = z.object({
+  kind: z.enum(["person", "session"]),          // multi-person (siblings) | multi-session
+  from: z.number().int().min(2).max(50),        // person: from the Nth person; session: more than N sessions
+  mode: z.enum(["flat", "pct"]),                // £ off | % off
+  value: z.number().positive().max(100_000),
+  listingIds: z.array(z.string().trim().max(60)).max(500).nullable().default(null), // null/[] = all listings
+  active: z.boolean().default(true),
+});
+const autoPctOk = (r: { mode?: string; value?: number }) => r.mode !== "pct" || (r.value ?? 0) <= 100;
+const autoSchema = autoBase.refine(autoPctOk, { message: "A percentage can't exceed 100" });
+
+discounts.get("/auto", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const snap = await autoCol.where("tenantId", "==", tenantId).get();
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  list.sort((a, b) => `${a.createdAt ?? ""}`.localeCompare(`${b.createdAt ?? ""}`));
+  res.json(list);
+});
+
+discounts.post("/auto", async (req, res) => {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  const parsed = autoSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const doc = { ...parsed.data, tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const ref = await autoCol.add(doc);
+  res.status(201).json({ id: ref.id, ...doc });
+});
+
+async function ownAuto(req: Request, id: string) {
+  const auth = req.auth!;
+  if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
+  const snap = await autoCol.doc(id).get();
+  if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  return { status: 200 as const, snap };
+}
+
+discounts.put("/auto/:id", async (req, res) => {
+  const o = await ownAuto(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Rule not found" }); return; }
+  const parsed = autoBase.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  if (!autoPctOk(parsed.data)) { res.status(400).json({ error: "A percentage can't exceed 100" }); return; }
+  await o.snap.ref.set(parsed.data, { merge: true });
+  const after = await o.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+discounts.delete("/auto/:id", async (req, res) => {
+  const o = await ownAuto(req, req.params.id);
+  if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Rule not found" }); return; }
+  await o.snap.ref.delete();
+  res.json({ ok: true });
+});
+
 // GET /api/discounts — the tenant's codes (operators).
 discounts.get("/", async (req, res) => {
   const tenantId = opScope(req, res);
