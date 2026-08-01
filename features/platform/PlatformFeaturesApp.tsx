@@ -60,6 +60,7 @@ export function PlatformFeaturesApp() {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [typeTab, setTypeTab] = useState("all");
   const [busy, setBusy] = useState<string | null>(null); // `${id}:${view}` mid-save
   const [open, setOpen] = useState<Set<string>>(() => new Set()); // expanded cards (start closed)
   const toggleOpen = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -87,10 +88,21 @@ export function PlatformFeaturesApp() {
     }
   };
 
+  // Tabs by provider type, plus the live count per type.
+  const typeTabs = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of providers ?? []) counts.set(p.type, (counts.get(p.type) ?? 0) + 1);
+    const order = ["freelancer", "company", "franchise"];
+    const present = [...counts.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    return [["all", "All", providers?.length ?? 0] as const, ...present.map((t) => [t, t[0].toUpperCase() + t.slice(1), counts.get(t) ?? 0] as const)];
+  }, [providers]);
+
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return (providers ?? []).filter((p) => !t || p.name.toLowerCase().includes(t) || p.type.toLowerCase().includes(t));
-  }, [providers, q]);
+    return (providers ?? [])
+      .filter((p) => typeTab === "all" || p.type === typeTab)
+      .filter((p) => !t || p.name.toLowerCase().includes(t) || p.type.toLowerCase().includes(t));
+  }, [providers, q, typeTab]);
 
   return (
     <div className="text-[var(--ink)]">
@@ -110,7 +122,16 @@ export function PlatformFeaturesApp() {
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading providers…</div>
       ) : (
         <>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {typeTabs.map(([v, label, count]) => (
+              <button key={v} type="button" onClick={() => setTypeTab(v)}
+                className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
+                style={typeTab === v ? { borderColor: "transparent", background: BLUE, color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                {label} <span className={typeTab === v ? "opacity-80" : "text-[var(--ink-3)]"}>{count}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search providers…"
               className="w-[240px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]" />
             <span className="text-[11.5px] text-[var(--ink-3)]">{shown.length} provider{shown.length === 1 ? "" : "s"} · {PAGES.length} toggleable pages · core pages always on</span>
