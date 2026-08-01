@@ -696,7 +696,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listingInfo }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean; listingInfo?: AmendListing | null }) {
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listingInfo, venue }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null } }) {
   const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay));
   const [cancelling, setCancelling] = useState(!!autoCancel);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -790,6 +790,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
 
   const kidNames = (b.kids && b.kids.length ? b.kids.map((k) => k.name) : [b.child]).filter(Boolean);
   const initials = kidNames.length ? kidNames.map((n) => (n || "?").charAt(0).toUpperCase()).join(" & ") : "?";
+  const loc = { location: venue?.location ?? info?.location ?? null, address: venue?.address ?? info?.address ?? null, city: venue?.city ?? info?.city ?? null };
   const sessCount = b.sessions?.length || b.days?.length || 0;
   const childCount = b.kids?.length || 1;
 
@@ -809,8 +810,8 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listin
         <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
           <PCol label="🎟 Listing" w="min-w-[120px] flex-1">
             <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
-            {info?.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {info.location}</span>}
-            {(info?.address || info?.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(", ")}</span>}
+            {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
+            {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
           </PCol>
           <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}</span></PCol>
           <PCol label="Status" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? "Date change" : b.status}</span></PCol>
@@ -1109,6 +1110,17 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
     const ls = tenantListings[b.tenantId ?? ""] ?? [];
     return ls.find((l) => (l.blocks ?? []).some((bk) => bk.id === b.blockId)) ?? null;
   };
+  // Venue/address per listing from the detail endpoint (works even for archived
+  // listings the public storefront feed drops) — for the row under the listing.
+  const [venueById, setVenueById] = useState<Record<string, { location?: string | null; address?: string | null; city?: string | null }>>({});
+  useEffect(() => {
+    const ids = [...new Set((bookings ?? []).map((b) => b.listingId).filter(Boolean) as string[])];
+    ids.filter((id) => !venueById[id]).forEach((id) => {
+      apiGet<{ library?: { venue?: { name?: string; address?: string; city?: string } | null } }>(`/api/listings/${encodeURIComponent(id)}`)
+        .then((l) => setVenueById((m) => ({ ...m, [id]: { location: l.library?.venue?.name ?? null, address: l.library?.venue?.address ?? null, city: l.library?.venue?.city ?? null } })))
+        .catch(() => {});
+    });
+  }, [bookings, venueById]);
   // The payment-link email deep-links here as ?pay=REF; the schedule's
   // "Edit booking" deep-links as ?amend=REF (auto-opens the Change-dates flow).
   const params = useSearchParams();
@@ -1301,7 +1313,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={b.listingId ? venueById[b.listingId] : undefined} />
                     ))}
                   </div>
                 )}
