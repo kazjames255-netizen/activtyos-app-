@@ -1288,7 +1288,7 @@ function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<Wizar
         <option value="">Select a venue…</option>
         {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
       </Select>
-      <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in the Locations tab — just pick a venue here.</div>
+      <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in <b>Locations</b>.</div>
 
       {seasons.length > 0 && (<>
         <SectionHead icon="📅">Season</SectionHead>
@@ -1296,12 +1296,12 @@ function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<Wizar
           <option value="">No season</option>
           {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
-        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Which trading period this runs in — lets Bookings, Audiences &amp; money-in group by season. Manage the names in Setup → Seasons.</div>
+        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Groups this in Bookings, Audiences &amp; money. Rename in <b>Setup → Seasons</b>.</div>
       </>)}
 
       <FieldLabel>On-the-day contact number <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
       <Input value={d.sitePhone ?? ""} onChange={(e) => upd({ sitePhone: e.target.value })} placeholder="e.g. 07700 900123" className="mb-1 w-full max-w-[280px]" inputMode="tel" />
-      <div className="mb-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Shown to parents on the listing <b>only while the camp is running</b> — a number to reach staff during session days. Hidden before it starts and after it ends.</div>
+      <div className="text-[11px] leading-[1.4] text-[var(--ink-3)]">Shown to parents <b>only while the camp is running</b> — hidden before and after.</div>
 
       </RichCard>
       <RichCard icon="🏷️" title="Categories" subtitle="What describes this listing" tint="teal">
@@ -1576,14 +1576,14 @@ function RichCard({ icon, title, subtitle, tint = "blue", children, className = 
   }[tint];
   return (
     <div className={`overflow-hidden rounded-2xl border bg-white ${className}`} style={{ borderColor: T.border, boxShadow: `0 20px 44px -20px ${T.ring}` }}>
-      <div className="flex items-center gap-2.5 px-4 py-2.5 text-white" style={{ background: T.head }}>
-        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-white/15 text-[15px] ring-1 ring-white/25">{icon}</span>
+      <div className="flex items-center gap-2 px-3.5 py-2 text-white" style={{ background: T.head }}>
+        <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-white/15 text-[14px] ring-1 ring-white/25">{icon}</span>
         <div className="min-w-0">
-          <div className="text-[13.5px] font-extrabold leading-tight tracking-[-0.01em]">{title}</div>
-          {subtitle && <div className="truncate text-[10.5px] font-semibold text-white/70">{subtitle}</div>}
+          <div className="text-[13px] font-extrabold leading-tight tracking-[-0.01em]">{title}</div>
+          {subtitle && <div className="truncate text-[10px] font-semibold text-white/70">{subtitle}</div>}
         </div>
       </div>
-      <div className="p-4" style={{ background: "linear-gradient(180deg,#ffffff,#eef4fd)" }}>{children}</div>
+      <div className="p-3.5" style={{ background: "linear-gradient(180deg,#ffffff,#eef4fd)" }}>{children}</div>
     </div>
   );
 }
@@ -2170,12 +2170,10 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   return (
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
-      <RichCard icon="🧩" title="Add-ons" subtitle="Per-day, whole-block or one-off extras — reusable on any listing" tint="teal">
-        <div>
-      <HeadingFields d={d} upd={upd} sectionKey="addons" />
-      {local.addons.length > 0 && (
-        <div className="mb-3 flex flex-col gap-1.5">
-          <SectionHead icon="✨">Your add-ons — tick the ones for this listing</SectionHead>
+      <div className="grid items-start gap-4 md:grid-cols-2">
+      <RichCard icon="🧩" title="Your add-ons" subtitle="Tick the ones for this listing" tint="teal">
+      {local.addons.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
           {local.addons.map((a) => {
             const on = d.addonIds.includes(a.id);
             return (
@@ -2196,9 +2194,11 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
             );
           })}
         </div>
-      )}
-      <SectionHead icon={editing ? "✏️" : "➕"}>{editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"}</SectionHead>
-      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
+      ) : <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No add-ons yet — create one on the right. They save and appear on every listing.</div>}
+      <HeadingFields d={d} upd={upd} sectionKey="addons" />
+      </RichCard>
+      <RichCard icon={editing ? "✏️" : "➕"} title={editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"} subtitle="Saved and reusable on any listing">
+      <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hot lunch" className="w-full" /></div>
         <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
         <div className="w-[90px]"><FieldLabel>Price £</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
@@ -2242,8 +2242,8 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
         <Button variant="primary" onClick={save}>{editing ? "Save changes" : "＋ Add"}</Button>
         {editing && <Button onClick={clear}>Cancel</Button>}
       </div>
-        </div>
       </RichCard>
+      </div>
     </div>
   );
 }
@@ -3598,10 +3598,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
 // ── Small shared bits ──────────────────────────────────────────────────────
 function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: string; lede: string }) {
   return (
-    <div className="mb-3.5 text-center">
-      <div className="inline-flex items-center rounded-full px-2.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{kicker.replace(/^STEP\s+\d+\s*·\s*/i, "")}</div>
-      <h3 className="mt-1.5 text-[23px] font-extrabold leading-[1.12] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)", background: "linear-gradient(115deg,#16306e 10%,#3f78d8 60%,#6aa0ee)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>{title}</h3>
-      <p className="mx-auto mt-1 max-w-[520px] text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{lede}</p>
+    <div className="mb-2.5 text-center">
+      <div className="inline-flex items-center rounded-full px-2.5 py-[2px] text-[9px] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>{kicker.replace(/^STEP\s+\d+\s*·\s*/i, "")}</div>
+      <h3 className="mt-1 text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)", background: "linear-gradient(115deg,#16306e 10%,#3f78d8 60%,#6aa0ee)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" }}>{title}</h3>
+      <p className="mx-auto mt-0.5 max-w-[600px] text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{lede}</p>
     </div>
   );
 }
@@ -3611,7 +3611,7 @@ function StepHead({ kicker, title, lede }: { n?: number; kicker: string; title: 
  */
 function SectionHead({ children, icon }: { children: React.ReactNode; icon?: string }) {
   return (
-    <div className="mb-2 mt-4 flex items-center gap-2 first:mt-0">
+    <div className="mb-1.5 mt-3 flex items-center gap-2 first:mt-0">
       {icon && <span className="flex h-6 w-6 flex-none items-center justify-center rounded-lg text-[12px] text-white shadow-[0_2px_6px_rgba(31,84,163,.3)]" style={{ background: "linear-gradient(135deg,#3f78d8,#16306e)" }}>{icon}</span>}
       <div className="text-[12.5px] font-extrabold tracking-[-0.01em] text-[#16306e]">{children}</div>
       <div className="ml-1 h-px flex-1 rounded-full" style={{ background: "linear-gradient(90deg,var(--brand-line,#cdddf7),transparent)" }} />
