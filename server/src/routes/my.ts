@@ -1130,7 +1130,8 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       title: `${booking.booker} requested a ${what} change on ${booking.ref}`,
       body: `${booking.listing} · ${booking.child}${scope}${parsed.data.timing ? ` → ${parsed.data.timing}` : ""}. Review it to approve or decline.`,
       subject: `${booking.ref}: ${what} change requested by ${booking.booker}`,
-      href: "/company/bookings",
+      // Deep-link straight to this booking so it opens with the request showing.
+      href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,
       ref: booking.ref,
     });
   }
@@ -1429,7 +1430,7 @@ async function partialCancel(
           ? `${money(value)} credited to their wallet. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`
           : `${money(value)} refund requested — needs your approval. Places are back on ${releasedDays.map(prettyDay).join(", ")}.`,
       subject: `${existing.ref}: ${who} released by ${existing.booker}`,
-      href: "/company/bookings",
+      href: `/company/bookings?ref=${encodeURIComponent(existing.ref)}`,
       ref: existing.ref,
     });
   }
