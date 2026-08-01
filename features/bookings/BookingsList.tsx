@@ -6,7 +6,6 @@ import { useBookingsStore } from "./store";
 import {
   FILTER_TABS,
   attendeeCount,
-  avatarGradient,
   bookingKids,
   matchesFilter,
   matchesSearch,
@@ -27,16 +26,6 @@ import { useSettings } from "@/lib/settings";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
-
-// A labelled square tile — the building block of a booking row.
-function Cell({ label, bg, fg, ring, title, children }: { label: string; bg: string; fg: string; ring?: string; title?: string; children: React.ReactNode }) {
-  return (
-    <span title={title} className="flex min-w-[96px] max-w-[190px] flex-none flex-col justify-center rounded-xl px-2.5 py-1.5" style={{ background: bg, color: fg, boxShadow: ring ? `inset 0 0 0 1px ${ring}` : undefined }}>
-      <span className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] opacity-70">{label}</span>
-      <span className="truncate text-[12px] font-extrabold leading-tight">{children}</span>
-    </span>
-  );
-}
 
 /**
  * The list. With a booking open it becomes the left rail of a split view:
@@ -401,10 +390,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
               <div
                 key={b.ref}
                 className={
-                  "overflow-hidden rounded-2xl border bg-[var(--surface)] transition-all " +
-                  (on ? "border-[var(--brand-2)]" : "border-[var(--line)]") +
-                  (off ? " opacity-65" : "")
+                  "overflow-hidden rounded-2xl border transition-all " +
+                  (on ? "border-[#4a86e6]" : "border-[#26365e]") +
+                  (off ? " opacity-55" : "")
                 }
+                style={{ background: "linear-gradient(120deg,#0f1830,#18294a)", boxShadow: "0 16px 38px -20px rgba(0,0,0,.6)" }}
               >
               <div
                 onClick={() => open(b.ref)}
@@ -417,14 +407,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   }}
                   className={
                     "h-4 w-4 flex-none rounded border-[1.5px] " +
-                    (on ? "border-[var(--brand-2)] bg-[var(--brand-2)]" : "border-[var(--line)]")
+                    (on ? "border-[#4a86e6] bg-[#4a86e6]" : "border-[#3a4a70]")
                   }
                 />
                 {/* The child's initial, not the payer's — a photo goes here
                     once a booking carries the child's id (handoff §I). */}
                 <span
-                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-white shadow-[0_5px_12px_-6px_rgba(29,58,143,.7)]"
-                  style={{ background: avatarGradient(lead) }}
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-[14px] font-extrabold text-[#04202a]"
+                  style={{ background: "linear-gradient(135deg,#43d9c0,#1c7f9e)", boxShadow: "0 0 0 1px rgba(255,255,255,.14), 0 6px 16px -6px rgba(38,220,190,.5)" }}
                 >
                   {lead.charAt(0).toUpperCase()}
                 </span>
@@ -434,11 +424,11 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                       only the payer can't answer "is Sophie in on Thursday" —
                       and a family booking three children read as three
                       identical rows. */}
-                  <span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">
+                  <span className="block truncate text-[13.5px] font-extrabold text-white">
                     {kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}
-                    <span className="ml-1.5 whitespace-nowrap text-[11px] font-bold text-[#1d3a8f]">View details ›</span>
+                    <span className="ml-1.5 whitespace-nowrap text-[11px] font-bold text-[#9cc0ff]">View details ›</span>
                   </span>
-                  <span className="block truncate text-[11px] text-[var(--ink-3)]">
+                  <span className="block truncate text-[11px] text-[#8ea0c8]">
                     {/* On the row, not behind a click — "when did this come
                         in" is the first thing asked of a bookings list. */}
                     {b.createdAt ? `Booked ${prettyBookedOn(b)} · ` : ""}
@@ -446,14 +436,18 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   </span>
                 </span>
 
-                <div className="hidden flex-[3] flex-wrap items-stretch gap-1.5 lg:flex">
-                  <Cell label="🎟 Listing" bg="linear-gradient(120deg,#eaf1fe,#dbe8fb)" fg="#16306e" ring="#cfe0f7" title={b.listing}>{b.listing || "—"}</Cell>
-                  {seasonNameOf(b.listingId) && <Cell label="📅 Season" bg="linear-gradient(120deg,#2f9fb8,#12586e)" fg="#ffffff">{seasonNameOf(b.listingId)}</Cell>}
-                  <Cell label="📆 Dates" bg="var(--panel)" fg="var(--ink)" title={b.dates}>{b.dates}</Cell>
-                  <Cell label="Group" bg="var(--panel)" fg="var(--ink-2)">{att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sess</Cell>
-                  {(() => { const t = statusTone(b.status); return <Cell label="Status" bg={t.bg} fg={t.fg}>{b.status}</Cell>; })()}
-                  {(() => { const t = payTone(b.pay); return <Cell label="Payment" bg={t.bg} fg={t.fg}>{payLabelFor(b)}</Cell>; })()}
-                  {refundPending && <Cell label="Refund" bg="#fdebec" fg="#bb1620">Pending</Cell>}
+                <div className="hidden min-w-0 flex-[2.4] flex-col justify-center gap-1.5 lg:flex">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="max-w-full truncate rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: "rgba(120,170,255,.15)", color: "#bcd4ff", boxShadow: "inset 0 0 0 1px rgba(120,170,255,.3)" }} title={b.listing}>🎟 {b.listing || "—"}</span>
+                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[10.5px] font-extrabold text-[#04202a]" style={{ background: "linear-gradient(120deg,#37d1bd,#128199)" }}>📅 {seasonNameOf(b.listingId)}</span>}
+                  </div>
+                  <div className="truncate text-[12px]"><span className="num font-bold text-[#dfe7ff]">{b.dates}</span> <span className="text-[#8ea0c8]">· {att > 1 ? `${att} children` : "1 child"} · {sessionCount(b)} sessions · {b.ref}</span></div>
+                </div>
+
+                <div className="hidden flex-none flex-wrap items-center justify-end gap-1.5 md:flex">
+                  <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span>
+                  <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
+                  {refundPending && <span className="whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-extrabold text-[#bb1620]">Refund pending</span>}
                 </div>
 
                 {/* Voucher money arrives outside the app — reconcile it right
@@ -491,7 +485,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   </span>
                 )}
 
-                <b className="flex-none text-right text-[16px] tabular-nums text-[var(--ink)]">
+                <b className="flex-none text-right text-[16px] tabular-nums text-white">
                   {money(b.amount)}
                 </b>
               </div>
