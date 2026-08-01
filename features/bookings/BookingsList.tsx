@@ -27,10 +27,21 @@ import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
 
-// A labelled detail column in the booking row's white body.
-function Col({ label, grow, children }: { label: string; grow?: boolean; children: React.ReactNode }) {
+// Status → identity-panel gradient, so a booking's state reads at a glance.
+const HERO_GRAD: Record<string, string> = {
+  "Confirmed": "linear-gradient(140deg,#22a35b,#0d5c34)",        // green
+  "Approval needed": "linear-gradient(140deg,#e0902f,#9a4f10)",  // amber
+  "Waitlisted": "linear-gradient(140deg,#7c5cd8,#392a86)",       // violet
+  "Offered": "linear-gradient(140deg,#7c5cd8,#392a86)",
+  "Cancelled": "linear-gradient(140deg,#6a7488,#3a4152)",        // slate
+  "Declined": "linear-gradient(140deg,#6a7488,#3a4152)",
+};
+const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#2f6bd8,#122a63)";
+
+// A fixed-width labelled column, so every row's cells line up down the page.
+function Col({ label, w, children }: { label: string; w: string; children: React.ReactNode }) {
   return (
-    <span className={"flex flex-col justify-center " + (grow ? "min-w-[130px] flex-[1.4]" : "flex-none")}>
+    <span className={"flex flex-col justify-center " + w}>
       <span className="text-[8px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
       <span className="mt-[3px] block leading-[1.2]">{children}</span>
     </span>
@@ -407,23 +418,23 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}
               >
               <div className="flex items-stretch">
-                {/* Gradient identity hero — compact */}
-                <div onClick={() => open(b.ref)} className="relative flex w-[150px] flex-none cursor-pointer items-center gap-2.5 p-2.5 pr-5 text-white sm:w-[236px]" style={{ background: "linear-gradient(140deg,#2f6bd8,#122a63)" }}>
+                {/* Identity hero — colour = booking status */}
+                <div onClick={() => open(b.ref)} className="relative flex w-[150px] flex-none cursor-pointer items-center gap-2.5 p-2.5 pr-5 text-white sm:w-[236px]" style={{ background: heroGrad(b.status) }}>
                   <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute right-2 top-2 h-3.5 w-3.5 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/45")} />
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/15 text-[15px] font-extrabold ring-1 ring-white/20">{lead.charAt(0).toUpperCase()}</span>
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-extrabold leading-[1.15]" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(", ") || b.child || "—"}</div>
+                    <div className="text-[13.5px] font-extrabold leading-[1.15]" style={{ fontFamily: "var(--ff-display)" }}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
                     <div className="truncate text-[10px] text-white/70">Ref {b.ref}{b.createdAt ? ` · ${prettyBookedOn(b)}` : ""}</div>
                   </div>
                 </div>
 
-                {/* Detail columns — compact, full names, sessions spelled out */}
-                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-5 gap-y-1 px-4 py-1.5 hover:bg-[var(--panel)]">
-                  <Col label="🎟 Listing" grow><span className="text-[12.5px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
-                  {seasonNameOf(b.listingId) && <Col label="📅 Season"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span></Col>}
-                  <Col label="📆 Dates"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
-                  <Col label="Status"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
-                  <Col label="Payment"><span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
+                {/* Detail columns — fixed widths so every row lines up */}
+                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer items-center gap-4 overflow-hidden px-4 py-1.5 hover:bg-[var(--panel)]">
+                  <Col label="🎟 Listing" w="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-extrabold text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
+                  <Col label="📅 Season" w="w-[124px]">{seasonNameOf(b.listingId) ? <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>}</Col>
+                  <Col label="📆 Dates" w="w-[158px]"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
+                  <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: statusTone(b.status).bg, color: statusTone(b.status).fg }}>{b.status}</span></Col>
+                  <Col label="Payment" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
 
                   {b.pay === "Awaiting voucher payment" && !off && (
                     <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
