@@ -1076,6 +1076,17 @@ my.post("/bookings/:ref/amend", async (req, res) => {
   }
   const onBooking = new Set(booking.days ?? []);
   for (const k of booking.kids ?? []) for (const d of k.dates ?? []) onBooking.add(d);
+  // Some bookings carry no ISO days/kids dates — only session display strings
+  // ("Mon 27 Jul 2026 · 09:00 – 15:30"). Recover the ISO dates from those so a
+  // move's "from" is recognised as being on the booking (mirrors the client).
+  if (!onBooking.size) {
+    for (const s of booking.sessions ?? []) {
+      const mm = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+      if (!mm) continue;
+      const d = new Date(`${mm[1]} ${mm[2]} ${mm[3]}`);
+      if (!Number.isNaN(d.getTime())) onBooking.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+  }
   for (const mv of moves) {
     if (mv.from && !onBooking.has(mv.from)) {
       res.status(400).json({ error: `${prettyDay(mv.from)} isn't on this booking` });
