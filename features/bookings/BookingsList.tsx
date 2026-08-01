@@ -29,24 +29,24 @@ import { HowItWorks } from "@/components/HowItWorks";
 // Status → identity-panel gradient. Same hue family as the status pill, but a
 // brighter, friendlier version (with a text shadow so white stays legible).
 const HERO_GRAD: Record<string, string> = {
-  "Confirmed": "linear-gradient(140deg,#37cf83,#13a35f)",        // fresh green (matches green pill)
-  "Approval needed": "linear-gradient(140deg,#ffc25a,#e88f1f)",  // sunny amber
-  "Waitlisted": "linear-gradient(140deg,#63b0f2,#2278c0)",       // sky blue (matches blue pill)
-  "Offered": "linear-gradient(140deg,#63b0f2,#2278c0)",
-  "Cancelled": "linear-gradient(140deg,#ff9a9a,#e05555)",        // soft coral (matches red pill)
-  "Declined": "linear-gradient(140deg,#ff9a9a,#e05555)",
+  "Confirmed": "linear-gradient(140deg,#3d7fe6,#1749a8)",        // deep blue (matches blue pill)
+  "Approval needed": "linear-gradient(140deg,#f2a231,#cf7208)",  // deep amber
+  "Waitlisted": "linear-gradient(140deg,#25ad68,#0b8446)",       // deep green (matches green pill)
+  "Offered": "linear-gradient(140deg,#25ad68,#0b8446)",
+  "Cancelled": "linear-gradient(140deg,#ee6d6d,#c93030)",        // deep coral (matches red pill)
+  "Declined": "linear-gradient(140deg,#ee6d6d,#c93030)",
 };
-const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#7fa8ff,#3f66d8)";
-// The Status pill wears the SAME colour as the hero, so green hero ⇢ green pill.
+const heroGrad = (s: string) => HERO_GRAD[s] || "linear-gradient(140deg,#4f78e0,#2140a0)";
+// The Status pill wears the SAME colour as the hero, so blue hero ⇢ blue pill.
 const HERO_TONE: Record<string, { bg: string; fg: string }> = {
-  "Confirmed": { bg: "#e2f7ec", fg: "#12995a" },
-  "Approval needed": { bg: "#fdefd6", fg: "#c9791a" },
-  "Waitlisted": { bg: "#e6f1fd", fg: "#1f78c0" },
-  "Offered": { bg: "#e6f1fd", fg: "#1f78c0" },
-  "Cancelled": { bg: "#fde8e8", fg: "#d94a4a" },
-  "Declined": { bg: "#fde8e8", fg: "#d94a4a" },
+  "Confirmed": { bg: "#e1eafb", fg: "#1749a8" },
+  "Approval needed": { bg: "#fbe6c6", fg: "#a85f08" },
+  "Waitlisted": { bg: "#dbf2e6", fg: "#0b8446" },
+  "Offered": { bg: "#dbf2e6", fg: "#0b8446" },
+  "Cancelled": { bg: "#fbdede", fg: "#c53030" },
+  "Declined": { bg: "#fbdede", fg: "#c53030" },
 };
-const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e9eefc", fg: "#3f66d8" };
+const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0" };
 
 // A fixed-width labelled column, so every row's cells line up down the page.
 function Col({ label, w, children }: { label: string; w: string; children: React.ReactNode }) {
