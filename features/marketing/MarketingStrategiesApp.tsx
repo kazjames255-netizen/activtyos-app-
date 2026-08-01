@@ -24,7 +24,7 @@ const CATS: [Cat | "all", string, string][] = [
 
 interface Play {
   id: string; icon: string; title: string; goal: string; grad: string; cats: Cat[];
-  effort: "Low" | "Medium"; impact: "Medium" | "High"; channel: string;
+  effort: "Low" | "Medium"; impact: "Medium" | "High"; channel: string; audience?: string;
   steps: string[]; cta: { label: string; view: string }; secondary?: { label: string; view: string };
 }
 const PLAYS: Play[] = [
@@ -42,13 +42,13 @@ const PLAYS: Play[] = [
   },
   {
     id: "siblings", icon: "👨‍👩‍👧", title: "Sibling & group offer", goal: "Win the whole family — no code needed.", grad: GRAD.violet, cats: ["fill", "revenue"],
-    effort: "Low", impact: "Medium", channel: "Automatic discount",
+    effort: "Low", impact: "Medium", channel: "Automatic discount", audience: "Multi-child families",
     steps: ["Turn on an automatic multi-person discount", "Set £ or % off from the 2nd child", "Choose which listings it applies to", "Siblings get it automatically at checkout"],
     cta: { label: "Set up auto discount", view: "marketing" },
   },
   {
     id: "winback", icon: "🔁", title: "Win back lapsed families", goal: "Bring back families who’ve gone quiet.", grad: GRAD.pink, cats: ["retain"],
-    effort: "Medium", impact: "High", channel: "Groups + Email",
+    effort: "Medium", impact: "High", channel: "Groups + Email", audience: "Lapsed families",
     steps: ["Find families who haven’t booked in 60+ days", "Save them together as a parent group", "Reserve a welcome-back code for that group", "Follow up with a friendly email"],
     cta: { label: "Build the group", view: "marketing" }, secondary: { label: "Email them", view: "email" },
   },
@@ -72,9 +72,27 @@ const PLAYS: Play[] = [
   },
   {
     id: "loyalty", icon: "🏅", title: "Reward loyal families", goal: "Keep your best customers coming back.", grad: GRAD.teal, cats: ["retain", "revenue"],
-    effort: "Medium", impact: "Medium", channel: "Groups + Email",
+    effort: "Medium", impact: "Medium", channel: "Groups + Email", audience: "Repeat families",
     steps: ["Spot repeat bookers (Dashboard → repeat customers)", "Reserve a thank-you code for them as a group", "Send a personal note with it", "Invite them to book next season first"],
     cta: { label: "Reserve a code", view: "marketing" }, secondary: { label: "Say thanks", view: "email" },
+  },
+  {
+    id: "enquiries", icon: "📩", title: "Chase your enquiries", goal: "Turn interested-but-never-booked into first bookings.", grad: GRAD.violet, cats: ["grow", "fill"],
+    effort: "Low", impact: "High", channel: "Email", audience: "Enquiries",
+    steps: ["Open the Enquiries audience — people who asked but never booked", "Send a warm nudge with a first-timer code", "Point them at a session that still has space", "They drop off this list automatically once they book"],
+    cta: { label: "Email enquiries", view: "email" }, secondary: { label: "Make a welcome code", view: "marketing" },
+  },
+  {
+    id: "welcome-new", icon: "👋", title: "Welcome new families", goal: "Turn a first booking into a second.", grad: GRAD.green, cats: ["retain", "revenue"],
+    effort: "Low", impact: "Medium", channel: "Email", audience: "New this season",
+    steps: ["Open the New-this-season audience", "Send a friendly welcome and what to expect", "Suggest the next block or a sibling place", "Ask for a review after their first session"],
+    cta: { label: "Email new families", view: "email" },
+  },
+  {
+    id: "next-block", icon: "⏭️", title: "Sell the next block", goal: "Re-book families before their sessions end.", grad: GRAD.blue, cats: ["revenue", "retain", "fill"],
+    effort: "Low", impact: "High", channel: "Email", audience: "Ending soon",
+    steps: ["Open the Ending-soon audience — a session in the next couple of weeks", "Email them the next block is open", "Offer a returning-family perk", "Make re-booking one tap"],
+    cta: { label: "Email them", view: "email" }, secondary: { label: "Create a perk code", view: "marketing" },
   },
 ];
 
@@ -84,9 +102,9 @@ const PLAY_BY_ID: Record<string, Play> = Object.fromEntries(PLAYS.map((p) => [p.
 interface Week { theme: string; focus: string; why: string; playIds: string[]; grad: string }
 const CAMPAIGN: Week[] = [
   { theme: "Launch & get seen", focus: "Awareness", grad: GRAD.blue, why: "Open loud: put the new season in front of everyone and reward the fastest bookers.", playIds: ["announce", "earlybird"] },
-  { theme: "Spread the word", focus: "Growth", grad: GRAD.green, why: "While the early-bird buzz is live, turn happy families into referrers.", playIds: ["referral"] },
-  { theme: "Grow the basket", focus: "Value", grad: GRAD.violet, why: "Nudge families to book more than one child or session while intent is high.", playIds: ["siblings"] },
-  { theme: "Mid-run push", focus: "Fill spaces", grad: GRAD.teal, why: "Half-way check: target the sessions that are lagging before they run.", playIds: ["fill-session"] },
+  { theme: "Spread the word", focus: "Growth", grad: GRAD.green, why: "While the early-bird buzz is live, grow reach — referrals plus a nudge to everyone who enquired but never booked.", playIds: ["referral", "enquiries"] },
+  { theme: "Grow the basket", focus: "Value", grad: GRAD.violet, why: "Nudge families to book more than one child, and warmly welcome your first-timers.", playIds: ["siblings", "welcome-new"] },
+  { theme: "Mid-run push", focus: "Fill spaces", grad: GRAD.teal, why: "Half-way check: target lagging sessions and re-book anyone whose place is ending soon.", playIds: ["fill-session", "next-block"] },
   { theme: "Re-engage quiet families", focus: "Retention", grad: GRAD.pink, why: "Reach the families who’ve gone quiet with a warm welcome-back.", playIds: ["winback"] },
   { theme: "Close strong", focus: "Convert & keep", grad: GRAD.amber, why: "Mop up the keen ones on the waitlist and thank your loyal regulars.", playIds: ["waitlist", "loyalty"] },
 ];
@@ -229,6 +247,7 @@ export function MarketingStrategiesApp() {
             </div>
             <div className="flex flex-1 flex-col p-4">
               <div className="mb-3 flex flex-wrap gap-1.5">
+                {p.audience && <Chip label={`👪 ${p.audience}`} tone="#c81e77" />}
                 <Chip label={`Effort: ${p.effort}`} tone={p.effort === "Low" ? "#0f7a43" : "#a85f08"} />
                 <Chip label={`Impact: ${p.impact}`} tone={p.impact === "High" ? "#1d3a8f" : "#4a4763"} />
                 <Chip label={p.channel} tone="#5b3fd8" />
