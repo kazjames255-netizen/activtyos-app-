@@ -680,7 +680,7 @@ function ListingsTab({
       categoryIds: dr?.categoryIds ?? [],
       cap, spaces, left, booked,
       pct: cap && cap > 0 ? booked / cap : 0,
-      from: l.passes.length ? Math.min(...l.passes.map((p) => p.price)) : Infinity,
+      from: l.passes?.length ? Math.min(...l.passes.map((p) => p.price)) : Infinity,
       start: info?.from || "",
       end: info?.to || "",
       isLive: info ? info.live : true,
@@ -849,7 +849,7 @@ function ListingsTab({
 
                   {/* passes */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    {l.passes.length ? (
+                    {l.passes?.length ? (
                       <>
                         {l.passes.slice(0, 3).map((t, i) => (
                           <span key={i} className="inline-flex items-baseline gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1">
