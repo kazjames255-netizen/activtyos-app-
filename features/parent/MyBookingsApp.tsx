@@ -506,7 +506,12 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const [refundTo, setRefundTo] = useState<"card" | "wallet">("card");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const days = booking.days ?? [];
+  // Multi-child bookings keep dates per child (kids[].dates), not on booking.days
+  // — union them so the per-date "Your dates" layout shows for those too, rather
+  // than dropping to the single preferred-date fallback.
+  const days = booking.days && booking.days.length
+    ? booking.days
+    : [...new Set((booking.kids ?? []).flatMap((k) => k.dates ?? []))].sort();
 
   useEffect(() => {
     if (!booking.tenantId) return;
