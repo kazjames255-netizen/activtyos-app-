@@ -8,6 +8,7 @@ import { stripe, toPence } from "../lib/stripe";
 import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
 import { creditWallet } from "../lib/wallet";
+import { notify } from "../lib/notify";
 import {
   blockCountDelta,
   bookingDays,
@@ -442,15 +443,42 @@ bookings.post("/:ref/actions", async (req, res) => {
           if (b.dateChangeRequest) {
             const req = b.dateChangeRequest;
             const idxs = action.approveIndexes ?? req.moves.map((_, i) => i);
+            // Recover the ISO date from a session label ("Mon 27 Jul 2026 · …").
+            const isoOfLabel = (s: string): string | null => {
+              const mm = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+              if (!mm) return null;
+              const d = new Date(`${mm[1]} ${mm[2]} ${mm[3]}`);
+              return Number.isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            };
+            const labelOfIso = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
             req.moves.forEach((m, i) => {
               const ok = idxs.includes(i);
               m.approved = ok;
               if (ok && m.from && m.to) {
                 const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
                 if (kid?.dates?.length) kid.dates = kid.dates.map((d) => (d === m.from ? m.to! : d));
-                else if (b.days) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
+                else if (b.days?.length) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
+                // Bookings whose dates live only in `sessions` strings — move the
+                // matching label, keeping its time suffix, so the change shows.
+                if (b.sessions?.length) {
+                  b.sessions = b.sessions.map((s) => {
+                    if (isoOfLabel(s) !== m.from) return s;
+                    const suffix = s.includes(" · ") ? s.slice(s.indexOf(" · ")) : "";
+                    return `${labelOfIso(m.to!)}${suffix}`;
+                  }).sort((a, c) => ((isoOfLabel(a) ?? a) < (isoOfLabel(c) ?? c) ? -1 : 1));
+                }
               }
             });
+            // Refresh the headline date range from whatever dates it now holds.
+            const allIso = [...new Set([
+              ...(b.days ?? []),
+              ...((b.kids ?? []).flatMap((k) => k.dates ?? [])),
+              ...((b.sessions ?? []).map(isoOfLabel).filter(Boolean) as string[]),
+            ])].sort();
+            if (allIso.length) {
+              const fmt = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+              b.dates = allIso.length === 1 ? fmt(allIso[0]) : `${fmt(allIso[0])} – ${fmt(allIso[allIso.length - 1])}`;
+            }
             req.status = "approved";
             req.resolvedAt = new Date().toISOString();
             if (action.reason) req.reason = action.reason;
@@ -547,6 +575,32 @@ bookings.post("/:ref/actions", async (req, res) => {
     // become usable again once nothing in the basket is standing). Safe to
     // repeat — the redemption record is gone after the first release.
     if (updated.status === "Cancelled") void releaseDiscountCodes(scope.tenantId!, updated.ref);
+    // Tell the family the outcome of their date-change request (bell + email).
+    if ((action.type === "move-approve" || action.type === "move-deny") && updated.email?.includes("@")) {
+      const req = updated.dateChangeRequest;
+      const okMoves = (req?.moves ?? []).filter((m) => m.approved && m.to);
+      const declined = action.type === "move-deny" || (req?.moves ?? []).some((m) => m.approved === false);
+      const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      const moved = okMoves.map((m) => fmtDay(m.to!)).join(", ");
+      void notify({
+        tenantId: scope.tenantId!,
+        to: { kind: "parent", email: updated.email },
+        category: "booking",
+        title:
+          action.type === "move-deny"
+            ? `Your date change for ${updated.ref} wasn't approved`
+            : declined
+              ? `Some of your dates for ${updated.ref} were moved`
+              : `Your dates for ${updated.ref} have been moved ✓`,
+        body:
+          action.type === "move-deny"
+            ? `${updated.listing}: your provider couldn't make the change.${req?.reason ? ` Reason: ${req.reason}` : ""}`
+            : `${updated.listing}: you're now booked on ${moved || "the new date(s)"}.${req?.reason && declined ? ` Note: ${req.reason}` : ""}`,
+        subject: `${updated.ref}: date change ${action.type === "move-deny" ? "declined" : "approved"}`,
+        href: "/custdash/bookings",
+        ref: updated.ref,
+      });
+    }
     if (action.type === "promote" && updated.blockId) {
       const waiting = await waitingCount(updated.blockId, updated.days ?? []);
       res.json({ ...updated, ...(waiting ? { waiting } : {}) });
