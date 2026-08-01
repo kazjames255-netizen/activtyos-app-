@@ -166,8 +166,8 @@ function Donut({ segments, center, sub, size = 116 }: { segments: { label: strin
         {segments.map((s) => (
           <div key={s.label} className="flex items-center gap-2 text-[11.5px]">
             <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 truncate font-semibold">{s.label}</span>
-            <span className="tabular-nums font-bold text-[var(--ink-3)]">{s.value}</span>
+            <span className="min-w-0 flex-1 font-semibold leading-tight">{s.label}</span>
+            <span className="flex-none tabular-nums font-bold text-[var(--ink-3)]">{s.value}</span>
           </div>
         ))}
       </div>
@@ -217,11 +217,19 @@ function Breakdown({ entries }: { entries: { label: string; value: number; sub: 
   const max = Math.max(1, ...entries.map((e) => e.value));
   if (!entries.length) return <Empty>Nothing yet.</Empty>;
   return (
-    <div className="flex flex-col gap-2.5">
-      {entries.map((e) => (
+    <div className="flex flex-col gap-3">
+      {entries.map((e, i) => (
         <div key={e.label}>
-          <div className="mb-1 flex items-center justify-between text-[12px]"><span className="min-w-0 flex-1 truncate pr-2 font-semibold">{e.label}</span><span className="whitespace-nowrap text-[var(--ink-3)]">{e.sub}</span></div>
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(e.value / max) * 100}%`, background: e.color }} /></div>
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
+              <span className="truncate font-semibold">{e.label}</span>
+            </span>
+            <span className="whitespace-nowrap font-extrabold tabular-nums">{e.sub}</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-[var(--panel)]">
+            <div className="h-full rounded-full" style={{ width: `${(e.value / max) * 100}%`, background: `linear-gradient(90deg,${e.color},${e.color}aa)`, boxShadow: `0 4px 12px -6px ${e.color}` }} />
+          </div>
         </div>
       ))}
     </div>
@@ -595,8 +603,8 @@ export function DashboardApp() {
             </Panel>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Panel title="📊 Bookings & payments">
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <Panel title="📊 Bookings & payments" className="lg:col-span-2">
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">By status</div>
