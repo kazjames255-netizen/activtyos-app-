@@ -29,6 +29,8 @@ export function PlatformEngagementApp() {
   const val = (r: Row) => (metric === "visits" ? r.views : r.avgSeconds);
   const maxVal = d ? Math.max(1, ...d.rows.map(val)) : 1;
   const rows = d ? [...d.rows].sort((a, b) => (order === "high" ? val(b) - val(a) : val(a) - val(b))) : [];
+  // Total time providers spent on the platform, to show each page's share.
+  const totalSecs = d ? d.rows.reduce((s, r) => s + (r.totalSeconds || 0), 0) : 0;
 
   return (
     <div className="text-[var(--ink)]">
@@ -93,6 +95,11 @@ export function PlatformEngagementApp() {
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(val(r) / maxVal) * 100}%`, background: `linear-gradient(90deg,${BLUE},#3f78d8)` }} /></div>
                     <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[var(--ink-3)]">
                       <span>{metric === "visits" ? `${dur(r.avgSeconds)} avg time` : `${r.views.toLocaleString("en-GB")} visits`}</span>
+                      {totalSecs > 0 && (
+                        <span className="rounded-full bg-[#eef2fb] px-1.5 py-0.5 font-bold text-[#1d3a8f]" title="Share of all time providers spent on the platform">
+                          {Math.round((r.totalSeconds / totalSecs) * 100)}% of platform time
+                        </span>
+                      )}
                       {r.deltaPct != null && (
                         <span className="font-bold" style={{ color: up ? "#0f7a43" : down ? "#c02636" : "var(--ink-3)" }}>
                           {up ? "▲" : down ? "▼" : "•"} {Math.abs(Math.round(r.deltaPct * 100))}% vs prev 3 mo
