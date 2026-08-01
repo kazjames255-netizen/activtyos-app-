@@ -51,7 +51,7 @@ import { CouponsApp } from "@/features/parent/CouponsApp";
 import { ReferApp } from "@/features/parent/ReferApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { MyBookingsApp } from "@/features/parent/MyBookingsApp";
-import { ScheduleApp } from "@/features/parent/ScheduleApp";
+import { MyActivitiesApp } from "@/features/parent/MyActivitiesApp";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
 import { PlatformAnalyticsApp } from "@/features/platform/PlatformAnalyticsApp";
 import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp";
@@ -294,7 +294,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     bookings: MyBookingsApp,
     children: ChildrenApp,
     moments: ParentMomentsApp,
-    schedule: ScheduleApp,
+    schedule: MyActivitiesApp,
     newsfeed: ParentNewsfeedApp,
     messages: () => <MessagesApp mode="parent" />,
     activityos: SupportApp,
