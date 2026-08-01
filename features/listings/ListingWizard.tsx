@@ -1103,7 +1103,7 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
 
 function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-[640px]">
+    <div className="mx-auto max-w-[900px]">
       <StepHead n={n} kicker={kicker} title={title} lede={lede} />
       <RichCard icon="🎒" title={title} subtitle="Tick everything included — saved for every listing">
         <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
@@ -1274,8 +1274,8 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
   return (
     <div className="max-w-[1120px]">
       <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
-      <div className="grid items-start gap-4 md:grid-cols-2">
-      <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & on-the-day contact">
+      <div className="grid items-start gap-4 md:grid-cols-3">
+      <RichCard icon="📍" title="Where & when" subtitle="Venue, ages, season & contact">
       <div className="mb-3 flex gap-3">
         <div className="w-[110px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={d.ageFrom} onChange={(e) => upd({ ageFrom: e.target.value })} className="w-full" /></div>
         <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
@@ -1302,9 +1302,8 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
       <div className="mb-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">Shown to parents on the listing <b>only while the camp is running</b> — a number to reach staff during session days. Hidden before it starts and after it ends.</div>
 
       </RichCard>
-      <RichCard icon="🏷️" title="Categories & capacity" subtitle="What it is, and how many can come" tint="teal">
-      <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
-      <div className="mb-1 text-[11.5px] font-bold text-[#16306e]">Categories</div>
+      <RichCard icon="🏷️" title="Categories" subtitle="What describes this listing" tint="teal">
+      <div>
       <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {local.categories.map((c) => (
@@ -1344,7 +1343,10 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         </div>
       )}
 
-      <SectionHead icon="👧👦">Capacity</SectionHead>
+      </div>
+      </RichCard>
+      <RichCard icon="👧👦" title="Capacity" subtitle="Places & spaces" tint="violet">
+      <div>
       <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
       <div className="my-2 flex flex-wrap items-end gap-2">
         <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
@@ -1692,10 +1694,10 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
   const setBookRule = (name: string, rule: BookRule) => upd({ bookRules: { ...(d.bookRules ?? {}), [name]: rule } });
   const multiDay = tickets.filter((t) => t.days > 1);
   return (
-    <div className="mx-auto max-w-[880px]">
+    <div className="mx-auto max-w-[1120px]">
       <StepHead n={6} kicker="STEP 6 · TICKETS & PRICING" title="Tickets & pricing" lede="Pick a block you built in the Blocks area — its passes & prices become this listing's tickets." />
       <RichCard icon="🎟️" title="Choose a block" subtitle="Its passes & prices become this listing's tickets">
-        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+        <div>
       {blocks.loading ? (
         <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">Loading your blocks…</Card>
       ) : blocks.error ? (
@@ -1868,10 +1870,10 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   const kindOf = (k: DiscountKind) => DISCOUNT_KINDS.find((x) => x.kind === k)!;
 
   return (
-    <div className="mx-auto max-w-[820px]">
+    <div className="mx-auto max-w-[1120px]">
       <StepHead n={7} kicker="STEP 7 · DISCOUNTS" title="Automatic discounts" lede="Rules that come off the price by themselves at checkout — no codes for parents to remember." />
       <RichCard icon="🏷️" title="Discount rules" subtitle="Come off the price automatically at checkout — no codes to remember" tint="violet">
-        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+        <div>
 
       {/* Create / edit panel */}
       <Card className="mb-4 overflow-hidden p-0">
@@ -2157,10 +2159,10 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
     clear();
   };
   return (
-    <div className="mx-auto max-w-[840px]">
+    <div className="mx-auto max-w-[1120px]">
       <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
       <RichCard icon="🧩" title="Add-ons" subtitle="Per-day, whole-block or one-off extras — reusable on any listing" tint="teal">
-        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+        <div>
       <HeadingFields d={d} upd={upd} sectionKey="addons" />
       {local.addons.length > 0 && (
         <div className="mb-3 flex flex-col gap-1.5">
@@ -2259,7 +2261,7 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
       <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
-        <div className="max-h-[calc(100vh-330px)] overflow-y-auto pr-1">
+        <div>
       <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 grid items-start gap-2 md:grid-cols-2">
         {local.staff.map((m) => {
@@ -2343,10 +2345,10 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
   // separately is how they came to disagree.
   const ownPolicies = wizSettings.cancellationPolicies;
   return (
-    <div className="mx-auto max-w-[840px]">
+    <div className="mx-auto max-w-[1120px]">
       <StepHead n={11} kicker="STEP 11 · POLICY & PUBLISH" title="Set clear expectations & publish" lede="Booking style, who can see it, cancellation policy — then publish." />
       <RichCard icon="📋" title="Policy & publish" subtitle="Booking style, visibility & cancellation — then hit Publish">
-        <div className="max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+        <div>
       <SectionHead icon="👁️">Who can see it</SectionHead>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {vis.map(([k, label, desc]) => (
