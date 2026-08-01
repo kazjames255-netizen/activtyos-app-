@@ -767,12 +767,12 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, clash, listingInfo, venue }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null } }) {
-  const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay));
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null } }) {
+  const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay || autoOpen));
   const [cancelling, setCancelling] = useState(!!autoCancel);
   const [withdrawing, setWithdrawing] = useState(false);
   const [amending, setAmending] = useState(!!autoAmend);
-  useEffect(() => { if (autoAmend || autoCancel) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, autoCancel, b.ref]);
+  useEffect(() => { if (autoAmend || autoCancel || autoOpen) document.getElementById(`booking-${b.ref}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [autoAmend, autoCancel, autoOpen, b.ref]);
   // The payment-link email lands on ?pay=REF — open that card's payment.
   const [paying, setPaying] = useState(!!autoPay);
   const [offerBusy, setOfferBusy] = useState(false);
@@ -1187,6 +1187,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const payRef = params.get("pay");
   const amendRef = params.get("amend");
   const cancelRef = params.get("cancel");
+  const openRef = params.get("open"); // deep-link from a notification — just open the card
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
@@ -1373,7 +1374,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={venueOf(b)} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} autoOpen={b.ref === openRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={venueOf(b)} />
                     ))}
                   </div>
                 )}

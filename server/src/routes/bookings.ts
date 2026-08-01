@@ -598,16 +598,17 @@ bookings.post("/:ref/actions", async (req, res) => {
         category: "booking",
         title:
           action.type === "move-deny"
-            ? `Your date change for ${updated.ref} wasn't approved`
+            ? `Date change declined · ${updated.ref}`
             : declined
-              ? `Some of your dates for ${updated.ref} were moved`
-              : `Your dates for ${updated.ref} have been moved ✓`,
+              ? `Date change part-approved · ${updated.ref}`
+              : `Date change approved · ${updated.ref}`,
         body:
           action.type === "move-deny"
             ? `${updated.listing}: your provider couldn't make the change.${req?.reason ? ` Reason: ${req.reason}` : ""}`
             : `${updated.listing}: you're now booked on ${moved || "the new date(s)"}.${req?.reason && declined ? ` Note: ${req.reason}` : ""}`,
         subject: `${updated.ref}: date change ${action.type === "move-deny" ? "declined" : "approved"}`,
-        href: "/custdash/bookings",
+        // Open the exact booking card so the family sees the change straight away.
+        href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,
       });
     }
