@@ -474,6 +474,23 @@ const fmtIso = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
+// Recover an ISO date from a session display string like
+// "Mon 27 Jul 2026 · 09:00 – 15:30" → "2026-07-27". Some bookings only carry
+// these strings (no ISO `days`), so the amend flow parses them as a fallback.
+const isoFromSession = (s: string): string | null => {
+  const m = s.match(/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+  if (!m) return null;
+  const d = new Date(`${m[1]} ${m[2]} ${m[3]}`);
+  return Number.isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+// Every ISO date a booking actually occupies, from whichever field holds it:
+// booking.days, then per-child kids[].dates, then parsed from session strings.
+const bookingDays = (b: Booking): string[] => {
+  if (b.days && b.days.length) return b.days;
+  const kidDays = [...new Set((b.kids ?? []).flatMap((k) => k.dates ?? []))];
+  if (kidDays.length) return kidDays.sort();
+  return [...new Set((b.sessions ?? []).map(isoFromSession).filter(Boolean) as string[])].sort();
+};
 
 // Parent-facing "move my dates" flow. Presents the provider's rules (fetched
 // from the public settings) and either changes the dates or sends a request,
@@ -506,12 +523,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   const [refundTo, setRefundTo] = useState<"card" | "wallet">("card");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Multi-child bookings keep dates per child (kids[].dates), not on booking.days
-  // — union them so the per-date "Your dates" layout shows for those too, rather
-  // than dropping to the single preferred-date fallback.
-  const days = booking.days && booking.days.length
-    ? booking.days
-    : [...new Set((booking.kids ?? []).flatMap((k) => k.dates ?? []))].sort();
+  // Every ISO date the booking occupies (booking.days, per-child dates, or
+  // parsed from session strings) — so the per-date "Your dates" layout shows
+  // instead of the single preferred-date fallback whenever dates exist.
+  const days = bookingDays(booking);
 
   useEffect(() => {
     if (!booking.tenantId) return;
