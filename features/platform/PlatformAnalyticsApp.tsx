@@ -113,21 +113,17 @@ export function PlatformAnalyticsApp() {
 
       {/* KPI tiles */}
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <div className="absolute left-0 top-0 h-full w-1" style={{ background: BLUE }} />
-          <div className="pl-1.5">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Monthly recurring</div>
-            <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{money(mode === "paying" ? s.mrrPaying : s.mrr)}</span><span className="text-[10.5px] text-[var(--ink-3)]">{mode === "paying" ? "paying only" : "incl. trials"}</span></div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
-              <span className="font-bold text-[#0f7a43]">{money(s.mrrPaying)}<span className="font-normal text-[var(--ink-3)]"> paying</span></span>
-              <span className="font-bold text-[#1d3a8f]">{money(s.mrrTrial)}<span className="font-normal text-[var(--ink-3)]"> on trial</span></span>
-            </div>
-            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{money(mode === "paying" ? s.arrPaying : s.arr)}/yr {mode === "paying" ? "paying" : "incl. trials"}</div>
+        <Tile label="Monthly recurring" icon="💷" grad={GRAD.blue}
+          value={money(mode === "paying" ? s.mrrPaying : s.mrr)}
+          sub={`${money(mode === "paying" ? s.arrPaying : s.arr)}/yr · ${mode === "paying" ? "paying only" : "incl. trials"}`}>
+          <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
+            <span className="font-bold text-white">{money(s.mrrPaying)}<span className="font-normal text-white/70"> paying</span></span>
+            <span className="font-bold text-white">{money(s.mrrTrial)}<span className="font-normal text-white/70"> on trial</span></span>
           </div>
-        </div>
+        </Tile>
         <ActiveTile value={s.active + s.canceling} sub={`${s.trialing} on trial · ${s.totalProviders} total`} series={d.activeByMonth.slice(-6)} />
-        <Kpi label="Avg. time with us" value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} accent="#0f7a43" />
-        <Kpi label="Trial → paid" value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} accent={GOLD} />
+        <Tile label="Avg. time with us" icon="⏳" grad={GRAD.green} value={tenure(s.avgTenureDays)} sub={`${s.newThisMonth} joined this month`} />
+        <Tile label="Trial → paid" icon="🎯" grad={GRAD.amber} value={pct(s.trialConversion)} sub={`Churn ${pct(s.churnRate)}`} aside={<Ring pct={s.trialConversion * 100} label={pct(s.trialConversion)} />} />
       </div>
 
       {/* Trend period — controls the charts below, not the KPI cards above. */}
@@ -165,7 +161,13 @@ export function PlatformAnalyticsApp() {
           <Breakdown entries={Object.entries(d.byPlan).map(([k, v]) => ({ label: k, value: v.mrr, sub: `${v.count} · ${money(v.mrr)}/mo`, color: PLAN_C[k] ?? BLUE }))} />
         </Card>
         <Card title="Providers by status">
-          <Breakdown entries={Object.entries(d.byStatus).map(([k, v]) => ({ label: k, value: v, sub: String(v), color: STATUS_C[k] ?? "#8a86a3" }))} />
+          {Object.values(d.byStatus).some((v) => v > 0)
+            ? <Donut
+                segments={Object.entries(d.byStatus).map(([k, v]) => ({ label: k, value: v, color: STATUS_C[k] ?? "#8a86a3" }))}
+                center={String(Object.values(d.byStatus).reduce((s2, v) => s2 + v, 0))}
+                sub="providers"
+              />
+            : <Empty>No providers yet.</Empty>}
         </Card>
         <Card title="How they heard about us">
           {Object.keys(d.attribution).length
@@ -226,14 +228,77 @@ function NewestProviders({ items, nowMs }: { items: RecentProv[]; nowMs: number 
 }
 
 // ── Pieces ────────────────────────────────────────────────────────────────
-function Kpi({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
+// Rich, colourful KPI tile — a dark gradient with white figures (shared look with the freelancer Dashboard).
+const GRAD = {
+  blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
+  teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
+  green: "linear-gradient(135deg,#0b6b3a 0%,#2fb56f 100%)",
+  pink: "linear-gradient(135deg,#9c1458 0%,#ee1f63 100%)",
+  amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
+  violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
+} as const;
+function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="absolute left-0 top-0 h-full w-1" style={{ background: accent }} />
-      <div className="pl-1.5">
-        <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
-        <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
+    <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
+      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
+            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
+            <span className="truncate">{label}</span>
+          </div>
+          <div className="mt-1.5 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
+          {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
+        </div>
+        {aside && <div className="flex-none">{aside}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+// A single-percentage ring gauge — white on a coloured KPI tile.
+function Ring({ pct: p, size = 60, label }: { pct: number; size?: number; label: string }) {
+  const sw = 7, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
+  const dash = c * Math.min(1, Math.max(0, p / 100));
+  return (
+    <div className="relative flex-none" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.22)" strokeWidth={sw} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#fff" strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${dash.toFixed(1)} ${c.toFixed(1)}`} />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-[12.5px] font-extrabold tabular-nums">{label}</div>
+    </div>
+  );
+}
+// A multi-segment doughnut with a centre figure + side legend, on a light card.
+function Donut({ segments, center, sub, valueFmt = (n) => String(n), size = 116 }: { segments: { label: string; value: number; color: string }[]; center: string; sub?: string; valueFmt?: (n: number) => string; size?: number }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const sw = 15, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
+  const shown = segments.filter((s) => s.value > 0);
+  const lens = shown.map((s) => c * (s.value / total));
+  const offsets = lens.map((_, i) => lens.slice(0, i).reduce((sum, l) => sum + l, 0));
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative flex-none" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--panel)" strokeWidth={sw} />
+          {shown.map((s, i) => (
+            <circle key={s.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${lens[i].toFixed(1)} ${(c - lens[i]).toFixed(1)}`} strokeDashoffset={(-offsets[i]).toFixed(1)} />
+          ))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-[19px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{center}</div>
+          {sub && <div className="mt-0.5 text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{sub}</div>}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {segments.map((s) => (
+          <div key={s.label} className="flex items-center gap-2 text-[11.5px]">
+            <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 font-semibold capitalize leading-tight">{s.label}</span>
+            <span className="flex-none tabular-nums font-bold text-[var(--ink-3)]">{valueFmt(s.value)}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -242,22 +307,17 @@ function Kpi({ label, value, sub, accent }: { label: string; value: string; sub:
 function ActiveTile({ value, sub, series }: { value: number; sub: string; series: { month: string; count: number }[] }) {
   const max = Math.max(1, ...series.map((x) => x.count));
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-      <div className="absolute left-0 top-0 h-full w-1" style={{ background: LIGHTB }} />
-      <div className="pl-1.5">
-        <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Active providers</div>
-        <div className="mt-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>
-        <div className="mt-2.5 flex items-end gap-1" style={{ height: 30 }}>
-          {series.map((x, i) => (
-            <div key={x.month} className="flex flex-1 items-end" style={{ height: "100%" }} title={`${monthLabel(x.month)}: ${x.count} live`}>
-              <div className="w-full rounded-t-[3px]" style={{ height: `${Math.max(8, (x.count / max) * 100)}%`, background: i === series.length - 1 ? BLUE : "#bcd0f2" }} />
-            </div>
-          ))}
-        </div>
-        <div className="mt-1 flex gap-1 text-[9px] font-semibold text-[var(--ink-3)]">{series.map((x) => <span key={x.month} className="flex-1 text-center">{monthLabel(x.month)}</span>)}</div>
+    <Tile label="Active providers" icon="👥" grad={GRAD.teal} value={String(value)} sub={sub}>
+      <div className="mt-2.5 flex items-end gap-1" style={{ height: 30 }}>
+        {series.map((x, i) => (
+          <div key={x.month} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${monthLabel(x.month)}: ${x.count} live`}>
+            <span className="mb-0.5 text-[8.5px] font-extrabold tabular-nums" style={{ opacity: i === series.length - 1 ? 1 : 0.75 }}>{x.count}</span>
+            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(8, (x.count / max) * 100)}%`, opacity: i === series.length - 1 ? 1 : 0.5 }} />
+          </div>
+        ))}
       </div>
-    </div>
+      <div className="mt-1 flex gap-1 text-[9px] font-semibold text-white/70">{series.map((x) => <span key={x.month} className="flex-1 text-center">{monthLabel(x.month)}</span>)}</div>
+    </Tile>
   );
 }
 function Card({ title, right, children, className = "" }: { title: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -411,11 +471,19 @@ function Breakdown({ entries }: { entries: { label: string; value: number; sub: 
   const max = Math.max(1, ...entries.map((e) => e.value));
   if (!entries.length) return <Empty>Nothing yet.</Empty>;
   return (
-    <div className="flex flex-col gap-2.5">
-      {entries.map((e) => (
+    <div className="flex flex-col gap-3">
+      {entries.map((e, i) => (
         <div key={e.label}>
-          <div className="mb-1 flex items-center justify-between text-[12px]"><span className="font-semibold capitalize">{e.label}</span><span className="text-[var(--ink-3)]">{e.sub}</span></div>
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${(e.value / max) * 100}%`, background: e.color }} /></div>
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
+              <span className="truncate font-semibold capitalize">{e.label}</span>
+            </span>
+            <span className="whitespace-nowrap font-extrabold tabular-nums text-[var(--ink-2)]">{e.sub}</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-[var(--panel)]">
+            <div className="h-full rounded-full" style={{ width: `${(e.value / max) * 100}%`, background: `linear-gradient(90deg,${e.color},${e.color}aa)`, boxShadow: `0 4px 12px -6px ${e.color}` }} />
+          </div>
         </div>
       ))}
     </div>
