@@ -59,6 +59,29 @@ function Tile({ label, value, sub, grad, children }: { label: string; value: str
     </div>
   );
 }
+// A clean white line sparkline on a coloured tile — money over recent weeks.
+function MiniLine({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
+  const max = Math.max(1, ...data);
+  const W = 320, H = 46, PAD = 6;
+  const n = Math.max(1, data.length);
+  const x = (i: number) => PAD + (i * (W - 2 * PAD)) / Math.max(1, n - 1);
+  const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
+  const path = data.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area = `${path} L${x(n - 1)},${H - PAD} L${x(0)},${H - PAD} Z`;
+  return (
+    <div className="mt-3">
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white/60">{caption}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 42 }} preserveAspectRatio="none">
+        <defs><linearGradient id="mlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".28" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
+        <path d={area} fill="url(#mlg)" />
+        <path d={path} fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <circle cx={x(n - 1)} cy={y(data[n - 1] ?? 0)} r={2.6} fill="#fff" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="mt-1 flex gap-1 text-[8.5px] font-semibold text-white/60">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+    </div>
+  );
+}
+
 // A white mini bar chart drawn on a coloured tile — the last few weeks at a glance.
 function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
   const max = Math.max(1, ...data);
@@ -216,6 +239,7 @@ export function DashboardApp() {
     const wkStarts: number[] = [];
     for (let i = 4; i >= 0; i--) wkStarts.push(wkMs(nowMs) - i * 7 * 86400000);
     const weekly = wkStarts.map(() => 0);
+    const weeklyIncome = wkStarts.map(() => 0);
 
     const income = keys.map((k) => ({ label: k, value: 0 }));
     const booked = keys.map((k) => ({ label: k, value: 0 }));
@@ -242,7 +266,7 @@ export function DashboardApp() {
       }
       const ws = b.createdAt || b.days?.[0] || "";
       const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
-      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; break; } }
+      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedOf(b); break; } }
     }
     let cum = 0;
     const newBk = keys.map((k) => { cum += perMonthNew.get(k) ?? 0; return { month: k, count: perMonthNew.get(k) ?? 0, cumulative: cum }; });
@@ -250,7 +274,7 @@ export function DashboardApp() {
     const recent = [...list].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6);
 
     return {
-      income, booked, newBk, weekly,
+      income, booked, newBk, weekly, weeklyIncome,
       weeklyLabels: wkStarts.map((ms) => { const dt = new Date(ms); return `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`; }),
       kpis: { collected: totalCollected, bookings: list.filter((b) => !isCancelled(b)).length, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
       byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
@@ -288,7 +312,9 @@ export function DashboardApp() {
         >
           {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="New bookings · last 5 weeks" />}
         </Tile>
-        <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green} />
+        <Tile label="Taken this week" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
+          {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption="Collected · last 5 weeks" />}
+        </Tile>
         <Tile
           label="Outstanding"
           value={money(d.money.outstanding)}
