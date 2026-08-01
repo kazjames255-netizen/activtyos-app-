@@ -121,6 +121,16 @@ const bulkSchema = z.object({
 
 export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${ref}`;
 
+// Resolve a booking's doc ref. New bookings use the `${tenantId}_${ref}` id,
+// but older/imported/seeded ones have random ids — fall back to a ref lookup so
+// operator actions (approve, cancel, …) find them either way.
+async function resolveBookingRef(tenantId: string, ref: string): Promise<FirebaseFirestore.DocumentReference> {
+  const byId = col.doc(bookingDocId(tenantId, ref));
+  if ((await byId.get()).exists) return byId;
+  const q = await col.where("tenantId", "==", tenantId).where("ref", "==", ref).limit(1).get();
+  return q.empty ? byId : q.docs[0].ref;
+}
+
 // Is this booking doc inside the caller's scope?
 function inScope(
   b: { tenantId?: string; franchiseId?: string },
@@ -180,7 +190,7 @@ bookings.get("/:ref", async (req, res) => {
     res.status(400).json({ error: "tenantId query param required for platform accounts" });
     return;
   }
-  const doc = await col.doc(bookingDocId(tenantId, req.params.ref)).get();
+  const doc = await (await resolveBookingRef(tenantId, req.params.ref)).get();
   if (!doc.exists || !inScope(doc.data() as BookingDoc, scope)) {
     res.status(404).json({ error: "Booking not found" });
     return;
@@ -198,7 +208,7 @@ bookings.get("/:ref/children", async (req, res) => {
   if (!scope) return;
   const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
   if (!tenantId) { res.status(400).json({ error: "tenantId query param required for platform accounts" }); return; }
-  const doc = await col.doc(bookingDocId(tenantId, req.params.ref)).get();
+  const doc = await (await resolveBookingRef(tenantId, req.params.ref)).get();
   if (!doc.exists || !inScope(doc.data() as BookingDoc, scope)) { res.status(404).json({ error: "Booking not found" }); return; }
   const b = fromDoc(doc.data() as BookingDoc);
   const kids = b.kids?.length ? b.kids.map((k) => ({ name: k.name, childId: k.childId })) : [{ name: b.child, childId: b.childId }];
@@ -325,7 +335,7 @@ bookings.post("/:ref/actions", async (req, res) => {
     return;
   }
   const action = parsed.data;
-  const ref = col.doc(bookingDocId(scope.tenantId!, req.params.ref));
+  const ref = await resolveBookingRef(scope.tenantId!, req.params.ref);
 
   const tenantName = async () => {
     const t = await tenantsCol.doc(scope.tenantId!).get();
@@ -640,7 +650,7 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const ref = col.doc(bookingDocId(tenantId, req.params.ref));
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
   try {
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -682,10 +692,11 @@ bookings.post("/bulk", async (req, res) => {
     return;
   }
   const { refs, action } = parsed.data;
+  // Resolve each ref to its doc first (handles random/legacy ids), then read
+  // inside the transaction.
+  const docRefs = await Promise.all(refs.map((r) => resolveBookingRef(scope.tenantId!, r)));
   const updated = await db.runTransaction(async (tx) => {
-    const snaps = await Promise.all(
-      refs.map((r) => tx.get(col.doc(bookingDocId(scope.tenantId!, r)))),
-    );
+    const snaps = await Promise.all(docRefs.map((dr) => tx.get(dr)));
     // Mutate + aggregate block deltas first (all reads must precede
     // writes). Each entry keeps the booking's days so per-day counts move
     // too (undefined days = every session, resolved once the block loads).

@@ -93,8 +93,18 @@ async function tenantContact(tenantId: string): Promise<{ email?: string; name: 
   // plan/type — so notification links point at the portal this team uses.
   const plan = ((t.get("subscription") as { plan?: string } | undefined)?.plan || (t.get("type") as string) || "").toLowerCase();
   const portal = plan.includes("freelanc") ? "freelancer" : plan.includes("franchis") ? "franchise" : plan.includes("company") ? "company" : undefined;
+  let email = (t.get("notifyEmail") as string) || (t.get("email") as string) || undefined;
+  // Many tenants never set notifyEmail — fall back to the owner's account email
+  // so operator notifications still reach someone.
+  if (!email) {
+    const ownerUid = t.get("ownerUid") as string | undefined;
+    if (ownerUid) {
+      const u = await db.collection("users").doc(ownerUid).get();
+      email = (u.exists ? (u.get("email") as string) : undefined) || undefined;
+    }
+  }
   return {
-    email: (t.get("notifyEmail") as string) || (t.get("email") as string) || undefined,
+    email,
     name: (t.get("name") as string) || "Your activity provider",
     portal,
   };
