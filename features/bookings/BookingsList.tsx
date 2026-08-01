@@ -432,14 +432,14 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                     {/* On the row, not behind a click — "when did this come
                         in" is the first thing asked of a bookings list. */}
                     {b.createdAt ? `Booked ${prettyBookedOn(b)} · ` : ""}
-                    by {b.booker} · {b.listing} · {b.pass}
+                    by {b.booker} · {b.pass}
                   </span>
                 </span>
 
                 <span className="hidden min-w-0 flex-1 sm:block">
-                  <span className="mb-0.5 flex flex-wrap items-center gap-1.5">
-                    <span className="max-w-full truncate rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]" title={b.listing}>🎟 {b.listing || "—"}</span>
-                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📅 {seasonNameOf(b.listingId)}</span>}
+                  <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                    <span className="max-w-full truncate rounded-full px-2 py-[3px] text-[11px] font-extrabold ring-1 ring-inset" style={{ background: "linear-gradient(120deg,#eaf1fe,#dbe8fb)", color: "#16306e", boxShadow: "inset 0 0 0 1px #cfe0f7" }} title={b.listing}>🎟 {b.listing || "—"}</span>
+                    {seasonNameOf(b.listingId) && <span className="whitespace-nowrap rounded-full px-2 py-[3px] text-[10.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>📅 {seasonNameOf(b.listingId)}</span>}
                   </span>
                   <span className="block truncate text-[12.5px] text-[var(--ink)]">{b.dates}</span>
                   <span className="block truncate text-[11px] text-[var(--ink-3)]">

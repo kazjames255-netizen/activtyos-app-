@@ -228,10 +228,11 @@ function TeamManager({ staff, onChange, holderId }: { staff: StaffMember[]; onCh
   );
 }
 
-function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover }: {
+function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover, listing, seasonName }: {
   date: string; isToday: boolean; dayChildren: PlacedChild[]; groups: RatioGroup[]; staff: StaffMember[];
   onDay: (by: number) => void;
   onCover?: (c: { onDuty: number; needed: number; within: boolean }) => void;
+  listing?: string; seasonName?: string;
 }) {
   // Child → group. Default is by age; a manual drag overrides it. Both the
   // overrides and each group's staffing persist per (tenant, day) via
@@ -389,6 +390,12 @@ function CoverBoard({ date, isToday, dayChildren, groups, staff, onDay, onCover 
               {isToday && <div className="text-[11.5px] opacity-85">{shortDay(date)}</div>}
             </div>
             <button type="button" onClick={() => onDay(1)} aria-label="Next day" className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[16px]">›</button>
+            {listing && (
+              <div className="ml-1 flex flex-wrap items-center gap-1.5">
+                <span className="whitespace-nowrap rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-extrabold" title={listing}>🎟 {listing}</span>
+                {seasonName && <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>📅 {seasonName}</span>}
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-4" style={{ fontVariantNumeric: "tabular-nums" }}>
             <div className="text-center leading-none">
@@ -735,6 +742,8 @@ export function RatiosApp() {
   // The ratios feed is per-day, so this is the fuller set: you can switch to a
   // live listing even on a day it isn't running (the board just reads empty).
   const [liveListings, setLiveListings] = useState<string[]>([]);
+  const [nameSeason, setNameSeason] = useState<Record<string, string>>({});
+  const [season, setSeason] = useState("");
   useEffect(() => {
     apiGet<(ServerListing & { status?: string; archived?: boolean; visibility?: string })[]>("/api/listings?mine=1")
       .then((ls) => {
@@ -745,6 +754,7 @@ export function RatiosApp() {
           .map((l) => l.name)
           .filter(Boolean);
         setLiveListings([...new Set(names)].sort());
+        setNameSeason(Object.fromEntries((ls ?? []).filter((l) => l.name && l.seasonId).map((l) => [l.name as string, l.seasonId as string])));
       })
       .catch(() => {});
   }, []);
@@ -795,9 +805,13 @@ export function RatiosApp() {
   // Always sit on a real camp — a whole-site aggregate ratio is meaningless,
   // since each camp has its own groups and staffing. Snap to the first
   // available whenever the current pick isn't running (first load, day change).
+  const seasons = settings.seasons ?? [];
+  const seasonObj = seasons.find((s) => s.id === season);
+  const visibleListings = seasonObj ? listings.filter((l) => nameSeason[l] === seasonObj.id) : listings;
+  const curSeasonName = seasons.find((s) => s.id === nameSeason[listing])?.name;
   useEffect(() => {
-    if (listings.length && !listings.includes(listing)) setListing(listings[0]);
-  }, [listings, listing]);
+    if (visibleListings.length && !visibleListings.includes(listing)) setListing(visibleListings[0]);
+  }, [visibleListings, listing]);
   const shown = useMemo(() => (sessions ?? []).filter((s) => !listing || s.listingName === listing), [sessions, listing]);
 
   // The whole day's children (deduped), each tagged with the window they're on
@@ -887,19 +901,34 @@ export function RatiosApp() {
           meaningless. Ended and hidden listings never appear (they have no live
           sessions in the feed). */}
       {ready && listings.length > 0 && (
-        <label className="mb-3 flex items-center gap-2 text-[12.5px]">
-          <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Listing</span>
-          <span className="relative inline-flex items-center">
-            <select value={listing} onChange={(e) => setListing(e.target.value)}
-              className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
-              {listings.map((l) => {
-                const n = listingCounts.get(l)?.size ?? 0;
-                return <option key={l} value={l}>{l} · {n} {n === 1 ? "child" : "kids"}</option>;
-              })}
-            </select>
-            <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
-          </span>
-        </label>
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-[12.5px]">
+          {seasons.length > 0 && (
+            <label className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">📅 Season</span>
+              <span className="relative inline-flex items-center">
+                <select value={season} onChange={(e) => setSeason(e.target.value)}
+                  className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
+                  <option value="">All seasons</option>
+                  {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
+              </span>
+            </label>
+          )}
+          <label className="flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">🎟 Listing</span>
+            <span className="relative inline-flex items-center">
+              <select value={listing} onChange={(e) => setListing(e.target.value)}
+                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-4 pr-9 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_2px_rgba(20,30,60,.06)] transition-colors hover:border-[var(--brand-2,#2f6bd8)] focus:border-[var(--brand-2,#2f6bd8)] focus:outline-none">
+                {visibleListings.map((l) => {
+                  const n = listingCounts.get(l)?.size ?? 0;
+                  return <option key={l} value={l}>{l} · {n} {n === 1 ? "child" : "kids"}</option>;
+                })}
+              </select>
+              <span aria-hidden className="pointer-events-none absolute right-3.5 text-[10px] text-[var(--ink-3)]">▼</span>
+            </span>
+          </label>
+        </div>
       )}
 
       {/* Showing … with a fancy day navigator */}
@@ -971,7 +1000,7 @@ export function RatiosApp() {
       ) : shown.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">Nothing runs on {dayLabel(date)}{listing ? ` for ${listing}` : ""}.</Card>
       ) : (
-        <CoverBoard date={date} isToday={isToday} dayChildren={children} groups={groups} staff={staffLib} onDay={(by) => setDate((d) => shiftDay(d, by))} onCover={setCover} />
+        <CoverBoard date={date} isToday={isToday} dayChildren={children} groups={groups} staff={staffLib} onDay={(by) => setDate((d) => shiftDay(d, by))} onCover={setCover} listing={listing} seasonName={curSeasonName} />
       )}
 
       {/* Staff ratio calculator — occasional planning tool, kept at the bottom. */}
