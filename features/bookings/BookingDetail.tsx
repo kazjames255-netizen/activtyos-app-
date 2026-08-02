@@ -608,7 +608,11 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               </div>
             )}
             <Button variant="primary" onClick={() => act(b.ref, "refund-approve")}>
-              {isVoucher ? "Mark refund reimbursed" : `Approve refund${b.paymentIntentId ? " (via Stripe)" : ""}`}
+              {dest === "wallet"
+                ? "Accept refund to wallet"
+                : dest === "card"
+                  ? "Accept refund to bank"
+                  : isVoucher ? "Mark refund reimbursed" : `Approve refund${b.paymentIntentId ? " (via Stripe)" : ""}`}
             </Button>
             <Button onClick={() => act(b.ref, "refund-decline")}>Decline refund</Button>
           </>
