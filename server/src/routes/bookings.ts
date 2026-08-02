@@ -67,6 +67,9 @@ const actionSchema = z.discriminatedUnion("type", [
       // resend mutates nothing — it re-sends the payment-link email
       "resend",
     ]),
+    // Optional free-text the operator gives when declining a booking; it's
+    // relayed to the family in the decline email. Ignored for other types.
+    reason: z.string().max(300).optional(),
   }),
   // Approve a parent's date-change request. approveIndexes lets the operator
   // approve only SOME swaps (omit = all); reason explains any declined ones.
@@ -531,6 +534,10 @@ bookings.post("/:ref/actions", async (req, res) => {
         default:
           // "resend" returned early above, so only real row actions reach here.
           applyRowAction(b, action.type as Exclude<typeof action.type, "resend">);
+          // Keep the operator's decline note on the record so it can be shown
+          // back in the portal and relayed in the email below.
+          if (action.type === "decline" && "reason" in action && action.reason?.trim())
+            b.declineReason = action.reason.trim();
       }
 
       // Keep the block's place counts — total AND per day — in step with
@@ -581,7 +588,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (action.type === "approve" || action.type === "promote")
         emailBookingConfirmed(updated, await tenantName());
       else if (action.type === "offer") emailPlaceOffered(updated, await tenantName());
-      else if (action.type === "decline") emailBookingDeclined(updated, await tenantName());
+      else if (action.type === "decline") emailBookingDeclined(updated, await tenantName(), updated.declineReason);
       else if (action.type === "refund-approve") emailRefundApproved(updated, await tenantName());
     }
 

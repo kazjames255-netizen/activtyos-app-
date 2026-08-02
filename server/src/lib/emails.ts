@@ -336,13 +336,21 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
   );
 }
 
-export function emailBookingDeclined(b: Booking, providerName: string): void {
+export function emailBookingDeclined(b: Booking, providerName: string, reason?: string): void {
+  const note = reason?.trim()
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0;border-collapse:separate">
+         <tr><td style="background:#fbf1f1;border-left:3px solid #d9736b;border-radius:6px;padding:11px 14px">
+           <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a1443c;margin-bottom:3px">Message from ${providerName}</div>
+           <div style="font-size:14px;color:#4a2b28;white-space:pre-wrap">${escapeHtml(reason.trim())}</div>
+         </td></tr>
+       </table>`
+    : "";
   sendCustomerEmail(
     b, providerName, "bookings",
     `Booking update — ${b.listing}`,
     "Your booking request was declined",
     `<p style="font-size:14px">Sorry ${b.booker} — ${providerName} couldn't take this booking.
-     Nothing has been charged. Feel free to browse other dates or activities.</p>`,
+     Nothing has been charged. Feel free to browse other dates or activities.</p>${note}`,
   );
 }
 

@@ -547,6 +547,8 @@ export function BookingDetail({ booking }: { booking: Booking }) {
   const cancelOpen = useBookingsStore((s) => s.cancelOpen);
   const saveNote = useBookingsStore((s) => s.saveNote);
   const [note, setNote] = useState(booking.note || "");
+  const [declining, setDeclining] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
   const [messaging, setMessaging] = useState(false);
   const [tab, setTab] = useState<"booking" | "children">("booking");
   // The block's live availability — feeds the per-day "Move" chips with the
@@ -570,7 +572,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       {b.status === "Approval needed" && (
         <>
           <Button variant="primary" onClick={() => act(b.ref, "approve")}>Approve</Button>
-          <Button onClick={() => act(b.ref, "decline")}>Decline</Button>
+          <Button onClick={() => { setDeclineReason(""); setDeclining(true); }}>Decline</Button>
         </>
       )}
       {b.status === "Waitlisted" && (
@@ -620,6 +622,39 @@ export function BookingDetail({ booking }: { booking: Booking }) {
 
   return (
     <div>
+      {declining && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setDeclining(false)}
+          className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8"
+        >
+          <Card className="w-full max-w-[440px] px-5 py-[18px]">
+            <h3 className="m-0 font-[var(--ff-display)] text-[18px] leading-tight text-[var(--ink)]">Decline this booking?</h3>
+            <p className="mt-1.5 mb-3 text-[13px] text-[var(--ink-3)]">
+              {b.booker} will be told the request was declined and nothing has been charged.
+              You can add a short reason for them (optional).
+            </p>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              maxLength={300}
+              rows={3}
+              autoFocus
+              placeholder="e.g. Sorry, this week is now fully booked — try our August dates."
+              className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]"
+            />
+            <div className="mt-1 text-right text-[11px] text-[var(--ink-3)]">{declineReason.length}/300</div>
+            <div className="mt-2 flex justify-end gap-2">
+              <Button onClick={() => setDeclining(false)}>Cancel</Button>
+              <Button
+                variant="danger"
+                onClick={() => { act(b.ref, "decline", declineReason.trim() || undefined); setDeclining(false); }}
+              >
+                Decline booking
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
       <div className="mb-3">
         <button
           onClick={close}

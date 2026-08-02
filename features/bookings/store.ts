@@ -48,7 +48,7 @@ interface BookingsState {
   sendBulkEmail: (subject: string, body: string) => Promise<boolean>;
   open: (ref: string) => void;
   close: () => void;
-  act: (ref: string, action: UiRowAction) => void;
+  act: (ref: string, action: UiRowAction, reason?: string) => void;
 
   cancelOpen: (ref: string) => void;
   cancelAbort: (ref: string) => void;
@@ -216,9 +216,9 @@ export const useBookingsStore = create<BookingsState>()(
         });
       },
 
-      act: (ref, action) => {
+      act: (ref, action, reason) => {
         void run(async () => {
-          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action }));
+          applyServer(await apiPost<Booking>(actionsUrl(ref), { type: action, ...(reason?.trim() ? { reason: reason.trim() } : {}) }));
           if (action === "resend") {
             const b = get().bookings.find((x) => x.ref === ref);
             if (b) setTimeout(() => alert(`Payment link / invoice re-sent to ${b.email}.`), 20);

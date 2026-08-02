@@ -161,6 +161,10 @@ export interface Booking {
     resolvedAt?: string;
   } | null;
 
+  /** Optional free-text the provider gave when declining the booking; shown
+   *  to the family in the decline email. */
+  declineReason?: string;
+
   // Transient UI state (kept on the record to match the legacy flows).
   _cancelling?: boolean;
   _refundType?: "full" | "partial" | "none";
