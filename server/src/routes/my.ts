@@ -1039,7 +1039,13 @@ my.post("/bookings", async (req, res) => {
           passwordLink,
         });
     } else {
-      emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
+      // Match the email to what actually happened: a booking that's already
+      // Confirmed (an auto-approve listing) must NOT be told it's "a request
+      // pending approval". Only a manual-approval or waitlisted place is.
+      const b0 = bookings[0];
+      const provider = listing.tenantName ?? listing.name;
+      if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider);
+      else emailBookingRequestReceived(b0, provider);
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never
     // wired: the create path only ever emailed the parent, so operators got no

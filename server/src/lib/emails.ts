@@ -1,4 +1,5 @@
 import type { Booking } from "../../../features/bookings/types";
+import { bookingDateSummary } from "../../../features/bookings/helpers";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender } from "./sender";
@@ -36,7 +37,10 @@ function sendGated(
   void autoEmailOn(tenantId, key)
     .then(async (on) => {
       if (!on) { console.log(`[mail] "${subject}" → ${to} skipped (autoEmails.${key} off)`); return; }
-      return sendMail(to, subject, html, await tenantSender(tenantId, providerName));
+      // Attach the inline mark only when the template actually shows it (the
+      // branded layout), so a plain-HTML email never gets an orphan attachment.
+      const attachments = html.includes("cid:aos-mark") ? [aosLogoAttachment()] : undefined;
+      return sendMail(to, subject, html, await tenantSender(tenantId, providerName), attachments ? { attachments } : undefined);
     })
     .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
 }
@@ -61,26 +65,44 @@ function sendAs(
     .catch((e) => console.error(`[mail] sender lookup failed for "${subject}":`, (e as Error).message));
 }
 
+// The shared branded shell for parent booking emails — same look as the
+// provider's new-booking email (ActivityOS mark on a gradient header, white
+// card, tidy detail rows). `title`/`bodyHtml` are HTML and inserted raw; the
+// logo rides along as an inline cid attachment (see sendGated). Any email
+// using this must be sent so `cid:aos-mark` resolves.
 function layout(providerName: string, title: string, bodyHtml: string, b: Booking): string {
+  const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:7px 16px 7px 0;font-size:12.5px;color:#8a86a3;white-space:nowrap;vertical-align:top">${escapeHtml(label)}</td>
+      <td style="padding:7px 0;font-size:13.5px;color:#171534;border-bottom:1px solid #eef0f5">${value}</td>
+    </tr>`;
   return `
-  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
-    <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
-      <strong style="font-size:18px">${providerName}</strong>
-      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
+  <div style="margin:0;padding:0;background:#eef1f7">
+  <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
+      <div style="background:linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%);padding:18px 24px;text-align:center">
+        <img src="cid:aos-mark" width="26" height="26" alt="" style="vertical-align:middle;margin-right:9px;border-radius:7px" />
+        <span style="font-size:21px;font-weight:800;letter-spacing:.2px;color:#ffffff;vertical-align:middle">Activity<span style="color:#EE1F63">OS</span></span>
+      </div>
+      <div style="padding:26px 28px 30px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3f78d8">${escapeHtml(providerName)}</div>
+        <h1 style="font-size:22px;line-height:1.25;margin:4px 0 14px;color:#171534">${title}</h1>
+        ${bodyHtml}
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
+          ${row("Booking ref", `<b>${escapeHtml(b.ref)}</b>`)}
+          ${row("Activity", escapeHtml(b.listing))}
+          ${row("Pass", escapeHtml(b.pass))}
+          ${row("Dates", escapeHtml(bookingDateSummary(b)))}
+          ${row("Child", escapeHtml(kids || "—"))}
+          ${row("Total", `<b>${gbp(b.amount)}</b>`)}
+        </table>
+      </div>
+      <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
+        <span style="font-size:11.5px;color:#8a86a3">You're receiving this because a booking was made with ${escapeHtml(providerName)}.</span>
+      </div>
     </div>
-    <h2 style="font-size:19px;margin:18px 0 6px">${title}</h2>
-    ${bodyHtml}
-    <table style="margin:14px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref</td><td><b>${b.ref}</b></td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${b.listing}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Pass</td><td>${b.pass}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Dates</td><td>${b.dates}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Child</td><td>${b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child}</td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Total</td><td><b>${gbp(b.amount)}</b></td></tr>
-    </table>
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">
-      You're receiving this because a booking was made with ${providerName}.
-    </p>
+  </div>
   </div>`;
 }
 
