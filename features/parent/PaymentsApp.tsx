@@ -5,7 +5,7 @@ import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import { money, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { PayModal } from "@/features/payments/PayModal";
 import { downloadReceipts, type ReceiptCtx } from "./paymentReceipt";
@@ -39,7 +39,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-bold">{b.listing}</div>
         <div className="text-[11.5px] text-[var(--ink-3)]">
-          {b.child} · {b.dates} · Ref {b.ref}
+          {b.child} · {bookingDateSummary(b)} · Ref {b.ref}
         </div>
       </div>
       <span className="hidden w-[92px] text-right text-[11.5px] text-[var(--ink-3)] sm:inline">{methodOf(b)}</span>

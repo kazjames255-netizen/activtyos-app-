@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money, payLabelFor, payTone } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, payLabelFor, payTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
 import { filledDetails, type VoucherProvider } from "@/lib/settings";
@@ -884,7 +884,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
             {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
           </PCol>
-          <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}</span></PCol>
+          <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
           <PCol label="Status" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? "Date change" : b.status}</span></PCol>
           {!cancelled && <PCol label="Payment" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
           <div className="ml-auto flex-none text-right">

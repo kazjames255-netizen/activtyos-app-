@@ -4,7 +4,7 @@
 // when available and always shows the method of payment.
 
 import type { Booking } from "@/features/bookings/types";
-import { money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
+import { bookingDateSummary, money, payLabelFor, refundedTotal } from "@/features/bookings/helpers";
 
 export interface ReceiptCtx {
   /** The operator's business/display name — headers each receipt. */
@@ -121,7 +121,7 @@ function drawReceipt(doc: Doc, b: Booking, ctx: ReceiptCtx, logo: { dataUrl: str
     ["Activity", b.listing],
     ["Pass", b.ticket || b.pass || "—"],
     ["Child", childrenOf(b)],
-    ["Dates", b.dates || (b.days ?? []).join(", ") || "—"],
+    ["Dates", bookingDateSummary(b)],
   ];
   if (b.sessions && b.sessions.length) rows.push(["Sessions / times", b.sessions.join("   ·   ")]);
   if (loc) rows.push(["Location", loc]);

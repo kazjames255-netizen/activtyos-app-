@@ -152,6 +152,25 @@ export function sessionIsoDates(b: Booking): string[] {
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
 /**
+ * A concise, CORRECT date label for what a booking actually attends — not
+ * `b.dates`, which holds the block's whole run (e.g. "20 Jul – 11 Aug 2026")
+ * and reads as a wildly wrong range for a single-day pass. Uses the real ISO
+ * days (or the session strings). Single day → "Thu 6 Aug 2026"; several →
+ * "Starts Thu 6 Aug 2026" (the full list is on the expanded card).
+ */
+export function bookingDateSummary(b: Booking): string {
+  const days = (b.days && b.days.length ? [...b.days] : sessionIsoDates(b)).sort();
+  if (!days.length) return b.dates || "—";
+  const fmt = (iso: string) => {
+    const d = new Date(`${iso}T00:00:00`);
+    return Number.isNaN(d.getTime())
+      ? iso
+      : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  };
+  return days.length > 1 ? `Starts ${fmt(days[0])}` : fmt(days[0]);
+}
+
+/**
  * Newest first — the order a provider wants on landing, because the booking
  * that just came in is the one they haven't seen.
  *
