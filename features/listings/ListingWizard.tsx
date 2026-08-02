@@ -3527,6 +3527,15 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                   <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: "#fff" }}>{d.sitePhone}</a>
                 </div>
               )}
+              {d.payMethods && d.payMethods.length > 0 && (
+                <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
+                  <div className={lab} style={{ color: MUTs }}>ways to pay</div>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    <span className="rounded-md px-2 py-1 text-[10.5px] font-bold text-white" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>💳 Card</span>
+                    {d.payMethods.map((m) => <span key={m} className="rounded-md px-2 py-1 text-[10.5px] font-bold text-white" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>{m}</span>)}
+                  </div>
+                </div>
+              )}
               {passSummary.length > 0 && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: MUTs }}>passes</div>
