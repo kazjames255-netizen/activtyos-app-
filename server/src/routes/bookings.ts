@@ -23,6 +23,7 @@ import {
   emailBookingConfirmed,
   emailBookingDeclined,
   emailPaymentLink,
+  emailPaymentReceived,
   emailPlaceOffered,
   emailRefundApproved,
   emailVoucherInstructions,
@@ -120,6 +121,30 @@ const bulkSchema = z.object({
 });
 
 export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${ref}`;
+
+/** Tell the family an off-platform payment (voucher / TFC / cash / bank) has
+ *  landed — a rich branded email (dates, venue, who's on it, amount) AND the
+ *  in-app bell. Called wherever a booking is settled: the reconcile action and
+ *  the bookings-area "Mark received". Fire-and-forget. */
+async function notifyPaymentReceived(tenantId: string, b: Booking, label: string): Promise<void> {
+  if (!b.email?.includes("@")) return;
+  const email = b.email;
+  const tenantDoc = await db.collection("tenants").doc(tenantId).get();
+  const provider = (tenantDoc.get("name") as string) || "your provider";
+  const kidsLabel = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
+  const dateLabel = (b.sessions ?? [])[0]?.split(" · ")[0];
+  emailPaymentReceived(b, provider, { label, amount: b.amount ?? 0 });
+  void notify({
+    tenantId,
+    to: { kind: "parent", email },
+    category: "billing",
+    title: `Payment received · ${b.ref}`,
+    body: `${b.listing}${kidsLabel ? ` · ${kidsLabel}` : ""} — £${(b.amount ?? 0).toFixed(2)} received via ${label}${dateLabel ? ` · ${dateLabel}` : ""}. Fully paid — thank you!`,
+    href: `/custdash/bookings?open=${encodeURIComponent(b.ref)}`,
+    ref: b.ref,
+    bellOnly: true, // the rich email is sent above
+  });
+}
 
 // Resolve a booking's doc ref. New bookings use the `${tenantId}_${ref}` id,
 // but older/imported/seeded ones have random ids — fall back to a ref lookup so
@@ -575,6 +600,9 @@ bookings.post("/:ref/actions", async (req, res) => {
         recordedBy: req.user?.email ?? "operator",
         createdAt: new Date().toISOString(),
       });
+      // Tell the family their voucher/cash/TFC payment has landed (rich email + bell).
+      const label = updated.voucherScheme ? `voucher (${updated.voucherScheme})` : (updated.method ?? "payment").toLowerCase();
+      void notifyPaymentReceived(updated.tenantId ?? scope.tenantId!, updated, label).catch((e) => console.error("[actions:paid] payment-received notify failed:", (e as Error).message));
     }
 
     // Freed seats pass to the queue (auto mode); promotes report who's
@@ -728,18 +756,7 @@ bookings.post("/:ref/reconcile", async (req, res) => {
         offline: true, status: "recorded", recordedBy: req.user?.email ?? "operator",
         createdAt: parsed.data.date ?? new Date().toISOString(),
       });
-      if (updated.email?.includes("@")) {
-        void notify({
-          tenantId,
-          to: { kind: "parent", email: updated.email },
-          category: "billing",
-          title: `Payment received · ${updated.ref}`,
-          body: `${updated.listing}: we’ve received your ${label} payment of £${(updated.amount ?? 0).toFixed(2)} — your booking is fully paid. Thank you!`,
-          subject: `Payment received for ${updated.ref}`,
-          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
-          ref: updated.ref,
-        });
-      }
+      void notifyPaymentReceived(tenantId, updated, label).catch((e) => console.error("[reconcile] payment-received notify failed:", (e as Error).message));
     }
     res.json(updated);
   } catch (e) {

@@ -546,6 +546,20 @@ export function emailVoucherInstructions(
   );
 }
 
+/** The provider has recorded an off-platform payment (voucher / TFC / cash /
+ *  bank transfer) against a booking — tell the family it's landed, with all the
+ *  booking context (dates, venue, who's on it, the amount). */
+export function emailPaymentReceived(b: Booking, providerName: string, opts: { label: string; amount: number }): void {
+  sendCustomerEmail(
+    b, providerName, "payments",
+    `Payment received — ${b.listing}`,
+    "Payment received ✓",
+    `<p style="font-size:14px">Thanks ${b.booker} — ${providerName} has received your <b>${escapeHtml(opts.label)}</b>
+      payment of <b>${gbp(opts.amount)}</b>. Your booking is now fully paid — see you there!</p>`,
+    {}, // hero photo + venue location; the details table shows dates / who / total
+  );
+}
+
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
