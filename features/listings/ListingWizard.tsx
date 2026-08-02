@@ -11,7 +11,7 @@ import * as blocksApi from "@/features/blocks/blocksApi";
 import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./format";
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
-import { useTenantSettings, useSettings } from "@/lib/settings";
+import { useTenantSettings, useSettings, detailsForListing } from "@/lib/settings";
 import { policyWording, type NamedPolicy } from "@/lib/cancellation";
 import { CheckoutPanel } from "./checkout";
 import type { ChildProfile } from "./checkout";
@@ -719,8 +719,12 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     // own site. Surface that + a link, instead of a false "paid".
     const scheme = done.voucherScheme;
     const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
-    const websiteD = provider?.details?.find((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value));
+    // The right account/Ofsted/reference for this listing's setting — shown on
+    // the card so the family can pay without hunting through the email.
+    const vDetails = provider ? detailsForListing(provider, { listingId: listing.id, locationId: (listing as { venueId?: string | null }).venueId }) : [];
+    const websiteD = vDetails.find((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value));
     const website = websiteD ? (/^https?:\/\//i.test(websiteD.value) ? websiteD.value : `https://${websiteD.value}`) : null;
+    const isUrlD = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
     const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
     const labCls = "w-[92px] flex-none text-[#8a86a3]";
     const valCls = "font-semibold text-[#171534]";
@@ -753,7 +757,21 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
 
         {scheme && (
           <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-left text-[12.5px] leading-relaxed text-[#7a5a12]">
-            <b>Almost there — your place is held.</b> Head over to your <b>{scheme}</b> account to pay <b>{money(done.total)}</b>, quoting the details in your confirmation email. Your booking shows as <b>awaiting voucher payment</b> until the money reaches {listing.tenantName || "your provider"}.
+            <b>Almost there — your place is held.</b> Head over to your <b>{scheme}</b> account to pay <b>{money(done.total)}</b>, quoting these details (we&rsquo;ve emailed them too). Your booking shows as <b>awaiting voucher payment</b> until the money reaches {listing.tenantName || "your provider"}.
+            {vDetails.length > 0 && (
+              <table className="mt-2.5" cellPadding={0}>
+                <tbody>
+                  {vDetails.map((dt) => (
+                    <tr key={dt.id}>
+                      <td className="pr-4 align-top text-[#a5834a]">{dt.label}</td>
+                      <td className="align-top font-extrabold text-[#5a4410]">{isUrlD(dt) ? <a href={/^https?:\/\//i.test(dt.value) ? dt.value : `https://${dt.value}`} target="_blank" rel="noreferrer" className="underline" style={{ color: "#2f6bd8" }}>{dt.value} ↗</a> : dt.value}</td>
+                    </tr>
+                  ))}
+                  <tr><td className="pr-4 text-[#a5834a]">Booking ref</td><td className="font-extrabold text-[#5a4410]">{done.refs.join(", ")}</td></tr>
+                  <tr><td className="pr-4 text-[#a5834a]">Amount</td><td className="font-extrabold text-[#5a4410]">{money(done.total)}</td></tr>
+                </tbody>
+              </table>
+            )}
             {website && (
               <div className="mt-2.5">
                 <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>Go to {scheme} to pay ↗</a>

@@ -53,7 +53,9 @@ const nowIso = () => new Date().toISOString();
 export function applyRowAction(b: Booking, action: RowAction): void {
   if (action === "approve") b.status = "Confirmed";
   else if (action === "decline") b.status = "Declined";
-  else if (action === "paid") b.pay = "Paid";
+  // Marking it paid/voucher-received settles it IN FULL — record the money so
+  // reconciliation sees nothing outstanding and auto-marks it reconciled.
+  else if (action === "paid") { b.pay = (b.amount ?? 0) <= 0 ? "Funded" : "Paid"; b.amountPaid = b.amount ?? 0; }
   else if (action === "recon") b.recon = !b.recon;
   else if (action === "promote") {
     b.status = "Confirmed";
