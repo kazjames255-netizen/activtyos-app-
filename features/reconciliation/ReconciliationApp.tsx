@@ -211,6 +211,7 @@ export function ReconciliationApp() {
             const refCount = it.payRefs?.length ?? (it.paymentRef ? 1 : 0);
             const due = it.outstanding;
             const offReceived = Math.max(0, it.amountPaid - it.cardPaid);
+            const partPaid = !it.reconciled && it.amountPaid > 0 && due > 0; // some money in, balance still owed
             const isOpen = expanded === it.ref;
             return (
               <div key={it.ref} className="overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]" style={{ borderColor: it.overdue ? "#f6c9cc" : "var(--line)" }}>
@@ -232,8 +233,8 @@ export function ReconciliationApp() {
                   {it.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">overdue{it.voucherReceiveBy ? ` since ${fmt(it.voucherReceiveBy)}` : ""}</span>}
                   <div className="text-right">
                     <div className="text-[14px] font-extrabold tabular-nums">{it.reconciled ? money(it.amount) : `${money(due)} due`}</div>
-                    {it.cardPaid > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(it.cardPaid)} paid by card</div>}
-                    {!it.reconciled && it.amountPaid > 0 && <div className="text-[10.5px] text-[var(--ink-3)]">{money(it.amountPaid)} received</div>}
+                    {it.cardPaid > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(it.cardPaid)} by card</div>}
+                    {offReceived > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(offReceived)} by {it.voucherScheme || it.method}</div>}
                   </div>
                   {it.reconciled ? (
                     <div className="flex items-center gap-2">
@@ -242,10 +243,14 @@ export function ReconciliationApp() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button type="button" title={`Nudge — remind the family ${money(due)} is still to pay (with cost, dates & times).${it.nudges ? ` Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}.` : ""}`} disabled={busy === it.ref} onClick={() => nudge(it)}
+                      <button type="button"
+                        title={`${partPaid ? `Part-paid — nudge for the remaining ${money(due)}.` : `Nudge — remind the family ${money(due)} is still to pay.`} Emails + notifies them with the cost, dates & times.${it.nudges ? ` Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}.` : ""}`}
+                        disabled={busy === it.ref} onClick={() => nudge(it)}
                         className="relative grid h-8 w-8 flex-none place-items-center rounded-full border text-[14px] transition-colors disabled:opacity-50"
-                        style={it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-                        🔔{it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{it.nudges}</span>}
+                        style={partPaid ? { borderColor: "#e2225f", background: "#fdeef4" } : it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                        🔔
+                        {partPaid && it.nudges === 0 && <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[#e2225f] text-[9px] font-extrabold text-white">!</span>}
+                        {it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full px-1 text-[9px] font-extrabold text-white" style={{ background: partPaid ? "#e2225f" : "#e88f1f" }}>{it.nudges}</span>}
                       </button>
                       <button type="button" onClick={() => setOpenRef(openRef === it.ref ? null : it.ref)} className="text-[11.5px] font-bold text-[#2f6bd8]" title="For when only part of the money has landed — e.g. a deposit, or one of two sibling vouchers">Log amount received</button>
                       <button type="button" disabled={busy === it.ref} onClick={() => reconcile(it)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px disabled:opacity-50" style={{ background: "linear-gradient(180deg,#22b06b,#0b8446)" }}>{busy === it.ref ? "Saving…" : "✓ Reconcile"}</button>
