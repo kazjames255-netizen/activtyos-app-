@@ -726,8 +726,23 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     : [];
   useEffect(() => {
     if (!parentMode) return;
-    // Signed out this 401s, which is fine — they just type the details in.
-    apiGet<ChildProfile[]>("/api/my/children").then(setSaved).catch(() => {});
+    // A signed-out parent 401s (fine — they type the details in), but a
+    // TRANSIENT failure (a dropped dev-server socket, a flaky network) used to
+    // be swallowed and leave "Your children" blank forever until an unrelated
+    // re-render happened to refetch. Retry a few times so a one-off blip
+    // recovers on its own rather than looking like the family has no children.
+    let alive = true;
+    const load = (tries = 0) => {
+      apiGet<ChildProfile[]>("/api/my/children")
+        .then((cs) => { if (alive) setSaved(cs); })
+        .catch((e) => {
+          // 401 = genuinely signed out; don't retry that. Anything else is worth another go.
+          const status = (e as { status?: number })?.status;
+          if (alive && status !== 401 && tries < 4) setTimeout(() => load(tries + 1), 700 * (tries + 1));
+        });
+    };
+    load();
+    return () => { alive = false; };
   }, [parentMode]);
   // An operator's "saved children" are the ones on the family they've just
   // found, so the same one-tap row works for them too.
