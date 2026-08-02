@@ -158,6 +158,38 @@ childFiles.get("/:id", async (req, res) => {
 });
 
 /**
+ * Reassemble a stored file server-side (same logic as the GET above, minus the
+ * HTTP layer) so a route can attach it to an email. Returns null for a missing
+ * or half-uploaded file so the caller can degrade quietly. Access control is
+ * the CALLER's job — this trusts whoever asks, so only call it once the tenant
+ * has been granted the plan (grantPlanAccess) for exactly the booking in hand.
+ */
+export async function readChildFile(
+  id?: string | null,
+): Promise<{ name: string; contentType: string; buffer: Buffer } | null> {
+  if (!id) return null;
+  try {
+    const snap = await filesCol.doc(id).get();
+    if (!snap.exists) return null;
+    const data = snap.data() as FileDoc;
+    if (!data.complete) return null;
+    const chunks = await snap.ref.collection("chunks").get();
+    const parts: string[] = [];
+    chunks.forEach((c) => {
+      parts[Number(c.id)] = (c.data() as { b64: string }).b64;
+    });
+    if (parts.length !== data.total || parts.some((p) => p === undefined)) return null;
+    return {
+      name: data.name,
+      contentType: data.contentType || "application/octet-stream",
+      buffer: Buffer.from(parts.join(""), "base64"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Let a tenant's staff read the plans belonging to children on a booking they
  * now hold. Called from the booking route after the booking is written — the
  * client never gets to widen access to its own files.

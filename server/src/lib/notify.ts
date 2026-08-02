@@ -15,7 +15,7 @@
 //     email that's suppressed.
 
 import { db } from "../firebase";
-import { sendMail } from "./mailer";
+import { sendMail, type MailAttachment } from "./mailer";
 import { webUrl } from "./stripe";
 
 const col = () => db.collection("notifications");
@@ -142,6 +142,12 @@ export interface NotifyInput {
   subject?: string;
   /** Richer email body; plain `body` is used when absent. */
   emailHtml?: string;
+  /** A FULLY-composed email (own header, layout, button) — bypasses the
+   *  standard `layout()` wrapper entirely. Any `{{VIEW_URL}}` token in it is
+   *  replaced with the resolved absolute, portal-correct deep link. */
+  emailFullHtml?: string;
+  /** Files to attach to the email (e.g. a child's EHCP plan). */
+  attachments?: MailAttachment[];
   /** Bell only — no email regardless of mute (e.g. low-value chatter). */
   bellOnly?: boolean;
 }
@@ -189,15 +195,23 @@ export async function notify(input: NotifyInput): Promise<void> {
     }
     if (!to?.includes("@")) return;
 
+    // A fully-composed email brings its own header/layout/button; we only
+    // resolve its {{VIEW_URL}} into the absolute, portal-correct deep link.
+    // Otherwise wrap the (plain or rich) body in the standard layout.
+    const link = href ? (href.startsWith("http") ? href : `${webUrl}${href}`) : "";
+    const html = input.emailFullHtml
+      ? input.emailFullHtml.replace(/\{\{VIEW_URL\}\}/g, link)
+      : layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer);
+
     await sendMail(
       to,
       input.subject ?? input.title,
-      // `href` (not input.href) — portal-corrected for team recipients.
-      layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer),
+      html,
       // The provider's name on the From line either way. Reply-To only for
       // family mail — pointing the team's own notification back at itself
       // would just loop.
       { name: provider.name, ...(parentEmail && provider.email ? { replyTo: provider.email } : {}) },
+      input.attachments?.length ? { attachments: input.attachments } : undefined,
     );
   } catch (e) {
     console.error("[notify] failed:", (e as Error).message);

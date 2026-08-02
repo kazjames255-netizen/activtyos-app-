@@ -219,7 +219,7 @@ bookings.get("/:ref/children", async (req, res) => {
     return [d.id, {
       photo: c.photo as string | undefined, dob: c.dob as string | undefined, school: c.school as string | undefined,
       allergies: c.allergies as string | undefined, medical: c.medical as string | undefined, dietary: c.dietary as string | undefined,
-      send: c.send as string | undefined, sendPlanName: c.sendPlanName as string | undefined, careNotes: c.careNotes as string | undefined,
+      send: c.send as string | undefined, sendPlanName: c.sendPlanName as string | undefined, sendPlanId: c.sendPlanId as string | undefined, careNotes: c.careNotes as string | undefined,
       collectionPassword: c.collectionPassword as string | undefined, emergencyName: c.emergencyName as string | undefined, emergencyPhone: c.emergencyPhone as string | undefined,
       photoConsent: c.photoConsent as boolean | undefined, likes: c.likes as string | undefined, dislikes: c.dislikes as string | undefined,
       swimming: c.swimming as string | undefined, sex: c.sex as string | undefined, suncreamConsent: c.suncreamConsent as boolean | undefined,

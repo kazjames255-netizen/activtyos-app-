@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { ChildQuestion } from "@/lib/settings";
+import { openFile } from "@/lib/api";
 
 // Shared child-info card — the blue-header, colour-coded card used on the
 // Register (in a modal) and in the Bookings detail (inline as a tab). One
@@ -39,9 +40,36 @@ export function SectionTitle({ dot, children }: { dot: string; children: ReactNo
   return <div className="mb-1.5 mt-3.5 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: dot }} /><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{children}</span></div>;
 }
 
+// Opens a child's EHCP/SEND plan securely. The file lives behind an
+// authenticated API route (no public URL), so we fetch it with the signed-in
+// operator's token and hand the browser a blob — never an attachment or a
+// shareable link.
+function PlanButton({ id, name }: { id: string; name?: string }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setErr(null); setBusy(true);
+          try { await openFile(`/api/my/files/${id}`); }
+          catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t open the plan."); }
+          finally { setBusy(false); }
+        }}
+        className="inline-flex items-center gap-1.5 rounded-full border border-[#c9d8f6] bg-[#eef3ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#e2ecfe] disabled:opacity-60"
+      >
+        📎 {busy ? "Opening…" : `Open EHCP plan${name ? ` — ${name}` : ""}`}
+      </button>
+      {err && <div className="mt-1 text-[11.5px] font-semibold text-[var(--red,#e21d27)]">{err}</div>}
+    </div>
+  );
+}
+
 export interface ChildInfo {
   name: string; age?: number; dob?: string; sex?: string; photo?: string;
-  allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; swimming?: string;
+  allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; sendPlanId?: string; swimming?: string;
   careNotes?: string; likes?: string; dislikes?: string; answers?: Record<string, string>;
   photoConsent?: boolean; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean;
   collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; school?: string;
@@ -112,6 +140,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, onCl
             {on("swimming") && <Fact label="Swimming" tint={T.swim} value={info.swimming && (SWIM_LABEL[info.swimming] ?? info.swimming)} />}
           </div>
         ) : <div className="rounded-xl bg-[#e7f6ee] px-3 py-2 text-[12px] font-semibold text-[#15803d]">✓ Nothing flagged</div>}
+        {on("send") && info.sendPlanId && <PlanButton id={info.sendPlanId} name={info.sendPlanName} />}
 
         {((on("careNotes") && info.careNotes) || (on("likes") && info.likes) || (on("dislikes") && info.dislikes)) && <>
           <SectionTitle dot={T.care.fg}>Personality &amp; care</SectionTitle>

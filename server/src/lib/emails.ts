@@ -1,8 +1,17 @@
 import type { Booking } from "../../../features/bookings/types";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
-import { sendMail } from "./mailer";
+import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender } from "./sender";
 import { webUrl } from "./stripe";
+import { AOS_MARK_PNG_B64 } from "./brandLogo";
+
+/** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
+ *  hot-linked so it renders in every client and regardless of environment —
+ *  Gmail/Outlook strip SVG and data-URIs and can't reach a localhost URL. Any
+ *  email that shows the mark must include this in its attachments. */
+export function aosLogoAttachment(): MailAttachment {
+  return { filename: "activityos.png", content: Buffer.from(AOS_MARK_PNG_B64, "base64"), contentType: "image/png", cid: "aos-mark" };
+}
 
 // Booking email templates. Plain, inline-styled HTML — per-provider sending
 // domains come with the white-label milestone; until then every send carries
@@ -356,6 +365,171 @@ export function emailVoucherInstructions(
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// ── The provider's "new booking" email ────────────────────────────────────
+// A richly-presented, email-client-safe (tables + inline styles) notification
+// for the provider's team: the ActivityOS brand at the top, the listing's
+// photo + name, every attendee with their age, allergies, medical and SEND /
+// additional-needs notes, a payment breakdown, and a button that opens the
+// exact booking. Any EHCP plans ride along as real attachments (added by the
+// caller). The button href is the literal `{{VIEW_URL}}` token — notify()
+// swaps it for the resolved, portal-correct deep link at send time.
+
+export interface NewBookingAttendee {
+  name: string;
+  age?: number;
+  ticket?: string;
+  allergies?: string;
+  medical?: string;
+  dietary?: string;
+  /** SEND / additional needs, free text. */
+  send?: string;
+  /** The child's EHCP/SEND plan file id, when one is on file. The email links
+   *  STRAIGHT to the secure viewer (/plan/:id) — the plan is never attached
+   *  (special-category data); the viewer re-checks access server-side. */
+  ehcpFileId?: string;
+}
+
+export interface NewBookingEmailArgs {
+  providerName: string;
+  /** "New booking" | "Booking request" | "Waitlist join". */
+  kind: string;
+  bookerName: string;
+  listingName: string;
+  /** Absolute URL of the listing's hero image, if it has one. */
+  listingImage?: string;
+  /** Pass / ticket line, e.g. "SUMMER WEEK 2 (3RD–7TH AUGUST) 9AM–5:30PM". */
+  pass?: string;
+  /** Human session lines, e.g. "Mon 03 August 2026: 09:00 – 17:30". */
+  sessions: string[];
+  attendees: NewBookingAttendee[];
+  /** Venue name + address, if resolvable. */
+  location?: string;
+  cardAmount: number;
+  childcareAmount: number;
+  childcareLabel?: string; // e.g. "Tax-Free Childcare" / "Childcare vouchers"
+  total: number;
+  /** The parent-visible booking id (#03073…). */
+  bookingId: string;
+  ref: string;
+  needsApproval?: boolean;
+}
+
+function detailRow(label: string, valueHtml: string): string {
+  return `
+    <tr>
+      <td style="padding:12px 0 2px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3">${escapeHtml(label)}</td>
+    </tr>
+    <tr>
+      <td style="padding:0 0 12px;font-size:14.5px;line-height:1.5;color:#171534;border-bottom:1px solid #eef0f5">${valueHtml}</td>
+    </tr>`;
+}
+
+function attendeeCard(a: NewBookingAttendee): string {
+  const health = [a.allergies && `Allergies — ${escapeHtml(a.allergies)}`, a.medical && `Medical — ${escapeHtml(a.medical)}`, a.dietary && `Dietary — ${escapeHtml(a.dietary)}`]
+    .filter(Boolean)
+    .join("<br>");
+  const line = (label: string, valueHtml: string, tint: string) =>
+    `<div style="margin-top:8px">
+       <span style="display:inline-block;font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:${tint}">${label}</span>
+       <div style="font-size:13.5px;line-height:1.5;color:#3b3860;margin-top:1px">${valueHtml}</div>
+     </div>`;
+  return `
+  <div style="border:1px solid #eef0f5;border-radius:14px;padding:14px 16px;margin:0 0 12px;background:#fbfcfe">
+    <div style="font-size:15px;font-weight:800;color:#171534">${escapeHtml(a.name)}${a.age != null ? `<span style="color:#8a86a3;font-weight:600"> · age ${a.age}</span>` : ""}${a.ticket ? `<span style="color:#8a86a3;font-weight:600"> · ${escapeHtml(a.ticket)}</span>` : ""}</div>
+    ${line("🩺 Health &amp; allergies", health || "<span style='color:#a7a3bd'>None recorded</span>", "#1d3a8f")}
+    ${line("🧩 SEND &amp; additional needs", a.send ? escapeHtml(a.send) : "<span style='color:#a7a3bd'>None recorded — worth asking the family</span>", "#8a3ffb")}
+    ${a.ehcpFileId ? `<a href="${webUrl}/plan/${encodeURIComponent(a.ehcpFileId)}" style="margin-top:9px;display:inline-block;background:#eef3ff;color:#1d3a8f;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;text-decoration:none">📎 Open ${escapeHtml(a.name)}'s EHCP plan →</a>` : ""}
+  </div>`;
+}
+
+export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
+  const money = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
+  const heading =
+    a.kind === "Waitlist join" ? "New waitlist join"
+    : a.kind === "Booking request" ? "New booking request"
+    : "You have a new booking";
+
+  // At most 5 dates, then a plain "＋ N more" line — an interactive dropdown
+  // (<details>) is stripped by Gmail/Outlook, so text is the reliable choice.
+  const MAX_DATES = 5;
+  const sessionsHtml = a.sessions.length
+    ? a.sessions.slice(0, MAX_DATES).map((s) => escapeHtml(s)).join("<br>") +
+      (a.sessions.length > MAX_DATES
+        ? `<br><span style="color:#8a86a3;font-size:12.5px;font-weight:700">＋ ${a.sessions.length - MAX_DATES} more date${a.sessions.length - MAX_DATES === 1 ? "" : "s"}</span>`
+        : "")
+    : "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
+
+  // Only show a payment line that actually has money against it — a card-only
+  // booking shouldn't display "Childcare payment £0", and vice versa.
+  const payRows = ([
+    ...(a.cardAmount > 0 ? [["Card payment", money(a.cardAmount)]] : []),
+    ...(a.childcareAmount > 0 ? [[a.childcareLabel || "Childcare payment", money(a.childcareAmount)]] : []),
+  ] as [string, string][])
+    .map(
+      ([l, v]) =>
+        `<tr><td style="padding:5px 0;font-size:13.5px;color:#4a4763">${escapeHtml(l)}</td><td style="padding:5px 0;font-size:13.5px;text-align:right;color:#171534">${v}</td></tr>`,
+    )
+    .join("");
+
+  return `
+  <div style="margin:0;padding:0;background:#eef1f7">
+  <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
+
+      <!-- ActivityOS brand header — the real mark, embedded inline (cid) so it
+           renders in every client (see aosLogoAttachment). -->
+      <div style="background:linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%);padding:18px 24px;text-align:center">
+        <img src="cid:aos-mark" width="26" height="26" alt="" style="vertical-align:middle;margin-right:9px;border-radius:7px" />
+        <span style="font-size:21px;font-weight:800;letter-spacing:.2px;color:#ffffff;vertical-align:middle">Activity<span style="color:#EE1F63">OS</span></span>
+      </div>
+
+      ${a.listingImage
+        ? `<img src="${a.listingImage}" alt="${escapeHtml(a.listingName)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;object-fit:cover;max-height:230px" />`
+        : ""}
+
+      <div style="padding:26px 28px 30px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3f78d8">${escapeHtml(a.providerName)}</div>
+        <h1 style="font-size:23px;line-height:1.25;margin:4px 0 2px;color:#171534">${heading}</h1>
+        <div style="font-size:15px;font-weight:700;color:#4a4763;margin-top:6px">${escapeHtml(a.listingName)}</div>
+
+        <p style="font-size:14.5px;line-height:1.6;color:#3b3860;margin:16px 0 4px">
+          Hi ${escapeHtml(a.providerName)}, <b>${escapeHtml(a.bookerName)}</b> has ${a.kind === "Booking request" ? "requested a place on" : a.kind === "Waitlist join" ? "joined the waiting list for" : "booked"} <b>${escapeHtml(a.listingName)}</b>${a.needsApproval ? " — this one needs your approval." : "."}
+        </p>
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:14px">
+          ${detailRow("Booker", escapeHtml(a.bookerName))}
+          ${a.pass ? detailRow("Listing", `${escapeHtml(a.listingName)}<br><span style="color:#8a86a3;font-size:13px">${escapeHtml(a.pass)}</span>`) : detailRow("Listing", escapeHtml(a.listingName))}
+          ${detailRow("Dates &amp; times", sessionsHtml)}
+          ${a.location ? detailRow("Location", escapeHtml(a.location)) : ""}
+        </table>
+
+        <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 10px">Attendees &amp; profile notes</div>
+        ${a.attendees.map(attendeeCard).join("")}
+
+        <!-- Payment -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:18px 0 6px;background:#f7f9fd;border-radius:12px">
+          <tr><td style="padding:14px 16px 4px" colspan="2"><span style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3">Payment</span></td></tr>
+          <tr><td colspan="2" style="padding:0 16px"><table width="100%" cellpadding="0" cellspacing="0">${payRows}
+            <tr><td style="padding:9px 0 3px;border-top:1px solid #e3e8f2;font-size:15px;font-weight:800;color:#171534">Total</td><td style="padding:9px 0 3px;border-top:1px solid #e3e8f2;font-size:15px;font-weight:800;text-align:right;color:#171534">${money(a.total)}</td></tr>
+          </table></td></tr>
+          <tr><td colspan="2" style="padding:8px 16px 14px;font-size:12.5px;color:#8a86a3">Booking ID <b style="color:#4a4763">${escapeHtml(a.bookingId)}</b> · Ref <b style="color:#4a4763">${escapeHtml(a.ref)}</b></td></tr>
+        </table>
+
+        <!-- View booking button (direct to this booking) -->
+        <div style="text-align:center;margin:24px 0 6px">
+          <a href="{{VIEW_URL}}" style="display:inline-block;background:#15b364;color:#ffffff;padding:14px 34px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(21,179,100,.6)">View booking →</a>
+        </div>
+        <p style="text-align:center;font-size:12px;color:#a7a3bd;margin:6px 0 0">Opens this exact booking in ActivityOS.</p>
+      </div>
+
+      <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
+        <span style="font-size:11.5px;color:#8a86a3">You're receiving this because you're on ${escapeHtml(a.providerName)}'s team on ActivityOS.</span>
+      </div>
+    </div>
+  </div>
+  </div>`;
+}
 
 /** Notify a recipient (parent or operator) that they've got a new message. The
  * body is quoted inline and a button deep-links to the thread. Reply-by-email

@@ -58,13 +58,26 @@ export const fromAddress = (angled ? angled[1] : MAIL_FROM).trim();
 /** The platform's own display name — used when no tenant identity applies. */
 export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace(/^"|"$/g, "") : "";
 
+/** A file to attach — e.g. a child's EHCP plan on a booking notification.
+ *  `content` is the raw bytes (Buffer) or a base64 string with `encoding`. */
+export interface MailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+  encoding?: string;
+  /** Set to reference the file inline from the HTML as `cid:<value>` (e.g. an
+   *  embedded logo) instead of showing it as a downloadable attachment. */
+  cid?: string;
+}
+
 /** Returns true when the transport accepted the message — the campaign
  *  history uses it as the "delivered" count. Callers that don't care can
  *  keep treating this as fire-and-forget.
  *
  *  `sender` brands the mail for one provider: their name on the From line and
- *  their address on Reply-To. Omit it for platform mail. */
-export async function sendMail(to: string, subject: string, html: string, sender?: Sender): Promise<boolean> {
+ *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
+ *  adds files (or inline `cid:` images). */
+export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<boolean> {
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
@@ -75,6 +88,7 @@ export async function sendMail(to: string, subject: string, html: string, sender
       to,
       subject,
       html,
+      ...(opts?.attachments?.length ? { attachments: opts.attachments } : {}),
     });
     console.log(
       `[mail] "${subject}" → ${to}` +

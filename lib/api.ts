@@ -90,3 +90,18 @@ export const put = <T>(path: string, body: unknown) =>
 export const patch = <T>(path: string, body: unknown) =>
   api<T>(path, { method: "PATCH", body: JSON.stringify(body) });
 export const del = <T>(path: string) => api<T>(path, { method: "DELETE" });
+
+// Open an authenticated binary file (e.g. a child's EHCP plan at
+// /api/my/files/:id) in a new tab. Every /api route needs a Bearer token, so a
+// plain <a href> would 401 — we fetch with the token, then hand the browser a
+// blob URL. The caller decides when it's allowed to be seen; access is still
+// re-checked server-side on the fetch itself.
+export async function openFile(path: string): Promise<void> {
+  const user = await signedInUser();
+  const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token") : null;
+  const res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, res.status === 404 ? "That file isn't available." : `Couldn't open the file (${res.status}).`);
+  const url = URL.createObjectURL(await res.blob());
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
