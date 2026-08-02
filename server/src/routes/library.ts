@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { geocodeAddress } from "./geo";
+
+type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
 // ─────────────────────────────────────────────────────────────────────────
 // The tenant's shared listing library — the option lists reused across all
@@ -86,6 +89,40 @@ library.put("/", async (req, res) => {
   }
   await ref.set(doc);
   res.json(doc);
+
+  // Geocode venues ONCE at save time and store lat/lng, so the browse page
+  // reads stored coordinates instead of geocoding on the fly (which hammered
+  // the rate-limited geocoder — see routes/geo.ts). Fire-and-forget: the save
+  // has already returned; coords land a moment later and push out via realtime.
+  if ("venues" in body) {
+    void (async () => {
+      const venues = (doc.venues as Venue[] | undefined) ?? [];
+      const prevById = new Map(((existing.venues as Venue[] | undefined) ?? []).map((v) => [v.id, v]));
+      // Only what's missing coords, or whose address changed since it was geocoded.
+      const stale = venues.filter((v) => {
+        if (v.kind === "online" || !v.address?.trim()) return false;
+        const prev = prevById.get(v.id);
+        const hasCoords = typeof v.lat === "number" && typeof v.lng === "number";
+        return !hasCoords || !prev || prev.address !== v.address;
+      });
+      if (!stale.length) return;
+      const found = new Map<string, { lat: number; lng: number; address: string }>();
+      for (const v of stale) {
+        const hit = await geocodeAddress(v.address!);
+        if (hit) found.set(v.id, { ...hit, address: v.address! });
+      }
+      if (!found.size) return;
+      // Re-read and merge by id (only where the address still matches) so a
+      // concurrent edit isn't clobbered by our slightly-stale copy.
+      const fresh = (await ref.get()).data() ?? {};
+      const freshVenues = (fresh.venues as Venue[] | undefined) ?? [];
+      const merged = freshVenues.map((v) => {
+        const c = found.get(v.id);
+        return c && c.address === v.address ? { ...v, lat: c.lat, lng: c.lng } : v;
+      });
+      await ref.update({ venues: merged });
+    })().catch((e) => console.error("[library] venue geocode failed:", (e as Error).message));
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────

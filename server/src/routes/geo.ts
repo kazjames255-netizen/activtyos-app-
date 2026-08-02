@@ -76,6 +76,22 @@ async function nominatimUK(q: string): Promise<GeoHit[]> {
   return raw.map((h) => ({ label: h.display_name, lat: parseFloat(h.lat), lng: parseFloat(h.lon) }));
 }
 
+/** First coordinate for a free-text UK address/postcode, or null. Same
+ *  OS→Nominatim fallback (and 5s cap) as the search route — for server-side
+ *  callers that STORE coords (e.g. a venue at save time) so the browse page
+ *  never has to geocode on the fly. Never throws. */
+export async function geocodeAddress(q: string): Promise<{ lat: number; lng: number } | null> {
+  const s = (q ?? "").trim();
+  if (s.length < 3) return null;
+  try {
+    const hits = OS_KEY ? await osNames(s).catch(() => nominatimUK(s)) : await nominatimUK(s);
+    const h = hits[0];
+    return h ? { lat: h.lat, lng: h.lng } : null;
+  } catch {
+    return null;
+  }
+}
+
 // GET /api/geo/search?q= — operator address lookup (auth-scoped).
 geo.get("/search", async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
