@@ -20,6 +20,7 @@ const KEYS = [
   "categories",
   "venues",
   "provided",
+  "toBring",
   "safety",
   "send",
   "outcomes",

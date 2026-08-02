@@ -95,6 +95,7 @@ export interface LocalState {
   categories: Category[];
   venues: Venue[];
   provided: string[];
+  toBring: string[];
   safety: string[];
   send: string[];
   outcomes: string[];
@@ -145,6 +146,7 @@ function seedLocal(): LocalState {
       { id: uid(), name: "Bedford Woodland Centre", address: "Mowsbury Park, Bedford MK41 8DH" },
     ],
     provided: ["Lunch", "Snacks", "All equipment", "Materials", "Water", "Certificate"],
+    toBring: ["Sun cream", "Water bottle", "Packed lunch", "Change of clothes"],
     safety: ["DBS-checked staff", "First aid on site", "Safeguarding lead", "Low ratios", "Secure venue"],
     send: ["Wheelchair accessible", "1:1 support available", "Quiet space", "Visual timetables", "SEND-trained staff"],
     outcomes: ["Teamwork", "Confidence", "New skills", "Physical activity", "Creativity", "Making friends"],
@@ -171,6 +173,7 @@ function loadLocal(): LocalState {
       categories: p.categories ?? seed.categories,
       venues: p.venues ?? seed.venues,
       provided: p.provided ?? seed.provided,
+      toBring: p.toBring ?? seed.toBring,
       safety: p.safety ?? seed.safety,
       send: p.send ?? seed.send,
       outcomes: p.outcomes ?? seed.outcomes,
@@ -312,7 +315,7 @@ export function FreelancerListingsApp() {
           // them up rather than leaving the operator to rebuild.
           const merged = { ...seedLocal(), ...lib } as LocalState;
           const cached = loadLocal();
-          const listKeys = ["addons", "staff", "categories", "venues", "provided", "safety", "send", "outcomes"] as const;
+          const listKeys = ["addons", "staff", "categories", "venues", "provided", "toBring", "safety", "send", "outcomes"] as const;
           let recovered = false;
           for (const k of listKeys) {
             if ((merged[k]?.length ?? 0) === 0 && (cached[k]?.length ?? 0) > 0) {

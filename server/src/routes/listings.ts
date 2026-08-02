@@ -89,6 +89,7 @@ const baseListingSchema = z
       .optional(),
     outcomes: strArr.optional(),
     provided: strArr.optional(),
+    toBring: strArr.optional(), // "what to bring" — sun cream, water bottle, etc.
     safety: strArr.optional(),
     send: strArr.optional(),
     // when it runs (the recipe the server turns into dated blocks)

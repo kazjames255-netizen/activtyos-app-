@@ -287,6 +287,7 @@ export interface WizardDraft {
   sections: { id: string; type: string; text: string }[];
   outcomes: string[];
   provided: string[];
+  toBring: string[];
   safety: string[];
   send: string[];
   runFrom: string;
@@ -397,7 +398,7 @@ export function emptyDraft(defaults?: {
   return {
     id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
     categoryIds: [], venueId: null, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
-    descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], safety: [], send: [],
+    descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], toBring: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     ticketOverrides: {}, bookRules: {}, addonIds: [], staffIds: [], visibility: "public", bookingType: "auto", waitlist: true, waitlistSize: "20", waitlistMode: "manual",
     // The first policy still in use — a new listing must never start on one
@@ -609,6 +610,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     categories: lib?.categories ?? [],
     venues: lib?.venue ? [lib.venue] : [],
     provided: [],
+    toBring: [],
     safety: [],
     send: [],
     outcomes: [],
@@ -1027,7 +1029,17 @@ export function ListingWizard({
             {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} />}
             {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }} />}
+            {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" cardTitle="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
+              extra={
+                <div className="mt-4">
+                  <RichCard icon="🧳" title="What to bring" subtitle="What families should pack — shown on the listing and in the confirmation email">
+                    <EditableChips options={local.toBring} sel={d.toBring} emojis={local.emojis} showEmoji check
+                      onToggle={(v) => upd({ toBring: toggle(d.toBring, v) })}
+                      onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, toBring: [...s.toBring, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ toBring: [...d.toBring, name] }); }}
+                      onDelete={(v) => { patchLocal((s) => ({ ...s, toBring: s.toBring.filter((x) => x !== v) })); upd({ toBring: d.toBring.filter((x) => x !== v) }); }} />
+                  </RichCard>
+                </div>
+              } />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
@@ -1146,14 +1158,15 @@ function EditableChips({ options, sel, onToggle, onAdd, onDelete, emojis, showEm
   );
 }
 
-function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode }) {
+function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDelete, emojis, headings, cardIcon = "🎒", cardTitle, cardSubtitle = "Tick everything included — saved for every listing", extra }: { n: number; kicker: string; title: string; lede: string; options: string[]; sel: string[]; onToggle: (v: string) => void; onAdd: (v: string, emoji: string) => void; onDelete: (v: string) => void; emojis: Record<string, string>; headings?: React.ReactNode; cardIcon?: string; cardTitle?: string; cardSubtitle?: string; extra?: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-[900px]">
       <StepHead n={n} kicker={kicker} title={title} lede={lede} />
-      <RichCard icon="🎒" title={title} subtitle="Tick everything included — saved for every listing">
+      <RichCard icon={cardIcon} title={cardTitle ?? title} subtitle={cardSubtitle}>
         <EditableChips options={options} sel={sel} onToggle={onToggle} onAdd={onAdd} onDelete={onDelete} emojis={emojis} showEmoji check />
         {headings}
       </RichCard>
+      {extra}
     </div>
   );
 }
