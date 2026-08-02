@@ -200,3 +200,29 @@ h4 {
   color: currentColor;
   opacity: 0.55;
 }
+
+/* Always-visible scrollbars. The app has fixed headers with inner scroll areas,
+ * and macOS "overlay" scrollbars stay hidden until you actually scroll — so a
+ * page with more content below reads as if it ends at the fold. Styling the
+ * WebKit scrollbar opts out of the overlay behaviour and keeps a slim,
+ * permanently-visible bar; the colours track the active theme's ink tokens so
+ * it works on both the dark operator shell and the light customer/parent areas. */
+* {
+  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-color: var(--ink-3) transparent;
+}
+*::-webkit-scrollbar {                          /* Chrome / Safari / Edge */
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-3) 65%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+  background-clip: padding-box;
+}
