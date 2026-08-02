@@ -5,7 +5,7 @@ import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "
 import { consumeDiscountCodes, releaseDiscountCodes } from "../lib/discountRedemptions";
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
-import { rewardReferrer } from "./referral";
+import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { money } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
@@ -1060,6 +1060,10 @@ my.post("/bookings", async (req, res) => {
         bookingRef: placedBooking?.ref,
       });
     }
+    // Eagerly mint THIS family's own friend-facing referral code now they've
+    // booked, so a link they share works immediately — even before they open
+    // their Refer page (which used to be the only thing that created it).
+    if (familyEmail && !onBehalf) void ensureReferralCode(listing.tenantId, familyEmail);
 
     // One email for the basket, not one per child. On-behalf bookings get
     // the account+pay email instead (no child data in it — a mistyped

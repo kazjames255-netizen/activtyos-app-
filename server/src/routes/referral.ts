@@ -114,6 +114,34 @@ function referralCodeFor(email: string): string {
 }
 export { referralCodeFor };
 
+/** Create (or refresh) the FRIEND-facing referral discount code for a family
+ *  with a given provider, reflecting the provider's current friendOff / minSpend.
+ *  Idempotent (merges). Returns the code, or null if referrals are off for the
+ *  tenant. Called both when the family opens their Refer page AND eagerly after
+ *  a booking — so a link shared before the page is ever opened still validates
+ *  (previously the doc only existed once the referrer viewed their page). */
+export async function ensureReferralCode(tenantId: string, email: string): Promise<string | null> {
+  const el = (email ?? "").trim().toLowerCase();
+  if (!tenantId || !el) return null;
+  const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; minSpend?: number } } } | undefined;
+  const ref = lib?.settings?.referral;
+  if (!ref?.enabled) return null;
+  const type = ref.type === "percent" ? "percent" : "amount";
+  const friendOff = Math.max(0, Number(ref.friendOff) || 0);
+  const minSpend = Math.max(0, Number(ref.minSpend) || 0);
+  const code = referralCodeFor(el);
+  const codesCol = db.collection("discountCodes");
+  const existing = await codesCol.where("tenantId", "==", tenantId).where("code", "==", code).limit(1).get();
+  const codeDoc = {
+    tenantId, code, type, value: friendOff,
+    ...(minSpend ? { minSpend } : {}),
+    referral: true, referrerEmail: el, newCustomerOnly: true, active: true,
+  };
+  if (existing.empty) await codesCol.add({ ...codeDoc, usedCount: 0, createdAt: new Date().toISOString() });
+  else await existing.docs[0].ref.set(codeDoc, { merge: true });
+  return code;
+}
+
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
 
 /** Reward the referrer once their friend's first booking goes through: mint a
@@ -197,18 +225,8 @@ referral.get("/", async (req, res) => {
   const referrerReward = Math.max(0, Number(ref.referrerReward) || 0);
   const minSpend = Math.max(0, Number(ref.minSpend) || 0);
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "your provider";
-  const code = referralCodeFor(email);
-
   // Ensure the friend-facing discount code exists and reflects the current amount/type.
-  const codesCol = db.collection("discountCodes");
-  const existing = await codesCol.where("tenantId", "==", tenantId).where("code", "==", code).limit(1).get();
-  const codeDoc = {
-    tenantId, code, type, value: friendOff,
-    ...(minSpend ? { minSpend } : {}),
-    referral: true, referrerEmail: email, newCustomerOnly: true, active: true,
-  };
-  if (existing.empty) await codesCol.add({ ...codeDoc, usedCount: 0, createdAt: new Date().toISOString() });
-  else await existing.docs[0].ref.set(codeDoc, { merge: true });
+  const code = (await ensureReferralCode(tenantId, email)) ?? referralCodeFor(email);
 
   // Stats — each successful referral is one `referrals` doc.
   const mine = await db.collection("referrals").where("referrerEmail", "==", email).get();
