@@ -890,8 +890,8 @@ export const DEFAULT_SETTINGS: TenantSettings = {
     enabled: false,
     tiers: [
       { id: "bronze", name: "Bronze", enabled: false, priceMonthly: 20, benefitType: "percent", benefitValue: 5, perks: [] },
-      { id: "silver", name: "Silver", enabled: false, priceMonthly: 40, benefitType: "percent", benefitValue: 10, perks: ["Priority booking"] },
-      { id: "gold", name: "Gold", enabled: false, priceMonthly: 40, benefitType: "credit", benefitValue: 50, perks: ["Priority booking"] },
+      { id: "silver", name: "Silver", enabled: false, priceMonthly: 40, benefitType: "percent", benefitValue: 10, perks: [] },
+      { id: "gold", name: "Gold", enabled: false, priceMonthly: 40, benefitType: "credit", benefitValue: 50, perks: [] },
     ],
   },
   requireDob: true,

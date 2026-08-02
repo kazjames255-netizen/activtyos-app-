@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Card, Button } from "@/components/ui";
@@ -36,6 +36,43 @@ const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB
 // merely restates it — "5% off every booking", "£70 credit every month" — is
 // noise (and often stale/contradictory). Only show genuine EXTRA perks.
 const extraPerk = (s: string) => !!s && !/\b\d+\s*%\s*off\b/i.test(s) && !/£\s*\d/.test(s) && !/\bwallet\b/i.test(s);
+
+/** One membership tier card — the SINGLE source of truth for how a tier looks,
+ *  used by the family's Memberships page AND the operator's Setup preview so the
+ *  two are always identical. `footer` is the call-to-action (Join / Current plan
+ *  / a static preview pill). */
+export function MembershipTierCard({ tier, footer, highlight }: {
+  tier: { name: string; blurb?: string; priceMonthly: number; benefitType: "credit" | "percent"; benefitValue: number; perks?: string[] };
+  footer?: ReactNode;
+  highlight?: boolean;
+}) {
+  const bn = benefit(tier);
+  const perks = (tier.perks ?? []).filter(extraPerk);
+  return (
+    <Card className={`flex flex-col px-5 py-5 ${highlight ? "ring-2 ring-[#15b364]" : ""}`}>
+      <div className="text-[15px] font-extrabold text-[var(--ink)]">{tier.name}</div>
+      {tier.blurb && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tier.blurb}</div>}
+      <div className="mt-3 flex items-baseline gap-1">
+        <span className="font-[var(--ff-display)] text-[30px] leading-none text-[var(--ink)]">{money(tier.priceMonthly)}</span>
+        <span className="text-[12.5px] text-[var(--ink-3)]">/ month</span>
+      </div>
+      <div className="mt-3 rounded-xl bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3.5 py-3">
+        <div className="text-[15.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
+        <div className="mt-1 text-[11.5px] leading-snug text-[#516099]">{bn.sub}</div>
+      </div>
+      {perks.length > 0 && (
+        <ul className="mt-3 space-y-1.5">
+          {perks.map((perk, i) => (
+            <li key={i} className="flex items-start gap-2 text-[12.5px] text-[var(--ink-2)]">
+              <span className="mt-[1px] text-[#15b364]">✓</span><span>{perk}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {footer && <div className="mt-4 pt-1">{footer}</div>}
+    </Card>
+  );
+}
 
 export function MembershipsApp() {
   const [p, setP] = useState<Payload | null>(null);
@@ -108,38 +145,13 @@ export function MembershipsApp() {
           const isCurrent = current?.tierId === t.id;
           const isSwitch = !!current && !isCurrent;
           return (
-            <Card key={t.id} className={`flex flex-col px-5 py-5 ${isCurrent ? "ring-2 ring-[#15b364]" : ""}`}>
-              <div className="text-[15px] font-extrabold text-[var(--ink)]">{t.name}</div>
-              {t.blurb && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{t.blurb}</div>}
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="font-[var(--ff-display)] text-[30px] leading-none text-[var(--ink)]">{money(t.priceMonthly)}</span>
-                <span className="text-[12.5px] text-[var(--ink-3)]">/ month</span>
-              </div>
-              {(() => { const bn = benefit(t); return (
-                <div className="mt-3 rounded-xl bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3.5 py-3">
-                  <div className="text-[15.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
-                  <div className="mt-1 text-[11.5px] leading-snug text-[#516099]">{bn.sub}</div>
-                </div>
-              ); })()}
-              {(t.perks ?? []).filter(extraPerk).length > 0 && (
-                <ul className="mt-3 flex-1 space-y-1.5">
-                  {(t.perks ?? []).filter(extraPerk).map((perk, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[12.5px] text-[var(--ink-2)]">
-                      <span className="mt-[1px] text-[#15b364]">✓</span><span>{perk}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-4">
-                {isCurrent ? (
-                  <div className="rounded-full bg-[#e6f6ec] py-2 text-center text-[12.5px] font-extrabold text-[#0f7a43]">Current plan</div>
-                ) : (
-                  <Button variant="primary" className="w-full justify-center" onClick={() => join(tenantId, t.id)} disabled={!!busy}>
+            <MembershipTierCard key={t.id} tier={t} highlight={isCurrent}
+              footer={isCurrent
+                ? <div className="rounded-full bg-[#e6f6ec] py-2 text-center text-[12.5px] font-extrabold text-[#0f7a43]">Current plan</div>
+                : <Button variant="primary" className="w-full justify-center" onClick={() => join(tenantId, t.id)} disabled={!!busy}>
                     {busy === t.id ? "Joining…" : isSwitch ? `Switch to ${t.name}` : `Join ${t.name}`}
-                  </Button>
-                )}
-              </div>
-            </Card>
+                  </Button>}
+            />
           );
         })}
       </div>
