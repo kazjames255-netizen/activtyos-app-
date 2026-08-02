@@ -345,6 +345,21 @@ export function payLabelFor(b: { pay: string; voucherScheme?: string; method?: s
   return payLabel(b.pay);
 }
 
+/** How the money came in (or will), for the Payment column's sub-line — the
+ *  scheme name for a voucher, else a tidy method label. */
+export function payMethodLabel(b: { voucherScheme?: string; method?: string }): string {
+  if (b.voucherScheme) return b.voucherScheme;
+  const m = (b.method ?? "").trim();
+  if (!m) return "—";
+  if (/voucher/i.test(m)) return "Voucher";
+  if (/cash/i.test(m)) return "Cash";
+  if (/bank|transfer/i.test(m)) return "Bank transfer";
+  if (/tax.?free|tfc/i.test(m)) return "Tax-Free Childcare";
+  if (/haf|funded/i.test(m)) return "HAF / funded";
+  if (/card/i.test(m)) return "Card";
+  return m;
+}
+
 // Attendee helpers — a booking is either multi-kid (kids[]) or single child.
 export function bookingKids(b: Booking): Kid[] {
   if (b.kids && b.kids.length) return b.kids;

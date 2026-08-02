@@ -12,6 +12,7 @@ import {
   money,
   payLabel,
   payLabelFor,
+  payMethodLabel,
   payTone,
   bookedOn,
   byNewest,
@@ -449,7 +450,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <Col label="📅 Season" w="w-[124px]">{seasonNameOf(b.listingId) ? <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>}</Col>
                   <Col label="📆 Dates" w="w-[158px]"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{b.dates}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
                   <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span></Col>
-                  <Col label="Payment" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></Col>
+                  <Col label="Payment" w="w-[118px]">
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
+                    <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-[var(--ink-3)]" title={payMethodLabel(b)}>{payMethodLabel(b)}</span>
+                  </Col>
 
                   {b.pay === "Awaiting voucher payment" && !off && (
                     <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
