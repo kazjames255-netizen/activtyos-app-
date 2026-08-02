@@ -1210,9 +1210,28 @@ my.post("/bookings", async (req, res) => {
     const waitlist = (
       await Promise.all([...queuedByBlock].map(([id, refs]) => queuePositions(id, refs)))
     ).flat();
+    // Report the total the customer is actually asked for as the SUM OF THE
+    // CREATED BOOKINGS — never the previewed `target`. They must match, but if a
+    // discount/rounding ever makes them drift, the parent (voucher "to pay", the
+    // done screen) and the provider (booking amounts) must never disagree.
+    const bookedTotal = round2(
+      bookings.filter((b) => b.status !== "Waitlisted").reduce((s, b) => s + (b.amount ?? 0), 0),
+    );
     res
       .status(201)
-      .json(legacy.success ? bookings[0] : { bookings, total: target, ...(waitlist.length ? { waitlist } : {}) });
+      .json(
+        legacy.success
+          ? bookings[0]
+          : {
+              bookings,
+              total: bookedTotal,
+              // The SAME voucher scheme + resolved details the family was
+              // emailed, so the done screen shows them for certain (rather than
+              // re-resolving client-side, which can miss them).
+              ...(voucher ? { voucher: { scheme: voucher.name, details: voucher.details } } : {}),
+              ...(waitlist.length ? { waitlist } : {}),
+            },
+      );
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
     else throw e;

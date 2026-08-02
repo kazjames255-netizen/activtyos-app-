@@ -599,7 +599,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string } | null>(null);
+  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string; voucherDetails?: { label: string; value: string }[] } | null>(null);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
   useEffect(() => {
     // Signed out this 401s, which just means there's nothing saved to match.
@@ -657,6 +657,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
       let total = 0;
+      let voucherDetails: { label: string; value: string }[] | undefined;
       // A basket spanning two blocks POSTs twice; discount codes must ride on
       // just ONE of them, or they'd come off each block's subtotal (and count as
       // extra redemptions). They apply to the first — the server re-validates.
@@ -664,7 +665,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
       for (const [blockId, items] of byBlock) {
         const sendCodes = discountCodes && discountCodes.length > 0 && !codesSent;
         if (sendCodes) codesSent = true;
-        const res = await apiPost<{ bookings: { ref: string }[]; total: number }>("/api/my/bookings", {
+        const res = await apiPost<{ bookings: { ref: string }[]; total: number; voucher?: { scheme: string; details: { label: string; value: string }[] } }>("/api/my/bookings", {
           listingId: listing.id,
           blockId,
           method,
@@ -689,6 +690,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
         });
         refs.push(...res.bookings.map((x) => x.ref));
         total += res.total;
+        if (res.voucher?.details?.length) voucherDetails = res.voucher.details;
       }
       const allDates = lines.flatMap((l) => l.dates).sort();
       setDone({
@@ -699,6 +701,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
         firstDate: allDates[0],
         lastDate: allDates[allDates.length - 1],
         voucherScheme,
+        voucherDetails,
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
@@ -723,7 +726,11 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
     // The right account/Ofsted/reference for this listing's setting — shown on
     // the card so the family can pay without hunting through the email.
-    const vDetails = provider ? detailsForListing(provider, { listingId: listing.id, locationId: (listing as { venueId?: string | null }).venueId }) : [];
+    // Prefer the details the SERVER resolved and emailed (done.voucherDetails);
+    // fall back to a client-side resolve for older cached bookings.
+    const vDetails = done.voucherDetails?.length
+      ? done.voucherDetails
+      : provider ? detailsForListing(provider, { listingId: listing.id, locationId: (listing as { venueId?: string | null }).venueId }) : [];
     const websiteD = vDetails.find((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value));
     const website = websiteD ? (/^https?:\/\//i.test(websiteD.value) ? websiteD.value : `https://${websiteD.value}`) : null;
     const isUrlD = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
@@ -763,8 +770,8 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
             {vDetails.length > 0 && (
               <table className="mt-2.5" cellPadding={0}>
                 <tbody>
-                  {vDetails.map((dt) => (
-                    <tr key={dt.id}>
+                  {vDetails.map((dt, di) => (
+                    <tr key={di}>
                       <td className="pr-4 align-top text-[#a5834a]">{dt.label}</td>
                       <td className="align-top font-extrabold text-[#5a4410]">{isUrlD(dt) ? <a href={/^https?:\/\//i.test(dt.value) ? dt.value : `https://${dt.value}`} target="_blank" rel="noreferrer" className="underline" style={{ color: "#2f6bd8" }}>{dt.value} ↗</a> : dt.value}</td>
                     </tr>
