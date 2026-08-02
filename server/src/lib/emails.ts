@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import type { Booking } from "../../../features/bookings/types";
 import { db } from "../firebase";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
@@ -91,6 +92,105 @@ async function customerBrand(
   return { name: providerName };
 }
 
+// —— Static venue map (booking-confirmation attachment) ————————————————————
+const project = (lon: number, lat: number, z: number) => {
+  const n = 2 ** z;
+  return {
+    x: ((lon + 180) / 360) * n,
+    y: ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * n,
+  };
+};
+/** A small static map of the venue with a pin, stitched from OSM tiles. Returns
+ *  a PNG buffer, or null on any failure (the email still sends without it). */
+async function venueMapPng(lat: number, lng: number): Promise<Buffer | null> {
+  try {
+    const z = 15, COLS = 3, ROWS = 2, T = 256;
+    const p = project(lng, lat, z);
+    const originX = Math.floor(p.x - COLS / 2);
+    const originY = Math.floor(p.y - ROWS / 2);
+    const layers: { input: Buffer; left: number; top: number }[] = [];
+    for (let dx = 0; dx < COLS; dx++)
+      for (let dy = 0; dy < ROWS; dy++) {
+        const r = await fetch(`https://tile.openstreetmap.org/${z}/${originX + dx}/${originY + dy}.png`, {
+          headers: { "User-Agent": "ActivityOS/1.0 (booking confirmation maps)" },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!r.ok) return null;
+        layers.push({ input: Buffer.from(await r.arrayBuffer()), left: dx * T, top: dy * T });
+      }
+    const W = COLS * T, H = ROWS * T;
+    const px = Math.round((p.x - originX) * T);
+    const py = Math.round((p.y - originY) * T);
+    const pin = Buffer.from(
+      `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><circle cx="${px}" cy="${py - 2}" r="10" fill="#EE1F63" stroke="#fff" stroke-width="3"/><circle cx="${px}" cy="${py - 2}" r="3.5" fill="#fff"/></svg>`,
+    );
+    // Crop to a landscape window centred on the pin (the 3×2 grid otherwise
+    // leaves the venue low), clamped to the stitched bounds.
+    const CW = Math.min(W, 600), CH = Math.min(H, 300);
+    const left = Math.round(Math.max(0, Math.min(W - CW, px - CW / 2)));
+    const top = Math.round(Math.max(0, Math.min(H - CH, py - CH / 2)));
+    return await sharp({ create: { width: W, height: H, channels: 4, background: { r: 233, g: 235, b: 240, alpha: 1 } } })
+      .composite([...layers, { input: pin, left: 0, top: 0 }])
+      .extract({ left, top, width: CW, height: CH })
+      .png()
+      .toBuffer();
+  } catch {
+    return null;
+  }
+}
+
+/** Everything a customer booking email shows about the listing itself: the hero
+ *  photo, venue location, and (for confirmations) what's included / to bring and
+ *  a map — all as inline cid attachments where they're images. Every piece is
+ *  optional; anything missing is simply omitted. */
+async function listingContext(
+  b: Booking,
+  want: { whatIncluded?: boolean; map?: boolean },
+): Promise<{ heroCid?: string; location?: string; provided?: string[]; toBring?: string[]; mapCid?: string; attachments: MailAttachment[] }> {
+  const attachments: MailAttachment[] = [];
+  try {
+    let listing: Record<string, unknown> | undefined;
+    if (b.blockId) {
+      const blk = await db.collection("blocks").doc(b.blockId).get();
+      const lid = blk.exists ? (blk.get("listingId") as string | undefined) : undefined;
+      if (lid) { const l = await db.collection("listings").doc(lid).get(); if (l.exists) listing = l.data() as Record<string, unknown>; }
+    }
+    if (!listing && b.tenantId) {
+      const q = await db.collection("listings").where("tenantId", "==", b.tenantId).where("name", "==", b.listing).limit(1).get();
+      if (!q.empty) listing = q.docs[0].data() as Record<string, unknown>;
+    }
+    if (!listing) return { attachments };
+
+    let heroCid: string | undefined;
+    const src = (listing.images as { src?: string }[] | undefined)?.[0]?.src;
+    const imgId = src?.match(/\/api\/images\/([^/?#]+)/)?.[1];
+    if (imgId) {
+      const img = (await db.collection("images").doc(imgId).get()).data() as { contentType?: string; b64?: string } | undefined;
+      if (img?.b64) { attachments.push({ filename: "listing", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/jpeg", cid: "listing-hero" }); heroCid = "cid:listing-hero"; }
+    }
+
+    let location: string | undefined; let lat: number | undefined; let lng: number | undefined;
+    const venueId = listing.venueId as string | undefined;
+    if (venueId && b.tenantId) {
+      const lib = (await db.collection("libraries").doc(b.tenantId).get()).data() ?? {};
+      const v = ((lib.venues ?? []) as { id: string; name?: string; address?: string; lat?: number; lng?: number }[]).find((x) => x.id === venueId);
+      if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; }
+    }
+
+    let mapCid: string | undefined;
+    if (want.map && typeof lat === "number" && typeof lng === "number") {
+      const png = await venueMapPng(lat, lng);
+      if (png) { attachments.push({ filename: "map.png", content: png, contentType: "image/png", cid: "booking-map" }); mapCid = "cid:booking-map"; }
+    }
+
+    const provided = want.whatIncluded ? ((listing.provided as string[] | undefined) ?? []).filter(Boolean) : undefined;
+    const toBring = want.whatIncluded ? ((listing.toBring as string[] | undefined) ?? []).filter(Boolean) : undefined;
+    return { heroCid, location, provided, toBring, mapCid, attachments };
+  } catch {
+    return { attachments };
+  }
+}
+
 /** Every session date, 3-across (date over time) at small text. Session strings
  *  look like "Mon 20 Jul 2026 · 08:00 – 17:30". */
 function datesGridHtml(sessions: string[]): string {
@@ -115,7 +215,13 @@ function datesGridHtml(sessions: string[]): string {
  *  session dates, a button straight to the booking, and "powered by ActivityOS"
  *  at the bottom. `hasLogo` gates the inline provider logo (cid:provider-logo).
  *  `title`/`bodyHtml` are HTML, inserted raw. */
-function layout(brand: { name: string; hasLogo: boolean }, title: string, bodyHtml: string, b: Booking): string {
+function layout(
+  brand: { name: string; hasLogo: boolean },
+  title: string,
+  bodyHtml: string,
+  b: Booking,
+  ctx: { heroCid?: string; location?: string; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
+): string {
   const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
   const bookingUrl = `${webUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
   const row = (label: string, value: string) =>
@@ -126,11 +232,15 @@ function layout(brand: { name: string; hasLogo: boolean }, title: string, bodyHt
   const header = brand.hasLogo
     ? `<img src="cid:provider-logo" alt="${escapeHtml(brand.name)}" style="max-height:48px;max-width:220px;display:inline-block" />`
     : `<span style="font-size:22px;font-weight:800;color:#1d3a8f">${escapeHtml(brand.name)}</span>`;
+  const label = (t: string) => `<div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 8px">${t}</div>`;
+  const chips = (items: string[]) =>
+    items.map((x) => `<span style="display:inline-block;background:#eef3ff;color:#1d3a8f;font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:999px;margin:0 6px 6px 0">${escapeHtml(x)}</span>`).join("");
   return `
   <div style="margin:0;padding:0;background:#eef1f7">
   <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
       <div style="padding:24px 28px 20px;text-align:center;border-bottom:1px solid #eef0f5">${header}</div>
+      ${ctx.heroCid ? `<img src="${ctx.heroCid}" alt="${escapeHtml(b.listing)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;object-fit:cover;max-height:220px" />` : ""}
       <div style="padding:24px 28px 28px">
         <h1 style="font-size:22px;line-height:1.25;margin:0 0 14px;color:#171534">${title}</h1>
         ${bodyHtml}
@@ -138,11 +248,15 @@ function layout(brand: { name: string; hasLogo: boolean }, title: string, bodyHt
           ${row("Booking ref", `<b>${escapeHtml(b.ref)}</b>`)}
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
+          ${ctx.location ? row("Location", escapeHtml(ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </table>
-        <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 8px">Dates &amp; times</div>
+        ${label("Dates &amp; times")}
         ${datesGridHtml(b.sessions ?? [])}
+        ${ctx.mapCid ? `${label("Where")}<img src="${ctx.mapCid}" alt="Map of ${escapeHtml(ctx.location ?? b.listing)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border-radius:12px;border:1px solid #eef0f5" />${ctx.location ? `<div style="font-size:12px;color:#8a86a3;margin-top:6px">📍 ${escapeHtml(ctx.location)}</div>` : ""}` : ""}
+        ${ctx.provided && ctx.provided.length ? `${label("What's included")}<div>${chips(ctx.provided)}</div>` : ""}
+        ${ctx.toBring && ctx.toBring.length ? `${label("What to bring")}<div>${chips(ctx.toBring)}</div>` : ""}
         <div style="text-align:center;margin:26px 0 4px">
           <a href="${bookingUrl}" style="display:inline-block;background:#15b364;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(21,179,100,.6)">View my booking →</a>
         </div>
@@ -166,17 +280,27 @@ function sendCustomerEmail(
   subject: string,
   title: string,
   body: string,
+  /** Pull in the listing's photo + venue (and, with whatIncluded/map, what's
+   *  included / to bring / a venue map). Omit for the plainer emails. */
+  enrich?: { whatIncluded?: boolean; map?: boolean },
 ): void {
   void (async () => {
     const brand = await customerBrand(b.tenantId, providerName);
+    const ctx: Awaited<ReturnType<typeof listingContext>> = enrich ? await listingContext(b, enrich) : { attachments: [] };
     sendGated(
       b.tenantId,
       key,
       b.email,
       subject,
-      layout({ name: brand.name, hasLogo: !!brand.logo }, title, body, b),
+      layout({ name: brand.name, hasLogo: !!brand.logo }, title, body, b, {
+        heroCid: ctx.heroCid,
+        location: ctx.location,
+        provided: ctx.provided,
+        toBring: ctx.toBring,
+        mapCid: ctx.mapCid,
+      }),
       providerName,
-      brandAttachments(brand),
+      [...brandAttachments(brand), ...ctx.attachments],
     );
   })().catch((e) => console.error(`[mail] "${subject}" build failed:`, (e as Error).message));
 }
@@ -188,6 +312,7 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
     "We've got your booking request",
     `<p style="font-size:14px">Thanks ${b.booker} — your request is with ${providerName} for approval.
      You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
+    {}, // hero photo + venue location
   );
 }
 
@@ -208,6 +333,7 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
     `Booking confirmed — ${b.listing} (${b.ref})`,
     "You're booked in ✓",
     `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
+    { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map
   );
 }
 
