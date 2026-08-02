@@ -35,6 +35,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# also guard dot-less env files (e.g. a stray `server/env` copy of secrets)
+/env
+/server/env
 
 # vercel
 .vercel
