@@ -414,12 +414,17 @@ export function emailDateChangeResolved(
 }
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
+  const toWallet = b.cancel?.refundTo === "wallet";
+  const amt = b.cancel?.amount ? gbp(b.cancel.amount) : "";
   sendCustomerEmail(
     b, providerName, "payments",
-    `Refund approved — ${b.listing}`,
-    "Your refund is on its way",
-    `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
-     ${b.cancel?.amount ? `Amount: <b>${gbp(b.cancel.amount)}</b>.` : ""}</p>`,
+    toWallet ? `Wallet credit added — ${b.listing}` : `Refund approved — ${b.listing}`,
+    toWallet ? "Your wallet credit is ready" : "Your refund is on its way",
+    toWallet
+      ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved your refund${amt ? ` of <b>${amt}</b>` : ""} as <b>wallet credit</b>.
+         It&rsquo;s <b>already in your wallet</b> and ready to spend on your next booking — nothing else to do.</p>`
+      : `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
+         ${amt ? `Amount: <b>${amt}</b>. It should reach your original payment method within a few days.` : ""}</p>`,
   );
 }
 

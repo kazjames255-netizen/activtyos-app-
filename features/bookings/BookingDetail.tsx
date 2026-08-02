@@ -589,8 +589,19 @@ export function BookingDetail({ booking }: { booking: Booking }) {
       )}
       {(b.cancel?.refund === "full" || b.cancel?.refund === "partial" || b.cancel?.refund === "pending") && (() => {
         const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+        const dest = b.cancel?.refundTo;
         return (
           <>
+            {dest && (
+              <div className="w-full rounded-lg border border-[#c9dcff] bg-[#eef4ff] px-3 py-2 text-[11.5px] font-semibold leading-[1.5] text-[#1d3a8f]">
+                The family asked for this refund{" "}
+                {dest === "wallet"
+                  ? <>as <b>👛 wallet credit</b> (store credit — money stays in the business)</>
+                  : isVoucher
+                    ? <>reimbursed <b>↩︎ via {b.voucherScheme ?? "their voucher scheme"}</b> (voucher / Tax-Free Childcare can&rsquo;t go to a bank card)</>
+                    : <>back to their <b>💳 card</b></>}.
+              </div>
+            )}
             {isVoucher && (
               <div className="w-full rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.5] text-[#7a5b06]">
                 Paid by <b>{b.voucherScheme ?? "voucher"}</b>, not a card — ActivityOS can&rsquo;t send this for you. If the family took <b>wallet credit</b> there&rsquo;s nothing to do. Otherwise <b>reimburse them back through {b.voucherScheme ?? "the scheme"}</b>, then click below to confirm it&rsquo;s done — the family is told straight away.

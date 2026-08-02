@@ -117,6 +117,10 @@ const basketSchema = z.object({
       phone: z.string().trim().max(40).optional(),
     })
     .optional(),
+  // How much of their wallet the family chose to spend on this basket. Absent =
+  // spend it all (the default). Capped server-side at the real balance, so a
+  // stale/oversized value can never overdraw the wallet.
+  walletCap: z.number().nonnegative().optional(),
 });
 const legacySchema = z.object({
   listingId: z.string().min(1),
@@ -867,8 +871,11 @@ my.post("/bookings", async (req, res) => {
       for (const [id, depth] of queueDepth) queuePos.set(id, { ...depth });
       const created: Booking[] = [];
       // Credit is drawn down as the bookings are built, so it lands on the
-      // earliest places taken and never on a waitlisted one.
-      let walletLeft = walletHeld;
+      // earliest places taken and never on a waitlisted one. The family may cap
+      // how much they spend (keep some for another time) — honoured here, but
+      // never above what they actually hold.
+      const walletCap = "walletCap" in input && typeof input.walletCap === "number" ? input.walletCap : walletHeld;
+      let walletLeft = round2(Math.max(0, Math.min(walletHeld, walletCap)));
       const walletSpends: { ref: string; amount: number; reason: string }[] = [];
       priced.forEach((p, i) => {
         const rc = resolveChild(p.item);
@@ -1818,9 +1825,17 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.tenantId) {
       const kids = [...new Set((updated.kids ?? []).map((k) => k.name).filter(Boolean))].join(", ") || updated.child || updated.booker;
       const amt = updated.cancel?.amount ?? 0;
+      // Say WHERE the family asked the money to go — wallet (store credit),
+      // back to card, or (voucher/TFC) reimbursed via the scheme — so the
+      // operator knows what they're approving without opening the booking.
+      const vScheme = updated.voucherScheme;
+      const isVoucher = !!vScheme || (updated.method ?? "").toLowerCase().includes("voucher");
+      const destTxt = updated.cancel?.refundTo === "wallet"
+        ? "to their WALLET (store credit)"
+        : isVoucher ? `via ${vScheme ?? "their voucher scheme"} (not a bank card)` : "back to their CARD";
       const refundTxt = updated.cancel?.refund === "none" || amt <= 0
         ? "No refund is due under your cancellation policy."
-        : `${money(amt)} refund requested — approve or decline.`;
+        : `${money(amt)} refund requested ${destTxt} — approve or decline.`;
       const reasonTxt = updated.cancel?.reason ? ` Reason: ${updated.cancel.reason}.` : "";
       void notify({
         tenantId: updated.tenantId,

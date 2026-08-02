@@ -643,7 +643,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -779,6 +779,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // it at booking time (authoritative); here we just preview the reduction so
   // the parent sees what they'll actually owe. Zero until the backend lands.
   const [walletBalance, setWalletBalance] = useState(0);
+  // How much of the wallet to spend on THIS booking. null = use all (the
+  // default auto-apply); a number = the family chose to spend less and keep the
+  // rest for another time.
+  const [walletUse, setWalletUse] = useState<number | null>(null);
   useEffect(() => {
     if (!parentMode || !tenantId) {
       setWalletBalance(0);
@@ -853,7 +857,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Order of deductions mirrors the server: automatic discounts (already in
   // grandTotal) → discount code → wallet credit.
   const afterCode = Math.max(0, grandTotal - codeOff);
-  const walletApplied = Math.min(walletBalance, afterCode);
+  // Most that could come off this booking from the wallet (can't exceed what's
+  // owed after codes). Auto-apply spends all of it; the family can dial it back.
+  const walletAvail = Math.min(walletBalance, afterCode);
+  const walletApplied = walletUse === null ? walletAvail : Math.max(0, Math.min(walletUse, walletAvail));
   const amountDue = Math.max(0, afterCode - walletApplied);
   // What makes a pass valid depends on how it was sold.
   //
@@ -1307,7 +1314,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           </div>
         )}
         {/* Deductions — each discount code, then wallet credit, and the final due-now. */}
-        {parentMode && (codeOff > 0 || walletApplied > 0) && (
+        {parentMode && (codeOff > 0 || walletAvail > 0) && (
           <>
             {appliedCodes.map((a) => (
               <div key={a.code} className="mt-2 flex items-baseline justify-between text-[12px]">
@@ -1315,10 +1322,34 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 <b style={{ color: tk.accent }}>−{money(Math.min(a.off, grandTotal))}</b>
               </div>
             ))}
-            {walletApplied > 0 && (
-              <div className="mt-2 flex items-baseline justify-between text-[12px]">
-                <span style={{ color: tk.muted }}>👛 Wallet credit{walletBalance > walletApplied ? ` (${money(walletBalance)} available)` : ""}</span>
-                <b style={{ color: tk.accent }}>−{money(walletApplied)}</b>
+            {walletAvail > 0 && (
+              <div className="mt-2">
+                <div className="flex items-baseline justify-between text-[12px]">
+                  <span style={{ color: tk.muted }}>👛 Wallet credit ({money(walletBalance)} available)</span>
+                  <b style={{ color: walletApplied > 0 ? tk.accent : tk.muted }}>−{money(walletApplied)}</b>
+                </div>
+                {/* Auto-applied in full, but the family can spend less and keep
+                    the rest for another time. */}
+                <div className="mt-1 flex items-center gap-1.5">
+                  {([["All", walletAvail], ["None", 0]] as const).map(([label, amt]) => {
+                    const on = label === "All" ? walletApplied === walletAvail : walletApplied === 0;
+                    return (
+                      <button key={label} type="button" onClick={() => setWalletUse(label === "All" ? null : 0)}
+                        className={`px-2 py-[3px] text-[10.5px] font-bold ${tk.round}`}
+                        style={on ? { background: tk.accent, color: "#0a0a0a" } : { border: `1px solid ${tk.line}`, color: tk.muted }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                  <input type="range" min={0} max={walletAvail} step={0.01} value={walletApplied}
+                    onChange={(e) => setWalletUse(parseFloat(e.target.value))} aria-label="How much wallet credit to use"
+                    className="h-1.5 flex-1 cursor-pointer" style={{ accentColor: tk.accent }} />
+                </div>
+                {walletApplied < walletAvail && (
+                  <div className="mt-0.5 text-[10.5px]" style={{ color: tk.muted }}>
+                    {money(walletBalance - walletApplied)} stays in your wallet for next time.
+                  </div>
+                )}
               </div>
             )}
             <div className="mt-1.5 flex items-baseline justify-between border-t pt-1.5 text-[15px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink }}>
@@ -1867,6 +1898,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // The parent's own payment reference per child (voucher/TFC matching).
             voucherRefs: method === "voucher" ? voucherRefs : undefined,
             discountCodes: appliedCodes.map((a) => a.code),
+            // Only sent when the family chose to spend LESS than their full
+            // balance — otherwise the server auto-applies it all (authoritative).
+            walletCap: walletUse === null ? undefined : walletApplied,
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),

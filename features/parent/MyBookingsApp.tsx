@@ -117,6 +117,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
     reasons: { id: string; label: string }[];
     askReason: boolean;
     letChoose: boolean;
+    walletEnabled: boolean;
     noRefundCredit: boolean;
     allowPartial: boolean;
     partRefund: boolean;
@@ -134,7 +135,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
 
   useEffect(() => {
     if (!booking.tenantId) return;
-    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
+    apiPublic<{ settings: { cancellationPolicies?: NamedPolicy[]; cancelReasons?: { id: string; label: string }[]; askReasonParent?: boolean; allowCardRefund?: boolean; refundLetCustomerChoose?: boolean; noRefundCredit?: boolean; allowPartialCancel?: boolean; partialAllowRefund?: boolean; partialAllowWallet?: boolean; partialAllowChangeDate?: boolean; customerArea?: { wallet?: boolean } } }>(`/api/public/library/${encodeURIComponent(booking.tenantId)}`)
       .then((r) => {
         const s = r.settings ?? {};
         const allowCard = s.allowCardRefund ?? true;
@@ -143,6 +144,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           reasons: s.cancelReasons ?? [],
           askReason: !!s.askReasonParent,
           letChoose: allowCard && !!s.refundLetCustomerChoose,
+          walletEnabled: s.customerArea?.wallet ?? true,
           noRefundCredit: !!s.noRefundCredit,
           allowPartial: s.allowPartialCancel ?? true,
           partRefund: s.partialAllowRefund ?? true,
@@ -205,14 +207,19 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
   const partialMode = scope === "days";
   const effRefund = partialMode ? (res === "refund" ? pickedRefund : 0) : advice?.amount ?? 0;
   const refundDue = effRefund > 0;
-  // A voucher was paid outside the app — a refund can't go "back to card"; it
-  // goes back through the scheme (slow) or into the wallet (instant).
+  // A voucher / Tax-Free Childcare payment was made outside the app — that money
+  // can NEVER be refunded to a bank card. The only place it can land is the
+  // family's wallet (store credit), and only if the provider runs one.
   const scheme = booking.voucherScheme;
-  const isVoucher = !!scheme || (booking.method ?? "").toLowerCase().includes("voucher");
-  // Nudge voucher refunds toward the wallet — reimbursing a voucher is slow.
+  const noBankRefund = !!scheme || /voucher|tax.?free|childcare|\btfc\b/i.test(booking.method ?? "");
+  const isVoucher = noBankRefund;
+  const walletOn = cfg?.walletEnabled ?? false;
+  // A voucher/TFC refund can only go to the wallet — force it there when the
+  // provider offers store credit (otherwise the provider reimburses via the
+  // scheme; there's nothing for the family to choose).
   useEffect(() => {
-    if (isVoucher) setRefundPref("wallet");
-  }, [isVoucher]);
+    if (noBankRefund) setRefundPref(walletOn ? "wallet" : "card");
+  }, [noBankRefund, walletOn]);
 
   async function submit() {
     setBusy(true);
@@ -412,29 +419,41 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Anything to add? (optional)…" rows={2}
         className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
 
-      {/* Card vs wallet only matters when there's a cash refund and the provider
-          lets the customer choose where it goes. */}
-      {refundDue && cfg?.letChoose && (
-        <div className="mt-2">
-          <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(effRefund)} refund to</div>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              ["wallet", "👛 Wallet credit"],
-              ["card", isVoucher ? `↩︎ Back via ${scheme ?? "voucher"}` : "💳 Back to card"],
-            ] as const).map(([v, l]) => (
-              <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
-                style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
-                {l}
-              </button>
-            ))}
+      {/* Where a refund goes. Voucher / Tax-Free Childcare money can never return
+          to a bank card, so those bookings are only ever offered the wallet (and
+          only when the provider runs store credit). Everyone else may choose
+          card vs wallet when the provider lets them. */}
+      {refundDue && (cfg?.letChoose || noBankRefund) && (() => {
+        const options: readonly (readonly ["wallet" | "card", string])[] = noBankRefund
+          ? (walletOn ? [["wallet", "👛 Wallet credit"]] : [])
+          : [
+              ...(walletOn ? ([["wallet", "👛 Wallet credit"]] as const) : []),
+              ["card", "💳 Back to card"],
+            ];
+        return (
+          <div className="mt-2">
+            <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">Send my {money(effRefund)} refund to</div>
+            {options.length > 0 && (
+              <div className={`grid ${options.length === 1 ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
+                {options.map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setRefundPref(v)} className="rounded-lg border bg-[var(--surface)] p-2 text-[12px] font-extrabold"
+                    style={refundPref === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+            {noBankRefund && (
+              <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+                💡 You paid by <b>{scheme ?? "childcare voucher / Tax-Free Childcare"}</b>, so a refund can&rsquo;t go back to a bank card.{" "}
+                {walletOn
+                  ? <>It&rsquo;s added to your <b>wallet as credit</b> — instant, and ready to spend on your next booking.</>
+                  : <>Your provider will arrange reimbursement through {scheme ?? "the scheme"}.</>}
+              </p>
+            )}
           </div>
-          {isVoucher && (
-            <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-              💡 <b>Wallet credit is instant</b> and ready to spend on your next booking. A refund back through {scheme ?? "your voucher scheme"} has to be handled by your provider and can take a while.
-            </p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {error && <div className="mt-1 text-[12px] text-[var(--red)]">{error}</div>}
       <div className="mt-2 flex gap-2">
@@ -549,6 +568,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 
   const selfService = policy.amendSelfService;
   const hasChanges = Object.keys(moves).length > 0 || !!preferredDate || !!newTiming || !!msg.trim();
+  // Voucher / Tax-Free Childcare money can never go back to a bank card, so a
+  // cheaper-date difference can only ever land in the wallet — never offer card.
+  const noBankRefund = !!booking.voucherScheme || /voucher|tax.?free|childcare|\btfc\b/i.test(booking.method ?? "");
+  useEffect(() => { if (noBankRefund) setRefundTo("wallet"); }, [noBankRefund]);
   // Where any money back goes, mirroring the provider's Money-back settings.
   const letChoose = policy.amendAllowCheaper && policy.allowCardRefund && policy.refundLetCustomerChoose;
   const cheaper = policy.amendAllowCheaper
@@ -740,17 +763,20 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           {/* Only ask where money goes when a move actually returns some. A
               same-pass date move keeps the price, so this only appears when the
               new dates come out cheaper (the difference is refundable). */}
-          {letChoose && moneyBack && (
+          {(letChoose || noBankRefund) && moneyBack && (
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">If money comes back, send it to</div>
-              <div className="grid grid-cols-2 gap-2">
-                {([["card", "💳 My card"], ["wallet", "👛 Wallet credit"]] as const).map(([v, l]) => (
+              <div className={`grid ${noBankRefund ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
+                {(noBankRefund ? ([["wallet", "👛 Wallet credit"]] as const) : ([["card", "💳 My card"], ["wallet", "👛 Wallet credit"]] as const)).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setRefundTo(v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
                     style={refundTo === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
                     {l}
                   </button>
                 ))}
               </div>
+              {noBankRefund && (
+                <p className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">💡 Paid by {booking.voucherScheme ?? "voucher / Tax-Free Childcare"}, so any money back can&rsquo;t go to a bank card — it&rsquo;s added to your wallet as credit.</p>
+              )}
             </div>
           )}
 
