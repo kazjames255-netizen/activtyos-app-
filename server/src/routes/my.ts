@@ -995,17 +995,18 @@ my.post("/bookings", async (req, res) => {
       const needsApproval = bookings.some((b) => b.status === "Approval needed");
       const waitlisted = bookings.every((b) => b.status === "Waitlisted");
       const primary = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
+      const refs = bookings.map((b) => b.ref);
+      // A basket books one row per child — the deep-link opens the FIRST ref, so
+      // lead the notification with that exact ref (and list the rest) so it's
+      // clear which booking it opens.
+      const kind = waitlisted ? "Waitlist" : needsApproval ? "Booking request" : "New booking";
       void notify({
         tenantId: listing.tenantId,
         to: { kind: "tenant" },
         category: "booking",
-        title: waitlisted
-          ? `${bookerName} joined the waitlist · ${listing.name}`
-          : needsApproval
-            ? `${bookerName} requested to book · ${listing.name}`
-            : `New booking · ${bookerName} · ${listing.name}`,
-        body: `${kids || bookerName} · ${bookings.length} place${bookings.length === 1 ? "" : "s"} · ${money(total)}.${needsApproval ? " Review to approve or decline." : ""}`,
-        subject: `${listing.name}: ${waitlisted ? "waitlist join" : needsApproval ? "booking request" : "new booking"} from ${bookerName}`,
+        title: `${kind} · ${primary.ref} · ${bookerName}`,
+        body: `${listing.name} · ${kids || bookerName} · ${bookings.length} place${bookings.length === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+        subject: `${listing.name}: ${waitlisted ? "waitlist join" : needsApproval ? "booking request" : "new booking"} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
         ref: primary.ref,
       });
