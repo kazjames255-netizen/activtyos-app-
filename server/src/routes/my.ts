@@ -1116,7 +1116,21 @@ my.post("/bookings", async (req, res) => {
           const v = venues.find((x) => x.id === venueId);
           if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
         }
-        const listingImage = (listing as { images?: { src?: string }[] }).images?.[0]?.src;
+        // Hero image — embed inline (cid) so it renders even from a localhost/
+        // dev URL a mail client's image proxy can't reach (same as the logo).
+        // The bytes live in the `images` collection (see routes/uploads.ts).
+        const attachments = [aosLogoAttachment()];
+        let heroCid: string | undefined;
+        const rawSrc = (listing as { images?: { src?: string }[] }).images?.[0]?.src;
+        const imgId = rawSrc?.match(/\/api\/images\/([^/?#]+)/)?.[1];
+        if (imgId) {
+          const imgDoc = await db.collection("images").doc(imgId).get();
+          const img = imgDoc.data() as { contentType?: string; b64?: string } | undefined;
+          if (img?.b64) {
+            attachments.push({ filename: "listing", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/jpeg", cid: "listing-hero" });
+            heroCid = "cid:listing-hero";
+          }
+        }
         const sessions = [...new Set(bookings.flatMap((b) => b.sessions ?? []))];
 
         const emailFullHtml = newBookingProviderEmail({
@@ -1124,7 +1138,7 @@ my.post("/bookings", async (req, res) => {
           kind,
           bookerName,
           listingName: listing.name,
-          listingImage: listingImage && /^https?:\/\//.test(listingImage) ? listingImage : undefined,
+          listingImage: heroCid,
           pass: primary.pass,
           sessions,
           attendees,
@@ -1144,11 +1158,11 @@ my.post("/bookings", async (req, res) => {
           category: "booking",
           title: `${kind} · ${primary.ref} · ${bookerName}`,
           body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
-          subject: `ActivityOS: ${waitlisted ? "waitlist join" : needsApproval ? "booking request" : "new booking"} — ${listing.name} from ${bookerName} (${primary.ref})`,
+          subject: `ActivityOS: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
           href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
           ref: primary.ref,
           emailFullHtml,
-          attachments: [aosLogoAttachment()], // inline brand mark (cid:aos-mark)
+          attachments, // inline brand mark (cid:aos-mark) + listing hero (cid:listing-hero)
         });
       })().catch((e) => console.error("[my] new-booking notify failed:", (e as Error).message));
     }
