@@ -105,6 +105,15 @@ memberships.post("/join", async (req, res) => {
   const tier = tiers.find((t) => t.id === tierId && t.enabled);
   if (!enabled || !tier) { res.status(400).json({ error: "That membership isn’t available" }); return; }
 
+  // A family holds ONE membership per provider — switching tiers replaces the
+  // old one. If the previous tier was a % perk, deactivate its standing code so
+  // two memberships' discounts can't stack. (Credit already paid out on a prior
+  // credit tier stays theirs — it can't be clawed back.)
+  const prev = (await db.collection("memberships").doc(memDocId(tenantId, email)).get()).data();
+  if (prev && prev.status === "active" && prev.tierId && prev.tierId !== tier.id && prev.benefitType === "percent") {
+    await deactivateMembershipCode(tenantId, email, prev.tierId as string);
+  }
+
   const now = new Date();
   const renews = new Date(now); renews.setMonth(renews.getMonth() + 1);
   await db.collection("memberships").doc(memDocId(tenantId, email)).set({

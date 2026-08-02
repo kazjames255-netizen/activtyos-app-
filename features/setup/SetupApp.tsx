@@ -2135,6 +2135,44 @@ export function SetupApp() {
                 </div>
               );
             })}
+            {/* Live preview — exactly how families see the tiers you've switched
+                on. Updates as you type. */}
+            {(() => {
+              const live = m.tiers.filter((t) => t.enabled);
+              if (!m.enabled || live.length === 0) return null;
+              const hero = (t: (typeof m.tiers)[number]) => t.benefitType === "credit"
+                ? { emoji: "👛", headline: `£${t.benefitValue} in your wallet`, sub: "topped up every month — yours to spend on any booking" }
+                : { emoji: "🎟️", headline: `${t.benefitValue}% off, every time`, sub: "applied automatically at checkout, stacking on top of any coupons" };
+              const extra = (s: string) => !!s && !/\d+\s*%\s*off/i.test(s) && !/£\s*\d/.test(s) && !/wallet/i.test(s);
+              return (
+                <div className="mt-5">
+                  <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Preview — how families see it</div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {live.map((t) => {
+                      const bn = hero(t);
+                      return (
+                        <div key={t.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+                          <div className="text-[14px] font-extrabold text-[var(--ink)]">{t.name}</div>
+                          <div className="mt-1 flex items-baseline gap-1"><span className="text-[26px] font-extrabold leading-none text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>£{t.priceMonthly}</span><span className="text-[11px] text-[var(--ink-3)]">/ month</span></div>
+                          <div className="mt-2 rounded-lg bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3 py-2.5">
+                            <div className="text-[13.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
+                            <div className="mt-0.5 text-[10.5px] leading-snug text-[#516099]">{bn.sub}</div>
+                          </div>
+                          {(t.perks ?? []).filter(extra).length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                              {(t.perks ?? []).filter(extra).map((p, i) => (
+                                <li key={i} className="flex items-start gap-1.5 text-[11.5px] text-[var(--ink-2)]"><span className="mt-[1px] text-[#15b364]">✓</span><span>{p}</span></li>
+                              ))}
+                            </ul>
+                          )}
+                          <div className="mt-3 rounded-full bg-[var(--brand-2,#2f6bd8)] py-1.5 text-center text-[11.5px] font-extrabold text-white">Join {t.name}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </Section>
         );
       })()}
