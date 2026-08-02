@@ -684,6 +684,70 @@ bookings.post("/:ref/record-payment", async (req, res) => {
   }
 });
 
+// POST /api/bookings/:ref/reconcile — one-click reconcile: mark the booking's
+// off-platform payment (voucher, TFC, cash, manual card…) fully received. Sets
+// it Paid (or Funded for £0), writes a payment record, and tells the family by
+// email + notification so it shows in their bookings/payments area. `undo`
+// reverts a mistaken reconcile back to awaiting (no email — it's a correction).
+const reconcileSchema = z.object({
+  method: z.string().max(60).optional(),
+  reference: z.string().max(120).optional(),
+  date: z.string().max(25).optional(),
+  undo: z.boolean().optional(),
+});
+bookings.post("/:ref/reconcile", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const parsed = reconcileSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const undo = !!parsed.data.undo;
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      if (undo) {
+        b.amountPaid = 0;
+        b.pay = (b.amount ?? 0) <= 0 ? "Funded" : b.voucherScheme ? "Awaiting voucher payment" : "Unpaid";
+      } else {
+        b.amountPaid = b.amount ?? 0;
+        b.pay = (b.amount ?? 0) <= 0 ? "Funded" : "Paid";
+      }
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    if (!undo) {
+      const label = updated.voucherScheme ? `voucher (${updated.voucherScheme})` : (parsed.data.method ?? updated.method ?? "payment").toLowerCase();
+      void db.collection("payments").add({
+        tenantId, refs: [updated.ref], email: updated.email,
+        amount: updated.amount, currency: "gbp",
+        method: parsed.data.method ?? updated.method, reference: parsed.data.reference ?? null,
+        offline: true, status: "recorded", recordedBy: req.user?.email ?? "operator",
+        createdAt: parsed.data.date ?? new Date().toISOString(),
+      });
+      if (updated.email?.includes("@")) {
+        void notify({
+          tenantId,
+          to: { kind: "parent", email: updated.email },
+          category: "billing",
+          title: `Payment received · ${updated.ref}`,
+          body: `${updated.listing}: we’ve received your ${label} payment of £${(updated.amount ?? 0).toFixed(2)} — your booking is fully paid. Thank you!`,
+          subject: `Payment received for ${updated.ref}`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
+    }
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
 bookings.post("/bulk", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;

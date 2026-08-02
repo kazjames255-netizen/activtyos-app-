@@ -20,8 +20,15 @@ export const reconciliation = Router();
 // hasn't been fully paid or written off as funded/refunded.
 const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Partially paid"]);
 const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
+// Reconciled = the money is in and fully accounted for.
+const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded") && outstandingOf(b) <= 0;
+// Payable bookings worth showing on the reconciliation ledger (paid or not).
+const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined" && ((b.amount ?? 0) > 0 || b.pay === "Funded" || !!b.voucherScheme);
+// The booking's date for the date-range filter — first session day, else booked date.
+const dateOf = (b: Booking) => b.days?.[0] || (b.createdAt ?? "").slice(0, 10) || "";
 
-// GET /api/reconciliation — the outstanding-money picture + a summary.
+// GET /api/reconciliation — the full payment ledger (reconciled + awaiting) with
+// per-booking fields so the client can filter by method, status, date, season & listing.
 reconciliation.get("/", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope) return;
@@ -39,28 +46,38 @@ reconciliation.get("/", async (req, res) => {
 
   const items = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
-    .filter((b) => OWES.has(b.pay) && outstandingOf(b) > 0 && b.status !== "Cancelled" && b.status !== "Declined")
+    .filter(relevant)
     .map((b) => ({
       ref: b.ref,
       booker: b.booker,
       email: b.email,
       listing: b.listing,
+      listingId: b.listingId ?? null,
       child: b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child,
       method: b.method,
       pay: b.pay,
       amount: b.amount ?? 0,
       amountPaid: b.amountPaid ?? 0,
       outstanding: outstandingOf(b),
+      reconciled: isReconciled(b),
       voucherScheme: b.voucherScheme ?? null,
       voucherReceiveBy: b.voucherReceiveBy ?? null,
+      date: dateOf(b),
+      createdAt: b.createdAt ?? null,
       // A voucher whose money should have arrived by now — the provider needs
       // to chase or accept. (Flag only; nothing auto-cancels — §Q.)
       overdue: b.pay === "Awaiting voucher payment" && !!b.voucherReceiveBy && b.voucherReceiveBy < today,
     }))
-    .sort((a, b) => (a.overdue === b.overdue ? (a.ref < b.ref ? 1 : -1) : a.overdue ? -1 : 1));
+    // Awaiting first (overdue at the very top), then most-recent.
+    .sort((a, b) => {
+      if (a.reconciled !== b.reconciled) return a.reconciled ? 1 : -1;
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+      return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+    });
 
+  const awaiting = items.filter((i) => !i.reconciled && i.outstanding > 0);
   const byMethod: Record<string, { count: number; outstanding: number }> = {};
-  for (const it of items) {
+  for (const it of awaiting) {
     const key = it.voucherScheme ? `Voucher · ${it.voucherScheme}` : it.method || "Other";
     const m = (byMethod[key] ??= { count: 0, outstanding: 0 });
     m.count += 1;
@@ -69,8 +86,9 @@ reconciliation.get("/", async (req, res) => {
   res.json({
     items,
     summary: {
-      count: items.length,
-      outstanding: Math.round(items.reduce((s, i) => s + i.outstanding, 0) * 100) / 100,
+      count: awaiting.length,
+      reconciledCount: items.filter((i) => i.reconciled).length,
+      outstanding: Math.round(awaiting.reduce((s, i) => s + i.outstanding, 0) * 100) / 100,
       overdue: items.filter((i) => i.overdue).length,
       awaitingVoucher: items.filter((i) => i.pay === "Awaiting voucher payment").length,
       byMethod,
