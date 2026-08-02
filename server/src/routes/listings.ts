@@ -71,6 +71,9 @@ const baseListingSchema = z
     venueId: z.string().max(60).nullable().optional(),
     // On-the-day contact number, shown to parents only while the camp runs.
     sitePhone: z.string().max(40).optional(),
+    // Off-platform payment methods this listing accepts (subset of the tenant's
+    // Setup payMethods). Card is always accepted and isn't stored here.
+    payMethods: z.array(z.string().max(60)).max(20).optional(),
     allowOutOfRange: z.boolean().optional(),
     // capacity
     maxAttendees: z.string().max(10).optional(),

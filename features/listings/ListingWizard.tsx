@@ -260,6 +260,10 @@ export interface WizardDraft {
    *  is actually running (today within the run dates) — e.g. how to reach staff
    *  during sessions. Blank = not shown. */
   sitePhone?: string;
+  /** Which off-platform payment methods this listing accepts (subset of the
+   *  tenant's Setup → Payment methods). Card is ALWAYS accepted and isn't listed
+   *  here. Undefined = accept everything the tenant offers (legacy default). */
+  payMethods?: string[];
   allowOutOfRange: boolean;
   maxAttendees: string;
   capacityScope: "day" | "listing";
@@ -1294,6 +1298,9 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
 function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState }) {
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
+  // Card is always accepted; these are the extra methods the tenant offers.
+  const nonCard = (settings.payMethods ?? []).filter((m) => !/card/i.test(m));
+  const accepted = d.payMethods ?? nonCard; // undefined = accept everything (legacy)
   return (
     <div className="max-w-[1120px]">
       <StepHead n={2} kicker="STEP 2 · DETAILS" title="Where, who & how many" lede="The venue, the ages it's for, the season, and how many can come." />
@@ -1368,6 +1375,25 @@ function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<Wizar
 
       </div>
       </RichCard>
+      </div>
+
+      <div className="mt-4">
+        <RichCard icon="💳" title="How can parents pay?" subtitle="Card is always accepted — turn other methods on or off" tint="teal">
+          <div className="mb-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">Set each scheme&rsquo;s details once in <b>Setup → Payment methods</b>; here you just pick which apply to <b>this</b> listing. Parents always see <b>card</b>; whatever you switch on also shows in their checkout and at the top of the booking page.</div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-2)" }}>💳 Card <span className="font-normal text-[var(--ink-3)]">· always on</span></span>
+            {nonCard.map((m) => {
+              const on = accepted.includes(m);
+              return (
+                <button key={m} type="button" onClick={() => upd({ payMethods: toggle(accepted, m) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
+                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                  {on ? "✓ " : ""}{m}
+                </button>
+              );
+            })}
+            {nonCard.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No other methods set up yet — add vouchers, Tax-Free Childcare, cash etc. in Setup → Payment methods.</span>}
+          </div>
+        </RichCard>
       </div>
     </div>
   );
@@ -3168,6 +3194,17 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
               <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#1d3a8f" }}>Camp is on now — reach staff</div>
               <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className="text-[16px] font-black tracking-[-0.01em]" style={{ color: "#0b6b3a" }}>{d.sitePhone}</a>
             </div>
+          </div>
+        )}
+
+        {/* Ways to pay — card is always accepted; show whatever else this listing takes */}
+        {d.payMethods && d.payMethods.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 px-2 text-[12px]">
+            <span className="font-extrabold uppercase tracking-[0.08em] text-[#7a8194]">Ways to pay</span>
+            <span className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#cdddf7", background: "#eef4ff", color: "#1d3a8f" }}>💳 Card</span>
+            {d.payMethods.map((m) => (
+              <span key={m} className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#b6e6c8", background: "#e4f8ee", color: "#0b6b3a" }}>{m}</span>
+            ))}
           </div>
         )}
 

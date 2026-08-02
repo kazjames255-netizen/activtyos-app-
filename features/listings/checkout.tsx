@@ -657,7 +657,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // correcting the state afterwards: a booking must never be recorded against
   // a method the provider has removed, and there's no moment where the two
   // disagree if it's computed.
-  const payList: readonly string[] = ckSettings.payMethods.length ? ckSettings.payMethods : PAY_METHODS;
+  // Card is always offered; other methods only if THIS listing accepts them
+  // (d.payMethods). Undefined = accept everything the tenant offers (legacy).
+  const allMethods: readonly string[] = ckSettings.payMethods.length ? ckSettings.payMethods : PAY_METHODS;
+  const payList: readonly string[] = allMethods.filter((m) => /card/i.test(m) || !d.payMethods || d.payMethods.includes(m));
   // Voucher schemes with a reference filled in — the only ones a parent can
   // actually be sent to.
   const vouchers = liveVouchers(ckSettings.voucherProviders);
