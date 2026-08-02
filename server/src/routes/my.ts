@@ -980,6 +980,30 @@ my.post("/bookings", async (req, res) => {
     } else {
       emailBookingRequestReceived(bookings[0], listing.tenantName ?? listing.name);
     }
+    // Tell the PROVIDER a booking just came in — bell + email. This was never
+    // wired: the create path only ever emailed the parent, so operators got no
+    // heads-up on new bookings. Fires once per basket, not per child.
+    if (listing.tenantId && bookings.length) {
+      const total = bookings.reduce((s, b) => s + (b.amount ?? 0), 0);
+      const kids = [...new Set(bookings.map((b) => b.child).filter(Boolean))].join(", ");
+      const needsApproval = bookings.some((b) => b.status === "Approval needed");
+      const waitlisted = bookings.every((b) => b.status === "Waitlisted");
+      const primary = bookings.find((b) => b.status !== "Waitlisted") ?? bookings[0];
+      void notify({
+        tenantId: listing.tenantId,
+        to: { kind: "tenant" },
+        category: "booking",
+        title: waitlisted
+          ? `${bookerName} joined the waitlist · ${listing.name}`
+          : needsApproval
+            ? `${bookerName} requested to book · ${listing.name}`
+            : `New booking · ${bookerName} · ${listing.name}`,
+        body: `${kids || bookerName} · ${bookings.length} place${bookings.length === 1 ? "" : "s"} · ${money(total)}.${needsApproval ? " Review to approve or decline." : ""}`,
+        subject: `${listing.name}: ${waitlisted ? "waitlist join" : needsApproval ? "booking request" : "new booking"} from ${bookerName}`,
+        href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
+        ref: primary.ref,
+      });
+    }
     // Keep Customers & families current (one upsert per child, same family).
     void upsertFamilyFromBasket(listing.tenantId, {
       booker: bookerName,
