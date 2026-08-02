@@ -450,15 +450,24 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
     : a.kind === "Booking request" ? "New booking request"
     : "You have a new booking";
 
-  // Every date, in a compact two-column table (date · time) at small text so a
-  // long run stays tidy. Session strings look like "Mon 20 Jul 2026 · 08:00 – 17:30".
+  // Every date in a 3-across grid (date over time, small text) so even a long
+  // run stays short and tidy. Session strings look like
+  // "Mon 20 Jul 2026 · 08:00 – 17:30".
+  const dateCell = (s: string) => {
+    const [day, time] = s.split(" · ");
+    return `<td width="33%" style="padding:3px 10px 6px 0;vertical-align:top">
+      <div style="font-size:12px;font-weight:700;color:#171534;white-space:nowrap">${escapeHtml(day ?? s)}</div>
+      ${time ? `<div style="font-size:11px;color:#8a86a3;white-space:nowrap">${escapeHtml(time)}</div>` : ""}
+    </td>`;
+  };
+  const dateRows: string[] = [];
+  for (let i = 0; i < a.sessions.length; i += 3) {
+    const cells = a.sessions.slice(i, i + 3).map(dateCell);
+    while (cells.length < 3) cells.push(`<td width="33%"></td>`); // keep columns aligned
+    dateRows.push(`<tr>${cells.join("")}</tr>`);
+  }
   const sessionsHtml = a.sessions.length
-    ? `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:12px;line-height:1.5">${a.sessions
-        .map((s) => {
-          const [day, time] = s.split(" · ");
-          return `<tr><td style="padding:2px 10px 2px 0;color:#171534;font-weight:600;white-space:nowrap;vertical-align:top">${escapeHtml(day ?? s)}</td><td style="padding:2px 0;color:#4a4763;white-space:nowrap">${escapeHtml(time ?? "")}</td></tr>`;
-        })
-        .join("")}</table>`
+    ? `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">${dateRows.join("")}</table>`
     : "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
 
   // Only show a payment line that actually has money against it — a card-only
