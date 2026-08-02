@@ -592,8 +592,9 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
  * "Preview as a parent" (same ParentPreview component, same data shape). */
 export function CustomerPage({ listing, topRight }: { listing: ServerListing; topRight?: React.ReactNode }) {
   const d = draftFromListing(listing);
+  const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
-  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string } | null>(null);
+  const [done, setDone] = useState<{ refs: string[]; total: number; children: string[]; passes: string[]; firstDate?: string; lastDate?: string; voucherScheme?: string } | null>(null);
   const [savedChildren, setSavedChildren] = useState<ChildProfile[]>([]);
   useEffect(() => {
     // Signed out this 401s, which just means there's nothing saved to match.
@@ -691,6 +692,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
         passes: [...new Set(lines.map((l) => l.pass))],
         firstDate: allDates[0],
         lastDate: allDates[allDates.length - 1],
+        voucherScheme,
       });
     } catch (e) {
       setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
@@ -709,6 +711,12 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
         : fmtDay(done.firstDate);
     const kids = done.children.join(", ");
     const where = venue?.name ? [venue.name, venue.address].filter(Boolean).join(", ") : null;
+    // Voucher bookings are NOT paid yet — the family pays through their scheme's
+    // own site. Surface that + a link, instead of a false "paid".
+    const scheme = done.voucherScheme;
+    const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
+    const websiteD = provider?.details?.find((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value));
+    const website = websiteD ? (/^https?:\/\//i.test(websiteD.value) ? websiteD.value : `https://${websiteD.value}`) : null;
     const rowCls = "flex items-start gap-3 py-1.5 text-[13px]";
     const labCls = "w-[92px] flex-none text-[#8a86a3]";
     const valCls = "font-semibold text-[#171534]";
@@ -732,10 +740,23 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
             {where && <div className={rowCls}><span className={labCls}>📍 Where</span><span className={valCls}>{where}</span></div>}
             <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
               <span className="text-[#8a86a3]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
-              <b className="text-[15px] text-[#171534]">{money(done.total)} paid</b>
+              {scheme
+                ? <b className="text-[15px] text-[#a5670a]">{money(done.total)} to pay via {scheme}</b>
+                : <b className="text-[15px] text-[#171534]">{money(done.total)} paid</b>}
             </div>
           </div>
         </div>
+
+        {scheme && (
+          <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-left text-[12.5px] leading-relaxed text-[#7a5a12]">
+            <b>Almost there — your place is held.</b> Head over to your <b>{scheme}</b> account to pay <b>{money(done.total)}</b>, quoting the details in your confirmation email. Your booking shows as <b>awaiting voucher payment</b> until the money reaches {listing.tenantName || "your provider"}.
+            {website && (
+              <div className="mt-2.5">
+                <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>Go to {scheme} to pay ↗</a>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>See my bookings</a>
