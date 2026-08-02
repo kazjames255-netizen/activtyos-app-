@@ -71,7 +71,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1211,7 +1211,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1269,6 +1269,7 @@ export function SetupApp() {
     ["vouchers", "Childcare vouchers"],
     ["marketplace", "Marketplace"],
     ["refer", "Refer a friend"],
+    ["memberships", "Memberships"],
     ["notifications", "Notifications"],
   ];
 
@@ -2082,6 +2083,52 @@ export function SetupApp() {
                 <Toggle on={r.capToFriendSpend} onChange={(v) => setR({ capToFriendSpend: v })} labels={["On", "Off"]} />
               </Row>
             )}
+          </Section>
+        );
+      })()}
+
+      {tab === "memberships" && (() => {
+        const m = settings.memberships;
+        const setM = (patch: Partial<typeof m>) => set("memberships", { ...m, ...patch });
+        const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
+        const setTier = (id: string, patch: Partial<(typeof m.tiers)[number]>) =>
+          setM({ tiers: m.tiers.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
+        return (
+          <Section
+            title="Memberships"
+            lede="Offer families up to three monthly plans. Each tier gives EITHER wallet credit every month, or a standing % off every booking (which stacks on top of any coupons). Toggle tiers on/off and set the price + benefit. Recurring billing is handled by Stripe."
+          >
+            <Row label="⭐ Memberships" hint="Off: no memberships page for families. On: families can join the tiers you switch on below.">
+              <Toggle on={m.enabled} onChange={(v) => setM({ enabled: v })} labels={["On", "Off"]} />
+            </Row>
+            {m.tiers.map((t) => {
+              const pct = t.benefitType === "percent";
+              return (
+                <div key={t.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Input value={t.name} onChange={(e) => setTier(t.id, { name: e.target.value })} className="w-[160px] font-bold" />
+                    <Toggle on={t.enabled} onChange={(v) => setTier(t.id, { enabled: v })} labels={["On", "Off"]} />
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">Price / month
+                      <span className="mt-1 flex items-center gap-1"><span className="text-[12px] font-bold text-[var(--ink-3)]">£</span><Input type="number" min="0" step="1" value={String(t.priceMonthly)} onChange={(e) => setTier(t.id, { priceMonthly: num(e.target.value) })} className="w-full" /></span>
+                    </label>
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">Benefit
+                      <span className="mt-1 block"><Toggle on={pct} onChange={(v) => setTier(t.id, { benefitType: v ? "percent" : "credit" })} labels={["% off", "£ credit"]} /></span>
+                    </label>
+                    <label className="text-[12px] font-semibold text-[var(--ink-2)]">{pct ? "% off every booking" : "£ credit / month"}
+                      <span className="mt-1 flex items-center gap-1">{!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}<Input type="number" min="0" step="1" max={pct ? "100" : undefined} value={String(t.benefitValue)} onChange={(e) => setTier(t.id, { benefitValue: Math.min(pct ? 100 : 1e6, num(e.target.value)) })} className="w-full" />{pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}</span>
+                    </label>
+                  </div>
+                  <label className="mt-2 block text-[12px] font-semibold text-[var(--ink-2)]">Perks (one per line — shown on the tier card)
+                    <textarea value={(t.perks ?? []).join("\n")} onChange={(e) => setTier(t.id, { perks: e.target.value.split("\n") })} rows={3} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
+                  </label>
+                  {t.benefitType === "credit" && t.benefitValue > t.priceMonthly && (
+                    <div className="mt-2 rounded-lg bg-[#fdf3d8] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5300]">⚠️ You’re giving £{t.benefitValue} credit for £{t.priceMonthly}/mo — margin-negative unless members don’t spend it all.</div>
+                  )}
+                </div>
+              );
+            })}
           </Section>
         );
       })()}

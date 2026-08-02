@@ -330,6 +330,26 @@ export interface SavedImage {
   quotes?: { text: string; byName?: string; marketing?: boolean }[];
 }
 
+/** One customer-membership tier a provider offers. A tier is either a CREDIT
+ *  plan (£`benefitValue` into the family's wallet every month) or a PERCENT plan
+ *  (`benefitValue`% off every booking, stacking on top of any coupons). */
+export interface MembershipTier {
+  id: string;
+  name: string;
+  /** Off tiers aren't shown to families — the provider dials 1–3 tiers up/down. */
+  enabled: boolean;
+  /** What the family pays per month (£). */
+  priceMonthly: number;
+  /** How the benefit is delivered. */
+  benefitType: "credit" | "percent";
+  /** £ of wallet credit per month (credit), or % off every booking (percent). */
+  benefitValue: number;
+  /** Extra selling-point perks shown on the tier card (priority booking, etc). */
+  perks: string[];
+  /** Optional one-line pitch under the tier name. */
+  blurb?: string;
+}
+
 export interface TenantSettings {
   // ── Public identity ──
   /**
@@ -636,6 +656,18 @@ export interface TenantSettings {
     capToFriendSpend: boolean;
   };
 
+  /**
+   * Customer memberships — the provider offers up to three monthly tiers a
+   * family can subscribe to (§ memberships). Each tier gives EITHER wallet
+   * credit or a standing % off every booking (which stacks with coupons).
+   * Off by default; recurring billing is Stripe on the connected account
+   * (backend), but the benefit itself is delivered from existing primitives.
+   */
+  memberships: {
+    enabled: boolean;
+    tiers: MembershipTier[];
+  };
+
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
   requireDob: boolean;
@@ -850,6 +882,14 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   features: {},
   customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true },
   referral: { enabled: false, type: "amount", friendOff: 10, referrerReward: 10, minSpend: 0, capToFriendSpend: true },
+  memberships: {
+    enabled: false,
+    tiers: [
+      { id: "bronze", name: "Bronze", enabled: false, priceMonthly: 20, benefitType: "percent", benefitValue: 5, perks: ["5% off every booking"] },
+      { id: "silver", name: "Silver", enabled: false, priceMonthly: 40, benefitType: "percent", benefitValue: 10, perks: ["10% off every booking", "Priority booking"] },
+      { id: "gold", name: "Gold", enabled: false, priceMonthly: 60, benefitType: "credit", benefitValue: 70, perks: ["£70 credit every month", "Priority booking", "Waived booking fees"] },
+    ],
+  },
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
@@ -960,6 +1000,11 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     features: { ...(s.features ?? {}) },
     customerArea: { ...DEFAULT_SETTINGS.customerArea, ...(s.customerArea ?? {}) },
     referral: { ...DEFAULT_SETTINGS.referral, ...(s.referral ?? {}) },
+    memberships: {
+      ...DEFAULT_SETTINGS.memberships,
+      ...(s.memberships ?? {}),
+      tiers: (s.memberships?.tiers ?? DEFAULT_SETTINGS.memberships.tiers).map((t) => ({ ...t, perks: t.perks ?? [] })),
+    },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
     emailPrefs: { ...DEFAULT_SETTINGS.emailPrefs, ...(s.emailPrefs ?? {}) },

@@ -27,6 +27,7 @@ import { moments } from "./routes/moments";
 import { medications } from "./routes/medications";
 import { childFiles } from "./routes/childFiles";
 import { referral, referralsAdmin } from "./routes/referral";
+import { memberships, membershipsAdmin } from "./routes/memberships";
 import { platform } from "./routes/platform";
 import { analytics } from "./routes/analytics";
 import { reconciliation } from "./routes/reconciliation";
@@ -183,8 +184,10 @@ app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
 app.use("/api/my/files", childFiles);
 app.use("/api/my/referral", referral);
+app.use("/api/my/memberships", memberships);
 app.use("/api/my", my);
 app.use("/api/referrals", referralsAdmin);
+app.use("/api/memberships", membershipsAdmin);
 app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);
 app.use("/api/tenants", tenants);

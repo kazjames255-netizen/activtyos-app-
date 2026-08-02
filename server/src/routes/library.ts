@@ -188,6 +188,8 @@ const PUBLIC_SETTINGS_KEYS = [
   "customerArea",
   // Refer-a-friend amounts + on/off, shown on the family's referral page.
   "referral",
+  // Membership tiers + on/off, shown on the family's Memberships page.
+  "memberships",
   // Operator module switches — the family app reads these so a module the
   // operator switched off is hidden on the customer side too.
   "features",

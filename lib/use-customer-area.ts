@@ -52,7 +52,10 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
         if (featureOff(fe, "newsfeed")) ca.newsfeed = false;
         if (featureOff(fe, "moments")) ca.moments = false;
         if (featureOff(fe, "meals")) ca.meals = false;
-        if (featureOff(fe, "memberships")) ca.memberships = false;
+        // Memberships also needs the programme actually switched on (at least
+        // one tier live), or the family sees an empty page.
+        ca.memberships = ca.memberships && !featureOff(fe, "memberships")
+          && !!full.memberships?.enabled && (full.memberships?.tiers ?? []).some((t) => t.enabled);
         ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
         setCa(ca);
       })

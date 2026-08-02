@@ -49,6 +49,7 @@ import { BrowseApp } from "@/features/parent/BrowseApp";
 import { WalletApp } from "@/features/parent/WalletApp";
 import { CouponsApp } from "@/features/parent/CouponsApp";
 import { ReferApp } from "@/features/parent/ReferApp";
+import { MembershipsApp } from "@/features/parent/MembershipsApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { BookingsHubApp } from "@/features/parent/BookingsHub";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
@@ -305,14 +306,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     account: AccountApp,
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="parent" />,
-    memberships: planned({
-      title: "Memberships",
-      blurb: "Recurring plans from your providers — a term of Tuesdays, a monthly pass — managed and paid from here.",
-      links: [
-        { href: "/custdash/wallet", label: "Wallet", hint: "credit and balances today" },
-        { href: "/custdash/coupons", label: "Coupons", hint: "codes your providers gave you" },
-      ],
-    }),
+    memberships: MembershipsApp,
     dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {

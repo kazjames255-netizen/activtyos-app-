@@ -27,6 +27,10 @@ export interface DiscountCodeDoc {
   referrerEmail?: string;
   newCustomerOnly?: boolean;
   maxOff?: number; // hard £ ceiling on the discount (e.g. a referral reward capped to what the friend spent)
+  // Membership perk: a standing % code assigned to an active member, auto-applied
+  // at checkout and stacking with any coupon. Deactivated when they cancel.
+  membership?: boolean;
+  membershipTierId?: string;
 }
 
 /** The emails a reserved code is limited to (single family + group members). */

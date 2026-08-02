@@ -332,6 +332,8 @@ my.get("/coupons", async (req, res) => {
       listingName: c.listingId ? (lName.get(c.listingId) ?? null) : null,
       provider: tName.get(c.tenantId) ?? "Your provider",
       reserved: reservedEmails(c).length > 0,
+      // A membership perk code — the checkout auto-applies it (stacks with coupons).
+      membership: !!c.membership,
     }))
     .sort((a, b) => (a.provider === b.provider ? a.code.localeCompare(b.code) : a.provider.localeCompare(b.provider)));
   res.json(out);

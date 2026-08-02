@@ -797,7 +797,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // against the SAME engine the charge uses (/api/discounts/validate → shared
   // lib/discountCodes) so the saving previewed here is exactly what's taken off.
   const attendees = Math.max(1, new Set(b.basket.flatMap((x) => b.childrenOn(x.id))).size);
-  type MyCoupon = { code: string; type: "percent" | "amount" | "perAttendee"; value: number; tenantId: string; listingId: string | null };
+  type MyCoupon = { code: string; type: "percent" | "amount" | "perAttendee"; value: number; tenantId: string; listingId: string | null; membership?: boolean };
   type Applied = { code: string; off: number; exclusive: boolean };
   const [myCoupons, setMyCoupons] = useState<MyCoupon[]>([]);
   const [codeInput, setCodeInput] = useState("");
@@ -853,6 +853,19 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     if (code) { triedRef.current = true; void applyCode(code); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentMode, grandTotal]);
+
+  // A member's standing % perk auto-applies on top of everything (it stacks —
+  // that's the point of paying for the membership). Applied once, when the
+  // family's coupons + total are known.
+  const triedMembership = useRef(false);
+  useEffect(() => {
+    if (!parentMode || triedMembership.current || grandTotal <= 0) return;
+    const perk = myCoupons.find((c) => c.membership);
+    if (!perk || isApplied(perk.code)) return;
+    triedMembership.current = true;
+    void applyCode(perk.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentMode, grandTotal, myCoupons]);
 
   // Order of deductions mirrors the server: automatic discounts (already in
   // grandTotal) → discount code → wallet credit.
