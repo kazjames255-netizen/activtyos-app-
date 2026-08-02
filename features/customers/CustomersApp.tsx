@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, openFile } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
@@ -913,14 +913,15 @@ export function CustomersApp() {
                           <span className="text-[11px] font-bold">SEND plan</span>
                           {k.sendPlanId ? (
                             <>
-                              <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/my/files/${k.sendPlanId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="max-w-[220px] truncate rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[2px] text-[11px] font-bold text-[var(--ink)]"
+                              <button
+                                type="button"
+                                // Fetch with the operator's token — a plain link
+                                // 401s (every /api route needs a Bearer token).
+                                onClick={() => { void openFile(`/api/my/files/${k.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn’t open the plan.")); }}
+                                className="max-w-[220px] truncate rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[2px] text-[11px] font-bold text-[var(--ink)] hover:border-[var(--brand)]"
                               >
                                 📎 {k.sendPlanName || "Open plan"}
-                              </a>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => set({ sendPlanId: "", sendPlanName: "" })}
