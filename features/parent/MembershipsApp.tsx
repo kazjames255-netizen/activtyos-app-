@@ -32,6 +32,10 @@ const benefit = (t: { benefitType: "credit" | "percent"; benefitValue: number })
 const benefitShort = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
   t.benefitType === "credit" ? `${money(t.benefitValue)}/mo wallet credit` : `${t.benefitValue}% off every booking`;
 const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+// The benefit (wallet credit / % off) is already the card's hero, so a perk that
+// merely restates it — "5% off every booking", "£70 credit every month" — is
+// noise (and often stale/contradictory). Only show genuine EXTRA perks.
+const extraPerk = (s: string) => !!s && !/\b\d+\s*%\s*off\b/i.test(s) && !/£\s*\d/.test(s) && !/\bwallet\b/i.test(s);
 
 export function MembershipsApp() {
   const [p, setP] = useState<Payload | null>(null);
@@ -117,9 +121,9 @@ export function MembershipsApp() {
                   <div className="mt-1 text-[11.5px] leading-snug text-[#516099]">{bn.sub}</div>
                 </div>
               ); })()}
-              {(t.perks ?? []).filter(Boolean).length > 0 && (
+              {(t.perks ?? []).filter(extraPerk).length > 0 && (
                 <ul className="mt-3 flex-1 space-y-1.5">
-                  {(t.perks ?? []).filter(Boolean).map((perk, i) => (
+                  {(t.perks ?? []).filter(extraPerk).map((perk, i) => (
                     <li key={i} className="flex items-start gap-2 text-[12.5px] text-[var(--ink-2)]">
                       <span className="mt-[1px] text-[#15b364]">✓</span><span>{perk}</span>
                     </li>

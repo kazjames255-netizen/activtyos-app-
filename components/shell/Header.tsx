@@ -56,12 +56,15 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Features). Operators lose the Messages tab when they turn Messages off.
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
-  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number }[] =
+  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean }[] =
     portal === "custdash"
       ? [
           ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread }] : []),
           ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 }] : []),
           { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
+          // Shown only when the provider runs a membership programme (gated in
+          // useCustomerArea). Given a fancy gold treatment so it stands out.
+          ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: "Memberships", icon: STAR, wide: false, badge: 0, fancy: true }] : []),
         ]
       : findNavItem(portal, "messages") && !featureOff(features, "messages")
         ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread }]
@@ -92,14 +95,21 @@ export function Header({ portal }: { portal: PortalKey }) {
         <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
           {tabs.map((t) => {
             const active = view === t.view;
+            // The Memberships tab gets a standing gold gradient (member-club feel)
+            // so it draws the eye whether or not it's the active view.
+            const fancyStyle = active
+              ? { background: "linear-gradient(120deg,#d4a017,#f5c542)", color: "#3a2a00", boxShadow: "0 2px 8px rgba(212,160,23,.5)" }
+              : { background: "linear-gradient(120deg,#f7d774,#ffe9a8)", color: "#6b4e00", boxShadow: "0 1px 5px rgba(212,160,23,.35)" };
             return (
               <Link
                 key={t.view}
                 href={t.href}
-                className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors hover:bg-[var(--surface)]"
-                style={active
-                  ? { background: "var(--brand-2, #2f6bd8)", color: "#fff", boxShadow: "0 1px 4px rgba(47,107,216,.35)" }
-                  : { color: "var(--ink-2)" }}
+                className={`relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors ${t.fancy ? "hover:brightness-105" : "hover:bg-[var(--surface)]"}`}
+                style={t.fancy
+                  ? fancyStyle
+                  : active
+                    ? { background: "var(--brand-2, #2f6bd8)", color: "#fff", boxShadow: "0 1px 4px rgba(47,107,216,.35)" }
+                    : { color: "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 {/* Icon-only on phones; the label returns from sm up. */}
@@ -272,4 +282,7 @@ const SEARCH = (
 );
 const CALENDAR = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="6" width="18" height="15" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+);
+const STAR = (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z" /></svg>
 );
