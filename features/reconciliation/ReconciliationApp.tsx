@@ -16,11 +16,12 @@ import { Tile, GRAD, money } from "@/features/money/finance-kit";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface PayRef { child?: string; scheme?: string; ref: string; amount?: number }
+interface Note { at: string; by?: string; text: string }
 interface Item {
   ref: string; booker: string; email?: string; phone?: string; listing: string; listingId: string | null; child: string;
   method: string; pay: string; amount: number; amountPaid: number; outstanding: number; cardPaid: number;
   reconciled: boolean; voucherScheme: string | null; voucherReceiveBy: string | null;
-  paymentRef: string | null; payRefs: PayRef[] | null; reconNotes: string | null; nudges: number; lastNudgedAt: string | null;
+  paymentRef: string | null; payRefs: PayRef[] | null; reconNotes: Note[]; nudges: number; lastNudgedAt: string | null;
   dates: string; sessions: string[]; date: string; createdAt: string | null; overdue: boolean;
 }
 interface Recon { items: Item[]; summary: { count: number; reconciledCount: number; outstanding: number; overdue: number; awaitingVoucher: number; byMethod: Record<string, { count: number; outstanding: number }> } }
@@ -116,14 +117,14 @@ export function ReconciliationApp() {
     finally { setBusy(null); }
   }
   async function saveNotes(it: Item) {
+    if (!notesDraft.trim()) return;
     setBusy(it.ref);
-    try { await api(`/api/bookings/${encodeURIComponent(it.ref)}/recon-notes`, { method: "PUT", body: JSON.stringify({ reconNotes: notesDraft }) }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save notes"); }
+    try { await api(`/api/bookings/${encodeURIComponent(it.ref)}/recon-notes`, { method: "PUT", body: JSON.stringify({ note: notesDraft.trim() }) }); setNotesDraft(""); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save note"); }
     finally { setBusy(null); }
   }
   const daysOverdue = (it: Item) => { const t = Date.parse(it.createdAt ?? ""); return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((nowMs - t) / 86400000)); };
-  // Off-platform amount still to reconcile once any card portion is set aside.
-  const offDue = (it: Item) => Math.max(0, it.amount - it.cardPaid - it.amountPaid);
+  const stamp = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -208,13 +209,14 @@ export function ReconciliationApp() {
             const c = methodCat(it);
             const tone = CAT_C[c] ?? "#8a86a3";
             const refCount = it.payRefs?.length ?? (it.paymentRef ? 1 : 0);
-            const due = offDue(it);
+            const due = it.outstanding;
+            const offReceived = Math.max(0, it.amountPaid - it.cardPaid);
             const isOpen = expanded === it.ref;
             return (
               <div key={it.ref} className="overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]" style={{ borderColor: it.overdue ? "#f6c9cc" : "var(--line)" }}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
                   <span className="w-1.5 self-stretch rounded-full" style={{ background: tone }} />
-                  <button type="button" onClick={() => { const open = !isOpen; setExpanded(open ? it.ref : null); if (open) { setNotesDraft(it.reconNotes ?? ""); setEditRef(null); } }} className="min-w-[160px] flex-1 text-left">
+                  <button type="button" onClick={() => { const open = !isOpen; setExpanded(open ? it.ref : null); if (open) { setNotesDraft(""); setEditRef(null); } }} className="min-w-[160px] flex-1 text-left">
                     <div className="flex flex-wrap items-center gap-2 text-[13px]">
                       <span className="text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</span>
                       <span className="font-extrabold">#{it.ref}</span>
@@ -240,7 +242,7 @@ export function ReconciliationApp() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button type="button" title={it.nudges ? `Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}. Click to nudge again.` : "Nudge — email + notify the family their payment is due (with cost, dates & times)"} disabled={busy === it.ref} onClick={() => nudge(it)}
+                      <button type="button" title={`Nudge — remind the family ${money(due)} is still to pay (with cost, dates & times).${it.nudges ? ` Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}.` : ""}`} disabled={busy === it.ref} onClick={() => nudge(it)}
                         className="relative grid h-8 w-8 flex-none place-items-center rounded-full border text-[14px] transition-colors disabled:opacity-50"
                         style={it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                         🔔{it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{it.nudges}</span>}
@@ -267,10 +269,10 @@ export function ReconciliationApp() {
                       <div className="flex flex-col gap-3">
                         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[12.5px]">
                           <div className="flex justify-between"><span className="text-[var(--ink-3)]">Total</span><b className="tabular-nums">{money(it.amount)}</b></div>
-                          {it.cardPaid > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Paid by card (auto)</span><b className="tabular-nums text-[#0b8446]">{money(it.cardPaid)}</b></div>}
-                          {it.amountPaid > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Received off-platform</span><b className="tabular-nums">{money(it.amountPaid)}</b></div>}
-                          <div className="mt-1 flex justify-between border-t border-[var(--line)] pt-1"><span className="font-bold">{it.reconciled ? "Settled" : "Still to reconcile"}</span><b className="tabular-nums">{it.reconciled ? money(it.amount) : money(due)}</b></div>
-                          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Via {it.voucherScheme ? `${it.voucherScheme} voucher` : it.method}</div>
+                          {it.cardPaid > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Paid by card at checkout</span><b className="tabular-nums text-[#0b8446]">{money(it.cardPaid)}</b></div>}
+                          {offReceived > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Received by {it.voucherScheme || it.method}</span><b className="tabular-nums text-[#0b8446]">{money(offReceived)}</b></div>}
+                          <div className="mt-1 flex justify-between border-t border-[var(--line)] pt-1"><span className="font-bold">{it.reconciled ? "✓ Settled" : `Still to pay by ${it.voucherScheme || it.method}`}</span><b className="tabular-nums" style={{ color: it.reconciled ? "#0b8446" : "#c02636" }}>{it.reconciled ? money(it.amount) : money(due)}</b></div>
+                          {it.cardPaid > 0 && !it.reconciled && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Split payment: {money(it.cardPaid)} already taken by card, {money(due)} still owed by {it.voucherScheme || it.method}.</div>}
                         </div>
                         <div>
                           <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Payment reference{refCount > 1 ? "s" : ""}</div>
@@ -295,9 +297,19 @@ export function ReconciliationApp() {
                           )}
                         </div>
                         <div>
-                          <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Internal note <span className="font-normal normal-case">— only you see this, never the parent</span></div>
-                          <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={2} placeholder="e.g. chased Edenred on 5 Aug; parent says sent — waiting on the bank" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#3f78d8]" />
-                          <button type="button" disabled={busy === it.ref || notesDraft === (it.reconNotes ?? "")} onClick={() => saveNotes(it)} className="mt-1 rounded-full px-3 py-1 text-[11.5px] font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>Save note</button>
+                          <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Internal notes <span className="font-normal normal-case">— only you see these, never the parent</span></div>
+                          {it.reconNotes.length > 0 && (
+                            <div className="mb-1.5 flex flex-col gap-1">
+                              {[...it.reconNotes].reverse().map((n, i) => (
+                                <div key={i} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px]">
+                                  <div className="text-[10px] font-bold text-[var(--ink-3)]">{stamp(n.at)}{n.by ? ` · ${n.by}` : ""}</div>
+                                  <div className="text-[var(--ink-2)]">{n.text}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={2} placeholder="Add a note — e.g. chased Edenred; parent says sent, waiting on the bank" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#3f78d8]" />
+                          <button type="button" disabled={busy === it.ref || !notesDraft.trim()} onClick={() => saveNotes(it)} className="mt-1 rounded-full px-3 py-1 text-[11.5px] font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>Add note</button>
                         </div>
                       </div>
                     </div>

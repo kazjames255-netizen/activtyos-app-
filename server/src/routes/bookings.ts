@@ -797,7 +797,7 @@ bookings.post("/:ref/nudge", async (req, res) => {
 // bank). Saves it and notifies the family so their booking shows the new one.
 // PUT /api/bookings/:ref/recon-notes — provider-only reconciliation notes.
 // Never shown to or emailed to the parent (internal money-matching notes).
-const reconNotesSchema = z.object({ reconNotes: z.string().max(2000) });
+const reconNotesSchema = z.object({ note: z.string().trim().min(1).max(2000) });
 bookings.put("/:ref/recon-notes", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
@@ -811,7 +811,7 @@ bookings.put("/:ref/recon-notes", async (req, res) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
-      b.reconNotes = parsed.data.reconNotes;
+      b.reconNotes = [...(b.reconNotes ?? []), { at: new Date().toISOString(), by: req.user?.name ?? req.user?.email ?? "operator", text: parsed.data.note }];
       tx.set(ref, toDoc(b));
       return b;
     });

@@ -99,8 +99,9 @@ export interface Booking {
   /** Split payment: how much of `amount` was already taken by card at checkout
    *  (auto-settled); the remainder is the off-platform portion reconciled here. */
   cardPaid?: number;
-  /** Provider-only reconciliation notes — never shown to the parent. */
-  reconNotes?: string;
+  /** Provider-only reconciliation notes — never shown to the parent. A running
+   *  log; each entry is time-stamped and attributed. */
+  reconNotes?: { at: string; by?: string; text: string }[];
   /** Reconciliation nudges: how many payment reminders were sent and when the
    *  last one went, so the bell can show state. Off-platform / awaiting only. */
   nudges?: number;

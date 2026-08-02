@@ -68,7 +68,7 @@ reconciliation.get("/", async (req, res) => {
       paymentRef: b.paymentRef ?? null,
       payRefs: b.payRefs ?? null,
       cardPaid: b.cardPaid ?? 0,
-      reconNotes: b.reconNotes ?? null,
+      reconNotes: b.reconNotes ?? [],
       nudges: b.nudges ?? 0,
       lastNudgedAt: b.lastNudgedAt ?? null,
       dates: b.dates ?? "",
