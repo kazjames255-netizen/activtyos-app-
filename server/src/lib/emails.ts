@@ -555,7 +555,7 @@ export function emailPaymentReceived(b: Booking, providerName: string, opts: { l
     `Payment received — ${b.listing}`,
     "Payment received ✓",
     `<p style="font-size:14px">Thanks ${b.booker} — ${providerName} has received your <b>${escapeHtml(opts.label)}</b>
-      payment of <b>${gbp(opts.amount)}</b>. Your booking is now fully paid — see you there!</p>`,
+      payment of <b>${gbp(opts.amount)}</b>. Your booking is now fully paid. Thank you!</p>`,
     {}, // hero photo + venue location; the details table shows dates / who / total
   );
 }
