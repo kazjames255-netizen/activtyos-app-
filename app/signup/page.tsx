@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
-import { post as apiPost, api } from "@/lib/api";
+import { post as apiPost, get as apiGet, api } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 
@@ -46,14 +46,15 @@ const HEARD_OPTIONS: { label: string; icon: string }[] = [
 interface InvitePreview { role: "franchise" | "staff"; tenantName: string }
 
 // Per-step copy shown in the gradient hero.
-type StepId = "type" | "you" | "business" | "identity" | "hear" | "login";
+type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "payments";
 const STEP_META: Record<StepId, { emoji: string; title: string; lede: string }> = {
   type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use ActivityOS." },
   you: { emoji: "🙋", title: "About you", lede: "So we can set up your account." },
   business: { emoji: "🏢", title: "About your business", lede: "This seeds your storefront, invoices and Setup." },
   identity: { emoji: "🌟", title: "How parents see you", lede: "Your public name on booking pages, and your logo." },
   hear: { emoji: "📣", title: "How did you hear about us?", lede: "Helps us reach more providers like you." },
-  login: { emoji: "🔑", title: "Your login", lede: "Last step — this is how you’ll sign in." },
+  login: { emoji: "🔑", title: "Your login", lede: "This is how you’ll sign in." },
+  payments: { emoji: "💳", title: "Get paid", lede: "Set up how money reaches you. You can skip and do this any time in Setup." },
 };
 
 // Downscale a logo to a small square-ish PNG/JPEG under the /api/uploads cap
@@ -119,6 +120,13 @@ function SignupForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Post-signup "Get paid" step. Bank details ride along with register-role;
+  // Stripe is connected after the account exists (needs a tenant).
+  const [bankName, setBankName] = useState("");
+  const [sortCode, setSortCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [stripeBusy, setStripeBusy] = useState(false);
+  const [stripeMsg, setStripeMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!inviteToken) return;
@@ -133,7 +141,7 @@ function SignupForm() {
 
   const isOperator = accountType !== "parent";
   const steps: StepId[] = useMemo(
-    () => (isOperator ? ["type", "business", "identity", "hear", "login"] : ["type", "you", "login"]),
+    () => (isOperator ? ["type", "business", "identity", "hear", "login", "payments"] : ["type", "you", "login"]),
     [isOperator],
   );
   const current = steps[step];
@@ -169,14 +177,63 @@ function SignupForm() {
     }
   }
 
+  const homeUrl = ACCOUNT_TYPES.find((t) => t.value === accountType)!.home;
+
   function next() {
     const problem = stepProblem(current);
     if (problem) { setError(problem); return; }
     setError(null);
+    // "login" is where the account is created. Operators then get one more
+    // (optional) "payments" step; parents finish here. "payments" is the finish.
+    if (current === "login") { void submit(); return; }
+    if (current === "payments") { void finishPayments(); return; }
     if (step < steps.length - 1) setStep(step + 1);
-    else void submit();
+    else router.replace(homeUrl);
   }
   function back() { setError(null); setStep((s) => Math.max(0, s - 1)); }
+
+  // Persist bank details entered on the "Get paid" step, then head to the
+  // dashboard. Read-modify-write so we don't clobber the settings just seeded
+  // by register-role (the library PUT replaces `settings` wholesale).
+  async function finishPayments() {
+    const hasBank = bankName.trim() || sortCode.trim() || accountNumber.trim();
+    if (hasBank) {
+      setBusy(true);
+      try {
+        const lib = await apiGet<{ settings?: Record<string, unknown> } | null>("/api/library");
+        const settings = { ...(lib?.settings ?? {}) };
+        const billing = { ...((settings.billing as Record<string, unknown>) ?? {}) };
+        if (bankName.trim()) billing.bankName = bankName.trim();
+        billing.accountName = billing.accountName ?? ((providerNameMode === "person" ? name.trim() : businessName.trim()) || businessName.trim());
+        if (sortCode.trim()) billing.sortCode = sortCode.trim();
+        if (accountNumber.trim()) billing.accountNumber = accountNumber.trim();
+        settings.billing = billing;
+        await api("/api/library", { method: "PUT", body: JSON.stringify({ settings }) });
+      } catch {
+        // Non-fatal — they can add bank details in Setup → Money any time.
+      }
+    }
+    router.replace(homeUrl);
+  }
+
+  // Kick off Stripe Express onboarding from the payments step. The account and
+  // tenant already exist by now, so /connect can create the Express account and
+  // hand back a hosted onboarding URL (which returns to Finance when done).
+  async function connectStripe() {
+    setStripeMsg(null);
+    setStripeBusy(true);
+    try {
+      const { url } = await apiPost<{ url: string }>("/api/payments/connect", {});
+      window.location.href = url;
+    } catch (err) {
+      setStripeMsg(
+        err instanceof Error && /configured/i.test(err.message)
+          ? "Card payments aren’t enabled on this server yet — you can connect Stripe later from Finance."
+          : err instanceof Error ? err.message : "Couldn’t start Stripe — try again from Finance later.",
+      );
+      setStripeBusy(false);
+    }
+  }
 
   async function submit() {
     setError(null);
@@ -217,7 +274,14 @@ function SignupForm() {
             }
           : {}),
       });
-      router.replace(ACCOUNT_TYPES.find((t) => t.value === accountType)!.home);
+      // Operators get an optional "Get paid" step (Stripe needs the tenant to
+      // exist first); parents go straight home.
+      if (isOperator) {
+        setBusy(false);
+        setStep(steps.indexOf("payments"));
+        return;
+      }
+      router.replace(homeUrl);
     } catch (err) {
       const code = (err as { code?: string }).code || "";
       setError(
@@ -228,7 +292,7 @@ function SignupForm() {
           : "Sign-up failed — check the details and try again.",
       );
       setBusy(false);
-      setStep(steps.length - 1);
+      setStep(steps.indexOf("login"));
     }
   }
 
@@ -281,9 +345,8 @@ function SignupForm() {
   }
 
   // ── Operator / parent wizard ─────────────────────────────────────────────
-  const lastStep = step === steps.length - 1;
   const meta = STEP_META[current];
-  const eyebrow = current === "type" && referredBy ? "🎉 You're invited to ActivityOS" : `Step ${step + 1} of ${steps.length}`;
+  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to ActivityOS" : `Step ${step + 1} of ${steps.length}`;
   return (
     <Card className="w-full max-w-[640px] overflow-hidden p-0">
       <Hero emoji={meta.emoji} eyebrow={eyebrow} title={meta.title} lede={meta.lede} steps={steps} step={step} />
@@ -413,16 +476,69 @@ function SignupForm() {
           </div>
         )}
 
+        {current === "payments" && (
+          <div className="flex flex-col gap-5">
+            <div className="rounded-xl bg-[var(--brand-soft,#eef3ff)] px-4 py-3 text-[12.5px] font-semibold text-[var(--brand-ink,#16306e)]">
+              🎉 Your account’s ready. Set up how you get paid below, or skip and do it later in <span className="whitespace-nowrap">Setup → Money</span> and Finance.
+            </div>
+
+            {/* Card payments via Stripe — needs the tenant, which now exists. */}
+            <div className="rounded-2xl border-2 border-[var(--line)] p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-[24px] leading-none">💳</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Take card payments</div>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--ink-3)]">
+                    Connect Stripe so parents can pay by card and money lands straight in your bank. Opens Stripe’s secure setup — you can come back and finish it any time.
+                  </p>
+                  <button type="button" onClick={() => void connectStripe()} disabled={stripeBusy}
+                    className="mt-2.5 rounded-full bg-[#635bff] px-4 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
+                    {stripeBusy ? "Opening Stripe…" : "Connect with Stripe →"}
+                  </button>
+                  {stripeMsg && <p className="mt-2 text-[11.5px] font-semibold text-[var(--red)]">{stripeMsg}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Bank details — for invoices, TFC/voucher payouts and manual transfers. */}
+            <div className="rounded-2xl border-2 border-[var(--line)] p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-[24px] leading-none">🏦</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Your bank details <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--ink-3)]">
+                    Shown on your invoices so parents paying by transfer, Tax-Free Childcare or vouchers know where to send money.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div><FieldLabel htmlFor="pay-bank">Bank name</FieldLabel><Input id="pay-bank" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Barclays" className="w-full" /></div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div><FieldLabel htmlFor="pay-sort">Sort code</FieldLabel><Input id="pay-sort" inputMode="numeric" value={sortCode} onChange={(e) => setSortCode(e.target.value)} placeholder="00-00-00" className="w-full" /></div>
+                      <div><FieldLabel htmlFor="pay-acc">Account number</FieldLabel><Input id="pay-acc" inputMode="numeric" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="12345678" className="w-full" /></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {error && <ErrorBox className="mt-4">{error}</ErrorBox>}
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--line)] bg-[var(--panel)] px-7 py-4">
-        {step > 0
+        {current === "payments"
+          // Account already exists — no going back, just skip the optional setup.
+          ? <button type="button" onClick={() => router.replace(homeUrl)} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">Skip for now →</button>
+          : step > 0
           ? <button type="button" onClick={back} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">← Back</button>
           : <SignInLink inline />}
         <div className="flex items-center gap-3">
-          <Button variant={lastStep ? "primary" : "solid"} type="button" onClick={next} disabled={busy} className="h-11 min-w-[150px] justify-center text-[14px]">
-            {busy ? "Creating…" : lastStep ? "🎉 Create account" : "Continue →"}
+          <Button variant={current === "login" || current === "payments" ? "primary" : "solid"} type="button" onClick={next} disabled={busy} className="h-11 min-w-[150px] justify-center text-[14px]">
+            {current === "payments"
+              ? (busy ? "Saving…" : "Go to dashboard →")
+              : current === "login"
+              ? (busy ? "Creating…" : "🎉 Create account")
+              : "Continue →"}
           </Button>
         </div>
       </div>
