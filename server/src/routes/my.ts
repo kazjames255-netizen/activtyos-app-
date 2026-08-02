@@ -1810,6 +1810,30 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // …and frees the discount code it was booked with.
     if (updated.tenantId) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    // Tell the provider a cancellation came in and a refund is waiting on their
+    // decision — bell + email, deep-linked straight to the booking so they can
+    // approve or decline it. (The partial-day path already did this; the whole
+    // -booking cancel never notified anyone, so operators found out only by
+    // chance.)
+    if (updated.tenantId) {
+      const kids = [...new Set((updated.kids ?? []).map((k) => k.name).filter(Boolean))].join(", ") || updated.child || updated.booker;
+      const amt = updated.cancel?.amount ?? 0;
+      const refundTxt = updated.cancel?.refund === "none" || amt <= 0
+        ? "No refund is due under your cancellation policy."
+        : `${money(amt)} refund requested — approve or decline.`;
+      const reasonTxt = updated.cancel?.reason ? ` Reason: ${updated.cancel.reason}.` : "";
+      void notify({
+        tenantId: updated.tenantId,
+        to: { kind: "tenant" },
+        category: "booking",
+        // Bell headline names the family + activity; the ref lives in the body.
+        title: `${updated.booker} asked to cancel — ${updated.listing}`,
+        body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt} Open the booking to approve or decline.`,
+        subject: `${updated.booker} — cancellation request`,
+        href: `/company/bookings?ref=${encodeURIComponent(updated.ref)}`,
+        ref: updated.ref,
+      });
+    }
     res.json(updated);
   } catch (e) {
     if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
