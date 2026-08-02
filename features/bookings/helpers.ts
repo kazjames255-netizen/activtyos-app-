@@ -403,6 +403,42 @@ export const kidActiveDays = (k: Kid) => {
 export const refundedTotal = (b: Booking) =>
   (b.refundLog || []).reduce((t, x) => t + (x.amount || 0), 0);
 
+// —— Money-dashboard aggregation helpers ——————————————————————————————————
+// These exist because the naive `isPaid ? amount : 0` / refundLog-only math
+// understates real revenue: a refund flips `pay` to "Refunded" (so the whole
+// booking's collected money vanished), partial payments were ignored, and
+// whole-booking refunds (cancel.amount) were never counted. Use THESE in the
+// Dashboard + Finance analytics, not `isPaid`/`refundedTotal` directly.
+
+/** What actually came IN on this booking, independent of the current pay label
+ *  (a refund flips it to "Refunded"/"Partially refunded"): the tracked split
+ *  `amountPaid` when present, else the full `amount` for any paid/refunded
+ *  state, else 0 (genuinely unpaid). */
+export const receivedOf = (b: Booking) => {
+  const paid = Number(b.amountPaid);
+  if (Number.isFinite(paid) && paid > 0) return paid;
+  return b.pay === "Paid" || b.pay === "Funded" || b.pay === "Refunded" || b.pay === "Partially refunded"
+    ? (b.amount || 0)
+    : 0;
+};
+
+/** Everything actually refunded on this booking: per-day/child refunds
+ *  (`refundLog`) PLUS an APPROVED whole-booking refund (`cancel.amount`). A
+ *  still-pending refund request is NOT counted — the money hasn't moved.
+ *  (Unlike `refundedTotal`, which is refundLog-only and drives pay state.) */
+export const refundedGross = (b: Booking) => {
+  const log = (b.refundLog || []).reduce((t, x) => t + (x.amount || 0), 0);
+  const c = b.cancel;
+  const wholeRefunded = !!c && (b.pay === "Refunded" || b.pay === "Partially refunded" || c.refund === "approved");
+  return log + (wholeRefunded ? (c!.amount || 0) : 0);
+};
+
+/** Net revenue retained on this booking = money received − money refunded. */
+export const collectedNet = (b: Booking) => Math.max(0, receivedOf(b) - refundedGross(b));
+
+/** Money still owed on a live (non-cancelled) booking = price − received. */
+export const owedOf = (b: Booking) => Math.max(0, (b.amount || 0) - receivedOf(b));
+
 export function nowStr(): string {
   return (
     new Date().toLocaleDateString("en-GB") + ", " + new Date().toTimeString().slice(0, 5)

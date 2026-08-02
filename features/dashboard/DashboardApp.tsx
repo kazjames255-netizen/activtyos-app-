@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { money, refundedTotal } from "@/features/bookings/helpers";
+import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
@@ -46,9 +46,12 @@ const availTone = (left: number, cap: number) =>
   left <= 0 ? { bg: "#fdebec", fg: "#c0392b", label: "full" }
   : left <= Math.max(3, cap * 0.15) ? { bg: "#fdf3d8", fg: "#9a5a00", label: `${left} left` }
   : { bg: "#e2f5ea", fg: "#0b8446", label: `${left} left` };
-const isPaid = (b: Booking) => b.pay === "Paid" || b.pay === "Funded";
-const collectedOf = (b: Booking) => (isPaid(b) ? Math.max(0, b.amount - refundedTotal(b)) : 0);
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
+// Counts toward booked revenue / attendee tallies: neither cancelled/declined
+// nor waitlisted (a waitlisted place has paid nothing and holds no seat). The
+// collected-money math needs no such guard — collectedNet is already 0 for an
+// unpaid waitlisted place — so waitlisted still shows in the status donut.
+const countsToward = (b: Booking) => !isCancelled(b) && b.status !== "Waitlisted";
 const monthOf = (b: Booking): string | null => {
   const s = b.createdAt || (b.days?.[0] ?? "");
   const m = s.slice(0, 7);
@@ -344,24 +347,24 @@ export function DashboardApp() {
       // The last-5-weeks mini graphs are fixed windows, independent of 3/6/12m.
       const ws = b.createdAt || b.days?.[0] || "";
       const t = Date.parse(ws.length === 10 ? `${ws}T00:00:00Z` : ws);
-      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedOf(b); break; } }
+      if (!Number.isNaN(t)) for (let i = 0; i < wkStarts.length; i++) { if (t >= wkStarts[i] && t < wkStarts[i] + 7 * 86400000) { weekly[i]++; weeklyIncome[i] += collectedNet(b); break; } }
 
       // Everything else honours the selected 3/6/12-month period.
       const m = monthOf(b);
       if (!m || !inWindow.has(m)) continue;
       const i = keys.indexOf(m);
-      income[i].value += collectedOf(b);
-      if (!isCancelled(b)) booked[i].value += b.amount;
-      totalCollected += collectedOf(b);
-      if (isPaid(b)) paidCount++;
-      if (!isCancelled(b)) bookingsCount++;
+      income[i].value += collectedNet(b);
+      if (countsToward(b)) booked[i].value += b.amount;
+      totalCollected += collectedNet(b);
+      if (collectedNet(b) > 0) paidCount++;
+      if (countsToward(b)) bookingsCount++;
       const fam = (b.email || b.booker || "").toLowerCase();
       families.add(fam);
-      if (fam && !isCancelled(b)) famCount.set(fam, (famCount.get(fam) ?? 0) + 1);
+      if (fam && countsToward(b)) famCount.set(fam, (famCount.get(fam) ?? 0) + 1);
       byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
       payMix.set(b.pay || "—", (payMix.get(b.pay || "—") ?? 0) + 1);
-      if (!isCancelled(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedOf(b));
-      if (!isCancelled(b)) bySeason.set(seasonName(b), (bySeason.get(seasonName(b)) ?? 0) + collectedOf(b));
+      if (countsToward(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedNet(b));
+      if (countsToward(b)) bySeason.set(seasonName(b), (bySeason.get(seasonName(b)) ?? 0) + collectedNet(b));
     }
     const acts = [...byAct.entries()].sort((x, y) => y[1] - x[1]);
     const seasonRows = [...bySeason.entries()].filter(([, v]) => v > 0 || bySeason.size <= 6).sort((x, y) => y[1] - x[1]);

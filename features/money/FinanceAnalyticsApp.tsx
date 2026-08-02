@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { refundedTotal } from "@/features/bookings/helpers";
+import { collectedNet, refundedGross, owedOf } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { LIGHT_PALETTE, PageHero, TabStrip } from "@/components/OperatorPage";
 import {
@@ -19,9 +19,7 @@ interface PayStatus { connected: boolean; payoutsEnabled?: boolean; chargesEnabl
 
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43", GOLD = "#f0b100", PINK = "#e2225f";
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-const isPaid = (b: Booking) => b.pay === "Paid" || b.pay === "Funded";
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
-const collectedOf = (b: Booking) => (isPaid(b) ? Math.max(0, b.amount - refundedTotal(b)) : 0);
 const monthOf = (b: Booking): string | null => { const s = b.createdAt || b.days?.[0] || ""; const m = s.slice(0, 7); return /^\d{4}-\d{2}$/.test(m) ? m : null; };
 const bookerKey = (b: Booking) => (b.email || b.booker || "").trim().toLowerCase();
 const learnerNames = (b: Booking): string[] => (b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean) : b.child ? [b.child] : []) as string[];
@@ -60,7 +58,10 @@ export function FinanceAnalyticsApp() {
   }
 
   const a = useMemo(() => {
-    const all = (bookings ?? []).filter((b) => b.status !== "Declined");
+    // Waitlisted places have paid nothing and hold no seat, so they're neither
+    // revenue nor an attendee — exclude them (alongside Declined). Cancelled
+    // stays IN so its retained/refunded money still nets out below.
+    const all = (bookings ?? []).filter((b) => b.status !== "Declined" && b.status !== "Waitlisted");
     const now = new Date(nowMs);
     const keys: string[] = [];
     for (let i = months - 1; i >= 0; i--) keys.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
@@ -92,12 +93,12 @@ export function FinanceAnalyticsApp() {
       const m = monthOf(b);
       if (!m || !inWindow.has(m)) continue;
       const i = keys.indexOf(m);
-      const col = collectedOf(b);
+      const col = collectedNet(b);
       if (!isCancelled(b)) { bookedByMonth[i].value += b.amount; booked += b.amount; }
       collectedByMonth[i].value += col; collected += col;
-      refunds += refundedTotal(b);
-      if (!isCancelled(b) && !isPaid(b)) owed += b.amount;
-      if (isPaid(b)) { paidBookings++; bySource.set(SOURCE_OF(b), (bySource.get(SOURCE_OF(b)) ?? 0) + col); }
+      refunds += refundedGross(b);
+      if (!isCancelled(b)) owed += owedOf(b);
+      if (col > 0) { paidBookings++; bySource.set(SOURCE_OF(b), (bySource.get(SOURCE_OF(b)) ?? 0) + col); }
       if (!isCancelled(b) && b.listing) byListing.set(b.listing, (byListing.get(b.listing) ?? 0) + col);
       const sess = b.sessions?.length || b.seats || 1;
       if (!isCancelled(b)) { if (b.amount > 0) paidSessions += sess; else freeSessions += sess; }
@@ -116,17 +117,17 @@ export function FinanceAnalyticsApp() {
       if (!isCancelled(b)) ages.push(...bookingAges(b));
     }
 
-    const feeEst = (list: Booking[]) => list.filter(isPaid).reduce((s, b) => s + collectedOf(b) * 0.014 + 0.2, 0);
+    const feeEst = (list: Booking[]) => list.filter((b) => collectedNet(b) > 0).reduce((s, b) => s + collectedNet(b) * 0.014 + 0.2, 0);
     const fees = feeEst(all.filter((b) => { const m = monthOf(b); return m != null && inWindow.has(m); }));
 
     // Expected payout split: settled (older than 7 days) vs on-the-way (last 7 days).
     const weekAgo = nowMs - 7 * 86400000;
     let inTransit = 0, inBank = 0;
     for (const b of all) {
-      if (!isPaid(b)) continue;
+      if (collectedNet(b) <= 0) continue;
       const t = Date.parse((b.createdAt || "").length === 10 ? `${b.createdAt}T00:00:00Z` : b.createdAt || "");
       if (Number.isNaN(t)) continue;
-      const net = collectedOf(b) * (1 - 0.014) - 0.2;
+      const net = collectedNet(b) * (1 - 0.014) - 0.2;
       if (t >= weekAgo) inTransit += Math.max(0, net); else inBank += Math.max(0, net);
     }
 
