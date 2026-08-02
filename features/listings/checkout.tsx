@@ -631,7 +631,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -662,6 +662,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // actually be sent to.
   const vouchers = liveVouchers(ckSettings.voucherProviders);
   const [voucherId, setVoucherId] = useState<string>("");
+  // The parent's own payment reference per child (voucher/TFC), so the provider
+  // can match the money in their bank. Forced before they can confirm.
+  const [voucherRefs, setVoucherRefs] = useState<Record<string, string>>({});
   // The earliest day anyone is actually booked in — what the deadline has to
   // respect. Nothing dated (free-text sessions) leaves it undefined, which
   // the window handles.
@@ -1728,6 +1731,26 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     We&rsquo;ll email {filledDetails(chosenVoucher).length === 1 ? "it" : "them"} to
                     you as well.
                   </div>
+
+                  {/* Force the parent to give THEIR own reference so the provider
+                      can match the money. One per child — siblings often pay under
+                      two separate references. */}
+                  {roster.length > 0 && (
+                    <div className="mt-3 border-t pt-3" style={{ borderColor: `${tk.ink}1a` }}>
+                      <div className="text-[12px] font-bold" style={{ color: tk.ink }}>Your payment reference{roster.length > 1 ? "s" : ""}</div>
+                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>The reference you&rsquo;ll pay under (your {chosenVoucher.name} account/reference), so your provider can match your payment when it lands. {roster.length > 1 ? "One per child — siblings can pay under separate references." : ""}</div>
+                      <div className="mt-2 flex flex-col gap-2">
+                        {roster.map((c) => (
+                          <div key={c.name} className="flex flex-wrap items-center gap-2">
+                            {roster.length > 1 && <span className="min-w-[92px] text-[12px] font-semibold" style={{ color: tk.ink }}>{c.name}</span>}
+                            <input value={voucherRefs[c.name] ?? ""} onChange={(e) => setVoucherRefs((r) => ({ ...r, [c.name]: e.target.value }))}
+                              placeholder="e.g. your account/reference number" className={`flex-1 border px-3 py-2 text-[13px] ${tk.round}`}
+                              style={{ borderColor: (voucherRefs[c.name] ?? "").trim() ? `${tk.ink}33` : "#e0a020", background: tk.inputBg, color: tk.ink }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {voucherId === NOT_LISTED && (
@@ -1796,7 +1819,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy}
+        disabled={(!parentMode && !b.parent) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -1818,6 +1841,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // The scheme the parent picked — the backend keys the "Awaiting
             // voucher payment" state off this, not the method string.
             voucherScheme: method === "voucher" ? chosenVoucher?.name : undefined,
+            // The parent's own payment reference per child (voucher/TFC matching).
+            voucherRefs: method === "voucher" ? voucherRefs : undefined,
             discountCodes: appliedCodes.map((a) => a.code),
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.

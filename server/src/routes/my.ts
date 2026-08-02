@@ -69,6 +69,9 @@ const itemSchema = z.object({
   timing: z.string().max(120).optional(), // …or by period title (checkout sends titles)
   dates: z.array(z.string().max(10)).min(1).max(60).optional(), // chosen session days
   child: z.string().min(1).max(80),
+  // Voucher / TFC bookings: the reference the parent will pay under, so the
+  // provider can match the money in their bank. Entered at checkout.
+  paymentRef: z.string().trim().max(120).optional(),
   // The saved child's record id, when booked from a profile. Lets the server
   // stamp a real id on the booking so registers resolve the face/allergies/
   // SEND/collection-password rather than guessing from the name.
@@ -503,6 +506,8 @@ my.post("/bookings", async (req, res) => {
       childByName.set((k.name ?? "").trim().toLowerCase(), rec);
     }
   }
+  // The parent's per-child payment reference (voucher/TFC), keyed by name.
+  const refByChild = new Map(input.items.filter((i) => i.paymentRef).map((i) => [i.child.trim().toLowerCase(), i.paymentRef!]));
   const resolveChild = (i: { child: string; childId?: string; age?: number }) => {
     // A childId must belong to this account — never trust a foreign id.
     const rec = (i.childId && childById.get(i.childId)) || childByName.get(i.child.trim().toLowerCase());
@@ -901,6 +906,7 @@ my.post("/bookings", async (req, res) => {
               nextBid + created.length,
             ),
             ...(rc.childId ? { childId: rc.childId } : {}),
+            ...(refByChild.get(rc.name.trim().toLowerCase()) ? { paymentRef: refByChild.get(rc.name.trim().toLowerCase()) } : {}),
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
             tenantId: listing.tenantId,
