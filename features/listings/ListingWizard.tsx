@@ -723,6 +723,9 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     // Voucher bookings are NOT paid yet — the family pays through their scheme's
     // own site. Surface that + a link, instead of a false "paid".
     const scheme = done.voucherScheme;
+    // A manual-approval listing holds the place until the provider says yes —
+    // nothing is confirmed or charged until then.
+    const needsApproval = d.bookingType === "manual";
     const provider = scheme ? (tSettings.voucherProviders ?? []).find((v) => v.name === scheme) : undefined;
     // The right account/Ofsted/reference for this listing's setting — shown on
     // the card so the family can pay without hunting through the email.
@@ -739,11 +742,17 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     const valCls = "font-semibold text-[#171534]";
     return (
       <div className="mx-auto max-w-[540px] p-6 text-center">
-        <div className="text-[44px]">🎉</div>
+        <div className="text-[44px]">{needsApproval ? "📩" : "🎉"}</div>
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]">
-          Congratulations{kids ? `, ${kids} is booked in!` : ", you’re booked in!"}
+          {needsApproval
+            ? `Request received${kids ? ` for ${kids}` : ""}!`
+            : `Congratulations${kids ? `, ${kids} is booked in!` : ", you’re booked in!"}`}
         </h2>
-        <p className="mt-1.5 text-[13px] text-[#6a6785]">A confirmation email is on its way with everything below.</p>
+        <p className="mt-1.5 text-[13px] text-[#6a6785]">
+          {needsApproval
+            ? `${listing.tenantName || "The provider"} will review it and confirm your place — you’ll get another email then${scheme ? "" : ", and payment is only taken once it’s approved"}. We’ve emailed you the details below.`
+            : "A confirmation email is on its way with everything below."}
+        </p>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e9f2] bg-white text-left shadow-[0_10px_30px_-14px_rgba(20,30,80,.25)]">
           <div className="px-4 py-3" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
@@ -759,7 +768,9 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
               <span className="text-[#8a86a3]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
               {scheme
                 ? <b className="text-[15px] text-[#a5670a]">{money(done.total)} to pay via {scheme}</b>
-                : <b className="text-[15px] text-[#171534]">{money(done.total)} paid</b>}
+                : needsApproval
+                ? <b className="text-[15px] text-[#8a5300]">{money(done.total)} · payable once approved</b>
+                : <b className="text-[15px] text-[#171534]">{money(done.total)}</b>}
             </div>
           </div>
         </div>
