@@ -365,7 +365,17 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   return (
     // -m-5/p-5 bleeds the light surface to the edges of the (dark-shell) content
     // area so the whole Messages page reads light, like the customer dashboard.
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div
+      className="-m-5 min-h-[calc(100vh-3.5rem)] p-5 text-[var(--ink)]"
+      style={{
+        ...LIGHT_PALETTE,
+        // Soft ambient wash instead of flat white — a blue glow top-left and a
+        // faint brand-pink one top-right, echoing the hero gradient. Kept low
+        // opacity so the white conversation cards still read cleanly on top.
+        background:
+          "radial-gradient(130% 85% at 0% 0%, rgba(63,120,216,.14) 0%, transparent 52%), radial-gradient(115% 80% at 100% 0%, rgba(238,31,99,.07) 0%, transparent 46%), linear-gradient(180deg,#eaf1fc 0%,#f5f8fd 42%,#f7f4fb 100%)",
+      }}
+    >
       {/* Money-in style hero */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
