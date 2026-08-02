@@ -450,14 +450,15 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
     : a.kind === "Booking request" ? "New booking request"
     : "You have a new booking";
 
-  // At most 5 dates, then a plain "＋ N more" line — an interactive dropdown
-  // (<details>) is stripped by Gmail/Outlook, so text is the reliable choice.
-  const MAX_DATES = 5;
+  // Every date, in a compact two-column table (date · time) at small text so a
+  // long run stays tidy. Session strings look like "Mon 20 Jul 2026 · 08:00 – 17:30".
   const sessionsHtml = a.sessions.length
-    ? a.sessions.slice(0, MAX_DATES).map((s) => escapeHtml(s)).join("<br>") +
-      (a.sessions.length > MAX_DATES
-        ? `<br><span style="color:#8a86a3;font-size:12.5px;font-weight:700">＋ ${a.sessions.length - MAX_DATES} more date${a.sessions.length - MAX_DATES === 1 ? "" : "s"}</span>`
-        : "")
+    ? `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:12px;line-height:1.5">${a.sessions
+        .map((s) => {
+          const [day, time] = s.split(" · ");
+          return `<tr><td style="padding:2px 10px 2px 0;color:#171534;font-weight:600;white-space:nowrap;vertical-align:top">${escapeHtml(day ?? s)}</td><td style="padding:2px 0;color:#4a4763;white-space:nowrap">${escapeHtml(time ?? "")}</td></tr>`;
+        })
+        .join("")}</table>`
     : "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
 
   // Only show a payment line that actually has money against it — a card-only
@@ -500,7 +501,7 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:14px">
           ${detailRow("Booker", escapeHtml(a.bookerName))}
           ${a.pass ? detailRow("Listing", `${escapeHtml(a.listingName)}<br><span style="color:#8a86a3;font-size:13px">${escapeHtml(a.pass)}</span>`) : detailRow("Listing", escapeHtml(a.listingName))}
-          ${detailRow("Dates &amp; times", sessionsHtml)}
+          ${detailRow("Dates & times", sessionsHtml)}
           ${a.location ? detailRow("Location", escapeHtml(a.location)) : ""}
         </table>
 
