@@ -122,17 +122,31 @@ async function venueMapPng(lat: number, lng: number): Promise<Buffer | null> {
     const W = COLS * T, H = ROWS * T;
     const px = Math.round((p.x - originX) * T);
     const py = Math.round((p.y - originY) * T);
-    const pin = Buffer.from(
-      `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><circle cx="${px}" cy="${py - 2}" r="10" fill="#EE1F63" stroke="#fff" stroke-width="3"/><circle cx="${px}" cy="${py - 2}" r="3.5" fill="#fff"/></svg>`,
-    );
+    // Stitch the tiles into the base map. (The pin is added AFTER the crop —
+    // compositing a full-canvas SVG here fails, because sharp renders SVGs at a
+    // higher density so the overlay comes out larger than the base and it
+    // throws "must have same dimensions or smaller", killing the whole map.)
+    const base = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 233, g: 235, b: 240, alpha: 1 } } })
+      .composite(layers)
+      .png()
+      .toBuffer();
     // Crop to a landscape window centred on the pin (the 3×2 grid otherwise
     // leaves the venue low), clamped to the stitched bounds.
     const CW = Math.min(W, 600), CH = Math.min(H, 300);
     const left = Math.round(Math.max(0, Math.min(W - CW, px - CW / 2)));
     const top = Math.round(Math.max(0, Math.min(H - CH, py - CH / 2)));
-    return await sharp({ create: { width: W, height: H, channels: 4, background: { r: 233, g: 235, b: 240, alpha: 1 } } })
-      .composite([...layers, { input: pin, left: 0, top: 0 }])
+    // A small pin, pre-rendered to an exact PW×PH PNG so its size never depends
+    // on sharp's SVG density, then dropped at the venue's spot in the crop.
+    const PW = 30, PH = 30;
+    const pin = await sharp(
+      Buffer.from(`<svg width="${PW}" height="${PH}" xmlns="http://www.w3.org/2000/svg"><circle cx="15" cy="15" r="10" fill="#EE1F63" stroke="#fff" stroke-width="3"/><circle cx="15" cy="15" r="3.5" fill="#fff"/></svg>`),
+      { density: 72 },
+    ).resize(PW, PH).png().toBuffer();
+    const pinLeft = Math.round(Math.max(0, Math.min(CW - PW, (px - left) - PW / 2)));
+    const pinTop = Math.round(Math.max(0, Math.min(CH - PH, (py - top) - PH / 2)));
+    return await sharp(base)
       .extract({ left, top, width: CW, height: CH })
+      .composite([{ input: pin, left: pinLeft, top: pinTop }])
       .png()
       .toBuffer();
   } catch {
