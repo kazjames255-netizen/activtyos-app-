@@ -1222,9 +1222,16 @@ my.post("/bookings", async (req, res) => {
     // Voucher instructions — the scheme, its references and the deadline, so
     // the family can go and pay. Re-sendable via the "resend" action.
     if (voucher) {
-      const v = bookings.find((b) => b.pay === "Awaiting voucher payment");
+      // One email for the whole voucher payment — the GRAND total across every
+      // awaiting booking (a basket spanning weeks makes more than one), so the
+      // family is asked for what the provider is actually owed, not one share.
+      const awaiting = bookings.filter((b) => b.pay === "Awaiting voucher payment");
+      const v = awaiting[0];
       if (v && v.email.includes("@"))
-        emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher);
+        emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher, {
+          total: round2(awaiting.reduce((s, b) => s + (b.amount ?? 0), 0)),
+          refs: awaiting.map((b) => b.ref),
+        });
     }
     // "2nd in line for 12 Aug" — per-date queue positions for anything queued,
     // asked block by block (a basket can now touch several).

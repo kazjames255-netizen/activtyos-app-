@@ -515,7 +515,13 @@ export function emailVoucherInstructions(
   b: Booking,
   providerName: string,
   scheme: { name: string; details: { label: string; value: string }[] },
+  /** When a checkout made several voucher bookings (e.g. across weeks), pass the
+   *  GRAND total + every ref so the family is asked for the full amount once,
+   *  not one booking's share. Defaults to this booking's own amount/ref. */
+  opts: { total?: number; refs?: string[] } = {},
 ): void {
+  const amount = opts.total ?? b.amount;
+  const refsLabel = opts.refs?.length ? opts.refs.join(", ") : b.ref;
   const isUrl = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
   const refRows = scheme.details
     .map((d) => `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0">${d.label}</td><td>${isUrl(d) ? `<a href="${/^https?:\/\//i.test(d.value) ? d.value : `https://${d.value}`}" style="color:#2f6bd8;font-weight:700">${d.value}</a>` : `<b>${d.value}</b>`}</td></tr>`)
@@ -525,13 +531,13 @@ export function emailVoucherInstructions(
     : null;
   sendCustomerEmail(
     b, providerName, "payments",
-    `Pay by childcare voucher — ${b.listing} (${b.ref})`,
+    `Pay by childcare voucher — ${b.listing} (${refsLabel})`,
     `Pay with ${scheme.name}`,
-    `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(b.amount)}</b> through
+    `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(amount)}</b> through
       <b>${scheme.name}</b> on their own website, quoting:</p>
      <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref</td><td><b>${b.ref}</b></td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(b.amount)}</b></td></tr></table>
+      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${opts.refs && opts.refs.length > 1 ? "s" : ""}</td><td><b>${refsLabel}</b></td></tr>
+      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(amount)}</b></td></tr></table>
      ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
      <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
   );
