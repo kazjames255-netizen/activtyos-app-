@@ -2600,8 +2600,15 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
   d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
-  const b = useBooking(d, booking, weeks, blocks, mode);
-  const view: BookView = { b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId };
+  // A family can't pick a day that's already gone (the server enforces it too).
+  // Operators still see every day — they may record a past attendance.
+  // useState initialiser, not a bare new Date() in render (React Compiler).
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const weeksShown = mode === "parent"
+    ? weeks.map((w) => ({ ...w, days: w.days.filter((iso) => iso >= today) })).filter((w) => w.days.length > 0)
+    : weeks;
+  const b = useBooking(d, booking, weeksShown, blocks, mode);
+  const view: BookView = { b, d, booking, weeks: weeksShown, spacesLeft, addons, mode, onBook, bookState, tenantId };
   // Checkout is much shorter than the calendar it replaces, so without this the
   // card collapses and leaves you staring at whitespace. "nearest" nudges it
   // into view only if it isn't already — no jump to the top of the page.
