@@ -683,7 +683,19 @@ export function BookingDetail({ booking }: { booking: Booking }) {
               {b.booker}
             </h3>
             <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">
-              Booking ref <b className="text-[var(--ink-2)]">{b.ref}</b> · ID {b.bid}
+              Booking ref <b className="text-[var(--ink-2)]">{b.ref}</b>
+              {(() => {
+                // The reference the FAMILY entered at checkout (voucher account /
+                // TFC payment ref) — what the provider matches the money against.
+                // Show that rather than our internal booking id when it exists.
+                const custRefs = [...new Set([
+                  ...((b.payRefs ?? []).map((r) => r.ref)),
+                  ...(b.paymentRef ? [b.paymentRef] : []),
+                ].map((s) => s?.trim()).filter(Boolean))] as string[];
+                return custRefs.length > 0
+                  ? <> · Payment ref <b className="text-[var(--ink-2)]">{custRefs.join(", ")}</b></>
+                  : <> · ID {b.bid}</>;
+              })()}
             </div>
             {/* When it came in — the question you ask before "and what did
                 they book". Date and time, because two bookings on the same
