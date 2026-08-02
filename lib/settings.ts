@@ -176,7 +176,17 @@ export interface VoucherDetail {
    *  no fixed set covers them all. */
   label: string;
   value: string;
+  /** Scope: the account number / Ofsted no / reference can differ per registered
+   *  setting. A detail can be pinned to one listing, or to a location (all its
+   *  listings). Both empty = applies to everything (the default). listingId wins
+   *  over locationId wins over unscoped. Only meaningful for the scoped labels. */
+  listingId?: string | null;
+  locationId?: string | null;
 }
+
+/** Labels whose value legitimately varies per registered setting (so they get
+ *  the per-listing / per-location scope pickers). */
+export const SCOPED_VOUCHER_LABELS = /account|ofsted|regulator|reference/i;
 
 /**
  * A childcare-voucher scheme the provider is registered with.
@@ -205,6 +215,28 @@ export const VOUCHER_DETAIL_LABELS = ["Setting name", "Ofsted/Regulator No", "Ac
 /** Details actually filled in — the only ones worth showing anyone. */
 export const filledDetails = (v: VoucherProvider): VoucherDetail[] =>
   v.details.filter((d) => d.value.trim().length > 0);
+
+/** The details a PARENT booking a specific listing should see — the right
+ *  account/Ofsted/reference for that registered setting. For each label we keep
+ *  the most specific match: this listing → its location → unscoped (all). */
+export function detailsForListing(v: VoucherProvider, ctx: { listingId?: string | null; locationId?: string | null }): VoucherDetail[] {
+  const byLabel = new Map<string, VoucherDetail[]>();
+  for (const d of v.details) {
+    if (!d.value.trim()) continue;
+    const arr = byLabel.get(d.label) ?? [];
+    arr.push(d); byLabel.set(d.label, arr);
+  }
+  const out: VoucherDetail[] = [];
+  for (const group of byLabel.values()) {
+    const match =
+      (ctx.listingId ? group.find((d) => d.listingId && d.listingId === ctx.listingId) : undefined) ??
+      (ctx.locationId ? group.find((d) => !d.listingId && d.locationId && d.locationId === ctx.locationId) : undefined) ??
+      group.find((d) => !d.listingId && !d.locationId) ??
+      group[0];
+    if (match) out.push(match);
+  }
+  return out;
+}
 
 /** The schemes a parent can actually be sent to. */
 export const liveVouchers = (all: VoucherProvider[]): VoucherProvider[] =>

@@ -18,7 +18,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
-import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, filledDetails } from "@/lib/settings";
+import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow, offerVouchers } from "@/lib/vouchers";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
@@ -686,6 +686,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const firstDate = b.basket.flatMap((x) => x.dates).sort()[0];
   const vWindow = voucherWindow(new Date().toISOString(), firstDate, ckSettings.voucherHoldDays, ckSettings.voucherClearDays, ckSettings.voucherDueByDays);
   const chosenVoucher = vouchers.find((v) => v.id === voucherId) ?? null;
+  // The right account/Ofsted/reference for THIS listing's registered setting.
+  const voucherDetails = chosenVoucher ? detailsForListing(chosenVoucher, { listingId: d.id, locationId: d.venueId }) : [];
   // The parent's dropdown honours THIS listing's accepted methods (payList),
   // mapped to payment rails — not a hardcoded card/bank/cash.
   const parentOpts: [string, string][] = payList.map(parentMethodEntry).filter((e): e is [string, string] => !!e);
@@ -1723,7 +1725,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   {/* Every detail they've given us, labelled. A scheme asking
                       for a setting name and getting an account number is a
                       payment that doesn't arrive. */}
-                  {filledDetails(chosenVoucher).map((d) => {
+                  {voucherDetails.map((d) => {
                     const isLink = /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
                     const href = /^https?:\/\//i.test(d.value) ? d.value : `https://${d.value}`;
                     return (
@@ -1735,13 +1737,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       </div>
                     );
                   })}
-                  {filledDetails(chosenVoucher).some((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value)) && (
+                  {voucherDetails.some((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value)) && (
                     <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>Tap the link to sign in and pay — it goes straight to {chosenVoucher.name}.</div>
                   )}
                   <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
                     Send <b style={{ color: tk.ink }}>{money(grandTotal)}</b> through their website,
-                    quoting {filledDetails(chosenVoucher).length === 1 ? "that" : "those"} details.
-                    We&rsquo;ll email {filledDetails(chosenVoucher).length === 1 ? "it" : "them"} to
+                    quoting {voucherDetails.length === 1 ? "that" : "those"} details.
+                    We&rsquo;ll email {voucherDetails.length === 1 ? "it" : "them"} to
                     you as well.
                   </div>
 

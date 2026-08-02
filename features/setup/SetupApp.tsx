@@ -20,6 +20,7 @@ import {
   inferWho,
   filledDetails,
   VOUCHER_DETAIL_LABELS,
+  SCOPED_VOUCHER_LABELS,
   DEFAULT_RATIO_GROUPS,
   type CancelReason,
   type VoucherProvider,
@@ -525,6 +526,14 @@ function ReasonEditor({ items, onChange }: { items: CancelReason[]; onChange: (v
  */
 function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange: (v: VoucherProvider[]) => void }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  // Listings + locations (venues) so an account no / Ofsted / reference can be
+  // pinned to the right registered setting.
+  const [listings, setListings] = useState<{ id: string; title?: string; name?: string; venueId?: string | null }[]>([]);
+  const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    apiGet<{ id: string; title?: string; name?: string; venueId?: string | null }[]>("/api/listings?mine=1").then((l) => setListings(Array.isArray(l) ? l : [])).catch(() => {});
+    apiGet<{ venues?: { id: string; name: string }[] }>("/api/library").then((lib) => setVenues(lib.venues ?? [])).catch(() => {});
+  }, []);
   const live = items.filter((v) => filledDetails(v).length).length;
   const patch = (i: number, fn: (v: VoucherProvider) => VoucherProvider) =>
     onChange(items.map((x, j) => (j === i ? fn(x) : x)));
@@ -591,6 +600,20 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                       >
                         &#10005;
                       </button>
+                      {SCOPED_VOUCHER_LABELS.test(d.label) && (
+                        <div className="flex w-full flex-wrap items-center gap-2 pl-1 text-[11px] text-[var(--ink-3)]">
+                          <span className="font-bold uppercase tracking-wide">Applies to</span>
+                          <select value={d.listingId ?? ""} onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, listingId: e.target.value || null, ...(e.target.value ? { locationId: null } : {}) } : y)) }))} className="max-w-[220px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]">
+                            <option value="">All listings</option>
+                            {listings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Listing"}</option>)}
+                          </select>
+                          <span>·</span>
+                          <select value={d.locationId ?? ""} disabled={!!d.listingId} onChange={(e) => patch(i, (x) => ({ ...x, details: x.details.map((y, n) => (n === k ? { ...y, locationId: e.target.value || null } : y)) }))} className="max-w-[220px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] disabled:opacity-50">
+                            <option value="">{d.listingId ? "(that listing's location)" : "All locations"}</option>
+                            {venues.map((vn) => <option key={vn.id} value={vn.id}>{vn.name}</option>)}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

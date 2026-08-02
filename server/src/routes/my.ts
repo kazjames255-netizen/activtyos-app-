@@ -528,10 +528,24 @@ my.post("/bookings", async (req, res) => {
     for (const a of ((lib.addons ?? []) as LibAddon[])) libAddons.set(a.id, a);
     if (wantsVoucher) {
       const settings = (lib.settings ?? {}) as Record<string, unknown>;
-      const providers = (settings.voucherProviders ?? []) as { id: string; name: string; details?: { label: string; value: string }[] }[];
+      const providers = (settings.voucherProviders ?? []) as { id: string; name: string; details?: { label: string; value: string; listingId?: string | null; locationId?: string | null }[] }[];
       const scheme = providers.find((v) => v.id === wantsVoucher || v.name === wantsVoucher);
       if (scheme) {
-        voucher = { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) };
+        // Resolve the right account/Ofsted/reference for THIS listing's setting:
+        // this listing → its location → unscoped (all), per detail label.
+        const all = (scheme.details ?? []).filter((d) => d.value?.trim());
+        const byLabel = new Map<string, typeof all>();
+        for (const d of all) { const g = byLabel.get(d.label) ?? []; g.push(d); byLabel.set(d.label, g); }
+        const details: { label: string; value: string }[] = [];
+        const thisListingId = input.listingId;
+        const thisVenueId = (listing as { venueId?: string | null }).venueId ?? null;
+        for (const g of byLabel.values()) {
+          const m = g.find((d) => d.listingId && d.listingId === thisListingId)
+            ?? g.find((d) => !d.listingId && d.locationId && d.locationId === thisVenueId)
+            ?? g.find((d) => !d.listingId && !d.locationId) ?? g[0];
+          if (m) details.push({ label: m.label, value: m.value });
+        }
+        voucher = { name: scheme.name, details };
         // Earliest session across the basket → the window's "first session".
         const first = input.items
           .flatMap((i) => i.dates ?? [])
