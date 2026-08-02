@@ -14,6 +14,9 @@ export const geo = Router(); // authed (address search)
 export const tiles = Router(); // public (map tiles — <img> can't send auth)
 
 const OS_KEY = process.env.OS_API_KEY;
+// Upstream (OS / Nominatim / tile server) must answer within this, or we bail —
+// never let a slow third party hold a client connection open.
+const GEO_TIMEOUT_MS = 5000;
 
 // OS returns British National Grid eastings/northings (EPSG:27700); the map
 // and the rest of the app use WGS84 lat/lng (EPSG:4326).
@@ -42,7 +45,10 @@ interface OsEntry {
 async function osNames(q: string): Promise<GeoHit[]> {
   const r = await fetch(
     `https://api.os.uk/search/names/v1/find?query=${encodeURIComponent(q)}&maxresults=6&key=${OS_KEY}`,
-    { headers: { Accept: "application/json" } },
+    // A slow upstream must fail fast — a hung geocode with no timeout holds a
+    // browser connection for the client's full 15s, and the browse page fires
+    // one lookup per venue, so a handful saturates the connection pool.
+    { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) },
   );
   if (!r.ok) throw new Error(`OS Names ${r.status}`);
   const data = (await r.json()) as { results?: { GAZETTEER_ENTRY: OsEntry }[] };
@@ -63,7 +69,7 @@ async function osNames(q: string): Promise<GeoHit[]> {
 async function nominatimUK(q: string): Promise<GeoHit[]> {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=gb&limit=6&q=${encodeURIComponent(q)}`,
-    { headers: { Accept: "application/json", "User-Agent": "ActivityOS/1.0 (childrens activity platform)" } },
+    { headers: { Accept: "application/json", "User-Agent": "ActivityOS/1.0 (childrens activity platform)" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) },
   );
   if (!r.ok) throw new Error(`Nominatim ${r.status}`);
   const raw = (await r.json()) as { display_name: string; lat: string; lon: string }[];
@@ -103,7 +109,7 @@ tiles.get("/:z/:x/:y", async (req, res) => {
     ? `https://api.os.uk/maps/raster/v1/zxy/Light_3857/${z}/${x}/${y}.png?key=${OS_KEY}`
     : `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
   try {
-    const upstream = await fetch(url, { headers: { "User-Agent": "ActivityOS/1.0" } });
+    const upstream = await fetch(url, { headers: { "User-Agent": "ActivityOS/1.0" }, signal: AbortSignal.timeout(GEO_TIMEOUT_MS) });
     if (!upstream.ok) {
       res.status(502).end();
       return;
