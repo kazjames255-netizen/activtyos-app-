@@ -139,10 +139,13 @@ test.describe("parent books; operator sees it live", () => {
     const ref = refLine?.match(/APF-\d+/)?.[0];
     expect(ref, "confirmation should show a booking reference").toBeTruthy();
 
-    // Parent's own bookings list shows it.
+    // Parent's own bookings list shows it. Anchor on OUR ref, not the listing
+    // title: the rebuilt hub has an "All activities" filter whose <option>s
+    // carry every listing name, so getByText(title).first() resolves to a
+    // hidden option and proves nothing.
     await page.getByRole("link", { name: "See my bookings" }).click();
     await page.waitForURL("**/custdash/bookings");
-    await expect(page.getByText(title).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(`Ref ${ref}`).first()).toBeVisible({ timeout: 15_000 });
 
     // The operator's already-open Bookings view received it via SSE — no reload.
     await expect(opPage.getByText(childName).first()).toBeVisible({ timeout: 25_000 });

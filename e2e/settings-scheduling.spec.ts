@@ -80,8 +80,9 @@ test.describe("timetable publish reaches staff", () => {
     await page.locator("select").first().selectOption({ index: 1 });
     await expect(page.getByText(/Pulled from listing|Dates edited/)).toBeVisible({ timeout: 15_000 });
 
-    // Step 7: manual build → grid.
-    await page.getByRole("button", { name: /7?\s*Build/ }).click();
+    // Step 7: manual build → grid. Anchored to end-of-name: the rebuilt
+    // timetable page added a "Builder" tab button that a bare /Build/ also hits.
+    await page.getByRole("button", { name: /^\d*\s*Build$/ }).click();
     await page.getByRole("button", { name: /Manual →/ }).click();
 
     // Type one activity into the first empty cell (a clickable div, not a
