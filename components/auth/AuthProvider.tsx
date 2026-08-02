@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 
@@ -51,6 +51,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Tracks whether a user was signed in while this page was open. If so, a
   // user->null transition is an intentional sign-out — redirect WITHOUT a
   // ?next return-path, so the next (possibly different) account isn't sent
@@ -63,9 +64,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace(hadUser.current ? "/login" : `/login?next=${encodeURIComponent(pathname)}`);
+      // Keep the query string on the return path — a deep link like
+      // /freelancer/bookings?ref=APF-123 must survive the login bounce, or the
+      // operator lands on the list instead of the specific booking.
+      const qs = searchParams.toString();
+      const dest = qs ? `${pathname}?${qs}` : pathname;
+      router.replace(hadUser.current ? "/login" : `/login?next=${encodeURIComponent(dest)}`);
     }
-  }, [loading, user, router, pathname]);
+  }, [loading, user, router, pathname, searchParams]);
 
   if (loading || !user) {
     return (
