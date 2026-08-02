@@ -3394,6 +3394,13 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
           </div>
         ))}
       </div>
+      {d.payMethods && d.payMethods.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b px-5 py-2.5" style={{ borderColor: LINEs, background: PANEL }}>
+          <span className="mr-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">Ways to pay</span>
+          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: `${LIME}26`, border: `1px solid ${LIME}` }}>💳 Card</span>
+          {d.payMethods.map((m) => <span key={m} className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: "rgba(255,255,255,.06)", border: `1px solid ${LINEs}` }}>{m}</span>)}
+        </div>
+      )}
       <div className={full ? "px-6 pb-8 lg:px-8" : "px-5 pb-6"}>
         {/* stats strip */}
         {/* Spec strip: ages, availability, all passes in one box, discounts in
@@ -3525,15 +3532,6 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                   <div className={lab} style={{ color: LIME }}>📞 camp is on now — reach staff</div>
                   <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: "#fff" }}>{d.sitePhone}</a>
-                </div>
-              )}
-              {d.payMethods && d.payMethods.length > 0 && (
-                <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                  <div className={lab} style={{ color: MUTs }}>ways to pay</div>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    <span className="rounded-md px-2 py-1 text-[10.5px] font-bold text-white" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>💳 Card</span>
-                    {d.payMethods.map((m) => <span key={m} className="rounded-md px-2 py-1 text-[10.5px] font-bold text-white" style={{ background: surf.cell, borderLeft: `2px solid ${LIME}` }}>{m}</span>)}
-                  </div>
                 </div>
               )}
               {passSummary.length > 0 && (

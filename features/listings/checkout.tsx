@@ -19,7 +19,7 @@ import { money, PAY_METHODS } from "@/features/bookings/helpers";
 import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
-import { voucherWindow, offerVouchers } from "@/lib/vouchers";
+import { voucherWindow } from "@/lib/vouchers";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
@@ -691,7 +691,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // The parent's dropdown honours THIS listing's accepted methods (payList),
   // mapped to payment rails — not a hardcoded card/bank/cash.
   const parentOpts: [string, string][] = payList.map(parentMethodEntry).filter((e): e is [string, string] => !!e);
-  if (payList.some((m) => /voucher/i.test(m)) && vouchers.length && offerVouchers(ckSettings.voucherWhenClose, vWindow)) parentOpts.push(["voucher", "Childcare vouchers"]);
+  // Show vouchers whenever the listing accepts them and a scheme has details to
+  // quote. If it's too close for the money to clear, the deadline note below
+  // still cautions the family — but the option no longer silently vanishes.
+  if (payList.some((m) => /voucher/i.test(m)) && vouchers.length) parentOpts.push(["voucher", "Childcare vouchers"]);
   const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
@@ -1678,16 +1681,6 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
 
-          {/* Hidden, so say why — an option that silently vanishes is a
-              phone call. */}
-          {parentMode && vouchers.length > 0 && vWindow.tooClose && vWindow.closeReason
-            && ckSettings.voucherWhenClose === "hide" && (
-            <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>
-              Childcare vouchers aren&rsquo;t available for this booking &mdash; {vWindow.closeReason},
-              and voucher payments take a few working days to reach us.
-            </div>
-          )}
-
           {/* Paying by voucher happens on the scheme's own website, so this
               has to hand over everything needed to do it: which scheme, the
               reference to quote, the amount, and by when. */}
@@ -1777,7 +1770,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               {/* Too close for the money to land, but the provider allows it
                   anyway. Saying so plainly is the difference between a parent
                   who pays today and one who finds out at the gate. */}
-              {vWindow.tooClose && ckSettings.voucherWhenClose !== "hide" && (
+              {vWindow.tooClose && (
                 <div className={`mt-2.5 border-2 px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
                   style={{ borderColor: "#f59e0b", color: tk.ink }}>
                   <b>Heads up &mdash; {vWindow.closeReason}.</b>{" "}
