@@ -590,7 +590,25 @@ bookings.post("/:ref/actions", async (req, res) => {
         emailBookingConfirmed(updated, await tenantName());
       else if (action.type === "offer") emailPlaceOffered(updated, await tenantName());
       else if (action.type === "decline") emailBookingDeclined(updated, await tenantName(), updated.declineReason);
-      else if (action.type === "refund-approve") emailRefundApproved(updated, await tenantName());
+      else if (action.type === "refund-approve") {
+        emailRefundApproved(updated, await tenantName());
+        // …and raise the family's in-app bell (email-only before, so it never
+        // showed in their notifications). bellOnly — the email above is the mail.
+        const toWallet = updated.cancel?.refundTo === "wallet";
+        const amt = updated.cancel?.amount ?? 0;
+        void notify({
+          tenantId: scope.tenantId!,
+          to: { kind: "parent", email: updated.email },
+          category: "billing",
+          bellOnly: true,
+          title: toWallet ? `Wallet credit added · ${updated.ref}` : `Refund approved · ${updated.ref}`,
+          body: toWallet
+            ? `£${amt.toFixed(2)} added to your wallet for ${updated.listing} — it's there now, ready to spend on your next booking.`
+            : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
+          href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+          ref: updated.ref,
+        });
+      }
     }
 
     // Offline settlements (TFC, HAF, PayPal, cash) become payment records
