@@ -72,12 +72,20 @@ test.describe("email client", () => {
   });
 
   test("the composer sends for real; the send lands in the Sent folder", async ({ page }) => {
+    const accounts = loadAccounts();
     const stamp = Date.now().toString(36);
     const subject = `E2E compose ${stamp}`;
 
     await page.goto("/company/email");
     // TabStrip "Compose" (exact — the Inbox sidebar has its own "✎ Compose").
     await page.getByRole("button", { name: "Compose", exact: true }).click();
+
+    // Before anything is sent, the composer states the identity the mail will
+    // carry — THIS run's provider name, not the platform's, and a real reply
+    // address (GET /api/emails/sender, openapi v0.32.0).
+    const sendingAs = page.locator('[data-ui="sending-as"]');
+    await expect(sendingAs).toContainText(accounts.accounts.company.tenantName!, { timeout: 15_000 });
+    await expect(sendingAs).toContainText("replies go to");
     await page.locator('select:has-text("A single address")').selectOption("one");
     await page.getByPlaceholder("name@example.com", { exact: true }).fill(`e2e-compose-${stamp}@${TEST_EMAIL_DOMAIN}`);
     await page.locator('div:has(> label:text-is("Subject")) input').fill(subject);

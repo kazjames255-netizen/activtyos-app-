@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import type { Sender } from "./sender";
 
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
@@ -47,20 +48,38 @@ function getTransport() {
   return transportPromise;
 }
 
+// MAIL_FROM is the one authenticated identity ("ActivityOS <no-reply@…>" or a
+// bare address). Its ADDRESS is fixed — providers only ever vary the display
+// name in front of it (see lib/sender.ts).
+const MAIL_FROM = process.env.MAIL_FROM || "ActivityOS <no-reply@activityos.local>";
+const angled = MAIL_FROM.match(/<([^>]+)>/);
+/** The address every send goes out as, whoever it's "from". */
+export const fromAddress = (angled ? angled[1] : MAIL_FROM).trim();
+/** The platform's own display name — used when no tenant identity applies. */
+export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace(/^"|"$/g, "") : "";
+
 /** Returns true when the transport accepted the message — the campaign
  *  history uses it as the "delivered" count. Callers that don't care can
- *  keep treating this as fire-and-forget. */
-export async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+ *  keep treating this as fire-and-forget.
+ *
+ *  `sender` brands the mail for one provider: their name on the From line and
+ *  their address on Reply-To. Omit it for platform mail. */
+export async function sendMail(to: string, subject: string, html: string, sender?: Sender): Promise<boolean> {
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
-      from: process.env.MAIL_FROM || 'ActivityOS <no-reply@activityos.local>',
+      // Object form so nodemailer does the quoting/MIME-encoding for names
+      // with commas, quotes or accents.
+      from: sender?.name ? { name: sender.name, address: fromAddress } : MAIL_FROM,
+      ...(sender?.replyTo ? { replyTo: sender.replyTo } : {}),
       to,
       subject,
       html,
     });
     console.log(
       `[mail] "${subject}" → ${to}` +
+        (sender?.name ? ` as "${sender.name}"` : "") +
+        (sender?.replyTo ? ` (reply-to: ${sender.replyTo})` : "") +
         (ethereal ? ` (preview: ${nodemailer.getTestMessageUrl(info)})` : ""),
     );
     return true;

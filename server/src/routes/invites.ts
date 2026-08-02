@@ -79,6 +79,7 @@ invites.post("/", async (req, res) => {
       link: `${webUrl}/signup?invite=${token}`,
       inviterName: req.user?.name ?? req.user?.email ?? undefined,
       message: inviteMessage,
+      tenantId: auth.tenantId,
     });
   }
   res.status(201).json({ token, url: `/signup?invite=${token}`, sentTo });

@@ -255,6 +255,7 @@ customers.post("/:id/invite", async (req, res) => {
       providerName: (tenant.exists ? (tenant.data()!.name as string) : "") || "Your activity provider",
       link,
       existed,
+      tenantId: snap.data()!.tenantId,
     });
 
     await ref.update({ invitedAt: new Date().toISOString() });

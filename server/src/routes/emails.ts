@@ -2,7 +2,9 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
+import { fromAddress, fromName } from "../lib/mailer";
 import { ukNow } from "../lib/scheduler";
+import { tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
@@ -222,6 +224,17 @@ emails.post("/suppress", async (req, res) => {
   const cust = await db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
   if (!cust.empty) await cust.docs[0].ref.set({ marketingOptIn: false }, { merge: true });
   res.json({ ok: true, email });
+});
+
+// GET /api/emails/sender — the identity this tenant's mail goes out under, so
+// the composer can show it before anything is sent. The address is the
+// platform's for everyone (one authenticated sending domain); only the name
+// and Reply-To are the provider's. See lib/sender.ts.
+emails.get("/sender", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const s = await tenantSender(tenantId);
+  res.json({ fromName: s.name ?? fromName, fromAddress, replyTo: s.replyTo ?? null });
 });
 
 // GET /api/emails — the send history (operators).

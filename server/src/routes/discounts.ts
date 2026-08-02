@@ -66,7 +66,7 @@ async function notifyAssigned(tenantId: string, email: string, name: string | un
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
   await db.collection("messages").add({ threadId: id, tenantId, parentEmail: el, from: "operator", senderName: tName, body, coupon, createdAt: now });
-  try { emailNewMessage(el, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
+  try { emailNewMessage(el, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages`, tenantId }); } catch { /* email never blocks */ }
 }
 const pctCheck = (c: { type?: string; value?: number }) => c.type !== "percent" || (c.value ?? 0) <= 100;
 const valueTxtOf = (type: string, value: number) => (type === "percent" ? `${value}% off` : type === "perAttendee" ? `£${value} off per child` : `£${value} off`);

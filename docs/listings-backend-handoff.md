@@ -2755,6 +2755,41 @@ Two things for you:
   control has a home. I'll add the toggle UI to Setup once the key's storable.
 - **Per-provider from-address** (white-label) — currently one `MAIL_FROM`.
 
+> ## STATUS — sending identity, 1 Aug 2026 (Amir)
+>
+> **Settings toggle: done.** `emailOnNewMessage` persists on the tenant doc;
+> `GET`/`PUT /api/messages/settings` reads and writes it (with `notifyEmail`).
+> The Setup toggle has a home whenever you want to add it.
+>
+> **Per-provider from-address: PARTIAL — read this before wiring anything.**
+> The from-*address* is still one `MAIL_FROM` and stays that way until
+> white-label (each provider needs their own verified sending domain, which
+> means a transactional provider + per-tenant DNS onboarding; it can't be done
+> on the current Gmail SMTP at all). What I *have* made per-provider is the
+> pair a shared address is allowed to vary:
+> - **From display name** — `settings.providerName` → tenant name. Families see
+>   "Sunshine Camps <no-reply@…>", not "ActivityOS".
+> - **Reply-To** — `notifyEmail` → `settings.billing.email` → `tenants.email`.
+>
+> `GET /api/emails/sender` → `{fromName, fromAddress, replyTo}` if you want to
+> show it anywhere. I put a "Sending as … · replies go to …" line in the
+> composer above the audience picker (`EmailApp.tsx`) — your file, so move or
+> restyle it however you like. `emails` history docs now also record the
+> `fromName`/`replyTo` each send went out under.
+>
+> **Reserved for you:** new-message emails set the From name but deliberately
+> leave **Reply-To unset**, so the per-thread `reply+<threadId>@inbound.…`
+> address below can claim that header when the inbound pipeline lands. Team
+> notifications skip it too (it would point a provider's mail at itself).
+>
+> **Bug this surfaced:** signup writes the contact email to
+> `libraries/{id}.settings.billing.email`, never to a top-level `tenants.email`
+> (`registerRole.ts`). So the `notifyEmail → email` fallback in `notify.ts`,
+> `routes/messages.ts` and the inbound tenant-matching in `routes/emails.ts` is
+> dead for every tenant made through signup — and `/api/messages/settings`
+> returns `accountEmail: ""`, so your Setup placeholder renders empty. I fixed
+> the chain in `lib/sender.ts` only; the other three still need it.
+
 **Reply-by-email — needs you (inbound infra).** Letting a reply to that email
 land back in the thread needs an inbound mail pipeline:
 - **Reply-to routing** — send with a `Reply-To` that encodes the thread, e.g.

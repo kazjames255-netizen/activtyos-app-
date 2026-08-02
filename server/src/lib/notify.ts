@@ -192,7 +192,12 @@ export async function notify(input: NotifyInput): Promise<void> {
     await sendMail(
       to,
       input.subject ?? input.title,
+      // `href` (not input.href) — portal-corrected for team recipients.
       layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer),
+      // The provider's name on the From line either way. Reply-To only for
+      // family mail — pointing the team's own notification back at itself
+      // would just loop.
+      { name: provider.name, ...(parentEmail && provider.email ? { replyTo: provider.email } : {}) },
     );
   } catch (e) {
     console.error("[notify] failed:", (e as Error).message);

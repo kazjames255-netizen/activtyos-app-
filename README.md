@@ -154,5 +154,22 @@ confirmed, declined, refund approved.
   `server/.env` (any SMTP provider — Resend, Mailgun, Gmail app password…)
   and restart the API.
 
-Per-provider sending domains (DKIM/SPF, emails "from" each provider) come
-with the white-label milestone, per the product doc.
+### Who mail comes from
+
+`MAIL_FROM` is the one authenticated identity every send leaves under — but
+the **display name and Reply-To are the provider's**, resolved per tenant in
+`server/src/lib/sender.ts`:
+
+- **From name** — Setup's trading name (`settings.providerName`), falling back
+  to the tenant name. Families see "Sunshine Camps", not "ActivityOS".
+- **Reply-To** — the tenant's `notifyEmail`, falling back to its account email.
+  A reply reaches the provider instead of a no-reply box.
+
+`GET /api/emails/sender` returns the resolved identity, and the Email composer
+shows it above the audience picker. Two deliberate exceptions: new-message
+alerts and team-audience notifications set the name but **no Reply-To** — that
+header is reserved for §JJ's reply-by-email thread routing.
+
+Per-provider sending *domains* (DKIM/SPF, `From: @theirdomain`) still come with
+the white-label milestone, per the product doc — this is the interim that needs
+no DNS setup from providers.

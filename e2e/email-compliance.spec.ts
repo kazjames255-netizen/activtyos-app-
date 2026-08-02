@@ -16,8 +16,10 @@ import { TEST_EMAIL_DOMAIN, apiFetch, apiPost, fbSignIn } from "./helpers/accoun
 // merge path is exercised by sending a tokened body and asserting delivery.
 
 interface DryRun { dryRun: boolean; recipientCount: number; sample: string[] }
-interface HistoryDoc { id: string; status: string; delivered: number; openedBy?: string[]; recipientCount: number; scheduledId?: string; subject: string }
+interface HistoryDoc { id: string; status: string; delivered: number; openedBy?: string[]; recipientCount: number; scheduledId?: string; subject: string; fromName?: string; replyTo?: string }
 interface Segment { id: string; name: string; emails: string[] }
+interface SenderIdentity { fromName: string; fromAddress: string; replyTo: string | null }
+interface MsgSettings { notifyEmail: string; accountEmail: string }
 
 const em = (tag: string, stamp: string) => `e2e-${tag}-${stamp}@${TEST_EMAIL_DOMAIN}`;
 
@@ -56,11 +58,15 @@ const dryRun = (token: string, recipients: string[]) =>
 test.describe("email compliance & send engine (API)", () => {
   let token: string;
   let tenantId: string;
+  let tenantName: string;
+  let companyEmail: string;
 
   test.beforeEach(async () => {
     const accounts = loadAccounts();
-    token = (await fbSignIn(accounts.accounts.company.email)).idToken;
+    companyEmail = accounts.accounts.company.email;
+    token = (await fbSignIn(companyEmail)).idToken;
     tenantId = accounts.accounts.company.tenantId!; // operator accounts always provision a tenant
+    tenantName = accounts.accounts.company.tenantName!; // seeded as settings.providerName too
   });
 
   test("marketing sends obey the PECR consent split; transactional mail is exempt", async () => {
@@ -152,6 +158,71 @@ test.describe("email compliance & send engine (API)", () => {
       const list = await apiFetch<HistoryDoc[]>("/api/emails", token);
       return list.find((h) => h.id === sent.id)?.openedBy ?? [];
     }, { timeout: 15_000 }).toContain(target);
+  });
+
+  // Per-provider sending identity (openapi v0.32.0). The envelope address is
+  // the platform's for every tenant, so what has to be proven is that the
+  // PROVIDER's name and reply address are the ones each send actually carries
+  // — and that the history doc records them, which is the only place the
+  // identity is readable back (the headers themselves reach only the SMTP
+  // transport, same limitation as rendered content above).
+  test("a send carries the provider's name and reply address, and records both", async () => {
+    const stamp = Date.now().toString(36);
+    const subject = `E2E identity ${stamp}`;
+
+    const identity = await apiFetch<SenderIdentity>("/api/emails/sender", token);
+    // THIS run's provider name (global.setup seeds settings.providerName with
+    // it), never the platform's — a bare "not ActivityOS" would pass on any
+    // tenant and prove nothing.
+    expect(identity.fromName).toBe(tenantName);
+    expect(identity.fromAddress).toContain("@");
+    // A provider must always have a reply address — null would mean families
+    // replying into a void, and would also make the round-trip below vacuous.
+    expect(identity.replyTo).toBeTruthy();
+
+    const sent = await apiPost<HistoryDoc>("/api/emails/send", token, {
+      subject, body: "Who am I from?", audience: "one", to: em("identity", stamp),
+    });
+    await expect.poll(async () => {
+      const list = await apiFetch<HistoryDoc[]>("/api/emails", token);
+      return list.find((h) => h.id === sent.id)?.status;
+    }, { timeout: 30_000 }).toBe("sent");
+
+    const doc = (await apiFetch<HistoryDoc[]>("/api/emails", token)).find((h) => h.id === sent.id)!;
+    expect(doc.fromName).toBe(identity.fromName);
+    expect(doc.replyTo ?? null).toBe(identity.replyTo);
+  });
+
+  test("Reply-To follows the tenant's notification address, falling back to its contact email", async () => {
+    const stamp = Date.now().toString(36);
+    const nominated = em("replyto", stamp);
+    const before = await apiFetch<MsgSettings>("/api/messages/settings", token);
+    const put = (notifyEmail: string) =>
+      apiFetch<MsgSettings>("/api/messages/settings", token, { method: "PUT", body: JSON.stringify({ notifyEmail }) });
+
+    try {
+      // Setup → the address a provider nominates for operational mail wins…
+      await put(nominated);
+      await expect.poll(
+        async () => (await apiFetch<SenderIdentity>("/api/emails/sender", token)).replyTo,
+        { timeout: 15_000 },
+      ).toBe(nominated);
+
+      // …and clearing it falls back to the tenant's contact email rather than
+      // going empty (a reply must always reach a human). Signup seeds that
+      // contact from the login email, so for this run it's the operator's own
+      // account — NOT `accountEmail`, which reads a top-level tenants.email
+      // that signup never writes (see lib/sender.ts).
+      await put("");
+      await expect.poll(
+        async () => (await apiFetch<SenderIdentity>("/api/emails/sender", token)).replyTo,
+        { timeout: 15_000 },
+      ).toBe(companyEmail.toLowerCase());
+    } finally {
+      // Shared tenant state — always hand it back as we found it, or every
+      // later send in this run inherits a throwaway reply address.
+      await put(before.notifyEmail).catch(() => {});
+    }
   });
 
   test("oversized blasts are rejected at the recipient cap", async () => {

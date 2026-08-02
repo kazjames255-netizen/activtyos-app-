@@ -171,10 +171,10 @@ messages.post("/", async (req, res) => {
       // Prefer the custom notification address; fall back to the account email.
       const tEmail = (t?.notifyEmail as string) || (t?.email as string | undefined);
       if (tEmail && t?.emailOnNewMessage !== false) {
-        emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl });
+        emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl, tenantId });
       }
     } else {
-      emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages` });
+      emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId });
     }
   } catch { /* ignore — never block a message on email */ }
 
@@ -249,7 +249,7 @@ messages.post("/from-booking", async (req, res) => {
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
   await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body, createdAt: now });
-  try { emailNewMessage(email, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
+  try { emailNewMessage(email, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId }); } catch { /* email never blocks */ }
   res.status(201).json({ ok: true, threadId: id });
 });
 

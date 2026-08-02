@@ -120,11 +120,17 @@ new fakes the moment they're spotted.
 
 ## Blocking for prod
 
-- [x] ~~SMTP_HOST unset → Ethereal inbox~~ — Gmail SMTP configured in
-  `server/.env` (app password); real delivery works. Remaining niceties:
-  Gmail caps ~500 sends/day and mails come "from" the Gmail address —
-  switch to a transactional provider + custom domain SPF/DKIM when volume
-  or branding demands it. (`server/src/lib/mailer.ts`)
+- [ ] **Mail leaves from a personal Gmail account.** `server/.env` points
+  `SMTP_*`/`MAIL_FROM` at `amirmoumen@gmail.com` (app password), so every
+  provider's mail — transactional, campaigns, e2e blasts — goes out as that
+  address, and its bounces land in that inbox. Also caps at ~500 recipients/day
+  against a `MAX_RECIPIENTS` of 2000 per send, so one large blast can exceed
+  quota mid-send (`delivered` then lands under `recipientCount` with nothing
+  surfacing the shortfall). Move to a transactional provider on an ActivityOS
+  domain with SPF/DKIM before real customer volume. (`server/src/lib/mailer.ts`)
+  - Partly mitigated: the From **display name** and **Reply-To** are already
+    per-provider (`server/src/lib/sender.ts`), so families see the provider's
+    name and replies reach them. Only the envelope address is shared.
 - [x] ~~Staff portal landing page is the legacy iframe~~ — real
   StaffDashApp now (today's sessions, open tasks, day-plan link).
 - [ ] **Inbound email has no provider connected** — the Email Inbox backend

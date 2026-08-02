@@ -267,6 +267,10 @@ interface Mail { id: string; from: string; fromEmail?: string; to?: string; cc?:
 interface ServerMail { id: string; from: string; fromEmail?: string; to?: string; subject: string; body?: string; html?: string; labels?: string[]; attachments?: { name: string; size?: string }[]; unread?: boolean; starred?: boolean; snoozedUntil?: string | null; folder?: string; at?: string }
 // A queued send (POST /api/emails/schedule) waiting for its sendAt.
 interface Scheduled { id: string; subject: string; body?: string; recipientCount: number; sendAt: string; status: "scheduled" | "sent" | "cancelled"; emailId?: string }
+// GET /api/emails/sender — the name families see and where their replies land.
+// The address is the platform's for every provider (one authenticated sending
+// domain); per-provider sending domains are the white-label milestone.
+interface SenderIdentity { fromName: string; fromAddress: string; replyTo: string | null }
 
 const KNOWN_LABELS = new Set<string>(["urgent", "follow", "haf", "enquiry", "system"]);
 const toMail = (m: ServerMail): Mail => ({
@@ -1536,6 +1540,7 @@ export function EmailApp() {
   const [sigChoice, setSigChoice] = useState<string | null>(null); // null = follow default
   const [sigMgr, setSigMgr] = useState(false);
   const [replyTo, setReplyTo] = useState<{ name: string; email: string } | null>(null); // focused 1:1 reply mode
+  const [sender, setSender] = useState<SenderIdentity | null>(null); // who this tenant's mail goes out as
   const [schedOpen, setSchedOpen] = useState(false);
   const [schedAt, setSchedAt] = useState("");
   const [undoSend, setUndoSend] = useState<{ payload: Record<string, unknown>; count: number; hadAttachments: boolean } | null>(null);
@@ -1620,6 +1625,7 @@ export function EmailApp() {
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setComposeBookings).catch(() => {}); }, []);
+  useEffect(() => { apiGet<SenderIdentity>("/api/emails/sender").then(setSender).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setComposeTemplates).catch(() => {}); }, []);
   useRealtime(["emails", "emailMessages", "scheduledEmails", "bookings", "moments"], () => { refresh(); loadRecipients(); apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); });
   const included = families.filter((f) => !excluded.has(f.email));
@@ -1851,6 +1857,14 @@ export function EmailApp() {
             </div>
             {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
           </div>
+        )}
+        {sender && (
+          <p data-ui="sending-as" className="mt-2 text-[11.5px] text-[var(--ink-3)]">
+            Sending as <b className="text-[var(--ink-2)]">{sender.fromName}</b> &lt;{sender.fromAddress}&gt;
+            {sender.replyTo
+              ? <> · replies go to <b className="text-[var(--ink-2)]">{sender.replyTo}</b></>
+              : <> · <span className="text-[#b45309]">no reply address set — add one in Setup so families can reply</span></>}
+          </p>
         )}
         {audience === "listing" && (
           <div className="mt-2">

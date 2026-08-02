@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
+import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
 import type { Role } from "../middleware/role";
 
@@ -169,7 +170,9 @@ purchasing.post("/:id/email", async (req, res) => {
   const tenant = await db.collection("tenants").doc(o.snap.data()!.tenantId as string).get();
   const billing = (tenant.data()?.settings as Record<string, unknown> | undefined)?.billing as Record<string, unknown> | undefined;
   const html = renderMoneyDoc("po", doc, billing);
-  await sendMail(to, `Purchase order${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
+  // A supplier replying to a PO must reach the provider who raised it.
+  const sender = await tenantSender(o.snap.data()!.tenantId as string, (billing?.businessName as string) || undefined);
+  await sendMail(to, `Purchase order${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender);
   const emailedAt = new Date().toISOString();
   await o.snap.ref.set({ emailedAt }, { merge: true });
   res.json({ ok: true, emailedAt, to });

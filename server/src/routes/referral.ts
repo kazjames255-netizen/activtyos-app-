@@ -175,7 +175,7 @@ export async function rewardReferrer(tenantId: string, referrerEmail: string, fr
     parentUnread: FieldValue.increment(1),
   }, { merge: true });
   await db.collection("messages").add({ threadId: id, tenantId, parentEmail: rel, from: "operator", senderName: tName, body, coupon: { code: rewardCode, valueTxt: rewardTxt, scope: "all listings", expiry: null }, createdAt: now });
-  try { emailNewMessage(rel, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages` }); } catch { /* email never blocks */ }
+  try { emailNewMessage(rel, { providerName: tName, senderName: tName, body, deepLink: `${webUrl}/custdash/messages`, tenantId }); } catch { /* email never blocks */ }
 }
 
 // GET /api/my/referral — the family's referral code, link, amounts and stats.

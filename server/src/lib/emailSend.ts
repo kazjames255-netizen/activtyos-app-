@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { sendMail } from "./mailer";
+import { tenantSender } from "./sender";
 
 // The one-to-many send engine behind the Email page: POST /api/emails/send
 // fires it directly, the scheduled-send sweep fires it at sendAt. Every send
@@ -143,12 +144,19 @@ export interface EmailHistoryDoc {
   /** Recipients whose client fetched the open pixel. */
   openedBy: string[];
   scheduledId?: string;
+  /** The identity this campaign went out under (lib/sender.ts) — recorded so
+   *  "who did this come from?" is answerable from the history alone. */
+  fromName?: string;
+  replyTo?: string;
 }
 
 /** Record the send, deliver in the background, and return the history doc
  *  immediately (the route responds without waiting on 2000 SMTP calls). */
 export async function performEmailSend(input: EmailSendInput): Promise<{ id: string } & EmailHistoryDoc> {
   const html = input.html && input.html.trim() ? input.html : bodyHtml(input.body);
+  // Resolved ONCE for the whole blast — it's the same provider for all 2000
+  // recipients, and per-recipient lookups would double the reads of a send.
+  const sender = await tenantSender(input.tenantId);
   const doc: EmailHistoryDoc = {
     tenantId: input.tenantId,
     subject: input.subject,
@@ -162,6 +170,8 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
     delivered: 0,
     openedBy: [],
     ...(input.scheduledId ? { scheduledId: input.scheduledId } : {}),
+    ...(sender.name ? { fromName: sender.name } : {}),
+    ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
   };
   const ref = await db.collection("emails").add(doc);
 
@@ -175,7 +185,7 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
       const subj = ctxs ? applyTokens(input.subject, ctx) : input.subject;
       const content = ctxs ? applyTokens(html, ctx) : html;
       const footer = input.audience === "all" ? unsubFooter(input.tenantId, to) : "";
-      if (await sendMail(to, subj, content + footer + pixel(ref.id, to))) delivered++;
+      if (await sendMail(to, subj, content + footer + pixel(ref.id, to), sender)) delivered++;
     }
     await ref.set({ delivered, status: "sent" }, { merge: true });
   })().catch((e) => console.error(`[email] delivery recording failed for ${ref.id}:`, (e as Error).message));

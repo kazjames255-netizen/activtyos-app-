@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
+import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
 import { platformFallback, stripe, toPence } from "../lib/stripe";
 import type { Role } from "../middleware/role";
@@ -127,7 +128,10 @@ invoices.post("/:id/email", async (req, res) => {
   const withLink = req.body?.link !== false;
   const payUrl = withLink && doc.payToken ? `${WEB_URL}/pay/${doc.payToken}` : undefined;
   const html = renderMoneyDoc("invoice", doc, billing, payUrl);
-  await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html);
+  // The trading name on the invoice is the name it should arrive from, and a
+  // billing query has to be able to reply to the provider, not the platform.
+  const sender = await tenantSender(o.snap.data()!.tenantId as string, (billing?.businessName as string) || undefined);
+  await sendMail(to, `Invoice${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender);
   const emailedAt = new Date().toISOString();
   // Sending an invoice moves a draft to "sent" (now awaiting payment).
   await o.snap.ref.set({ emailedAt, ...(doc.status === "draft" ? { status: "sent" } : {}) }, { merge: true });

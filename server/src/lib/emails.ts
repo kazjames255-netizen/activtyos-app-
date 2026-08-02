@@ -1,10 +1,13 @@
 import type { Booking } from "../../../features/bookings/types";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail } from "./mailer";
+import { tenantSender } from "./sender";
 import { webUrl } from "./stripe";
 
-// Booking email templates. Plain, inline-styled HTML — per-provider branding
-// and sending domains come with the white-label milestone.
+// Booking email templates. Plain, inline-styled HTML — per-provider sending
+// domains come with the white-label milestone; until then every send carries
+// the provider's name on the From line and their address on Reply-To
+// (lib/sender.ts).
 
 const gbp = (n: number) => `£${(Math.round(n * 100) / 100).toFixed(2)}`;
 
@@ -17,13 +20,36 @@ function sendGated(
   to: string,
   subject: string,
   html: string,
+  /** The name already rendered in the template — reused as the From name so
+   *  the envelope and the letterhead can't disagree. */
+  providerName?: string,
 ): void {
   void autoEmailOn(tenantId, key)
-    .then((on) => {
+    .then(async (on) => {
       if (!on) { console.log(`[mail] "${subject}" → ${to} skipped (autoEmails.${key} off)`); return; }
-      return sendMail(to, subject, html);
+      return sendMail(to, subject, html, await tenantSender(tenantId, providerName));
     })
     .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
+}
+
+/** Ungated provider-branded send (account access, invites, message alerts —
+ *  things an automatic-email toggle must never silence).
+ *
+ *  `replyTo: false` keeps the From name but leaves the Reply-To header unset:
+ *  §JJ's reply-by-email ingest claims that header for thread routing
+ *  (`reply+<threadId>@inbound.…`), so mail that will one day be repliable must
+ *  not squat on it now. */
+function sendAs(
+  tenantId: string | undefined,
+  providerName: string,
+  to: string,
+  subject: string,
+  html: string,
+  opts: { replyTo?: boolean } = {},
+): void {
+  void tenantSender(tenantId, providerName)
+    .then((s) => sendMail(to, subject, html, opts.replyTo === false ? { name: s.name } : s))
+    .catch((e) => console.error(`[mail] sender lookup failed for "${subject}":`, (e as Error).message));
 }
 
 function layout(providerName: string, title: string, bodyHtml: string, b: Booking): string {
@@ -62,6 +88,7 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
        You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -79,6 +106,7 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
        <p style="color:#8a86a3;font-size:12px">The link opens your bookings — sign in and the card payment starts automatically.</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -94,6 +122,7 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
       `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -110,6 +139,7 @@ export function emailBookingDeclined(b: Booking, providerName: string): void {
        Nothing has been charged. Feel free to browse other dates or activities.</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -126,6 +156,7 @@ export function emailRefundApproved(b: Booking, providerName: string): void {
        ${b.cancel?.amount ? `Amount: <b>${gbp(b.cancel.amount)}</b>.` : ""}</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -147,6 +178,7 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
        if the hold runs out, it passes to the next family in the queue.</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -165,9 +197,12 @@ export function emailSignUpInvite(p: {
   providerName: string;
   link: string;
   existed: boolean;
+  tenantId?: string;
 }): void {
   const cta = p.existed ? "Sign in" : "Set your password";
-  void sendMail(
+  sendAs(
+    p.tenantId,
+    p.providerName,
     p.to,
     `${p.providerName} — see what's coming up`,
     `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
@@ -202,12 +237,15 @@ export function emailTeamInvite(p: {
   inviterName?: string;
   /** Settings → Staff & workforce: a personal welcome line from the provider. */
   message?: string;
+  tenantId?: string;
 }): void {
   const what =
     p.role === "franchise"
       ? `run your own franchise area inside ${p.tenantName}`
       : `join the ${p.tenantName} team as staff`;
-  void sendMail(
+  sendAs(
+    p.tenantId,
+    p.tenantName,
     p.to,
     `${p.tenantName} — you're invited`,
     `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
@@ -243,8 +281,8 @@ export function emailFamilyBookingCreated(
   // set-password link the family will ever get — the bookings toggle can
   // silence a courtesy confirmation, never account access.
   const send = opts.accountCreated && opts.passwordLink
-    ? (to: string, subject: string, html: string) => void sendMail(to, subject, html)
-    : (to: string, subject: string, html: string) => sendGated(b.tenantId, "bookings", to, subject, html);
+    ? (to: string, subject: string, html: string) => sendAs(b.tenantId, providerName, to, subject, html)
+    : (to: string, subject: string, html: string) => sendGated(b.tenantId, "bookings", to, subject, html, providerName);
   send(
     b.email,
     `Your booking with ${providerName} (${refs})`,
@@ -312,6 +350,7 @@ export function emailVoucherInstructions(
        <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
       b,
     ),
+    providerName,
   );
 }
 
@@ -323,9 +362,11 @@ const escapeHtml = (s: string) =>
  * ingest is not built yet (handoff §JJ), so we don't invite email replies. */
 export function emailNewMessage(
   to: string,
-  opts: { providerName: string; senderName: string; body: string; deepLink: string },
+  opts: { providerName: string; senderName: string; body: string; deepLink: string; tenantId?: string },
 ): void {
-  void sendMail(
+  sendAs(
+    opts.tenantId,
+    opts.providerName,
     to,
     `New message from ${opts.senderName}`,
     `
@@ -339,5 +380,7 @@ export function emailNewMessage(
     <p><a href="${opts.deepLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Take me to the message</a></p>
     <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">You're receiving this because you have a conversation on ActivityOS.</p>
   </div>`,
+    // Reply-To stays free for §JJ's per-thread reply address.
+    { replyTo: false },
   );
 }

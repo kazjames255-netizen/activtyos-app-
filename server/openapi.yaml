@@ -1,10 +1,33 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.31.0
+  version: 0.32.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.32.0 — Per-provider sending identity (interim white-label)
+
+    Mail used to leave under one platform identity for every tenant. Now every
+    send carries the **provider's** name and reply address, while the envelope
+    address stays the platform's — one authenticated sending domain, nothing
+    for a provider to configure.
+    - **`GET /api/emails/sender`** (operators) → `{fromName, fromAddress,
+      replyTo}` — what this tenant's mail goes out as. `fromName` is the Setup
+      trading name (`settings.providerName`) falling back to the tenant name;
+      `replyTo` is the tenant's `notifyEmail` falling back to its account
+      email, or `null` when neither is set.
+    - **Applied to every send** — booking/transactional templates, campaign and
+      scheduled sends, notifications, invites, invoices and purchase orders.
+    - **Recorded on the history doc** — `emails` docs gain `fromName` and
+      `replyTo`, so "who did this come from?" is answerable from the audit
+      trail alone.
+    - **Two deliberate exceptions.** New-message alerts set the From name but
+      **no Reply-To** — that header is reserved for §JJ reply-by-email thread
+      routing (`reply+<threadId>@inbound.…`). Team-audience notifications skip
+      Reply-To too (it would point a provider's mail back at itself).
+    - **NOT yet white-label.** Per-provider sending *domains* (each provider's
+      own DKIM/SPF, `From: @theirdomain`) remain the white-label milestone.
 
     ## v0.31.0 — Cross-provider marketplace (opt-in)
 
@@ -1905,7 +1928,20 @@ paths:
       summary: The send history (operators)
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
-        "200": { description: Array of sent emails (newest first) }
+        "200": { description: "Array of sent emails (newest first), each with the fromName/replyTo it went out under" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/emails/sender:
+    get:
+      tags: [emails]
+      summary: The identity this tenant's mail goes out under (operators)
+      description: |
+        `fromName` = Setup trading name → tenant name. `fromAddress` is the
+        platform's authenticated address, the same for every provider.
+        `replyTo` = tenant `notifyEmail` → account email, or null.
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{fromName, fromAddress, replyTo}" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/emails/recipients:
