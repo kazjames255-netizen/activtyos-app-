@@ -57,6 +57,13 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [removed, setRemoved] = useState<Record<string, string[]>>({});
   const passes = booking?.passes ?? [];
   const periods = booking?.periods ?? [];
+  // How many bookable days a single week offers, and the whole run. With past
+  // days hidden for parents, a run that's part-gone has fewer left — so a pass
+  // needing more days than remain (a 17-day pass with 7 days left) can't be
+  // fulfilled and must be offered as un-pickable.
+  const weekMax = weeks.reduce((m, w) => Math.max(m, w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length), 0);
+  const runTotal = weeks.reduce((n, w) => n + w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length, 0);
+  const passFits = (p: { days?: number }) => (p.days ?? 1) <= runTotal;
   // A pass whose per-listing capacity is exactly "0" is CLOSED — not bookable
   // at all, regardless of how many places are left (that's the operator saying
   // "shut this pass", e.g. no 1:1 staff this camp). Absolute, so the front end
@@ -64,7 +71,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // other value is a normal cap and stays the backend's job (handoff §T).
   const closedPassIds = new Set(passes.filter((p) => d.ticketOverrides?.[p.name]?.capacity === "0").map((p) => p.id));
   const passClosed = (id: string | null) => id !== null && closedPassIds.has(id);
-  const firstOpen = passes.find((p) => !closedPassIds.has(p.id)) ?? passes[0] ?? null;
+  // Default to the first pass that's both open AND fulfillable (enough days
+  // left), so we never land on a greyed-out one.
+  const firstOpen = passes.find((p) => !closedPassIds.has(p.id) && passFits(p)) ?? passes.find((p) => !closedPassIds.has(p.id)) ?? passes[0] ?? null;
   // The block loads from the API after first render, so useState's initial
   // value is always empty — fall back to the first OPEN entry instead of
   // leaving nothing selected (which recorded a blank timing on the basket
@@ -75,6 +84,9 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const passId = passPick && !closedPassIds.has(passPick) ? passPick : firstOpen?.id ?? null;
   const periodId = periodPick ?? periods[0]?.id ?? null;
   const [sel, setSel] = useState<string[]>([]);
+  // Switching pass clears the chosen dates — a 5-day pass's dates make no sense
+  // under a 1-day one, and half a selection left behind reads as a bug.
+  const pickPass = (id: string) => { setPassId(id); setSel([]); };
   // Dates the parent wants but can't have — queued, not booked.
   const [waitSel, setWaitSel] = useState<string[]>([]);
   const [waitDone, setWaitDone] = useState(false);
@@ -98,9 +110,6 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const pass = passes.find((t) => t.id === passId) || null;
   const period = periods.find((p) => p.id === periodId) || null;
   const need = pass?.days ?? 0;
-  // Most days any single week offers, and the total the whole run offers.
-  const weekMax = weeks.reduce((m, w) => Math.max(m, w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length), 0);
-  const runTotal = weeks.reduce((n, w) => n + w.days.filter((x) => !(d.datesOff ?? []).includes(x)).length, 0);
   const rawRule: BookRule = pass ? ((d.bookRules ?? {})[pass.name] ?? "week") : "week";
   // Guard impossible rules for old/edge data: a "week" pass longer than a week,
   // or a "fixed block" that's neither a week block nor the whole run — both
@@ -386,7 +395,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     });
   const answers = (itemId: string, child: string, addonId: string) => addonAns[ansKey(itemId, child, addonId)] ?? {};
 
-  return { passes, periods, passId, setPassId, passClosed, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
