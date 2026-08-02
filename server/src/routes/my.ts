@@ -946,8 +946,46 @@ my.post("/bookings", async (req, res) => {
             });
         });
       });
+
+      // Join siblings into ONE booking. The engine prices per child, but a family
+      // booking the SAME thing (same block, pass, days & status) should be a
+      // single joint booking with kids[] — not two rows. Per-child voucher/TFC
+      // references become payRefs on the one booking (one booking, one ref per
+      // child). Capacity was already reserved per placement above, so merging
+      // the output rows changes nothing there.
+      const preMergeCount = created.length;
+      const bkGroups = new Map<string, Booking[]>();
+      for (const b of created) {
+        const key = `${b.blockId ?? ""}|${b.pass}|${(b.days ?? []).join(",")}|${b.status}`;
+        const arr = bkGroups.get(key) ?? [];
+        arr.push(b); bkGroups.set(key, arr);
+      }
+      const merged: Booking[] = [];
+      const refRemap = new Map<string, string>(); // old per-child ref → the joint booking's ref
+      for (const grp of bkGroups.values()) {
+        if (grp.length === 1) { merged.push(grp[0]); refRemap.set(grp[0].ref, grp[0].ref); continue; }
+        const { paymentRef: _drop, ...first } = grp[0];
+        const kids = grp.map((g) => ({ name: g.child, ...(g.childId ? { childId: g.childId } : {}), ...(g.age != null ? { age: g.age } : {}), ...(g.days ? { days: g.days } : {}) }));
+        const payRefs = grp.filter((g) => g.paymentRef).map((g) => ({ child: g.child, ...(g.voucherScheme ? { scheme: g.voucherScheme } : {}), ref: g.paymentRef!, amount: g.amount }));
+        const sum = (f: (b: Booking) => number) => round2(grp.reduce((s, g) => s + f(g), 0));
+        merged.push({
+          ...first,
+          child: grp.map((g) => g.child).join(", "),
+          kids,
+          seats: grp.length,
+          amount: sum((g) => g.amount ?? 0),
+          amountPaid: sum((g) => g.amountPaid ?? 0),
+          addons: grp.flatMap((g) => g.addons ?? []),
+          ...(payRefs.length ? { payRefs } : {}),
+          ...(grp.some((g) => g.walletApplied) ? { walletApplied: sum((g) => g.walletApplied ?? 0) } : {}),
+        });
+        for (const g of grp) refRemap.set(g.ref, grp[0].ref);
+      }
+      for (const w of walletSpends) w.ref = refRemap.get(w.ref) ?? w.ref;
+      created.length = 0; created.push(...merged);
+
       if (walletSpends.length) spendWalletInTx(tx, listing.tenantId, familyEmail, walletHeld, walletSpends);
-      tx.update(tenantRef, { nextBid: nextBid + created.length });
+      tx.update(tenantRef, { nextBid: nextBid + preMergeCount });
       for (const id of changed) {
         const blk = working.get(id)!;
         tx.update(db.collection("blocks").doc(id), { bookedCount: blk.bookedCount, dayCounts: blk.dayCounts ?? {} });
@@ -991,6 +1029,7 @@ my.post("/bookings", async (req, res) => {
     // heads-up on new bookings. Fires once per basket, not per child.
     if (listing.tenantId && bookings.length) {
       const total = bookings.reduce((s, b) => s + (b.amount ?? 0), 0);
+      const places = bookings.reduce((s, b) => s + (b.seats ?? b.kids?.length ?? 1), 0);
       const kids = [...new Set(bookings.map((b) => b.child).filter(Boolean))].join(", ");
       const needsApproval = bookings.some((b) => b.status === "Approval needed");
       const waitlisted = bookings.every((b) => b.status === "Waitlisted");
@@ -1005,7 +1044,7 @@ my.post("/bookings", async (req, res) => {
         to: { kind: "tenant" },
         category: "booking",
         title: `${kind} · ${primary.ref} · ${bookerName}`,
-        body: `${listing.name} · ${kids || bookerName} · ${bookings.length} place${bookings.length === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
+        body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
         subject: `${listing.name}: ${waitlisted ? "waitlist join" : needsApproval ? "booking request" : "new booking"} from ${bookerName} (${primary.ref})`,
         href: `/company/bookings?ref=${encodeURIComponent(primary.ref)}`,
         ref: primary.ref,
