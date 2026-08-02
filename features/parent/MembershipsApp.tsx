@@ -24,8 +24,13 @@ interface Current { tierId: string; benefitType: "credit" | "percent"; benefitVa
 interface Payload { enabled: boolean; provider?: string; tenantId?: string; tiers?: Tier[]; current?: Current | null; reason?: string }
 
 const money = (n?: number) => `£${(n ?? 0) % 1 === 0 ? Math.round(n ?? 0) : (n ?? 0).toFixed(2)}`;
-const benefitLine = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
-  t.benefitType === "credit" ? `${money(t.benefitValue)} wallet credit every month` : `${t.benefitValue}% off every booking`;
+/** The headline + supporting line for a tier's benefit — the star of the card. */
+const benefit = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
+  t.benefitType === "credit"
+    ? { emoji: "👛", headline: `${money(t.benefitValue)} in your wallet`, sub: "topped up every month — yours to spend on any booking" }
+    : { emoji: "🎟️", headline: `${t.benefitValue}% off, every time`, sub: "applied automatically at checkout, stacking on top of any coupons" };
+const benefitShort = (t: { benefitType: "credit" | "percent"; benefitValue: number }) =>
+  t.benefitType === "credit" ? `${money(t.benefitValue)}/mo wallet credit` : `${t.benefitValue}% off every booking`;
 const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
 export function MembershipsApp() {
@@ -86,7 +91,7 @@ export function MembershipsApp() {
               <div>
                 <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">Your membership</div>
                 <div className="mt-0.5 text-[16px] font-extrabold text-[var(--ink)]">{t?.name ?? "Member"} · {money(current.priceMonthly)}/mo</div>
-                <div className="text-[12.5px] text-[var(--ink-2)]">{benefitLine(current)}{current.renewsAt ? ` · renews ${fmtDate(current.renewsAt)}` : ""}</div>
+                <div className="text-[12.5px] text-[var(--ink-2)]">{benefit(current).emoji} {benefitShort(current)}{current.renewsAt ? ` · renews ${fmtDate(current.renewsAt)}` : ""}</div>
               </div>
               <Button variant="ghost" sm onClick={() => cancel(tenantId)} disabled={busy === "cancel"}>{busy === "cancel" ? "Cancelling…" : "Cancel membership"}</Button>
             </div>
@@ -106,9 +111,12 @@ export function MembershipsApp() {
                 <span className="font-[var(--ff-display)] text-[30px] leading-none text-[var(--ink)]">{money(t.priceMonthly)}</span>
                 <span className="text-[12.5px] text-[var(--ink-3)]">/ month</span>
               </div>
-              <div className="mt-3 rounded-lg bg-[#eef4ff] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f]">
-                {t.benefitType === "credit" ? "👛 " : "🏷️ "}{benefitLine(t)}
-              </div>
+              {(() => { const bn = benefit(t); return (
+                <div className="mt-3 rounded-xl bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3.5 py-3">
+                  <div className="text-[15.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
+                  <div className="mt-1 text-[11.5px] leading-snug text-[#516099]">{bn.sub}</div>
+                </div>
+              ); })()}
               {(t.perks ?? []).filter(Boolean).length > 0 && (
                 <ul className="mt-3 flex-1 space-y-1.5">
                   {(t.perks ?? []).filter(Boolean).map((perk, i) => (

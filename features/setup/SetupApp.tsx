@@ -2120,11 +2120,17 @@ export function SetupApp() {
                       <span className="mt-1 flex items-center gap-1">{!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}<Input type="number" min="0" step="1" max={pct ? "100" : undefined} value={String(t.benefitValue)} onChange={(e) => setTier(t.id, { benefitValue: Math.min(pct ? 100 : 1e6, num(e.target.value)) })} className="w-full" />{pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}</span>
                     </label>
                   </div>
-                  <label className="mt-2 block text-[12px] font-semibold text-[var(--ink-2)]">Perks (one per line — shown on the tier card)
+                  {/* Live benefit line — updates as they switch % ↔ £ or change the
+                      value, so they always see what a member actually gets. It's
+                      shown automatically on the customer card, so it's NOT a perk. */}
+                  <div className="mt-2 rounded-lg bg-[#eef4ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
+                    {pct ? "🏷️ " : "👛 "}Members get: {pct ? `${t.benefitValue}% off every booking` : `£${t.benefitValue} wallet credit every month`}
+                  </div>
+                  <label className="mt-2 block text-[12px] font-semibold text-[var(--ink-2)]">Extra perks (one per line — the benefit above is shown automatically)
                     <textarea value={(t.perks ?? []).join("\n")} onChange={(e) => setTier(t.id, { perks: e.target.value.split("\n") })} rows={3} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
                   </label>
-                  {t.benefitType === "credit" && t.benefitValue > t.priceMonthly && (
-                    <div className="mt-2 rounded-lg bg-[#fdf3d8] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5300]">⚠️ You’re giving £{t.benefitValue} credit for £{t.priceMonthly}/mo — margin-negative unless members don’t spend it all.</div>
+                  {t.benefitType === "credit" && t.benefitValue <= t.priceMonthly && (
+                    <div className="mt-2 rounded-lg bg-[#fdf3d8] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5300]">⚠️ Members pay £{t.priceMonthly}/mo but only get £{t.benefitValue} back — set the credit above the price (e.g. £{t.priceMonthly}/mo → £{Math.round(t.priceMonthly * 1.25)} wallet) so it’s worth joining.</div>
                   )}
                 </div>
               );

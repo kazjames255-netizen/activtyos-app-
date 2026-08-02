@@ -44,6 +44,8 @@ const membershipCodeFor = (email: string, tierId: string) =>
 export async function deliverMembershipBenefit(tenantId: string, email: string, tier: TierCfg): Promise<void> {
   const el = email.trim().toLowerCase();
   if (tier.benefitType === "credit") {
+    // benefitValue is the £ that lands in the wallet each month, to spend on any
+    // booking whenever they like (a "£40/mo → £50 wallet" plan).
     if (tier.benefitValue > 0) await creditWallet(tenantId, el, tier.benefitValue, `${tier.name} membership credit`);
     return;
   }
@@ -119,9 +121,9 @@ memberships.post("/join", async (req, res) => {
   void notify({
     tenantId, to: { kind: "parent", email }, category: "billing", bellOnly: true,
     title: `You’re a ${tier.name} member 🎉`,
-    body: tier.benefitType === "credit"
-      ? `£${tier.benefitValue.toFixed(2)} credit added to your wallet. Your ${tier.name} membership renews ${renewTxt}.`
-      : `${tier.benefitValue}% off every booking is now active. Your ${tier.name} membership renews ${renewTxt}.`,
+    body: tier.benefitType === "percent"
+      ? `${tier.benefitValue}% off every booking is now active. Your ${tier.name} membership renews ${renewTxt}.`
+      : `£${tier.benefitValue.toFixed(2)} added to your wallet — ready to spend on any booking, anytime. Your ${tier.name} membership renews ${renewTxt}.`,
     href: "/custdash/memberships", ref: tenantId,
   });
   res.json({ ok: true, tierId: tier.id, renewsAt: renews.toISOString() });

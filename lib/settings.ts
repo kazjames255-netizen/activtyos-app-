@@ -340,9 +340,13 @@ export interface MembershipTier {
   enabled: boolean;
   /** What the family pays per month (£). */
   priceMonthly: number;
-  /** How the benefit is delivered. */
+  /** How the benefit is delivered:
+   *  - "percent" — benefitValue% off every booking (stacks with coupons)
+   *  - "credit"  — £benefitValue lands in the family's wallet each month, to spend
+   *                on any booking whenever they like (set it above the price to make
+   *                joining worthwhile — a "£40/mo → £50 wallet" plan). */
   benefitType: "credit" | "percent";
-  /** £ of wallet credit per month (credit), or % off every booking (percent). */
+  /** % off (percent) or £ into the wallet each month (credit). */
   benefitValue: number;
   /** Extra selling-point perks shown on the tier card (priority booking, etc). */
   perks: string[];
@@ -885,9 +889,9 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   memberships: {
     enabled: false,
     tiers: [
-      { id: "bronze", name: "Bronze", enabled: false, priceMonthly: 20, benefitType: "percent", benefitValue: 5, perks: ["5% off every booking"] },
-      { id: "silver", name: "Silver", enabled: false, priceMonthly: 40, benefitType: "percent", benefitValue: 10, perks: ["10% off every booking", "Priority booking"] },
-      { id: "gold", name: "Gold", enabled: false, priceMonthly: 60, benefitType: "credit", benefitValue: 70, perks: ["£70 credit every month", "Priority booking", "Waived booking fees"] },
+      { id: "bronze", name: "Bronze", enabled: false, priceMonthly: 20, benefitType: "percent", benefitValue: 5, perks: [] },
+      { id: "silver", name: "Silver", enabled: false, priceMonthly: 40, benefitType: "percent", benefitValue: 10, perks: ["Priority booking"] },
+      { id: "gold", name: "Gold", enabled: false, priceMonthly: 40, benefitType: "credit", benefitValue: 50, perks: ["Priority booking"] },
     ],
   },
   requireDob: true,
