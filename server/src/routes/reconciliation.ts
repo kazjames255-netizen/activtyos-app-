@@ -22,8 +22,11 @@ const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Par
 const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
 // Reconciled = the money is in and fully accounted for.
 const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded") && outstandingOf(b) <= 0;
-// Payable bookings worth showing on the reconciliation ledger (paid or not).
-const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined" && ((b.amount ?? 0) > 0 || b.pay === "Funded" || !!b.voucherScheme);
+// Card settles automatically through Stripe — it isn't reconciled here (a failed
+// card is handled in the booking area instead), so it's kept off this ledger.
+const isCardMethod = (b: Booking) => /card/i.test(b.method || "") && !b.voucherScheme;
+// Payable off-platform bookings worth showing on the reconciliation ledger.
+const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined" && !isCardMethod(b) && ((b.amount ?? 0) > 0 || b.pay === "Funded" || !!b.voucherScheme);
 // The booking's date for the date-range filter — first session day, else booked date.
 const dateOf = (b: Booking) => b.days?.[0] || (b.createdAt ?? "").slice(0, 10) || "";
 
@@ -62,6 +65,9 @@ reconciliation.get("/", async (req, res) => {
       reconciled: isReconciled(b),
       voucherScheme: b.voucherScheme ?? null,
       voucherReceiveBy: b.voucherReceiveBy ?? null,
+      paymentRef: b.paymentRef ?? null,
+      nudges: b.nudges ?? 0,
+      lastNudgedAt: b.lastNudgedAt ?? null,
       date: dateOf(b),
       createdAt: b.createdAt ?? null,
       // A voucher whose money should have arrived by now — the provider needs

@@ -18,7 +18,9 @@ import { Tile, GRAD, money } from "@/features/money/finance-kit";
 interface Item {
   ref: string; booker: string; email?: string; listing: string; listingId: string | null; child: string;
   method: string; pay: string; amount: number; amountPaid: number; outstanding: number;
-  reconciled: boolean; voucherScheme: string | null; voucherReceiveBy: string | null; date: string; createdAt: string | null; overdue: boolean;
+  reconciled: boolean; voucherScheme: string | null; voucherReceiveBy: string | null;
+  paymentRef: string | null; nudges: number; lastNudgedAt: string | null;
+  date: string; createdAt: string | null; overdue: boolean;
 }
 interface Recon { items: Item[]; summary: { count: number; reconciledCount: number; outstanding: number; overdue: number; awaitingVoucher: number; byMethod: Record<string, { count: number; outstanding: number }> } }
 interface ListingLite { id: string; title?: string; name?: string; seasonId?: string | null }
@@ -51,7 +53,11 @@ export function ReconciliationApp() {
   const [seasonId, setSeasonId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [voucherSub, setVoucherSub] = useState(""); // sub-filter within Childcare vouchers (Edenred, …)
+  const [nowMs] = useState(() => Date.now());
   const [openRef, setOpenRef] = useState<string | null>(null);
+  const [editRef, setEditRef] = useState<string | null>(null); // booking whose payment reference is being edited
+  const [refDraft, setRefDraft] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<Recon>("/api/reconciliation").then((r) => { setData(r); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -70,8 +76,12 @@ export function ReconciliationApp() {
     return ["All", ...PREF_ORDER.filter((c) => present.has(c)), ...[...present].filter((c) => !PREF_ORDER.includes(c))];
   }, [items]);
 
+  // Voucher schemes present, for the sub-filter chips under the Vouchers tab.
+  const voucherSchemes = useMemo(() => [...new Set(items.filter((it) => methodCat(it) === "Childcare vouchers" && it.voucherScheme).map((it) => it.voucherScheme as string))].sort(), [items]);
+
   const filtered = useMemo(() => items.filter((it) => {
     if (cat !== "All" && methodCat(it) !== cat) return false;
+    if (cat === "Childcare vouchers" && voucherSub && it.voucherScheme !== voucherSub) return false;
     if (status === "awaiting" && it.reconciled) return false;
     if (status === "reconciled" && !it.reconciled) return false;
     if (listingId && it.listingId !== listingId) return false;
@@ -79,7 +89,7 @@ export function ReconciliationApp() {
     if (from && (!it.date || it.date < from)) return false;
     if (to && (!it.date || it.date > to)) return false;
     return true;
-  }), [items, cat, status, listingId, seasonId, from, to, listingSeason]);
+  }), [items, cat, voucherSub, status, listingId, seasonId, from, to, listingSeason]);
 
   const shownOutstanding = filtered.filter((i) => !i.reconciled).reduce((s, i) => s + i.outstanding, 0);
   const anyFilter = cat !== "All" || status !== "awaiting" || listingId || seasonId || from || to;
@@ -90,6 +100,19 @@ export function ReconciliationApp() {
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update"); }
     finally { setBusy(null); }
   }
+  async function nudge(it: Item) {
+    setBusy(it.ref);
+    try { await api(`/api/bookings/${encodeURIComponent(it.ref)}/nudge`, { method: "POST", body: "{}" }); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t nudge"); }
+    finally { setBusy(null); }
+  }
+  async function saveRef(it: Item) {
+    setBusy(it.ref);
+    try { await api(`/api/bookings/${encodeURIComponent(it.ref)}/payment-ref`, { method: "PUT", body: JSON.stringify({ paymentRef: refDraft.trim() }) }); setEditRef(null); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save reference"); }
+    finally { setBusy(null); }
+  }
+  const daysOverdue = (it: Item) => { const t = Date.parse(it.createdAt ?? ""); return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((nowMs - t) / 86400000)); };
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -107,12 +130,25 @@ export function ReconciliationApp() {
       {/* Method tabs */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         {cats.map((c) => (
-          <button key={c} type="button" onClick={() => setCat(c)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
+          <button key={c} type="button" onClick={() => { setCat(c); setVoucherSub(""); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={cat === c ? { borderColor: "transparent", background: c === "All" ? "linear-gradient(180deg,#4f8bf5,#2f6bd8)" : (CAT_C[c] ?? "#1d3a8f"), color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.45)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
             {c}{c !== "All" && <span className={cat === c ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{items.filter((it) => methodCat(it) === c).length}</span>}
           </button>
         ))}
       </div>
+
+      {/* Voucher provider sub-filter (Edenred, Computershare, …) */}
+      {cat === "Childcare vouchers" && voucherSchemes.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Provider:</span>
+          {["", ...voucherSchemes].map((v) => (
+            <button key={v || "all"} type="button" onClick={() => setVoucherSub(v)} className="rounded-full border px-3 py-1 text-[12px] font-bold transition-colors"
+              style={voucherSub === v ? { borderColor: "transparent", background: "#7c3aed", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+              {v || "All providers"}{v && <span className={voucherSub === v ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{items.filter((it) => it.voucherScheme === v).length}</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
@@ -133,11 +169,24 @@ export function ReconciliationApp() {
         )}
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
         <label className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]">to <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]" /></label>
-        {anyFilter && <button type="button" onClick={() => { setCat("All"); setStatus("awaiting"); setListingId(""); setSeasonId(""); setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8]">Clear filters</button>}
+        {anyFilter && <button type="button" onClick={() => { setCat("All"); setVoucherSub(""); setStatus("awaiting"); setListingId(""); setSeasonId(""); setFrom(""); setTo(""); }} className="text-[11.5px] font-bold text-[#2f6bd8]">Clear filters</button>}
         <span className="ml-auto text-[12px] text-[var(--ink-3)]">{filtered.length} shown{shownOutstanding > 0 ? ` · ${money(shownOutstanding)} outstanding` : ""}</span>
       </div>
 
-      {!data ? (
+      {cat === "Tax-Free Childcare" ? (
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 flex-none place-items-center rounded-xl text-[20px] text-white" style={{ background: GRAD.teal }}>🏦</span>
+            <div>
+              <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Tax-Free Childcare reconciles automatically</div>
+              <p className="mt-1 max-w-[620px] text-[12.5px] leading-relaxed text-[var(--ink-2)]">Parents pay from their government childcare account at <span className="font-semibold">gov.uk/sign-in-childcare-account</span> using your Ofsted/regulator number. Once HMRC settles it, the booking is matched here without any manual work — so there’s nothing to reconcile by hand.</p>
+              <div className="mt-3 rounded-lg border border-[#f3d98a] bg-[#fdf6e3] px-3 py-2 text-[12px] text-[#7a5a12]">
+                <b>Amir — this is where Tax-Free Childcare is wired.</b> Auto-reconciliation is pending the <b>HMRC EPP (Electronic Payment Provider) integration</b> (per <code>docs/listings-backend-handoff.md</code> §S). Until it’s live, TFC payments land in the bank like any transfer; wire the EPP feed to match them to bookings and flip them to Paid here automatically.
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : !data ? (
         <div className="py-12 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-14 text-center text-[13px] text-[var(--ink-3)]">{status === "awaiting" ? "Nothing to reconcile here — all matched. 🎉" : "No bookings match these filters."}</div>
@@ -155,7 +204,19 @@ export function ReconciliationApp() {
                       <span className="font-extrabold">#{it.ref}</span>
                       <span className="text-[var(--ink-2)]">{it.booker} · {it.child}</span>
                     </div>
-                    <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{it.listing} · {fmt(it.date)}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-[var(--ink-3)]">
+                      <span>{it.listing} · {fmt(it.date)}</span>
+                      {!it.reconciled && <span>· {daysOverdue(it)}d since booking</span>}
+                      {(it.voucherScheme || !it.reconciled) && (editRef === it.ref ? (
+                        <span className="inline-flex items-center gap-1">
+                          <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} placeholder="parent’s reference" className="w-[150px] rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[11.5px]" />
+                          <button type="button" disabled={busy === it.ref} onClick={() => saveRef(it)} className="font-bold text-[#0f7a43] disabled:opacity-50">Save</button>
+                          <button type="button" onClick={() => setEditRef(null)} className="text-[var(--ink-3)]">✕</button>
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => { setEditRef(it.ref); setRefDraft(it.paymentRef ?? ""); }} className="inline-flex items-center gap-1 rounded border border-dashed border-[var(--line)] px-1.5 py-0.5 hover:bg-[var(--panel)]" title="The reference the family pays under — edit if the bank shows it differently (they’ll be notified)">Ref:&nbsp;<b className="text-[var(--ink-2)]">{it.paymentRef || "not set"}</b> <span className="text-[#2f6bd8]">✎</span></button>
+                      ))}
+                    </div>
                   </div>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ background: tone }}>{it.voucherScheme ? `Voucher · ${it.voucherScheme}` : c}</span>
                   {it.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">overdue{it.voucherReceiveBy ? ` since ${fmt(it.voucherReceiveBy)}` : ""}</span>}
@@ -170,7 +231,12 @@ export function ReconciliationApp() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setOpenRef(openRef === it.ref ? null : it.ref)} className="text-[11.5px] font-bold text-[#2f6bd8]">Part payment</button>
+                      <button type="button" title={it.nudges ? `Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}. Click to nudge again.` : "Nudge — email + notify the family their payment is due"} disabled={busy === it.ref} onClick={() => nudge(it)}
+                        className="relative grid h-8 w-8 flex-none place-items-center rounded-full border text-[14px] transition-colors disabled:opacity-50"
+                        style={it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                        🔔{it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{it.nudges}</span>}
+                      </button>
+                      <button type="button" onClick={() => setOpenRef(openRef === it.ref ? null : it.ref)} className="text-[11.5px] font-bold text-[#2f6bd8]" title="For when only part of the money has landed — e.g. a deposit, or one of two sibling vouchers">Log amount received</button>
                       <button type="button" disabled={busy === it.ref} onClick={() => reconcile(it)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition-transform hover:-translate-y-px disabled:opacity-50" style={{ background: "linear-gradient(180deg,#22b06b,#0b8446)" }}>{busy === it.ref ? "Saving…" : "✓ Reconcile"}</button>
                     </div>
                   )}
@@ -201,7 +267,7 @@ function RecordForm({ item, onDone }: { item: Item; onDone: () => void }) {
   }
   return (
     <div className="border-t border-[var(--line)] bg-[var(--panel)] p-3.5">
-      <div className="mb-1.5 text-[12px] font-extrabold">Record a part payment for #{item.ref}</div>
+      <div className="mb-1.5 text-[12px] font-extrabold">Log an amount received for #{item.ref} <span className="font-normal text-[var(--ink-3)]">— use this when only part of the money has arrived (a deposit, or one of two sibling vouchers)</span></div>
       <div className="grid gap-2 sm:grid-cols-3">
         <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Amount £<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px]" /></label>
         <label className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Method<input value={method} onChange={(e) => setMethod(e.target.value)} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px]" /></label>

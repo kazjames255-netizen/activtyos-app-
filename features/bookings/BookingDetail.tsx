@@ -673,7 +673,16 @@ export function BookingDetail({ booking }: { booking: Booking }) {
           {b.status !== "Cancelled" && b.status !== "Declined" && (
             <Badge tone={payTone(b.pay)}>{payLabelFor(b)}</Badge>
           )}
+          {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
+            <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠ Card payment failed</Badge>
+          )}
         </div>
+
+        {b.cardFailed && b.status !== "Cancelled" && b.status !== "Declined" && (
+          <div className="mt-2.5 rounded-xl border border-[#f6c9cc] bg-[#fdebec] px-3.5 py-2.5 text-[12.5px] text-[#c02636]">
+            <b>The family’s card payment failed.</b> Nothing has been taken — get in touch to arrange payment (retry the card, send a pay link, or switch them to a voucher / bank transfer). Message them below.
+          </div>
+        )}
 
         {/* All actions live up here, right under the status. */}
         <div className="mt-3 flex flex-wrap items-center gap-[7px]">

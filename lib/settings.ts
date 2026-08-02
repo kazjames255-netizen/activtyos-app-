@@ -198,8 +198,9 @@ export interface VoucherProvider {
   details: VoucherDetail[];
 }
 
-/** The labels schemes usually ask for. Starting points, not a fixed list. */
-export const VOUCHER_DETAIL_LABELS = ["Account number/ID", "Setting name", "Ofsted/Regulator No"];
+/** The labels schemes usually ask for (mirrors what a provider lists on their
+ *  "paying by vouchers" page). Starting points, not a fixed list. */
+export const VOUCHER_DETAIL_LABELS = ["Setting name", "Ofsted/Regulator No", "Account number/ID", "Reference", "Website", "Instructions"];
 
 /** Details actually filled in — the only ones worth showing anyone. */
 export const filledDetails = (v: VoucherProvider): VoucherDetail[] =>

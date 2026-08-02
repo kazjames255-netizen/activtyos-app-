@@ -748,6 +748,87 @@ bookings.post("/:ref/reconcile", async (req, res) => {
   }
 });
 
+// POST /api/bookings/:ref/nudge — remind a family their off-platform payment is
+// still owed. Emails + notifies them, bumps the nudge counter (the bell colours
+// once nudged) and records when. Can be sent repeatedly.
+bookings.post("/:ref/nudge", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      b.nudges = (b.nudges ?? 0) + 1;
+      b.lastNudgedAt = new Date().toISOString();
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    const outstanding = Math.max(0, (updated.amount ?? 0) - (updated.amountPaid ?? 0));
+    const bookedMs = Date.parse(updated.createdAt ?? "");
+    const days = Number.isNaN(bookedMs) ? 0 : Math.max(0, Math.floor((Date.now() - bookedMs) / 86400000));
+    if (updated.email?.includes("@")) {
+      void notify({
+        tenantId,
+        to: { kind: "parent", email: updated.email },
+        category: "billing",
+        title: `Payment reminder · ${updated.ref}`,
+        body: `A friendly reminder: £${outstanding.toFixed(2)} is still to pay for ${updated.listing}${days ? ` (booked ${days} day${days === 1 ? "" : "s"} ago)` : ""}. Please complete your ${updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method} payment when you can — thank you!`,
+        subject: `Payment reminder for ${updated.ref}`,
+        href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+        ref: updated.ref,
+      });
+    }
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
+// PUT /api/bookings/:ref/payment-ref — the provider corrects the parent's
+// payment reference (e.g. the voucher account ref traced differently in the
+// bank). Saves it and notifies the family so their booking shows the new one.
+const paymentRefSchema = z.object({ paymentRef: z.string().trim().max(120) });
+bookings.put("/:ref/payment-ref", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const parsed = paymentRefSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      b.paymentRef = parsed.data.paymentRef;
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    if (updated.email?.includes("@")) {
+      void notify({
+        tenantId,
+        to: { kind: "parent", email: updated.email },
+        category: "billing",
+        title: `Payment reference updated · ${updated.ref}`,
+        body: `${updated.listing}: we've updated the payment reference for your ${updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method} payment to "${updated.paymentRef}". Please use this reference so we can match your payment.`,
+        subject: `Payment reference updated for ${updated.ref}`,
+        href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
+        ref: updated.ref,
+      });
+    }
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
 bookings.post("/bulk", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;

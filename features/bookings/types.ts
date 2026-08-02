@@ -88,6 +88,17 @@ export interface Booking {
   voucherScheme?: string;
   voucherSendBy?: string;
   voucherReceiveBy?: string;
+  /** The unique reference the parent pays under (voucher account ref / TFC
+   *  payment reference) so the provider can match the money in their bank.
+   *  Entered once by the parent; the provider can correct it (parent notified). */
+  paymentRef?: string;
+  /** Reconciliation nudges: how many payment reminders were sent and when the
+   *  last one went, so the bell can show state. Off-platform / awaiting only. */
+  nudges?: number;
+  lastNudgedAt?: string;
+  /** A card payment attempt failed (set by the Stripe webhook — Amir). Surfaces
+   *  a "card failed — arrange payment" flag in the booking area. */
+  cardFailed?: boolean;
   /** Stripe payment that settled this booking (set server-side on confirm).
    * stripeAccount is the provider's connected account it was charged on
    * (null = dev platform fallback). Refund-approve refunds through these. */
