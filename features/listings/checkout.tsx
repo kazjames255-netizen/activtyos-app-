@@ -628,6 +628,18 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     </>
   );
 }
+// A Setup payment-method label → the parent's payment rail [key, label]. Card/
+// bank/cash/tfc are fixed rails (card routes to Stripe); voucher is handled
+// separately because it only shows once a scheme has a reference to quote.
+function parentMethodEntry(m: string): [string, string] | null {
+  if (/card/i.test(m)) return ["card", "Card"];
+  if (/bank|transfer/i.test(m)) return ["bank", "Bank transfer"];
+  if (/cash/i.test(m)) return ["cash", "Cash on the day"];
+  if (/tax.?free|tfc/i.test(m)) return ["tfc", "Tax-Free Childcare"];
+  if (/haf|funded/i.test(m)) return ["haf", m];
+  if (/voucher/i.test(m)) return null;
+  return [m.toLowerCase().replace(/[^a-z0-9]+/g, "-"), m];
+}
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
@@ -674,6 +686,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const firstDate = b.basket.flatMap((x) => x.dates).sort()[0];
   const vWindow = voucherWindow(new Date().toISOString(), firstDate, ckSettings.voucherHoldDays, ckSettings.voucherClearDays, ckSettings.voucherDueByDays);
   const chosenVoucher = vouchers.find((v) => v.id === voucherId) ?? null;
+  // The parent's dropdown honours THIS listing's accepted methods (payList),
+  // mapped to payment rails — not a hardcoded card/bank/cash.
+  const parentOpts: [string, string][] = payList.map(parentMethodEntry).filter((e): e is [string, string] => !!e);
+  if (payList.some((m) => /voucher/i.test(m)) && vouchers.length && offerVouchers(ckSettings.voucherWhenClose, vWindow)) parentOpts.push(["voucher", "Childcare vouchers"]);
   const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
@@ -1656,14 +1672,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           <select value={method} onChange={(e) => setMethod(e.target.value)}
             className={`mt-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }}>
-            {(parentMode
-              // Vouchers only appear once the provider has a reference to
-              // quote. Offering the option with nothing behind it sends a
-              // parent to Edenred to guess.
-              ? [["card", "Card"], ["bank", "Bank transfer"], ["cash", "Cash on the day"],
-                 ...(vouchers.length && offerVouchers(ckSettings.voucherWhenClose, vWindow) ? [["voucher", "Childcare vouchers"]] : [])]
-              : payList.map((m) => [m, m])
-            ).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {(parentMode ? parentOpts : payList.map((m) => [m, m] as [string, string]))
+              .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
 
           {/* Hidden, so say why — an option that silently vanishes is a
