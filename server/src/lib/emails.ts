@@ -394,15 +394,22 @@ export function emailDateChangeResolved(
   const note = opts.reason?.trim()
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 2px;border-collapse:separate"><tr><td style="background:#f4f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:10px 13px"><div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#3a4a86;margin-bottom:3px">Message from ${providerName}</div><div style="font-size:13.5px;color:#2b3350;white-space:pre-wrap">${escapeHtml(opts.reason.trim())}</div></td></tr></table>`
     : "";
+  // "date change" / "time change" / "date & time change" — describe what they
+  // actually asked to move, so the subject reads naturally (no bare ref).
+  const hasDate = opts.moves.some((m) => m.to);
+  const changeLabel = hasDate && opts.timing ? "date & time change" : opts.timing ? "time change" : "date change";
+  const outcomeWord = opts.outcome === "declined" ? "declined" : opts.outcome === "partial" ? "partly approved" : "approved";
   const title =
-    opts.outcome === "declined" ? "Your date change couldn't be made"
-      : opts.outcome === "partial" ? "Your date change was partly approved"
-        : "Your date change is confirmed";
+    opts.outcome === "declined" ? `Your ${changeLabel} couldn't be made`
+      : opts.outcome === "partial" ? `Your ${changeLabel} was partly approved`
+        : `Your ${changeLabel} is confirmed`;
+  // Ref belongs in the email body, never the subject line.
+  const refLine = `<p style="font-size:12px;color:#8a86a3;margin-top:16px">Booking ${escapeHtml(b.ref)} · ${escapeHtml(b.listing)}</p>`;
   sendCustomerEmail(
     b, providerName, "bookings",
-    `Date change ${opts.outcome === "declined" ? "declined" : "update"} — ${b.listing}`,
+    `${providerName}: your ${changeLabel} was ${outcomeWord}`,
     title,
-    `${lead}${table}${note}`,
+    `${lead}${table}${note}${refLine}`,
   );
 }
 

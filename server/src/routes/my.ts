@@ -1365,14 +1365,13 @@ my.post("/bookings/:ref/amend", async (req, res) => {
 
   // Tell the provider a change is waiting for them — bell + email.
   if (booking.tenantId) {
-    const parts: string[] = [];
-    if (moves.length) parts.push(`${moves.length} date${moves.length === 1 ? "" : "s"}`);
-    if (parsed.data.timing) parts.push("timing");
-    const what = parts.join(" + ") || "date/time";
+    // "date change" / "time change" / "date & time change" — name what they
+    // actually asked to move, so the subject reads naturally (no bare ref).
+    const changeLabel = moves.length && parsed.data.timing ? "date & time change"
+      : parsed.data.timing ? "time change" : "date change";
     const scope = parsed.data.child ? ` for ${parsed.data.child}` : "";
     // Spell out exactly what they want moved — each "from → to" date, plus the
-    // requested time — so the operator sees the change in the email itself, not
-    // just "1 date + timing".
+    // requested time — so the operator sees the change in the email itself.
     const dateTxt = moves
       .map((mv) => (mv.from ? `${prettyDay(mv.from)} → ${prettyDay(mv.to)}` : `new date ${prettyDay(mv.to)}`))
       .join("; ");
@@ -1381,9 +1380,10 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       tenantId: booking.tenantId,
       to: { kind: "tenant" },
       category: "booking",
-      title: `${booking.booker} requested a ${what} change on ${booking.ref}`,
-      body: `${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`,
-      subject: `${booking.ref}: ${what} change requested by ${booking.booker}`,
+      title: `${booking.booker} requested a ${changeLabel}`,
+      // Ref lives in the body, not the subject.
+      body: `Booking ${booking.ref} · ${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`,
+      subject: `${booking.booker} — ${changeLabel} requested`,
       // Deep-link straight to this booking so it opens with the request showing.
       href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,
       ref: booking.ref,
