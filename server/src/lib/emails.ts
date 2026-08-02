@@ -1,5 +1,5 @@
 import type { Booking } from "../../../features/bookings/types";
-import { bookingDateSummary } from "../../../features/bookings/helpers";
+import { db } from "../firebase";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender } from "./sender";
@@ -33,16 +33,22 @@ function sendGated(
   /** The name already rendered in the template — reused as the From name so
    *  the envelope and the letterhead can't disagree. */
   providerName?: string,
+  /** Inline images / files the template references (e.g. cid:provider-logo,
+   *  cid:aos-mark). */
+  attachments?: MailAttachment[],
 ): void {
   void autoEmailOn(tenantId, key)
     .then(async (on) => {
       if (!on) { console.log(`[mail] "${subject}" → ${to} skipped (autoEmails.${key} off)`); return; }
-      // Attach the inline mark only when the template actually shows it (the
-      // branded layout), so a plain-HTML email never gets an orphan attachment.
-      const attachments = html.includes("cid:aos-mark") ? [aosLogoAttachment()] : undefined;
-      return sendMail(to, subject, html, await tenantSender(tenantId, providerName), attachments ? { attachments } : undefined);
+      return sendMail(to, subject, html, await tenantSender(tenantId, providerName), attachments?.length ? { attachments } : undefined);
     })
     .catch((e) => console.error(`[mail] gate check failed for "${subject}":`, (e as Error).message));
+}
+
+/** Inline attachments a customer booking email needs: ActivityOS mark for the
+ *  "powered by" footer, plus the provider's own logo when they have one. */
+function brandAttachments(brand: { logo?: MailAttachment }): MailAttachment[] {
+  return [aosLogoAttachment(), ...(brand.logo ? [brand.logo] : [])];
 }
 
 /** Ungated provider-branded send (account access, invites, message alerts —
@@ -65,129 +71,163 @@ function sendAs(
     .catch((e) => console.error(`[mail] sender lookup failed for "${subject}":`, (e as Error).message));
 }
 
-// The shared branded shell for parent booking emails — same look as the
-// provider's new-booking email (ActivityOS mark on a gradient header, white
-// card, tidy detail rows). `title`/`bodyHtml` are HTML and inserted raw; the
-// logo rides along as an inline cid attachment (see sendGated). Any email
-// using this must be sent so `cid:aos-mark` resolves.
-function layout(providerName: string, title: string, bodyHtml: string, b: Booking): string {
+/** Customer-facing branding: the PROVIDER's own logo (if they've uploaded one)
+ *  as an inline cid attachment, else just their name. Customer emails carry the
+ *  provider's identity — ActivityOS only appears as "powered by" in the footer. */
+async function customerBrand(
+  tenantId: string | undefined,
+  providerName: string,
+): Promise<{ name: string; logo?: MailAttachment }> {
+  if (!tenantId) return { name: providerName };
+  try {
+    const lib = await db.collection("libraries").doc(tenantId).get();
+    const logoUrl = ((lib.data()?.settings as { billing?: { logoUrl?: string } } | undefined)?.billing?.logoUrl) || undefined;
+    const imgId = logoUrl?.match(/\/api\/images\/([^/?#]+)/)?.[1];
+    if (imgId) {
+      const img = (await db.collection("images").doc(imgId).get()).data() as { contentType?: string; b64?: string } | undefined;
+      if (img?.b64) return { name: providerName, logo: { filename: "logo", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/png", cid: "provider-logo" } };
+    }
+  } catch { /* fall back to the name */ }
+  return { name: providerName };
+}
+
+/** Every session date, 3-across (date over time) at small text. Session strings
+ *  look like "Mon 20 Jul 2026 · 08:00 – 17:30". */
+function datesGridHtml(sessions: string[]): string {
+  if (!sessions.length) return "<span style='color:#a7a3bd'>Dates to be confirmed</span>";
+  const cell = (s: string) => {
+    const [day, time] = s.split(" · ");
+    return `<td width="33%" style="padding:3px 10px 6px 0;vertical-align:top">
+      <div style="font-size:12px;font-weight:700;color:#171534;white-space:nowrap">${escapeHtml(day ?? s)}</div>
+      ${time ? `<div style="font-size:11px;color:#8a86a3;white-space:nowrap">${escapeHtml(time)}</div>` : ""}
+    </td>`;
+  };
+  const rows: string[] = [];
+  for (let i = 0; i < sessions.length; i += 3) {
+    const cells = sessions.slice(i, i + 3).map(cell);
+    while (cells.length < 3) cells.push(`<td width="33%"></td>`);
+    rows.push(`<tr>${cells.join("")}</tr>`);
+  }
+  return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">${rows.join("")}</table>`;
+}
+
+/** The customer booking-email shell: the PROVIDER's logo/name up top, all the
+ *  session dates, a button straight to the booking, and "powered by ActivityOS"
+ *  at the bottom. `hasLogo` gates the inline provider logo (cid:provider-logo).
+ *  `title`/`bodyHtml` are HTML, inserted raw. */
+function layout(brand: { name: string; hasLogo: boolean }, title: string, bodyHtml: string, b: Booking): string {
   const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
+  const bookingUrl = `${webUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
   const row = (label: string, value: string) =>
     `<tr>
       <td style="padding:7px 16px 7px 0;font-size:12.5px;color:#8a86a3;white-space:nowrap;vertical-align:top">${escapeHtml(label)}</td>
       <td style="padding:7px 0;font-size:13.5px;color:#171534;border-bottom:1px solid #eef0f5">${value}</td>
     </tr>`;
+  const header = brand.hasLogo
+    ? `<img src="cid:provider-logo" alt="${escapeHtml(brand.name)}" style="max-height:48px;max-width:220px;display:inline-block" />`
+    : `<span style="font-size:22px;font-weight:800;color:#1d3a8f">${escapeHtml(brand.name)}</span>`;
   return `
   <div style="margin:0;padding:0;background:#eef1f7">
   <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f7;padding:24px 12px">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px -18px rgba(20,30,70,.4)">
-      <div style="background:linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%);padding:18px 24px;text-align:center">
-        <img src="cid:aos-mark" width="26" height="26" alt="" style="vertical-align:middle;margin-right:9px;border-radius:7px" />
-        <span style="font-size:21px;font-weight:800;letter-spacing:.2px;color:#ffffff;vertical-align:middle">Activity<span style="color:#EE1F63">OS</span></span>
-      </div>
-      <div style="padding:26px 28px 30px">
-        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3f78d8">${escapeHtml(providerName)}</div>
-        <h1 style="font-size:22px;line-height:1.25;margin:4px 0 14px;color:#171534">${title}</h1>
+      <div style="padding:24px 28px 20px;text-align:center;border-bottom:1px solid #eef0f5">${header}</div>
+      <div style="padding:24px 28px 28px">
+        <h1 style="font-size:22px;line-height:1.25;margin:0 0 14px;color:#171534">${title}</h1>
         ${bodyHtml}
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
           ${row("Booking ref", `<b>${escapeHtml(b.ref)}</b>`)}
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
-          ${row("Dates", escapeHtml(bookingDateSummary(b)))}
           ${row("Child", escapeHtml(kids || "—"))}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </table>
+        <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a86a3;margin:20px 0 8px">Dates &amp; times</div>
+        ${datesGridHtml(b.sessions ?? [])}
+        <div style="text-align:center;margin:26px 0 4px">
+          <a href="${bookingUrl}" style="display:inline-block;background:#15b364;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(21,179,100,.6)">View my booking →</a>
+        </div>
       </div>
       <div style="background:#f7f9fd;padding:16px 24px;text-align:center;border-top:1px solid #eef0f5">
-        <span style="font-size:11.5px;color:#8a86a3">You're receiving this because a booking was made with ${escapeHtml(providerName)}.</span>
+        <img src="cid:aos-mark" width="15" height="15" alt="" style="vertical-align:middle;margin-right:6px;border-radius:4px;opacity:.9" />
+        <span style="font-size:11.5px;color:#8a86a3;vertical-align:middle">Powered by <b style="color:#4a4763">ActivityOS</b></span>
+        <div style="font-size:11px;color:#a7a3bd;margin-top:5px">You're receiving this because a booking was made with ${escapeHtml(brand.name)}.</div>
       </div>
     </div>
   </div>
   </div>`;
 }
 
-export function emailBookingRequestReceived(b: Booking, providerName: string): void {
-  sendGated(
-    b.tenantId,
-    "bookings",
-    b.email,
-    `Booking request received — ${b.listing} (${b.ref})`,
-    layout(
+/** Build + send a customer booking email through the branded shell — resolves
+ *  the provider's logo, wraps the body in layout(), attaches the marks. */
+function sendCustomerEmail(
+  b: Booking,
+  providerName: string,
+  key: "bookings" | "payments" | "waitlist",
+  subject: string,
+  title: string,
+  body: string,
+): void {
+  void (async () => {
+    const brand = await customerBrand(b.tenantId, providerName);
+    sendGated(
+      b.tenantId,
+      key,
+      b.email,
+      subject,
+      layout({ name: brand.name, hasLogo: !!brand.logo }, title, body, b),
       providerName,
-      "We've got your booking request",
-      `<p style="font-size:14px">Thanks ${b.booker} — your request is with ${providerName} for approval.
-       You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
-      b,
-    ),
-    providerName,
+      brandAttachments(brand),
+    );
+  })().catch((e) => console.error(`[mail] "${subject}" build failed:`, (e as Error).message));
+}
+
+export function emailBookingRequestReceived(b: Booking, providerName: string): void {
+  sendCustomerEmail(
+    b, providerName, "bookings",
+    `Booking request received — ${b.listing} (${b.ref})`,
+    "We've got your booking request",
+    `<p style="font-size:14px">Thanks ${b.booker} — your request is with ${providerName} for approval.
+     You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
   );
 }
 
 export function emailPaymentLink(b: Booking, providerName: string): void {
-  sendGated(
-    b.tenantId,
-    "bookings",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "bookings",
     `Complete your booking — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      "Your booking is reserved — payment link inside",
-      `<p style="font-size:14px">Hi ${b.booker}, ${providerName} has reserved this booking for you.</p>
-       <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
-       <p style="color:#8a86a3;font-size:12px">The link opens your bookings — sign in and the card payment starts automatically.</p>`,
-      b,
-    ),
-    providerName,
+    "Your booking is reserved — payment inside",
+    `<p style="font-size:14px">Hi ${b.booker}, ${providerName} has reserved this booking for you.</p>
+     <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
+     <p style="color:#8a86a3;font-size:12px">Signing in from the link starts the card payment automatically.</p>`,
   );
 }
 
 export function emailBookingConfirmed(b: Booking, providerName: string): void {
-  sendGated(
-    b.tenantId,
-    "bookings",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "bookings",
     `Booking confirmed — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      "You're booked in ✓",
-      `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
-      b,
-    ),
-    providerName,
+    "You're booked in ✓",
+    `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
   );
 }
 
 export function emailBookingDeclined(b: Booking, providerName: string): void {
-  sendGated(
-    b.tenantId,
-    "bookings",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "bookings",
     `Booking update — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      "Your booking request was declined",
-      `<p style="font-size:14px">Sorry ${b.booker} — ${providerName} couldn't take this booking.
-       Nothing has been charged. Feel free to browse other dates or activities.</p>`,
-      b,
-    ),
-    providerName,
+    "Your booking request was declined",
+    `<p style="font-size:14px">Sorry ${b.booker} — ${providerName} couldn't take this booking.
+     Nothing has been charged. Feel free to browse other dates or activities.</p>`,
   );
 }
 
 export function emailRefundApproved(b: Booking, providerName: string): void {
-  sendGated(
-    b.tenantId,
-    "payments",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "payments",
     `Refund approved — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      "Your refund is on its way",
-      `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
-       ${b.cancel?.amount ? `Amount: <b>${gbp(b.cancel.amount)}</b>.` : ""}</p>`,
-      b,
-    ),
-    providerName,
+    "Your refund is on its way",
+    `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
+     ${b.cancel?.amount ? `Amount: <b>${gbp(b.cancel.amount)}</b>.` : ""}</p>`,
   );
 }
 
@@ -195,21 +235,14 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
   const until = b.offerExpiresAt
     ? new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : "";
-  sendGated(
-    b.tenantId,
-    "waitlist",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "waitlist",
     `A place has opened up — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      "A place is yours if you want it",
-      `<p style="font-size:14px">Good news ${b.booker} — a place has opened up on the dates you were
-       waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
-       <p style="font-size:14px">Sign in to <b>My bookings</b> and accept the offer to take the place —
-       if the hold runs out, it passes to the next family in the queue.</p>`,
-      b,
-    ),
-    providerName,
+    "A place is yours if you want it",
+    `<p style="font-size:14px">Good news ${b.booker} — a place has opened up on the dates you were
+     waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
+     <p style="font-size:14px">Sign in to <b>My bookings</b> and accept the offer to take the place —
+     if the hold runs out, it passes to the next family in the queue.</p>`,
   );
 }
 
@@ -364,24 +397,17 @@ export function emailVoucherInstructions(
   const sendBy = b.voucherSendBy
     ? new Date(`${b.voucherSendBy}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
     : null;
-  sendGated(
-    b.tenantId,
-    "payments",
-    b.email,
+  sendCustomerEmail(
+    b, providerName, "payments",
     `Pay by childcare voucher — ${b.listing} (${b.ref})`,
-    layout(
-      providerName,
-      `Pay with ${scheme.name}`,
-      `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(b.amount)}</b> through
-        <b>${scheme.name}</b> on their own website, quoting:</p>
-       <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
-        <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref</td><td><b>${b.ref}</b></td></tr>
-        <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(b.amount)}</b></td></tr></table>
-       ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
-       <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
-      b,
-    ),
-    providerName,
+    `Pay with ${scheme.name}`,
+    `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(b.amount)}</b> through
+      <b>${scheme.name}</b> on their own website, quoting:</p>
+     <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
+      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref</td><td><b>${b.ref}</b></td></tr>
+      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(b.amount)}</b></td></tr></table>
+     ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
+     <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
   );
 }
 
