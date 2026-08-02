@@ -6,6 +6,7 @@ import { sendMail, type MailAttachment } from "./mailer";
 import { tenantSender } from "./sender";
 import { webUrl } from "./stripe";
 import { AOS_MARK_PNG_B64 } from "./brandLogo";
+import { geocodeAddress } from "../routes/geo";
 
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
@@ -170,17 +171,28 @@ async function listingContext(
     }
 
     let location: string | undefined; let lat: number | undefined; let lng: number | undefined;
+    let venueAddress: string | undefined;
     const venueId = listing.venueId as string | undefined;
     if (venueId && b.tenantId) {
       const lib = (await db.collection("libraries").doc(b.tenantId).get()).data() ?? {};
       const v = ((lib.venues ?? []) as { id: string; name?: string; address?: string; lat?: number; lng?: number }[]).find((x) => x.id === venueId);
-      if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; }
+      if (v) { location = [v.name, v.address].filter(Boolean).join(", ") || undefined; lat = v.lat; lng = v.lng; venueAddress = v.address; }
     }
 
     let mapCid: string | undefined;
-    if (want.map && typeof lat === "number" && typeof lng === "number") {
-      const png = await venueMapPng(lat, lng);
-      if (png) { attachments.push({ filename: "map.png", content: png, contentType: "image/png", cid: "booking-map" }); mapCid = "cid:booking-map"; }
+    if (want.map) {
+      // Prefer the venue's saved coordinates, but a venue added before
+      // geocode-on-save (or whose geocode failed) has none — so geocode the
+      // address here so the map still shows. Best-effort; the email sends
+      // without it on any miss.
+      if ((typeof lat !== "number" || typeof lng !== "number") && venueAddress) {
+        const hit = await geocodeAddress(venueAddress);
+        if (hit) { lat = hit.lat; lng = hit.lng; }
+      }
+      if (typeof lat === "number" && typeof lng === "number") {
+        const png = await venueMapPng(lat, lng);
+        if (png) { attachments.push({ filename: "map.png", content: png, contentType: "image/png", cid: "booking-map" }); mapCid = "cid:booking-map"; }
+      }
     }
 
     const provided = want.whatIncluded ? ((listing.provided as string[] | undefined) ?? []).filter(Boolean) : undefined;
