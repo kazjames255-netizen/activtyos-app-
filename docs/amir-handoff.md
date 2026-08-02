@@ -73,3 +73,40 @@ Surfacing signup attribution (heardAbout/referredBy/activityKinds) — now the H
 
 Shout if any of the "already built" routes clash with something you're mid-way
 on and we'll reconcile.
+
+---
+
+## Addendum — 2026-08 (customer memberships + more)
+
+### Customer memberships — Phase 2 is YOURS (recurring billing)
+Phase 1 is fully built and on `main`: 3 tiers per provider (% off / £ credit),
+operator builder in Setup, customer Memberships page (a gold tab in the custdash
+top bar), benefit delivery reusing existing primitives (`creditWallet` /
+per-member `membership` discount code that the checkout auto-applies + stacks),
+switch-cancels-previous, and a `memberships` Firestore collection.
+
+**What's left is the recurring monthly charge** — the one thing Phase 1 fakes
+(it delivers benefits on join with **no money collected**). Full spec:
+**`docs/memberships-handoff.md`**. In short:
+- Stripe subscription per member on the **provider's connected account** (reuse
+  the connect plumbing in `routes/payments.ts` / `lib/stripe.ts`).
+- Webhook `invoice.paid` → call the existing **`deliverMembershipBenefit()`**
+  (in `routes/memberships.ts`) — that's the single integration point.
+- `invoice.payment_failed` → dunning → suspend perks; cancel → cancel the sub.
+- **Idempotency**: the credit path double-credits on duplicate webhooks — dedupe
+  on `lastDeliveredAt` within the billing period (percent path is already safe).
+- **DO NOT ship Phase 1 to real money** without gating benefit delivery behind a
+  successful charge.
+
+### Wallet backend (§Z) — still yours, now with more callers
+`creditWallet` / `spendWalletInTx` are live and used by memberships + refunds;
+the read endpoint `GET /api/my/wallet` returns `{balances:[{tenantId,provider,
+balance,transactions}]}`. If that's still my thin layer, harden it.
+
+### Dashboard/analytics date param (small)
+`GET /api/dashboard` has **no date param** — the 3/6/12-month toggle only
+rescopes the client-side windows, so the server KPI tiles (takenThisWeek,
+newThisWeek, occupancy) are fixed windows. Also `newThisWeek` counts bookings
+created-then-cancelled in the window. Add a `?from&to` (or `?months=`) param and
+have those tiles honour it. (Revenue-math correctness bugs were already fixed
+front-end — see the analytics commit.)
