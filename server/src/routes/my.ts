@@ -1069,7 +1069,11 @@ my.post("/bookings", async (req, res) => {
       // pending approval". Only a manual-approval or waitlisted place is.
       const b0 = bookings[0];
       const provider = listing.tenantName ?? listing.name;
-      if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider);
+      // A voucher booking gets ONE combined email (confirmation + how to pay),
+      // sent below via emailVoucherInstructions — so don't ALSO send the generic
+      // confirmed/request email, or the family gets two.
+      if (voucher) { /* handled by the voucher email below */ }
+      else if (b0.status === "Confirmed") emailBookingConfirmed(b0, provider);
       else emailBookingRequestReceived(b0, provider);
     }
     // Tell the PROVIDER a booking just came in — bell + email. This was never

@@ -245,7 +245,6 @@ function layout(
         <h1 style="font-size:22px;line-height:1.25;margin:0 0 14px;color:#171534">${title}</h1>
         ${bodyHtml}
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
-          ${row("Booking ref", `<b>${escapeHtml(b.ref)}</b>`)}
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
           ${ctx.location ? row("Location", escapeHtml(ctx.location)) : ""}
@@ -308,7 +307,7 @@ function sendCustomerEmail(
 export function emailBookingRequestReceived(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "bookings",
-    `Booking request received — ${b.listing} (${b.ref})`,
+    `Booking request received — ${b.listing}`,
     "We've got your booking request",
     `<p style="font-size:14px">Thanks ${b.booker} — your request is with ${providerName} for approval.
      You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
@@ -319,7 +318,7 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
 export function emailPaymentLink(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "bookings",
-    `Complete your booking — ${b.listing} (${b.ref})`,
+    `Complete your booking — ${b.listing}`,
     "Your booking is reserved — payment inside",
     `<p style="font-size:14px">Hi ${b.booker}, ${providerName} has reserved this booking for you.</p>
      <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
@@ -330,7 +329,7 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
 export function emailBookingConfirmed(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "bookings",
-    `Booking confirmed — ${b.listing} (${b.ref})`,
+    `Booking confirmed — ${b.listing}`,
     "You're booked in ✓",
     `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
     { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map
@@ -340,7 +339,7 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
 export function emailBookingDeclined(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "bookings",
-    `Booking update — ${b.listing} (${b.ref})`,
+    `Booking update — ${b.listing}`,
     "Your booking request was declined",
     `<p style="font-size:14px">Sorry ${b.booker} — ${providerName} couldn't take this booking.
      Nothing has been charged. Feel free to browse other dates or activities.</p>`,
@@ -350,7 +349,7 @@ export function emailBookingDeclined(b: Booking, providerName: string): void {
 export function emailRefundApproved(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "payments",
-    `Refund approved — ${b.listing} (${b.ref})`,
+    `Refund approved — ${b.listing}`,
     "Your refund is on its way",
     `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
      ${b.cancel?.amount ? `Amount: <b>${gbp(b.cancel.amount)}</b>.` : ""}</p>`,
@@ -363,7 +362,7 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
     : "";
   sendCustomerEmail(
     b, providerName, "waitlist",
-    `A place has opened up — ${b.listing} (${b.ref})`,
+    `A place has opened up — ${b.listing}`,
     "A place is yours if you want it",
     `<p style="font-size:14px">Good news ${b.booker} — a place has opened up on the dates you were
      waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
@@ -529,17 +528,21 @@ export function emailVoucherInstructions(
   const sendBy = b.voucherSendBy
     ? new Date(`${b.voucherSendBy}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
     : null;
+  // ONE email for a voucher booking: the confirmation AND how to pay, together
+  // (not a separate "booked in" + "pay by voucher" pair).
   sendCustomerEmail(
     b, providerName, "payments",
-    `Pay by childcare voucher — ${b.listing} (${refsLabel})`,
-    `Pay with ${scheme.name}`,
-    `<p style="font-size:14px">Your place is held, ${b.booker}. Pay <b>${gbp(amount)}</b> through
+    `Booking confirmed — pay with ${scheme.name} · ${b.listing}`,
+    `You're booked in ✓ — pay with ${scheme.name}`,
+    `<p style="font-size:14px">Great news ${b.booker} — your booking with ${providerName} is confirmed.
+      It's held as <b>awaiting voucher payment</b> until the money lands. Pay <b>${gbp(amount)}</b> through
       <b>${scheme.name}</b> on their own website, quoting:</p>
      <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${opts.refs && opts.refs.length > 1 ? "s" : ""}</td><td><b>${refsLabel}</b></td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(amount)}</b></td></tr></table>
      ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
      <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
+    { whatIncluded: true, map: true },
   );
 }
 
