@@ -566,6 +566,9 @@ my.post("/bookings", async (req, res) => {
   }
 
   // Price each item (base pass/timing + add-ons) and validate its days.
+  // A family can't book a day that's already gone — only an operator recording
+  // a past attendance (onBehalf) may back-date.
+  const todayIso = new Date().toISOString().slice(0, 10);
   let priced;
   try {
     priced = input.items.map((item) => {
@@ -590,6 +593,10 @@ my.post("/bookings", async (req, res) => {
       const passDays = resolvedPass?.days ?? listedPass?.days;
       let days = item.dates ?? (passDays && passDays < sessionDates.length ? sessionDates.slice(0, passDays) : sessionDates);
       days = [...new Set(days)].sort();
+      if (!onBehalf) {
+        const past = days.find((d) => d < todayIso);
+        if (past) throw new HttpError(400, `${prettyDay(past)} has already passed — that date can no longer be booked.`);
+      }
       const missing = days.find((d) => !blockOfDate.has(d));
       if (missing) throw new HttpError(400, `This activity doesn't run on ${missing}`);
       if (passDays && days.length > passDays)
@@ -964,32 +971,50 @@ my.post("/bookings", async (req, res) => {
         });
       });
 
-      // Join siblings into ONE booking. The engine prices per child, but a family
-      // booking the SAME thing (same block, pass, days & status) should be a
-      // single joint booking with kids[] — not two rows. Per-child voucher/TFC
-      // references become payRefs on the one booking (one booking, one ref per
-      // child). Capacity was already reserved per placement above, so merging
+      // ONE booking = ONE reference for a whole checkout. The engine prices per
+      // child per day-segment, but a family's basket — however it's broken down
+      // (several children, several days, the SAME child on separate days, even
+      // different passes) — must arrive as a SINGLE booking with kids[] and one
+      // reference, not a row per child-day. So merge everything on the same
+      // block + status: each child appears once carrying the union of their
+      // days, days/sessions are unioned, amounts summed, per-child voucher refs
+      // become payRefs. Capacity was reserved per placement above, so collapsing
       // the output rows changes nothing there.
       const preMergeCount = created.length;
       const bkGroups = new Map<string, Booking[]>();
       for (const b of created) {
-        const key = `${b.blockId ?? ""}|${b.pass}|${(b.days ?? []).join(",")}|${b.status}`;
+        const key = `${b.blockId ?? ""}|${b.status}`;
         const arr = bkGroups.get(key) ?? [];
         arr.push(b); bkGroups.set(key, arr);
       }
       const merged: Booking[] = [];
-      const refRemap = new Map<string, string>(); // old per-child ref → the joint booking's ref
+      const refRemap = new Map<string, string>(); // old per-child-day ref → the joint booking's ref
       for (const grp of bkGroups.values()) {
         if (grp.length === 1) { merged.push(grp[0]); refRemap.set(grp[0].ref, grp[0].ref); continue; }
         const { paymentRef: _drop, ...first } = grp[0];
-        const kids = grp.map((g) => ({ name: g.child, ...(g.childId ? { childId: g.childId } : {}), ...(g.age != null ? { age: g.age } : {}), ...(g.days ? { days: g.days } : {}) }));
-        const payRefs = grp.filter((g) => g.paymentRef).map((g) => ({ child: g.child, ...(g.voucherScheme ? { scheme: g.voucherScheme } : {}), ref: g.paymentRef!, amount: g.amount }));
+        // One entry per child, carrying the union of the days they're booked on.
+        const kidMap = new Map<string, { name: string; childId?: string; age?: number; days: string[] }>();
+        for (const g of grp) {
+          const k = (g.childId ?? g.child).trim().toLowerCase();
+          const cur = kidMap.get(k) ?? { name: g.child, ...(g.childId ? { childId: g.childId } : {}), ...(g.age != null ? { age: g.age } : {}), days: [] };
+          cur.days = [...new Set([...cur.days, ...(g.days ?? [])])].sort();
+          kidMap.set(k, cur);
+        }
+        const kids = [...kidMap.values()];
+        // One voucher/TFC reference per child (not per day).
+        const payRefs = [...new Map(
+          grp.filter((g) => g.paymentRef).map((g) => [(g.childId ?? g.child).trim().toLowerCase(), { child: g.child, ...(g.voucherScheme ? { scheme: g.voucherScheme } : {}), ref: g.paymentRef!, amount: g.amount }]),
+        ).values()];
         const sum = (f: (b: Booking) => number) => round2(grp.reduce((s, g) => s + f(g), 0));
+        const passes = [...new Set(grp.map((g) => g.pass).filter(Boolean))];
         merged.push({
           ...first,
-          child: grp.map((g) => g.child).join(", "),
+          child: kids.map((k) => k.name).join(", "),
           kids,
-          seats: grp.length,
+          seats: kids.length,
+          pass: passes.join(" · "),
+          days: [...new Set(grp.flatMap((g) => g.days ?? []))].sort(),
+          sessions: [...new Set(grp.flatMap((g) => g.sessions ?? []))],
           amount: sum((g) => g.amount ?? 0),
           amountPaid: sum((g) => g.amountPaid ?? 0),
           addons: grp.flatMap((g) => g.addons ?? []),
