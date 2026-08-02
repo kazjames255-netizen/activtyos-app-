@@ -113,17 +113,48 @@ async function tenantContact(tenantId: string): Promise<{ email?: string; name: 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function layout(heading: string, body: string, href?: string, footer?: string): string {
+/** The provider's own logo as an inline (cid:provider-logo) attachment, loaded
+ *  the same way the booking emails do (settings.billing.logoUrl → images doc).
+ *  Family-facing mail wears the provider's brand, never ActivityOS's. */
+async function tenantLogo(tenantId: string): Promise<MailAttachment | undefined> {
+  try {
+    const lib = await db.collection("libraries").doc(tenantId).get();
+    const logoUrl = ((lib.data()?.settings as { billing?: { logoUrl?: string } } | undefined)?.billing?.logoUrl) || undefined;
+    const imgId = logoUrl?.match(/\/api\/images\/([^/?#]+)/)?.[1];
+    if (!imgId) return undefined;
+    const img = (await db.collection("images").doc(imgId).get()).data() as { contentType?: string; b64?: string } | undefined;
+    if (img?.b64)
+      return { filename: "logo", content: Buffer.from(img.b64, "base64"), contentType: img.contentType || "image/png", cid: "provider-logo" };
+  } catch { /* no logo — fall back to the provider's name */ }
+  return undefined;
+}
+
+/** `branded` = a family-facing email: show the provider's logo (or name) and
+ *  drop the ActivityOS chrome to a small "powered by" line — the family's
+ *  relationship is with the provider, not us. Operator mail keeps the
+ *  "· via ActivityOS" chrome (they ARE the ActivityOS customer). */
+function layout(
+  heading: string,
+  body: string,
+  href?: string,
+  footer?: string,
+  opts?: { branded?: boolean; logoCid?: string },
+): string {
   const link = href ? (href.startsWith("http") ? href : `${webUrl}${href}`) : null;
+  const brandColor = "#1d3a8f";
+  const header = opts?.logoCid
+    ? `<img src="cid:${opts.logoCid}" alt="${escapeHtml(heading)}" style="max-height:44px;max-width:220px;display:inline-block" />`
+    : `<strong style="font-size:18px">${escapeHtml(heading)}</strong>${opts?.branded ? "" : `<span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>`}`;
+  const cta = opts?.branded ? "Open" : "Open in ActivityOS";
+  const poweredBy = opts?.branded ? `<span style="color:#b7b3c9;font-size:11px;display:block;margin-top:6px">Powered by ActivityOS</span>` : "";
   return `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
-    <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
-      <strong style="font-size:18px">${escapeHtml(heading)}</strong>
-      <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
+    <div style="padding:18px 0 10px;border-bottom:2px solid ${brandColor}">
+      ${header}
     </div>
     <div style="font-size:14px;line-height:1.6;margin:18px 0">${body}</div>
-    ${link ? `<p><a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open in ActivityOS</a></p>` : ""}
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${escapeHtml(footer ?? "You're receiving this because of your account on ActivityOS.")}</p>
+    ${link ? `<p><a href="${link}" style="display:inline-block;background:${brandColor};color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">${cta}</a></p>` : ""}
+    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${escapeHtml(footer ?? "You're receiving this because of your account on ActivityOS.")}${poweredBy}</p>
   </div>`;
 }
 
@@ -197,12 +228,16 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     // A fully-composed email brings its own header/layout/button; we only
     // resolve its {{VIEW_URL}} into the absolute, portal-correct deep link.
-    // Otherwise wrap the (plain or rich) body in the standard layout.
+    // Otherwise wrap the (plain or rich) body in the standard layout — carrying
+    // the PROVIDER's own logo for family-facing mail (never ActivityOS's).
+    const logo = parentEmail ? await tenantLogo(input.tenantId) : undefined;
     const link = href ? (href.startsWith("http") ? href : `${webUrl}${href}`) : "";
     const html = input.emailFullHtml
       ? input.emailFullHtml.replace(/\{\{VIEW_URL\}\}/g, link)
-      : layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer);
+      : layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer,
+          parentEmail ? { branded: true, logoCid: logo?.cid } : undefined);
 
+    const attachments = [...(input.attachments ?? []), ...(logo ? [logo] : [])];
     await sendMail(
       to,
       input.subject ?? input.title,
@@ -211,7 +246,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       // family mail — pointing the team's own notification back at itself
       // would just loop.
       { name: provider.name, ...(parentEmail && provider.email ? { replyTo: provider.email } : {}) },
-      input.attachments?.length ? { attachments: input.attachments } : undefined,
+      attachments.length ? { attachments } : undefined,
     );
   } catch (e) {
     console.error("[notify] failed:", (e as Error).message);

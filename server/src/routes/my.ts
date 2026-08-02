@@ -1370,12 +1370,19 @@ my.post("/bookings/:ref/amend", async (req, res) => {
     if (parsed.data.timing) parts.push("timing");
     const what = parts.join(" + ") || "date/time";
     const scope = parsed.data.child ? ` for ${parsed.data.child}` : "";
+    // Spell out exactly what they want moved — each "from → to" date, plus the
+    // requested time — so the operator sees the change in the email itself, not
+    // just "1 date + timing".
+    const dateTxt = moves
+      .map((mv) => (mv.from ? `${prettyDay(mv.from)} → ${prettyDay(mv.to)}` : `new date ${prettyDay(mv.to)}`))
+      .join("; ");
+    const detail = [dateTxt, parsed.data.timing ? `new time ${parsed.data.timing}` : ""].filter(Boolean).join(" · ");
     void notify({
       tenantId: booking.tenantId,
       to: { kind: "tenant" },
       category: "booking",
       title: `${booking.booker} requested a ${what} change on ${booking.ref}`,
-      body: `${booking.listing} · ${booking.child}${scope}${parsed.data.timing ? ` → ${parsed.data.timing}` : ""}. Review it to approve or decline.`,
+      body: `${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`,
       subject: `${booking.ref}: ${what} change requested by ${booking.booker}`,
       // Deep-link straight to this booking so it opens with the request showing.
       href: `/company/bookings?ref=${encodeURIComponent(booking.ref)}`,

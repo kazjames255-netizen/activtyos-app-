@@ -354,6 +354,58 @@ export function emailBookingDeclined(b: Booking, providerName: string, reason?: 
   );
 }
 
+/** The outcome of a family's date/time-change request — branded with the
+ *  provider's own logo (via sendCustomerEmail), spelling out each "from → to"
+ *  date and the requested time, and whether each was approved or declined. */
+export function emailDateChangeResolved(
+  b: Booking,
+  providerName: string,
+  opts: {
+    outcome: "approved" | "declined" | "partial";
+    moves: { from?: string; to?: string; approved?: boolean }[];
+    timing?: string;
+    reason?: string;
+  },
+): void {
+  const fmt = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const pill = (ok: boolean) =>
+    `<span style="font-size:11px;font-weight:800;color:${ok ? "#15803d" : "#b91c1c"};background:${ok ? "#e6f6ec" : "#fceaea"};padding:2px 9px;border-radius:999px;white-space:nowrap">${ok ? "Approved" : "Not approved"}</span>`;
+  const rowsHtml = opts.moves
+    .filter((m) => m.to)
+    .map((m) => {
+      const ok = opts.outcome === "declined" ? false : m.approved !== false;
+      const change = m.from ? `${fmt(m.from)} &rarr; <b>${fmt(m.to!)}</b>` : `New date: <b>${fmt(m.to!)}</b>`;
+      return `<tr><td style="padding:7px 14px 7px 0;font-size:13.5px;color:#4a4763">${change}</td><td style="padding:7px 0;text-align:right">${pill(ok)}</td></tr>`;
+    })
+    .join("");
+  const timingHtml = opts.timing
+    ? `<tr><td style="padding:7px 14px 7px 0;font-size:13.5px;color:#4a4763">New time: <b>${escapeHtml(opts.timing)}</b></td><td style="padding:7px 0;text-align:right">${pill(opts.outcome !== "declined")}</td></tr>`
+    : "";
+  const table = rowsHtml || timingHtml
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:14px 0;border-collapse:collapse">${rowsHtml}${timingHtml}</table>`
+    : "";
+  const lead =
+    opts.outcome === "declined"
+      ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} wasn't able to make the change you asked for on <b>${b.listing}</b>. Your original dates and times stay exactly as they were.</p>`
+      : opts.outcome === "partial"
+        ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} has reviewed your request on <b>${b.listing}</b>. Here's what was and wasn't approved:</p>`
+        : `<p style="font-size:14px">Good news ${b.booker} — ${providerName} approved your change on <b>${b.listing}</b>:</p>`;
+  const note = opts.reason?.trim()
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 2px;border-collapse:separate"><tr><td style="background:#f4f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:10px 13px"><div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#3a4a86;margin-bottom:3px">Message from ${providerName}</div><div style="font-size:13.5px;color:#2b3350;white-space:pre-wrap">${escapeHtml(opts.reason.trim())}</div></td></tr></table>`
+    : "";
+  const title =
+    opts.outcome === "declined" ? "Your date change couldn't be made"
+      : opts.outcome === "partial" ? "Your date change was partly approved"
+        : "Your date change is confirmed";
+  sendCustomerEmail(
+    b, providerName, "bookings",
+    `Date change ${opts.outcome === "declined" ? "declined" : "update"} — ${b.listing}`,
+    title,
+    `${lead}${table}${note}`,
+  );
+}
+
 export function emailRefundApproved(b: Booking, providerName: string): void {
   sendCustomerEmail(
     b, providerName, "payments",

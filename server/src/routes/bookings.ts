@@ -22,6 +22,7 @@ import {
 import {
   emailBookingConfirmed,
   emailBookingDeclined,
+  emailDateChangeResolved,
   emailPaymentLink,
   emailPaymentReceived,
   emailPlaceOffered,
@@ -620,28 +621,38 @@ bookings.post("/:ref/actions", async (req, res) => {
     // become usable again once nothing in the basket is standing). Safe to
     // repeat — the redemption record is gone after the first release.
     if (updated.status === "Cancelled") void releaseDiscountCodes(scope.tenantId!, updated.ref);
-    // Tell the family the outcome of their date-change request (bell + email).
+    // Tell the family the outcome of their date-change request. The EMAIL is the
+    // provider-branded one (their logo, each from → to date, approved/declined);
+    // the notify here is bell-only so the family doesn't also get the plain
+    // ActivityOS-branded version.
     if ((action.type === "move-approve" || action.type === "move-deny") && updated.email?.includes("@")) {
       const req = updated.dateChangeRequest;
-      const okMoves = (req?.moves ?? []).filter((m) => m.approved && m.to);
-      const declined = action.type === "move-deny" || (req?.moves ?? []).some((m) => m.approved === false);
+      const someDeclined = (req?.moves ?? []).some((m) => m.approved === false);
+      const outcome: "approved" | "declined" | "partial" =
+        action.type === "move-deny" ? "declined" : someDeclined ? "partial" : "approved";
+      emailDateChangeResolved(updated, await tenantName(), {
+        outcome,
+        moves: (req?.moves ?? []).map((m) => ({ from: m.from, to: m.to, approved: m.approved })),
+        timing: (req as { timing?: string } | undefined)?.timing,
+        reason: req?.reason,
+      });
       const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-      const moved = okMoves.map((m) => fmtDay(m.to!)).join(", ");
+      const moved = (req?.moves ?? []).filter((m) => m.approved && m.to).map((m) => fmtDay(m.to!)).join(", ");
       void notify({
         tenantId: scope.tenantId!,
         to: { kind: "parent", email: updated.email },
         category: "booking",
+        bellOnly: true,
         title:
-          action.type === "move-deny"
+          outcome === "declined"
             ? `Date change declined · ${updated.ref}`
-            : declined
+            : outcome === "partial"
               ? `Date change part-approved · ${updated.ref}`
               : `Date change approved · ${updated.ref}`,
         body:
-          action.type === "move-deny"
+          outcome === "declined"
             ? `${updated.listing}: your provider couldn't make the change.${req?.reason ? ` Reason: ${req.reason}` : ""}`
-            : `${updated.listing}: you're now booked on ${moved || "the new date(s)"}.${req?.reason && declined ? ` Note: ${req.reason}` : ""}`,
-        subject: `${updated.ref}: date change ${action.type === "move-deny" ? "declined" : "approved"}`,
+            : `${updated.listing}: you're now booked on ${moved || "the new date(s)"}.${req?.reason && outcome === "partial" ? ` Note: ${req.reason}` : ""}`,
         // Open the exact booking card so the family sees the change straight away.
         href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,

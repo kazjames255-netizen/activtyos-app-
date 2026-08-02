@@ -154,6 +154,8 @@ export interface Booking {
    *  operator to approve/deny from the row. On approve the swaps are applied. */
   dateChangeRequest?: {
     moves: { childName?: string; childId?: string; from: string; to: string; approved?: boolean }[];
+    /** A requested new time slot ("09:00 – 15:30"), separate from date moves. */
+    timing?: string;
     requestedAt?: string;
     status: "pending" | "approved" | "denied";
     /** Optional reason the provider gave when denying. */
