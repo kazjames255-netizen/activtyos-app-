@@ -1707,12 +1707,21 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   {/* Every detail they've given us, labelled. A scheme asking
                       for a setting name and getting an account number is a
                       payment that doesn't arrive. */}
-                  {filledDetails(chosenVoucher).map((d) => (
-                    <div key={d.id} className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-[11px]" style={{ color: tk.muted }}>{d.label}</span>
-                      <span className="text-[14.5px] font-extrabold" style={{ color: tk.ink }}>{d.value}</span>
-                    </div>
-                  ))}
+                  {filledDetails(chosenVoucher).map((d) => {
+                    const isLink = /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
+                    const href = /^https?:\/\//i.test(d.value) ? d.value : `https://${d.value}`;
+                    return (
+                      <div key={d.id} className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                        <span className="text-[11px]" style={{ color: tk.muted }}>{d.label}</span>
+                        {isLink
+                          ? <a href={href} target="_blank" rel="noreferrer" className="text-[14px] font-extrabold underline" style={{ color: "#2f6bd8" }}>{d.value} ↗</a>
+                          : <span className="text-[14.5px] font-extrabold" style={{ color: tk.ink }}>{d.value}</span>}
+                      </div>
+                    );
+                  })}
+                  {filledDetails(chosenVoucher).some((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value)) && (
+                    <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>Tap the link to sign in and pay — it goes straight to {chosenVoucher.name}.</div>
+                  )}
                   <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
                     Send <b style={{ color: tk.ink }}>{money(grandTotal)}</b> through their website,
                     quoting {filledDetails(chosenVoucher).length === 1 ? "that" : "those"} details.

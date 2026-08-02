@@ -771,12 +771,15 @@ bookings.post("/:ref/nudge", async (req, res) => {
     const bookedMs = Date.parse(updated.createdAt ?? "");
     const days = Number.isNaN(bookedMs) ? 0 : Math.max(0, Math.floor((Date.now() - bookedMs) / 86400000));
     if (updated.email?.includes("@")) {
+      const how = updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method;
+      const when = updated.dates ? ` on ${updated.dates}` : "";
+      const times = (updated.sessions ?? []).slice(0, 3).join("; ");
       void notify({
         tenantId,
         to: { kind: "parent", email: updated.email },
         category: "billing",
         title: `Payment reminder · ${updated.ref}`,
-        body: `A friendly reminder: £${outstanding.toFixed(2)} is still to pay for ${updated.listing}${days ? ` (booked ${days} day${days === 1 ? "" : "s"} ago)` : ""}. Please complete your ${updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method} payment when you can — thank you!`,
+        body: `A friendly reminder about ${updated.child}'s place on ${updated.listing}${when}: £${outstanding.toFixed(2)} is still to pay${days ? ` (booked ${days} day${days === 1 ? "" : "s"} ago)` : ""}.${times ? ` Sessions: ${times}.` : ""} Please complete your ${how} payment when you can — thank you!`,
         subject: `Payment reminder for ${updated.ref}`,
         href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,
@@ -792,6 +795,33 @@ bookings.post("/:ref/nudge", async (req, res) => {
 // PUT /api/bookings/:ref/payment-ref — the provider corrects the parent's
 // payment reference (e.g. the voucher account ref traced differently in the
 // bank). Saves it and notifies the family so their booking shows the new one.
+// PUT /api/bookings/:ref/recon-notes — provider-only reconciliation notes.
+// Never shown to or emailed to the parent (internal money-matching notes).
+const reconNotesSchema = z.object({ reconNotes: z.string().max(2000) });
+bookings.put("/:ref/recon-notes", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const parsed = reconNotesSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      b.reconNotes = parsed.data.reconNotes;
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
 const paymentRefSchema = z.object({ paymentRef: z.string().trim().max(120) });
 bookings.put("/:ref/payment-ref", async (req, res) => {
   const scope = operatorScope(req, res);

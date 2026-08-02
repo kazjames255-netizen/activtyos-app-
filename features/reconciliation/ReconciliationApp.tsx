@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -15,12 +15,13 @@ import { Tile, GRAD, money } from "@/features/money/finance-kit";
 // the family so it shows in their bookings & payments area.
 // ─────────────────────────────────────────────────────────────────────────
 
+interface PayRef { child?: string; scheme?: string; ref: string; amount?: number }
 interface Item {
-  ref: string; booker: string; email?: string; listing: string; listingId: string | null; child: string;
-  method: string; pay: string; amount: number; amountPaid: number; outstanding: number;
+  ref: string; booker: string; email?: string; phone?: string; listing: string; listingId: string | null; child: string;
+  method: string; pay: string; amount: number; amountPaid: number; outstanding: number; cardPaid: number;
   reconciled: boolean; voucherScheme: string | null; voucherReceiveBy: string | null;
-  paymentRef: string | null; nudges: number; lastNudgedAt: string | null;
-  date: string; createdAt: string | null; overdue: boolean;
+  paymentRef: string | null; payRefs: PayRef[] | null; reconNotes: string | null; nudges: number; lastNudgedAt: string | null;
+  dates: string; sessions: string[]; date: string; createdAt: string | null; overdue: boolean;
 }
 interface Recon { items: Item[]; summary: { count: number; reconciledCount: number; outstanding: number; overdue: number; awaitingVoucher: number; byMethod: Record<string, { count: number; outstanding: number }> } }
 interface ListingLite { id: string; title?: string; name?: string; seasonId?: string | null }
@@ -56,8 +57,10 @@ export function ReconciliationApp() {
   const [voucherSub, setVoucherSub] = useState(""); // sub-filter within Childcare vouchers (Edenred, …)
   const [nowMs] = useState(() => Date.now());
   const [openRef, setOpenRef] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null); // row whose full detail card is open
   const [editRef, setEditRef] = useState<string | null>(null); // booking whose payment reference is being edited
   const [refDraft, setRefDraft] = useState("");
+  const [notesDraft, setNotesDraft] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<Recon>("/api/reconciliation").then((r) => { setData(r); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -112,7 +115,15 @@ export function ReconciliationApp() {
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save reference"); }
     finally { setBusy(null); }
   }
+  async function saveNotes(it: Item) {
+    setBusy(it.ref);
+    try { await api(`/api/bookings/${encodeURIComponent(it.ref)}/recon-notes`, { method: "PUT", body: JSON.stringify({ reconNotes: notesDraft }) }); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save notes"); }
+    finally { setBusy(null); }
+  }
   const daysOverdue = (it: Item) => { const t = Date.parse(it.createdAt ?? ""); return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((nowMs - t) / 86400000)); };
+  // Off-platform amount still to reconcile once any card portion is set aside.
+  const offDue = (it: Item) => Math.max(0, it.amount - it.cardPaid - it.amountPaid);
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -192,37 +203,35 @@ export function ReconciliationApp() {
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-14 text-center text-[13px] text-[var(--ink-3)]">{status === "awaiting" ? "Nothing to reconcile here — all matched. 🎉" : "No bookings match these filters."}</div>
       ) : (
         <div className="flex flex-col gap-2">
+          <p className="px-1 text-[11px] leading-snug text-[var(--ink-3)]">Split payments show how much was taken by card; the rest is what you reconcile here. A booking for two children may pay as two references (e.g. £50 per reference on a £100 booking) — open a row to see each one.</p>
           {filtered.map((it) => {
             const c = methodCat(it);
             const tone = CAT_C[c] ?? "#8a86a3";
+            const refCount = it.payRefs?.length ?? (it.paymentRef ? 1 : 0);
+            const due = offDue(it);
+            const isOpen = expanded === it.ref;
             return (
               <div key={it.ref} className="overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)]" style={{ borderColor: it.overdue ? "#f6c9cc" : "var(--line)" }}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
                   <span className="w-1.5 self-stretch rounded-full" style={{ background: tone }} />
-                  <div className="min-w-[150px] flex-1">
+                  <button type="button" onClick={() => { const open = !isOpen; setExpanded(open ? it.ref : null); if (open) { setNotesDraft(it.reconNotes ?? ""); setEditRef(null); } }} className="min-w-[160px] flex-1 text-left">
                     <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                      <span className="text-[var(--ink-3)]">{isOpen ? "▾" : "▸"}</span>
                       <span className="font-extrabold">#{it.ref}</span>
                       <span className="text-[var(--ink-2)]">{it.booker} · {it.child}</span>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-[var(--ink-3)]">
                       <span>{it.listing} · {fmt(it.date)}</span>
                       {!it.reconciled && <span>· {daysOverdue(it)}d since booking</span>}
-                      {(it.voucherScheme || !it.reconciled) && (editRef === it.ref ? (
-                        <span className="inline-flex items-center gap-1">
-                          <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} placeholder="parent’s reference" className="w-[150px] rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[11.5px]" />
-                          <button type="button" disabled={busy === it.ref} onClick={() => saveRef(it)} className="font-bold text-[#0f7a43] disabled:opacity-50">Save</button>
-                          <button type="button" onClick={() => setEditRef(null)} className="text-[var(--ink-3)]">✕</button>
-                        </span>
-                      ) : (
-                        <button type="button" onClick={() => { setEditRef(it.ref); setRefDraft(it.paymentRef ?? ""); }} className="inline-flex items-center gap-1 rounded border border-dashed border-[var(--line)] px-1.5 py-0.5 hover:bg-[var(--panel)]" title="The reference the family pays under — edit if the bank shows it differently (they’ll be notified)">Ref:&nbsp;<b className="text-[var(--ink-2)]">{it.paymentRef || "not set"}</b> <span className="text-[#2f6bd8]">✎</span></button>
-                      ))}
+                      {refCount > 1 ? <span>· {refCount} references</span> : it.paymentRef ? <span>· Ref: <b className="text-[var(--ink-2)]">{it.paymentRef}</b></span> : null}
                     </div>
-                  </div>
+                  </button>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white" style={{ background: tone }}>{it.voucherScheme ? `Voucher · ${it.voucherScheme}` : c}</span>
                   {it.overdue && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 text-[11px] font-bold text-[#c02636]">overdue{it.voucherReceiveBy ? ` since ${fmt(it.voucherReceiveBy)}` : ""}</span>}
                   <div className="text-right">
-                    <div className="text-[14px] font-extrabold tabular-nums">{it.reconciled ? money(it.amount) : `${money(it.outstanding)} due`}</div>
-                    {!it.reconciled && it.amountPaid > 0 && <div className="text-[10.5px] text-[var(--ink-3)]">{money(it.amountPaid)} of {money(it.amount)} paid</div>}
+                    <div className="text-[14px] font-extrabold tabular-nums">{it.reconciled ? money(it.amount) : `${money(due)} due`}</div>
+                    {it.cardPaid > 0 && <div className="text-[10.5px] font-bold text-[#0b8446]">{money(it.cardPaid)} paid by card</div>}
+                    {!it.reconciled && it.amountPaid > 0 && <div className="text-[10.5px] text-[var(--ink-3)]">{money(it.amountPaid)} received</div>}
                   </div>
                   {it.reconciled ? (
                     <div className="flex items-center gap-2">
@@ -231,7 +240,7 @@ export function ReconciliationApp() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button type="button" title={it.nudges ? `Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}. Click to nudge again.` : "Nudge — email + notify the family their payment is due"} disabled={busy === it.ref} onClick={() => nudge(it)}
+                      <button type="button" title={it.nudges ? `Reminded ${it.nudges}× · last ${fmt(it.lastNudgedAt)}. Click to nudge again.` : "Nudge — email + notify the family their payment is due (with cost, dates & times)"} disabled={busy === it.ref} onClick={() => nudge(it)}
                         className="relative grid h-8 w-8 flex-none place-items-center rounded-full border text-[14px] transition-colors disabled:opacity-50"
                         style={it.nudges > 0 ? { borderColor: "#f0b100", background: "#fdf6e3" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                         🔔{it.nudges > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{it.nudges}</span>}
@@ -241,6 +250,59 @@ export function ReconciliationApp() {
                     </div>
                   )}
                 </div>
+
+                {isOpen && (
+                  <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3.5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="flex flex-col gap-2 text-[12.5px]">
+                        <Field label="Children">{it.child}</Field>
+                        <Field label="Dates">{it.dates || fmt(it.date)}</Field>
+                        <div>
+                          <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Sessions &amp; times</div>
+                          <div className="mt-0.5 flex flex-col gap-0.5">{it.sessions.length ? it.sessions.map((s, i) => <span key={i}>{s}</span>) : <span className="text-[var(--ink-3)]">—</span>}</div>
+                        </div>
+                        {(it.email || it.phone) && <Field label="Contact">{[it.email, it.phone].filter(Boolean).join(" · ")}</Field>}
+                        <Field label="Booked">{fmt(it.createdAt)} · {daysOverdue(it)}d ago</Field>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[12.5px]">
+                          <div className="flex justify-between"><span className="text-[var(--ink-3)]">Total</span><b className="tabular-nums">{money(it.amount)}</b></div>
+                          {it.cardPaid > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Paid by card (auto)</span><b className="tabular-nums text-[#0b8446]">{money(it.cardPaid)}</b></div>}
+                          {it.amountPaid > 0 && <div className="flex justify-between"><span className="text-[var(--ink-3)]">Received off-platform</span><b className="tabular-nums">{money(it.amountPaid)}</b></div>}
+                          <div className="mt-1 flex justify-between border-t border-[var(--line)] pt-1"><span className="font-bold">{it.reconciled ? "Settled" : "Still to reconcile"}</span><b className="tabular-nums">{it.reconciled ? money(it.amount) : money(due)}</b></div>
+                          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Via {it.voucherScheme ? `${it.voucherScheme} voucher` : it.method}</div>
+                        </div>
+                        <div>
+                          <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Payment reference{refCount > 1 ? "s" : ""}</div>
+                          {it.payRefs && it.payRefs.length ? (
+                            <div className="flex flex-col gap-1">
+                              {it.payRefs.map((r, i) => (
+                                <div key={i} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px]">
+                                  <span className="min-w-0 truncate">{r.child ? <b>{r.child}</b> : null}{r.scheme ? ` · ${r.scheme}` : ""}</span>
+                                  <span className="flex flex-none items-center gap-2"><span className="font-mono font-bold">{r.ref}</span>{r.amount != null && <span className="text-[var(--ink-3)]">{money(r.amount)}</span>}</span>
+                                </div>
+                              ))}
+                              <p className="text-[10.5px] leading-snug text-[var(--ink-3)]">Two children on one booking can pay as two references — e.g. £50 per reference on a £100 booking — and each may land separately in your bank.</p>
+                            </div>
+                          ) : editRef === it.ref ? (
+                            <div className="flex items-center gap-1">
+                              <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} placeholder="parent’s reference" className="flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
+                              <button type="button" disabled={busy === it.ref} onClick={() => saveRef(it)} className="rounded px-2 py-1 text-[11.5px] font-bold text-white disabled:opacity-50" style={{ background: "#0f7a43" }}>Save</button>
+                              <button type="button" onClick={() => setEditRef(null)} className="text-[var(--ink-3)]">✕</button>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => { setEditRef(it.ref); setRefDraft(it.paymentRef ?? ""); }} className="inline-flex items-center gap-1 rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px] hover:bg-[var(--panel)]" title="Edit if the bank shows the reference differently — the family is notified of the change">Ref:&nbsp;<b>{it.paymentRef || "not set"}</b> <span className="text-[#2f6bd8]">✎</span></button>
+                          )}
+                        </div>
+                        <div>
+                          <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Internal note <span className="font-normal normal-case">— only you see this, never the parent</span></div>
+                          <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={2} placeholder="e.g. chased Edenred on 5 Aug; parent says sent — waiting on the bank" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none focus:border-[#3f78d8]" />
+                          <button type="button" disabled={busy === it.ref || notesDraft === (it.reconNotes ?? "")} onClick={() => saveNotes(it)} className="mt-1 rounded-full px-3 py-1 text-[11.5px] font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>Save note</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {openRef === it.ref && !it.reconciled && <RecordForm item={it} onDone={() => { setOpenRef(null); refresh(); }} />}
               </div>
             );
@@ -249,6 +311,10 @@ export function ReconciliationApp() {
       )}
     </div>
   );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-0.5 text-[var(--ink-2)]">{children}</div></div>;
 }
 
 // Partial / manual amount entry — for when only some of the money has arrived.

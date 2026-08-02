@@ -597,6 +597,7 @@ function VoucherEditor({ items, onChange }: { items: VoucherProvider[]; onChange
                 <Button sm className="mt-2" onClick={() => patch(i, (x) => ({ ...x, details: [...x.details, { id: uid(), label: "", value: "" }] }))}>
                   &#65291; Add a detail
                 </Button>
+                <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">Tip: add a <b>Website</b> detail (optional) — the sign-in link for this scheme. It shows the family a tappable link at checkout and in their confirmation email so they can pay in one tap.</p>
               </div>
             )}
           </div>

@@ -92,6 +92,15 @@ export interface Booking {
    *  payment reference) so the provider can match the money in their bank.
    *  Entered once by the parent; the provider can correct it (parent notified). */
   paymentRef?: string;
+  /** Per-child / per-scheme payment references — siblings on one booking may
+   *  pay as two separate references (e.g. £50 each for a £100 booking). When
+   *  present these take precedence over the single paymentRef. */
+  payRefs?: { child?: string; scheme?: string; ref: string; amount?: number }[];
+  /** Split payment: how much of `amount` was already taken by card at checkout
+   *  (auto-settled); the remainder is the off-platform portion reconciled here. */
+  cardPaid?: number;
+  /** Provider-only reconciliation notes — never shown to the parent. */
+  reconNotes?: string;
   /** Reconciliation nudges: how many payment reminders were sent and when the
    *  last one went, so the bell can show state. Off-platform / awaiting only. */
   nudges?: number;
