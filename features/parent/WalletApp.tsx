@@ -39,6 +39,12 @@ type WalletBalance = {
   transactions: WalletTxn[];
 };
 
+// The family's membership with their provider — shown on the wallet so they see
+// the recurring plan that tops it up (and what's coming next month).
+type MembershipTier = { id: string; name: string };
+type MembershipCurrent = { tierId: string; benefitType: "credit" | "percent"; benefitValue: number; priceMonthly: number; renewsAt?: string };
+type MembershipPayload = { enabled: boolean; provider?: string; tenantId?: string; tiers?: MembershipTier[]; current?: MembershipCurrent | null };
+
 const fmtWhen = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -48,15 +54,25 @@ const fmtWhen = (iso: string) => {
 
 export function WalletApp() {
   const [balances, setBalances] = useState<WalletBalance[] | null>(null);
+  const [membership, setMembership] = useState<MembershipPayload | null>(null);
 
-  const load = () =>
+  const load = () => {
     apiGet<{ balances: WalletBalance[] }>("/api/my/wallet")
       .then((r) => setBalances(r?.balances ?? []))
       .catch(() => setBalances([])); // endpoint not built yet → show empty state
+    apiGet<MembershipPayload>("/api/my/memberships")
+      .then(setMembership)
+      .catch(() => setMembership(null));
+  };
   useEffect(() => {
     void load();
   }, []);
-  useRealtime(["wallet", "bookings"], load);
+  useRealtime(["wallet", "bookings", "memberships"], load);
+
+  // The active membership for a given provider (Phase 1 is single-provider).
+  const memFor = (tenantId: string) =>
+    membership?.current && membership.tenantId === tenantId ? membership : null;
+  const tierName = (m: MembershipPayload) => m.tiers?.find((t) => t.id === m.current?.tierId)?.name ?? "Member";
 
   if (!balances) {
     return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your wallet…</div>;
@@ -95,15 +111,41 @@ export function WalletApp() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {funded.map((b) => (
+            {funded.map((b) => {
+              const added = b.transactions.filter((t) => t.delta > 0).reduce((n, t) => n + t.delta, 0);
+              const spent = b.transactions.filter((t) => t.delta < 0).reduce((n, t) => n + Math.abs(t.delta), 0);
+              const mem = memFor(b.tenantId);
+              return (
               <Card key={b.tenantId} className="overflow-hidden p-0">
                 <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
-                  <div className="text-[14px] font-extrabold">{b.provider}</div>
+                  <div>
+                    <div className="text-[14px] font-extrabold">{b.provider}</div>
+                    {spent > 0 && (
+                      <div className="mt-0.5 text-[11px] text-[var(--ink-3)] tabular-nums">
+                        {money(added)} added · {money(spent)} spent · <b className="text-[var(--ink-2)]">{money(b.balance)} left</b>
+                      </div>
+                    )}
+                  </div>
                   <div className="text-right">
                     <div className="text-[16px] font-extrabold text-[#1d3a8f]">{money(b.balance)}</div>
                     <div className="text-[10.5px] text-[var(--ink-3)]">to spend</div>
                   </div>
                 </div>
+                {/* The membership plan that tops this wallet up, if any. */}
+                {mem?.current && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-[var(--line)] bg-[#fff8e6] px-4 py-2.5">
+                    <div className="text-[12.5px]">
+                      <span className="font-extrabold text-[#8a5b00]">⭐ {tierName(mem)} membership</span>
+                      <span className="text-[var(--ink-3)]"> · {money(mem.current.priceMonthly)}/mo</span>
+                    </div>
+                    <div className="text-[11.5px] text-[var(--ink-2)]">
+                      {mem.current.benefitType === "credit"
+                        ? `+${money(mem.current.benefitValue)} credit each month`
+                        : `${mem.current.benefitValue}% off every booking`}
+                      {mem.current.renewsAt ? ` · renews ${fmtWhen(mem.current.renewsAt)}` : ""}
+                    </div>
+                  </div>
+                )}
                 <div className="px-4 py-1.5">
                   {b.transactions.length === 0 ? (
                     <div className="py-2 text-[12px] text-[var(--ink-3)]">No activity yet.</div>
@@ -122,7 +164,8 @@ export function WalletApp() {
                   )}
                 </div>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </>
       )}
