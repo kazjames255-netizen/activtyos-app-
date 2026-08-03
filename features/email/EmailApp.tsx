@@ -310,72 +310,162 @@ interface Mailbox { configured: boolean; address: string | null; received: numbe
  *  provider's parent mail lands in this Inbox. Renders nothing until the
  *  platform has an inbound domain: an unconfigured address would just swallow
  *  their mail, and it isn't something a provider can fix. */
+// Where each provider's forwarding setting actually lives. Deep links save a
+// provider hunting through menus — the single biggest reason setup is
+// abandoned. Outlook splits personal vs work/school on different hosts.
+const MAIL_HOSTS = [
+  {
+    id: "outlook", label: "Outlook", emoji: "📨",
+    links: [
+      ["Open Outlook.com settings", "https://outlook.live.com/mail/0/options/mail/forwarding"],
+      ["Open work/school Outlook settings", "https://outlook.office.com/mail/options/mail/forwarding"],
+    ] as [string, string][],
+    steps: [
+      "Tick “Enable forwarding”.",
+      "Paste your ActivityOS address into the box.",
+      "Tick “Keep a copy of forwarded messages” so nothing leaves your own inbox.",
+      "Press Save.",
+    ],
+    note: "Prefer Rules → “Redirect to” if you see it: a redirect keeps the parent as the sender, so replies go straight back to them.",
+  },
+  {
+    id: "gmail", label: "Gmail", emoji: "✉️",
+    links: [["Open Gmail forwarding settings", "https://mail.google.com/mail/u/0/#settings/fwdandpop"]] as [string, string][],
+    steps: [
+      "Click “Add a forwarding address” and paste your ActivityOS address.",
+      "Google emails a confirmation code to us — it appears on this page within a minute.",
+      "Type that code back into Gmail and press Verify.",
+      "Choose “Forward a copy… and keep Gmail’s copy in the Inbox”, then Save Changes.",
+    ],
+    note: "Gmail won’t start forwarding until the code is entered — that’s the step people get stuck on, so we show it to you here.",
+  },
+  {
+    id: "other", label: "Something else", emoji: "🌐",
+    links: [] as [string, string][],
+    steps: [
+      "Sign in to your email provider’s website (not the app).",
+      "Look for Settings → Forwarding, or “Forwarders” if your website host runs your email.",
+      "Paste your ActivityOS address and save.",
+      "Keep a copy in your own inbox if it offers the choice.",
+    ],
+    note: "Yahoo only allows forwarding on its paid plan. If you’re stuck, send us the name of your email provider and we’ll write the steps for you.",
+  },
+];
+
+interface Mailbox { configured: boolean; address: string | null; received: number; lastAt: string | null; pendingVerification: { code?: string; link?: string; at?: string } | null }
+
+/** "See your emails here" — a provider adds one forwarding rule and the mail
+ *  parents send them appears in this Inbox. Written for someone who has never
+ *  heard of mail forwarding: pick your email, follow four steps, and the panel
+ *  confirms by itself the moment the first message lands. Renders nothing
+ *  until the platform has an inbound domain. */
 function MailboxSetup() {
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [host, setHost] = useState<string | null>(null);
   const load = useCallback(() => { apiGet<Mailbox>("/api/emails/mailbox").then(setMb).catch(() => {}); }, []);
   useEffect(load, [load]);
   useRealtime(["emailMessages"], load);
 
   if (!mb?.configured || !mb.address) return null;
+  const address = mb.address;
   const live = mb.received > 0;
-  const copy = () => { navigator.clipboard?.writeText(mb.address!).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); };
+  const copy = () => { navigator.clipboard?.writeText(address).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); };
+  const chosen = MAIL_HOSTS.find((h) => h.id === host);
+
+  // Once mail is flowing this collapses to a single reassuring line — the
+  // setup instructions have done their job and shouldn't keep taking space.
+  // A pending Gmail code always wins: it's time-sensitive, it only exists
+  // here, and someone connecting a SECOND mailbox already has mail arriving.
+  if (live && !host && !mb.pendingVerification) {
+    return (
+      <div data-ui="mailbox-setup" className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#cdeacd] bg-[#f3fbf3] px-4 py-2.5">
+        <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your emails are coming through</span>
+        <code data-ui="inbound-address" className="rounded-md bg-white px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
+        <span className="text-[11.5px] text-[var(--ink-3)]">Last one {when(mb.lastAt ?? undefined)}</span>
+        <button type="button" onClick={() => setHost("outlook")} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
+      </div>
+    );
+  }
 
   return (
-    <div data-ui="mailbox-setup" className="rounded-2xl border border-[var(--line)] bg-white p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[14px] font-extrabold text-[var(--ink)]">
-          {live ? "✓ Mailbox connected" : "📥 See your own emails here"}
-        </span>
-        <span className="text-[12px] text-[var(--ink-3)]">
-          {live ? `Last message ${when(mb.lastAt ?? undefined)}` : "Add one forwarding rule and your emails appear in this Inbox."}
-        </span>
-        <button type="button" onClick={() => setOpen((v) => !v)} className="ml-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">
-          {open ? "Hide setup" : live ? "Setup steps" : "Show me how"}
-        </button>
+    <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#dbe6fb] bg-white">
+      <div className="border-b border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3">
+        <div className="text-[15px] font-extrabold text-[#16306e]">📥 See the emails parents send you, here</div>
+        <div className="mt-0.5 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
+          Right now this Inbox only shows email sent <b>from</b> ActivityOS. Add one setting in your own email
+          — it takes about two minutes, once — and everything parents send you shows up here too.
+          Your email keeps working exactly as it does now, and you keep your own copy of everything.
+        </div>
       </div>
 
-      {/* Gmail refuses to forward until a code it emails HERE is entered back
-          in Gmail — a mailbox the provider can't open, so surface it loudly. */}
-      {mb.pendingVerification && (
-        <div className="mt-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3">
-          <div className="text-[12.5px] font-bold text-[#7a5a12]">Gmail needs this confirmation code</div>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-white px-2.5 py-1 text-[15px] font-extrabold tracking-wider text-[#7a5a12]">{mb.pendingVerification.code}</code>}
-            <span className="text-[11.5px] text-[#7a5a12]">Paste it into Gmail&rsquo;s forwarding settings to finish.</span>
-            {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="text-[11.5px] font-bold text-[#1d3a8f] underline">or confirm via Google&rsquo;s link</a>}
-          </div>
+      <div className="px-4 py-3">
+        {/* Step 1 — the address. Always visible: it's what every route needs. */}
+        <div className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 1 — copy your ActivityOS address</div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <code data-ui="inbound-address" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink)]">{address}</code>
+          <button type="button" onClick={copy} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: copied ? "#0f9d58" : "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{copied ? "Copied ✓" : "Copy"}</button>
+          <span className="text-[11.5px] text-[var(--ink-3)]">This address belongs to you — nobody else can use it.</span>
         </div>
-      )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold text-[var(--ink-2)]">Your ActivityOS address</span>
-        <code data-ui="inbound-address" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12.5px] font-bold text-[var(--ink)]">{mb.address}</code>
-        <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">{copied ? "Copied ✓" : "Copy"}</button>
+        {/* Step 2 — pick a provider, then show only that provider's steps. */}
+        <div className="mt-4 text-[12.5px] font-extrabold text-[var(--ink)]">Step 2 — which email do you use?</div>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {MAIL_HOSTS.map((h) => (
+            <button key={h.id} type="button" onClick={() => setHost(h.id)}
+              className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
+              style={host === h.id ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+              {h.emoji} {h.label}
+            </button>
+          ))}
+        </div>
+
+        {chosen && (
+          <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
+            {chosen.links.length > 0 && (
+              <div className="mb-2.5 flex flex-wrap gap-2">
+                {chosen.links.map(([label, href]) => (
+                  <a key={href} href={href} target="_blank" rel="noreferrer" className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white">{label} ↗</a>
+                ))}
+              </div>
+            )}
+            <ol className="ml-4 list-decimal text-[12.5px] leading-relaxed text-[var(--ink-2)]">
+              {chosen.steps.map((t) => <li key={t} className="mt-0.5">{t}</li>)}
+            </ol>
+            <div className="mt-2 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{chosen.note}</div>
+          </div>
+        )}
+
+        {/* Gmail's code — delivered to US, so the provider can only get it here. */}
+        {mb.pendingVerification && (
+          <div className="mt-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5">
+            <div className="text-[12.5px] font-extrabold text-[#7a5a12]">Gmail sent us your confirmation code</div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+              {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-white px-3 py-1.5 text-[17px] font-extrabold tracking-[0.15em] text-[#7a5a12]">{mb.pendingVerification.code}</code>}
+              <span className="text-[12px] text-[#7a5a12]">Type this into Gmail and press <b>Verify</b> to finish.</span>
+            </div>
+            {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11.5px] font-bold text-[#1d3a8f] underline">Or just click Google&rsquo;s confirm link ↗</a>}
+          </div>
+        )}
+
+        {/* Step 3 — proves itself. No "test" button to misinterpret: the panel
+            simply turns green when a real message arrives. */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2.5">
+          <span className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 3 —</span>
+          {live
+            ? <span data-ui="mailbox-live" className="text-[12.5px] font-extrabold text-[#127a3e]">✓ working — your emails are arriving here</span>
+            : <span className="text-[12.5px] text-[var(--ink-2)]">waiting for your first email… this page updates by itself. Not sure it worked? Send yourself an email from another account.</span>}
+        </div>
+
+        <div className="mt-2.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">
+          <b>Good to know:</b> only email you <b>receive</b>{" "}appears here — messages you send from your
+          own inbox won&rsquo;t. Replies you send from ActivityOS are saved here automatically.
+        </div>
       </div>
-
-      {open && (
-        <div className="mt-3 grid gap-3 text-[12px] leading-relaxed text-[var(--ink-2)] sm:grid-cols-3">
-          <div>
-            <div className="font-extrabold text-[var(--ink)]">Outlook</div>
-            Settings → Mail → <b>Rules</b> → Add new rule → condition <i>Apply to all messages</i> → action <b>Redirect to</b> → paste the address.
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Choose <b>Redirect</b>, not Forward — redirect keeps the parent as the sender.</div>
-          </div>
-          <div>
-            <div className="font-extrabold text-[var(--ink)]">Gmail</div>
-            Settings → <b>Forwarding and POP/IMAP</b> → Add a forwarding address → paste it → Google emails a code, which appears above → enter it in Gmail, then pick <i>Keep Gmail&rsquo;s copy</i>.
-          </div>
-          <div>
-            <div className="font-extrabold text-[var(--ink)]">Anything else</div>
-            Most hosts call it <b>forwarders</b> or <b>redirect</b> in webmail settings. Yahoo needs a paid plan for forwarding.
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Mail you send from your own mailbox won&rsquo;t appear here — only mail you receive.</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
 
 function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
