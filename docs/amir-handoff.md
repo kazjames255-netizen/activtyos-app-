@@ -110,3 +110,52 @@ newThisWeek, occupancy) are fixed windows. Also `newThisWeek` counts bookings
 created-then-cancelled in the window. Add a `?from&to` (or `?months=`) param and
 have those tiles honour it. (Revenue-math correctness bugs were already fixed
 front-end — see the analytics commit.)
+
+---
+
+## Back to Kaz — connecting Stripe is hard to find (front-end, 3 Aug 2026)
+
+Backend is fine and unchanged; this is purely where the entry point lives.
+Raising rather than editing, since `FinanceAnalyticsApp.tsx` is yours.
+
+**The symptom:** looking for "where do I link my bank details / Stripe
+account", I couldn't find it, and neither could a fresh pair of eyes. It is
+there — sidebar **MONEY → Finance & analytics → Payouts tab → "Connect
+payouts"** — and it works (`POST /api/payments/connect` → Stripe hosted
+onboarding). Three things hide it:
+
+1. **The MONEY sidebar group starts collapsed**, so the page itself is one
+   expand away.
+2. **`/…/finance` lands on Overview** (`FinanceAnalyticsApp.tsx:41`), and
+   nothing on Overview hints that payouts need connecting. The entry point is
+   on a tab most people won't click when they're hunting for "bank details".
+3. **The words "Stripe" and "bank" appear nowhere** on the page — it's
+   "Connect payouts" under "Finance & analytics". Searching the UI for either
+   term finds nothing.
+
+**The bigger one — it disappears forever once connected.** The banner renders
+only while `status && !status.payoutsEnabled`. After onboarding there is no
+route in the product to review or change payout settings, so a provider
+switching bank accounts has to go to Stripe directly and would reasonably file
+that as a bug.
+
+Two cheap fixes, both yours to shape:
+
+- **Default to the Payouts tab when not connected.** One line — `useState`
+  seeded from the `/api/payments/status` result. A provider who hasn't set up
+  payouts almost certainly opened Finance for exactly that.
+- **Keep a permanent, quiet row after onboarding** — "Payout account:
+  connected ✓ · Manage" linking to a fresh account link. `GET
+  /api/payments/status` already returns `connected` / `chargesEnabled` /
+  `detailsSubmitted` / `payoutsEnabled`, so all four states are renderable
+  today with no backend change.
+
+Your new signup **"Get paid"** step (`app/signup/page.tsx:57`) covers new
+operators nicely — this is about everyone who signed up before it, and about
+life after onboarding.
+
+**Unrelated, while I was in there:** `BookingCard` in `MyBookingsApp.tsx` lost
+its `data-ui="card"` attribute in the parent rebuild, so `cardWith()` can't
+anchor parent booking rows in e2e any more. I worked around it in the specs,
+but that attribute is what the suite's anchoring convention rests on — worth
+putting back.
