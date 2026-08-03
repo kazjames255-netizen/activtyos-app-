@@ -147,6 +147,14 @@ function SignupForm() {
   const current = steps[step];
   const toggleKind = (k: string) => setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
 
+  // The login email defaults to the contact email they already typed earlier —
+  // one less thing to re-enter. Only prefills when they land on the login step
+  // AND the field is still empty, so it never clobbers something they've edited.
+  useEffect(() => {
+    if (current === "login" && contactEmail.trim() && !email.trim()) setEmail(contactEmail.trim());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
+
   function stepProblem(id: StepId): string | null {
     if (id === "business") {
       if (businessName.trim().length < 2) return "Enter your business name.";
