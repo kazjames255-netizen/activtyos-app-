@@ -66,10 +66,10 @@ function sendAs(
   to: string,
   subject: string,
   html: string,
-  opts: { replyTo?: boolean } = {},
+  opts: { replyTo?: boolean; attachments?: MailAttachment[] } = {},
 ): void {
   void tenantSender(tenantId, providerName)
-    .then((s) => sendMail(to, subject, html, opts.replyTo === false ? { name: s.name } : s))
+    .then((s) => sendMail(to, subject, html, opts.replyTo === false ? { name: s.name } : s, opts.attachments?.length ? { attachments: opts.attachments } : undefined))
     .catch((e) => console.error(`[mail] sender lookup failed for "${subject}":`, (e as Error).message));
 }
 
@@ -486,32 +486,44 @@ export function emailSignUpInvite(p: {
   existed: boolean;
   tenantId?: string;
 }): void {
-  const cta = p.existed ? "Sign in" : "Set your password";
-  sendAs(
-    p.tenantId,
-    p.providerName,
-    p.to,
-    `${p.providerName} — see what's coming up`,
-    `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
-      <h2 style="font-size:19px;margin:0 0 10px">Hi ${p.firstName}, here's your account</h2>
-      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
-        ${p.existed
-          ? `You already have an ActivityOS account, so ${p.providerName}'s listings are waiting for you when you sign in.`
-          : `${p.providerName} set up an account for you after your enquiry, so you can see every session they're running, with dates and places left.`}
-      </p>
-      <p style="margin:0 0 16px">
-        <a href="${p.link}" style="display:inline-block;background:#2f6bd8;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">${cta}</a>
-      </p>
-      <p style="font-size:12.5px;line-height:1.55;color:#5b6478;margin:0 0 8px">
-        We haven't set a password for you — that link lets you choose your own. Your name and
-        email are already filled in, so there's nothing to type twice.
-      </p>
-      <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
-        Didn't ask for this? Ignore this email and nothing happens, or reply and we'll delete
-        the account.
-      </p>
-    </div>`,
-  );
+  void (async () => {
+    const brand = await customerBrand(p.tenantId, p.providerName);
+    const cta = p.existed ? "Sign in" : "Set your password";
+    const header = brand.logo
+      ? `<img src="cid:provider-logo" alt="${escapeHtml(brand.name)}" style="max-height:46px;max-width:220px;display:inline-block" />`
+      : `<span style="font-size:22px;font-weight:800;color:#1d3a8f">${escapeHtml(brand.name)}</span>`;
+    const html = `
+    <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">${header}</div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Hi ${escapeHtml(p.firstName)} 👋</h2>
+        <p style="font-size:14px;line-height:1.6;margin:0 0 4px">
+          <b>${escapeHtml(brand.name)}</b> takes bookings on <b>ActivityOS</b> and has set up an account for you — so you can
+          see every session they run, with dates and places left, and book in a couple of taps.
+        </p>
+        <div style="background:#eef4ff;border-radius:14px;padding:22px;text-align:center;margin:18px 0">
+          <a href="${p.link}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">${cta} →</a>
+          <div style="font-size:12px;line-height:1.5;color:#4a5a94;margin-top:12px">
+            ${p.existed
+              ? "You already have an ActivityOS account — that link signs you in."
+              : "No password is set yet — that link lets you choose your own. Your name and email are already filled in."}
+          </div>
+        </div>
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0;text-align:center">
+          Didn't expect this? Just ignore it — nothing happens.
+        </p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    sendAs(
+      p.tenantId,
+      p.providerName,
+      p.to,
+      `${p.providerName} invited you to sign up to their booking platform`,
+      html,
+      { attachments: brandAttachments(brand) },
+    );
+  })().catch((e) => console.error("[mail] sign-up invite build failed:", (e as Error).message));
 }
 
 /** Team/franchise invite — the join link, who sent it and what it grants.
