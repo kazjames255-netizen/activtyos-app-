@@ -42,6 +42,11 @@ test.describe("signup", () => {
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "Create account" }).click();
+    // Operators now land on an optional "Get paid" step (Stripe Connect + bank
+    // details) before the portal — skip it. Only appears when the account was
+    // actually created, so it must not be awaited on the duplicate-email path.
+    const skip = page.getByRole("button", { name: /^Skip for now/ });
+    await skip.click({ timeout: 15_000 }).catch(() => { /* signup failed → the error assertion owns it */ });
   }
 
   test("parents are not offered self-signup (they arrive via a provider's link)", async ({ page }) => {

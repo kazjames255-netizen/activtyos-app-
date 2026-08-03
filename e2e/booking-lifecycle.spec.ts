@@ -86,6 +86,9 @@ test.describe("approval flow", () => {
     await opPage.goto("/company/bookings");
     await opPage.getByText(declineKid).first().click();
     await opPage.getByRole("button", { name: "Decline", exact: true }).click();
+    // Declining now opens a confirm popup with an optional reason the family
+    // sees in the decline email; the booking only flips once it's confirmed.
+    await opPage.getByRole("button", { name: "Decline booking", exact: true }).click();
     await expect(cardWith(opPage, declineKid, "Declined")).toBeVisible({ timeout: 15_000 });
     await opCtx.close();
 
