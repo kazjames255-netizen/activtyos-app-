@@ -37,8 +37,12 @@ async function compressLogo(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const max = 480, s = Math.min(1, max / Math.max(img.width, img.height));
-      const w = Math.round(img.width * s), h = Math.round(img.height * s);
+      // SVGs (and some formats) can report 0×0 — fall back to a sensible box so
+      // they still rasterise instead of drawing blank.
+      const iw = img.naturalWidth || img.width || 480;
+      const ih = img.naturalHeight || img.height || 480;
+      const max = 480, s = Math.min(1, max / Math.max(iw, ih));
+      const w = Math.round(iw * s), h = Math.round(ih * s);
       const c = document.createElement("canvas"); c.width = w; c.height = h;
       const ctx = c.getContext("2d"); if (!ctx) { resolve(dataUrl); return; }
       ctx.drawImage(img, 0, 0, w, h);
@@ -1322,11 +1326,14 @@ export function SetupApp() {
 
       {tab === "branding" && (
         <Section title="Branding" lede="Your logo and accent colour on customer-facing pages, emails and documents.">
-          <Row label="Logo" hint="A PNG or JPG. Shown on your customer pages, emails and PDFs.">
+          <Row label="Logo" hint="PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB. We resize it automatically. Shown on your customer pages, emails and PDFs.">
+            <div>
             <div className="flex items-center gap-2">
               {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — try a PNG or JPG."); } e.target.value = ""; }} /></label>
+              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
               {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+            </div>
+            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>
             </div>
           </Row>
           <Row label="Accent colour" hint="Tints buttons and highlights on your customer-facing pages.">
@@ -1914,9 +1921,10 @@ export function SetupApp() {
                 <FieldLabel>Logo</FieldLabel>
                 <div className="flex items-center gap-2">
                   {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — try a PNG or JPG."); } e.target.value = ""; }} /></label>
+                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
                   {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
                 </div>
+                <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>
               </div>
               <div><FieldLabel>Company registration no.</FieldLabel><Input value={settings.billing?.companyReg ?? ""} placeholder="133950" onChange={(e) => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), companyReg: e.target.value } } })} className="w-full" /></div>
             </div>
