@@ -154,8 +154,20 @@ Your new signup **"Get paid"** step (`app/signup/page.tsx:57`) covers new
 operators nicely — this is about everyone who signed up before it, and about
 life after onboarding.
 
-**Unrelated, while I was in there:** `BookingCard` in `MyBookingsApp.tsx` lost
-its `data-ui="card"` attribute in the parent rebuild, so `cardWith()` can't
-anchor parent booking rows in e2e any more. I worked around it in the specs,
-but that attribute is what the suite's anchoring convention rests on — worth
-putting back.
+**Correction to an earlier note of mine:** I said `BookingCard` had lost its
+`data-ui="card"`. It hasn't — it renders through `components/ui/Card`, which
+sets the attribute, so `cardWith()` anchors parent rows fine. I'd grepped the
+file for the literal attribute and missed the shared component. Nothing to fix.
+
+(The `booking.spec` change still stands on its own merits: the listing title
+now also appears in the "All activities" filter's hidden `<option>`s, so
+`getByText(title).first()` was matching an invisible element. It's anchored to
+the booking ref instead.)
+
+
+**Both fixes above are now done** (see the payments commit) — I took them on
+rather than leaving them with you: Finance auto-selects Payouts while payouts
+aren't live, and a permanent "✓ Payout account connected · Manage payouts" row
+replaces the banner afterwards, linking to a Stripe Express login link via the
+new `POST /api/payments/dashboard`. Reshape the copy/placement however you
+like; the behaviour is covered by a spec in `payments.spec.ts`.

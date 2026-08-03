@@ -1,5 +1,5 @@
 import { test, expect, type Frame, type Locator } from "@playwright/test";
-import { loadAccounts } from "./helpers/env";
+import { loadAccounts, statePath } from "./helpers/env";
 import { apiPost, fbSignIn } from "./helpers/accounts";
 
 // The platform's one real payment surface: the public invoice pay-link.
@@ -112,4 +112,24 @@ test("a declined card leaves the invoice unpaid", async ({ page }) => {
   await page.reload();
   await expect(page.getByText("Amount due")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("£30.00").first()).toBeVisible();
+});
+
+// Connecting a payout account is the ONE route a provider has to getting paid,
+// and it used to be two clicks deep on a non-default tab inside a collapsed
+// sidebar group. Finance now opens on Payouts while payouts aren't live.
+test.describe("payout account setup is reachable", () => {
+  test.use({ storageState: statePath("freelancer") });
+
+  test("Finance opens on Payouts with a Connect button until payouts are live", async ({ page }) => {
+    await page.goto("/freelancer/finance");
+    await page.waitForLoadState("load");
+    // No click on "Payouts" here — landing there is the behaviour under test.
+    await expect(page.getByRole("button", { name: /Connect payouts|Continue setup/ }))
+      .toBeVisible({ timeout: 20_000 });
+
+    // An operator's own tab choice must win over the auto-select, or they
+    // could never read any other tab on an unconnected account.
+    await page.getByRole("button", { name: "Debts", exact: true }).click();
+    await expect(page.getByRole("button", { name: /Connect payouts|Continue setup/ })).toBeHidden();
+  });
 });

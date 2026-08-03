@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { collectedNet, refundedGross, owedOf } from "@/features/bookings/helpers";
@@ -41,6 +41,17 @@ export function FinanceAnalyticsApp() {
   const [tab, setTab] = useState<"overview" | "revenue" | "payouts" | "debts" | "people">("overview");
   const [nowMs] = useState(() => Date.now());
   const [connecting, setConnecting] = useState(false);
+  // Land on Payouts when payouts aren't set up yet — someone opening Finance
+  // with no payout account is almost always here to fix exactly that, and the
+  // Connect banner is otherwise two clicks deep on a non-default tab. Fires
+  // once, and never over a tab the operator has already chosen themselves.
+  const autoTabbed = useRef(false);
+  const [tabTouched, setTabTouched] = useState(false);
+  useEffect(() => {
+    if (autoTabbed.current || tabTouched || !status || status.payoutsEnabled) return;
+    autoTabbed.current = true;
+    setTab("payouts");
+  }, [status, tabTouched]);
 
   const load = useCallback(() => {
     apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(Array.isArray(b) ? b : []); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -55,6 +66,15 @@ export function FinanceAnalyticsApp() {
     setConnecting(true);
     try { const { url } = await apiPost<{ url: string }>("/api/payments/connect", {}); window.location.href = url; }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t start Stripe"); setConnecting(false); }
+  }
+
+  /** Into the provider's own Stripe dashboard — change bank details, see
+   *  payouts, download statements. The only route to payout settings once
+   *  onboarding is done and the Connect banner has gone. */
+  async function manage() {
+    setConnecting(true);
+    try { const { url } = await apiPost<{ url: string }>("/api/payments/dashboard", {}); window.location.href = url; }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t open Stripe"); setConnecting(false); }
   }
 
   const a = useMemo(() => {
@@ -178,7 +198,7 @@ export function FinanceAnalyticsApp() {
       <TabStrip
         tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["payouts", "Payouts"], ["debts", "Debts"], ["people", "Customers & learners"]]}
         value={tab}
-        onChange={setTab}
+        onChange={(t) => { setTabTouched(true); setTab(t); }}
       />
 
       {loading ? (
@@ -237,6 +257,18 @@ export function FinanceAnalyticsApp() {
                 <b>{status.connected ? "Finish setting up payouts" : "Connect your payout account"}</b> — card payments land in your own account. ActivityOS never holds your money.
               </div>
               <button type="button" onClick={connect} disabled={connecting} className="rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-bold text-white disabled:opacity-60">{connecting ? "Opening…" : status.connected ? "Continue setup" : "Connect payouts"}</button>
+            </div>
+          )}
+          {/* Stays put once payouts are live — the banner above disappears at
+              that point, and without this there'd be no way back to payout
+              settings to change a bank account. */}
+          {status?.payoutsEnabled && (
+            <div data-ui="payout-account" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+              <div className="text-[12.5px] text-[var(--ink-2)]">
+                <b className="text-[#0f7a43]">✓ Payout account connected</b>
+                <span className="text-[var(--ink-3)]"> — card payments go straight to your own bank. Bank details and statements live in Stripe.</span>
+              </div>
+              <button type="button" onClick={manage} disabled={connecting} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink)] disabled:opacity-60">{connecting ? "Opening…" : "Manage payouts →"}</button>
             </div>
           )}
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">

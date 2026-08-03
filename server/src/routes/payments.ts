@@ -1,7 +1,7 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import { canWrite, operatorScope } from "../middleware/role";
+import { canWrite, operatorScope, type Role } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
 import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -25,6 +25,11 @@ export const payments = Router();
 
 const paymentsCol = db.collection("payments");
 const tenantsCol = db.collection("tenants");
+
+/** The portal an operator role lives in — Stripe has to send them back to
+ *  their OWN portal, or PortalGuard bounces them on return. */
+const portalOf = (role: Role): string =>
+  role === "freelancer" || role === "franchise" ? role : "company";
 
 function needStripe(res: Response) {
   if (stripe) return stripe;
@@ -89,14 +94,57 @@ payments.post("/connect", async (req, res) => {
         });
       }
     }
+    // Return to the CALLER's own Finance page. These used to be hardcoded to
+    // /freelancer/finance, which bounced a company or franchise operator into
+    // a portal PortalGuard then blocked — they came back from Stripe to an
+    // error instead of their payouts.
+    const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
     const link = await s.accountLinks.create({
       account: accountId,
       type: "account_onboarding",
       // Both return to Finance — /status tells the UI how far they got.
-      refresh_url: `${webUrl}/freelancer/finance`,
-      return_url: `${webUrl}/freelancer/finance`,
+      refresh_url: finance,
+      return_url: finance,
     });
     res.json({ url: link.url, accountId });
+  } catch (e) {
+    stripeFail(res, e);
+  }
+});
+
+// POST /api/payments/dashboard — a one-time link into the provider's own
+// Stripe Express dashboard, where they change bank details, see payouts and
+// download statements. This is the "Manage" route AFTER onboarding: an
+// account_onboarding link is for finishing setup, not for revisiting it.
+payments.post("/dashboard", async (req, res) => {
+  const s = needStripe(res);
+  if (!s) return;
+  const auth = req.auth!;
+  if (!canWrite(auth.role) || !auth.tenantId) {
+    res.status(403).json({ error: "Requires an operator account with a tenant" });
+    return;
+  }
+  const tenant = await tenantsCol.doc(auth.tenantId).get();
+  const accountId: string | undefined = tenant.data()?.stripeAccountId;
+  if (!accountId) {
+    res.status(409).json({ error: "Connect your payout account first" });
+    return;
+  }
+  try {
+    // Stripe only issues a login link once onboarding has been submitted;
+    // before that the right destination is still the onboarding form.
+    const account = await s.accounts.retrieve(accountId);
+    if (!account.details_submitted) {
+      const finance = `${webUrl}/${portalOf(auth.role)}/finance`;
+      const link = await s.accountLinks.create({
+        account: accountId, type: "account_onboarding",
+        refresh_url: finance, return_url: finance,
+      });
+      res.json({ url: link.url, onboarding: true });
+      return;
+    }
+    const login = await s.accounts.createLoginLink(accountId);
+    res.json({ url: login.url, onboarding: false });
   } catch (e) {
     stripeFail(res, e);
   }
