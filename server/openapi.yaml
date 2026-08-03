@@ -1931,6 +1931,25 @@ paths:
         "200": { description: "Array of sent emails (newest first), each with the fromName/replyTo it went out under" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/emails/mailbox:
+    get:
+      tags: [emails]
+      summary: The tenant's inbound (redirect) address and whether mail is arriving
+      description: |
+        A provider adds ONE redirect rule in Outlook/Gmail pointing at
+        `address`; their incoming mail then appears in the in-app Inbox.
+        `configured:false` means the platform has no `INBOUND_EMAIL_DOMAIN`
+        yet and `address` is null — clients must say so rather than show an
+        address that goes nowhere. `pendingVerification` carries the code from
+        Gmail's forwarding-confirmation mail, which is delivered HERE and so is
+        otherwise unreachable by the provider.
+        Redirect captures RECEIVED mail only — mail a provider sends from their
+        own mailbox never passes an inbound rule.
+      parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
+      responses:
+        "200": { description: "{configured, address, received, lastAt, pendingVerification:{code,link,at}|null}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/emails/sender:
     get:
       tags: [emails]

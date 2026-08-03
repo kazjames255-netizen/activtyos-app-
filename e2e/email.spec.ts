@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { API_URL, loadAccounts, statePath } from "./helpers/env";
-import { TEST_EMAIL_DOMAIN, apiPost, fbSignIn } from "./helpers/accounts";
+import { TEST_EMAIL_DOMAIN, apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { arrangeEnquirer, wizardToContent } from "./helpers/email";
 
 // The Email client's backend round trips: an inbound email (webhook → store)
@@ -170,5 +170,49 @@ test.describe("email client", () => {
     await page.locator('select:has-text("Use a saved one")').selectOption({ label: savedName });
     await expect(page.getByText("Your design", { exact: true })).toBeVisible();
     await page.getByTitle("Cancel").click();
+  });
+});
+
+// Mailbox redirect: a provider adds ONE redirect rule in Outlook/Gmail pointing
+// at their ActivityOS address, and mail they receive appears in this Inbox.
+// Skips unless the stack has an INBOUND_EMAIL_DOMAIN — without one there is no
+// address to redirect to, and the setup panel correctly renders nothing.
+test.describe("mailbox redirect", () => {
+  test.use({ storageState: statePath("company") });
+
+  test("a redirected email reaches the Inbox, and Gmail's confirmation code is surfaced", async ({ page }) => {
+    const accounts = loadAccounts();
+    const op = await fbSignIn(accounts.accounts.company.email);
+    const mb = await apiFetch<{ configured: boolean; address: string | null }>("/api/emails/mailbox", op.idToken);
+    test.skip(!mb.configured || !mb.address, "no INBOUND_EMAIL_DOMAIN on this stack");
+
+    const stamp = Date.now().toString(36);
+    const subject = `E2E redirected ${stamp}`;
+    const code = `${Date.now()}`.slice(-9);
+    const post = (body: unknown) => fetch(`${API_URL}/api/emails/inbound`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_EMAIL_SECRET || "dev-inbound" },
+      body: JSON.stringify(body),
+    });
+
+    // A parent's mail, redirected by the provider's own rule — addressed ONLY
+    // to the inbound address, so this proves slug routing, not a tenantId hint.
+    expect((await post({ to: mb.address, from: "A Parent", fromEmail: `parent-${stamp}@example.com`, subject, text: "Any space in August?" })).status).toBe(201);
+
+    // Gmail's forwarding confirmation lands at the same address; the provider
+    // can't open that mailbox, so the panel has to show them the code.
+    expect((await post({
+      to: mb.address, from: "Gmail Team", fromEmail: "forwarding-noreply@google.com",
+      subject: `Gmail Forwarding Confirmation - Receive Mail from e2e-${stamp}@gmail.com`,
+      text: `Confirmation code: ${code}\nOr click https://mail.google.com/mail/vf-${stamp} to confirm.`,
+    })).status).toBe(201);
+
+    await page.goto("/company/email");
+    await expect(page.getByText(subject)).toBeVisible({ timeout: 20_000 });
+
+    const panel = page.locator('[data-ui="mailbox-setup"]');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('[data-ui="inbound-address"]')).toHaveText(mb.address!);
+    await expect(panel.locator('[data-ui="gmail-code"]')).toHaveText(code, { timeout: 20_000 });
   });
 });

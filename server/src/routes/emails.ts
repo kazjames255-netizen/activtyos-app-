@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
 import { fromAddress, fromDomain, fromName } from "../lib/mailer";
 import { ukNow } from "../lib/scheduler";
-import { tenantSender } from "../lib/sender";
+import { inboundAddress, inboundConfigured, inboundDomain, tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
@@ -237,6 +237,31 @@ emails.get("/sender", async (req, res) => {
   res.json({ fromName: s.name ?? fromName, fromAddress: s.address ?? fromAddress, replyTo: s.replyTo ?? null });
 });
 
+// GET /api/emails/mailbox — the tenant's inbound (redirect) address and
+// whether anything has actually arrived at it. A provider adds ONE redirect
+// rule in Outlook/Gmail pointing here and their parent mail shows up in the
+// in-app Inbox. `configured:false` means no INBOUND_EMAIL_DOMAIN is set up
+// yet — the UI must say so rather than hand out an address that goes nowhere.
+emails.get("/mailbox", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const address = await inboundAddress(tenantId);
+  const snap = await msgCol.where("tenantId", "==", tenantId).get();
+  let received = 0;
+  let lastAt: string | null = null;
+  let pending: { code?: string; link?: string; at?: string } | null = null;
+  for (const d of snap.docs) {
+    const m = d.data() as { at?: string; verificationCode?: string; verificationLink?: string };
+    received++;
+    if (m.at && (!lastAt || m.at > lastAt)) lastAt = m.at;
+    // Surface the newest Gmail confirmation still waiting to be entered.
+    if ((m.verificationCode || m.verificationLink) && (!pending?.at || (m.at ?? "") > pending.at)) {
+      pending = { code: m.verificationCode, link: m.verificationLink, at: m.at };
+    }
+  }
+  res.json({ configured: inboundConfigured, address, received, lastAt, pendingVerification: pending });
+});
+
 // GET /api/emails — the send history (operators).
 emails.get("/", async (req, res) => {
   const tenantId = opScope(req, res);
@@ -431,6 +456,22 @@ const inboundSchema = z.object({
   attachments: z.array(z.object({ name: z.string().max(200), size: z.string().max(20).optional() })).max(20).optional(),
 }).refine((i) => i.tenantId || i.to, { message: "Provide tenantId or a To address" });
 
+/** Google's forwarding-confirmation mail → the code and one-click link inside
+ *  it. Matched on Google's own sender first, with a subject fallback in case
+ *  the inbound provider drops the address. */
+function gmailConfirmation(fromEmail?: string, subject?: string, text?: string): { code?: string; link?: string } | null {
+  const isGoogle = (fromEmail ?? "").toLowerCase().includes("forwarding-noreply@google.com")
+    || /forwarding confirmation/i.test(subject ?? "");
+  if (!isGoogle) return null;
+  const body = text ?? "";
+  return {
+    // Gmail's confirmation codes are a long digit run; take the longest so a
+    // stray number elsewhere in the mail can't win.
+    code: (body.match(/\b\d{6,12}\b/g) ?? []).sort((a, b) => b.length - a.length)[0],
+    link: body.match(/https?:\/\/mail\.google\.com\/\S+/)?.[0],
+  };
+}
+
 export const emailsInbound = Router();
 emailsInbound.post("/", async (req, res) => {
   if (req.headers["x-inbound-secret"] !== INBOUND_SECRET) { res.status(401).json({ error: "Bad inbound secret" }); return; }
@@ -445,10 +486,11 @@ emailsInbound.post("/", async (req, res) => {
       const hit = await db.collection("tenants").where(field, "==", addr).limit(1).get();
       if (!hit.empty) { tenantId = hit.docs[0].id; break; }
     }
-    // A reply to the address we SENT as — `sunshine-camps@<our domain>` — is
-    // the common case once per-tenant local parts are on (lib/sender.ts), and
-    // it matches on the local part alone since the domain is always ours.
-    if (!tenantId && addr.endsWith(`@${fromDomain}`)) {
+    // Either of OUR domains resolves by slug: the sending domain (a reply to
+    // the address we sent as) or the inbound domain (a provider's redirect
+    // rule). Both are ours, so the local part alone identifies the tenant.
+    const ours = [fromDomain, inboundDomain].filter(Boolean);
+    if (!tenantId && ours.some((d) => addr.endsWith(`@${d}`))) {
       const slug = addr.slice(0, addr.lastIndexOf("@"));
       const hit = await db.collection("tenants").where("sendingSlug", "==", slug).limit(1).get();
       if (!hit.empty) tenantId = hit.docs[0].id;
@@ -458,6 +500,12 @@ emailsInbound.post("/", async (req, res) => {
     res.status(404).json({ error: "No provider matches that address" });
     return;
   }
+
+  // Gmail won't start forwarding until someone confirms a code it emails to
+  // the DESTINATION — which is us, a mailbox the provider can't open. Without
+  // surfacing it, every Gmail provider dead-ends here. Flag the message and
+  // lift the code out so the setup panel can show it.
+  const setup = gmailConfirmation(input.fromEmail, input.subject, input.text);
 
   const doc = {
     tenantId,
@@ -469,14 +517,16 @@ emailsInbound.post("/", async (req, res) => {
     body: input.text,
     ...(input.html ? { html: input.html } : {}),
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
-    labels: [] as string[],
+    labels: setup ? ["Mailbox setup"] : ([] as string[]),
+    ...(setup?.code ? { verificationCode: setup.code } : {}),
+    ...(setup?.link ? { verificationLink: setup.link } : {}),
     unread: true,
-    starred: false,
+    starred: !!setup,
     snoozedUntil: null,
     at: new Date().toISOString(),
   };
   const ref = await msgCol.add(doc);
-  res.status(201).json({ id: ref.id, ok: true });
+  res.status(201).json({ id: ref.id, ok: true, ...(setup ? { setup: true } : {}) });
 });
 
 // ── Open tracking (public) ────────────────────────────────────────────────

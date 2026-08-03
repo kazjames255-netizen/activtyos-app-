@@ -132,6 +132,51 @@ The second needs an inbound-parse provider wired to the existing
 `POST /api/emails/inbound` webhook — `PROD-READINESS.md` records that as not
 connected, which is why the Email Inbox stays empty.
 
+### Mailbox redirect — BUILT, waiting on an inbound domain
+
+Kaz's ask ("if they get a new email in Outlook they should see it on the
+platform") is answered by **redirect**, not mailbox sync. Each tenant gets
+`<slug>@<INBOUND_EMAIL_DOMAIN>`; the provider adds one redirect rule and their
+incoming mail appears in the in-app Inbox.
+
+- `GET /api/emails/mailbox` → address, whether anything has arrived, and any
+  pending Gmail confirmation. Reports `configured:false` until the platform has
+  an inbound domain, and the setup panel renders nothing rather than handing
+  out an address that swallows mail.
+- The Email Inbox shows the address, a copy button and per-provider steps.
+- **Gmail's confirmation code is surfaced.** Google emails it to the
+  destination — a mailbox the provider cannot open — so without this every
+  Gmail provider dead-ends. The inbound handler detects that mail, extracts the
+  code and link, and the panel displays them.
+
+**Two limits to state plainly to providers:**
+
+1. **Sent mail is NOT captured.** Redirect rules act on incoming mail only.
+   Mail a provider sends from Outlook never passes an inbound rule. Capturing
+   it needs IMAP/Graph sync (§7a) or an admin-level BCC rule on their tenant.
+   Replies sent *from ActivityOS* are already recorded, so redirect plus
+   in-app replies gives complete threads — the gap is only replies they send
+   from their own mailbox.
+2. **Provider coverage.** Outlook has true *redirect* (keeps the parent as
+   sender); Gmail has forwarding (preserves `From`, needs the code above);
+   most hosts have forwarders; **Yahoo historically requires a paid plan**.
+
+**Remaining to go live:** an inbound-parse provider (Postmark/Mailgun/SES
+inbound) with MX records on a dedicated subdomain, then set
+`INBOUND_EMAIL_DOMAIN`. Same ESP decision as §8.
+
+### §7a — why not IMAP/Graph sync
+
+Full sync was considered and deferred. IMAP no longer avoids OAuth (Microsoft
+has disabled basic auth for IMAP on Exchange Online, and Gmail steers to
+XOAUTH2), so it costs the same consent work while adding IMAP IDLE's
+persistent connection per mailbox, hard incremental-sync state, and full
+mailbox credentials instead of scoped tokens. If sync is ever funded, Graph
+(push subscriptions + delta queries) beats IMAP for Outlook, with IMAP kept as
+the fallback for custom-domain hosts. It also multiplies the data-protection
+exposure — a full mirror of a provider's mailbox is parents' and children's
+personal data under our control.
+
 It is also what §JJ reserves `reply+<threadId>@inbound.…` for. **New-message
 emails deliberately leave `Reply-To` unset** so that header stays free for it.
 

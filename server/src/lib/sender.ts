@@ -51,19 +51,22 @@ export const slugify = (name: string): string =>
     .slice(0, 32)
     .replace(/-+$/, "");
 
-/** The tenant's stable sending local part, assigned once and then never
- *  changed — a From address that drifts hurts recognition and breaks the
- *  inbound match. Returns undefined when the feature is off. */
-async function sendingSlug(
+/** The tenant's stable mail slug, assigned once and then never changed.
+ *
+ *  Assigned for EVERY tenant regardless of MAIL_PER_TENANT_FROM, because the
+ *  inbound address (`<slug>@<INBOUND_EMAIL_DOMAIN>`) depends on it too — a
+ *  provider's forwarding rule points at that address forever, so it must not
+ *  appear or change with an outbound feature flag. */
+export async function tenantSlug(
   tenantId: string,
-  tenant: FirebaseFirestore.DocumentSnapshot,
+  tenant?: FirebaseFirestore.DocumentSnapshot,
   name?: string,
-): Promise<string | undefined> {
-  if (!PER_TENANT_FROM) return undefined;
-  const existing = (tenant.get("sendingSlug") as string | undefined)?.trim();
+): Promise<string> {
+  const snap = tenant ?? (await db.collection("tenants").doc(tenantId).get());
+  const existing = (snap.get("sendingSlug") as string | undefined)?.trim();
   if (existing) return existing;
 
-  const base = slugify(name ?? "") || "provider";
+  const base = slugify(name ?? (snap.get("name") as string | undefined) ?? "") || "provider";
   // A reserved word, or a slug another tenant already owns, gets a short
   // tenant-derived suffix rather than silently colliding.
   const taken = RESERVED.has(base)
@@ -71,6 +74,24 @@ async function sendingSlug(
   const slug = taken ? `${base}-${tenantId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 6)}` : base;
   await db.collection("tenants").doc(tenantId).set({ sendingSlug: slug }, { merge: true });
   return slug;
+}
+
+// ── Inbound (mailbox redirect) ────────────────────────────────────────────
+// A provider adds ONE redirect rule in Outlook/Gmail pointing at their
+// ActivityOS address; their parent mail then appears in the in-app Inbox.
+// This is a SEPARATE domain from sending: its MX records point at the
+// inbound-parse provider, whereas the sending domain's don't.
+const INBOUND_DOMAIN = (process.env.INBOUND_EMAIL_DOMAIN ?? "").trim().toLowerCase();
+/** False until an inbound domain is configured — the UI must say so rather
+ *  than show providers an address that silently swallows their mail. */
+export const inboundConfigured = !!INBOUND_DOMAIN;
+export const inboundDomain = INBOUND_DOMAIN;
+
+/** Where this tenant's redirected mail should be sent, or null when no
+ *  inbound domain is configured yet. */
+export async function inboundAddress(tenantId: string): Promise<string | null> {
+  if (!INBOUND_DOMAIN) return null;
+  return `${await tenantSlug(tenantId)}@${INBOUND_DOMAIN}`;
 }
 
 /** Resolve a tenant's sending identity. Costs two doc reads, so callers that
@@ -115,10 +136,14 @@ export async function tenantSender(tenantId?: string, nameOverride?: string): Pr
       replyTo = ((owner.get("email") as string | undefined) ?? "").trim().toLowerCase() || undefined;
     }
   }
-  const slug = await sendingSlug(tenantId, tenant, name);
+  // The slug is assigned either way (inbound needs it); it only becomes the
+  // From address when per-tenant sending is switched on. Derive it from the
+  // tenant's own name, NOT `name` — that may carry a per-send override, and
+  // the slug has to stay stable forever.
+  const slug = await tenantSlug(tenantId, tenant, settings.providerName);
   return {
     ...(name ? { name } : {}),
     ...(replyTo?.includes("@") ? { replyTo } : {}),
-    ...(slug ? { address: `${slug}@${fromDomain}` } : {}),
+    ...(PER_TENANT_FROM ? { address: `${slug}@${fromDomain}` } : {}),
   };
 }

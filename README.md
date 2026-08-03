@@ -168,6 +168,14 @@ the **display name and Reply-To are the provider's**, resolved per tenant in
 `GET /api/emails/sender` returns the resolved identity, and the Email composer
 shows it above the audience picker.
 
+**Receiving mail (mailbox redirect).** Set `INBOUND_EMAIL_DOMAIN` (a subdomain
+whose MX points at an inbound-parse provider) and each tenant gets
+`<slug>@<that domain>`. A provider adds one redirect rule in Outlook/Gmail and
+their incoming mail lands in the in-app Inbox; the Email page shows the address
+and per-provider steps. Unset → the panel hides itself rather than showing an
+address that goes nowhere. Redirect captures RECEIVED mail only — see
+`docs/email-sending-identity.md` §5.
+
 **Per-tenant From addresses** (`sunshine-camps@…` instead of `no-reply@`) are
 built but **off** — set `MAIL_PER_TENANT_FROM=1` to enable. Only turn it on
 with an ESP that authenticates your domain: Gmail SMTP rewrites `From` to the

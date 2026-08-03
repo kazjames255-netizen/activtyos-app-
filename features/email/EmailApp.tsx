@@ -304,6 +304,79 @@ const FOLDERS: [string, string][] = [
   ["drafts", "Drafts"], ["scheduled", "Scheduled"], ["archive", "Archive"], ["spam", "Spam"], ["trash", "Trash"], ["all", "All mail"],
 ];
 
+interface Mailbox { configured: boolean; address: string | null; received: number; lastAt: string | null; pendingVerification: { code?: string; link?: string; at?: string } | null }
+
+/** "Connect your mailbox" — one redirect rule in Outlook/Gmail and a
+ *  provider's parent mail lands in this Inbox. Renders nothing until the
+ *  platform has an inbound domain: an unconfigured address would just swallow
+ *  their mail, and it isn't something a provider can fix. */
+function MailboxSetup() {
+  const [mb, setMb] = useState<Mailbox | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
+  const load = useCallback(() => { apiGet<Mailbox>("/api/emails/mailbox").then(setMb).catch(() => {}); }, []);
+  useEffect(load, [load]);
+  useRealtime(["emailMessages"], load);
+
+  if (!mb?.configured || !mb.address) return null;
+  const live = mb.received > 0;
+  const copy = () => { navigator.clipboard?.writeText(mb.address!).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); };
+
+  return (
+    <div data-ui="mailbox-setup" className="rounded-2xl border border-[var(--line)] bg-white p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[14px] font-extrabold text-[var(--ink)]">
+          {live ? "✓ Mailbox connected" : "📥 See your own emails here"}
+        </span>
+        <span className="text-[12px] text-[var(--ink-3)]">
+          {live ? `Last message ${when(mb.lastAt ?? undefined)}` : "Add one forwarding rule and your emails appear in this Inbox."}
+        </span>
+        <button type="button" onClick={() => setOpen((v) => !v)} className="ml-auto rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">
+          {open ? "Hide setup" : live ? "Setup steps" : "Show me how"}
+        </button>
+      </div>
+
+      {/* Gmail refuses to forward until a code it emails HERE is entered back
+          in Gmail — a mailbox the provider can't open, so surface it loudly. */}
+      {mb.pendingVerification && (
+        <div className="mt-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3">
+          <div className="text-[12.5px] font-bold text-[#7a5a12]">Gmail needs this confirmation code</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-white px-2.5 py-1 text-[15px] font-extrabold tracking-wider text-[#7a5a12]">{mb.pendingVerification.code}</code>}
+            <span className="text-[11.5px] text-[#7a5a12]">Paste it into Gmail&rsquo;s forwarding settings to finish.</span>
+            {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="text-[11.5px] font-bold text-[#1d3a8f] underline">or confirm via Google&rsquo;s link</a>}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[12px] font-bold text-[var(--ink-2)]">Your ActivityOS address</span>
+        <code data-ui="inbound-address" className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[12.5px] font-bold text-[var(--ink)]">{mb.address}</code>
+        <button type="button" onClick={copy} className="rounded-full border border-[var(--line)] px-3 py-1 text-[12px] font-bold text-[var(--ink-2)]">{copied ? "Copied ✓" : "Copy"}</button>
+      </div>
+
+      {open && (
+        <div className="mt-3 grid gap-3 text-[12px] leading-relaxed text-[var(--ink-2)] sm:grid-cols-3">
+          <div>
+            <div className="font-extrabold text-[var(--ink)]">Outlook</div>
+            Settings → Mail → <b>Rules</b> → Add new rule → condition <i>Apply to all messages</i> → action <b>Redirect to</b> → paste the address.
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Choose <b>Redirect</b>, not Forward — redirect keeps the parent as the sender.</div>
+          </div>
+          <div>
+            <div className="font-extrabold text-[var(--ink)]">Gmail</div>
+            Settings → <b>Forwarding and POP/IMAP</b> → Add a forwarding address → paste it → Google emails a code, which appears above → enter it in Gmail, then pick <i>Keep Gmail&rsquo;s copy</i>.
+          </div>
+          <div>
+            <div className="font-extrabold text-[var(--ink)]">Anything else</div>
+            Most hosts call it <b>forwarders</b> or <b>redirect</b> in webmail settings. Yahoo needs a paid plan for forwarding.
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Mail you send from your own mailbox won&rsquo;t appear here — only mail you receive.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
   const [enqLocs, setEnqLocs] = useState<string[]>([]);
@@ -376,6 +449,8 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             ); })}
           </div>
         </div>
+        <div className="flex flex-col gap-3">
+        <MailboxSetup />
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
             {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
@@ -405,8 +480,9 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             </div>
           ))}
         </div>
+        </div>
       </div>
-      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Star, read, folders, snooze and delete are saved to your account. Sent shows your real send history; Scheduled shows queued sends you can still cancel. Receiving mail here needs your mailbox forwarded to ActivityOS (ask support to connect it).</div>
+      <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Star, read, folders, snooze and delete are saved to your account. Sent shows your real send history; Scheduled shows queued sends you can still cancel.</div>
       {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
         const toolBtn = "flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#1d3a8f]";
         return (
