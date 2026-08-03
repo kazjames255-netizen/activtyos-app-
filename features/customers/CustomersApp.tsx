@@ -251,6 +251,8 @@ export function CustomersApp() {
   const [stage, setStage] = useState<Stage | "">("");
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"families" | "children">("families");
   const [loc, setLoc] = useState("");
@@ -428,12 +430,18 @@ export function CustomersApp() {
 
   /** Invite a family already on the books — the edit form no longer offers it. */
   async function sendInvite(c: Customer) {
-    setError(null);
+    setError(null); setNotice(null); setInvitingId(c.id);
+    const who = c.name || c.email || "the family";
     try {
       await apiPost(`/api/customers/${encodeURIComponent(c.id)}/invite`, {});
       refresh();
+      const msg = `✓ Sign-up link ${c.invitedAt ? "re-sent" : "sent"} to ${who}.`;
+      setNotice(msg);
+      setTimeout(() => setNotice((n) => (n === msg ? null : n)), 5000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't send the sign-up link");
+    } finally {
+      setInvitingId(null);
     }
   }
 
@@ -591,6 +599,12 @@ export function CustomersApp() {
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mb-3 rounded-lg border border-[#bfe6cf] bg-[#e9f8ef] px-3 py-2 text-[12.5px] font-semibold text-[#0f7a43]">
+          {notice}
         </div>
       )}
 
@@ -1376,10 +1390,11 @@ export function CustomersApp() {
                     <button
                       type="button"
                       onClick={() => sendInvite(c)}
+                      disabled={invitingId === c.id}
                       title={c.invitedAt ? "Send the sign-up link again" : "Create their account and email a link to set a password"}
-                      className="rounded-full border border-[var(--brand-2,#2f6bd8)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]"
+                      className="rounded-full border border-[var(--brand-2,#2f6bd8)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)] disabled:opacity-50"
                     >
-                      {c.invitedAt ? "Re-send sign-up link" : "Send sign-up link"}
+                      {invitingId === c.id ? "Sending…" : c.invitedAt ? "Re-send sign-up link" : "Send sign-up link"}
                     </button>
                   )}
                   {canWrite && (

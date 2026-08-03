@@ -521,7 +521,9 @@ export function emailSignUpInvite(p: {
       p.to,
       `${p.providerName} invited you to sign up to their booking platform`,
       html,
-      { attachments: brandAttachments(brand) },
+      // ONLY the provider's own logo — never the ActivityOS mark (an unreferenced
+      // aos-mark attachment shows as a stray "ActivityOS logo" chip in Gmail).
+      { attachments: brand.logo ? [brand.logo] : [] },
     );
   })().catch((e) => console.error("[mail] sign-up invite build failed:", (e as Error).message));
 }
