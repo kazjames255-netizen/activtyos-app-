@@ -16,7 +16,7 @@ Every send already carries the provider's identity as far as a shared address
 allows:
 
 ```
-From:     Sunshine Camps <no-reply@activityos.app>   ← their NAME, our address
+From:     Sunshine Camps <no-reply@activityos.uk>   ← their NAME, our address
 Reply-To: hello@sunshinecamps.co.uk                  ← their real mailbox
 ```
 
@@ -73,7 +73,7 @@ address.
 
 | | Setup burden | `From:` shows | Deliverability | Verdict |
 |---|---|---|---|---|
-| **A. Today** — our address, their name + Reply-To | none | `Sunshine Camps <…@activityos.app>` | ours, controlled | shipped |
+| **A. Today** — our address, their name + Reply-To | none | `Sunshine Camps <…@activityos.uk>` | ours, controlled | shipped |
 | **B. Single-sender verification** — they click a link | one click | their address | **breaks under DMARC** | avoid |
 | **C. Domain authentication** — they add DNS records | ~4 DNS records | `anything@theirdomain` | full alignment | the real white-label |
 | **D. Connect their mailbox** — Google/Microsoft OAuth | OAuth consent | their address | perfect | transactional only |
@@ -187,7 +187,7 @@ emails deliberately leave `Reply-To` unset** so that header stays free for it.
 Since the domain stays ours, DMARC is satisfied either way:
 
 ```
-From: Sunshine Camps <sunshine-camps@activityos.app>
+From: Sunshine Camps <sunshine-camps@activityos.uk>
 ```
 
 Reads as the provider rather than a robot, and gives each tenant a distinct
@@ -256,7 +256,7 @@ Also fixes the ~500 recipients/day Gmail cap against `MAX_RECIPIENTS` of 2000.
 ### Then turn on §6 and you have ~90% of the perceived outcome
 
 ```
-From:     Sunshine Camps <sunshine-camps@activityos.app>
+From:     Sunshine Camps <sunshine-camps@activityos.uk>
 Reply-To: hello@sunshinecamps.co.uk
 ```
 
@@ -272,6 +272,29 @@ over SMTP. Avoid: each provider must click a verification link sent to their
 own mailbox, it caps around 99 aliases, DMARC still fails for their domain, and
 it routes every provider's mail through one personal Google account. It is a
 worse version of Step 0 with permanent manual work.
+
+---
+
+## 7b. The domain question is SETTLED
+
+`activityos.uk` is already ours — registered 26 Jun 2026 at **Namecheap**
+(expires 26 Jun 2027), apex on Vercel, and referenced in code since 25 Jul as
+the public pricing page. Nothing to buy.
+
+Two things that follow from how it's already configured:
+
+- **The root domain already has mailboxes** (Namecheap Private Email,
+  `mx1.privateemail.com`). Do NOT repoint the apex MX at an email service —
+  that would break whatever mail already runs there. Inbound goes on a
+  **subdomain**, `inbound.activityos.uk`, with its own MX. This is exactly why
+  `INBOUND_EMAIL_DOMAIN` is a separate setting from the sending domain.
+- **SPF must be merged, not added.** Adding a second SPF record to a domain
+  that already has one is a misconfiguration that breaks authentication for
+  both. One record, listing both senders.
+
+DNS access is on Kaz's Namecheap account. Also worth confirming auto-renew is
+on: if it lapses, the site, every booking link and all platform mail stop at
+once.
 
 ---
 
