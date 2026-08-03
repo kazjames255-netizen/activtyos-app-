@@ -108,7 +108,7 @@ providers who opt in, falling back to A for everyone else.
 - **Step 0 — move off personal Gmail onto an ESP on an ActivityOS domain.**
   Independent of white-label and the actual blocker: it fixes the 500/day cap,
   stops every provider's mail carrying a personal address, and is the
-  prerequisite for everything below. **Do this first.**
+  prerequisite for everything below. **Do this first — costed in §7.**
 - **Step 1 — per-tenant local part** (§6). Cheap, no provider setup, and it
   unlocks inbound reply routing.
 - **Step 2 — opt-in domain authentication** (option C) for providers who ask.
@@ -179,13 +179,72 @@ every send to the platform address (the persisted slug is simply ignored).
 
 ---
 
-## 7. Decisions needed
+## 7. Step 0 in practice — stop showing a personal Gmail
 
-1. **Is per-provider from-address in the current milestone, or still deferred?**
+Today every provider's mail leaves as `amirmoumen@gmail.com`. Two separate
+problems get bundled together here, and only the first is cheap:
+
+| | Fixable how | Cost |
+|---|---|---|
+| **Stop showing a personal Gmail** | our domain + an ESP | ~£10–15/yr + £0–20/mo |
+| **Show the provider's own address** | *their* DNS records, per provider | support time, §3 option C |
+
+### It is less exposed than it looks — but still worth fixing
+
+A parent's inbox list shows the **display name** ("Sunshine Camps"); the
+address only appears if they expand the message or hit Reply. Most never see
+it. But on a booking confirmation for someone's child, a personal Gmail
+address reads as suspicious when they do.
+
+### What Step 0 takes
+
+1. **A domain** for the platform (~£10–15/yr). **We don't own one yet** —
+   `WEB_URL`/`API_URL` are still `localhost` everywhere.
+2. **An ESP** — Resend's free tier covers roughly 3k emails/month; Postmark and
+   SES are the other sane picks. *Verify current pricing before quoting.*
+3. **DNS once, on OUR domain** — SPF, DKIM, DMARC. Providers do nothing.
+4. **`server/.env`** — swap `SMTP_*` and `MAIL_FROM`. That is the entire code
+   change; `lib/mailer.ts` is already provider-agnostic SMTP.
+
+Also fixes the ~500 recipients/day Gmail cap against `MAX_RECIPIENTS` of 2000.
+
+### Then turn on §6 and you have ~90% of the perceived outcome
+
+```
+From:     Sunshine Camps <sunshine-camps@activityos.app>
+Reply-To: hello@sunshinecamps.co.uk
+```
+
+Provider's name as the sender, their name in the address, replies to their real
+mailbox, **nothing of ours visible**. A parent would have to look closely to
+notice the domain isn't the provider's. The remaining 10% —
+`From: hello@sunshinecamps.co.uk` — is option C and needs that provider's DNS.
+
+### The shortcut to refuse
+
+Gmail's "Send mail as" aliases technically allow sending as another address
+over SMTP. Avoid: each provider must click a verification link sent to their
+own mailbox, it caps around 99 aliases, DMARC still fails for their domain, and
+it routes every provider's mail through one personal Google account. It is a
+worse version of Step 0 with permanent manual work.
+
+---
+
+## 8. Decisions needed
+
+1. **Buy a platform domain + pick an ESP (§7).** The only urgent one — until
+   this lands, every provider's mail shows a personal Gmail address and is
+   capped at ~500 recipients/day. Recurring cost, so it's a client call.
+2. **Is per-provider from-address in the current milestone, or still deferred?**
    §JJ tags it white-label; this memo assumes deferred until told otherwise.
-2. **Which ESP?** Resend / Postmark / SendGrid / SES. Recurring cost → client
-   call. All support multi-domain auth; Postmark and Resend have the least
-   painful domain-verification UX, which matters given §4's support point.
-3. **Does the Build Manual (product spec "item 9") pin a model?** That document
+3. **Which ESP?** Resend / Postmark / SendGrid / SES. All support multi-domain
+   auth; Postmark and Resend have the least painful domain-verification UX,
+   which matters given §4's support point.
+4. **Should replies also land in the platform Inbox (§5)?** Not free: it puts
+   our infrastructure in the path of a parent's reply, so a webhook or
+   forwarding failure loses a message that today would simply have arrived.
+   Today's mailbox-only routing cannot fail that way. Recommend keeping
+   mailbox-only as the default and making platform-capture opt-in.
+5. **Does the Build Manual (product spec "item 9") pin a model?** That document
    is **not in this repo** — `mailer.ts:3` only references it. It should be read
    before we commit, in case it specifies something narrower.
