@@ -359,7 +359,7 @@ interface Mailbox { configured: boolean; address: string | null; received: numbe
  *  heard of mail forwarding: pick your email, follow four steps, and the panel
  *  confirms by itself the moment the first message lands. Renders nothing
  *  until the platform has an inbound domain. */
-function MailboxSetup() {
+function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" }) {
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
   const [host, setHost] = useState<string | null>(null);
@@ -367,7 +367,22 @@ function MailboxSetup() {
   useEffect(load, [load]);
   useRealtime(["emailMessages"], load);
 
-  if (!mb?.configured || !mb.address) return null;
+  // Not switched on for this platform yet. The Inbox stays silent — it isn't
+  // something a provider can act on. Settings is where someone goes to ASK,
+  // so it owes them an answer rather than an empty tab.
+  if (!mb?.configured || !mb.address) {
+    if (context !== "settings" || !mb) return null;
+    return (
+      <Card className="p-4">
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">Show your own emails here</div>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--ink-3)]">
+          Forwarding your own inbox into ActivityOS isn&rsquo;t switched on for your account yet.
+          Once it is, you&rsquo;ll get your own address here and everything parents email you will
+          appear in the Inbox alongside what you send. Ask support to turn it on.
+        </p>
+      </Card>
+    );
+  }
   const address = mb.address;
   const live = mb.received > 0;
   const copy = () => { navigator.clipboard?.writeText(address).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); };
@@ -1645,6 +1660,7 @@ function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch
   const chip = (on: boolean) => on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" };
   return (
     <div className="flex max-w-2xl flex-col gap-3">
+      <MailboxSetup context="settings" />
       <Card className="p-4">
         <div className="text-[14px] font-extrabold text-[var(--ink)]">Undo send</div>
         <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">A grace period after you hit Send where you can still pull it back before it goes.</p>
