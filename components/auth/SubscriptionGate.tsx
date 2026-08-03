@@ -24,10 +24,13 @@ export function SubscriptionGate({ portal, children }: { portal: string; childre
     apiGet<{ current: { status: string } }>("/api/subscription")
       .then((d) => {
         if (cancelled) return;
-        // active/trialing/canceling all still have access (canceling keeps it
-        // until period end); none/canceled/past_due are walled.
+        // Only a BRAND-NEW signup (status "none" — never picked a plan / gave a
+        // card) is walled behind the plan picker. Once they've started a trial
+        // the card is already captured and the subscription exists, so we never
+        // re-wall them with the full pick-a-plan screen — a lapsed/cancelled/
+        // past-due state is surfaced by the TrialBanner, not a hard gate.
         const s = d.current?.status;
-        setState(s === "active" || s === "trialing" || s === "canceling" ? "ok" : "gated");
+        setState(!s || s === "none" ? "gated" : "ok");
       })
       .catch(() => { if (!cancelled) setState("ok"); }); // API unreachable — don't lock the shell
     return () => { cancelled = true; };
