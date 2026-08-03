@@ -2762,6 +2762,10 @@ Two things for you:
 > The Setup toggle has a home whenever you want to add it.
 >
 > **Per-provider from-address: PARTIAL — read this before wiring anything.**
+> Options, tradeoffs and a staged plan are written up in
+> **`docs/email-sending-identity.md`** — including why a provider's own address
+> can't simply go in the `From:` line, and the three decisions I need back
+> (milestone or deferred / which ESP / what the Build Manual's item 9 says).
 > The from-*address* is still one `MAIL_FROM` and stays that way until
 > white-label (each provider needs their own verified sending domain, which
 > means a transactional provider + per-tenant DNS onboarding; it can't be done

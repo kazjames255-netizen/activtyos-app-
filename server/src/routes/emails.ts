@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
-import { fromAddress, fromName } from "../lib/mailer";
+import { fromAddress, fromDomain, fromName } from "../lib/mailer";
 import { ukNow } from "../lib/scheduler";
 import { tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
@@ -234,7 +234,7 @@ emails.get("/sender", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const s = await tenantSender(tenantId);
-  res.json({ fromName: s.name ?? fromName, fromAddress, replyTo: s.replyTo ?? null });
+  res.json({ fromName: s.name ?? fromName, fromAddress: s.address ?? fromAddress, replyTo: s.replyTo ?? null });
 });
 
 // GET /api/emails — the send history (operators).
@@ -444,6 +444,14 @@ emailsInbound.post("/", async (req, res) => {
     for (const field of ["notifyEmail", "email"]) {
       const hit = await db.collection("tenants").where(field, "==", addr).limit(1).get();
       if (!hit.empty) { tenantId = hit.docs[0].id; break; }
+    }
+    // A reply to the address we SENT as — `sunshine-camps@<our domain>` — is
+    // the common case once per-tenant local parts are on (lib/sender.ts), and
+    // it matches on the local part alone since the domain is always ours.
+    if (!tenantId && addr.endsWith(`@${fromDomain}`)) {
+      const slug = addr.slice(0, addr.lastIndexOf("@"));
+      const hit = await db.collection("tenants").where("sendingSlug", "==", slug).limit(1).get();
+      if (!hit.empty) tenantId = hit.docs[0].id;
     }
   }
   if (!tenantId || !(await db.collection("tenants").doc(tenantId).get()).exists) {

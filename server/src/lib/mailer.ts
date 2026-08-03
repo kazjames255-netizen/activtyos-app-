@@ -53,8 +53,11 @@ function getTransport() {
 // name in front of it (see lib/sender.ts).
 const MAIL_FROM = process.env.MAIL_FROM || "ActivityOS <no-reply@activityos.local>";
 const angled = MAIL_FROM.match(/<([^>]+)>/);
-/** The address every send goes out as, whoever it's "from". */
+/** The platform's default From address. A tenant may override the LOCAL PART
+ *  (see lib/sender.ts) — never the domain, which is the one we authenticate. */
 export const fromAddress = (angled ? angled[1] : MAIL_FROM).trim();
+/** The authenticated sending domain — everything after the last "@". */
+export const fromDomain = fromAddress.slice(fromAddress.lastIndexOf("@") + 1);
 /** The platform's own display name — used when no tenant identity applies. */
 export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace(/^"|"$/g, "") : "";
 
@@ -83,7 +86,9 @@ export async function sendMail(to: string, subject: string, html: string, sender
     const info = await t.sendMail({
       // Object form so nodemailer does the quoting/MIME-encoding for names
       // with commas, quotes or accents.
-      from: sender?.name ? { name: sender.name, address: fromAddress } : MAIL_FROM,
+      from: sender?.name || sender?.address
+        ? { name: sender.name ?? fromName, address: sender.address ?? fromAddress }
+        : MAIL_FROM,
       ...(sender?.replyTo ? { replyTo: sender.replyTo } : {}),
       to,
       subject,

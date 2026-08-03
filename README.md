@@ -166,7 +166,13 @@ the **display name and Reply-To are the provider's**, resolved per tenant in
   A reply reaches the provider instead of a no-reply box.
 
 `GET /api/emails/sender` returns the resolved identity, and the Email composer
-shows it above the audience picker. Two deliberate exceptions: new-message
+shows it above the audience picker.
+
+**Per-tenant From addresses** (`sunshine-camps@…` instead of `no-reply@`) are
+built but **off** — set `MAIL_PER_TENANT_FROM=1` to enable. Only turn it on
+with an ESP that authenticates your domain: Gmail SMTP rewrites `From` to the
+authenticated account, so the per-tenant local part would be discarded. See
+`docs/email-sending-identity.md`. Two deliberate exceptions: new-message
 alerts and team-audience notifications set the name but **no Reply-To** — that
 header is reserved for §JJ's reply-by-email thread routing.
 
