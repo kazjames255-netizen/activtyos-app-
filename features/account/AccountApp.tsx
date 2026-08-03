@@ -17,9 +17,30 @@ const LIGHT_PALETTE = {
 } as CSSProperties;
 const looksEmail = (s: string) => /@/.test(s);
 
+// Downscale any uploaded image to a PNG/JPG under the upload cap, so a big logo
+// still fits (mirrors the Setup logo upload; handles SVGs that report 0×0).
+async function compressLogo(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const iw = img.naturalWidth || img.width || 480, ih = img.naturalHeight || img.height || 480;
+      const s = Math.min(1, 480 / Math.max(iw, ih));
+      const w = Math.round(iw * s), h = Math.round(ih * s);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const ctx = c.getContext("2d"); if (!ctx) { resolve(dataUrl); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      let out = c.toDataURL("image/png");
+      if (out.length > 820_000) { let q = 0.85; out = c.toDataURL("image/jpeg", q); while (out.length > 820_000 && q > 0.4) { q -= 0.12; out = c.toDataURL("image/jpeg", q); } }
+      resolve(out);
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 export function AccountApp() {
   const { signOutUser } = useAuth();
-  const { settings } = useSettings();
+  const { settings, save } = useSettings();
   const [p, setP] = useState<Profile | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -42,6 +63,26 @@ export function AccountApp() {
     }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]; if (!f) return;
+    setError(null); setOk(null);
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); });
+      const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl;
+      const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) });
+      await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } });
+      setOk("Logo saved — it'll show on your customer emails and pages.");
+    } catch (err) {
+      setError(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…).");
+    }
+    e.target.value = "";
+  }
+  async function removeLogo() {
+    setError(null); setOk(null);
+    try { await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } }); setOk("Logo removed."); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t remove the logo"); }
+  }
 
   async function saveProfile() {
     setError(null); setOk(null);
@@ -103,6 +144,24 @@ export function AccountApp() {
               <a href={`/${p.role}/setup`} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Edit in Setup →</a>
             </div>
             <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">The details you gave when you signed up. Manage them in Setup.</p>
+
+            {/* Logo — editable right here (not only in Setup), since it's the one
+                thing every customer email + page shows. */}
+            <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
+              <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Logo</div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                {b.logoUrl
+                  ? <img src={b.logoUrl} alt="Your logo" className="h-10 max-w-[140px] rounded border border-[var(--line)] bg-white object-contain" />
+                  : <span className="text-[12px] text-[var(--ink-3)]">No logo yet — parents just see your name.</span>}
+                <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
+                  {b.logoUrl ? "⬆ Change logo" : "⬆ Upload logo"}
+                  <input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={uploadLogo} />
+                </label>
+                {b.logoUrl && <button type="button" onClick={removeLogo} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+              </div>
+              <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Shown on your customer emails, booking pages and PDFs. PNG, JPG, SVG, WebP, GIF — up to 1MB, resized automatically.</div>
+            </div>
+
             <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
               {reg.map(([k, v]) => (
                 <div key={k} className="flex flex-col">
