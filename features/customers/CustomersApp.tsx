@@ -24,6 +24,7 @@ import { QuestionFields } from "@/components/QuestionFields";
 const ageOf = (c: { dob?: string; age?: number }): number | null =>
   ageOn(c.dob, new Date().toISOString().slice(0, 10)) ?? (c.age ?? null);
 import { FamiliesExport, type FamilyRow } from "./FamiliesExport";
+import { FamilyImport } from "./FamilyImport";
 import type { Booking } from "@/features/bookings/types";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -249,6 +250,7 @@ export function CustomersApp() {
   const [q, setQ] = useState("");
   const [stage, setStage] = useState<Stage | "">("");
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"families" | "children">("families");
   const [loc, setLoc] = useState("");
@@ -558,6 +560,11 @@ export function CustomersApp() {
             >
               ⬇ Export
             </Button>
+            {canWrite && (
+              <Button title="Bulk-add families from a spreadsheet + invite them" onClick={() => setImporting(true)}>
+                📥 Import
+              </Button>
+            )}
             {canWrite && !draft && (
               <Button variant="primary" className="!bg-white !border-white !text-[#1d3a8f]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
                 ＋ Add family
@@ -1439,6 +1446,7 @@ export function CustomersApp() {
           onClose={() => setExporting(false)}
         />
       )}
+      {importing && <FamilyImport onClose={() => setImporting(false)} onDone={refresh} />}
     </div>
   );
 }
