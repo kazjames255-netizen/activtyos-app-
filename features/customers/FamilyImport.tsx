@@ -113,10 +113,14 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
     <div onClick={(e) => e.target === e.currentTarget && !running && onClose()} className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8">
       <Card className="w-full max-w-[620px] px-5 py-[18px]">
         <h3 className="m-0 font-[var(--ff-display)] text-[19px] leading-tight text-[var(--ink)]">Import families</h3>
-        <p className="mt-1 mb-3 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
+        <p className="mt-1 mb-2 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
           Paste rows straight from <b>Excel or Google Sheets</b>, or upload a <b>CSV / TSV</b> file. We detect the columns
           (first name, surname, email, phone) — a header row helps but isn’t needed. Each becomes a family, and you can email
           them all a sign-up invite in one go.
+        </p>
+        <p className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
+          📞 <b>Phone is optional.</b> Add it and it’s saved on the family’s record; leave it blank and you (or the family) can
+          add it any time.
         </p>
 
         {result ? (

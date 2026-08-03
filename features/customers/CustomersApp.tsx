@@ -629,8 +629,8 @@ export function CustomersApp() {
               <Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} className="w-full" />
             </div>
             <div>
-              <FieldLabel>Phone</FieldLabel>
-              <Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} className="w-full" />
+              <FieldLabel>Phone <span className="font-normal text-[var(--ink-3)]">(optional)</span></FieldLabel>
+              <Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} className="w-full" placeholder="Optional — they add it themselves if blank" />
             </div>
           </div>
 
