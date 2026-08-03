@@ -643,7 +643,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -792,6 +792,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       .then((r) => setWalletBalance((r?.balances ?? []).find((x) => x.tenantId === tenantId)?.balance ?? 0))
       .catch(() => {});
   }, [tenantId]);
+
+  // The parent's contact phone. Prefilled from what the provider has on file
+  // (e.g. from a bulk import); if they've none, the family enters it here — a
+  // booking needs a contact number, so it's required before they can book.
+  const [phone, setPhone] = useState("");
+  const [phonePrefilled, setPhonePrefilled] = useState(false);
+  useEffect(() => {
+    if (!parentMode || !tenantId) return;
+    apiGet<{ phone: string }>(`/api/my/contact?tenantId=${encodeURIComponent(tenantId)}`)
+      .then((r) => { if (r?.phone?.trim()) { setPhone(r.phone.trim()); setPhonePrefilled(true); } })
+      .catch(() => {});
+  }, [parentMode, tenantId]);
   // ── Discount code (parent only) ─────────────────────────────────────────
   // A parent can type a code or one-tap one of their own coupons. We validate it
   // against the SAME engine the charge uses (/api/discounts/validate → shared
@@ -1885,8 +1897,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className="mt-2 text-[11.5px] font-semibold" style={{ color: "#dc2626" }}>{booking.error}</div>
       )}
 
+      {ckStage === "pay" && parentMode && (
+        <div className="mt-3">
+          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>Contact phone</label>
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 07700 900123"
+            className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
+            style={{ background: tk.inputBg, borderColor: phone.trim() ? tk.line : tk.accent, color: tk.ink }} />
+          <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
+            {phone.trim()
+              ? (phonePrefilled ? "From your provider — edit it if it's changed." : "So your provider can reach you about this booking.")
+              : "We need a contact number to complete your booking."}
+          </div>
+        </div>
+      )}
+
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -1911,6 +1937,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // The parent's own payment reference per child (voucher/TFC matching).
             voucherRefs: method === "voucher" ? voucherRefs : undefined,
             discountCodes: appliedCodes.map((a) => a.code),
+            // The parent's contact number (required above); lands on their
+            // family record if it hasn't got one yet.
+            phone: parentMode ? phone.trim() || undefined : undefined,
             // Only sent when the family chose to spend LESS than their full
             // balance — otherwise the server auto-applies it all (authoritative).
             walletCap: walletUse === null ? undefined : walletApplied,
@@ -1922,6 +1951,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         }}>
         {booking?.busy ? "Booking…"
           : !parentMode && !b.parent ? "Find the parent first"
+          : parentMode && !phone.trim() ? "Add your contact phone"
           : roster.length === 0 ? "Add a child first"
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
           : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`

@@ -121,6 +121,9 @@ const basketSchema = z.object({
   // spend it all (the default). Capped server-side at the real balance, so a
   // stale/oversized value can never overdraw the wallet.
   walletCap: z.number().nonnegative().optional(),
+  // The booker's phone, captured at checkout (required client-side when they
+  // have none on file). Lands on the family record if it hasn't got one yet.
+  phone: z.string().trim().max(40).optional(),
 });
 const legacySchema = z.object({
   listingId: z.string().min(1),
@@ -255,6 +258,21 @@ my.get("/providers", async (req, res) => {
   if (!ids.length) { res.json([]); return; }
   const tenants = await db.getAll(...ids.map((id) => db.collection("tenants").doc(id)));
   res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
+});
+
+// GET /api/my/contact?tenantId= — the family's own on-file phone with a
+// provider, to prefill checkout. Empty when they have none yet (the client then
+// requires them to enter one). Read-only.
+my.get("/contact", async (req, res) => {
+  const email = tokenEmail(req);
+  const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : "";
+  if (!email || !tenantId) { res.json({ phone: "" }); return; }
+  let phone = "";
+  for (const e of [email.toLowerCase(), email]) {
+    const cust = await db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", e).limit(1).get();
+    if (!cust.empty) { phone = ((cust.docs[0].data().phone as string | undefined) ?? "").trim(); break; }
+  }
+  res.json({ phone });
 });
 
 // GET /api/my/wallet — the family's store credit, per provider, with the
@@ -1218,7 +1236,7 @@ my.post("/bookings", async (req, res) => {
     void upsertFamilyFromBasket(listing.tenantId, {
       booker: bookerName,
       email: familyEmail,
-      phone: onBehalf?.phone,
+      phone: onBehalf?.phone ?? ("phone" in input ? input.phone : undefined),
       uid: familyUid,
       children: bookings.map((b) => ({ name: b.child, childId: b.childId, age: b.age })),
     });

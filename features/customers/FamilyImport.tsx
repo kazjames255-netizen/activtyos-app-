@@ -88,6 +88,15 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
     try { setText(await f.text()); } catch { /* ignore unreadable file */ }
   }
 
+  function downloadTemplate() {
+    const csv = "First name,Surname,Email,Phone (optional)\nSarah,Doyle,sarah@example.com,07700 900123\nTom,Ives,tom@example.com,\n";
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "activityos-families-template.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
   async function run() {
     if (!rows.length) return;
     setRunning(true); setProgress(0); setResult(null);
@@ -139,6 +148,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
               <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
                 ⬆ Choose a file<input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void readFile(f); e.target.value = ""; }} />
               </label>
+              <button type="button" onClick={downloadTemplate} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">⬇ Download CSV template</button>
               <span className="text-[11.5px] text-[var(--ink-3)]">or paste below</span>
             </div>
             <textarea

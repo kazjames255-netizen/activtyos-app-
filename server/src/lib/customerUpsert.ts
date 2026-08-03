@@ -111,6 +111,9 @@ export async function upsertFamilyFromBasket(
     const patch: Record<string, unknown> = {};
     if (missing.length) patch.children = [...children, ...missing];
     if (family.uid && doc.data().uid !== family.uid) patch.uid = family.uid;
+    // Fill a MISSING phone from what the family gave at checkout — but never
+    // overwrite one the provider already has on file.
+    if (family.phone?.trim() && !((doc.data().phone as string | undefined) ?? "").trim()) patch.phone = family.phone.trim();
     if (Object.keys(patch).length) await doc.ref.update(patch);
   } catch (e) {
     console.error("[customers] family upsert failed:", (e as Error).message);
