@@ -256,7 +256,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   }[] = [
     {
       key: "about",
-      emoji: "🧒",
+      emoji: "👦👧",
       title: "About your child",
       sub: "The basics for the register.",
       ok: canLeaveAbout,
