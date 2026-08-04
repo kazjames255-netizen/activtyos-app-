@@ -87,6 +87,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     ? Array.from(new Set((searchParams.get("emails") ?? "").split(",").map((e) => e.trim()).filter(Boolean)))
     : [];
   const preCompose = preEmails.length > 0;
+  // Optional pre-filled message body (e.g. "Hi Sarah," from the Contact panel).
+  const preBody = preCompose ? (searchParams.get("body") ?? "") : "";
   // Parent deep-link from a newsfeed post/newsletter ("Message us for more info"):
   // ?compose=1&tenant=<id>&subject=<title> opens the composer pre-addressed to that
   // provider with the subject filled, leaving the parent to type the message.
@@ -95,7 +97,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(preBody);
   const [error, setError] = useState<string | null>(null);
   const [composing, setComposing] = useState(preCompose || preParentCompose);
   const [providers, setProviders] = useState<Provider[]>([]);

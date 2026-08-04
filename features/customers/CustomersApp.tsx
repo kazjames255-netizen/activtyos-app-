@@ -199,9 +199,13 @@ function ContactPane({
         ) : (
           <span className={dead}>📱 No phone number</span>
         )}
-        <a href={`/freelancer/messages?to=${encodeURIComponent(email ?? name)}`} className={item}>
-          💌 Message in app
-        </a>
+        {email ? (
+          <a href={`/freelancer/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`Hi ${name.split(" ")[0] || "there"},\n\n`)}`} className={item}>
+            💌 <span className="min-w-0 flex-1 truncate">Message in app</span>
+          </a>
+        ) : (
+          <span className={dead}>💌 No email for in-app message</span>
+        )}
       </div>
 
       {(email || usable) && (
