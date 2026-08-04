@@ -7,7 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 
 interface Provider { tenantId: string; name: string }
-interface Option { id: string; name: string; price: number; description?: string }
+interface Option { id: string; name: string; price: number; description?: string; allergens?: string[] }
 interface OrderItem { name: string; qty: number; lineTotal: number }
 interface Order { id: string; tenantId: string; childName: string; date: string; items: OrderItem[]; total: number; status: string; pay: string }
 
@@ -76,8 +76,12 @@ export function ParentMealsApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Meals</h2>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Order meals from your provider’s menu.</p>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🍽️</span>Meals
+        </div>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Order meals from your provider’s menu — allergens are shown on each item; pay the provider at drop-off.</p>
+      </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
@@ -118,6 +122,7 @@ export function ParentMealsApp() {
                   <div key={o.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
                     <span className="text-[13px] font-bold">{o.name}</span>
                     <span className="text-[12.5px] tabular-nums">{money(o.price)}</span>
+                    {(o.allergens?.length ?? 0) > 0 && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-1.5 py-[1px] text-[10px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {o.allergens!.join(", ")}</span>}
                     {o.description && <span className="min-w-0 flex-1 truncate text-[11px] text-[var(--ink-3)]">{o.description}</span>}
                     <div className="ml-auto flex items-center gap-1.5">
                       <Button sm onClick={() => bump(o.id, -1)} aria-label="Less">−</Button>

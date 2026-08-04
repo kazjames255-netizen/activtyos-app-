@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input } from "@/components/ui";
+import { OperatorPage } from "@/components/OperatorPage";
 import { MealShopApp } from "./MealShopApp";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -97,9 +98,11 @@ export function MealsApp() {
   if (tab === "shop") return <MealShopApp canManage={canManage} onBoard={() => setTab("board")} />;
 
   return (
-    <div className="text-[var(--ink)]">
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Meals &amp; allergies</h2>
+    <OperatorPage
+      title="Meals & allergies"
+      icon="🍽️"
+      lede={`${dayLabel(date)} — the menu, and who at the table needs care.`}
+      actions={
         <div className="flex items-center gap-1.5">
           <Button sm onClick={() => setTab("shop")}>Meal shop →</Button>
           <Button sm onClick={() => setDate((d) => shiftDay(d, -1))} aria-label="Previous day">←</Button>
@@ -107,9 +110,8 @@ export function MealsApp() {
           <Button sm onClick={() => setDate((d) => shiftDay(d, 1))} aria-label="Next day">→</Button>
           {date !== todayIso() && <Button sm onClick={() => setDate(todayIso())}>Today</Button>}
         </div>
-      </div>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{dayLabel(date)} — the menu, and who at the table needs care.</p>
-
+      }
+    >
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
       {board && (
@@ -169,6 +171,6 @@ export function MealsApp() {
           ))}
         </div>
       )}
-    </div>
+    </OperatorPage>
   );
 }
