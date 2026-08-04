@@ -58,14 +58,20 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
     : item.view === "coupons" ? (coupons > 0 ? String(coupons) : null)
     : item.badge;
   // A faded section still shows (so the parent knows it exists) but reads as
-  // empty — dimmed, a "no info" tag, and not clickable.
+  // empty — dimmed, with a soft "no info" pill. Still tappable, so it fills in
+  // the moment the provider adds something.
   if (faded) {
     return (
-      <div className={`${itemCls} cursor-default opacity-45`} style={{ color: "var(--side-nav)" }} title={`${item.label} — nothing here yet`} aria-disabled>
+      <Link
+        href={`/${portal}/${item.view}`}
+        className={`${itemCls} opacity-60 transition-opacity hover:opacity-90`}
+        style={{ color: "var(--side-nav)" }}
+        title={`${item.label} — nothing here yet`}
+      >
         <Icon icon={item.icon} />
         <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
-        <span className="ml-auto flex-none rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-[var(--side-muted)]">no info</span>
-      </div>
+        <span className="ml-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">no info</span>
+      </Link>
     );
   }
   return (
@@ -186,11 +192,23 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // published one for them — otherwise it's an empty page, so hide it. Starts
   // hidden so it never flashes before we know.
   const [hasTimetable, setHasTimetable] = useState(false);
+  // Which content sections are EMPTY (no info yet) — so they fade with a
+  // "no info" tag even when the provider has the feature switched on. The
+  // sidebar lives in the persistent layout, so this runs once, not per nav.
+  const [emptySections, setEmptySections] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (portal !== "custdash") return;
     apiGet<unknown[]>("/api/timetables/published")
       .then((w) => setHasTimetable((w?.length ?? 0) > 0))
       .catch(() => {});
+    const check = (url: string, view: string) =>
+      apiGet<unknown[]>(url).then((r) => ((r?.length ?? 0) > 0 ? null : view)).catch(() => null);
+    Promise.all([
+      check("/api/moments", "moments"),
+      check("/api/posts", "newsfeed"),
+      check("/api/meal-options", "meals"),
+      check("/api/my/trips", "trips"),
+    ]).then((res) => setEmptySections(new Set(res.filter(Boolean) as string[])));
   }, [portal]);
   // What to hide from this nav:
   //  • custdash — sections the provider switched off (Customer area) + Simple mode.
@@ -216,6 +234,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
       else caHidden.add(v);
     }
+    // Feature is ON but has no content yet → still show it, faded with "no info".
+    for (const v of emptySections) if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
   } else {
     for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
     for (const v of moneyHidden) caHidden.add(v);
