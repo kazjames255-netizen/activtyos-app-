@@ -1,0 +1,23 @@
+# Nixpacks config for the ActivityOS API on Railway.
+#
+# The API (server/) imports pure, dependency-free shared modules from
+# ../../../features and ../../../lib, so Railway must build from the REPO ROOT
+# (the whole tree present) rather than an isolated server/ subdirectory. We
+# install ONLY the server's dependencies and start it with tsx.
+#
+# The Next.js web app deploys separately on Vercel, which ignores this file.
+
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+# NODE_ENV=production on Railway → this omits devDeps, so tsx lives in the
+# server's runtime `dependencies` (not devDependencies) on purpose.
+cmds = ["npm --prefix server ci"]
+
+[phases.build]
+# No build step — tsx runs the TypeScript directly.
+cmds = []
+
+[start]
+cmd = "npm --prefix server start"

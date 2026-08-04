@@ -34,14 +34,19 @@ You'll paste that as `FIREBASE_SERVICE_ACCOUNT` on the API host (step 2).
 
 ---
 
-## 1. Deploy the API (do this first — the web app needs its URL)
+## 1. Deploy the API (Railway) — do this first, the web app needs its URL
 
-On your chosen host (Railway shown):
+Railway builds from the **repo root** (not `server/`) — the API imports pure
+shared modules from `../../../features` and `../../../lib`, so the whole tree
+must be present. A committed **`nixpacks.toml`** already tells Railway to install
+and start only the server, so you don't set build/start commands by hand.
 
-1. New project → deploy from this GitHub repo, **root directory = `server`**.
-2. Build command: *(none — `tsx` runs TypeScript directly)*
-   Start command: `npm start`
-3. Set environment variables:
+1. Railway → **New Project → Deploy from GitHub repo** → pick this repo. Leave
+   **Root Directory blank** (repo root). `nixpacks.toml` does the rest:
+   installs `server` deps, starts `npm --prefix server start`.
+   *(`tsx` is in the server's runtime `dependencies` on purpose — Railway runs
+   `NODE_ENV=production`, which skips devDependencies.)*
+2. Set environment variables:
 
    | Var | Value |
    |---|---|
@@ -51,11 +56,11 @@ On your chosen host (Railway shown):
    | `CORS_ORIGIN` | `https://app.activityos.uk` (comma-separate if more) |
    | `STRIPE_SECRET_KEY` | your **live** key (or test key for a test deploy) |
    | `STRIPE_WEBHOOK_SECRET` | from step 4 |
-   | `PORT` | usually injected by the host; the server reads it |
+   | `PORT` | injected by Railway automatically; the server reads it |
 
-4. Point `api.activityos.uk` at the host (its custom-domain UI → add a CNAME in
-   Namecheap DNS to the value it gives you). Confirm `https://api.activityos.uk/health`
-   returns `{"ok":true}`.
+3. In Railway → the service → **Settings → Networking**, add the custom domain
+   `api.activityos.uk`, then add the CNAME it gives you in Namecheap DNS. Confirm
+   `https://api.activityos.uk/health` returns `{"ok":true}`.
 
 ---
 

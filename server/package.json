@@ -24,6 +24,7 @@
     "proj4": "^2.20.9",
     "stripe": "^22.3.2",
     "swagger-ui-express": "^5.0.1",
+    "tsx": "^4.19.0",
     "yaml": "^2.9.0",
     "zod": "^3.25.0"
   },
@@ -33,7 +34,6 @@
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/swagger-ui-express": "^4.1.8",
-    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }
