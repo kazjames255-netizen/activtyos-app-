@@ -5,6 +5,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
+import { MasterCard } from "@/components/OperatorPage";
 import { UK_ALLERGENS } from "./allergens";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -88,12 +89,15 @@ export function SavedMenus() {
   async function remove(m: SavedMenu) { if (!confirm(`Delete the “${m.name}” menu?`)) return; try { await api(`/api/meal-menus/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
   return (
-    <div className="mb-6">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Saved menus</div>
-        {editing !== "new" && <Button sm variant="primary" onClick={() => setEditing("new")}>＋ New menu</Button>}
+    <MasterCard className="mb-4" header={
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> Saved menus</div>
+          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
+        </div>
+        {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ New menu</button>}
       </div>
-      <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Build a menu once — a set of meals with prices and allergens — then reuse it across your listings’ days.</p>
+    }>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
       {editing === "new" && <MenuEditor initial={{ id: "", name: "", items: [] }} onSave={create} onCancel={() => setEditing(null)} />}
@@ -128,6 +132,6 @@ export function SavedMenus() {
           ))}
         </div>
       )}
-    </div>
+    </MasterCard>
   );
 }

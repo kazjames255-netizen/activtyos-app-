@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { OperatorPage } from "@/components/OperatorPage";
+import { OperatorPage, MasterCard } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { MenuPlanner } from "./MenuPlanner";
 import { SavedMenus } from "./SavedMenus";
@@ -48,13 +48,16 @@ function MenuSharing() {
     </button>
   );
   return (
-    <div className="mb-6">
-      <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Menu sharing</div>
-      <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Who sees the day’s menu as a “what’s being served” note in their customer area. Families can add meals at checkout either way.</p>
+    <MasterCard className="mb-4" header={
+      <div>
+        <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">👀</span> Menu sharing</div>
+        <div className="mt-0.5 text-[11.5px] text-white/80">Who sees the day’s menu as a “what’s being served” note. Families can add meals at checkout either way.</div>
+      </div>
+    }>
       <div className="flex flex-col gap-2 sm:flex-row">
         {opt("booked", "All booked families", "Anyone booked on a day can see that day’s menu.")}
         {opt("paid", "Only families who added a meal", "The menu note shows only once a family has bought a meal that day.")}
       </div>
-    </div>
+    </MasterCard>
   );
 }

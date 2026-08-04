@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
-import { Button, Card, FieldLabel, Select } from "@/components/ui";
+import { FieldLabel, Select } from "@/components/ui";
+import { MasterCard } from "@/components/OperatorPage";
 import { genDates, groupWeeks, fmtDate } from "@/features/listings/format";
 import { mealDayPlan, type MealDayPlan } from "./plan";
 import type { SavedMenu } from "./SavedMenus";
@@ -93,12 +94,14 @@ export function MenuPlanner() {
   const liveListings = (listings ?? []).filter((l) => !l.archived);
 
   return (
-    <div className="mb-6">
-      <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Menu planner</div>
-      <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Pick a camp, then drop a menu’s dishes onto its days. Choose the menu, tick the dish(es), then tap days — or “every Monday”. Parents pick from the day’s dishes at checkout.</p>
+    <MasterCard className="mb-4" header={
+      <div>
+        <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🗓️</span> Menu planner</div>
+        <div className="mt-0.5 text-[11.5px] text-white/80">Pick a camp, then drop a menu’s dishes onto its days — choose the menu, tick the dish(es), then tap days or “every Monday”.</div>
+      </div>
+    }>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-
-      <Card className="p-3.5">
+      <div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px] flex-1">
             <FieldLabel>Camp</FieldLabel>
@@ -197,7 +200,7 @@ export function MenuPlanner() {
             </div>
           )
         )}
-      </Card>
-    </div>
+      </div>
+    </MasterCard>
   );
 }
