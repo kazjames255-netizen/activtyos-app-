@@ -231,16 +231,15 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
     if (customerArea.simpleMode) {
       for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))) caHidden.add(v);
     }
-    const softOff = [
-      ...Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view),
-      ...(hasTimetable ? [] : ["timetable"]),
-    ];
-    for (const v of softOff) {
-      if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
-      else caHidden.add(v);
+    // A feature the provider switched OFF (Customer area / Features) DISAPPEARS
+    // from the customer entirely — they don't offer it.
+    for (const [view, key] of Object.entries(CA_VIEW_KEY)) {
+      if (customerArea[key] === false) caHidden.add(view);
     }
-    // Feature is ON but has no content yet → still show it, faded with "no info".
-    for (const v of emptySections) if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
+    // On, but nothing in it yet → still shown, faded with "no info"/"no records"
+    // (an unpublished timetable counts as empty). Never fade what's hidden.
+    const empty = new Set<string>([...emptySections, ...(hasTimetable ? [] : ["timetable"])]);
+    for (const v of empty) if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
   } else {
     for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
     for (const v of moneyHidden) caHidden.add(v);
