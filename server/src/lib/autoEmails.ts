@@ -18,7 +18,7 @@ export interface AutoEmailPrefs {
   sessionReminder: boolean; // pre-session reminder
   sessionTiming: number;    // hours before the session
   waitlist: boolean;        // place-opened / moved-up
-  dayOf: boolean;           // registers open / not-arrived alerts
+  dayOf: boolean;           // not-arrived alerts (30 min after session start)
   lateCollection: boolean;  // late-checkout alert
   announcements: boolean;   // re-marketing to past customers (opt-in)
   reviewRequests: boolean;  // ask for a review after the LAST booked session

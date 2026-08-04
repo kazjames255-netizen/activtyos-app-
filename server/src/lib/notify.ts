@@ -26,6 +26,11 @@ const prefsCol = () => db.collection("notificationPrefs");
  *  EMAIL_DELIVERY_KEY in lib/settings.ts (the Setup toggle). */
 const EMAIL_DELIVERY_KEY = "email-delivery";
 
+/** Notification keys that are OFF unless the provider explicitly switched them
+ *  on (an absent pref means off, not on). Mirrors NOTIFICATIONS_DEFAULT_OFF in
+ *  lib/settings.ts. */
+const DEFAULT_OFF = new Set(["med-due", "register-missing", "register-collect"]);
+
 /** What a notification is about. Doubles as the mute key a parent can set. */
 export type NotifyCategory =
   | "accident"
@@ -209,7 +214,11 @@ export async function notify(input: NotifyInput): Promise<void> {
     if (input.to.kind === "tenant") {
       const notifs = (await db.collection("libraries").doc(input.tenantId).get()).data()
         ?.settings?.notifications as Record<string, boolean> | undefined;
-      if (input.key && notifs?.[input.key] === false) return;
+      if (input.key) {
+        const pref = notifs?.[input.key];
+        // Explicitly off → skip. Absent → skip only for default-off keys.
+        if (pref === false || (pref === undefined && DEFAULT_OFF.has(input.key))) return;
+      }
       if (notifs?.[EMAIL_DELIVERY_KEY] === false) tenantEmailOff = true;
     }
 

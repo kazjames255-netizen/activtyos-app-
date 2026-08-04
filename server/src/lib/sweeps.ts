@@ -120,8 +120,10 @@ async function medicationDue(): Promise<void> {
     const at = AT_TIME.exec(m.schedule ?? "");
     const due = at ? toMinutes(at[1]) : null;
     if (due === null) continue;
-    // A tight window: a dose reminder hours late is worse than none.
-    if (now < due || now >= due + 15) continue;
+    // Ring 5 minutes BEFORE the dose is due (a heads-up), and keep firing for a
+    // short window after in case the sweep ran late — a reminder hours late is
+    // worse than none.
+    if (now < due - 5 || now >= due + 15) continue;
 
     const med = (await settingsFor(m.tenantId)).medication ?? {};
     if (med.remindWhenDue === false) continue;
@@ -521,12 +523,11 @@ async function reviewRequests(): Promise<void> {
 }
 
 // ── Day-of register alerts ────────────────────────────────────────────────
-// Three alerts for the team, one scan: registers-open in the morning,
-// not-arrived shortly after a session starts (only when the register is
-// actually in use), and late-collection once a session has ended.
-const REG_OPEN_AT = 7 * 60 + 30;   // 07:30 — before the first session
-const NO_SHOW_GRACE = 15;          // minutes after start before chasing
-const NO_SHOW_STALE = 90;          // stop chasing once the session's long begun
+// Two alerts for the team, one scan: not-arrived a while after a session
+// starts (only when the register is actually in use), and late-collection once
+// a session has ended.
+const NO_SHOW_GRACE = 30;          // minutes after start before chasing
+const NO_SHOW_STALE = 120;         // stop chasing once the session's long begun
 
 async function dayOfAlerts(): Promise<void> {
   const { date: today, minutes: now } = ukNow();
@@ -547,29 +548,6 @@ async function dayOfAlerts(): Promise<void> {
     (await bookingsFor(b.id)).filter(
       (bk) => (bk.status === "Confirmed" || bk.status === "Approval needed") && bookedOn(bk, today),
     );
-
-  // Registers open — one morning heads-up per tenant with sessions today.
-  const byTenant = new Map<string, typeof blocks>();
-  for (const b of blocks) byTenant.set(b.tenantId, [...(byTenant.get(b.tenantId) ?? []), b]);
-  for (const [tenantId, tBlocks] of byTenant) {
-    if (now < REG_OPEN_AT) continue;
-    const lib = await libFor(tenantId);
-    if (!autoEmailsOf(lib).dayOf) continue;
-    let count = 0;
-    for (const b of tBlocks) count += (await expected(b)).length;
-    if (!count) continue;
-    await fireOnce(`regopen_${tenantId}_${today}`, { tenantId }, () =>
-      notify({
-        tenantId,
-        to: { kind: "tenant" },
-        category: "register",
-        key: "register-open",
-        title: `Registers open — ${count} ${count === 1 ? "child" : "children"} expected today`,
-        body: `${tBlocks.length} ${tBlocks.length === 1 ? "session" : "sessions"} running today. Open the registers to sign children in.`,
-        href: "/company/registers",
-      }),
-    ).catch((err) => console.error(`[sweeps] registers open ${tenantId}:`, (err as Error).message));
-  }
 
   for (const b of blocks) {
     const lib = await libFor(b.tenantId);
@@ -602,31 +580,31 @@ async function dayOfAlerts(): Promise<void> {
     }
 
     // Late collection — signed in, not collected, session over + threshold.
+    // One alert per session (30 min after it ends by default). The email never
+    // names the children — it just flags that some are still to be collected;
+    // staff open the register to see who.
     if (prefs.lateCollection) {
       const regSettings = ((lib.settings as Record<string, unknown> | undefined)?.registers ?? {}) as { lateThresholdMinutes?: number };
-      const threshold = Number(regSettings.lateThresholdMinutes) > 0 ? Number(regSettings.lateThresholdMinutes) : 15;
+      const threshold = Number(regSettings.lateThresholdMinutes) > 0 ? Number(regSettings.lateThresholdMinutes) : 30;
       for (const s of b.todaySessions) {
         const end = toMinutes(s.end);
         if (end === null || now < end + threshold) continue;
         const inRefs = Object.entries(entries).filter(([, e]) => e.status === "in" && !e.collectedAt).map(([ref]) => ref);
         if (!inRefs.length) continue;
         const byRef = new Map((await bookingsFor(b.id)).map((bk) => [bk.ref, bk]));
-        for (const ref of inRefs) {
-          const bk = byRef.get(ref);
-          if (!bk || !bookedOn(bk, today)) continue;
-          await fireOnce(`latecol_${b.id}_${today}_${ref}`, { tenantId: b.tenantId }, () =>
-            notify({
-              tenantId: b.tenantId,
-              to: { kind: "tenant" },
-              category: "register",
-              key: "register-collect",
-              title: `Not collected yet: ${kidNames(bk)} — session ended ${s.end}`,
-              body: `${kidNames(bk)} is still signed in ${threshold}+ minutes after the session ended. Contact the family and log the collection when they arrive.`,
-              href: "/company/registers",
-              ref,
-            }),
-          ).catch((err) => console.error(`[sweeps] late collection ${b.id}/${ref}:`, (err as Error).message));
-        }
+        const uncollected = inRefs.filter((ref) => { const bk = byRef.get(ref); return bk && bookedOn(bk, today); });
+        if (!uncollected.length) continue;
+        await fireOnce(`latecol_${b.id}_${today}_${s.end}`, { tenantId: b.tenantId }, () =>
+          notify({
+            tenantId: b.tenantId,
+            to: { kind: "tenant" },
+            category: "register",
+            key: "register-collect",
+            title: `Children not collected yet — session ended ${s.end}`,
+            body: `Some children are still signed in ${threshold}+ minutes after the session ended. Open the register to see who, contact the families, and log each collection.`,
+            href: "/company/registers",
+          }),
+        ).catch((err) => console.error(`[sweeps] late collection ${b.id}:`, (err as Error).message));
       }
     }
   }

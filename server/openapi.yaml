@@ -116,7 +116,7 @@ info:
       before each booked session, with venue + outstanding balance), payment-due
       reminders (unpaid invoices + voucher send-by dates), review requests (once,
       the day after a family's LAST booked session), and day-of register alerts
-      (registers open / not-arrived / late collection, category `register`).
+      (not-arrived / late collection, category `register`).
     - **`POST /api/emails/schedule`** — queue a full send for a future UK
       wall-clock `sendAt` (recipients frozen at schedule time);
       **`GET /api/emails/scheduled`** lists the queue,

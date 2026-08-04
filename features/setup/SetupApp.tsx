@@ -13,6 +13,7 @@ import {
   useSettings,
   PROVIDER_NOTIFICATIONS,
   EMAIL_DELIVERY_KEY,
+  notificationOn,
   answerKey,
   dobRequired,
   DEFAULT_QUESTION_LENGTH,
@@ -153,7 +154,7 @@ function NotificationsTab() {
               {PROVIDER_NOTIFICATIONS.filter((n) => n.group === g).map((n, i) => (
                 <div key={n.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                   <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">{n.label}</div>
-                  <Toggle on={prefs[n.key] !== false} onChange={(v) => setPref(n.key, v)} labels={["On", "Off"]} />
+                  <Toggle on={notificationOn(prefs, n.key, n.defaultOff)} onChange={(v) => setPref(n.key, v)} labels={["On", "Off"]} />
                 </div>
               ))}
             </div>

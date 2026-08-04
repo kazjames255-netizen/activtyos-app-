@@ -357,7 +357,7 @@ export interface MembershipTier {
 /** Every alert a provider can switch off in Setup → Notifications. `key` is the
  *  stable id that `notify()` checks (tenant audience only); an absent/true value
  *  means the alert is on. Grouped for display. */
-export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string }[] = [
+export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string; defaultOff?: boolean }[] = [
   { key: "booking-new", group: "Bookings & money", label: "New booking, request or waitlist join" },
   { key: "booking-change", group: "Bookings & money", label: "Date or time change requested" },
   { key: "booking-release", group: "Bookings & money", label: "Days released (partial cancel)" },
@@ -369,12 +369,26 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "med-consent", group: "Care & safeguarding", label: "Parent authorised a medication" },
   { key: "med-note", group: "Care & safeguarding", label: "Parent left a note on a medication" },
   { key: "calendar-reminder", group: "Daily reminders", label: "Calendar event reminders" },
-  { key: "med-due", group: "Daily reminders", label: "Medication due" },
+  { key: "med-due", group: "Daily reminders", label: "Medication due (5 min before)", defaultOff: true },
   { key: "safeguarding-due", group: "Daily reminders", label: "Safeguarding action due" },
-  { key: "register-open", group: "Daily reminders", label: "Registers open (children expected today)" },
-  { key: "register-missing", group: "Daily reminders", label: "Children not signed in yet" },
-  { key: "register-collect", group: "Daily reminders", label: "Not collected yet — session ended" },
+  { key: "register-missing", group: "Daily reminders", label: "Children not signed in yet (30 min after start)", defaultOff: true },
+  { key: "register-collect", group: "Daily reminders", label: "Children not collected yet (30 min after session end)", defaultOff: true },
 ];
+
+/** Notification keys that are OFF unless a provider explicitly switches them on
+ *  (the rest are on unless switched off). Mirrored in server/src/lib/notify.ts.
+ *  Derived from PROVIDER_NOTIFICATIONS so the two never drift. */
+export const NOTIFICATIONS_DEFAULT_OFF = new Set(
+  PROVIDER_NOTIFICATIONS.filter((n) => n.defaultOff).map((n) => n.key),
+);
+
+/** Is a notification key on, given the provider's saved prefs? Absent = the
+ *  key's default (off for defaultOff keys, on otherwise). */
+export function notificationOn(prefs: Record<string, boolean> | undefined, key: string, defaultOff?: boolean): boolean {
+  const v = prefs?.[key];
+  if (v === undefined) return !defaultOff;
+  return v;
+}
 
 /** Master switch (a reserved notifications key) for whether platform emails are
  *  sent to the operator's personal inbox at all. Off → the in-app bell still
