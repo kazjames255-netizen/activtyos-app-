@@ -93,7 +93,33 @@ customers.get("/", async (req, res) => {
     q = q.where("tenantId", "==", scope.tenantId);
   }
   const snap = await q.get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name?: string }) }));
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
+    Record<string, unknown> & { id: string; name?: string; email?: string; children?: Array<{ name?: string }> }
+  >;
+
+  // Merge in children a PARENT added to their OWN account: those live in the
+  // `children` collection (keyed by parentUid), not on the customer doc, so
+  // without this they'd never show in Families until a booking. Match each
+  // customer to their account by email → uid, and add any child not already on
+  // the record (de-duped by name).
+  const kidsCol = db.collection("children");
+  await Promise.all(
+    list.map(async (c) => {
+      const email = (c.email ?? "").trim();
+      if (!email.includes("@")) return;
+      try {
+        const uid = (await auth.getUserByEmail(email)).uid;
+        const kids = await kidsCol.where("parentUid", "==", uid).get();
+        if (kids.empty) return;
+        const have = new Set((c.children ?? []).map((k) => (k.name ?? "").trim().toLowerCase()));
+        const extra = kids.docs
+          .map((k) => ({ id: k.id, ...(k.data() as Record<string, unknown>) }))
+          .filter((k) => !have.has(String((k as { name?: string }).name ?? "").trim().toLowerCase()));
+        if (extra.length) c.children = [...(c.children ?? []), ...(extra as Array<{ name?: string }>)];
+      } catch { /* no account for this email yet — nothing to merge */ }
+    }),
+  );
+
   list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
   res.json(list);
 });
