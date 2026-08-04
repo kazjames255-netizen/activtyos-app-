@@ -682,6 +682,10 @@ export interface TenantSettings {
     memberships: boolean; // memberships
     browse: boolean;      // browse more activities
     refer: boolean;       // the "Refer a friend" page
+    timetable: boolean;   // the Activity timetable page
+    trips: boolean;       // Trips & consent
+    accidents: boolean;   // First aid & incidents (⚠️ safeguarding — usually kept on)
+    medication: boolean;  // Medication (⚠️ safeguarding — usually kept on)
   };
 
   /**
@@ -917,7 +921,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   providerNameMode: "business",
   marketplaceListed: false,
   features: {},
-  customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true },
+  customerArea: { simpleMode: false, codesBanner: true, coupons: true, newsfeed: true, moments: true, messaging: true, wallet: true, meals: true, memberships: true, browse: true, refer: true, timetable: true, trips: true, accidents: true, medication: true },
   referral: { enabled: false, type: "amount", friendOff: 10, referrerReward: 10, minSpend: 0, capToFriendSpend: true },
   memberships: {
     enabled: false,

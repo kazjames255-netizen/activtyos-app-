@@ -119,7 +119,8 @@ function SignOutItem({ item }: { item: NavItem }) {
 const CA_VIEW_KEY: Record<string, keyof CustomerArea> = {
   coupons: "coupons", wallet: "wallet", newsfeed: "newsfeed", moments: "moments",
   meals: "meals", memberships: "memberships", messages: "messaging", browse: "browse",
-  refer: "refer",
+  refer: "refer", timetable: "timetable", trips: "trips", accidents: "accidents",
+  medication: "medication",
 };
 
 // custdash views that FADE (with a "no info" / "no records" note) instead of

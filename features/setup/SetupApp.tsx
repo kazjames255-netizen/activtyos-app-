@@ -2020,6 +2020,7 @@ export function SetupApp() {
         const custKeys: Record<string, (keyof typeof ca)[]> = {
           messages: ["messaging"], marketing: ["coupons", "codesBanner"], newsfeed: ["newsfeed"],
           moments: ["moments"], meals: ["meals"], memberships: ["memberships"], referrals: ["refer"],
+          timetable: ["timetable"], trips: ["trips"], accidents: ["accidents"], medication: ["medication"],
         };
         const skip = new Set(["dash", "dashboard", "auth"]);
         const seen = new Set<string>();
