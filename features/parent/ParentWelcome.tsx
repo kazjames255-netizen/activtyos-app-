@@ -118,7 +118,7 @@ export function ParentWelcome() {
       aria-modal="true"
       aria-labelledby="welcome-title"
     >
-      <div className="max-h-[92vh] w-full max-w-[480px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
+      <div className="max-h-[92vh] w-full max-w-[620px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header band */}
         <div className="relative px-6 py-6 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
           <button
@@ -148,7 +148,7 @@ export function ParentWelcome() {
             <p className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
               So {provider || "your provider"} can reach you about bookings and keep their records right. You can change these any time in My account.
             </p>
-            <div className="mt-3 grid gap-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
                 <span className={label}>Your name <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.name} onChange={set("name")} placeholder="First and last name" />
@@ -157,7 +157,7 @@ export function ParentWelcome() {
                 <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.phone} onChange={set("phone")} placeholder="Mobile we can reach you on" inputMode="tel" />
               </div>
-              <div className="relative">
+              <div className="relative sm:col-span-2">
                 <span className={label}>Find your address <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— start typing</span></span>
                 <input
                   className={inp}
@@ -185,11 +185,11 @@ export function ParentWelcome() {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <span className={label}>Home address <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder="House, street, town" />
               </div>
-              <div className="max-w-[190px]">
+              <div>
                 <span className={label}>Postcode <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
               </div>
