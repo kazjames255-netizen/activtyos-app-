@@ -638,7 +638,7 @@ export function ChildrenApp() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <span className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-strong)]">
-            👦👧 Children &amp; details
+            👦👧 {children.length === 1 ? "Child" : "Children"} &amp; details
           </span>
           <h2 className="mt-2 text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
             My <span style={{ color: "var(--brand-strong)" }}>{children.length === 1 ? "child" : "children"}</span>

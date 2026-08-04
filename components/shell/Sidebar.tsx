@@ -45,6 +45,7 @@ function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolea
   if (portal !== "custdash" || !multiChild) return label;
   if (label === "My child") return "My children";
   if (label === "My child's day" || label === "My child’s day") return "My children’s day";
+  if (label === "Child & details") return "Children & details";
   return label;
 }
 

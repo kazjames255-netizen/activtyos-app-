@@ -489,7 +489,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "children", legacyView: "custdash-children", label: "Children & details", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20a6 6 0 0 1 12 0\"></path><path d=\"M16 7a3 3 0 0 1 0 6\"></path><path d=\"M18 20a6 6 0 0 0-3-5\"></path></svg>" }, badge: null },
+        { view: "children", legacyView: "custdash-children", label: "Child & details", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20a6 6 0 0 1 12 0\"></path><path d=\"M16 7a3 3 0 0 1 0 6\"></path><path d=\"M18 20a6 6 0 0 0-3-5\"></path></svg>" }, badge: null },
         { view: "moments", legacyView: "custdash-moments", label: "My child's day", icon: { type: "glyph", value: "📷" }, badge: null },
         { view: "newsfeed", legacyView: "custdash-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "medication", legacyView: "custdash-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
