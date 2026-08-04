@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import type { Me } from "@/lib/roles";
 
@@ -19,6 +19,9 @@ interface AccountProfile { name: string; phone: string; address: string; postcod
 // /api/me/welcome), so it never shows again.
 export function ParentWelcome() {
   const router = useRouter();
+  // ?welcome=1 forces the popup open regardless of the seen-flag — handy for
+  // re-viewing it during testing without clearing the flag each time.
+  const forced = useSearchParams().get("welcome") === "1";
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"details" | "go">("details");
   const [provider, setProvider] = useState<string>("");
@@ -57,9 +60,10 @@ export function ParentWelcome() {
   }
 
   useEffect(() => {
+    if (forced) setOpen(true);
     apiGet<Me>("/api/me")
       .then((m) => {
-        if (m.role === "parent" && !m.welcomed) setOpen(true);
+        if (forced || (m.role === "parent" && !m.welcomed)) setOpen(true);
       })
       .catch(() => {});
     // Prefill anything we already hold (usually just a name from their invite).
