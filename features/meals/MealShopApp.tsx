@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
+import { useSettings } from "@/lib/settings";
 import { UK_ALLERGENS } from "./allergens";
 import { SavedMenus } from "./SavedMenus";
 
@@ -51,6 +52,7 @@ export function MealShopApp({ canManage, onBoard }: { canManage: boolean; onBoar
 
       {/* Saved-menu library — reusable menus to schedule onto listing days */}
       {canManage && <SavedMenus />}
+      {canManage && <MenuSharing />}
 
       {/* Menu for sale */}
       <div className="mb-2 flex items-center justify-between">
@@ -125,5 +127,31 @@ export function MealShopApp({ canManage, onBoard }: { canManage: boolean; onBoar
         </div>
       )}
     </OperatorPage>
+  );
+}
+
+// Who sees the read-only "what's being served" menu display in the customer
+// area. Ordering is always open to booked families — this only gates the
+// informational display.
+function MenuSharing() {
+  const { settings, save } = useSettings();
+  const share = settings.meals?.menuShare ?? "booked";
+  const set = (v: "booked" | "paid") => save({ settings: { ...settings, meals: { ...settings.meals, menuShare: v } } });
+  const opt = (v: "booked" | "paid", label: string, sub: string) => (
+    <button type="button" onClick={() => set(v)} className="flex-1 rounded-xl border p-2.5 text-left"
+      style={share === v ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+      <div className="text-[12.5px] font-extrabold" style={{ color: share === v ? "#1d3a8f" : "var(--ink)" }}>{share === v ? "✓ " : ""}{label}</div>
+      <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{sub}</div>
+    </button>
+  );
+  return (
+    <div className="mb-6">
+      <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Menu sharing</div>
+      <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Who sees the day’s menu as a “what’s being served” note in their customer area. Ordering stays open to every booked family either way.</p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {opt("booked", "All booked families", "Anyone booked on a day can see that day’s menu.")}
+        {opt("paid", "Only families who paid", "The menu note shows only once a family has paid for a meal that day.")}
+      </div>
+    </div>
   );
 }

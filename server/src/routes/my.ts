@@ -274,19 +274,26 @@ my.get("/meal-days", async (req, res) => {
   const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
   const menus = new Map(menuSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, name: s.data()!.name as string, items: (s.data()!.items ?? []) as unknown[] }]));
 
-  // Provider display names, once per tenant.
+  // Provider display names + the "what's being served" share rule, per tenant.
   const tenantIds = [...new Set([...listings.values()].map((l) => l.tenantId as string).filter(Boolean))];
   const libs = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("libraries").doc(id))) : [];
-  const nameByTenant = new Map(libs.map((l) => [l.id, ((l.data() as { settings?: { providerName?: string } } | undefined)?.settings?.providerName ?? "").trim()]));
+  const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string } } } | undefined)?.settings ?? {}]));
+  const nameByTenant = new Map([...settingsByTenant].map(([id, s]) => [id, (s.providerName ?? "").trim()]));
+
+  // Days the family has already PAID a meal for — used when a provider only
+  // shares the served-menu display with paying families.
+  const paidSnap = await bookingsCol.firestore.collection("mealOrders").where("parentEmail", "==", email.toLowerCase()).where("pay", "==", "Paid").get();
+  const paidKeys = new Set(paidSnap.docs.map((d) => `${(d.data() as { listingId?: string }).listingId}__${(d.data() as { date?: string }).date}`));
 
   // Merge siblings on the same (listing,date) into one entry.
-  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] } }>();
+  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean }>();
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
     if (!l || !l.mealsEnabled || !l.mealPlan) continue;
     const plan = l.mealPlan as Record<string, string>;
     const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => plan[dt] && menus.has(plan[dt]));
     const kids = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
+    const share = (settingsByTenant.get(l.tenantId as string)?.meals?.menuShare) === "paid" ? "paid" : "booked";
     for (const date of dates) {
       const key = `${b.listingId}__${date}`;
       let entry = byKey.get(key);
@@ -299,6 +306,7 @@ my.get("/meal-days", async (req, res) => {
           date,
           children: [],
           menu: menus.get(plan[date])!,
+          served: share === "booked" || paidKeys.has(key),
         };
         byKey.set(key, entry);
       }

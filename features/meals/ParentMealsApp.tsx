@@ -14,7 +14,7 @@ import { Badge, Button, Card } from "@/components/ui";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string }
-interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] } }
+interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] }; served: boolean }
 interface OrderItem { name: string; qty: number; lineTotal: number }
 interface Order { id: string; tenantId: string; listingId?: string; childName: string; date: string; items: OrderItem[]; total: number; status: string; pay: string }
 
@@ -73,6 +73,28 @@ export function ParentMealsApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
+      {(() => {
+        const served = (days ?? []).filter((d) => d.served);
+        if (served.length === 0) return null;
+        return (
+          <div className="mb-4">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">What’s being served</div>
+            <div className="flex flex-col gap-1.5">
+              {served.map((d) => (
+                <Card key={`s-${keyOf(d)}`} className="p-2.5">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-[12.5px] font-extrabold">{fmtDay(d.date)}</span>
+                    <span className="text-[11.5px] text-[var(--ink-3)]">{d.listingName} · {d.menu.name}</span>
+                  </div>
+                  <div className="mt-1 text-[11.5px] text-[var(--ink-2)]">{d.menu.items.map((it) => it.name).join(" · ")}</div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Order a meal</div>
       {!days ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
       : days.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No meals to order yet — they’ll appear here on the days your provider offers meals for a camp you’ve booked.</Card>
