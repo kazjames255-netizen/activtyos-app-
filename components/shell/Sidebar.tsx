@@ -209,7 +209,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
     Promise.all([
       check("/api/moments", "moments"),
       check("/api/posts", "newsfeed"),
-      check("/api/meal-options", "meals"),
+      check("/api/meal-orders", "meals"),
       check("/api/my/trips", "trips"),
       check("/api/incidents", "accidents"),
       check("/api/medications", "medication"),
