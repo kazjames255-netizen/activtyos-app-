@@ -93,25 +93,19 @@ function NotificationsTab() {
   const emailOn = prefs[EMAIL_DELIVERY_KEY] !== false;
 
   const [s, setS] = useState<MsgSettings | null>(null);
-  const [draft, setDraft] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const [savedEmail, setSavedEmail] = useState(false);
   useEffect(() => {
-    apiGet<MsgSettings>("/api/messages/settings").then((d) => { setS(d); setDraft(d.notifyEmail); }).catch(() => setS({ emailOnNewMessage: true, notifyEmail: "", accountEmail: "" }));
+    apiGet<MsgSettings>("/api/messages/settings").then((d) => setS(d)).catch(() => setS({ emailOnNewMessage: true, notifyEmail: "", accountEmail: "" }));
   }, []);
-  async function put(patch: Partial<MsgSettings>) {
+  async function change(v: boolean) {
+    if (s) setS({ ...s, emailOnNewMessage: v });
     setErr(null);
-    try {
-      const next = await api<MsgSettings>("/api/messages/settings", { method: "PUT", body: JSON.stringify(patch) });
-      setS(next); setDraft(next.notifyEmail);
-      return true;
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); return false; }
+    try { await api<MsgSettings>("/api/messages/settings", { method: "PUT", body: JSON.stringify({ emailOnNewMessage: v }) }); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); }
   }
-  async function change(v: boolean) { if (s) setS({ ...s, emailOnNewMessage: v }); await put({ emailOnNewMessage: v }); }
-  async function saveEmail() {
-    if (draft.trim() === (s?.notifyEmail ?? "")) return;
-    if (await put({ notifyEmail: draft.trim() })) { setSavedEmail(true); setTimeout(() => setSavedEmail(false), 1800); }
-  }
+  // Where every alert email lands: the address you sign in with (an old custom
+  // override still wins if one was ever set, but the UI to set one is gone).
+  const alertEmail = (s?.notifyEmail || s?.accountEmail || "").trim();
   return (
     <Card className="p-5">
       <h3 className="text-[15px] font-extrabold">Message notifications</h3>
@@ -124,16 +118,11 @@ function NotificationsTab() {
         {s && <Toggle on={s.emailOnNewMessage} onChange={change} />}
       </div>
       {s?.emailOnNewMessage && (
-        <div className="mt-3 rounded-xl border border-[var(--line)] px-4 py-3">
-          <div className="text-[13.5px] font-bold">Send alerts to</div>
-          <div className="mb-2 text-[12px] text-[var(--ink-3)]">Leave blank to use your account email{s.accountEmail ? ` (${s.accountEmail})` : ""}.</div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input type="email" value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={saveEmail}
-              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              placeholder={s.accountEmail || "you@example.com"} className="min-w-[240px] flex-1" />
-            <Button onClick={saveEmail}>Save</Button>
-            {savedEmail && <span className="text-[12px] font-bold text-[#1d3a8f]">✓ Saved</span>}
+        <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+          <div className="text-[13px] font-semibold text-[var(--ink)]">
+            Sent to <span className="font-extrabold">{alertEmail || "your sign-in email"}</span>
           </div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">This is the email you sign in with — every alert goes here. To change it, update your email in Account.</div>
         </div>
       )}
       {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
@@ -145,7 +134,7 @@ function NotificationsTab() {
             <div className="text-[14px] font-extrabold">Platform emails to my personal inbox</div>
             <div className="text-[12px] text-[var(--ink-3)]">
               {emailOn
-                ? "On — you’ll get an email for every alert below (that’s switched on). Turn this off to keep everything in the in-app bell only, with nothing sent to your inbox."
+                ? <>On — you’ll get an email at <span className="font-bold">{alertEmail || "your sign-in email"}</span> for every alert below that’s switched on. Turn this off to keep everything in the in-app bell only, with nothing sent to your inbox.</>
                 : "Off — nothing is emailed to you. Every alert still shows in your in-app bell so you don’t miss anything."}
             </div>
           </div>
