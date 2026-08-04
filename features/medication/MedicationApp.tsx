@@ -154,7 +154,15 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
 
       {step === 1 && (
         <div className="grid gap-2.5 sm:grid-cols-3">
-          <div className="sm:col-span-3"><FieldLabel>Child (booked)</FieldLabel><ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} /></div>
+          <div className="sm:col-span-3">
+            <FieldLabel>Child (booked)</FieldLabel>
+            <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} />
+            {d.childName.trim() && !d.childId && (
+              <div className="mt-1.5 rounded-lg border border-[#f0c36d] bg-[#fff7e6] px-3 py-2 text-[11.5px] text-[#8a5a00]">
+                ⚠️ <b>{d.childName.trim()}</b> hasn&rsquo;t booked with you, so this medication can&rsquo;t be linked to their account — it won&rsquo;t appear in the parent&rsquo;s area or notify them. Medication can only be recorded against a child who has a booking.
+              </div>
+            )}
+          </div>
           <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
           <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
           <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
