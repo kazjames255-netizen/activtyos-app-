@@ -136,7 +136,15 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
 
       {step === 1 && (
         <div className="grid gap-2.5 sm:grid-cols-2">
-          <div className="sm:col-span-2"><FieldLabel>Child (booked)</FieldLabel><ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} /></div>
+          <div className="sm:col-span-2">
+            <FieldLabel>Child (booked)</FieldLabel>
+            <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} />
+            {d.childName.trim() && !d.childId && (
+              <div className="mt-1.5 rounded-lg border border-[#f0c36d] bg-[#fff7e6] px-3 py-2 text-[11.5px] text-[#8a5a00]">
+                ⚠️ <b>{d.childName.trim()}</b> hasn&rsquo;t booked with you, so this record can&rsquo;t be linked to their account — it won&rsquo;t appear in the parent&rsquo;s area or notify them. You can only log accidents/incidents against a child who has a booking (that&rsquo;s when they attend).
+              </div>
+            )}
+          </div>
           <div><FieldLabel>Date</FieldLabel><Input type="date" max={todayIso()} value={d.date} onChange={(e) => set({ date: e.target.value })} className="w-full" /></div>
           <div><FieldLabel>Time</FieldLabel><Input type="time" value={d.time ?? ""} onChange={(e) => set({ time: e.target.value })} className="w-full" /></div>
           <div className="sm:col-span-2"><FieldLabel>Where did it happen?</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. the main hall" className="w-full" /></div>
