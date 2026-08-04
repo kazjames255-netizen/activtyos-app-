@@ -269,8 +269,24 @@ my.get("/providers", async (req, res) => {
     ...custSnapLc.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
   ].filter(Boolean) as string[])].slice(0, 30);
   if (!ids.length) { res.json([]); return; }
-  const tenants = await db.getAll(...ids.map((id) => db.collection("tenants").doc(id)));
-  res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
+  const [tenants, libs] = await Promise.all([
+    db.getAll(...ids.map((id) => db.collection("tenants").doc(id))),
+    db.getAll(...ids.map((id) => db.collection("libraries").doc(id))),
+  ]);
+  const settingsById = new Map(
+    libs.map((l) => [l.id, ((l.data() as { settings?: { providerName?: string; billing?: { logoUrl?: string } } } | undefined)?.settings) ?? {}]),
+  );
+  // The customer-facing display name (settings.providerName, chosen at
+  // onboarding) is what a family should see — not the raw internal tenant name
+  // like "Kaz james (freelancer)". Logo brands the portal shell when uploaded.
+  res.json(tenants.filter((t) => t.exists).map((t) => {
+    const s = settingsById.get(t.id) ?? {};
+    return {
+      tenantId: t.id,
+      name: (s.providerName?.trim() || (t.data()!.name as string) || "Your activity provider"),
+      logoUrl: s.billing?.logoUrl ?? null,
+    };
+  }));
 });
 
 // GET /api/my/contact?tenantId= — the family's own on-file phone with a

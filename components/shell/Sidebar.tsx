@@ -138,6 +138,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
   useEffect(() => {
     apiGet<Me>("/api/me")
       .then((m) => {
@@ -145,9 +146,14 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           setBrand(m.tenantName);
           return;
         }
-        // Parent side: brand with their provider (Phase 1 is single-provider).
-        apiGet<{ name: string }[]>("/api/my/providers")
-          .then((ps) => ps?.[0]?.name && setBrand(ps[0].name))
+        // Parent side: brand with their provider (Phase 1 is single-provider) —
+        // their logo if uploaded, otherwise their customer-facing display name.
+        apiGet<{ name: string; logoUrl?: string | null }[]>("/api/my/providers")
+          .then((ps) => {
+            const p = ps?.[0];
+            if (p?.name) setBrand(p.name);
+            if (p?.logoUrl) setBrandLogo(p.logoUrl);
+          })
           .catch(() => {});
       })
       .catch(() => {});
@@ -205,12 +211,20 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       style={{ background: "var(--side-bg)", color: "var(--side-ink)" }}
     >
       <div className="px-4 pb-4">
-        <span
-          className="block truncate text-[17px] font-extrabold"
-          style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
-        >
-          {brandName}
-        </span>
+        {brandLogo ? (
+          <img
+            src={brandLogo}
+            alt={brandName}
+            className="h-10 max-w-[180px] rounded-md bg-white object-contain p-1"
+          />
+        ) : (
+          <span
+            className="block truncate text-[17px] font-extrabold"
+            style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
+          >
+            {brandName}
+          </span>
+        )}
       </div>
 
       {groups.map((group) => {
