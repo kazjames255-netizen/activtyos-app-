@@ -140,11 +140,9 @@ function seedLocal(): LocalState {
       "Specialist Camps",
       "SEND & Inclusion",
     ].map((name) => ({ id: uid(), name })),
-    venues: [
-      { id: uid(), name: "Stantonbury Leisure Centre", address: "Purbeck, Milton Keynes MK14 6BN" },
-      { id: uid(), name: "Northampton Sports Hub", address: "Gladstone Rd, Northampton NN5 7EA" },
-      { id: uid(), name: "Bedford Woodland Centre", address: "Mowsbury Park, Bedford MK41 8DH" },
-    ],
+    // No seeded venues — a real provider adds their own. (Pre-filling demo
+    // venues showed brand-new operators addresses that weren't theirs.)
+    venues: [],
     provided: ["Lunch", "Snacks", "All equipment", "Materials", "Water", "Certificate"],
     toBring: ["Sun cream", "Water bottle", "Packed lunch", "Change of clothes"],
     safety: ["DBS-checked staff", "First aid on site", "Safeguarding lead", "Low ratios", "Secure venue"],
@@ -155,6 +153,12 @@ function seedLocal(): LocalState {
     emojis: {},
   };
 }
+// The old manual/demo venues, stripped from any saved state on load (see below).
+const DEMO_VENUES = new Set([
+  "Stantonbury Leisure Centre|Purbeck, Milton Keynes MK14 6BN",
+  "Northampton Sports Hub|Gladstone Rd, Northampton NN5 7EA",
+  "Bedford Woodland Centre|Mowsbury Park, Bedford MK41 8DH",
+]);
 function localKey() {
   const who = firebaseAuth.currentUser?.uid || firebaseAuth.currentUser?.email || "anon";
   return `activityos.listings-extra.${who}`;
@@ -171,7 +175,9 @@ function loadLocal(): LocalState {
       : seed.staff;
     return {
       categories: p.categories ?? seed.categories,
-      venues: p.venues ?? seed.venues,
+      // Strip the old demo venues from any state that saved them before the
+      // seed was emptied — a real provider should never see them.
+      venues: (p.venues ?? seed.venues).filter((v) => !DEMO_VENUES.has(`${v.name}|${v.address ?? ""}`)),
       provided: p.provided ?? seed.provided,
       toBring: p.toBring ?? seed.toBring,
       safety: p.safety ?? seed.safety,

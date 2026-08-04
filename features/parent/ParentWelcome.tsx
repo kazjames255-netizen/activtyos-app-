@@ -62,8 +62,11 @@ export function ParentWelcome() {
           <h2 id="welcome-title" className="mt-1 text-[21px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
             Welcome{provider ? ` to ${provider}` : ""}!
           </h2>
-          <p className="mt-1 text-[13px] leading-[1.5] text-white/85">
-            You&rsquo;re all set up. Let&rsquo;s get you ready to book in just one quick step.
+          <p className="mt-1 text-[13px] leading-[1.5] text-white/90">
+            This is your home for everything{provider ? ` with ${provider}` : ""} — <b>book activities, camps &amp; clubs</b>, manage your children&rsquo;s details, message the team, use vouchers &amp; wallet credit, and see what&rsquo;s coming up, all in one place.
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/80">
+            Let&rsquo;s get you ready to book — it takes one quick step.
           </p>
         </div>
 
