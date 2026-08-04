@@ -901,14 +901,10 @@ export const SEEDED_QUESTIONS: ChildQuestion[] = [
     scope: "all",
     replaces: "dietary",
   },
-  {
-    id: "q-swimming",
-    label: "Swimming ability",
-    type: "choice",
-    options: ["Non-swimmer", "Weak", "Confident", "Strong"],
-    scope: "all",
-    replaces: "swimming",
-  },
+  // Swimming ability is NOT seeded by default — it's only relevant to some
+  // providers (swim schools, camps with a pool), so a coach who never goes near
+  // water shouldn't have it forced on their families. Add it per-provider in
+  // Setup → Child questions if you need it.
   { id: "q-suncream", label: "May we apply sun cream?", type: "yesno", scope: "all", replaces: "suncreamConsent" },
   { id: "q-firstaid", label: "May we give first aid?", type: "yesno", scope: "all", replaces: "firstAidConsent" },
   {

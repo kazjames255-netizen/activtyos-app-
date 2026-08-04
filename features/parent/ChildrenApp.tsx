@@ -98,7 +98,7 @@ function Flag({ bg, fg, children }: { bg: string; fg: string; children: React.Re
   );
 }
 
-function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: string; onDone: (changed: boolean) => void }) {
+function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { child?: Child; tenantId?: string; defaultCollectionPassword?: string; onDone: (changed: boolean) => void }) {
   const editing = !!child;
   // The provider's settings + custom questions. A parent has no tenant of their
   // own, so this reads the provider's public slice (see useTenantSettings). It
@@ -125,7 +125,10 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
   const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone ?? "");
   const [likes, setLikes] = useState(child?.likes ?? "");
   const [dislikes, setDislikes] = useState(child?.dislikes ?? "");
-  const [collectionPassword, setCollectionPassword] = useState(child?.collectionPassword ?? "");
+  // A new child inherits the family's existing collection PIN/word (same for
+  // all their children) — editable, in case one child differs.
+  const [collectionPassword, setCollectionPassword] = useState(child?.collectionPassword ?? defaultCollectionPassword ?? "");
+  const pinPrefilled = !child && !!defaultCollectionPassword;
   const [photoConsent, setPhotoConsent] = useState(child?.photoConsent ?? false);
   const [photo, setPhoto] = useState<string | null>(child?.photo ?? null);
   const [answers, setAnswers] = useState<Record<string, string>>(child?.answers ?? {});
@@ -417,6 +420,11 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
                   <Input value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)}
                     maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
                     placeholder={pinMode ? "e.g. 4816" : "e.g. Bluebell"} className="w-full" />
+                  {pinPrefilled && (
+                    <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,#1d3a8f)]">
+                      ✓ Same {pinMode ? "PIN" : "word"} as your other children — change it if this one&rsquo;s different.
+                    </div>
+                  )}
                 </div>
               )}
               {settings.askPhotoConsent && (
@@ -608,6 +616,7 @@ export function ChildrenApp() {
       {adding && (
         <ChildModal
           tenantId={tenantId}
+          defaultCollectionPassword={(children ?? []).map((c) => c.collectionPassword).find((p) => !!p?.trim()) ?? ""}
           onDone={(changed) => {
             setAdding(false);
             if (changed) refresh();
