@@ -118,6 +118,9 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
   const [send, setSend] = useState(child?.send ?? "");
   const [sendPlanId, setSendPlanId] = useState<string | null>(child?.sendPlanId ?? null);
   const [sendPlanName, setSendPlanName] = useState<string | null>(child?.sendPlanName ?? null);
+  // Yes/No gate for SEND — so a parent typing "no" in a free-text box can't
+  // accidentally trigger the plan-upload prompt. null = not answered yet.
+  const [hasSend, setHasSend] = useState<boolean | null>(child?.send || child?.sendPlanId ? true : null);
   const [emergencyName, setEmergencyName] = useState(child?.emergencyName ?? "");
   const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone ?? "");
   const [likes, setLikes] = useState(child?.likes ?? "");
@@ -300,11 +303,29 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
           <Area label="Dietary needs" placeholder="e.g. vegetarian, halal" value={dietary} onChange={setDietary} max={limitFor(settings, "dietary", CHILD_LIMITS)} rows={2} />
           {settings.collectSend && (
             <div>
-              <Area label={<>SEND / accessibility</>} placeholder="Describe the support they need" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={3} />
-              {/* The plan upload only appears once they've told us there's
-                  something to support — asking for a document before that is
-                  asking twice. */}
-              {settings.collectSendPlan && !!send.trim() && (
+              <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
+              <div className="flex gap-2">
+                {([["No", false], ["Yes", true]] as const).map(([lbl, val]) => (
+                  <button
+                    key={lbl}
+                    type="button"
+                    onClick={() => {
+                      setHasSend(val);
+                      if (!val) { setSend(""); setSendPlanId(null); setSendPlanName(null); }
+                    }}
+                    className="flex-1 rounded-lg border-2 px-3 py-2 text-[12.5px] font-bold transition-colors"
+                    style={hasSend === val
+                      ? { borderColor: "var(--brand-2)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#1d3a8f)" }
+                      : { borderColor: "var(--line)", color: "var(--ink-2)" }}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              {hasSend === true && (
+              <div className="mt-2">
+              <Area label={<>Tell us about their SEND / additional needs</>} placeholder="Describe the support they need — e.g. autism, ADHD, 1:1 support, sensory needs" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={3} />
+              {settings.collectSendPlan && (
                 <div className="mt-2 rounded-lg border border-dashed border-[var(--line)] p-2.5">
                   <div className="text-[11px] font-bold">SEND or EHCP plan <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
                   <div className="mt-0.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
@@ -330,6 +351,8 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
                   )}
                   {planError && <div className="mt-1.5 text-[11px] font-bold text-[var(--red)]">{planError}</div>}
                 </div>
+              )}
+              </div>
               )}
             </div>
           )}
