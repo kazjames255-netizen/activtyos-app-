@@ -347,6 +347,19 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     const used = (`${t.subject ?? ""} ${t.body}`.match(/\{[A-Za-z]+\}/g) ?? []).map((x) => x.toLowerCase());
     return used.every((tok) => !knownTokens.has(tok) || allowedTokens.has(tok));
   };
+  // Live preview — what the message will actually read as once merge fields
+  // fill. Uses the selected recipient's real name where there is one, else
+  // example names, so an operator sees the result before sending.
+  const previewEmail = familyTargets[0] ?? threads?.find((x) => x.id === openId)?.parentEmail;
+  const previewCust = previewEmail ? customers.find((c) => c.email === previewEmail) : undefined;
+  const previewChild = previewCust?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+  const previewText = mergeText(draft, {
+    parentName: previewCust?.name || "Sarah Smith",
+    providerName,
+    childName: previewChild || "Ava",
+  });
+  const hasTokens = /\{[A-Za-z]+\}/.test(draft);
+
   const proBar = mode !== "operator" ? null : (
     <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] px-2.5 pt-2">
       <div className="mr-1 flex gap-0.5 rounded-full border border-[var(--line)] p-0.5">
@@ -367,6 +380,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           ))}
           <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Save as template</button>
           <Link href={`/${portalSeg}/templates`} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] no-underline hover:text-[var(--ink)]">⚙ Manage</Link>
+          {hasTokens && draft.trim() && (
+            <div className="mt-1.5 w-full rounded-lg border border-[var(--brand-line,#dbe6fb)] bg-[var(--brand-soft,#eef4ff)] px-3 py-2">
+              <div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--brand-strong,#1d3a8f)]">
+                👀 Preview — {previewCust ? `how ${previewCust.name} will see it` : "example names"}
+              </div>
+              <div className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink)]">{previewText}</div>
+            </div>
+          )}
         </>
       )}
     </div>
