@@ -2,17 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import type { Me } from "@/lib/roles";
 
+interface AccountProfile { name: string; phone: string; address: string; postcode: string }
+
 // First-login welcome for a parent. Shows exactly once — the moment a
-// freshly-registered family first lands in the portal — nudging them to add
-// their children before they explore. `welcomedAt` on their user record is
-// stamped on dismiss (via POST /api/me/welcome), so it never shows again.
+// freshly-registered family first lands in the portal. Two phases:
+//   1. "Your details" — capture the parent's own name / phone / address, which
+//      they were never asked for (an invite only gives us their email).
+//   2. "Get going"    — add your children (full profile form), then browse.
+// `welcomedAt` on their user record is stamped on finish/dismiss (via POST
+// /api/me/welcome), so it never shows again.
 export function ParentWelcome() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<"details" | "go">("details");
   const [provider, setProvider] = useState<string>("");
+
+  const [form, setForm] = useState<AccountProfile>({ name: "", phone: "", address: "", postcode: "" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<Me>("/api/me")
@@ -20,14 +30,17 @@ export function ParentWelcome() {
         if (m.role === "parent" && !m.welcomed) setOpen(true);
       })
       .catch(() => {});
+    // Prefill anything we already hold (usually just a name from their invite).
+    apiGet<AccountProfile & { phone: string }>("/api/account")
+      .then((p) => setForm({ name: p.name ?? "", phone: /@/.test(p.phone) ? "" : (p.phone ?? ""), address: p.address ?? "", postcode: p.postcode ?? "" }))
+      .catch(() => {});
     // The provider they belong to, so the welcome reads in their brand.
     apiGet<{ name: string }[]>("/api/my/providers")
       .then((ps) => ps?.[0]?.name && setProvider(ps[0].name))
       .catch(() => {});
   }, []);
 
-  // Mark seen (fire-and-forget — a failed stamp just means they see it once
-  // more, never a blocked navigation) and close.
+  // Stamp "seen" (fire-and-forget) and close.
   function markSeen() {
     void apiPost("/api/me/welcome", {});
     setOpen(false);
@@ -37,7 +50,29 @@ export function ParentWelcome() {
     router.push(href);
   }
 
+  const set = (k: keyof AccountProfile) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const detailsOk = !!form.name.trim() && !!form.phone.trim();
+
+  async function saveDetails() {
+    if (!detailsOk) { setErr("Please add your name and a contact number."); return; }
+    setSaving(true); setErr(null);
+    try {
+      await apiPut("/api/account", {
+        name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim(), postcode: form.postcode.trim(),
+      });
+      setPhase("go");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn’t save — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!open) return null;
+
+  const inp = "w-full rounded-lg border px-3 py-2 text-[13.5px]";
+  const inpStyle = { borderColor: "var(--line,#ece6f1)", background: "#fff", color: "var(--ink,#171534)" } as React.CSSProperties;
+  const label = "mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3,#8a86a3)]";
 
   return (
     <div
@@ -47,7 +82,7 @@ export function ParentWelcome() {
       aria-modal="true"
       aria-labelledby="welcome-title"
     >
-      <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
+      <div className="max-h-[92vh] w-full max-w-[480px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header band */}
         <div className="relative px-6 py-6 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
           <button
@@ -65,58 +100,99 @@ export function ParentWelcome() {
           <p className="mt-1 text-[13px] leading-[1.5] text-white/90">
             This is your home for everything{provider ? ` with ${provider}` : ""} — <b>book activities, camps &amp; clubs</b>, manage your children&rsquo;s details, message the team, use vouchers &amp; wallet credit, and see what&rsquo;s coming up, all in one place.
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/80">
-            Let&rsquo;s get you ready to book — it takes one quick step.
+          <p className="mt-2 text-[11.5px] font-bold uppercase tracking-wide text-white/70">
+            Step {phase === "details" ? "1" : "2"} of 2 — {phase === "details" ? "Your details" : "Get going"}
           </p>
         </div>
 
-        {/* Step 1 — add children (the important bit) */}
-        <div className="px-6 pt-5">
-          <div className="rounded-xl border border-[var(--line,#ece6f1)] bg-[#f7faff] p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2f6bd8] text-[15px] font-extrabold text-white">1</span>
-              <div className="min-w-0">
-                <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Add your children</div>
-                <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
-                  Tell us who&rsquo;s coming along — names, ages and anything we should know. It makes booking quick and keeps them safe on the day.
+        {phase === "details" ? (
+          /* ── Phase 1: the parent's own details ─────────────────────────── */
+          <div className="px-6 py-5">
+            <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">A few details about you</div>
+            <p className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
+              So {provider || "your provider"} can reach you about bookings and keep their records right. You can change these any time in My account.
+            </p>
+            <div className="mt-3 grid gap-3">
+              <div>
+                <span className={label}>Your name <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.name} onChange={set("name")} placeholder="First and last name" />
+              </div>
+              <div>
+                <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.phone} onChange={set("phone")} placeholder="Mobile we can reach you on" inputMode="tel" />
+              </div>
+              <div>
+                <span className={label}>Home address <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— optional</span></span>
+                <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder="House, street, town" />
+              </div>
+              <div className="max-w-[190px]">
+                <span className={label}>Postcode <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— optional</span></span>
+                <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] leading-[1.45] text-[var(--ink-3,#8a86a3)]">
+              Your children&rsquo;s own details — and their emergency contacts — come next.
+            </p>
+            {err && <div className="mt-2 text-[12px] font-bold text-[#e21d27]">{err}</div>}
+            <button
+              type="button"
+              onClick={saveDetails}
+              disabled={saving}
+              className="mt-4 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:opacity-60"
+              style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
+            >
+              {saving ? "Saving…" : "Continue →"}
+            </button>
+          </div>
+        ) : (
+          /* ── Phase 2: add children, then browse ────────────────────────── */
+          <>
+            <div className="px-6 pt-5">
+              <div className="rounded-xl border border-[var(--line,#ece6f1)] bg-[#f7faff] p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2f6bd8] text-[15px] font-extrabold text-white">1</span>
+                  <div className="min-w-0">
+                    <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Add your children</div>
+                    <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
+                      Tell us who&rsquo;s coming along — names, ages, medical &amp; SEND needs, an emergency contact and anything {provider || "your provider"} asks. It makes booking quick and keeps them safe on the day.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => go("/custdash/children")}
+                  className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px"
+                  style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
+                >
+                  Add my children →
+                </button>
+              </div>
+
+              <div className="mt-3 flex items-start gap-3 px-1">
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[15px] font-extrabold text-[#2f6bd8]">2</span>
+                <div className="min-w-0">
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Then find what&rsquo;s on</div>
+                  <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
+                    Head to Browse activities to see everything {provider || "your provider"} has on — and book your place.
+                  </div>
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => go("/custdash/children")}
-              className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px"
-              style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
-            >
-              Add my children →
-            </button>
-          </div>
 
-          {/* Step 2 — then explore / browse */}
-          <div className="mt-3 flex items-start gap-3 px-1">
-            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[15px] font-extrabold text-[#2f6bd8]">2</span>
-            <div className="min-w-0">
-              <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Then find what&rsquo;s on</div>
-              <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
-                Have a look around your dashboard, then head to Browse activities to see everything you can book.
-              </div>
+            <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line,#ece6f1)] bg-[var(--panel,#fbf8fc)] px-6 py-3">
+              <button type="button" onClick={markSeen} className="text-[12.5px] font-bold text-[var(--ink-3,#8a86a3)] hover:text-[var(--ink-2,#4a4763)]">
+                I&rsquo;ll do it later
+              </button>
+              <button
+                type="button"
+                onClick={() => go("/custdash/browse")}
+                className="rounded-full border border-[var(--line,#ece6f1)] bg-white px-4 py-2 text-[13px] font-bold text-[#1d3a8f] hover:border-[#2f6bd8]"
+              >
+                Browse activities
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line,#ece6f1)] bg-[var(--panel,#fbf8fc)] px-6 py-3">
-          <button type="button" onClick={markSeen} className="text-[12.5px] font-bold text-[var(--ink-3,#8a86a3)] hover:text-[var(--ink-2,#4a4763)]">
-            I&rsquo;ll do it later
-          </button>
-          <button
-            type="button"
-            onClick={() => go("/custdash/browse")}
-            className="rounded-full border border-[var(--line,#ece6f1)] bg-white px-4 py-2 text-[13px] font-bold text-[#1d3a8f] hover:border-[#2f6bd8]"
-          >
-            Browse activities
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

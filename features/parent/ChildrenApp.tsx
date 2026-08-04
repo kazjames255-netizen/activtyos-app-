@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
+import { uploadPlan, PLAN_MAX_BYTES } from "@/features/listings/planUpload";
+import { squareAvatar, CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
+import { asksEveryBooking, dobRequired, limitFor, questionsFor, useTenantSettings } from "@/lib/settings";
 
 export interface Child {
   id: string;
@@ -16,6 +20,10 @@ export interface Child {
   medical?: string;
   dietary?: string;
   send?: string;
+  /** An uploaded SEND / EHCP plan — the stored file's id and the name it came
+   *  in under. The bytes live in storage (see planUpload), not on the record. */
+  sendPlanId?: string;
+  sendPlanName?: string;
   emergencyName?: string;
   emergencyPhone?: string;
   likes?: string;
@@ -23,26 +31,8 @@ export interface Child {
   collectionPassword?: string;
   photoConsent?: boolean;
   photo?: string;
-}
-
-// Client-side avatar: centre-crop + resize to 128px JPEG (~10KB) so it can
-// live inline until the real file-storage milestone.
-async function fileToAvatar(file: File): Promise<string> {
-  const img = document.createElement("img");
-  const url = URL.createObjectURL(file);
-  await new Promise((res, rej) => {
-    img.onload = res;
-    img.onerror = rej;
-    img.src = url;
-  });
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const min = Math.min(img.width, img.height);
-  ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
-  URL.revokeObjectURL(url);
-  return canvas.toDataURL("image/jpeg", 0.8);
+  /** Answers to the provider's own child questions, keyed by question id. */
+  answers?: Record<string, string>;
 }
 
 function Avatar({ child, size = 44, accent }: { child: Pick<Child, "name" | "photo">; size?: number; accent?: string }) {
@@ -76,10 +66,6 @@ function Avatar({ child, size = 44, accent }: { child: Pick<Child, "name" | "pho
 // A rotating set of friendly accents so a list of children isn't a wall of grey.
 const ACCENTS = ["#2f6bd8", "#0f9488", "#7a5af8", "#e0692a", "#d6336c", "#0ea5e9"];
 
-// Character limits per free-text field — the capacity we agreed: long enough
-// to explain a real need, short enough to keep registers and exports readable.
-const LIMITS = { allergies: 140, medical: 140, dietary: 140, send: 200, likes: 80, dislikes: 80 } as const;
-
 // A bigger, capped free-text box with a live character count.
 function Area({
   label, value, onChange, max, placeholder, rows = 3,
@@ -111,8 +97,14 @@ function Flag({ bg, fg, children }: { bg: string; fg: string; children: React.Re
   );
 }
 
-function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolean) => void }) {
+function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: string; onDone: (changed: boolean) => void }) {
   const editing = !!child;
+  // The provider's settings + custom questions. A parent has no tenant of their
+  // own, so this reads the provider's public slice (see useTenantSettings). It
+  // falls back to the defaults — every field on — until it loads, so the base
+  // fields always render and the form never blanks out.
+  const { settings, questions } = useTenantSettings(tenantId);
+
   const [name, setName] = useState(child?.name ?? "");
   const [dob, setDob] = useState(child?.dob ?? "");
   const [sex, setSex] = useState<"boy" | "girl" | "">((child?.sex as "boy" | "girl") ?? "");
@@ -123,6 +115,8 @@ function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolea
   const [medical, setMedical] = useState(child?.medical ?? "");
   const [dietary, setDietary] = useState(child?.dietary ?? "");
   const [send, setSend] = useState(child?.send ?? "");
+  const [sendPlanId, setSendPlanId] = useState<string | null>(child?.sendPlanId ?? null);
+  const [sendPlanName, setSendPlanName] = useState<string | null>(child?.sendPlanName ?? null);
   const [emergencyName, setEmergencyName] = useState(child?.emergencyName ?? "");
   const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone ?? "");
   const [likes, setLikes] = useState(child?.likes ?? "");
@@ -130,17 +124,50 @@ function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolea
   const [collectionPassword, setCollectionPassword] = useState(child?.collectionPassword ?? "");
   const [photoConsent, setPhotoConsent] = useState(child?.photoConsent ?? false);
   const [photo, setPhoto] = useState<string | null>(child?.photo ?? null);
+  const [answers, setAnswers] = useState<Record<string, string>>(child?.answers ?? {});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const planRef = useRef<HTMLInputElement>(null);
+  const [planPct, setPlanPct] = useState<number | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+
+  // The provider's own "once" questions — the stable ones asked when a child is
+  // set up (the every-booking ones are asked on the booking itself). Age-gated
+  // ones only appear once we know the child's age from their date of birth.
+  const today = new Date().toISOString().slice(0, 10);
+  const askQuestions = questionsFor(questions, undefined, ageOn(dob, today)).filter((q) => !asksEveryBooking(q));
+  const needDob = dobRequired(settings, questions).required;
+  const pinMode = settings.collectionCheck === "pin";
 
   async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      setPhoto(await fileToAvatar(file));
+      setPhoto(await squareAvatar(file));
     } catch {
       setError("Couldn't read that image — try another file.");
+    }
+  }
+
+  async function pickPlan(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > PLAN_MAX_BYTES) {
+      setPlanError(`${file.name} is ${Math.round(file.size / 1_000_000)}MB — the limit is ${PLAN_MAX_BYTES / 1_000_000}MB.`);
+      return;
+    }
+    setPlanError(null);
+    setPlanPct(0);
+    try {
+      const ref = await uploadPlan(file, setPlanPct);
+      setSendPlanId(ref.id);
+      setSendPlanName(ref.name);
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : "That upload didn't finish — try again.");
+    } finally {
+      setPlanPct(null);
     }
   }
 
@@ -150,18 +177,20 @@ function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolea
     setBusy(true);
     const body = {
       name: name.trim(),
-      dob: dob.trim(),
-      sex,
+      ...(dob.trim() ? { dob: dob.trim() } : {}),
+      ...(sex ? { sex } : {}),
       ...(school.trim() ? { school: school.trim() } : {}),
       ...(allergies.trim() ? { allergies: allergies.trim() } : {}),
       ...(medical.trim() ? { medical: medical.trim() } : {}),
       ...(dietary.trim() ? { dietary: dietary.trim() } : {}),
       ...(send.trim() ? { send: send.trim() } : {}),
+      ...(sendPlanId ? { sendPlanId, ...(sendPlanName ? { sendPlanName } : {}) } : {}),
       ...(emergencyName.trim() ? { emergencyName: emergencyName.trim() } : {}),
       ...(emergencyPhone.trim() ? { emergencyPhone: emergencyPhone.trim() } : {}),
       ...(likes.trim() ? { likes: likes.trim() } : {}),
       ...(dislikes.trim() ? { dislikes: dislikes.trim() } : {}),
       ...(collectionPassword.trim() ? { collectionPassword: collectionPassword.trim() } : {}),
+      ...(Object.keys(answers).length ? { answers } : {}),
       photoConsent,
       ...(photo ? { photo } : {}),
     };
@@ -178,28 +207,215 @@ function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolea
     }
   }
 
-  // The slideshow: each section is a slide, finish one to swipe to the next.
-  const STEPS = [
-    { emoji: "🧒", title: "About your child", sub: "The basics for the register." },
-    { emoji: "🩹", title: "Health & diet", sub: "Anything staff must know on day one." },
-    { emoji: "💛", title: "Contact & comfort", sub: "Who to call, and what settles them." },
-    { emoji: "🔒", title: "Safeguarding", sub: "Collection and photo permission." },
-  ];
-  const last = STEPS.length - 1;
-  const [step, setStep] = useState(0);
-  // Compulsory: name + date of birth (identity & age/ratios) and a reachable
-  // emergency contact (safeguarding — a child can't be left with no one to
-  // call). Everything else is optional. Gender isn't required — some providers
-  // never ask it.
-  const canLeaveAbout = !!name.trim() && !!dob.trim();
+  const slideWrap = "w-full flex-none px-5 py-4 flex flex-col gap-3.5";
+
+  // Compulsory: a name, a date of birth (unless the provider made it optional
+  // and nothing age-gated needs it), and — when the provider asks gender — a
+  // choice of boy/girl. Everything else on this slide is optional.
+  const canLeaveAbout = !!name.trim() && (!!dob.trim() || !needDob) && (!settings.collectGender || !!sex);
   const emergencyOk = !!emergencyName.trim() && !!emergencyPhone.trim();
-  const canLeave = (s: number) => (s === 0 ? canLeaveAbout : s === 2 ? emergencyOk : true);
-  const canNext = canLeave(step);
-  const canSave = canLeaveAbout && emergencyOk;
+  const missingQuestions = unansweredRequired(askQuestions, answers);
+  const questionsOk = missingQuestions.length === 0;
+
+  // The slideshow, built to match what this provider actually asks: the
+  // questions slide only appears when they have some, and the safeguarding
+  // slide only when there's a collection check or a photo-consent question.
+  const slides: {
+    key: string; emoji: string; title: string; sub: string; ok: boolean; hint?: string; body: React.ReactNode;
+  }[] = [
+    {
+      key: "about",
+      emoji: "🧒",
+      title: "About your child",
+      sub: "The basics for the register.",
+      ok: canLeaveAbout,
+      hint: "A name" + (needDob ? ", date of birth" : "") + (settings.collectGender ? " and boy or girl" : "") + " are needed to continue.",
+      body: (
+        <>
+          {settings.collectPhoto && (
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="flex h-[56px] w-[56px] flex-none items-center justify-center overflow-hidden rounded-full border border-[var(--line)] bg-[var(--panel)] text-[22px] text-[var(--ink-2)]" aria-label="Upload photo">
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt="" className="h-full w-full object-cover" />
+                ) : "+"}
+              </button>
+              <div className="min-w-0 flex-1">
+                <Button type="button" onClick={() => fileRef.current?.click()}>{photo ? "Change photo" : "Add a photo"}</Button>
+                <div className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">Optional — goes on the register so staff know who they&rsquo;re greeting and handing over.</div>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" onChange={pickPhoto} className="hidden" />
+            </div>
+          )}
+          <div>
+            <FieldLabel>Full name <span className="text-[var(--red)]">*</span></FieldLabel>
+            <Input required placeholder="Child’s name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
+          </div>
+          <div>
+            <FieldLabel>Date of birth {needDob ? <span className="text-[var(--red)]">*</span> : <span className="font-normal text-[var(--ink-3)]">— optional</span>}</FieldLabel>
+            <Input required={needDob} type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full" />
+          </div>
+          {settings.collectGender && (
+            <div>
+              <FieldLabel>Boy or girl <span className="text-[var(--red)]">*</span></FieldLabel>
+              <div className="grid grid-cols-2 gap-2">
+                {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setSex(sex === v ? "" : v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
+                    style={sex === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Used on the register and to colour their name in the provider&rsquo;s list.</div>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "health",
+      emoji: "🩹",
+      title: "Health & diet",
+      sub: "Anything staff must know on day one.",
+      ok: true,
+      body: (
+        <>
+          <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
+          <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
+          <Area label="Dietary needs" placeholder="e.g. vegetarian, halal" value={dietary} onChange={setDietary} max={limitFor(settings, "dietary", CHILD_LIMITS)} rows={2} />
+          {settings.collectSend && (
+            <div>
+              <Area label={<>SEND / accessibility</>} placeholder="Describe the support they need" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={3} />
+              {/* The plan upload only appears once they've told us there's
+                  something to support — asking for a document before that is
+                  asking twice. */}
+              {settings.collectSendPlan && !!send.trim() && (
+                <div className="mt-2 rounded-lg border border-dashed border-[var(--line)] p-2.5">
+                  <div className="text-[11px] font-bold">SEND or EHCP plan <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+                  <div className="mt-0.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
+                    If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
+                  </div>
+                  {sendPlanId ? (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold">📎 {sendPlanName ?? "Plan attached"}</span>
+                      <button type="button" onClick={() => { setSendPlanId(null); setSendPlanName(null); }} className="text-[11px] font-bold text-[var(--ink-3)]">Remove</button>
+                    </div>
+                  ) : planPct !== null ? (
+                    <div className="mt-2">
+                      <div className="text-[11.5px] font-bold">Uploading… {Math.round(planPct * 100)}%</div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--line)]">
+                        <div className="h-full rounded-full bg-[var(--brand-2)]" style={{ width: `${planPct * 100}%` }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <Button type="button" onClick={() => planRef.current?.click()} className="mt-2">📎 Choose a file to upload</Button>
+                  )}
+                  {!sendPlanId && (
+                    <input ref={planRef} type="file" accept="application/pdf,image/*" onChange={pickPlan} className="hidden" />
+                  )}
+                  {planError && <div className="mt-1.5 text-[11px] font-bold text-[var(--red)]">{planError}</div>}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "contact",
+      emoji: "💛",
+      title: "Contact & comfort",
+      sub: "Who to call, and what settles them.",
+      ok: emergencyOk,
+      hint: "An emergency contact — a name and number — is required.",
+      body: (
+        <>
+          <div>
+            <FieldLabel>Emergency contact <span className="text-[var(--red)]">*</span></FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+              <Input placeholder="Phone" inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+            </div>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Required — who staff ring if they can&rsquo;t reach you.</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Area label="Likes" placeholder="What settles them" value={likes} onChange={setLikes} max={limitFor(settings, "likes", CHILD_LIMITS)} rows={2} />
+            <Area label="Dislikes" placeholder="What to avoid" value={dislikes} onChange={setDislikes} max={limitFor(settings, "dislikes", CHILD_LIMITS)} rows={2} />
+          </div>
+        </>
+      ),
+    },
+    ...(askQuestions.length
+      ? [{
+          key: "questions",
+          emoji: "📝",
+          title: "A few questions",
+          sub: "Asked once by your provider.",
+          ok: questionsOk,
+          hint: "Please answer the required questions to continue.",
+          body: (
+            // Operator theme (CSS vars) — no `tone`, so QuestionFields renders
+            // its default variant, matching the rest of this form.
+            <QuestionFields questions={askQuestions} answers={answers} onChange={setAnswers} />
+          ),
+        }]
+      : []),
+    ...(settings.collectionCheck !== "off" || settings.askPhotoConsent
+      ? [{
+          key: "safeguarding",
+          emoji: "🔒",
+          title: "Safeguarding",
+          sub: "Collection and photo permission.",
+          ok: true,
+          body: (
+            <>
+              {settings.collectionCheck !== "off" && (
+                <div>
+                  <FieldLabel>Collection {pinMode ? "PIN" : "password"}</FieldLabel>
+                  <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
+                    Pick {pinMode ? "a number" : "a word"} only your family knows. If <b className="text-[var(--ink-2)]">anyone other than you</b>{" "}
+                    comes to collect them, staff will ask for it and won&rsquo;t hand over without it. Staff can see this {pinMode ? "PIN" : "word"}, so don&rsquo;t reuse a password from anywhere else.
+                  </div>
+                  <Input value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)}
+                    maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
+                    placeholder={pinMode ? "e.g. 4816" : "e.g. Bluebell"} className="w-full" />
+                </div>
+              )}
+              {settings.askPhotoConsent && (
+                <div>
+                  <FieldLabel>Photo permission</FieldLabel>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { v: true, label: "Photos allowed", desc: "May appear in Moments & newsfeed" },
+                      { v: false, label: "No photos", desc: "Never photographed or shared" },
+                    ].map((opt) => (
+                      <button key={String(opt.v)} type="button" onClick={() => setPhotoConsent(opt.v)} className="rounded-xl border p-2.5 text-left"
+                        style={photoConsent === opt.v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
+                        <div className="text-[12.5px] font-extrabold" style={{ color: photoConsent === opt.v ? "var(--brand-ink)" : "var(--ink)" }}>
+                          {opt.v ? "📷 " : "🚫 "}{opt.label}
+                        </div>
+                        <div className="text-[11px]" style={{ color: photoConsent === opt.v ? "var(--brand-strong)" : "var(--ink-3)" }}>{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ),
+        }]
+      : []),
+  ];
+
+  const last = slides.length - 1;
+  const [step, setStep] = useState(0);
+  // A slide the wizard has grown past can leave the current one stranded on an
+  // index that no longer exists (a provider config that drops a slide). Clamp.
+  const safeStep = Math.min(step, last);
+  const canNext = slides[safeStep].ok;
+  const canSave = canLeaveAbout && emergencyOk && questionsOk;
   const next = () => canNext && setStep((s) => Math.min(last, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
-
-  const slideWrap = "w-full flex-none px-5 py-4 flex flex-col gap-3.5";
 
   return (
     <div
@@ -212,132 +428,45 @@ function ChildModal({ child, onDone }: { child?: Child; onDone: (changed: boolea
           <div className="flex items-start justify-between">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">
-                {editing ? `Edit ${child!.name || "child"}` : "Add a child"} · Step {step + 1} of {STEPS.length}
+                {editing ? `Edit ${child!.name || "child"}` : "Add a child"} · Step {safeStep + 1} of {slides.length}
               </div>
               <h3 className="m-0 mt-0.5 text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-                {STEPS[step].emoji} {STEPS[step].title}
+                {slides[safeStep].emoji} {slides[safeStep].title}
               </h3>
-              <div className="text-[11.5px] text-[var(--ink-3)]">{STEPS[step].sub}</div>
+              <div className="text-[11.5px] text-[var(--ink-3)]">{slides[safeStep].sub}</div>
             </div>
             <button type="button" onClick={() => onDone(false)} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]" aria-label="Close">×</button>
           </div>
           {/* segmented progress bar */}
           <div className="mt-3 flex gap-1.5">
-            {STEPS.map((s, i) => (
-              <button key={s.title} type="button" onClick={() => (i < step || (i === step + 1 && canNext) ? setStep(i) : undefined)}
+            {slides.map((s, i) => (
+              <button key={s.key} type="button" onClick={() => (i < safeStep || (i === safeStep + 1 && canNext) ? setStep(i) : undefined)}
                 className="h-1.5 flex-1 rounded-full transition-colors"
-                style={{ background: i <= step ? "var(--brand-2)" : "var(--line)" }} aria-label={`Go to ${s.title}`} />
+                style={{ background: i <= safeStep ? "var(--brand-2)" : "var(--line)" }} aria-label={`Go to ${s.title}`} />
             ))}
           </div>
         </div>
 
         {/* slides — swipe horizontally as you complete each */}
         <div className="overflow-hidden">
-          <div className="flex items-stretch transition-transform duration-300 ease-out" style={{ transform: `translateX(-${step * 100}%)` }}>
-            {/* Slide 1 — about */}
-            <div className={slideWrap} aria-hidden={step !== 0}>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => fileRef.current?.click()}
-                  className="flex h-[56px] w-[56px] flex-none items-center justify-center overflow-hidden rounded-full border border-[var(--line)] bg-[var(--panel)] text-[22px] text-[var(--ink-2)]" aria-label="Upload photo">
-                  {photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photo} alt="" className="h-full w-full object-cover" />
-                  ) : "+"}
-                </button>
-                <div className="min-w-0 flex-1">
-                  <Button type="button" onClick={() => fileRef.current?.click()}>{photo ? "Change photo" : "Add a photo"}</Button>
-                  <div className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">Optional — goes on the register so staff know who they&rsquo;re greeting and handing over.</div>
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" onChange={pickPhoto} className="hidden" />
+          <div className="flex items-stretch transition-transform duration-300 ease-out" style={{ transform: `translateX(-${safeStep * 100}%)` }}>
+            {slides.map((s, i) => (
+              <div key={s.key} className={slideWrap} aria-hidden={safeStep !== i}>
+                {s.body}
               </div>
-              <div>
-                <FieldLabel>Full name <span className="text-[var(--red)]">*</span></FieldLabel>
-                <Input required placeholder="Child’s name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
-              </div>
-              <div>
-                <FieldLabel>Date of birth <span className="text-[var(--red)]">*</span></FieldLabel>
-                <Input required type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full" />
-              </div>
-              <div>
-                <FieldLabel>Boy or girl <span className="font-normal text-[var(--ink-3)]">— optional</span></FieldLabel>
-                <div className="grid grid-cols-2 gap-2">
-                  {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => (
-                    <button key={v} type="button" onClick={() => setSex(v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
-                      style={sex === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Slide 2 — health & diet */}
-            <div className={slideWrap} aria-hidden={step !== 1}>
-              <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={LIMITS.allergies} rows={2} />
-              <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={LIMITS.medical} rows={2} />
-              <Area label="Dietary needs" placeholder="e.g. vegetarian, halal" value={dietary} onChange={setDietary} max={LIMITS.dietary} rows={2} />
-              <Area label={<>SEND / accessibility</>} placeholder="Describe the support they need" value={send} onChange={setSend} max={LIMITS.send} rows={3} />
-            </div>
-
-            {/* Slide 3 — contact & comfort */}
-            <div className={slideWrap} aria-hidden={step !== 2}>
-              <div>
-                <FieldLabel>Emergency contact <span className="text-[var(--red)]">*</span></FieldLabel>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="Name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
-                  <Input placeholder="Phone" inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
-                </div>
-                <div className="mt-1 text-[11px] text-[var(--ink-3)]">Required — who staff ring if they can&rsquo;t reach you.</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Area label="Likes" placeholder="What settles them" value={likes} onChange={setLikes} max={LIMITS.likes} rows={2} />
-                <Area label="Dislikes" placeholder="What to avoid" value={dislikes} onChange={setDislikes} max={LIMITS.dislikes} rows={2} />
-              </div>
-            </div>
-
-            {/* Slide 4 — safeguarding */}
-            <div className={slideWrap} aria-hidden={step !== 3}>
-              <div>
-                <FieldLabel>Collection password</FieldLabel>
-                <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
-                  Pick a word only your family knows. If <b className="text-[var(--ink-2)]">anyone other than you</b>{" "}
-                  comes to collect them, staff will ask for it and won&rsquo;t hand over without it. Staff can see this word, so don&rsquo;t reuse a password from anywhere else.
-                </div>
-                <Input placeholder="e.g. Bluebell" value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)} className="w-full" />
-              </div>
-              <div>
-                <FieldLabel>Photo permission</FieldLabel>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { v: true, label: "Photos allowed", desc: "May appear in Moments & newsfeed" },
-                    { v: false, label: "No photos", desc: "Never photographed or shared" },
-                  ].map((opt) => (
-                    <button key={String(opt.v)} type="button" onClick={() => setPhotoConsent(opt.v)} className="rounded-xl border p-2.5 text-left"
-                      style={photoConsent === opt.v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
-                      <div className="text-[12.5px] font-extrabold" style={{ color: photoConsent === opt.v ? "var(--brand-ink)" : "var(--ink)" }}>
-                        {opt.v ? "📷 " : "🚫 "}{opt.label}
-                      </div>
-                      <div className="text-[11px]" style={{ color: photoConsent === opt.v ? "var(--brand-strong)" : "var(--ink-3)" }}>{opt.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* footer nav */}
         <div className="border-t border-[var(--line)] px-5 py-3.5">
           {error && <div className="mb-2 text-[12.5px] text-[var(--red)]">{error}</div>}
-          {step === 0 && !canLeaveAbout && (
-            <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">A name and date of birth are needed to continue.</div>
-          )}
-          {step === 2 && !emergencyOk && (
-            <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">An emergency contact — a name and number — is required.</div>
+          {!slides[safeStep].ok && slides[safeStep].hint && (
+            <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">{slides[safeStep].hint}</div>
           )}
           <div className="flex items-center gap-2">
-            {step > 0 && <Button type="button" onClick={back}>← Back</Button>}
-            {step < last ? (
+            {safeStep > 0 && <Button type="button" onClick={back}>← Back</Button>}
+            {safeStep < last ? (
               <Button variant="primary" type="button" onClick={next} disabled={!canNext} className="ml-auto">
                 Next →
               </Button>
@@ -359,6 +488,9 @@ export function ChildrenApp() {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Child | null>(null);
+  // Phase 1 is single-provider: the family's one provider, so the Add/Edit form
+  // can read that provider's settings + custom child questions.
+  const [tenantId, setTenantId] = useState<string | undefined>(undefined);
   // Which children already have a booking on record — those can't be removed,
   // so the register/booking history stays intact.
   const [bookedIds, setBookedIds] = useState<Set<string>>(new Set());
@@ -378,6 +510,12 @@ export function ChildrenApp() {
 
   useEffect(refresh, [refresh]);
   useRealtime(["children", "bookings"], refresh);
+
+  useEffect(() => {
+    apiGet<{ tenantId: string }[]>("/api/my/providers")
+      .then((ps) => { if (ps[0]) setTenantId(ps[0].tenantId); })
+      .catch(() => {});
+  }, []);
 
   const hasBookings = useCallback(
     (c: Child) => bookedIds.has(c.id) || bookedNames.has(c.name.trim().toLowerCase()),
@@ -427,6 +565,7 @@ export function ChildrenApp() {
 
       {adding && (
         <ChildModal
+          tenantId={tenantId}
           onDone={(changed) => {
             setAdding(false);
             if (changed) refresh();
@@ -436,6 +575,7 @@ export function ChildrenApp() {
       {editing && (
         <ChildModal
           child={editing}
+          tenantId={tenantId}
           onDone={(changed) => {
             setEditing(null);
             if (changed) refresh();
