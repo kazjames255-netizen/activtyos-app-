@@ -62,11 +62,16 @@ export function ParentWelcome() {
 
   useEffect(() => {
     if (forced) setOpen(true);
-    apiGet<Me>("/api/me")
-      .then((m) => {
-        if (forced || (m.role === "parent" && !m.welcomed)) setOpen(true);
-      })
-      .catch(() => {});
+    // Show only to a parent who hasn't seen it AND hasn't onboarded yet (no
+    // children on record). Anyone who already added a child has clearly been
+    // through it, so never nag them again — even if the seen-flag got cleared.
+    Promise.all([
+      apiGet<Me>("/api/me").catch(() => null),
+      apiGet<unknown[]>("/api/my/children").catch(() => [] as unknown[]),
+    ]).then(([m, kids]) => {
+      if (forced) return;
+      if (m?.role === "parent" && !m.welcomed && (kids?.length ?? 0) === 0) setOpen(true);
+    });
     // Prefill anything we already hold (usually just a name from their invite).
     apiGet<AccountProfile>("/api/account")
       .then((p) => setForm({

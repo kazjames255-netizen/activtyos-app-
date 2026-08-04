@@ -494,7 +494,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "newsfeed", legacyView: "custdash-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
         { view: "medication", legacyView: "custdash-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "meals", legacyView: "custdash-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
-        { view: "accidents", legacyView: "custdash-accidents", label: "Accidents & incidents", icon: { type: "glyph", value: "🩹" }, badge: null },
+        { view: "accidents", legacyView: "custdash-accidents", label: "First aid & incidents", icon: { type: "glyph", value: "🩹" }, badge: null },
         { view: "trips", legacyView: "custdash-trips", label: "Trips & consent", icon: { type: "glyph", value: "🚌" }, badge: null },
       ],
     },
