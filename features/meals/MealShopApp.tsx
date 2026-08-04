@@ -7,6 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
 import { UK_ALLERGENS } from "./allergens";
+import { SavedMenus } from "./SavedMenus";
 
 interface Option { id: string; name: string; price: number; description?: string; allergens?: string[]; active?: boolean }
 interface OrderItem { name: string; price: number; qty: number; lineTotal: number }
@@ -47,6 +48,9 @@ export function MealShopApp({ canManage, onBoard }: { canManage: boolean; onBoar
   return (
     <OperatorPage title="Meal shop" icon="🛒" lede="The meals families can order and pay for, and the orders coming in." actions={<Button sm onClick={onBoard}>← Dietary board</Button>}>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+
+      {/* Saved-menu library — reusable menus to schedule onto listing days */}
+      {canManage && <SavedMenus />}
 
       {/* Menu for sale */}
       <div className="mb-2 flex items-center justify-between">
