@@ -164,6 +164,10 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   // ones only appear once we know the child's age from their date of birth.
   const today = new Date().toISOString().slice(0, 10);
   const askQuestions = questionsFor(questions, undefined, ageOn(dob, today)).filter((q) => !asksEveryBooking(q));
+  // The dietary question is shown on the Health & diet step (under allergies),
+  // not on the separate questions page — pull it out of the general list.
+  const dietaryQ = askQuestions.find((q) => q.replaces === "dietary" || q.id === "q-dietary");
+  const otherQuestions = askQuestions.filter((q) => q !== dietaryQ);
   const needDob = dobRequired(settings, questions).required;
   const pinMode = settings.collectionCheck === "pin";
 
@@ -310,8 +314,11 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         <>
           <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
           <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
-          {/* Dietary is asked once via the provider's "Dietary requirements"
-              question (seeded, replaces:"dietary") — not a second built-in box. */}
+          {/* Dietary requirements sit here under allergies/medical (not on the
+              separate questions page) — it's the provider's "Dietary" question. */}
+          {dietaryQ && (
+            <QuestionFields questions={[dietaryQ]} answers={answers} onChange={setAnswers} />
+          )}
           {settings.collectSend && (
             <div>
               <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
@@ -407,18 +414,18 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         </>
       ),
     },
-    ...(askQuestions.length
+    ...(otherQuestions.length
       ? [{
           key: "questions",
           emoji: "📝",
           title: "A few questions",
           sub: "Asked once by your provider.",
-          ok: questionsOk,
+          ok: unansweredRequired(otherQuestions, answers).length === 0,
           hint: "Please answer the required questions to continue.",
           body: (
             // Operator theme (CSS vars) — no `tone`, so QuestionFields renders
             // its default variant, matching the rest of this form.
-            <QuestionFields questions={askQuestions} answers={answers} onChange={setAnswers} />
+            <QuestionFields questions={otherQuestions} answers={answers} onChange={setAnswers} />
           ),
         }]
       : []),

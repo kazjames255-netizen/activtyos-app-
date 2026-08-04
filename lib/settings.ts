@@ -907,19 +907,9 @@ export const SEEDED_QUESTIONS: ChildQuestion[] = [
   // Setup → Child questions if you need it.
   { id: "q-suncream", label: "May we apply sun cream?", type: "yesno", scope: "all", replaces: "suncreamConsent" },
   { id: "q-firstaid", label: "May we give first aid?", type: "yesno", scope: "all", replaces: "firstAidConsent" },
-  {
-    id: "q-walkhome",
-    label: "May they walk home alone?",
-    type: "yesno",
-    help: "Asked only about children old enough — set the age in Setup & features.",
-    scope: "all",
-    // Deliberately conservative. A provider who lets younger children walk
-    // home can lower it; one who never does can hide the question. What must
-    // not happen is the product asking a parent of a five-year-old whether
-    // they may walk home alone.
-    minAge: 8,
-    replaces: "walkHomeConsent",
-  },
+  // "May they walk home alone?" is NOT seeded by default — most providers hand
+  // over to a named adult, so it doesn't belong on every family. Add it
+  // per-provider in Setup → Child questions if you need it.
 ];
 
 export const DEFAULT_SETTINGS: TenantSettings = {
