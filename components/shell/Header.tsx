@@ -56,12 +56,12 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Features). Operators lose the Messages tab when they turn Messages off.
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
-  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean }[] =
+  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string }[] =
     portal === "custdash"
       ? [
-          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread }] : []),
-          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0 }] : []),
-          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0 },
+          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff" }] : []),
+          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff" }] : []),
+          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0, accent: "#0ea5a5", accentLight: "#3fd0c9" },
           // Shown only when the provider runs a membership programme (gated in
           // useCustomerArea). Given a fancy gold treatment so it stands out.
           ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: "Memberships", icon: STAR, wide: false, badge: 0, fancy: true }] : []),
@@ -100,16 +100,19 @@ export function Header({ portal }: { portal: PortalKey }) {
             const fancyStyle = active
               ? { background: "linear-gradient(120deg,#d4a017,#f5c542)", color: "#3a2a00", boxShadow: "0 2px 8px rgba(212,160,23,.5)" }
               : { background: "linear-gradient(120deg,#f7d774,#ffe9a8)", color: "#6b4e00", boxShadow: "0 1px 5px rgba(212,160,23,.35)" };
+            // Each tab carries its own colour — a soft tint at rest, a vibrant
+            // gradient when active — so the bar reads as bright action buttons.
+            const accent = t.accent ?? "#2f6bd8";
+            const accentLight = t.accentLight ?? "#5b9bff";
+            const colourStyle = active
+              ? { background: `linear-gradient(120deg, ${accent}, ${accentLight})`, color: "#fff", boxShadow: `0 4px 12px -2px ${accent}80` }
+              : { background: `${accent}18`, color: accent };
             return (
               <Link
                 key={t.view}
                 href={t.href}
-                className={`relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold no-underline transition-colors ${t.fancy ? "hover:brightness-105" : "hover:bg-[var(--surface)]"}`}
-                style={t.fancy
-                  ? fancyStyle
-                  : active
-                    ? { background: "var(--brand-2, #2f6bd8)", color: "#fff", boxShadow: "0 1px 4px rgba(47,107,216,.35)" }
-                    : { color: "var(--ink-2)" }}
+                className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold no-underline transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+                style={t.fancy ? fancyStyle : colourStyle}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 {/* Icon-only on phones; the label returns from sm up. */}
