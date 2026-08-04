@@ -132,6 +132,19 @@ function ChildModal({ child, tenantId, onDone }: { child?: Child; tenantId?: str
   const [planPct, setPlanPct] = useState<number | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
 
+  // The family-level emergency contact (captured once with the parent's own
+  // details) pre-fills a NEW child's emergency contact — it's the same across
+  // children. Editable, in case one child needs a different contact.
+  useEffect(() => {
+    if (editing) return;
+    apiGet<{ emergencyName?: string; emergencyPhone?: string }>("/api/account")
+      .then((p) => {
+        if (p.emergencyName) setEmergencyName((v) => v || p.emergencyName!);
+        if (p.emergencyPhone) setEmergencyPhone((v) => v || p.emergencyPhone!);
+      })
+      .catch(() => {});
+  }, [editing]);
+
   // The provider's own "once" questions — the stable ones asked when a child is
   // set up (the every-booking ones are asked on the booking itself). Age-gated
   // ones only appear once we know the child's age from their date of birth.

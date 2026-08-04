@@ -8,7 +8,7 @@ import type { Me } from "@/lib/roles";
 interface GeoHit { label: string; lat: number; lng: number }
 const UK_POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
 
-interface AccountProfile { name: string; phone: string; address: string; postcode: string }
+interface AccountProfile { name: string; phone: string; address: string; postcode: string; emergencyName: string; emergencyPhone: string }
 
 // First-login welcome for a parent. Shows exactly once — the moment a
 // freshly-registered family first lands in the portal. Two phases:
@@ -26,7 +26,7 @@ export function ParentWelcome() {
   const [phase, setPhase] = useState<"details" | "go">("details");
   const [provider, setProvider] = useState<string>("");
 
-  const [form, setForm] = useState<AccountProfile>({ name: "", phone: "", address: "", postcode: "" });
+  const [form, setForm] = useState<AccountProfile>({ name: "", phone: "", address: "", postcode: "", emergencyName: "", emergencyPhone: "" });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -68,8 +68,12 @@ export function ParentWelcome() {
       })
       .catch(() => {});
     // Prefill anything we already hold (usually just a name from their invite).
-    apiGet<AccountProfile & { phone: string }>("/api/account")
-      .then((p) => setForm({ name: p.name ?? "", phone: /@/.test(p.phone) ? "" : (p.phone ?? ""), address: p.address ?? "", postcode: p.postcode ?? "" }))
+    apiGet<AccountProfile>("/api/account")
+      .then((p) => setForm({
+        name: p.name ?? "", phone: /@/.test(p.phone) ? "" : (p.phone ?? ""),
+        address: p.address ?? "", postcode: p.postcode ?? "",
+        emergencyName: p.emergencyName ?? "", emergencyPhone: p.emergencyPhone ?? "",
+      }))
       .catch(() => {});
     // The provider they belong to, so the welcome reads in their brand.
     apiGet<{ name: string }[]>("/api/my/providers")
@@ -89,14 +93,16 @@ export function ParentWelcome() {
 
   const set = (k: keyof AccountProfile) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const firstName = form.name.trim().split(/\s+/)[0] || "";
-  const detailsOk = !!form.name.trim() && !!form.phone.trim() && !!form.address.trim() && !!form.postcode.trim();
+  const detailsOk = !!form.name.trim() && !!form.phone.trim() && !!form.address.trim() && !!form.postcode.trim()
+    && !!form.emergencyName.trim() && !!form.emergencyPhone.trim();
 
   async function saveDetails() {
-    if (!detailsOk) { setErr("Please fill in your name, contact number, home address and postcode."); return; }
+    if (!detailsOk) { setErr("Please fill in your details, address and an emergency contact."); return; }
     setSaving(true); setErr(null);
     try {
       await apiPut("/api/account", {
         name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim(), postcode: form.postcode.trim(),
+        emergencyName: form.emergencyName.trim(), emergencyPhone: form.emergencyPhone.trim(),
       });
       setPhase("go");
     } catch (e) {
@@ -194,9 +200,24 @@ export function ParentWelcome() {
                 <span className={label}>Postcode <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
               </div>
+
+              {/* Family-level emergency contact — the same for every child, so
+                  it's asked once here rather than on each child profile. */}
+              <div className="mt-1 sm:col-span-2">
+                <div className="text-[12.5px] font-extrabold text-[var(--ink,#171534)]">Emergency contact</div>
+                <div className="text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">Who staff should ring if they can&rsquo;t reach you. We&rsquo;ll use this for all your children.</div>
+              </div>
+              <div>
+                <span className={label}>Contact name <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.emergencyName} onChange={set("emergencyName")} placeholder="e.g. Grandparent, partner" />
+              </div>
+              <div>
+                <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.emergencyPhone} onChange={set("emergencyPhone")} placeholder="Their phone number" inputMode="tel" />
+              </div>
             </div>
             <p className="mt-1.5 text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">
-              Your children&rsquo;s details and emergency contacts come next.
+              Your children&rsquo;s details come next — this emergency contact is applied to each of them.
             </p>
             {err && <div className="mt-2 text-[12px] font-bold text-[#e21d27]">{err}</div>}
             <button

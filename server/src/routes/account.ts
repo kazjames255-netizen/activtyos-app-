@@ -14,8 +14,12 @@ const putSchema = z.object({
   address: z.string().trim().max(300).optional(),
   postcode: z.string().trim().max(16).optional(),
   marketingConsent: z.boolean().optional(),
+  // A family-level emergency contact — the same across all their children, so
+  // it's captured once here rather than re-typed on every child profile.
+  emergencyName: z.string().trim().max(120).optional(),
+  emergencyPhone: z.string().trim().max(40).optional(),
 });
-type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean };
+type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string };
 
 account.get("/", async (req, res) => {
   const auth = req.auth!;
@@ -30,6 +34,8 @@ account.get("/", async (req, res) => {
     address: u.address ?? "",
     postcode: u.postcode ?? "",
     marketingConsent: u.marketingConsent ?? false,
+    emergencyName: u.emergencyName ?? "",
+    emergencyPhone: u.emergencyPhone ?? "",
     role: auth.role,
     tenantId: auth.tenantId ?? null,
   });
