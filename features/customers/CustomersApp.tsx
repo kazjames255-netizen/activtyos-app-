@@ -39,12 +39,22 @@ interface Child {
   name: string;
   age?: number;
   dob?: string;
+  // Care details — present on linked/operator records, blank on thin
+  // booking-only ones (hence the "not visible" note only when all are absent).
+  allergies?: string;
+  medical?: string;
+  dietary?: string;
+  send?: string;
   /** The provider's own copy of a SEND plan, emailed to them by the family. */
   sendPlanId?: string;
   sendPlanName?: string;
-  /** The parent's own photo of them. Not on these thin records yet — it
-   *  arrives with the account link (§K) — but the circle is built to show it
-   *  the day it does, because a face is the point of a register. */
+  collectionPassword?: string;
+  photoConsent?: boolean;
+  emergencyName?: string;
+  emergencyPhone?: string;
+  likes?: string;
+  dislikes?: string;
+  /** The parent's own photo of them, shown on the register once linked. */
   photo?: string;
 }
 interface Customer {
@@ -1289,19 +1299,42 @@ export function CustomersApp() {
                       <Row label="Location" value={k.family.locationName} />
                     </div>
 
-                    {/* Named rather than omitted. A blank allergies line reads
-                        as "no allergies", which is the dangerous reading. */}
-                    <div className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-                      <div className="text-[11px] font-extrabold text-[var(--ink-2)]">
-                        Not visible to you yet
-                      </div>
-                      <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-                        Allergies · Medical · SEND and their plan · Collection password · Photo ·
-                        Emergency contact — the parent holds these on their own account. They
-                        appear here once the accounts are linked, and a blank line here does{" "}
-                        <b>not</b> mean a child has none.
-                      </div>
-                    </div>
+                    {(() => {
+                      const hasDetail = Boolean(
+                        k.allergies || k.medical || k.dietary || k.send || k.sendPlanName ||
+                        k.collectionPassword || k.emergencyName || k.emergencyPhone ||
+                        k.likes || k.dislikes || typeof k.photoConsent === "boolean",
+                      );
+                      // A thin booking-only record has none of these — keep the
+                      // "held by the parent" note. A linked/entered child shows
+                      // the real care details.
+                      if (!hasDetail) {
+                        return (
+                          <div className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-3 py-2">
+                            <div className="text-[11px] font-extrabold text-[var(--ink-2)]">Not filled in yet</div>
+                            <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
+                              Allergies · Medical · SEND · Collection password · Emergency contact — the
+                              family hasn&rsquo;t added these to this child yet. A blank line does <b>not</b> mean a child has none.
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mt-2.5 grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
+                          <Row label="Allergies" value={k.allergies || "None recorded"} wide />
+                          <Row label="Medical" value={k.medical || "None recorded"} wide />
+                          {k.dietary && <Row label="Dietary" value={k.dietary} wide />}
+                          {k.send && <Row label="SEND / additional needs" value={k.send} wide />}
+                          {k.sendPlanName && <Row label="SEND plan" value={`📎 ${k.sendPlanName}`} />}
+                          {(k.emergencyName || k.emergencyPhone) && (
+                            <Row label="Emergency contact" value={[k.emergencyName, k.emergencyPhone].filter(Boolean).join(" · ")} wide />
+                          )}
+                          {k.collectionPassword && <Row label="Collection password" value={k.collectionPassword} />}
+                          {typeof k.photoConsent === "boolean" && <Row label="Photo consent" value={k.photoConsent ? "Allowed" : "No photos"} />}
+                          {(k.likes || k.dislikes) && <Row label="Likes / dislikes" value={[k.likes, k.dislikes].filter(Boolean).join(" · ")} wide />}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
