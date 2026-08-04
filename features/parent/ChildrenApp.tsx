@@ -544,17 +544,28 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                 ← Back
               </button>
             )}
-            {(() => {
-              const isLast = safeStep >= last;
-              const disabled = isLast ? (busy || !canSave) : !canNext;
-              return (
-                <button type="button" onClick={() => (isLast ? save() : next())} disabled={disabled}
-                  className="ml-auto rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
-                  {isLast ? (busy ? "Saving…" : editing ? "Save changes" : "Save child") : "Next →"}
+            <div className="ml-auto flex items-center gap-2">
+              {/* When EDITING an existing child, a quick save from any step —
+                  no need to click through every page for a small change. */}
+              {editing && safeStep < last && (
+                <button type="button" onClick={() => save()} disabled={busy || !canSave}
+                  className="rounded-full border-2 px-4 py-2 text-[13px] font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ borderColor: "#2f6bd8", color: "#1d3a8f", background: "white" }}>
+                  {busy ? "Saving…" : "✓ Save changes"}
                 </button>
-              );
-            })()}
+              )}
+              {(() => {
+                const isLast = safeStep >= last;
+                const disabled = isLast ? (busy || !canSave) : !canNext;
+                return (
+                  <button type="button" onClick={() => (isLast ? save() : next())} disabled={disabled}
+                    className="rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
+                    {isLast ? (busy ? "Saving…" : editing ? "Save changes" : "Save child") : "Next →"}
+                  </button>
+                );
+              })()}
+            </div>
           </div>
         </div>
       </div>
