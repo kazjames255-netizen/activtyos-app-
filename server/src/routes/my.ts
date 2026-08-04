@@ -247,6 +247,68 @@ my.get("/bookings", async (req, res) => {
   res.json(list);
 });
 
+// GET /api/my/meal-days — the family's booked days that OFFER meals, each with
+// that day's scheduled menu (from the per-listing meal planner). Powers the
+// parent Meals area: they order a meal for a child on a day, priced server-side
+// against this menu (see POST /api/meal-orders). Read-only join.
+my.get("/meal-days", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const snap = await bookingsCol.where("email", "==", email).get();
+  const bookings = snap.docs
+    .map((d) => fromDoc(d.data() as BookingDoc))
+    .filter((b) => b.listingId && (b.status !== "Cancelled"));
+  const listingIds = [...new Set(bookings.map((b) => b.listingId).filter(Boolean) as string[])].slice(0, 50);
+  if (!listingIds.length) { res.json([]); return; }
+
+  const listingSnaps = await db.getAll(...listingIds.map((id) => db.collection("listings").doc(id)));
+  const listings = new Map(
+    listingSnaps.filter((s) => s.exists).map((s) => [s.id, s.data() as Record<string, unknown>]),
+  );
+  // Only the menus referenced by a meals-enabled listing's plan.
+  const menuIds = [...new Set(
+    [...listings.values()]
+      .filter((l) => l.mealsEnabled && l.mealPlan)
+      .flatMap((l) => Object.values(l.mealPlan as Record<string, string>)),
+  )];
+  const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
+  const menus = new Map(menuSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, name: s.data()!.name as string, items: (s.data()!.items ?? []) as unknown[] }]));
+
+  // Provider display names, once per tenant.
+  const tenantIds = [...new Set([...listings.values()].map((l) => l.tenantId as string).filter(Boolean))];
+  const libs = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("libraries").doc(id))) : [];
+  const nameByTenant = new Map(libs.map((l) => [l.id, ((l.data() as { settings?: { providerName?: string } } | undefined)?.settings?.providerName ?? "").trim()]));
+
+  // Merge siblings on the same (listing,date) into one entry.
+  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] } }>();
+  for (const b of bookings) {
+    const l = listings.get(b.listingId!);
+    if (!l || !l.mealsEnabled || !l.mealPlan) continue;
+    const plan = l.mealPlan as Record<string, string>;
+    const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => plan[dt] && menus.has(plan[dt]));
+    const kids = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
+    for (const date of dates) {
+      const key = `${b.listingId}__${date}`;
+      let entry = byKey.get(key);
+      if (!entry) {
+        entry = {
+          tenantId: l.tenantId as string,
+          tenantName: nameByTenant.get(l.tenantId as string) || (l.tenantName as string) || "Your provider",
+          listingId: b.listingId!,
+          listingName: (l.title as string) || (l.name as string) || "Camp",
+          date,
+          children: [],
+          menu: menus.get(plan[date])!,
+        };
+        byKey.set(key, entry);
+      }
+      for (const k of kids) if (!entry.children.includes(k)) entry.children.push(k);
+    }
+  }
+  const out = [...byKey.values()].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  res.json(out);
+});
+
 // GET /api/my/providers — the distinct providers the parent has booked with
 // (tenant id + name). Powers the newsfeed header and the "message a provider"
 // picker, so a parent only ever contacts someone they have a booking with.

@@ -89,12 +89,21 @@ mealOptions.delete("/:id", async (req, res) => {
 });
 
 // ── Meal orders ───────────────────────────────────────────────────────────
+// An order line references EITHER a tenant-wide meal-option (legacy meal shop)
+// OR a menu item from a listing's scheduled day-menu (the planner). When any
+// line is a menuItemId the order must carry the listingId so the server can
+// resolve that day's menu and price it.
+const orderItemSchema = z.union([
+  z.object({ optionId: z.string().min(1).max(60), qty: z.number().int().min(1).max(20) }),
+  z.object({ menuItemId: z.string().min(1).max(60), qty: z.number().int().min(1).max(20) }),
+]);
 const orderSchema = z.object({
   tenantId: z.string().min(1).max(60),
+  listingId: z.string().max(60).optional(),
   date: z.string().max(10),
   childName: z.string().trim().min(1).max(80),
   childId: z.string().max(60).optional(),
-  items: z.array(z.object({ optionId: z.string().min(1).max(60), qty: z.number().int().min(1).max(20) })).min(1).max(20),
+  items: z.array(orderItemSchema).min(1).max(20),
 });
 
 function operatorScope(req: Request, res: Response): string | null {
@@ -198,24 +207,53 @@ mealOrders.post("/", async (req, res) => {
     }
   }
 
-  // Resolve every option from the server — the client never sends a price.
-  const optionDocs = await db.getAll(...input.items.map((i) => optionsCol.doc(i.optionId)));
-  const items: { optionId: string; name: string; price: number; qty: number; lineTotal: number }[] = [];
-  for (let idx = 0; idx < input.items.length; idx++) {
-    const i = input.items[idx];
-    const optDoc = optionDocs[idx];
-    if (!optDoc.exists || optDoc.data()!.tenantId !== input.tenantId || optDoc.data()!.active === false) {
-      res.status(400).json({ error: `One of the meals isn't available any more — refresh the menu` });
-      return;
+  // Resolve every line from the server — the client never sends a price.
+  type OrderLine = { name: string; price: number; qty: number; lineTotal: number; optionId?: string; menuItemId?: string; allergens?: string[] };
+  const items: OrderLine[] = [];
+  const usesMenu = input.items.some((i) => "menuItemId" in i);
+  if (usesMenu) {
+    // Ordering from a listing's scheduled day-menu (the planner). The listing
+    // must offer meals on this date, and every line must be an item on that
+    // day's menu — prices come from the menu, never the client.
+    if (!input.listingId) { res.status(400).json({ error: "This order needs a listing" }); return; }
+    const listingSnap = await db.collection("listings").doc(input.listingId).get();
+    const listing = listingSnap.data();
+    if (!listingSnap.exists || listing!.tenantId !== input.tenantId || !listing!.mealsEnabled) {
+      res.status(400).json({ error: "That camp isn't offering meals" }); return;
     }
-    const price = round2(optDoc.data()!.price as number);
-    items.push({ optionId: i.optionId, name: optDoc.data()!.name as string, price, qty: i.qty, lineTotal: round2(price * i.qty) });
+    const menuId = (listing!.mealPlan as Record<string, string> | undefined)?.[input.date];
+    if (!menuId) { res.status(400).json({ error: "There's no menu set for that day" }); return; }
+    const menuSnap = await db.collection("mealMenus").doc(menuId).get();
+    if (!menuSnap.exists || menuSnap.data()!.tenantId !== input.tenantId) { res.status(400).json({ error: "That day's menu is unavailable — refresh" }); return; }
+    const byId = new Map(((menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]).map((it) => [it.id, it]));
+    for (const i of input.items) {
+      if (!("menuItemId" in i)) { res.status(400).json({ error: "Mixed order types aren't supported" }); return; }
+      const it = byId.get(i.menuItemId);
+      if (!it) { res.status(400).json({ error: "One of the meals isn't on that day's menu any more — refresh" }); return; }
+      const price = round2(it.price);
+      items.push({ menuItemId: i.menuItemId, name: it.name, price, qty: i.qty, lineTotal: round2(price * i.qty), ...(it.allergens?.length ? { allergens: it.allergens } : {}) });
+    }
+  } else {
+    const optionIds = input.items.map((i) => ("optionId" in i ? i.optionId : ""));
+    const optionDocs = await db.getAll(...optionIds.map((id) => optionsCol.doc(id)));
+    for (let idx = 0; idx < input.items.length; idx++) {
+      const i = input.items[idx];
+      if (!("optionId" in i)) { res.status(400).json({ error: "Mixed order types aren't supported" }); return; }
+      const optDoc = optionDocs[idx];
+      if (!optDoc.exists || optDoc.data()!.tenantId !== input.tenantId || optDoc.data()!.active === false) {
+        res.status(400).json({ error: `One of the meals isn't available any more — refresh the menu` });
+        return;
+      }
+      const price = round2(optDoc.data()!.price as number);
+      items.push({ optionId: i.optionId, name: optDoc.data()!.name as string, price, qty: i.qty, lineTotal: round2(price * i.qty) });
+    }
   }
   const total = round2(items.reduce((s, x) => s + x.lineTotal, 0));
   if (total <= 0) { res.status(400).json({ error: "Nothing to order" }); return; }
 
   const doc = {
     tenantId: input.tenantId,
+    ...(input.listingId ? { listingId: input.listingId } : {}),
     parentEmail: email.toLowerCase(),
     parentName: req.user?.name ?? email,
     childName: input.childName,
