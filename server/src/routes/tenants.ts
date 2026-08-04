@@ -24,9 +24,16 @@ export const me = Router();
 me.get("/", async (req, res) => {
   const auth = req.auth!;
   let tenantName: string | null = null;
+  let logoUrl: string | null = null;
   if (auth.tenantId) {
-    const t = await db.collection("tenants").doc(auth.tenantId).get();
+    const [t, lib] = await Promise.all([
+      db.collection("tenants").doc(auth.tenantId).get(),
+      db.collection("libraries").doc(auth.tenantId).get(),
+    ]);
     tenantName = t.exists ? t.data()!.name : null;
+    // The operator's own logo, so their portal chrome (sidebar) wears their
+    // brand — not just their customer emails/pages.
+    logoUrl = ((lib.data()?.settings as { billing?: { logoUrl?: string } } | undefined)?.billing?.logoUrl) || null;
   }
   // The parent's postcode, captured at signup, so the browse can locate them.
   const userSnap = await db.collection("users").doc(req.user!.uid).get();
@@ -36,7 +43,28 @@ me.get("/", async (req, res) => {
     role: auth.role,
     tenantId: auth.tenantId,
     tenantName,
+    logoUrl,
     postcode,
     franchiseId: auth.franchiseId,
   });
+
+  // A parent hitting /api/me IS in the platform — mark any customer record a
+  // provider created for them as 'joined', so an invited family flips from
+  // "Invited" to "Customer" the moment they sign in (before any booking).
+  // Fire-and-forget: never delay or fail /api/me over it.
+  if (auth.role === "parent" && req.user!.email) void markCustomerJoined(req.user!.email);
 });
+
+/** Stamp joinedAt on this email's customer records (across providers) the first
+ *  time we see them signed in. Idempotent — skips any already stamped. */
+async function markCustomerJoined(email: string): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    for (const e of [...new Set([email, email.toLowerCase()])]) {
+      const snap = await db.collection("customers").where("email", "==", e).get();
+      await Promise.all(snap.docs.filter((d) => !d.data().joinedAt).map((d) => d.ref.update({ joinedAt: now })));
+    }
+  } catch (err) {
+    console.error("[me] mark customer joined failed:", (err as Error).message);
+  }
+}

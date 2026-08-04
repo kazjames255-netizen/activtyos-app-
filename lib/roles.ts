@@ -5,6 +5,8 @@ export interface Me {
   role: "platform" | "company" | "franchise" | "freelancer" | "staff" | "parent";
   tenantId: string | null;
   tenantName: string | null;
+  /** The operator's own logo (settings.billing.logoUrl), for the portal chrome. */
+  logoUrl?: string | null;
   /** The parent's postcode from signup — seeds the browse distance search. */
   postcode?: string | null;
   franchiseId: string | null;

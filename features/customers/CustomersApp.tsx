@@ -62,6 +62,8 @@ interface Customer {
   children?: Child[];
   /** Set once they've been invited to set a password. */
   invitedAt?: string;
+  /** Set the first time they actually sign in (accepted the invite / joined). */
+  joinedAt?: string;
 }
 interface Draft {
   id: string | null;
@@ -118,8 +120,8 @@ type Stage = "lead" | "invited" | "customer" | "repeat";
  */
 const STAGES: { key: Stage; label: string; hint: string; colour: string }[] = [
   { key: "lead", label: "Lead", hint: "Enquired, never booked, not invited yet", colour: "#e22295" },
-  { key: "invited", label: "Invited", hint: "Sent a sign-up link, hasn't booked yet", colour: "#2f6bd8" },
-  { key: "customer", label: "Customer", hint: "Booked with you once", colour: "#3f78d8" },
+  { key: "invited", label: "Invited", hint: "Sent a sign-up link, not signed in yet", colour: "#2f6bd8" },
+  { key: "customer", label: "Customer", hint: "Signed up or booked with you", colour: "#3f78d8" },
   { key: "repeat", label: "Repeat", hint: "Booked more than once — they came back", colour: "#6a4fd0" },
 ];
 
@@ -499,6 +501,9 @@ export function CustomersApp() {
     const st = stats[(c.email ?? "").trim().toLowerCase()];
     if (st && st.n > 1) return "repeat";
     if (st && st.n > 0) return "customer";
+    // Signed in / accepted the invite but not booked yet — an active account
+    // holder, so "Customer", not still "Invited".
+    if (c.joinedAt) return "customer";
     return c.invitedAt ? "invited" : "lead";
   };
 
@@ -1349,9 +1354,11 @@ export function CustomersApp() {
                     {c.marketingOptIn && (
                       <span className="rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-extrabold text-[#1d3a8f]">✉ Marketing</span>
                     )}
-                    {c.invitedAt && (
+                    {c.joinedAt ? (
+                      <span className="rounded-full bg-[#e6f6ec] px-2 py-[2px] text-[10px] font-extrabold text-[#1a7f43]">✓ Signed up</span>
+                    ) : c.invitedAt ? (
                       <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-extrabold text-[#5b6478]">Invited</span>
-                    )}
+                    ) : null}
                     {(c.children ?? []).length === 0 ? (
                       <span className="text-[11px] text-[var(--ink-3)]">No children on record</span>
                     ) : (

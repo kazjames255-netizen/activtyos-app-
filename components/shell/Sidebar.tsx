@@ -144,6 +144,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       .then((m) => {
         if (m.tenantName) {
           setBrand(m.tenantName);
+          if (m.logoUrl) setBrandLogo(m.logoUrl); // operator's own logo in their portal chrome
           return;
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
