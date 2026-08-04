@@ -287,10 +287,10 @@ my.get("/meal-days", async (req, res) => {
   const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string } } } | undefined)?.settings ?? {}]));
   const nameByTenant = new Map([...settingsByTenant].map(([id, s]) => [id, (s.providerName ?? "").trim()]));
 
-  // Days the family has already PAID a meal for — used when a provider only
-  // shares the served-menu display with paying families.
-  const paidSnap = await bookingsCol.firestore.collection("mealOrders").where("parentEmail", "==", email.toLowerCase()).where("pay", "==", "Paid").get();
-  const paidKeys = new Set(paidSnap.docs.map((d) => `${(d.data() as { listingId?: string }).listingId}__${(d.data() as { date?: string }).date}`));
+  // Days the family has bought a meal for (meals are added at checkout and ride
+  // the booking) — used when a provider only shares the served-menu display
+  // with families who paid for a meal.
+  const paidKeys = new Set(bookings.flatMap((b) => (b.mealDates ?? []).map((dt) => `${b.listingId}__${dt}`)));
 
   // Merge siblings on the same (listing,date) into one entry.
   const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean }>();
@@ -1106,6 +1106,10 @@ my.post("/bookings", async (req, res) => {
             days: seg.days,
             ...(p.timing ? { timing: p.timing } : {}),
             addons: segAddons.map((a) => `${a.label} — £${a.price.toFixed(2)}`),
+            // The ISO dates a meal was bought for on this segment — a clean
+            // signal for the customer "what's being served" gate + read-out,
+            // separate from the human-readable add-on strings.
+            ...(() => { const md = segAddons.filter((a) => a.meal).flatMap((a) => a.onDays); return md.length ? { mealDates: [...new Set(md)] } : {}; })(),
             sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
             status: placed ? placedStatus : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place

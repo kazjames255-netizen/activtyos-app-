@@ -361,7 +361,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     const best = options[0];
     return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
   })();
-  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setPriceEdit({}); setTotalOverride(null); setStage("pick"); };
+  const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setMealSel({}); setPriceEdit({}); setTotalOverride(null); setStage("pick"); };
   const assignTo = (itemId: string, name: string) => setAssign((a) => ({ ...a, [itemId]: name }));
   const assignAll = (name: string) => setAssign(Object.fromEntries(basket.map((x) => [x.id, name])));
   const setItemPrice = (itemId: string, price: number | null) =>
@@ -395,7 +395,17 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     });
   const answers = (itemId: string, child: string, addonId: string) => addonAns[ansKey(itemId, child, addonId)] ?? {};
 
-  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  // Meals bought at checkout — one menu item per child per day, keyed
+  // `${child}|${date}`. Priced from the listing's scheduled day-menu; the cost
+  // joins the total in the checkout panel and is paid with the booking, exactly
+  // like an add-on. Meat/veg are separate items → a single pick per day.
+  const [mealSel, setMealSel] = useState<Record<string, string>>({});
+  const mealKey = (child: string, date: string) => `${child}|${date}`;
+  const pickMeal = (child: string, date: string, menuItemId: string | null) =>
+    setMealSel((all) => { const key = mealKey(child, date); const next = { ...all }; if (menuItemId) next[key] = menuItemId; else delete next[key]; return next; });
+  const mealFor = (child: string, date: string) => mealSel[mealKey(child, date)] ?? "";
+
+  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }

@@ -143,6 +143,9 @@ export interface Booking {
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];
+  /** ISO dates a meal was bought for at checkout (meals ride the add-on lines;
+   *  this is the clean structured signal the meals area reads). */
+  mealDates?: string[];
   answers: [string, string][];
   note: string;
   recon: boolean | null;

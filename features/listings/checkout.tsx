@@ -643,7 +643,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -772,7 +772,28 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       }, 0);
     }, 0);
   }, 0);
-  const calculated = b.total + addonTotal;
+  // Meals bought at checkout — priced from the listing's scheduled day-menu,
+  // one item per child per day. Folds into the total like add-ons; the server
+  // re-prices authoritatively (see /api/my/bookings items[].meals).
+  const mealMenus = d.mealMenus ?? [];
+  const mealPlanMap = d.mealPlan ?? {};
+  const menuByIdCk = new Map(mealMenus.map((m) => [m.id, m]));
+  const menuForDate = (date: string) => { const id = mealPlanMap[date]; return id ? menuByIdCk.get(id) : undefined; };
+  const mealItemAt = (date: string, itemId: string) => menuForDate(date)?.items.find((i) => i.id === itemId);
+  // Every (child, day) the family could order a meal for — deduped so a child
+  // on two lines the same day is counted once.
+  const mealSlots: { kid: string; date: string }[] = [];
+  if (d.mealsEnabled) {
+    const seen = new Set<string>();
+    for (const item of b.basket) for (const kid of b.childrenOn(item.id)) for (const date of item.dates) {
+      const k = `${kid}|${date}`;
+      if (!seen.has(k) && menuForDate(date)) { seen.add(k); mealSlots.push({ kid, date }); }
+    }
+  }
+  const mealTotal = mealSlots.reduce((sum, { kid, date }) => { const sel = b.mealFor(kid, date); const it = sel ? mealItemAt(date, sel) : undefined; return it ? sum + it.price : sum; }, 0);
+  const mealKids = [...new Set(mealSlots.map((s) => s.kid))];
+  const fmtMealDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const calculated = b.total + addonTotal + mealTotal;
   const grandTotal = b.totalOverride ?? calculated;
 
   // Wallet credit the family holds with THIS provider. The server auto-applies
@@ -1277,6 +1298,45 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </>
       )}
 
+      {/* Meals — pick from the day's menu; the cost joins the total below and
+          is paid with the booking. Optional, one meal per child per day. */}
+      {ckStage === "pay" && d.mealsEnabled && mealSlots.length > 0 && (
+        <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
+          <div className="mb-0.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals</div>
+          <p className="mb-2 text-[11px]" style={{ color: tk.muted }}>Optional — order a meal for each day. You pay for them with your booking.</p>
+          {mealKids.map((kid) => (
+            <div key={kid} className="mb-2">
+              {mealKids.length > 1 && <div className="mb-1 text-[11.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</div>}
+              <div className="flex flex-col gap-1.5">
+                {mealSlots.filter((s) => s.kid === kid).map(({ date }) => {
+                  const menu = menuForDate(date);
+                  if (!menu) return null;
+                  const sel = b.mealFor(kid, date);
+                  return (
+                    <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${tk.line}` }}>
+                      <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {menu.items.map((it) => {
+                          const on = sel === it.id;
+                          return (
+                            <button key={it.id} type="button" onClick={() => b.pickMeal(kid, date, on ? null : it.id)}
+                              className="rounded-full px-2.5 py-1 text-[12px] font-bold"
+                              style={on ? { background: tk.accent, color: tk.accentInk } : { border: `1px solid ${tk.line}`, color: tk.ink }}
+                              title={(it.allergens?.length ?? 0) > 0 ? `Contains ${it.allergens!.join(", ")}` : undefined}>
+                              {on ? "✓ " : ""}{it.name} · {money(it.price)}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Totals belong to the paying step. Showing prices and discounts while
           someone is choosing lunches was two conversations at once. */}
       {ckStage === "pay" && (
@@ -1294,12 +1354,17 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <span>Add-ons</span><b style={{ color: tk.ink }}>{money(addonTotal)}</b>
           </div>
         )}
+        {mealTotal > 0 && (
+          <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
+            <span>Meals</span><b style={{ color: tk.ink }}>{money(mealTotal)}</b>
+          </div>
+        )}
         <div className="mt-2 flex items-baseline justify-between text-[14px]">
           <span style={{ color: tk.muted }}>Total</span>
           <span className="flex items-baseline gap-2">
             {/* What it was BEFORE discounts — showing the discounted total here
                 struck through said "£540, was £540". */}
-            {(b.saved > 0 || b.totalOverride !== null) && <s className="text-[11px]" style={{ color: tk.muted }}>{money(b.subtotal + addonTotal)}</s>}
+            {(b.saved > 0 || b.totalOverride !== null) && <s className="text-[11px]" style={{ color: tk.muted }}>{money(b.subtotal + addonTotal + mealTotal)}</s>}
             <b style={{ color: tk.ink }}>{money(grandTotal)}</b>
           </span>
         </div>
@@ -1943,7 +2008,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // Only sent when the family chose to spend LESS than their full
             // balance — otherwise the server auto-applies it all (authoritative).
             walletCap: walletUse === null ? undefined : walletApplied,
-            basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, children: roster,
+            basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, mealSel: b.mealSel, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
           });
