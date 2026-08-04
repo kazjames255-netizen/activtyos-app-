@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../firebase";
+import { auth as adminAuth, db } from "../firebase";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 
@@ -40,6 +40,21 @@ children.get("/lookup", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !CARD_ROLES.has(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   const idx = await bookedChildren(auth.tenantId);
+  // Also include children a family added to their OWN account (not just booked),
+  // so Find-a-child covers everyone on the operator's list. Matched customer
+  // (email) → account (uid) → their children.
+  try {
+    const custs = await db.collection("customers").where("tenantId", "==", auth.tenantId).get();
+    await Promise.all(custs.docs.map(async (cd) => {
+      const cust = cd.data() as { name?: string; email?: string; phone?: string };
+      const email = (cust.email ?? "").trim();
+      if (!email.includes("@")) return;
+      let uid: string;
+      try { uid = (await adminAuth.getUserByEmail(email)).uid; } catch { return; }
+      const kids = await db.collection("children").where("parentUid", "==", uid).get();
+      kids.docs.forEach((kd) => { if (!idx.has(kd.id)) idx.set(kd.id, { parentName: cust.name ?? "", email, phone: cust.phone ?? "", ref: "" }); });
+    }));
+  } catch { /* booked children still returned */ }
   if (!idx.size) { res.json([]); return; }
   const ids = [...idx.keys()];
   const docs = await db.getAll(...ids.map((id) => db.collection("children").doc(id)));
@@ -80,9 +95,28 @@ children.get("/:id", async (req, res) => {
       else if (!contact.phone && b.phone) contact.phone = b.phone;
       if (countsTowardCapacity(b.status) && b.status !== "Offered") { const t = timeOf(b.blockId); bookings.push({ ref: b.ref, listing: b.listing ?? "", dates: b.dates ?? "", pass: b.pass ?? "", start: t.start, end: t.end, status: b.status }); }
     }
-  if (!contact) { res.status(404).json({ error: "Child not found for this account" }); return; }
   const doc = await db.collection("children").doc(id).get();
   if (!doc.exists) { res.status(404).json({ error: "Child not found" }); return; }
+  if (!contact) {
+    // Not booked — allow the card only if the child's family is a customer of
+    // THIS tenant (so an operator can't open a stranger's child by id).
+    const puid = doc.get("parentUid") as string | undefined;
+    if (puid) {
+      const u = await db.collection("users").doc(puid).get();
+      const pemail = (u.exists ? ((u.get("email") as string | undefined) ?? "") : "").trim();
+      if (pemail) {
+        for (const e of [...new Set([pemail.toLowerCase(), pemail])]) {
+          const cust = await db.collection("customers").where("tenantId", "==", auth.tenantId).where("email", "==", e).limit(1).get();
+          if (!cust.empty) {
+            const cd = cust.docs[0].data() as { name?: string; phone?: string };
+            contact = { parentName: cd.name ?? "", email: pemail, phone: cd.phone ?? "", ref: "" };
+            break;
+          }
+        }
+      }
+    }
+    if (!contact) { res.status(404).json({ error: "Child not found for this account" }); return; }
+  }
   const c = doc.data() as Record<string, unknown>;
   // Phone fallback: the booking often has none — the number lives on the customer
   // record (operator directory / parent account). Postcode comes off the user doc.

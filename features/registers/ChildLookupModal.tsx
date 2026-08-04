@@ -122,7 +122,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
               {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
               <div className="max-h-[52vh] overflow-y-auto">
                 {rows === null ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-                  : shown.length === 0 ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{term ? "No child matches." : "No children booked yet."}</div>
+                  : shown.length === 0 ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{term ? "No child matches." : "No children on your list yet."}</div>
                     : <ul className="space-y-1">{shown.map((r) => (
                         <li key={r.childId}>
                           <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] px-3 py-2 text-left transition hover:border-[#1d3a8f] hover:bg-[#f7faff] disabled:opacity-50">
