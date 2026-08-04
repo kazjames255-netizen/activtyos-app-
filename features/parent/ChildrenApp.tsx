@@ -125,6 +125,10 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   const [hasSend, setHasSend] = useState<boolean | null>(child?.send || child?.sendPlanId ? true : null);
   const [emergencyName, setEmergencyName] = useState(child?.emergencyName ?? "");
   const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone ?? "");
+  // True when the emergency contact came from the parent's own details (Step 1)
+  // — then we confirm it rather than asking for it again per child.
+  const [emergencyFromAccount, setEmergencyFromAccount] = useState(false);
+  const [editEmergency, setEditEmergency] = useState(false);
   const [likes, setLikes] = useState(child?.likes ?? "");
   const [dislikes, setDislikes] = useState(child?.dislikes ?? "");
   // A new child inherits the family's existing collection PIN/word (same for
@@ -150,6 +154,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       .then((p) => {
         if (p.emergencyName) setEmergencyName((v) => v || p.emergencyName!);
         if (p.emergencyPhone) setEmergencyPhone((v) => v || p.emergencyPhone!);
+        if (p.emergencyName && p.emergencyPhone) setEmergencyFromAccount(true);
       })
       .catch(() => {});
   }, [editing]);
@@ -376,11 +381,24 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         <>
           <div>
             <FieldLabel>Emergency contact <span className="text-[var(--red)]">*</span></FieldLabel>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
-              <Input placeholder="Phone" inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
-            </div>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Required — who staff ring if they can&rsquo;t reach you.</div>
+            {emergencyFromAccount && !editEmergency ? (
+              // Already given with the parent's own details — confirm, don't re-ask.
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                <span className="min-w-0 flex-1 text-[12.5px]">
+                  <b>{emergencyName}</b>{emergencyPhone ? ` · ${emergencyPhone}` : ""}
+                  <span className="ml-1 text-[11px] text-[var(--ink-3)]">— from your details</span>
+                </span>
+                <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">Change for this child</button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+                  <Input placeholder="Phone" inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+                </div>
+                <div className="mt-1 text-[11px] text-[var(--ink-3)]">Required — who staff ring if they can&rsquo;t reach you.</div>
+              </>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Area label="Likes" placeholder="What settles them" value={likes} onChange={setLikes} max={limitFor(settings, "likes", CHILD_LIMITS)} rows={2} />
