@@ -7,6 +7,7 @@ import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUnreadMessages } from "@/lib/use-unread";
+import { useBookingFlags } from "@/lib/use-booking-flags";
 import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
@@ -48,6 +49,9 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Live unread total — drives the "new" bubble on the Messages tab so a reply
   // is visible from any screen and clears once the thread is opened.
   const unread = useUnreadMessages(portal);
+  // Booking-area flags (approvals, change/cancel requests, failed cards; or
+  // "to pay" for a parent) — badge + hover tooltip on the Bookings tab.
+  const bookingFlags = useBookingFlags(portal);
 
   // The parent gets three primary actions promoted into the top bar. Operators
   // get a single Messages tab (same promotion) so replies are reachable from
@@ -56,12 +60,12 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Features). Operators lose the Messages tab when they turn Messages off.
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
-  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string }[] =
+  const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string; tip?: string }[] =
     portal === "custdash"
       ? [
-          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff" }] : []),
-          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff" }] : []),
-          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: 0, accent: "#0ea5a5", accentLight: "#3fd0c9" },
+          ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : messageLabel }] : []),
+          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: "Find & book activities" }] : []),
+          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Your bookings" },
           // Shown only when the provider runs a membership programme (gated in
           // useCustomerArea). Given a fancy gold treatment so it stands out.
           ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: "Memberships", icon: STAR, wide: false, badge: 0, fancy: true }] : []),
@@ -69,8 +73,8 @@ export function Header({ portal }: { portal: PortalKey }) {
       : [
           // Bookings promoted to the top bar (like the customer's My bookings),
           // out of the sidebar. Only where the portal has a bookings view.
-          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: 0, accent: "#0ea5a5", accentLight: "#3fd0c9" }] : []),
-          ...(findNavItem(portal, "messages") && !featureOff(features, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff" }] : []),
+          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
+          ...(findNavItem(portal, "messages") && !featureOff(features, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
         ];
 
   return (
@@ -114,6 +118,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               <Link
                 key={t.view}
                 href={t.href}
+                title={t.tip || t.label}
                 className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold no-underline transition-all duration-150 hover:-translate-y-px hover:brightness-105"
                 style={t.fancy ? fancyStyle : colourStyle}
               >
