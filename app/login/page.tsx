@@ -57,8 +57,19 @@ function LoginForm() {
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
       await goHome();
-    } catch {
-      setError("Sign-in failed — check your email and password.");
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? "";
+      // A blocked/failed network request is NOT a wrong password — it's usually
+      // an ad blocker / privacy extension / VPN in this browser profile stopping
+      // the call to Google's sign-in service. Say so, rather than blaming the
+      // credentials.
+      if (code === "auth/network-request-failed" || /network|fetch|failed to fetch/i.test((err as Error)?.message ?? "")) {
+        setError("Couldn't reach the sign-in service. An ad blocker, privacy extension or VPN in this browser may be blocking it — try an incognito window, or disable extensions for this site.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts — please wait a minute and try again.");
+      } else {
+        setError("Sign-in failed — check your email and password.");
+      }
       setBusy(false);
     }
   }
