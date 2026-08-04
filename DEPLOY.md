@@ -115,12 +115,24 @@ Copy the signing secret into the API's `STRIPE_WEBHOOK_SECRET` and redeploy.
 
 ---
 
-## What I (Claude) can and can't do here
+## Handover notes (for Amir)
 
-**Ready in code:** every URL is env-driven (`WEB_URL`, `API_URL`,
-`NEXT_PUBLIC_API_URL`, `CORS_ORIGIN`), and the API now accepts its Firebase key as
-an inline env var (`FIREBASE_SERVICE_ACCOUNT`) so it runs on a secret-only host.
+The code side is done and committed — nothing more to change in the repo to go
+live:
 
-**Needs you (account/console access I don't have):** creating the Vercel + API-host
-projects, pasting secrets, adding the Firebase authorized domain, and the Namecheap
-DNS records. Give me a host and I'll tailor the exact commands/config file for it.
+- All URLs are env-driven: `WEB_URL`, `API_URL`, `NEXT_PUBLIC_API_URL`,
+  `CORS_ORIGIN`.
+- The API takes its Firebase key inline via `FIREBASE_SERVICE_ACCOUNT` (raw JSON
+  or base64), so it runs on a secret-only host — no key file needed.
+- `nixpacks.toml` builds the API from the repo root (its `../../../features` /
+  `../../../lib` imports need the whole tree) and starts only the server; `tsx`
+  is a runtime dependency so `NODE_ENV=production` installs it.
+
+What's left is all account / console / DNS work (steps 0–5 above): the Railway +
+Vercel projects, the secrets, the Firebase **Authorized domains** entry (this is
+what caused the `ERR_CONNECTION_REFUSED` on a real phone against `localhost`), the
+Stripe webhook, and the Namecheap DNS records.
+
+Open question for Amir: final web address — `app.activityos.uk` is assumed
+throughout; change it in one place (`WEB_URL` / the Vercel domain / the Firebase
+authorized domain) if it should be different.
