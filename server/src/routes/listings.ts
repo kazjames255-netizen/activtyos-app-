@@ -380,11 +380,26 @@ listings.get("/:id", async (req, res) => {
     categories: lib.categories ?? [],
   };
 
+  // Meals: resolve the saved menus this listing's mealPlan references, so the
+  // parent can see each day's menu + allergens at checkout without hitting the
+  // operator-only /api/meal-menus endpoint. Only the menus actually used are
+  // embedded (deduped by id).
+  let mealMenus: unknown[] = [];
+  if (l.mealsEnabled && l.mealPlan && typeof l.mealPlan === "object") {
+    const ids = [...new Set(Object.values(l.mealPlan as Record<string, string>).filter((v): v is string => typeof v === "string"))];
+    if (ids.length) {
+      const menuSnaps = await Promise.all(ids.map((id) => db.collection("mealMenus").doc(id).get()));
+      mealMenus = menuSnaps
+        .filter((s) => s.exists && s.data()!.tenantId === l.tenantId)
+        .map((s) => ({ id: s.id, name: s.data()!.name, items: s.data()!.items ?? [] }));
+    }
+  }
+
   // Parents see the provider's chosen public name (own name vs business name,
   // set at onboarding) rather than the business name denormalised onto the
   // listing at creation. Falls back to that stored name when unset.
   const providerName = (libData.settings as { providerName?: string } | undefined)?.providerName?.trim();
-  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library });
+  res.json({ ...joined, tenantName: providerName || joined.tenantName, bundle, library, mealMenus });
 });
 
 // Operators manage their own tenant's listings. (Bookings keep a denormalised

@@ -304,6 +304,10 @@ export interface WizardDraft {
   /** Per-day meal schedule: run-date (ISO) → saved-menu id (from the Meal shop's
    *  saved-menu library). Built by dragging/painting menus onto the Meals step. */
   mealPlan?: Record<string, string>;
+  /** Server-embedded (GET /api/listings/:id): the saved menus referenced by
+   *  mealPlan, resolved for parents so checkout can show the menu + allergens
+   *  without the operator-only menu endpoint. Read-only — never edited here. */
+  mealMenus?: SavedMenu[];
   ticketOverrides: Record<string, TicketOverride>;
   bookRules: Record<string, BookRule>;
   addonIds: string[];
@@ -2796,6 +2800,65 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
  */
 
 
+// ── Meals at checkout — read-only "what's on the menu these days" ───────────
+// Shown on a meals-enabled listing: for the days the parent is picking (or all
+// planned days before they choose), the menu that runs and its allergens. Info
+// only — ordering/paying is a separate step in the customer Meals area.
+function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: string[]; tone?: "light" | "dark" }) {
+  const [open, setOpen] = useState(false);
+  const menus = d.mealMenus ?? [];
+  const plan = d.mealPlan ?? {};
+  const byId = useMemo(() => new Map(menus.map((m) => [m.id, m])), [menus]);
+  if (!d.mealsEnabled || menus.length === 0 || Object.keys(plan).length === 0) return null;
+  const has = (iso: string) => !!plan[iso] && byId.has(plan[iso]);
+  const chosen = dates.filter(has);
+  const showDays = (chosen.length ? chosen : Object.keys(plan).filter(has)).sort();
+  if (showDays.length === 0) return null;
+  const allergens = [...new Set(showDays.flatMap((iso) => byId.get(plan[iso])!.items.flatMap((it) => it.allergens ?? [])))];
+  const dark = tone === "dark";
+  const cardBg = dark ? "rgba(255,255,255,.05)" : "#f4f8ff";
+  const line = dark ? "rgba(255,255,255,.14)" : "#d6e3fb";
+  const ink = dark ? "#eaf1ff" : "#1d3a8f";
+  const sub = dark ? "#a9b7d4" : "#5b6478";
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: line, background: cardBg }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left">
+        <span className="text-[16px]">🍽️</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-extrabold" style={{ color: ink }}>Meals {chosen.length ? "on your days" : "available"}</span>
+          <span className="block text-[11px]" style={{ color: sub }}>{chosen.length ? `${chosen.length} day${chosen.length === 1 ? "" : "s"} with a menu` : `Menu set for ${showDays.length} day${showDays.length === 1 ? "" : "s"}`} · pre-order in your Meals area after booking</span>
+        </span>
+        {allergens.length > 0 && <span className="hidden rounded-full px-1.5 py-[1px] text-[10px] font-bold capitalize sm:inline" style={{ background: dark ? "rgba(226,29,41,.18)" : "#fdebec", color: "#e21d27" }}>⚠ {allergens.length} allergen{allergens.length === 1 ? "" : "s"}</span>}
+        <span className="text-[12px]" style={{ color: sub }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="border-t px-3.5 py-2.5" style={{ borderColor: line }}>
+          <div className="flex flex-col gap-2">
+            {showDays.map((iso) => {
+              const menu = byId.get(plan[iso])!;
+              return (
+                <div key={iso}>
+                  <div className="text-[11.5px] font-extrabold" style={{ color: ink }}>{fmtDate(iso)} · {menu.name}</div>
+                  <div className="mt-0.5 flex flex-col gap-0.5">
+                    {menu.items.map((it) => (
+                      <div key={it.id} className="flex flex-wrap items-baseline gap-1.5 text-[11.5px]" style={{ color: sub }}>
+                        <span className="font-semibold" style={{ color: dark ? "#dbe6ff" : "#374151" }}>{it.name}</span>
+                        <span className="tabular-nums">{money(it.price)}</span>
+                        {(it.allergens?.length ?? 0) > 0 && <span className="capitalize text-[#e21d27]">⚠ {it.allergens!.join(", ")}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[10.5px]" style={{ color: sub }}>Allergens are shown for guidance — please tell the provider about any allergy when you book.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
 function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId }: BookView) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
@@ -2892,6 +2955,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: col }} />{note.text}</div>;
           })()}
+          <MealsAtCheckout d={d} dates={b.sel} tone="light" />
           <WaitlistPanel b={b} d={d} tone="light" />
           {/* Once something's in the basket the button has nothing to do until
               more dates are picked, so it goes and says why instead. */}
@@ -3072,6 +3136,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
                 <span className="inline-block h-2 w-2" style={{ background: col }} />{note.text}</div>;
             })()}
+            <MealsAtCheckout d={d} dates={b.sel} tone="dark" />
             <WaitlistPanel b={b} d={d} tone="dark" />
             {b.basket.length > 0 && b.sel.length === 0 && !b.canAdd ? (
               <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
