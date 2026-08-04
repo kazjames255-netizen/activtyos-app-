@@ -260,7 +260,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       } else {
         const t = threads?.find((x) => x.id === openId);
         if (!t) return;
-        const payload = mode === "parent" ? { tenantId: t.tenantId, body: draft } : { parentEmail: t.parentEmail, parentName: t.parentName, body: draft };
+        // Resolve merge fields ({ChildName}, {ParentName}, {ProviderName}) on an
+        // operator REPLY too — not just on a brand-new message.
+        let body = draft;
+        if (mode !== "parent") {
+          const c1 = customers.find((c) => c.email === t.parentEmail);
+          const childName = c1?.children?.map((k) => k.name).filter(Boolean).join(" & ");
+          body = mergeText(draft, { parentName: t.parentName, providerName, childName });
+        }
+        const payload = mode === "parent" ? { tenantId: t.tenantId, body } : { parentEmail: t.parentEmail, parentName: t.parentName, body };
         await apiPost("/api/messages", payload);
         setDraft(""); loadThread(t.id);
       }
