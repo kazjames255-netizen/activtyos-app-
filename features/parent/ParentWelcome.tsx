@@ -246,7 +246,7 @@ export function ParentWelcome() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => go("/custdash/children")}
+                  onClick={() => go("/custdash/children?add=1")}
                   className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px"
                   style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
                 >

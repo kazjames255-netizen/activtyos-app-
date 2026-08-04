@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
@@ -508,6 +509,11 @@ export function ChildrenApp() {
   // so the register/booking history stays intact.
   const [bookedIds, setBookedIds] = useState<Set<string>>(new Set());
   const [bookedNames, setBookedNames] = useState<Set<string>>(new Set());
+
+  // Deep-link straight into the Add-a-child form (e.g. from the welcome popup's
+  // "Add my children" button → /custdash/children?add=1).
+  const addParam = useSearchParams().get("add");
+  useEffect(() => { if (addParam === "1") setAdding(true); }, [addParam]);
 
   const refresh = useCallback(() => {
     apiGet<Child[]>("/api/my/children")
