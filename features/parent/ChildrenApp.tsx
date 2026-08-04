@@ -468,29 +468,27 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   return (
     <div
       onClick={(e) => e.target === e.currentTarget && onDone(false)}
-      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8"
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto px-3.5 py-8"
+      style={{ background: "rgba(12,18,40,.55)", backdropFilter: "blur(3px)" }}
     >
-      <div className="w-full max-w-[460px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
-        {/* header + progress */}
-        <div className="border-b border-[var(--line)] px-5 pb-3.5 pt-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">
-                {editing ? `Edit ${child!.name || "child"}` : "Add a child"} · Step {safeStep + 1} of {slides.length}
-              </div>
-              <h3 className="m-0 mt-0.5 text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-                {slides[safeStep].emoji} {slides[safeStep].title}
-              </h3>
-              <div className="text-[11.5px] text-[var(--ink-3)]">{slides[safeStep].sub}</div>
-            </div>
-            <button type="button" onClick={() => onDone(false)} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]" aria-label="Close">×</button>
+      <div className="w-full max-w-[600px] overflow-hidden rounded-2xl bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
+        {/* Branded header + progress — matches the welcome onboarding card. */}
+        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
+          <button type="button" onClick={() => onDone(false)} aria-label="Close"
+            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
+          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
+            {editing ? `Edit ${child!.name || "child"}` : "Add a child"} · Step {safeStep + 1} of {slides.length}
           </div>
+          <h3 className="m-0 mt-0.5 text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            {slides[safeStep].emoji} {slides[safeStep].title}
+          </h3>
+          <div className="text-[12px] text-white/85">{slides[safeStep].sub}</div>
           {/* segmented progress bar */}
           <div className="mt-3 flex gap-1.5">
             {slides.map((s, i) => (
               <button key={s.key} type="button" onClick={() => (i < safeStep || (i === safeStep + 1 && canNext) ? setStep(i) : undefined)}
                 className="h-1.5 flex-1 rounded-full transition-colors"
-                style={{ background: i <= safeStep ? "var(--brand-2)" : "var(--line)" }} aria-label={`Go to ${s.title}`} />
+                style={{ background: i <= safeStep ? "#ffffff" : "rgba(255,255,255,.3)" }} aria-label={`Go to ${s.title}`} />
             ))}
           </div>
         </div>
@@ -509,22 +507,29 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         </div>
 
         {/* footer nav */}
-        <div className="border-t border-[var(--line)] px-5 py-3.5">
+        <div className="border-t border-[var(--line)] bg-[var(--panel)] px-6 py-3.5">
           {error && <div className="mb-2 text-[12.5px] text-[var(--red)]">{error}</div>}
           {!slides[safeStep].ok && slides[safeStep].hint && (
             <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">{slides[safeStep].hint}</div>
           )}
           <div className="flex items-center gap-2">
-            {safeStep > 0 && <Button type="button" onClick={back}>← Back</Button>}
-            {safeStep < last ? (
-              <Button variant="primary" type="button" onClick={next} disabled={!canNext} className="ml-auto">
-                Next →
-              </Button>
-            ) : (
-              <Button variant="primary" type="button" onClick={() => save()} disabled={busy || !canSave} className="ml-auto">
-                {busy ? "Saving…" : editing ? "Save changes" : "Save child"}
-              </Button>
+            {safeStep > 0 && (
+              <button type="button" onClick={back}
+                className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
+                ← Back
+              </button>
             )}
+            {(() => {
+              const isLast = safeStep >= last;
+              const disabled = isLast ? (busy || !canSave) : !canNext;
+              return (
+                <button type="button" onClick={() => (isLast ? save() : next())} disabled={disabled}
+                  className="ml-auto rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
+                  {isLast ? (busy ? "Saving…" : editing ? "Save changes" : "Save child") : "Next →"}
+                </button>
+              );
+            })()}
           </div>
         </div>
       </div>
