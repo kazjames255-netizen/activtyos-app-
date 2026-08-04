@@ -38,6 +38,8 @@ me.get("/", async (req, res) => {
   // The parent's postcode, captured at signup, so the browse can locate them.
   const userSnap = await db.collection("users").doc(req.user!.uid).get();
   const postcode = (userSnap.data()?.postcode as string | undefined) ?? null;
+  // Whether the parent has seen the first-login welcome popup (add-your-kids).
+  const welcomed = !!(userSnap.data()?.welcomedAt);
   res.json({
     email: req.user!.email ?? null,
     role: auth.role,
@@ -45,6 +47,7 @@ me.get("/", async (req, res) => {
     tenantName,
     logoUrl,
     postcode,
+    welcomed,
     franchiseId: auth.franchiseId,
   });
 
@@ -53,6 +56,13 @@ me.get("/", async (req, res) => {
   // "Invited" to "Customer" the moment they sign in (before any booking).
   // Fire-and-forget: never delay or fail /api/me over it.
   if (auth.role === "parent" && req.user!.email) void markCustomerJoined(req.user!.email);
+});
+
+// POST /api/me/welcome — the parent has seen the first-login welcome popup;
+// stamp it so it never shows again. Idempotent.
+me.post("/welcome", async (req, res) => {
+  await db.collection("users").doc(req.user!.uid).set({ welcomedAt: new Date().toISOString() }, { merge: true });
+  res.json({ ok: true });
 });
 
 /** Stamp joinedAt on this email's customer records (across providers) the first

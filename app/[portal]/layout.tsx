@@ -10,6 +10,7 @@ import { TrialBanner } from "@/components/billing/TrialBanner";
 import { PageTracker } from "@/components/analytics/PageTracker";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
+import { ParentWelcome } from "@/features/parent/ParentWelcome";
 
 // The customer dashboard runs the same light palette the operator screens sit
 // on (see components/OperatorPage LIGHT_PALETTE), so the parent portal matches
@@ -52,6 +53,8 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             <div style={light ? undefined : LIGHT_PALETTE}>
               <Header portal={portalKey} />
             </div>
+            {/* First-login welcome popup (add-your-children), parent only, once. */}
+            {portalKey === "custdash" && <ParentWelcome />}
             {/* Customer-only flashy newsflash for unseen provider posts. */}
             {portalKey === "custdash" && <NewsflashBanner />}
             {/* Customer-only running bar of the family's usable discount codes. */}

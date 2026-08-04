@@ -9,6 +9,8 @@ export interface Me {
   logoUrl?: string | null;
   /** The parent's postcode from signup — seeds the browse distance search. */
   postcode?: string | null;
+  /** Has the parent seen the first-login welcome popup? */
+  welcomed?: boolean;
   franchiseId: string | null;
 }
 
