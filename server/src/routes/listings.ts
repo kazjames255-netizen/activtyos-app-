@@ -5,6 +5,7 @@ import { canWrite } from "../middleware/role";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { desiredRuns, syncListingBlocks } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
+import { mealDayPlan } from "../lib/mealPlan";
 
 export const listings = Router();
 
@@ -98,11 +99,20 @@ const baseListingSchema = z
     blockMode: z.enum(["weekly", "custom"]).optional(),
     days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     datesOff: z.array(z.string().max(10)).max(400).optional(),
-    // meals — whether this listing offers meals, and which saved menu runs each
-    // run-day (ISO date → mealMenus id). Parents see it at checkout. Not a
-    // RUN_FIELD: changing it never re-syncs the dated blocks.
+    // meals — whether this listing offers meals, and what runs each run-day
+    // (ISO date → the menu + which of its dishes are served that day). A legacy
+    // plain menu-id string still parses (= the whole menu). Parents pick from
+    // the day's dishes at checkout. Not a RUN_FIELD: it never re-syncs blocks.
     mealsEnabled: z.boolean().optional(),
-    mealPlan: z.record(z.string().max(10), z.string().max(60)).optional(),
+    mealPlan: z
+      .record(
+        z.string().max(10),
+        z.union([
+          z.string().max(60),
+          z.object({ menuId: z.string().max(60), itemIds: z.array(z.string().max(60)).max(40).default([]) }),
+        ]),
+      )
+      .optional(),
     // tickets
     blockId: z.string().max(60).nullable().optional(), // block bundle
     ticketOverrides: z
@@ -386,7 +396,7 @@ listings.get("/:id", async (req, res) => {
   // embedded (deduped by id).
   let mealMenus: unknown[] = [];
   if (l.mealsEnabled && l.mealPlan && typeof l.mealPlan === "object") {
-    const ids = [...new Set(Object.values(l.mealPlan as Record<string, string>).filter((v): v is string => typeof v === "string"))];
+    const ids = [...new Set(Object.values(l.mealPlan as Record<string, unknown>).map((v) => mealDayPlan(v)?.menuId).filter((v): v is string => !!v))];
     if (ids.length) {
       const menuSnaps = await Promise.all(ids.map((id) => db.collection("mealMenus").doc(id).get()));
       mealMenus = menuSnaps

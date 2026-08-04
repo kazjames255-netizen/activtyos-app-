@@ -24,6 +24,7 @@ import { QuestionFields, unansweredRequired } from "@/components/QuestionFields"
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
 import type { WizardDraft } from "./ListingWizard";
+import { mealDayPlan, dishesForDay } from "@/features/meals/plan";
 
 export type ParentRow = { id: string; name: string; email?: string; children?: ChildProfile[] };
 
@@ -778,7 +779,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const mealMenus = d.mealMenus ?? [];
   const mealPlanMap = d.mealPlan ?? {};
   const menuByIdCk = new Map(mealMenus.map((m) => [m.id, m]));
-  const menuForDate = (date: string) => { const id = mealPlanMap[date]; return id ? menuByIdCk.get(id) : undefined; };
+  // Only the dishes served that day (a menu subset) are orderable.
+  const menuForDate = (date: string) => {
+    const p = mealDayPlan(mealPlanMap[date]);
+    const menu = p ? menuByIdCk.get(p.menuId) : undefined;
+    return p && menu ? { id: menu.id, name: menu.name, items: dishesForDay(p, menu.items) } : undefined;
+  };
   const mealItemAt = (date: string, itemId: string) => menuForDate(date)?.items.find((i) => i.id === itemId);
   // Every (child, day) the family could order a meal for — deduped so a child
   // on two lines the same day is counted once.

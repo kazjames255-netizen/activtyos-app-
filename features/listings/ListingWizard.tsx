@@ -10,6 +10,7 @@ import { VenueMap } from "./VenueMap";
 import * as blocksApi from "@/features/blocks/blocksApi";
 import { uid, to12h, pHours, toggle, genDates, fmtDate, groupWeeks } from "./format";
 import type { SavedMenu } from "@/features/meals/SavedMenus";
+import { mealDayPlan, dishesForDay, type MealPlanValue } from "@/features/meals/plan";
 import { useBooking, useOpensAt, type BasketItem } from "./booking";
 import { LOW_LEFT, blockOn, capacityNote } from "./capacity";
 import { useTenantSettings, useSettings, detailsForListing } from "@/lib/settings";
@@ -39,7 +40,6 @@ const STEPS = [
   { key: "provided", label: "Provided", stage: "About" },
   { key: "safety", label: "Safety & SEND", stage: "About" },
   { key: "run", label: "When it runs", stage: "When it runs" },
-  { key: "meals", label: "Meals", stage: "When it runs" },
   { key: "tickets", label: "Tickets & pricing", stage: "Tickets & pricing" },
   { key: "discounts", label: "Discounts", stage: "Tickets & pricing" },
   { key: "addons", label: "Add-ons", stage: "Extras & team" },
@@ -301,9 +301,10 @@ export interface WizardDraft {
   /** Whether this listing offers meals. When on, the menu + allergens auto-show
    *  to parents at checkout, and `mealPlan` says which saved menu runs each day. */
   mealsEnabled?: boolean;
-  /** Per-day meal schedule: run-date (ISO) → saved-menu id (from the Meal shop's
-   *  saved-menu library). Built by dragging/painting menus onto the Meals step. */
-  mealPlan?: Record<string, string>;
+  /** Per-day meal schedule: run-date (ISO) → the menu + the dishes served that
+   *  day ({ menuId, itemIds }). A legacy plain menu-id string = the whole menu.
+   *  Built in the Meals area's per-listing planner (not the wizard). */
+  mealPlan?: Record<string, MealPlanValue>;
   /** Server-embedded (GET /api/listings/:id): the saved menus referenced by
    *  mealPlan, resolved for parents so checkout can show the menu + allergens
    *  without the operator-only menu endpoint. Read-only — never edited here. */
@@ -1087,7 +1088,6 @@ export function ListingWizard({
               } />}
             {stepKey === "safety" && <SafetyStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "run" && <RunStep d={d} upd={upd} />}
-            {stepKey === "meals" && <MealsStep d={d} upd={upd} />}
             {stepKey === "tickets" && <TicketsStep d={d} upd={upd} blocks={blocks} tickets={tickets} />}
             {stepKey === "discounts" && <DiscountsStep d={d} upd={upd} tickets={tickets} />}
             {stepKey === "preview" && <div><StepHead n={10} kicker="STEP 10 · PREVIEW" title="Preview" lede="Exactly what parents see — the full customer page." /><HeadingsEditor d={d} upd={upd} /><ParentPreview {...previewProps} full /></div>}
@@ -1809,123 +1809,6 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
           )}
         </RichCard>
       </div>
-    </div>
-  );
-}
-
-// ── Step: Meals (per-listing planner — drag saved menus onto the run days) ──
-const ERASE = "__erase__";
-function MealsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
-  const [menus, setMenus] = useState<SavedMenu[] | null>(null);
-  const [brush, setBrush] = useState<string | null>(null); // menu id, ERASE, or null
-  useEffect(() => { apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch(() => setMenus([])); }, []);
-
-  const dates = useMemo(() => genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)), [d.runFrom, d.runTo, d.days, d.datesOff]);
-  const weeks = useMemo(() => groupWeeks(dates), [dates]);
-  const plan = d.mealPlan ?? {};
-  const menuById = useMemo(() => new Map((menus ?? []).map((m) => [m.id, m])), [menus]);
-  const on = d.mealsEnabled ?? false;
-  const planned = dates.filter((iso) => plan[iso] && menuById.has(plan[iso])).length;
-  const weekdaysPresent = [1, 2, 3, 4, 5, 6, 0].filter((n) => dates.some((iso) => new Date(`${iso}T00:00:00Z`).getUTCDay() === n));
-
-  const assign = (iso: string, menuId: string | null) => {
-    const next = { ...plan };
-    if (!menuId || menuId === ERASE) delete next[iso]; else next[iso] = menuId;
-    upd({ mealPlan: next });
-  };
-  const paint = (iso: string) => { if (brush) assign(iso, brush); };
-  const applyWeekday = (n: number) => {
-    if (!brush) return;
-    const next = { ...plan };
-    for (const iso of dates) if (new Date(`${iso}T00:00:00Z`).getUTCDay() === n) { if (brush === ERASE) delete next[iso]; else next[iso] = brush; }
-    upd({ mealPlan: next });
-  };
-
-  const chip = (key: string, label: string, colour: string, active: boolean, pick: () => void, dragId?: string) => (
-    <button key={key} type="button" onClick={pick} draggable={!!dragId}
-      onDragStart={dragId ? (e) => { e.dataTransfer.setData("text/plain", dragId); e.dataTransfer.effectAllowed = "copy"; } : undefined}
-      className="rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors"
-      style={active ? { borderColor: "transparent", background: colour, color: "#fff" } : { borderColor: colour, color: colour, background: "#fff" }}>
-      {active ? "✓ " : ""}{label}
-    </button>
-  );
-
-  return (
-    <div className="max-w-[1120px]">
-      <StepHead kicker="STEP · MEALS" title="Meals" lede="Offer meals at this camp, then drop a saved menu onto each day — parents see the menu and allergens at checkout." />
-
-      <RichCard icon="🍽️" title="Offer meals at this listing" subtitle="When on, the day’s menu and its allergens are shown to parents at checkout, and they can pre-order.">
-        <label className="flex cursor-pointer items-center gap-2.5">
-          <button type="button" role="switch" aria-checked={on} onClick={() => upd({ mealsEnabled: !on })}
-            className="relative h-6 w-11 rounded-full transition-colors" style={{ background: on ? "var(--brand-2,#2f6bd8)" : "#cbd5e1" }}>
-            <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: on ? "22px" : "2px" }} />
-          </button>
-          <span className="text-[13px] font-bold text-[var(--ink)]">{on ? "Meals are offered here" : "No meals at this listing"}</span>
-        </label>
-      </RichCard>
-
-      {on && (
-        menus === null ? (
-          <div className="mt-4 py-6 text-center text-[12px] text-[var(--ink-3)]">Loading your menus…</div>
-        ) : menus.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-[var(--line)] bg-[#f7faff] p-5 text-center text-[12.5px] text-[var(--ink-2)]">
-            You haven’t built any menus yet. Head to <b>Meals → Meal shop → Saved menus</b> to create one, then come back to drop it onto the days.
-          </div>
-        ) : dates.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-[var(--line)] bg-[#f7faff] p-5 text-center text-[12.5px] text-[var(--ink-2)]">
-            Set the run dates on the <b>previous step</b> first — then the days appear here to plan.
-          </div>
-        ) : (
-          <div className="mt-4 grid items-start gap-4 md:grid-cols-[300px_1fr]">
-            <RichCard icon="🥗" title="Your menus" subtitle="Tap one to pick it up, then tap days — or drag it straight onto a day." tint="violet">
-              <div className="flex flex-wrap gap-1.5">
-                {menus.map((m, i) => chip(m.id, m.name, WEEK_PAL[i % WEEK_PAL.length], brush === m.id, () => setBrush((b) => (b === m.id ? null : m.id)), m.id))}
-                {chip(ERASE, "Erase", "#e21d27", brush === ERASE, () => setBrush((b) => (b === ERASE ? null : ERASE)))}
-              </div>
-              <div className="mt-3 border-t border-[var(--line)] pt-3">
-                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Apply the picked menu to every…</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {weekdaysPresent.map((n) => {
-                    const label = (WEEKDAYS.find(([w]) => w === n)?.[1]) ?? "";
-                    return <button key={n} type="button" disabled={!brush} onClick={() => applyWeekday(n)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] disabled:opacity-40">{label}</button>;
-                  })}
-                </div>
-                <button type="button" onClick={() => upd({ mealPlan: {} })} className="mt-2.5 text-[11.5px] font-bold text-[var(--red,#e21d27)] underline">Clear all days</button>
-                {!brush && <p className="mt-2 text-[11px] text-[var(--ink-3)]">Pick a menu above to start assigning.</p>}
-              </div>
-            </RichCard>
-
-            <RichCard icon="📆" title={`${planned} of ${dates.length} days planned`} subtitle="Tap a day to drop the picked menu on it, or drag a menu here." tint="teal">
-              <div className="flex max-h-[360px] flex-col gap-2 overflow-y-auto pr-1">
-                {weeks.map((w) => (
-                  <div key={w.mon} className="overflow-hidden rounded-xl border border-[var(--line)]">
-                    <div className="px-3 py-1.5 text-[12px] font-extrabold text-[var(--ink-2)]" style={{ background: "#eef4fd" }}>Week {w.n} <span className="font-semibold opacity-70">· from {fmtDate(w.mon)}</span></div>
-                    <div className="grid grid-cols-2 gap-1.5 p-2.5 sm:grid-cols-3">
-                      {w.days.map((iso) => {
-                        const mid = plan[iso];
-                        const menu = mid ? menuById.get(mid) : undefined;
-                        const idx = menu ? (menus.findIndex((m) => m.id === menu.id)) : -1;
-                        const col = idx >= 0 ? WEEK_PAL[idx % WEEK_PAL.length] : "";
-                        return (
-                          <button key={iso} type="button" onClick={() => paint(iso)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) assign(iso, id); }}
-                            className="flex min-h-[52px] flex-col items-start rounded-lg border p-2 text-left transition-colors"
-                            style={menu ? { borderColor: col, background: `${col}14` } : { borderColor: "var(--line)", background: "#fff" }}>
-                            <span className="text-[11px] font-extrabold text-[var(--ink-2)]">{fmtDate(iso)}</span>
-                            {menu ? <span className="mt-0.5 text-[11.5px] font-bold" style={{ color: col }}>{menu.name}</span>
-                              : <span className="mt-0.5 text-[11px] text-[var(--ink-3)]">— tap to add —</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RichCard>
-          </div>
-        )
-      )}
     </div>
   );
 }
@@ -2814,12 +2697,18 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
   const menus = d.mealMenus ?? [];
   const plan = d.mealPlan ?? {};
   const byId = useMemo(() => new Map(menus.map((m) => [m.id, m])), [menus]);
+  // The dishes served on a given day (a menu subset), resolved from the plan.
+  const dayMenu = (iso: string) => {
+    const p = mealDayPlan(plan[iso]);
+    const menu = p ? byId.get(p.menuId) : undefined;
+    return p && menu ? { name: menu.name, items: dishesForDay(p, menu.items) } : undefined;
+  };
   if (!d.mealsEnabled || menus.length === 0 || Object.keys(plan).length === 0) return null;
-  const has = (iso: string) => !!plan[iso] && byId.has(plan[iso]);
+  const has = (iso: string) => !!dayMenu(iso);
   const chosen = dates.filter(has);
   const showDays = (chosen.length ? chosen : Object.keys(plan).filter(has)).sort();
   if (showDays.length === 0) return null;
-  const allergens = [...new Set(showDays.flatMap((iso) => byId.get(plan[iso])!.items.flatMap((it) => it.allergens ?? [])))];
+  const allergens = [...new Set(showDays.flatMap((iso) => dayMenu(iso)!.items.flatMap((it) => it.allergens ?? [])))];
   const dark = tone === "dark";
   const cardBg = dark ? "rgba(255,255,255,.05)" : "#f4f8ff";
   const line = dark ? "rgba(255,255,255,.14)" : "#d6e3fb";
@@ -2840,7 +2729,7 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
         <div className="border-t px-3.5 py-2.5" style={{ borderColor: line }}>
           <div className="flex flex-col gap-2">
             {showDays.map((iso) => {
-              const menu = byId.get(plan[iso])!;
+              const menu = dayMenu(iso)!;
               return (
                 <div key={iso}>
                   <div className="text-[11.5px] font-extrabold" style={{ color: ink }}>{fmtDate(iso)} · {menu.name}</div>

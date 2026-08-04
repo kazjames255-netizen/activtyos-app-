@@ -7,6 +7,7 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
+import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { money } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -276,10 +277,10 @@ my.get("/meal-days", async (req, res) => {
   const menuIds = [...new Set(
     [...listings.values()]
       .filter((l) => l.mealsEnabled && l.mealPlan)
-      .flatMap((l) => Object.values(l.mealPlan as Record<string, string>)),
+      .flatMap((l) => Object.values(l.mealPlan as Record<string, unknown>).map((v) => mealDayPlan(v)?.menuId).filter((v): v is string => !!v)),
   )];
   const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
-  const menus = new Map(menuSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, name: s.data()!.name as string, items: (s.data()!.items ?? []) as unknown[] }]));
+  const menus = new Map(menuSnaps.filter((s) => s.exists).map((s) => [s.id, { id: s.id, name: s.data()!.name as string, items: (s.data()!.items ?? []) as { id: string }[] }]));
 
   // Provider display names + the "what's being served" share rule, per tenant.
   const tenantIds = [...new Set([...listings.values()].map((l) => l.tenantId as string).filter(Boolean))];
@@ -297,14 +298,19 @@ my.get("/meal-days", async (req, res) => {
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
     if (!l || !l.mealsEnabled || !l.mealPlan) continue;
-    const plan = l.mealPlan as Record<string, string>;
-    const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => plan[dt] && menus.has(plan[dt]));
+    const plan = l.mealPlan as Record<string, unknown>;
+    const dayPlan = (dt: string) => { const p = mealDayPlan(plan[dt]); return p && menus.has(p.menuId) ? p : null; };
+    const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => dayPlan(dt));
     const kids = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
     const share = (settingsByTenant.get(l.tenantId as string)?.meals?.menuShare) === "paid" ? "paid" : "booked";
     for (const date of dates) {
       const key = `${b.listingId}__${date}`;
       let entry = byKey.get(key);
       if (!entry) {
+        const p = dayPlan(date)!;
+        const menu = menus.get(p.menuId)!;
+        // Only that day's dishes (a menu subset) are shown.
+        const items = dishesForDay(p, menu.items) as unknown[];
         entry = {
           tenantId: l.tenantId as string,
           tenantName: nameByTenant.get(l.tenantId as string) || (l.tenantName as string) || "Your provider",
@@ -312,7 +318,7 @@ my.get("/meal-days", async (req, res) => {
           listingName: (l.title as string) || (l.name as string) || "Camp",
           date,
           children: [],
-          menu: menus.get(plan[date])!,
+          menu: { id: menu.id, name: menu.name, items },
           served: share === "booked" || paidKeys.has(key),
         };
         byKey.set(key, entry);
@@ -702,15 +708,18 @@ my.post("/bookings", async (req, res) => {
   const wantsMeals = input.items.some((i) => i.meals?.length);
   if (wantsMeals) {
     if (!(listing as { mealsEnabled?: boolean }).mealsEnabled) throw new HttpError(400, "This camp isn't offering meals");
-    const plan = ((listing as { mealPlan?: Record<string, string> }).mealPlan) ?? {};
+    const plan = ((listing as { mealPlan?: Record<string, unknown> }).mealPlan) ?? {};
     const dates = [...new Set(input.items.flatMap((i) => (i.meals ?? []).map((m) => m.date)))];
-    const menuIdByDate = new Map(dates.map((dt) => [dt, plan[dt]]).filter(([, id]) => !!id) as [string, string][]);
-    const menuIds = [...new Set(menuIdByDate.values())];
+    const planByDate = new Map(dates.map((dt) => [dt, mealDayPlan(plan[dt])]).filter(([, p]) => !!p) as [string, { menuId: string; itemIds: string[] }][]);
+    const menuIds = [...new Set([...planByDate.values()].map((p) => p.menuId))];
     const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
     const menuById = new Map(menuSnaps.filter((s) => s.exists && s.data()!.tenantId === listing.tenantId).map((s) => [s.id, (s.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]]));
-    for (const [dt, menuId] of menuIdByDate) {
-      const items = menuById.get(menuId);
-      if (items) mealItemByDate.set(dt, new Map(items.map((it) => [it.id, { name: it.name, price: it.price, allergens: it.allergens }])));
+    for (const [dt, p] of planByDate) {
+      const all = menuById.get(p.menuId);
+      if (!all) continue;
+      // Only the dishes actually served that day are orderable.
+      const dishes = dishesForDay(p, all) as { id: string; name: string; price: number; allergens?: string[] }[];
+      mealItemByDate.set(dt, new Map(dishes.map((it) => [it.id, { name: it.name, price: it.price, allergens: it.allergens }])));
     }
   }
 
