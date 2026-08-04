@@ -158,7 +158,10 @@ export function BrowseApp() {
   // includes marketplace-opted providers, so we scope it to the parent's own
   // providers here. (Cross-provider is Phase 2, behind a per-provider opt-in.)
   const providerIds = new Set(providers.map((p) => p.tenantId));
-  const visible = providerIds.size ? listings.filter((l) => providerIds.has(l.tenantId)) : listings;
+  // Always scope to the parent's own providers — no "show everything" fallback.
+  // If we can't resolve a provider yet, they see the empty state, never another
+  // provider's catalogue (that would break Phase-1 single-provider scoping).
+  const visible = listings.filter((l) => providerIds.has(l.tenantId));
   const listedProviders = new Set(visible.map((l) => l.tenantId));
   const providerName = listedProviders.size === 1 && providers.length === 1 ? providers[0].name : null;
 
