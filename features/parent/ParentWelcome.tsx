@@ -87,6 +87,7 @@ export function ParentWelcome() {
   }
 
   const set = (k: keyof AccountProfile) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const firstName = form.name.trim().split(/\s+/)[0] || "";
   const detailsOk = !!form.name.trim() && !!form.phone.trim() && !!form.address.trim() && !!form.postcode.trim();
 
   async function saveDetails() {
@@ -118,9 +119,9 @@ export function ParentWelcome() {
       aria-modal="true"
       aria-labelledby="welcome-title"
     >
-      <div className="max-h-[92vh] w-full max-w-[620px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
+      <div className="max-h-[94vh] w-full max-w-[680px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header band */}
-        <div className="relative px-6 py-6 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
+        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
           <button
             type="button"
             onClick={markSeen}
@@ -129,24 +130,23 @@ export function ParentWelcome() {
           >
             ×
           </button>
-          <div className="text-[26px]">👋</div>
-          <h2 id="welcome-title" className="mt-1 text-[21px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
-            Welcome{provider ? ` to ${provider}` : ""}!
+          <h2 id="welcome-title" className="text-[21px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
+            👋 Welcome{firstName ? `, ${firstName}` : ""}!
           </h2>
-          <p className="mt-1 text-[13px] leading-[1.5] text-white/90">
-            This is your home for everything{provider ? ` with ${provider}` : ""} — <b>book activities, camps &amp; clubs</b>, manage your children&rsquo;s details, message the team, use vouchers &amp; wallet credit, and see what&rsquo;s coming up, all in one place.
+          <p className="mt-1 text-[12.5px] leading-[1.45] text-white/90">
+            Your home for booking{provider ? ` ${provider}’s` : ""} activities — plus your children&rsquo;s details, messages, vouchers &amp; wallet, all in one place.
           </p>
-          <p className="mt-2 text-[11.5px] font-bold uppercase tracking-wide text-white/70">
+          <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-white/70">
             Step {phase === "details" ? "1" : "2"} of 2 — {phase === "details" ? "Your details" : "Get going"}
           </p>
         </div>
 
         {phase === "details" ? (
           /* ── Phase 1: the parent's own details ─────────────────────────── */
-          <div className="px-6 py-5">
+          <div className="px-6 py-4">
             <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">A few details about you</div>
-            <p className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
-              So {provider || "your provider"} can reach you about bookings and keep their records right. You can change these any time in My account.
+            <p className="mt-0.5 text-[12px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">
+              So {provider || "your provider"} can reach you about bookings. Change them any time in My account.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
@@ -194,15 +194,15 @@ export function ParentWelcome() {
                 <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
               </div>
             </div>
-            <p className="mt-2 text-[11px] leading-[1.45] text-[var(--ink-3,#8a86a3)]">
-              Your children&rsquo;s own details — and their emergency contacts — come next.
+            <p className="mt-1.5 text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">
+              Your children&rsquo;s details and emergency contacts come next.
             </p>
             {err && <div className="mt-2 text-[12px] font-bold text-[#e21d27]">{err}</div>}
             <button
               type="button"
               onClick={saveDetails}
               disabled={saving}
-              className="mt-4 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:opacity-60"
+              className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:opacity-60"
               style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
             >
               {saving ? "Saving…" : "Continue →"}
