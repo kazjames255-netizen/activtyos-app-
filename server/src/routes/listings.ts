@@ -98,6 +98,11 @@ const baseListingSchema = z
     blockMode: z.enum(["weekly", "custom"]).optional(),
     days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     datesOff: z.array(z.string().max(10)).max(400).optional(),
+    // meals — whether this listing offers meals, and which saved menu runs each
+    // run-day (ISO date → mealMenus id). Parents see it at checkout. Not a
+    // RUN_FIELD: changing it never re-syncs the dated blocks.
+    mealsEnabled: z.boolean().optional(),
+    mealPlan: z.record(z.string().max(10), z.string().max(60)).optional(),
     // tickets
     blockId: z.string().max(60).nullable().optional(), // block bundle
     ticketOverrides: z
