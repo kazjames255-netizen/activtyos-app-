@@ -552,6 +552,11 @@ export function CustomersApp() {
   const kids = shown.flatMap((c) =>
     (c.children ?? []).map((k) => ({ ...k, family: c })),
   );
+  // Siblings grouped under their family — joined in one card, still opened
+  // individually (see the Children view).
+  const childFamilies = shown
+    .map((c) => ({ family: c, kids: (c.children ?? []).map((k) => ({ ...k, family: c })) }))
+    .filter((g) => g.kids.length > 0);
 
   return (
     // The same light palette Listings, Sessions & blocks and Bookings each set
@@ -1235,16 +1240,28 @@ export function CustomersApp() {
           </Card>
         ) : (
           <div className="grid gap-2.5 lg:grid-cols-2">
-            {kids.map((k) => {
-              const st = STAGES.find((x) => x.key === stageOf(k.family))!;
-              const key = childKey(k.family.id, k.name);
+            {childFamilies.map(({ family, kids: sibs }) => {
+              const st = STAGES.find((x) => x.key === stageOf(family))!;
               return (
                 <div
-                  key={key}
+                  key={family.id}
                   className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:shadow-[0_14px_30px_-20px_rgba(9,20,44,.6)]"
                 >
+                <span className="absolute inset-y-0 left-0 z-[1] w-1.5" style={{ background: st.colour }} />
+                {/* Family header — siblings joined under one card, still opened individually. */}
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2 pl-5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span aria-hidden className="text-[14px]">👪</span>
+                    <span className="truncate text-[13px] font-extrabold">{family.name}</span>
+                    <span className="flex-none rounded-full bg-[var(--brand-soft)] px-2 py-[1px] text-[10px] font-bold text-[var(--brand-strong)]">{sibs.length} {sibs.length === 1 ? "child" : "children"}</span>
+                  </div>
+                  {family.locationName && <span className="flex-none truncate text-[11px] text-[var(--ink-3)]">📍 {family.locationName}</span>}
+                </div>
+                {sibs.map((k, sibIdx) => {
+                  const key = childKey(family.id, k.name);
+                  return (
+                <div key={key} className={sibIdx > 0 ? "border-t border-[var(--line)]" : ""}>
                 <div className="flex items-center gap-3 px-4 py-3 pl-5">
-                  <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: st.colour }} />
                   {k.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -1267,10 +1284,6 @@ export function CustomersApp() {
                       {ageOf(k) !== null && (
                         <span className="text-[11.5px] text-[var(--ink-3)]">age {ageOf(k)}</span>
                       )}
-                    </div>
-                    <div className="truncate text-[11.5px] text-[var(--ink-3)]">
-                      {k.family.name}
-                      {k.family.locationName ? ` · 📍 ${k.family.locationName}` : ""}
                     </div>
                   </div>
                   <button
@@ -1339,12 +1352,10 @@ export function CustomersApp() {
                 )}
               </div>
               );
+                })}
+              </div>
+              );
             })}
-            <div className="col-span-full mt-1 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-              Names and ages only for now. Allergies, medical, SEND and the collection password
-              live on the parent&rsquo;s own record — they appear here once the accounts are
-              linked.
-            </div>
           </div>
         )
       ) : (
