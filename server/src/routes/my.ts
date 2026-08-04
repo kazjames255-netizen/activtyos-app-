@@ -253,8 +253,21 @@ my.get("/bookings", async (req, res) => {
 my.get("/providers", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-  const snap = await bookingsCol.where("email", "==", email).get();
-  const ids = [...new Set(snap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId).filter(Boolean) as string[])].slice(0, 30);
+  // Providers the parent has BOOKED with, plus providers that have ADDED them
+  // as a customer (invited via Add family / bulk import) — so a freshly-invited
+  // parent who hasn't booked yet still resolves their provider, which is what
+  // brands their whole portal shell. Customers are stored lower-cased and
+  // as-entered, so match both.
+  const [bySnap, custSnap, custSnapLc] = await Promise.all([
+    bookingsCol.where("email", "==", email).get(),
+    db.collection("customers").where("email", "==", email).get(),
+    db.collection("customers").where("email", "==", email.toLowerCase()).get(),
+  ]);
+  const ids = [...new Set([
+    ...bySnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
+    ...custSnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
+    ...custSnapLc.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
+  ].filter(Boolean) as string[])].slice(0, 30);
   if (!ids.length) { res.json([]); return; }
   const tenants = await db.getAll(...ids.map((id) => db.collection("tenants").doc(id)));
   res.json(tenants.filter((t) => t.exists).map((t) => ({ tenantId: t.id, name: (t.data()!.name as string) ?? "Your activity provider" })));
