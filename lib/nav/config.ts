@@ -151,7 +151,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "email", legacyView: "admin-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
         { view: "tasks", legacyView: "tasks", label: "Task manager", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
         { view: "staff", legacyView: "admin-staff", label: "Staff", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6\"></path><path d=\"M16 6.4a3 3 0 0 1 0 5.8M21 20c0-2.4-1.4-4.5-3.5-5.5\"></path></svg>" }, badge: null },
-        { view: "bookings", legacyView: "bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: null },
+        { view: "bookings", legacyView: "bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
         { view: "calendar", legacyView: "cal-admin", label: "Events calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
         { view: "meals", legacyView: "admin-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
@@ -178,7 +178,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "listings", legacyView: "franchise-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "blocks", legacyView: "franchise-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
-        { view: "bookings", legacyView: "franchise-bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: null },
+        { view: "bookings", legacyView: "franchise-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
         { view: "customers", legacyView: "franchise-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
     },
@@ -289,7 +289,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "blocks", legacyView: "freelancer-blocks", label: "Sessions & blocks", icon: { type: "glyph", value: "▥" }, badge: null },
-        { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", icon: { type: "glyph", value: "◷" }, badge: null },
+        { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
         { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
     },

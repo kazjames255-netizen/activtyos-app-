@@ -66,9 +66,12 @@ export function Header({ portal }: { portal: PortalKey }) {
           // useCustomerArea). Given a fancy gold treatment so it stands out.
           ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: "Memberships", icon: STAR, wide: false, badge: 0, fancy: true }] : []),
         ]
-      : findNavItem(portal, "messages") && !featureOff(features, "messages")
-        ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread }]
-        : [];
+      : [
+          // Bookings promoted to the top bar (like the customer's My bookings),
+          // out of the sidebar. Only where the portal has a bookings view.
+          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: 0, accent: "#0ea5a5", accentLight: "#3fd0c9" }] : []),
+          ...(findNavItem(portal, "messages") && !featureOff(features, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff" }] : []),
+        ];
 
   return (
     <header className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-3 sm:gap-3 sm:px-5">
