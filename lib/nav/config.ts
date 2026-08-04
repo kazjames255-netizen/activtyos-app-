@@ -502,7 +502,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "medication", legacyView: "custdash-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
-        { view: "accidents", legacyView: "custdash-accidents", label: "Accidents & incidents", icon: { type: "glyph", value: "🩹" }, badge: null },
+        { view: "accidents", legacyView: "custdash-accidents", label: "First aid & incidents", icon: { type: "glyph", value: "🩹" }, badge: null },
       ],
     },
     {
@@ -518,7 +518,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
-      label: "Payments & rewards",
+      label: "Savings & rewards",
       pinned: false,
       footer: false,
       items: [
