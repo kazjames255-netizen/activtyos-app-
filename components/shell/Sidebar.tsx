@@ -61,6 +61,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
   // empty — dimmed, with a soft "no info" pill. Still tappable, so it fills in
   // the moment the provider adds something.
   if (faded) {
+    const tag = NO_RECORDS_VIEWS.has(item.view) ? "No records" : "No info";
     return (
       <Link
         href={`/${portal}/${item.view}`}
@@ -70,7 +71,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
       >
         <Icon icon={item.icon} />
         <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
-        <span className="ml-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">no info</span>
+        <span className="ml-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">{tag}</span>
       </Link>
     );
   }
@@ -121,9 +122,11 @@ const CA_VIEW_KEY: Record<string, keyof CustomerArea> = {
   refer: "refer",
 };
 
-// custdash views that FADE (with a "no info" note) instead of disappearing when
-// they're switched off / have nothing in them — so the parent still sees them.
-const FADE_VIEWS = new Set<string>(["moments", "newsfeed", "meals", "trips", "timetable"]);
+// custdash views that FADE (with a "no info" / "no records" note) instead of
+// disappearing when they're switched off / have nothing in them.
+const FADE_VIEWS = new Set<string>(["moments", "newsfeed", "meals", "trips", "timetable", "accidents", "medication"]);
+// Care/record sections read "No records"; the rest read "No info".
+const NO_RECORDS_VIEWS = new Set<string>(["accidents", "medication", "meals"]);
 
 function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden, faded }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string>; faded: Set<string> }) {
   return (
@@ -208,6 +211,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       check("/api/posts", "newsfeed"),
       check("/api/meal-options", "meals"),
       check("/api/my/trips", "trips"),
+      check("/api/incidents", "accidents"),
+      check("/api/medications", "medication"),
     ]).then((res) => setEmptySections(new Set(res.filter(Boolean) as string[])));
   }, [portal]);
   // What to hide from this nav:
