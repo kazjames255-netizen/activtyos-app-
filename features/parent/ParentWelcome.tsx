@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import type { Me } from "@/lib/roles";
+
+interface GeoHit { label: string; lat: number; lng: number }
+const UK_POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
 
 interface AccountProfile { name: string; phone: string; address: string; postcode: string }
 
@@ -23,6 +26,35 @@ export function ParentWelcome() {
   const [form, setForm] = useState<AccountProfile>({ name: "", phone: "", address: "", postcode: "" });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Address finder — suggests as you type, and fills address + postcode on pick.
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<GeoHit[]>([]);
+  const [showHits, setShowHits] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function onQuery(v: string) {
+    setQuery(v);
+    if (timer.current) clearTimeout(timer.current);
+    if (v.trim().length < 3) { setHits([]); setShowHits(false); return; }
+    timer.current = setTimeout(() => {
+      apiGet<GeoHit[]>(`/api/geo/search?q=${encodeURIComponent(v.trim())}`)
+        .then((r) => { setHits(r ?? []); setShowHits(true); })
+        .catch(() => { setHits([]); setShowHits(false); });
+    }, 300);
+  }
+  function pickAddress(label: string) {
+    const pc = (label.match(UK_POSTCODE)?.[1] ?? "").toUpperCase().replace(/\s+/g, " ").trim();
+    const addr = label
+      .replace(/,?\s*United Kingdom$/i, "")
+      .replace(UK_POSTCODE, "")
+      .replace(/,\s*,/g, ",")
+      .replace(/[\s,]+$/, "")
+      .trim();
+    setForm((f) => ({ ...f, address: addr, postcode: pc }));
+    setQuery(addr);
+    setShowHits(false);
+  }
 
   useEffect(() => {
     apiGet<Me>("/api/me")
@@ -51,10 +83,10 @@ export function ParentWelcome() {
   }
 
   const set = (k: keyof AccountProfile) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const detailsOk = !!form.name.trim() && !!form.phone.trim();
+  const detailsOk = !!form.name.trim() && !!form.phone.trim() && !!form.address.trim() && !!form.postcode.trim();
 
   async function saveDetails() {
-    if (!detailsOk) { setErr("Please add your name and a contact number."); return; }
+    if (!detailsOk) { setErr("Please fill in your name, contact number, home address and postcode."); return; }
     setSaving(true); setErr(null);
     try {
       await apiPut("/api/account", {
@@ -121,12 +153,40 @@ export function ParentWelcome() {
                 <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.phone} onChange={set("phone")} placeholder="Mobile we can reach you on" inputMode="tel" />
               </div>
+              <div className="relative">
+                <span className={label}>Find your address <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— start typing</span></span>
+                <input
+                  className={inp}
+                  style={inpStyle}
+                  value={query}
+                  onChange={(e) => onQuery(e.target.value)}
+                  onFocus={() => hits.length && setShowHits(true)}
+                  placeholder="Start typing your address or postcode…"
+                  autoComplete="off"
+                />
+                {showHits && hits.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[190px] overflow-y-auto rounded-lg border bg-white shadow-lg" style={{ borderColor: "var(--line,#ece6f1)" }}>
+                    {hits.map((h, i) => (
+                      <button
+                        key={`${h.label}-${i}`}
+                        type="button"
+                        onClick={() => pickAddress(h.label)}
+                        className="block w-full truncate px-3 py-2 text-left text-[12.5px] hover:bg-[#f2f6ff]"
+                        style={{ color: "var(--ink-2,#4a4763)" }}
+                        title={h.label}
+                      >
+                        📍 {h.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
-                <span className={label}>Home address <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— optional</span></span>
+                <span className={label}>Home address <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder="House, street, town" />
               </div>
               <div className="max-w-[190px]">
-                <span className={label}>Postcode <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— optional</span></span>
+                <span className={label}>Postcode <span className="text-[#e21d27]">*</span></span>
                 <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
               </div>
             </div>
