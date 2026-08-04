@@ -55,7 +55,8 @@ export function ParentWelcome() {
       .replace(/[\s,]+$/, "")
       .trim();
     setForm((f) => ({ ...f, address: addr, postcode: pc }));
-    setQuery(addr);
+    setQuery(""); // clear the finder so the address isn't repeated below
+    setHits([]);
     setShowHits(false);
   }
 
@@ -134,7 +135,7 @@ export function ParentWelcome() {
             👋 Welcome{firstName ? `, ${firstName}` : ""}!
           </h2>
           <p className="mt-1 text-[12.5px] leading-[1.45] text-white/90">
-            Your home for booking{provider ? ` ${provider}’s` : ""} activities — plus your children&rsquo;s details, messages, vouchers &amp; wallet, all in one place.
+            Your home for booking{provider ? ` ${provider}’s activities` : " activities"} — plus your children&rsquo;s details, messages, vouchers &amp; wallet, all in one place.
           </p>
           <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-white/70">
             Step {phase === "details" ? "1" : "2"} of 2 — {phase === "details" ? "Your details" : "Get going"}
