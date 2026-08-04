@@ -94,6 +94,13 @@ const itemSchema = z.object({
     )
     .max(20)
     .optional(),
+  // Meals bought at checkout — one menu item per day, priced from the listing's
+  // scheduled day-menu. They ride the add-on pipeline (as per-day extras), so
+  // the cost lands in the booking total and is paid with the booking.
+  meals: z
+    .array(z.object({ menuItemId: z.string().max(60), date: z.string().max(10) }))
+    .max(60)
+    .optional(),
 });
 const basketSchema = z.object({
   listingId: z.string().min(1),
@@ -688,6 +695,25 @@ my.post("/bookings", async (req, res) => {
     }
   }
 
+  // Meals bought at checkout: resolve the listing's scheduled day-menu for
+  // every date a meal was chosen on, so each meal line can be priced + named
+  // from the authoritative menu (never the client). date → (menuItemId → item).
+  const mealItemByDate = new Map<string, Map<string, { name: string; price: number; allergens?: string[] }>>();
+  const wantsMeals = input.items.some((i) => i.meals?.length);
+  if (wantsMeals) {
+    if (!(listing as { mealsEnabled?: boolean }).mealsEnabled) throw new HttpError(400, "This camp isn't offering meals");
+    const plan = ((listing as { mealPlan?: Record<string, string> }).mealPlan) ?? {};
+    const dates = [...new Set(input.items.flatMap((i) => (i.meals ?? []).map((m) => m.date)))];
+    const menuIdByDate = new Map(dates.map((dt) => [dt, plan[dt]]).filter(([, id]) => !!id) as [string, string][]);
+    const menuIds = [...new Set(menuIdByDate.values())];
+    const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
+    const menuById = new Map(menuSnaps.filter((s) => s.exists && s.data()!.tenantId === listing.tenantId).map((s) => [s.id, (s.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]]));
+    for (const [dt, menuId] of menuIdByDate) {
+      const items = menuById.get(menuId);
+      if (items) mealItemByDate.set(dt, new Map(items.map((it) => [it.id, { name: it.name, price: it.price, allergens: it.allergens }])));
+    }
+  }
+
   // Price each item (base pass/timing + add-ons) and validate its days.
   // A family can't book a day that's already gone — only an operator recording
   // a past attendance (onBehalf) may back-date.
@@ -756,9 +782,21 @@ my.post("/bookings", async (req, res) => {
           unit: def.price,
           onDays,
           suffix,
+          meal: false,
           ...(answers.length ? { answers } : {}),
         };
       });
+      // Meals chosen for this child's days become per-day add-on lines priced
+      // from that day's menu — so they split per block and total exactly like
+      // add-ons. One meal per date; the date must be one this child is booked.
+      for (const meal of (item.meals ?? [])) {
+        if (!days.includes(meal.date)) throw new HttpError(400, "A meal was chosen for a day that isn't booked");
+        const menu = mealItemByDate.get(meal.date);
+        const it = menu?.get(meal.menuItemId);
+        if (!it) throw new HttpError(400, "A chosen meal isn't on that day's menu — refresh and try again");
+        const price = round2(it.price);
+        addons.push({ name: it.name, price, label: `🍽 ${it.name} · ${prettyDay(meal.date)}`, perDay: true, unit: price, onDays: [meal.date], suffix: "", meal: true });
+      }
       // The days grouped by owning block. One booking doc per block keeps
       // capacity, registers, waitlists and cancellations — all keyed on a
       // single blockId — exact when a line spans blocks.
@@ -1012,7 +1050,10 @@ my.post("/bookings", async (req, res) => {
             if (a.perDay) {
               const on = a.onDays.filter((d) => seg.days.includes(d));
               if (!on.length) return [];
-              return [{ ...a, price: round2(a.unit * on.length), label: `${a.name} × ${on.length}${a.suffix}` }];
+              // A meal keeps its own date-stamped label; a normal per-day
+              // add-on shows the "× n days" count.
+              const label = a.meal ? `🍽 ${a.name} · ${on.map((d) => prettyDay(d)).join(", ")}` : `${a.name} × ${on.length}${a.suffix}`;
+              return [{ ...a, price: round2(a.unit * on.length), label }];
             }
             const home = p.segments.find((s2) => s2.days.includes(a.onDays[0]))?.blockId ?? p.segments[0].blockId;
             return home === seg.blockId ? [a] : [];
