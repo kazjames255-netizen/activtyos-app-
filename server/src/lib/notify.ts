@@ -21,6 +21,11 @@ import { webUrl } from "./stripe";
 const col = () => db.collection("notifications");
 const prefsCol = () => db.collection("notificationPrefs");
 
+/** Reserved notifications key for the master "send platform emails to my inbox"
+ *  switch. Off → keep the in-app bell, send no operator email. Kept in sync with
+ *  EMAIL_DELIVERY_KEY in lib/settings.ts (the Setup toggle). */
+const EMAIL_DELIVERY_KEY = "email-delivery";
+
 /** What a notification is about. Doubles as the mute key a parent can set. */
 export type NotifyCategory =
   | "accident"
@@ -194,12 +199,18 @@ export async function notify(input: NotifyInput): Promise<void> {
     const parentEmail = input.to.kind === "parent" ? key(input.to.email) : undefined;
     if (input.to.kind === "parent" && !parentEmail) return;
 
-    // A provider can switch a whole alert off in Setup → Notifications. Only for
-    // tenant-audience alerts, and only when they've explicitly set it false —
-    // an absent key stays on. Skips both the bell and the email.
-    if (input.to.kind === "tenant" && input.key) {
-      const lib = (await db.collection("libraries").doc(input.tenantId).get()).data() as { settings?: { notifications?: Record<string, boolean> } } | undefined;
-      if (lib?.settings?.notifications?.[input.key] === false) return;
+    // A provider controls their team-facing alerts in Setup → Notifications:
+    //  · a per-alert key set false → the whole alert is skipped (bell + email);
+    //  · the master EMAIL_DELIVERY_KEY set false → keep the in-app bell but send
+    //    NO email to their personal inbox.
+    // Both apply only to tenant-audience alerts, and only when explicitly set
+    // false (an absent key stays on).
+    let tenantEmailOff = false;
+    if (input.to.kind === "tenant") {
+      const notifs = (await db.collection("libraries").doc(input.tenantId).get()).data()
+        ?.settings?.notifications as Record<string, boolean> | undefined;
+      if (input.key && notifs?.[input.key] === false) return;
+      if (notifs?.[EMAIL_DELIVERY_KEY] === false) tenantEmailOff = true;
     }
 
     const provider = await tenantContact(input.tenantId);
@@ -224,7 +235,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       at: new Date().toISOString(),
     } satisfies NotificationDoc);
 
-    if (input.bellOnly) return;
+    if (input.bellOnly || tenantEmailOff) return;
 
     let to: string | undefined;
     let footer: string | undefined;

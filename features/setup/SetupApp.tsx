@@ -12,6 +12,7 @@ import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import {
   useSettings,
   PROVIDER_NOTIFICATIONS,
+  EMAIL_DELIVERY_KEY,
   answerKey,
   dobRequired,
   DEFAULT_QUESTION_LENGTH,
@@ -89,6 +90,7 @@ function NotificationsTab() {
   const setPref = (key: string, on: boolean) =>
     void save({ settings: { ...settings, notifications: { ...prefs, [key]: on } } });
   const groups = [...new Set(PROVIDER_NOTIFICATIONS.map((n) => n.group))];
+  const emailOn = prefs[EMAIL_DELIVERY_KEY] !== false;
 
   const [s, setS] = useState<MsgSettings | null>(null);
   const [draft, setDraft] = useState("");
@@ -137,8 +139,24 @@ function NotificationsTab() {
       {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
 
       <div className="mt-5 border-t border-[var(--line)] pt-4">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border-2 px-4 py-3.5"
+          style={{ borderColor: emailOn ? "#2f6bd8" : "var(--line)", background: emailOn ? "linear-gradient(180deg,#eff5ff,#fff)" : "var(--surface)" }}>
+          <div className="min-w-0">
+            <div className="text-[14px] font-extrabold">Platform emails to my personal inbox</div>
+            <div className="text-[12px] text-[var(--ink-3)]">
+              {emailOn
+                ? "On — you’ll get an email for every alert below (that’s switched on). Turn this off to keep everything in the in-app bell only, with nothing sent to your inbox."
+                : "Off — nothing is emailed to you. Every alert still shows in your in-app bell so you don’t miss anything."}
+            </div>
+          </div>
+          <Toggle on={emailOn} onChange={(v) => setPref(EMAIL_DELIVERY_KEY, v)} labels={["On", "Off"]} />
+        </div>
         <h3 className="text-[15px] font-extrabold">What we alert you about</h3>
-        <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Each of these sends your team an in-app bell and an email. Switch off any you don’t want — the rest keep coming.</p>
+        <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">
+          {emailOn
+            ? "Each of these sends your team an in-app bell and an email. Switch off any you don’t want — the rest keep coming."
+            : "Emails are off above, so these send an in-app bell only. Switch off any you don’t want in the bell either."}
+        </p>
         {groups.map((g) => (
           <div key={g} className="mb-3">
             <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g}</div>

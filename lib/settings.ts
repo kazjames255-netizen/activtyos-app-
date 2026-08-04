@@ -376,6 +376,12 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "register-collect", group: "Daily reminders", label: "Not collected yet — session ended" },
 ];
 
+/** Master switch (a reserved notifications key) for whether platform emails are
+ *  sent to the operator's personal inbox at all. Off → the in-app bell still
+ *  fires for everything above, but no email is sent. Kept in sync with the
+ *  same-named constant in server/src/lib/notify.ts. */
+export const EMAIL_DELIVERY_KEY = "email-delivery";
+
 export interface TenantSettings {
   // ── Public identity ──
   /**
