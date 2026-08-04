@@ -282,7 +282,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
             <div>
               <FieldLabel>Boy or girl <span className="text-[var(--red)]">*</span></FieldLabel>
               <div className="grid grid-cols-2 gap-2">
-                {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => (
+                {([["boy", "👦 Boy"], ["girl", "👧 Girl"]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setSex(sex === v ? "" : v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
                     style={sex === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
                     {l}
