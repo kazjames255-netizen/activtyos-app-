@@ -114,7 +114,9 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   const [school] = useState(child?.school ?? "");
   const [allergies, setAllergies] = useState(child?.allergies ?? "");
   const [medical, setMedical] = useState(child?.medical ?? "");
-  const [dietary, setDietary] = useState(child?.dietary ?? "");
+  // Dietary is captured via the provider's "Dietary requirements" question now,
+  // not a built-in box — but preserve any value already on the record.
+  const dietary = child?.dietary ?? "";
   const [send, setSend] = useState(child?.send ?? "");
   const [sendPlanId, setSendPlanId] = useState<string | null>(child?.sendPlanId ?? null);
   const [sendPlanName, setSendPlanName] = useState<string | null>(child?.sendPlanName ?? null);
@@ -303,7 +305,8 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
         <>
           <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
           <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
-          <Area label="Dietary needs" placeholder="e.g. vegetarian, halal" value={dietary} onChange={setDietary} max={limitFor(settings, "dietary", CHILD_LIMITS)} rows={2} />
+          {/* Dietary is asked once via the provider's "Dietary requirements"
+              question (seeded, replaces:"dietary") — not a second built-in box. */}
           {settings.collectSend && (
             <div>
               <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
@@ -494,9 +497,11 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
 
         {/* slides — swipe horizontally as you complete each */}
         <div className="overflow-hidden">
-          <div className="flex items-stretch transition-transform duration-300 ease-out" style={{ transform: `translateX(-${safeStep * 100}%)` }}>
+          <div className="flex items-start transition-transform duration-300 ease-out" style={{ transform: `translateX(-${safeStep * 100}%)` }}>
             {slides.map((s, i) => (
-              <div key={s.key} className={slideWrap} aria-hidden={safeStep !== i}>
+              // Inactive slides collapse to zero height so the card is only as
+              // tall as the CURRENT step — not the tallest one.
+              <div key={s.key} className={`${slideWrap} ${safeStep === i ? "" : "max-h-0 overflow-hidden py-0"}`} aria-hidden={safeStep !== i}>
                 {s.body}
               </div>
             ))}
