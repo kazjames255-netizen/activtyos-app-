@@ -354,6 +354,28 @@ export interface MembershipTier {
   blurb?: string;
 }
 
+/** Every alert a provider can switch off in Setup → Notifications. `key` is the
+ *  stable id that `notify()` checks (tenant audience only); an absent/true value
+ *  means the alert is on. Grouped for display. */
+export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string }[] = [
+  { key: "booking-new", group: "Bookings & money", label: "New booking, request or waitlist join" },
+  { key: "booking-change", group: "Bookings & money", label: "Date or time change requested" },
+  { key: "booking-release", group: "Bookings & money", label: "Days released (partial cancel)" },
+  { key: "booking-cancel", group: "Bookings & money", label: "Cancellation request" },
+  { key: "billing", group: "Bookings & money", label: "Subscription & billing (trial, payment failed, ended)" },
+  { key: "trip-consent", group: "Care & safeguarding", label: "Trip consent given or declined" },
+  { key: "incident-ack", group: "Care & safeguarding", label: "Parent acknowledged an accident / incident" },
+  { key: "incident-reply", group: "Care & safeguarding", label: "Parent replied on an incident thread" },
+  { key: "med-consent", group: "Care & safeguarding", label: "Parent authorised a medication" },
+  { key: "med-note", group: "Care & safeguarding", label: "Parent left a note on a medication" },
+  { key: "calendar-reminder", group: "Daily reminders", label: "Calendar event reminders" },
+  { key: "med-due", group: "Daily reminders", label: "Medication due" },
+  { key: "safeguarding-due", group: "Daily reminders", label: "Safeguarding action due" },
+  { key: "register-open", group: "Daily reminders", label: "Registers open (children expected today)" },
+  { key: "register-missing", group: "Daily reminders", label: "Children not signed in yet" },
+  { key: "register-collect", group: "Daily reminders", label: "Not collected yet — session ended" },
+];
+
 export interface TenantSettings {
   // ── Public identity ──
   /**
@@ -672,6 +694,11 @@ export interface TenantSettings {
     tiers: MembershipTier[];
   };
 
+  /** Provider notification switches — key (see PROVIDER_NOTIFICATIONS) → on/off.
+   *  An absent key means on; false turns the alert off entirely (no bell, no
+   *  email). Checked by notify() for tenant-audience alerts only. */
+  notifications: Record<string, boolean>;
+
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
   requireDob: boolean;
@@ -894,6 +921,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
       { id: "gold", name: "Gold", enabled: false, priceMonthly: 40, benefitType: "credit", benefitValue: 50, perks: [] },
     ],
   },
+  notifications: {},
   requireDob: true,
   collectGender: true,
   genderOptions: ["Boy", "Girl", "Prefer not to say"],
@@ -1009,6 +1037,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
       ...(s.memberships ?? {}),
       tiers: (s.memberships?.tiers ?? DEFAULT_SETTINGS.memberships.tiers).map((t) => ({ ...t, perks: t.perks ?? [] })),
     },
+    notifications: { ...(s.notifications ?? {}) },
     charLimits: { ...DEFAULT_SETTINGS.charLimits, ...(s.charLimits ?? {}) },
     autoEmails: { ...DEFAULT_SETTINGS.autoEmails, ...(s.autoEmails ?? {}) },
     emailPrefs: { ...DEFAULT_SETTINGS.emailPrefs, ...(s.emailPrefs ?? {}) },

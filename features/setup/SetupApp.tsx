@@ -11,6 +11,7 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
 import {
   useSettings,
+  PROVIDER_NOTIFICATIONS,
   answerKey,
   dobRequired,
   DEFAULT_QUESTION_LENGTH,
@@ -83,6 +84,12 @@ type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning"
 // store the rest of this page uses — so it manages its own load/save.
 interface MsgSettings { emailOnNewMessage: boolean; notifyEmail: string; accountEmail: string }
 function NotificationsTab() {
+  const { settings, save } = useSettings();
+  const prefs = settings.notifications ?? {};
+  const setPref = (key: string, on: boolean) =>
+    void save({ settings: { ...settings, notifications: { ...prefs, [key]: on } } });
+  const groups = [...new Set(PROVIDER_NOTIFICATIONS.map((n) => n.group))];
+
   const [s, setS] = useState<MsgSettings | null>(null);
   const [draft, setDraft] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -128,6 +135,24 @@ function NotificationsTab() {
         </div>
       )}
       {err && <div className="mt-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
+
+      <div className="mt-5 border-t border-[var(--line)] pt-4">
+        <h3 className="text-[15px] font-extrabold">What we alert you about</h3>
+        <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Each of these sends your team an in-app bell and an email. Switch off any you don’t want — the rest keep coming.</p>
+        {groups.map((g) => (
+          <div key={g} className="mb-3">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g}</div>
+            <div className="overflow-hidden rounded-xl border border-[var(--line)]">
+              {PROVIDER_NOTIFICATIONS.filter((n) => n.group === g).map((n, i) => (
+                <div key={n.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
+                  <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">{n.label}</div>
+                  <Toggle on={prefs[n.key] !== false} onChange={(v) => setPref(n.key, v)} labels={["On", "Off"]} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -1252,6 +1277,7 @@ export function SetupApp() {
     );
 
   const TABS: [Tab, string][] = [
+    ["notifications", "🔔 Notifications"],
     ["features", "Features"],
     ["company", "Company setup"],
     ["seasons", "Seasons"],
@@ -1275,7 +1301,6 @@ export function SetupApp() {
     ["marketplace", "Marketplace"],
     ["refer", "Refer a friend"],
     ["memberships", "Memberships"],
-    ["notifications", "Notifications"],
   ];
 
   return (
@@ -1303,7 +1328,7 @@ export function SetupApp() {
         </p>
       </HowItWorks>
 
-      <TabStrip tabs={TABS} value={tab} onChange={setTab} />
+      <TabStrip tabs={TABS} value={tab} onChange={setTab} accent="notifications" />
 
       {tab === "company" && (
         <Section title="Company setup" lede="Who you are — the name and details your customers and documents show. Bank details and the invoice template live in the Money tab.">

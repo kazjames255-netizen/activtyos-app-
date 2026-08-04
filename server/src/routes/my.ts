@@ -1222,6 +1222,7 @@ my.post("/bookings", async (req, res) => {
           tenantId: listing.tenantId,
           to: { kind: "tenant" },
           category: "booking",
+          key: "booking-new",
           title: `${kind} · ${primary.ref} · ${bookerName}`,
           body: `${listing.name} · ${kids || bookerName} · ${places} place${places === 1 ? "" : "s"} · ${money(total)}.${refs.length > 1 ? ` Refs: ${refs.join(", ")} (opens ${primary.ref}).` : ""}${needsApproval ? " Review to approve or decline." : ""}`,
           subject: `ActivityOS: ${kind} — ${listing.name} from ${bookerName} (${primary.ref})`,
@@ -1411,6 +1412,7 @@ my.post("/bookings/:ref/amend", async (req, res) => {
       tenantId: booking.tenantId,
       to: { kind: "tenant" },
       category: "booking",
+      key: "booking-change",
       title: `${booking.booker} requested a ${changeLabel}`,
       // Ref lives in the body, not the subject.
       body: `Booking ${booking.ref} · ${booking.listing} · ${booking.child}${scope}. ${detail}. Review it to approve or decline.`,
@@ -1709,6 +1711,7 @@ async function partialCancel(
       tenantId,
       to: { kind: "tenant" },
       category: "booking",
+      key: "booking-release",
       title: `${existing.booker} released ${who} on ${existing.ref}`,
       body:
         resolution === "wallet"
@@ -1866,6 +1869,7 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         to: { kind: "tenant" },
         category: "booking",
         // Bell headline names the family + activity; the ref lives in the body.
+        key: "booking-cancel",
         title: `${updated.booker} asked to cancel — ${updated.listing}`,
         body: `Booking ${updated.ref} · ${updated.listing} · ${kids}${updated.dates ? ` · ${updated.dates}` : ""}.${reasonTxt} ${refundTxt} Open the booking to approve or decline.`,
         subject: `${updated.booker} — cancellation request`,
@@ -1975,6 +1979,7 @@ my.post("/trips/:id/consent", async (req, res) => {
     tenantId: result.tenantId,
     to: { kind: "tenant" },
     category: "trip",
+    key: "trip-consent",
     title: `${result.childName}: consent ${parsed.data.decision === "granted" ? "given ✓" : "DECLINED"} — ${result.destination}`,
     body: result.allAnswered ? "Every family has now responded." : "Waiting on the rest of the families.",
     href: "/company/trips",

@@ -196,7 +196,7 @@ export async function tenantForCustomer(customerId: string): Promise<string | nu
 /** Billing notifications go to the whole team bell + provider email. */
 export function notifyBilling(tenantId: string, title: string, body: string): Promise<void> {
   return notify({
-    tenantId, to: { kind: "tenant" }, category: "billing",
+    tenantId, to: { kind: "tenant" }, category: "billing", key: "billing",
     title, body, href: "/company/subscription",
   });
 }

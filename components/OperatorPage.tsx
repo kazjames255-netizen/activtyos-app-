@@ -117,15 +117,19 @@ export function TabStrip<T extends string>({
   tabs,
   value,
   onChange,
+  accent,
 }: {
   tabs: [T, string][];
   value: T;
   onChange: (t: T) => void;
+  /** A tab to highlight (coloured) even when it isn't the active one. */
+  accent?: T;
 }) {
   return (
     <div className="mb-3.5 flex flex-wrap gap-1.5">
       {tabs.map(([key, label]) => {
         const on = key === value;
+        const isAccent = key === accent && !on;
         return (
           <button
             key={key}
@@ -135,7 +139,9 @@ export function TabStrip<T extends string>({
             style={
               on
                 ? { borderColor: "transparent", background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.55)" }
-                : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }
+                : isAccent
+                  ? { borderColor: "transparent", background: "linear-gradient(180deg,#f7c948,#eda100)", color: "#4a2f00", boxShadow: "0 3px 10px -2px rgba(237,161,0,.5)" }
+                  : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }
             }
           >
             {label}

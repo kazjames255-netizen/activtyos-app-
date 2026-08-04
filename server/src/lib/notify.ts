@@ -181,6 +181,10 @@ export interface NotifyInput {
   attachments?: MailAttachment[];
   /** Bell only — no email regardless of mute (e.g. low-value chatter). */
   bellOnly?: boolean;
+  /** Stable notification type (see PROVIDER_NOTIFICATIONS). For tenant-audience
+   *  alerts, if the provider has switched this key off in Setup → Notifications
+   *  (`settings.notifications[key] === false`), the whole alert is skipped. */
+  key?: string;
 }
 
 /** Raise the bell and send the email. Fire-and-forget: a notification must
@@ -189,6 +193,14 @@ export async function notify(input: NotifyInput): Promise<void> {
   try {
     const parentEmail = input.to.kind === "parent" ? key(input.to.email) : undefined;
     if (input.to.kind === "parent" && !parentEmail) return;
+
+    // A provider can switch a whole alert off in Setup → Notifications. Only for
+    // tenant-audience alerts, and only when they've explicitly set it false —
+    // an absent key stays on. Skips both the bell and the email.
+    if (input.to.kind === "tenant" && input.key) {
+      const lib = (await db.collection("libraries").doc(input.tenantId).get()).data() as { settings?: { notifications?: Record<string, boolean> } } | undefined;
+      if (lib?.settings?.notifications?.[input.key] === false) return;
+    }
 
     const provider = await tenantContact(input.tenantId);
     // Point operator links at the portal this team actually uses (a freelancer

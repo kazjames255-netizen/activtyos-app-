@@ -332,6 +332,7 @@ incidents.post("/:id/acknowledge", async (req, res) => {
       tenantId: String(rec.tenantId),
       to: { kind: "tenant" },
       category: rec.kind === "accident" ? "accident" : "incident",
+      key: "incident-ack",
       title: `${who} acknowledged the ${word} for ${rec.childName}`,
       body: `The ${word} recorded on ${rec.date} has been seen by the parent.`,
       href: "/company/accidents",
@@ -380,6 +381,7 @@ incidents.post("/:id/note", async (req, res) => {
     if (role === "parent") {
       await notify({
         tenantId, to: { kind: "tenant" }, category: data.kind === "accident" ? "accident" : "incident",
+        key: "incident-reply",
         title: `${note.by} replied about the ${word} for ${data.childName}`,
         body: parsed.data.text,
         href: "/company/incidents", ref: snap.id,
