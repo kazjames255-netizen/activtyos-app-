@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { emailNewMessage } from "../lib/emails";
+import { notify } from "../lib/notify";
 import { webUrl } from "../lib/stripe";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -161,6 +162,18 @@ messages.post("/", async (req, res) => {
 
   const msg = { threadId: id, tenantId, parentEmail, from, senderName, body, createdAt: now };
   const ref = await msgsCol.add(msg);
+
+  // Bell notification for the recipient so a new message shows up in their
+  // notifications, not only their inbox. bellOnly — the email is sent below and
+  // respects its own emailOnNewMessage toggle, so this must not double-send.
+  const preview = body.length > 140 ? `${body.slice(0, 140)}…` : body;
+  if (from === "parent") {
+    void notify({ tenantId, to: { kind: "tenant" }, category: "message", bellOnly: true,
+      title: `New message from ${senderName}`, body: preview, href: "/company/messages" });
+  } else {
+    void notify({ tenantId, to: { kind: "parent", email: parentEmail }, category: "message", bellOnly: true,
+      title: `New message from ${senderName}`, body: preview, href: "/custdash/messages" });
+  }
 
   // Outbound "you've got a new message" email to the RECIPIENT. Fire-and-forget;
   // an email failure must never fail the send. (Reply-by-email ingest = §JJ.)
