@@ -49,7 +49,7 @@ function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolea
   return label;
 }
 
-function NavLink({ item, portal, active, multiChild, unread, coupons }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number }) {
+function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number; faded?: boolean }) {
   // The Messages badge is live: unread message count, not the config placeholder.
   // It grows as replies arrive and clears to nothing once the thread is opened
   // (the open marks messages read → realtime → this refetches). The Coupons badge
@@ -57,6 +57,17 @@ function NavLink({ item, portal, active, multiChild, unread, coupons }: { item: 
   const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null)
     : item.view === "coupons" ? (coupons > 0 ? String(coupons) : null)
     : item.badge;
+  // A faded section still shows (so the parent knows it exists) but reads as
+  // empty — dimmed, a "no info" tag, and not clickable.
+  if (faded) {
+    return (
+      <div className={`${itemCls} cursor-default opacity-45`} style={{ color: "var(--side-nav)" }} title={`${item.label} — nothing here yet`} aria-disabled>
+        <Icon icon={item.icon} />
+        <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
+        <span className="ml-auto flex-none rounded-full bg-white/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-[var(--side-muted)]">no info</span>
+      </div>
+    );
+  }
   return (
     <Link
       href={`/${portal}/${item.view}`}
@@ -104,7 +115,11 @@ const CA_VIEW_KEY: Record<string, keyof CustomerArea> = {
   refer: "refer",
 };
 
-function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string> }) {
+// custdash views that FADE (with a "no info" note) instead of disappearing when
+// they're switched off / have nothing in them — so the parent still sees them.
+const FADE_VIEWS = new Set<string>(["moments", "newsfeed", "meals", "trips", "timetable"]);
+
+function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden, faded }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string>; faded: Set<string> }) {
   return (
     <>
       {items.filter((item) => !item.hidden && !caHidden.has(item.view)).map((item) =>
@@ -119,6 +134,7 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
             multiChild={multiChild}
             unread={unread}
             coupons={coupons}
+            faded={faded.has(item.view)}
           />
         ),
       )}
@@ -183,20 +199,27 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const features = useOperatorFeatures(portal);
   const moneyShow = useMoneyShow(portal);
   const moneyHidden = moneyShow === "outgoing" ? MONEY_INCOMING_VIEWS : moneyShow === "incoming" ? MONEY_OUTGOING_VIEWS : [];
-  const caHidden = new Set<string>(
-    portal === "custdash"
-      ? [
-          ...Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view),
-          ...(hasTimetable ? [] : ["timetable"]),
-          ...(customerArea.simpleMode
-            ? groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))
-            : []),
-        ]
-      : [
-          ...groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v)),
-          ...moneyHidden,
-        ],
-  );
+  const caHidden = new Set<string>();
+  // These "content" sections (custdash) fade with a "no info" note instead of
+  // vanishing when the provider hasn't switched them on or has nothing in them —
+  // so a parent still sees the section exists.
+  const faded = new Set<string>();
+  if (portal === "custdash") {
+    if (customerArea.simpleMode) {
+      for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => v !== "auth" && !SIMPLE_ALLOWED.has(v))) caHidden.add(v);
+    }
+    const softOff = [
+      ...Object.entries(CA_VIEW_KEY).filter(([, key]) => customerArea[key] === false).map(([view]) => view),
+      ...(hasTimetable ? [] : ["timetable"]),
+    ];
+    for (const v of softOff) {
+      if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
+      else caHidden.add(v);
+    }
+  } else {
+    for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
+    for (const v of moneyHidden) caHidden.add(v);
+  }
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).
   const [multiChild, setMultiChild] = useState(false);
@@ -239,7 +262,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} />
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} />
             </div>
           );
         }
@@ -259,7 +282,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             </button>
             {open && (
               <div>
-                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} />
+                <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} />
               </div>
             )}
           </div>
