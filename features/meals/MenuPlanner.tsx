@@ -47,7 +47,7 @@ export function MenuPlanner() {
   const [listingId, setListingId] = useState("");
   const [plan, setPlan] = useState<Record<string, MealDayPlan>>({});
   const [brushMenuId, setBrushMenuId] = useState<string | null>(null);
-  const [brushItems, setBrushItems] = useState<Set<string>>(new Set());
+  const [focusDay, setFocusDay] = useState<number | null>(null); // weekday being edited on the menu card
   const [erase, setErase] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +68,7 @@ export function MenuPlanner() {
     const next: Record<string, MealDayPlan> = {};
     for (const [iso, v] of Object.entries(raw)) { const p = mealDayPlan(v); if (p) next[iso] = p; }
     setPlan(next);
-    setBrushMenuId(null); setBrushItems(new Set()); setErase(false);
+    setBrushMenuId(null); setFocusDay(null); setErase(false);
   }, [listing]);
 
   const dates = useMemo(() => (listing ? genDates(listing.runFrom ?? "", listing.runTo ?? "", listing.days ?? []).filter((x) => !(listing.datesOff ?? []).includes(x)) : []), [listing]);
@@ -83,41 +83,48 @@ export function MenuPlanner() {
     api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(nextPlan).length > 0, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
   }, [listingId]);
 
+  const daysOfWeekday = (n: number) => dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n);
   const pickMenu = (id: string) => {
     setErase(false);
-    // Don't pre-tick anything — the operator picks one dish, or more if they
-    // want, rather than being forced to serve every dish on the menu.
-    if (brushMenuId === id) { setBrushMenuId(null); setBrushItems(new Set()); return; }
-    setBrushMenuId(id); setBrushItems(new Set());
+    if (brushMenuId === id) { setBrushMenuId(null); setFocusDay(null); return; }
+    setBrushMenuId(id); setFocusDay(null);
   };
-  const toggleBrushItem = (itemId: string) => setBrushItems((s) => { const n = new Set(s); if (n.has(itemId)) n.delete(itemId); else n.add(itemId); return n; });
 
+  // The dishes this menu serves on a given weekday (read from the first run-day
+  // of that weekday already set to this menu). Empty = weekday not set yet.
+  const weekdayServed = (menuId: string, n: number): Set<string> => {
+    const menu = menusById.get(menuId); if (!menu) return new Set();
+    const d = daysOfWeekday(n).find((dd) => plan[dd]?.menuId === menuId);
+    if (!d) return new Set();
+    const p = plan[d];
+    return new Set(p.itemIds.length ? p.itemIds : menu.items.map((i) => i.id));
+  };
+  // Add / remove a dish for a whole weekday (all its run-days). Removing the
+  // last dish clears that weekday. This is the "meals for Monday" control.
+  const toggleWeekdayDish = (menuId: string, n: number, itemId: string) => {
+    const menu = menusById.get(menuId); if (!menu) return;
+    const allIds = menu.items.map((i) => i.id);
+    const served = weekdayServed(menuId, n);
+    if (served.has(itemId)) served.delete(itemId); else served.add(itemId);
+    const ids = allIds.filter((id) => served.has(id));
+    const next = { ...plan };
+    for (const d of daysOfWeekday(n)) {
+      if (ids.length === 0) { if (plan[d]?.menuId === menuId) delete next[d]; }
+      else next[d] = { menuId, itemIds: ids };
+    }
+    commit(next);
+  };
+
+  // Slide-3 fine-tuning: tap an empty day to add the active menu (all dishes),
+  // then trim per day; erase deletes.
   const applyTo = (iso: string) => {
     const next = { ...plan };
     if (erase) delete next[iso];
-    else if (brushMenuId && brushItems.size) next[iso] = { menuId: brushMenuId, itemIds: [...brushItems] };
+    else if (brushMenuId) { const menu = menusById.get(brushMenuId); if (!menu) return; next[iso] = { menuId: brushMenuId, itemIds: menu.items.map((i) => i.id) }; }
     else return;
     commit(next);
   };
-  const applyWeekday = (n: number) => {
-    if (!erase && (!brushMenuId || !brushItems.size)) return;
-    const next = { ...plan };
-    for (const iso of dates) if (new Date(`${iso}T00:00:00Z`).getUTCDay() === n) { if (erase) delete next[iso]; else next[iso] = { menuId: brushMenuId!, itemIds: [...brushItems] }; }
-    commit(next);
-  };
   const clearAll = () => commit({});
-  // Assign / clear a whole weekday for a menu straight from the menu card —
-  // "runs on Mon, Wed". Uses the dishes ticked on that card.
-  const menuOnWeekday = (menuId: string, n: number) => dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n && plan[d]?.menuId === menuId);
-  const toggleMenuWeekday = (menuId: string, n: number) => {
-    const days = dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n);
-    if (days.length === 0) return;
-    const onAll = days.every((d) => plan[d]?.menuId === menuId);
-    const next = { ...plan };
-    if (onAll) { for (const d of days) delete next[d]; }
-    else { if (!brushItems.size) return; for (const d of days) next[d] = { menuId, itemIds: [...brushItems] }; }
-    commit(next);
-  };
   const dayDishes = (iso: string) => { const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined; if (!p || !menu) return null; const items = p.itemIds.length ? menu.items.filter((it) => p.itemIds.includes(it.id)) : menu.items; return { name: menu.name, items }; };
   // Toggle a single dish ON/OFF for one specific day — pick the meals right on
   // the day tile. Removing the last dish clears the day.
@@ -135,7 +142,7 @@ export function MenuPlanner() {
   const planned = dates.filter((iso) => dayDishes(iso)).length;
 
   const ready = !!listing && dates.length > 0;
-  const brushReady = !!brushMenuId && brushItems.size > 0;
+  const brushReady = !!brushMenuId && planned > 0;
 
   // Tab button on the blue header. `green` gives the two tool tabs the Bookings
   // tab's teal-green so they read as a separate group.
@@ -250,35 +257,38 @@ export function MenuPlanner() {
                     <div className="p-3" style={sel ? { background: tint } : undefined}>
                       {sel ? (
                         <>
-                          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Tick what’s served</div>
+                          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Pick a day, then choose its meal(s)</div>
                           <div className="flex flex-wrap gap-1.5">
-                            {m.items.map((it) => {
-                              const on = brushItems.has(it.id);
+                            {weekdaysPresent.map((n) => {
+                              const count = weekdayServed(m.id, n).size;
+                              const editing = focusDay === n;
                               return (
-                                <button key={it.id} type="button" onClick={(e) => { e.stopPropagation(); toggleBrushItem(it.id); }}
-                                  className="rounded-full border px-2.5 py-1.5 text-[12px] font-bold transition"
-                                  style={on ? { borderColor: dark, background: "#fff", color: dark } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>
-                                  {on ? "✓ " : ""}{it.name} · {money(it.price)}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
+                                <button key={n} type="button" onClick={(e) => { e.stopPropagation(); setFocusDay(editing ? null : n); }}
+                                  className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition"
+                                  style={editing ? { borderColor: dark, background: dark, color: "#fff" } : count > 0 ? { borderColor: dark, background: "#fff", color: dark } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
+                                  {WEEKDAYS.find(([w]) => w === n)?.[1]}{count > 0 ? ` · ${count}` : ""}
                                 </button>
                               );
                             })}
                           </div>
-                          <div className="mt-3 border-t pt-2.5" style={{ borderColor: `${dark}22` }}>
-                            <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Runs on <span className="font-semibold opacity-70">· fine-tune on the Days slide</span></div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {weekdaysPresent.map((n) => {
-                                const onAll = menuOnWeekday(m.id, n).length > 0 && dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n).every((d) => plan[d]?.menuId === m.id);
-                                return (
-                                  <button key={n} type="button" disabled={!onAll && brushItems.size === 0} onClick={(e) => { e.stopPropagation(); toggleMenuWeekday(m.id, n); }}
-                                    className="rounded-full border px-2.5 py-1 text-[11.5px] font-extrabold transition disabled:opacity-40"
-                                    style={onAll ? { borderColor: "transparent", background: dark, color: "#fff" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
-                                    {onAll ? "✓ " : ""}{WEEKDAYS.find(([w]) => w === n)?.[1]}
-                                  </button>
-                                );
-                              })}
+                          {focusDay !== null ? (
+                            <div className="mt-3 border-t pt-2.5" style={{ borderColor: `${dark}22` }}>
+                              <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Meals on every {WEEKDAYS.find(([w]) => w === focusDay)?.[1]}</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {m.items.map((it) => {
+                                  const on = weekdayServed(m.id, focusDay!).has(it.id);
+                                  return (
+                                    <button key={it.id} type="button" onClick={(e) => { e.stopPropagation(); toggleWeekdayDish(m.id, focusDay!, it.id); }}
+                                      className="rounded-full border px-2.5 py-1.5 text-[12px] font-bold transition"
+                                      style={on ? { borderColor: dark, background: "#fff", color: dark } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>
+                                      {on ? "✓ " : "+ "}{it.name} · {money(it.price)}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Tick one, or a few for parents to choose between. Fine-tune single days on the Days slide.</p>
                             </div>
-                            {brushItems.size === 0 && <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Tick a dish above first.</p>}
-                          </div>
+                          ) : <p className="mt-2 text-[11px] text-[var(--ink-3)]">Tap a day above to choose the meal(s) it serves.</p>}
                         </>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
@@ -291,8 +301,8 @@ export function MenuPlanner() {
               })}
             </div>
             <div className="mt-6 flex items-center gap-3">
-              {nextBtn("days", "Next: plan the days →", brushReady)}
-              {!brushReady && <span className="text-[12px] text-[var(--red,#e21d27)]">Tap a menu and tick at least one dish.</span>}
+              {nextBtn("days", "Next: fine-tune the days →", brushReady)}
+              {!brushReady && <span className="text-[12px] text-[var(--ink-3)]">Pick a day on a menu and choose its meal(s).</span>}
             </div>
           </div>
         )
@@ -307,19 +317,9 @@ export function MenuPlanner() {
               <div className="text-[18px] font-extrabold text-[var(--ink)]">Drop it onto the days</div>
               <span className="ml-auto rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{planned} of {dates.length} planned</span>
             </div>
-            <div className="mb-4 mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px]">
-              <span className="text-[var(--ink-3)]">Painting:</span>
-              {erase ? <span className="font-bold text-[var(--red,#e21d27)]">Erase</span>
-                : brushMenu ? <span className="font-bold text-[#1d3a8f]">{brushMenu.name} — {brushMenu.items.filter((it) => brushItems.has(it.id)).map((it) => it.name).join(", ")}</span>
-                : <span className="text-[var(--ink-3)]">nothing — open the <button type="button" onClick={() => setTab("menu")} className="font-bold text-[#2f6bd8] underline">Menu</button> tab first</span>}
-            </div>
+            <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">You set the pattern on the Menu slide — here you can tweak a single day: tap its dish chips, tap an empty day to add {brushMenu ? <b>{brushMenu.name}</b> : <>the <button type="button" onClick={() => setTab("menu")} className="font-bold text-[#2f6bd8] underline">picked menu</button></>}, or erase.</p>
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[12px] font-bold text-[var(--ink-3)]">Every</span>
-              {weekdaysPresent.map((n) => (
-                <button key={n} type="button" disabled={erase ? false : !brushReady} onClick={() => applyWeekday(n)} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] disabled:opacity-40">{WEEKDAYS.find(([w]) => w === n)?.[1]}</button>
-              ))}
-              <span className="mx-1.5 h-5 w-px bg-[var(--line)]" />
-              <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? "✓ Erasing" : "Erase"}</button>
+              <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? "✓ Erasing" : "Erase a day"}</button>
               <button type="button" onClick={clearAll} className="text-[12px] font-bold text-[var(--red,#e21d27)] underline">Clear all</button>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
