@@ -57,7 +57,7 @@ export function useParents(skip = false) {
 /** "My scheme isn't listed" — never a real scheme id. */
 const NOT_LISTED = "__not_listed__";
 
-export type CkStage = "parent" | "who" | "extras" | "pay";
+export type CkStage = "parent" | "who" | "extras" | "meals" | "pay";
 
 export type CkTheme = {
   bg: string; line: string; ink: string; muted: string;
@@ -976,18 +976,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Where we are in the sequence: dates, children, one step per extra, pay.
   // Each extra is named, because "Extra 2" tells a parent looking for the
   // t-shirt nothing at all.
+  const hasMeals = !!d.mealsEnabled && mealSlots.length > 0;
   const steps = [
     "Dates",
     ...(parentMode ? [] : ["Parent"]),
     "Children",
     ...ordered.map((a) => a.name),
+    ...(hasMeals ? ["Meals"] : []),
     parentMode ? "Pay" : "Payment",
   ];
   /** Where "Children" sits — one further along for an operator. */
   const whoAt = parentMode ? 1 : 2;
+  const mealsAt = whoAt + 1 + ordered.length; // index of the "Meals" step (only valid when hasMeals)
   const stepNow = ckStage === "parent" ? 1
     : ckStage === "who" ? whoAt
     : ckStage === "extras" ? whoAt + 1 + extraIdx
+    : ckStage === "meals" ? mealsAt
     : steps.length - 1;
   // Anything already passed can be jumped straight back to. Forward is not
   // offered: the extras depend on who is on which pass, so skipping ahead
@@ -997,6 +1001,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     if (i === 0) { b.setStage("pick"); return; }
     if (!parentMode && i === 1) { setCkStage("parent"); return; }
     if (i === whoAt) { setCkStage("who"); return; }
+    if (hasMeals && i === mealsAt) { setCkStage("meals"); return; }
     if (i === steps.length - 1) { setCkStage("pay"); return; }
     setExtraIdx(i - whoAt - 1);
     setCkStage("extras");
@@ -1310,35 +1315,34 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
       {/* Meals — pick from the day's menu; the cost joins the total below and
           is paid with the booking. Optional, one meal per child per day. */}
-      {ckStage === "pay" && d.mealsEnabled && mealSlots.length > 0 && (
-        <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
-          <div className="mb-0.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals <span className="font-semibold" style={{ color: tk.muted }}>· optional</span></div>
-          <p className="mb-2 text-[11px]" style={{ color: tk.muted }}>Pick a meal for any day — you pay for them with your booking. Allergens shown with ⚠.</p>
-          <div className="flex flex-col gap-1.5">
-            {mealKids.map((kid) => {
+      {ckStage === "meals" && (
+        <div>
+          <div className="text-[15px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals <span className="text-[12px] font-semibold" style={{ color: tk.muted }}>· optional</span></div>
+          <p className="mb-3 mt-0.5 text-[12px]" style={{ color: tk.muted }}>Pick a meal for any day — you pay for them with your booking. Allergens shown with ⚠. You can skip this.</p>
+          <div className="flex flex-col gap-3">
+            {mealKids.map((kid, ki) => {
               const slots = mealSlots.filter((s) => s.kid === kid);
               const chosen = slots.filter((s) => b.mealFor(kid, s.date)).length;
               const single = mealKids.length === 1;
               const open = single || (openMealKid === null ? kid === mealKids[0] : openMealKid === kid);
               return (
-                <div key={kid} className="overflow-hidden rounded-xl" style={{ border: `1px solid ${tk.line}` }}>
-                  {!single && (
-                    <button type="button" onClick={() => setOpenMealKid(open ? "" : kid)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
-                      <span className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</span>
-                      <span className="rounded-full px-2 py-[1px] text-[10.5px] font-bold" style={{ background: chosen ? tk.accent : `${tk.line}`, color: chosen ? tk.accentInk : tk.muted }}>{chosen}/{slots.length} meals</span>
-                      <span className="ml-auto text-[12px]" style={{ color: tk.muted }}>{open ? "▲" : "▼"}</span>
-                    </button>
-                  )}
+                <div key={kid} className="overflow-hidden rounded-xl" style={{ border: `2px solid ${chosen ? tk.accent : tk.line}` }}>
+                  <button type="button" onClick={() => !single && setOpenMealKid(open ? "" : kid)} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left" style={{ background: `${tk.accent}1f`, cursor: single ? "default" : "pointer" }}>
+                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-black" style={{ background: tk.accent, color: tk.accentInk }}>{ki + 1}</span>
+                    <span className="text-[13.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</span>
+                    <span className="rounded-full px-2 py-[1px] text-[10.5px] font-extrabold" style={{ background: chosen ? tk.accent : "transparent", color: chosen ? tk.accentInk : tk.muted, border: chosen ? "none" : `1px solid ${tk.line}` }}>{chosen}/{slots.length} meals</span>
+                    {!single && <span className="ml-auto text-[13px]" style={{ color: tk.muted }}>{open ? "▲" : "▼"}</span>}
+                  </button>
                   {open && (
-                    <div className="px-3 pb-3" style={single ? { paddingTop: "4px" } : undefined}>
-                      {!single && chosen > 0 && <button type="button" onClick={() => copyMealsToAll(kid)} className="mb-2 rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ border: `1px solid ${tk.accent}`, color: tk.accent }}>⧉ Copy {kid}’s meals to all children</button>}
+                    <div className="px-3 pb-3 pt-2.5">
+                      {!single && chosen > 0 && <button type="button" onClick={() => copyMealsToAll(kid)} className="mb-2.5 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold" style={{ border: `1px solid ${tk.accent}`, color: tk.accent }}>⧉ Copy {kid}’s meals to all children</button>}
                       <div className="grid gap-1.5 sm:grid-cols-2">
                         {slots.map(({ date }) => {
                           const menu = menuForDate(date);
                           if (!menu) return null;
                           const sel = b.mealFor(kid, date);
                           return (
-                            <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
+                            <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${sel ? tk.accent : tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
                               <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
                               <div className="mt-1 flex flex-wrap gap-1">
                                 {menu.items.map((it) => {
@@ -1363,6 +1367,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               );
             })}
           </div>
+          <button type="button" onClick={() => setCkStage("pay")} className={`mt-4 w-full py-3 text-[13.5px] font-extrabold ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}>
+            {mealTotal > 0 ? `Next — meals ${money(mealTotal)} →` : "Next →"}
+          </button>
+          <BackBtn tk={tk} onClick={() => { if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
+            Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
+          </BackBtn>
         </div>
       )}
 
@@ -1528,7 +1538,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               </div>
             )}
 
-            <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : "pay"); }}
+            <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : hasMeals ? "meals" : "pay"); }}
               className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
               {roster.length === 0 ? "Add a child first"
@@ -1566,7 +1576,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         const thisExtra = kids.reduce((t, k) => t + costFor(k), 0);
         const step = (n: number) => {
           if (n < 0) { if (extraIdx === 0) setCkStage("who"); else setExtraIdx(extraIdx - 1); return; }
-          if (last) setCkStage("pay"); else setExtraIdx(extraIdx + 1);
+          if (last) setCkStage(hasMeals ? "meals" : "pay"); else setExtraIdx(extraIdx + 1);
         };
         // Bar pieces, built once and arranged two ways below — a photo changes
         // the shape of this bar, not the things on it.
@@ -1818,8 +1828,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {/* No "change extras" button here any more — the tabs above go straight
           to the one they want, by name. */}
       {ckStage === "pay" && (
-        <BackBtn tk={tk} onClick={() => { if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
-          Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
+        <BackBtn tk={tk} onClick={() => { if (hasMeals) setCkStage("meals"); else if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
+          Back to {hasMeals ? "meals" : ordered.length ? ordered[ordered.length - 1].name : "children"}
         </BackBtn>
       )}
       {/* Nothing to pay: a parent isn't asked how they'd like to settle £0.
