@@ -279,27 +279,38 @@ export function MenuPlanner() {
               <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? "✓ Erasing" : "Erase"}</button>
               <button type="button" onClick={clearAll} className="text-[12px] font-bold text-[var(--red,#e21d27)] underline">Clear all</button>
             </div>
-            <div className="flex flex-col gap-2.5">
-              {weeks.map((w) => (
-                <div key={w.mon} className="overflow-hidden rounded-xl border border-[var(--line)]">
-                  <div className="px-3.5 py-2 text-[12.5px] font-extrabold text-[var(--ink-2)]" style={{ background: "#eef4fd" }}>Week {w.n} <span className="font-semibold opacity-70">· from {fmtDate(w.mon)}</span></div>
-                  <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {w.days.map((iso) => {
-                      const dd = dayDishes(iso);
-                      return (
-                        <button key={iso} type="button" onClick={() => applyTo(iso)}
-                          onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
-                          className="flex min-h-[72px] flex-col items-start rounded-xl border p-2.5 text-left transition"
-                          style={dd ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "#fff" }}>
-                          <span className="text-[11.5px] font-extrabold text-[var(--ink-2)]">{fmtDate(iso)}</span>
-                          {dd ? <span className="mt-1 text-[11.5px] font-bold leading-snug text-[#1d3a8f]">{dd.items.map((i) => i.name).join(", ")}</span>
-                            : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">— tap to add —</span>}
-                        </button>
-                      );
-                    })}
+            <div className="grid gap-3 lg:grid-cols-2">
+              {weeks.map((w, wi) => {
+                const [hd, hl] = MENU_PAL[wi % MENU_PAL.length];
+                const set = w.days.filter((iso) => dayDishes(iso)).length;
+                return (
+                  <div key={w.mon} className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${hd}, ${hl})` }}>
+                      <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
+                      <span className="text-[14px] font-extrabold">Week {w.n}</span>
+                      <span className="text-[12px] font-semibold text-white/85">· from {fmtDate(w.mon)}</span>
+                      <span className="ml-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{set}/{w.days.length}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
+                      {w.days.map((iso) => {
+                        const dd = dayDishes(iso);
+                        const mi = plan[iso] ? (menus ?? []).findIndex((m) => m.id === plan[iso]!.menuId) : -1;
+                        const col = mi >= 0 ? MENU_PAL[mi % MENU_PAL.length] : null;
+                        return (
+                          <button key={iso} type="button" onClick={() => applyTo(iso)}
+                            onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
+                            className="flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition hover:-translate-y-0.5"
+                            style={dd && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
+                            <span className="text-[11.5px] font-extrabold" style={{ color: dd && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
+                            {dd && col ? <span className="mt-1 text-[11.5px] font-bold leading-snug" style={{ color: col[0] }}>{dd.items.map((i) => i.name).join(", ")}</span>
+                              : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ tap to add</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )
