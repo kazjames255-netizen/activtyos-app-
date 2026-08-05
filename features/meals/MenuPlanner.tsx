@@ -107,6 +107,19 @@ export function MenuPlanner() {
   };
   const clearAll = () => commit({});
   const dayDishes = (iso: string) => { const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined; if (!p || !menu) return null; const items = p.itemIds.length ? menu.items.filter((it) => p.itemIds.includes(it.id)) : menu.items; return { name: menu.name, items }; };
+  // Toggle a single dish ON/OFF for one specific day — pick the meals right on
+  // the day tile. Removing the last dish clears the day.
+  const toggleDayDish = (iso: string, itemId: string) => {
+    const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined;
+    if (!p || !menu) return;
+    const allIds = menu.items.map((i) => i.id);
+    const served = new Set(p.itemIds.length ? p.itemIds : allIds);
+    if (served.has(itemId)) served.delete(itemId); else served.add(itemId);
+    const next = { ...plan };
+    if (served.size === 0) delete next[iso];
+    else next[iso] = { menuId: p.menuId, itemIds: allIds.filter((id) => served.has(id)) };
+    commit(next);
+  };
   const planned = dates.filter((iso) => dayDishes(iso)).length;
 
   const ready = !!listing && dates.length > 0;
@@ -295,18 +308,38 @@ export function MenuPlanner() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
                       {w.days.map((iso) => {
-                        const dd = dayDishes(iso);
-                        const mi = plan[iso] ? (menus ?? []).findIndex((m) => m.id === plan[iso]!.menuId) : -1;
+                        const p = plan[iso];
+                        const menu = p ? menusById.get(p.menuId) : undefined;
+                        const mi = menu ? (menus ?? []).findIndex((m) => m.id === menu.id) : -1;
                         const col = mi >= 0 ? MENU_PAL[mi % MENU_PAL.length] : null;
+                        const has = !!(p && menu && col);
+                        const served = p ? new Set(p.itemIds.length ? p.itemIds : (menu?.items.map((i) => i.id) ?? [])) : new Set<string>();
                         return (
-                          <button key={iso} type="button" onClick={() => applyTo(iso)}
+                          <div key={iso}
                             onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
-                            className="flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition hover:-translate-y-0.5"
-                            style={dd && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
-                            <span className="text-[11.5px] font-extrabold" style={{ color: dd && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
-                            {dd && col ? <span className="mt-1 text-[11.5px] font-bold leading-snug" style={{ color: col[0] }}>{dd.items.map((i) => i.name).join(", ")}</span>
-                              : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ tap to add</span>}
-                          </button>
+                            onClick={() => { if (erase || !has) applyTo(iso); }}
+                            className={`flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${erase || !has ? "cursor-pointer hover:-translate-y-0.5" : ""}`}
+                            style={has && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
+                            <span className="text-[11.5px] font-extrabold" style={{ color: has && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
+                            {has && menu && col ? (
+                              erase
+                                ? <span className="mt-1 text-[11.5px] font-bold leading-snug" style={{ color: col[0] }}>{menu.items.filter((it) => served.has(it.id)).map((i) => i.name).join(", ")}</span>
+                                : (
+                                  <div className="mt-1.5 flex flex-wrap gap-1">
+                                    {menu.items.map((it) => {
+                                      const on = served.has(it.id);
+                                      return (
+                                        <button key={it.id} type="button" onClick={(e) => { e.stopPropagation(); toggleDayDish(iso, it.id); }}
+                                          className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition"
+                                          style={on ? { borderColor: col[0], background: "#fff", color: col[0] } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)", opacity: 0.6 }}>
+                                          {on ? "✓ " : "+ "}{it.name}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )
+                            ) : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ tap to add</span>}
+                          </div>
                         );
                       })}
                     </div>
