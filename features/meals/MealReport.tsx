@@ -37,9 +37,14 @@ export function MealReport() {
   const spend = filtered.reduce((s, r) => s + r.price, 0);
 
   if (!rows) return null;
-  if (rows.length === 0) return null; // nothing ordered yet — keep the area clean
 
   const chip = (text: string) => <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f]">{text}</span>;
+  const emptyCard = (
+    <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7faff] p-5 text-center">
+      <div className="text-[13px] font-extrabold text-[var(--ink-2)]">No meals booked yet — 0 meals</div>
+      <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">Once families add meals at checkout, each day shows the dish totals and which children chose them.</div>
+    </div>
+  );
 
   // Daily: date → dish → { count, children }
   const daily = () => {
@@ -120,7 +125,7 @@ export function MealReport() {
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
-        {view === "daily" ? daily() : view === "weekly" ? weekly() : total()}
+        {filtered.length === 0 ? emptyCard : view === "daily" ? daily() : view === "weekly" ? weekly() : total()}
       </div>
     </div>
   );
