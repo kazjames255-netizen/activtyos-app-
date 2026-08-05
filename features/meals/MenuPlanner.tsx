@@ -29,6 +29,11 @@ const WEEKDAYS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "T
 type Tab = "season" | "menu" | "days" | "saved" | "sharing";
 const PLAN_TABS: [Tab, string][] = [["season", "1 · Season & listing"], ["menu", "2 · Menu"], ["days", "3 · Days"]];
 const TOOL_TABS: [Tab, string][] = [["saved", "Saved menus"], ["sharing", "Sharing"]];
+// [dark, light, tint] per menu card — cycled so each saved menu gets its own colour.
+const MENU_PAL: [string, string, string][] = [
+  ["#2f6bd8", "#5b9bff", "#eef4fd"], ["#0ea5a5", "#3fd0c9", "#e6fbf7"], ["#7a5af8", "#a88bff", "#f1edff"],
+  ["#e2559a", "#ff86c0", "#fdeef6"], ["#f5872b", "#ffb166", "#fff3e8"], ["#16a34a", "#4ade80", "#e9fbef"],
+];
 
 export function MenuPlanner() {
   const { settings } = useSettings();
@@ -200,38 +205,51 @@ export function MenuPlanner() {
         : menus.length === 0 ? <div className="grid min-h-[300px] place-items-center text-center text-[12.5px] text-[var(--ink-2)]"><div>No menus yet. Open the <b>Saved menus</b> tab to build one, then come back.</div></div>
         : (
           <div className="min-h-[300px]">
-            <div className="text-[18px] font-extrabold text-[var(--ink)]">Choose a menu</div>
-            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-3)]">Then tick which dish(es) to serve — parents pick from these at checkout (meat or veg are separate dishes).</p>
-            <div className="flex flex-wrap gap-2">
-              {menus.map((m) => (
-                <button key={m.id} type="button" onClick={() => pickMenu(m.id)} className="rounded-full border px-4 py-2 text-[13.5px] font-bold transition"
-                  style={brushMenuId === m.id ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                  {brushMenuId === m.id ? "✓ " : ""}{m.name}
-                </button>
-              ))}
+            <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose a menu</div>
+            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-2)]">Tap a menu, then tick the dish(es) to serve — parents pick from these at checkout (meat or veg are separate dishes).</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {menus.map((m, i) => {
+                const [dark, light, tint] = MENU_PAL[i % MENU_PAL.length];
+                const sel = brushMenuId === m.id;
+                return (
+                  <div key={m.id} role="button" tabIndex={0} onClick={() => pickMenu(m.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickMenu(m.id); } }}
+                    className="cursor-pointer overflow-hidden rounded-2xl border-2 bg-white transition hover:-translate-y-0.5"
+                    style={sel ? { borderColor: dark, boxShadow: `0 16px 34px -16px ${dark}aa` } : { borderColor: "var(--line)" }}>
+                    <div className="flex items-center gap-2 px-3.5 py-3 text-white" style={{ background: `linear-gradient(120deg, ${dark}, ${light})` }}>
+                      <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-white/25 text-[15px]">🍽️</span>
+                      <span className="truncate text-[15px] font-extrabold">{m.name}</span>
+                      <span className="ml-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{sel ? "✓ " : ""}{m.items.length} dish{m.items.length === 1 ? "" : "es"}</span>
+                    </div>
+                    <div className="p-3" style={sel ? { background: tint } : undefined}>
+                      {sel ? (
+                        <>
+                          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Tick what’s served</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.items.map((it) => {
+                              const on = brushItems.has(it.id);
+                              return (
+                                <button key={it.id} type="button" onClick={(e) => { e.stopPropagation(); toggleBrushItem(it.id); }}
+                                  className="rounded-full border px-2.5 py-1.5 text-[12px] font-bold transition"
+                                  style={on ? { borderColor: dark, background: "#fff", color: dark } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>
+                                  {on ? "✓ " : ""}{it.name} · {money(it.price)}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.items.map((it) => <span key={it.id} className="rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{it.name} · {money(it.price)}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {brushMenu && (
-              <div className="mt-5">
-                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Dishes on the day</div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {brushMenu.items.map((it) => {
-                    const on = brushItems.has(it.id);
-                    return (
-                      <button key={it.id} type="button" onClick={() => toggleBrushItem(it.id)} className="flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-left text-[13.5px] transition"
-                        style={on ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)" }}>
-                        <span className="flex h-5 w-5 flex-none items-center justify-center rounded border text-[11px]" style={{ borderColor: on ? "#2f6bd8" : "var(--line)", background: on ? "#2f6bd8" : "#fff", color: "#fff" }}>{on ? "✓" : ""}</span>
-                        <span className="font-extrabold">{it.name}</span>
-                        <span className="tabular-nums text-[var(--ink-3)]">{money(it.price)}</span>
-                        {(it.allergens?.length ?? 0) > 0 && <span className="ml-auto text-[10.5px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens!.join(", ")}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
             <div className="mt-6 flex items-center gap-3">
               {nextBtn("days", "Next: plan the days →", brushReady)}
-              {!brushReady && <span className="text-[12px] text-[var(--red,#e21d27)]">Pick a menu and at least one dish.</span>}
+              {!brushReady && <span className="text-[12px] text-[var(--red,#e21d27)]">Tap a menu and tick at least one dish.</span>}
             </div>
           </div>
         )
