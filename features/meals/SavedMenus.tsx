@@ -132,7 +132,7 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <div className="text-[15px] font-extrabold text-[var(--ink)]">Saved menus</div>
-          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Build a menu once — meals with prices and allergens — then reuse it across your listings’ days.</div>
         </div>
         {newBtnBare}
       </div>
@@ -145,7 +145,7 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> Saved menus</div>
-          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
+          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your listings’ days.</div>
         </div>
         {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ New menu</button>}
       </div>

@@ -315,7 +315,7 @@ my.get("/meal-days", async (req, res) => {
           tenantId: l.tenantId as string,
           tenantName: nameByTenant.get(l.tenantId as string) || (l.tenantName as string) || "Your provider",
           listingId: b.listingId!,
-          listingName: (l.title as string) || (l.name as string) || "Camp",
+          listingName: (l.title as string) || (l.name as string) || "Listing",
           date,
           children: [],
           menu: { id: menu.id, name: menu.name, items },
@@ -707,7 +707,7 @@ my.post("/bookings", async (req, res) => {
   const mealItemByDate = new Map<string, Map<string, { name: string; price: number; allergens?: string[] }>>();
   const wantsMeals = input.items.some((i) => i.meals?.length);
   if (wantsMeals) {
-    if (!(listing as { mealsEnabled?: boolean }).mealsEnabled) throw new HttpError(400, "This camp isn't offering meals");
+    if (!(listing as { mealsEnabled?: boolean }).mealsEnabled) throw new HttpError(400, "This listing isn't offering meals");
     const plan = ((listing as { mealPlan?: Record<string, unknown> }).mealPlan) ?? {};
     const dates = [...new Set(input.items.flatMap((i) => (i.meals ?? []).map((m) => m.date)))];
     const planByDate = new Map(dates.map((dt) => [dt, mealDayPlan(plan[dt])]).filter(([, p]) => !!p) as [string, { menuId: string; itemIds: string[] }][]);

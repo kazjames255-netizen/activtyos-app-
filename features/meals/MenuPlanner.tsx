@@ -16,7 +16,7 @@ import { MenuSharing } from "./MenuSharing";
 // ─────────────────────────────────────────────────────────────────────────
 // Meals workspace — one blue title card with tabs on the right, each opening a
 // large slide. The planner is three big slides:
-//   1 · Season & listing — pick the season + camp, turn meals on
+//   1 · Season & listing — pick the season + listing, turn meals on
 //   2 · Menu             — choose a saved menu, tick the dish(es)
 //   3 · Days             — drop it onto the run-days ("every Monday")
 // plus the Saved-menus library and the Menu-sharing setting as their own tabs.
@@ -27,7 +27,7 @@ interface Listing { id: string; title?: string; name?: string; archived?: boolea
 const WEEKDAYS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
 
 type Tab = "season" | "menu" | "days" | "saved" | "sharing";
-const PLAN_TABS: [Tab, string][] = [["season", "1 · Season & camp"], ["menu", "2 · Menu"], ["days", "3 · Days"]];
+const PLAN_TABS: [Tab, string][] = [["season", "1 · Season & listing"], ["menu", "2 · Menu"], ["days", "3 · Days"]];
 const TOOL_TABS: [Tab, string][] = [["saved", "Saved menus"], ["sharing", "Sharing"]];
 
 export function MenuPlanner() {
@@ -38,8 +38,8 @@ export function MenuPlanner() {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [menus, setMenus] = useState<SavedMenu[] | null>(null);
   const [season, setSeason] = useState("");
+  const [seasonTouched, setSeasonTouched] = useState(false);
   const [listingId, setListingId] = useState("");
-  const [mealsOn, setMealsOn] = useState(false);
   const [plan, setPlan] = useState<Record<string, MealDayPlan>>({});
   const [brushMenuId, setBrushMenuId] = useState<string | null>(null);
   const [brushItems, setBrushItems] = useState<Set<string>>(new Set());
@@ -56,13 +56,13 @@ export function MenuPlanner() {
   const brushMenu = brushMenuId ? menusById.get(brushMenuId) : undefined;
   const seasonListings = (listings ?? []).filter((l) => !l.archived && (!season || l.seasonId === season));
 
-  // When the camp changes, load its saved plan + flag.
+  // When the listing changes, load its saved plan.
   useEffect(() => {
-    if (!listing) { setPlan({}); setMealsOn(false); return; }
+    if (!listing) { setPlan({}); return; }
     const raw = (listing.mealPlan ?? {}) as Record<string, unknown>;
     const next: Record<string, MealDayPlan> = {};
     for (const [iso, v] of Object.entries(raw)) { const p = mealDayPlan(v); if (p) next[iso] = p; }
-    setPlan(next); setMealsOn(!!listing.mealsEnabled);
+    setPlan(next);
     setBrushMenuId(null); setBrushItems(new Set()); setErase(false);
   }, [listing]);
 
@@ -70,12 +70,13 @@ export function MenuPlanner() {
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
   const weekdaysPresent = [1, 2, 3, 4, 5, 6, 0].filter((n) => dates.some((iso) => new Date(`${iso}T00:00:00Z`).getUTCDay() === n));
 
-  const save = useCallback((nextPlan: Record<string, MealDayPlan>, on: boolean) => {
+  // Meals are "offered" on a listing whenever it has at least one planned day —
+  // no separate toggle. Persisted on every change.
+  const commit = useCallback((nextPlan: Record<string, MealDayPlan>) => {
+    setPlan(nextPlan);
     if (!listingId) return;
-    api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: on, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
+    api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(nextPlan).length > 0, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
   }, [listingId]);
-  const commit = (nextPlan: Record<string, MealDayPlan>) => { setPlan(nextPlan); save(nextPlan, mealsOn); };
-  const setOn = (on: boolean) => { setMealsOn(on); save(plan, on); };
 
   const pickMenu = (id: string) => {
     setErase(false);
@@ -101,7 +102,7 @@ export function MenuPlanner() {
   const dayDishes = (iso: string) => { const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined; if (!p || !menu) return null; const items = p.itemIds.length ? menu.items.filter((it) => p.itemIds.includes(it.id)) : menu.items; return { name: menu.name, items }; };
   const planned = dates.filter((iso) => dayDishes(iso)).length;
 
-  const ready = !!listing && mealsOn && dates.length > 0;
+  const ready = !!listing && dates.length > 0;
   const brushReady = !!brushMenuId && brushItems.size > 0;
 
   // Tab button on the blue header. `green` gives the two tool tabs the Bookings
@@ -128,8 +129,8 @@ export function MenuPlanner() {
   const pickCampFirst = (
     <div className="grid min-h-[300px] place-items-center">
       <div className="text-center">
-        <div className="text-[13px] font-bold text-[var(--ink-2)]">Pick a camp first</div>
-        <button type="button" onClick={() => setTab("season")} className="mt-2 rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>← Season &amp; camp</button>
+        <div className="text-[13px] font-bold text-[var(--ink-2)]">Pick a listing first</div>
+        <button type="button" onClick={() => setTab("season")} className="mt-2 rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>← Season &amp; listing</button>
       </div>
     </div>
   );
@@ -149,43 +150,40 @@ export function MenuPlanner() {
     }>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
 
-      {/* ── SLIDE 1 · SEASON & CAMP ── */}
+      {/* ── SLIDE 1 · SEASON & LISTING ── */}
       {tab === "season" && (
         <div className="min-h-[300px]">
-          <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose your season &amp; camp</div>
-          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-2)]">Pick the season, then the camp you’re planning meals for. Turn meals on and its days appear on the next slide.</p>
-          <div className="grid max-w-[760px] gap-4 sm:grid-cols-2">
+          <style>{`@keyframes mealsRevealRight{from{opacity:0;transform:translateX(-56px) scale(.94)}to{opacity:1;transform:none}}`}</style>
+          <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose your season &amp; listing</div>
+          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-2)]">Pick the season — its listings then slide out for you to choose from.</p>
+          {(() => { const showListing = seasonTouched || seasons.length === 0; return (
+          <div className={`grid max-w-[760px] gap-4 ${showListing ? "sm:grid-cols-2" : "sm:grid-cols-1 sm:max-w-[380px]"}`}>
             {/* Season card */}
             <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(31,84,163,.5)]" style={{ borderColor: "#cfe0fb", background: "linear-gradient(160deg,#eef5ff 0%,#ffffff 70%)" }}>
               <div className="mb-2.5 flex items-center gap-2">
                 <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>📅</span>
                 <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#1d3a8f]">Season</span>
               </div>
-              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setListingId(""); }} allLabel="All seasons" className="w-full !border-[#a9c6f4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#12306e]" />
-                : <div className="rounded-lg border border-dashed border-[#a9c6f4] bg-white px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No seasons set up — add them in Setup. Showing all camps.</div>}
+              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setSeasonTouched(true); setListingId(""); }} allLabel="All seasons" className="w-full !border-[#a9c6f4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#12306e]" />
+                : <div className="rounded-lg border border-dashed border-[#a9c6f4] bg-white px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No seasons set up — add them in Setup. Showing all listings.</div>}
             </div>
-            {/* Camp card */}
-            <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(14,165,165,.5)]" style={{ borderColor: "#bfeae4", background: "linear-gradient(160deg,#eafbf7 0%,#ffffff 70%)" }}>
-              <div className="mb-2.5 flex items-center gap-2">
-                <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🏕️</span>
-                <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#0e7a75]">Camp</span>
+            {/* Listing card — slides out of the season card once a season is picked */}
+            {showListing && (
+              <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(14,165,165,.5)]" style={{ borderColor: "#bfeae4", background: "linear-gradient(160deg,#eafbf7 0%,#ffffff 70%)", animation: "mealsRevealRight .45s cubic-bezier(.2,.8,.2,1) both" }}>
+                <div className="mb-2.5 flex items-center gap-2">
+                  <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🎟️</span>
+                  <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#0e7a75]">Listing</span>
+                </div>
+                <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="w-full !border-[#8fdcd4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#0e5b57]">
+                  <option value="">Choose a listing…</option>
+                  {seasonListings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled"}</option>)}
+                </Select>
+                {season && seasonListings.length === 0 && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">No listings in this season yet.</p>}
               </div>
-              <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="w-full !border-[#8fdcd4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#0e5b57]">
-                <option value="">Choose a camp…</option>
-                {seasonListings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled"}</option>)}
-              </Select>
-              {season && seasonListings.length === 0 && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">No camps in this season yet.</p>}
-            </div>
+            )}
           </div>
-          {listing && (
-            <label className="mt-5 flex w-fit cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition" style={mealsOn ? { borderColor: "#2f6bd8", background: "linear-gradient(135deg,#e8f1ff,#f6faff)", boxShadow: "0 8px 22px -16px rgba(47,107,216,.7)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
-              <button type="button" role="switch" aria-checked={mealsOn} onClick={() => setOn(!mealsOn)} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: mealsOn ? "linear-gradient(135deg,#4f8bf5,#2f6bd8)" : "#cbd5e1" }}>
-                <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: mealsOn ? "22px" : "2px" }} />
-              </button>
-              <span className="text-[13.5px] font-extrabold" style={{ color: mealsOn ? "#12306e" : "var(--ink-2)" }}>{mealsOn ? "🍽️ Meals are offered at this camp" : "Offer meals at this camp"}</span>
-            </label>
-          )}
-          {listing && mealsOn && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[#f0c98a] bg-[#fff8ec] p-3.5 text-[12.5px] text-[#8a5a00]">This camp has no run dates yet — set them in the listing’s <b>When it runs</b> step.</div>}
+          ); })()}
+          {listing && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[#f0c98a] bg-[#fff8ec] p-3.5 text-[12.5px] text-[#8a5a00]">This listing has no run dates yet — set them in the listing’s <b>When it runs</b> step.</div>}
           {ready && (
             <div className="mt-6 flex flex-wrap items-center gap-3">
               {nextBtn("menu", "Next: choose a menu →")}

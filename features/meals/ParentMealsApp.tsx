@@ -43,7 +43,7 @@ export function ParentMealsApp() {
 
       {!days ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
       : served.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for camps your provider offers meals on. You can add meals when you book.</Card>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for listings your provider offers meals on. You can add meals when you book.</Card>
       ) : (
         <div className="flex flex-col gap-3">
           {served.map((d) => (

@@ -219,7 +219,7 @@ mealOrders.post("/", async (req, res) => {
     const listingSnap = await db.collection("listings").doc(input.listingId).get();
     const listing = listingSnap.data();
     if (!listingSnap.exists || listing!.tenantId !== input.tenantId || !listing!.mealsEnabled) {
-      res.status(400).json({ error: "That camp isn't offering meals" }); return;
+      res.status(400).json({ error: "That listing isn't offering meals" }); return;
     }
     const menuId = (listing!.mealPlan as Record<string, string> | undefined)?.[input.date];
     if (!menuId) { res.status(400).json({ error: "There's no menu set for that day" }); return; }
