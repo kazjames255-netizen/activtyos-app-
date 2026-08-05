@@ -135,13 +135,13 @@ export function MenuPlanner() {
   );
 
   return (
-    <MasterCard bodyClassName="p-5 sm:p-6" header={
+    <MasterCard bodyClassName="p-5 sm:p-6 bg-gradient-to-br from-[#eef4ff] via-white to-[#eafbf7]" header={
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="text-[16px]">🍽️</span> Meals{listing ? <span className="font-semibold text-white/70"> · {listing.title || listing.name}</span> : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {PLAN_TABS.map(tabBtn)}
+          {PLAN_TABS.map((t) => tabBtn(t))}
           <span className="mx-1 h-5 w-px bg-white/25" />
           {TOOL_TABS.map((t) => tabBtn(t, true))}
         </div>
@@ -152,17 +152,25 @@ export function MenuPlanner() {
       {/* ── SLIDE 1 · SEASON & CAMP ── */}
       {tab === "season" && (
         <div className="min-h-[300px]">
-          <div className="text-[18px] font-extrabold text-[var(--ink)]">Choose your season &amp; camp</div>
-          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-3)]">Pick the season, then the camp you’re planning meals for. Turn meals on and its days appear on the next slide.</p>
-          <div className="grid max-w-[720px] gap-4 sm:grid-cols-2">
-            <div>
-              <FieldLabel>Season</FieldLabel>
-              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setListingId(""); }} allLabel="All seasons" className="w-full !py-2.5 !text-[13.5px]" />
-                : <div className="rounded-lg border border-dashed border-[var(--line)] bg-[#f7faff] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No seasons set up — add them in Setup. Showing all camps.</div>}
+          <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose your season &amp; camp</div>
+          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-2)]">Pick the season, then the camp you’re planning meals for. Turn meals on and its days appear on the next slide.</p>
+          <div className="grid max-w-[760px] gap-4 sm:grid-cols-2">
+            {/* Season card */}
+            <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(31,84,163,.5)]" style={{ borderColor: "#cfe0fb", background: "linear-gradient(160deg,#eef5ff 0%,#ffffff 70%)" }}>
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>📅</span>
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#1d3a8f]">Season</span>
+              </div>
+              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setListingId(""); }} allLabel="All seasons" className="w-full !border-[#a9c6f4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#12306e]" />
+                : <div className="rounded-lg border border-dashed border-[#a9c6f4] bg-white px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No seasons set up — add them in Setup. Showing all camps.</div>}
             </div>
-            <div>
-              <FieldLabel>Camp</FieldLabel>
-              <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="w-full !py-2.5 !text-[13.5px]">
+            {/* Camp card */}
+            <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(14,165,165,.5)]" style={{ borderColor: "#bfeae4", background: "linear-gradient(160deg,#eafbf7 0%,#ffffff 70%)" }}>
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🏕️</span>
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#0e7a75]">Camp</span>
+              </div>
+              <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="w-full !border-[#8fdcd4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#0e5b57]">
                 <option value="">Choose a camp…</option>
                 {seasonListings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled"}</option>)}
               </Select>
@@ -170,18 +178,18 @@ export function MenuPlanner() {
             </div>
           </div>
           {listing && (
-            <label className="mt-5 flex w-fit cursor-pointer items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-              <button type="button" role="switch" aria-checked={mealsOn} onClick={() => setOn(!mealsOn)} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: mealsOn ? "var(--brand-2,#2f6bd8)" : "#cbd5e1" }}>
+            <label className="mt-5 flex w-fit cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition" style={mealsOn ? { borderColor: "#2f6bd8", background: "linear-gradient(135deg,#e8f1ff,#f6faff)", boxShadow: "0 8px 22px -16px rgba(47,107,216,.7)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+              <button type="button" role="switch" aria-checked={mealsOn} onClick={() => setOn(!mealsOn)} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: mealsOn ? "linear-gradient(135deg,#4f8bf5,#2f6bd8)" : "#cbd5e1" }}>
                 <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: mealsOn ? "22px" : "2px" }} />
               </button>
-              <span className="text-[13.5px] font-bold text-[var(--ink)]">{mealsOn ? "Meals are offered at this camp" : "Offer meals at this camp"}</span>
+              <span className="text-[13.5px] font-extrabold" style={{ color: mealsOn ? "#12306e" : "var(--ink-2)" }}>{mealsOn ? "🍽️ Meals are offered at this camp" : "Offer meals at this camp"}</span>
             </label>
           )}
-          {listing && mealsOn && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[var(--line)] bg-[#f7faff] p-3.5 text-[12.5px] text-[var(--ink-2)]">This camp has no run dates yet — set them in the listing’s <b>When it runs</b> step.</div>}
+          {listing && mealsOn && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[#f0c98a] bg-[#fff8ec] p-3.5 text-[12.5px] text-[#8a5a00]">This camp has no run dates yet — set them in the listing’s <b>When it runs</b> step.</div>}
           {ready && (
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               {nextBtn("menu", "Next: choose a menu →")}
-              <span className="text-[12px] text-[var(--ink-3)]">{dates.length} run-days · {planned} already planned</span>
+              <span className="rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>{dates.length} run-days · {planned} planned</span>
             </div>
           )}
         </div>
