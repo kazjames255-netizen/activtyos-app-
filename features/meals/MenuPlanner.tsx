@@ -23,7 +23,7 @@ import { MenuSharing } from "./MenuSharing";
 // mealPlan[date] = { menuId, itemIds } — the menu + dishes served that day.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface MealConfig { catererEmail?: string; catererEvery?: "off" | "day" | "week"; catererAt?: string; cutoffWhen?: "same" | "prev" | "2days"; cutoffTime?: string }
+interface MealConfig { catererEmail?: string; catererEvery?: "off" | "day" | "week"; catererAt?: string; cutoffWhen?: "off" | "same" | "prev" | "2days"; cutoffTime?: string }
 interface Listing { id: string; title?: string; name?: string; archived?: boolean; seasonId?: string | null; runFrom?: string; runTo?: string; days?: number[]; datesOff?: string[]; mealsEnabled?: boolean; mealPlan?: Record<string, unknown>; mealConfig?: MealConfig }
 const WEEKDAYS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
 
@@ -257,6 +257,7 @@ export function MenuPlanner() {
                       days={Object.values(l.mealPlan as Record<string, unknown>).filter((v) => mealDayPlan(v)).length}
                       seasonName={seasons.find((s) => s.id === l.seasonId)?.name}
                       current={l.id === listingId}
+                      defaultCutoff={{ when: settings.meals?.cutoffWhen ?? "off", time: settings.meals?.cutoffTime ?? "08:00" }}
                       onEdit={() => { setSeason(l.seasonId ?? ""); setSeasonTouched(true); setListingId(l.id); setTab("days"); }} />
                   ))}
                 </div>
@@ -349,7 +350,10 @@ export function MenuPlanner() {
           <div className="min-h-[300px]">
             <div className="flex flex-wrap items-center gap-3">
               <div className="text-[18px] font-extrabold text-[var(--ink)]">Drop it onto the days</div>
-              <span className="ml-auto rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{planned} of {dates.length} planned</span>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{planned} of {dates.length} planned</span>
+                <button type="button" onClick={saveNow} className="rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ Save</button>
+              </div>
             </div>
             <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">You set the pattern on the Menu slide — here you can tweak a single day: tap its dish chips, tap an empty day to add {brushMenu ? <b>{brushMenu.name}</b> : <>the <button type="button" onClick={() => setTab("menu")} className="font-bold text-[#2f6bd8] underline">picked menu</button></>}, or erase.</p>
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
@@ -433,15 +437,16 @@ export function MenuPlanner() {
 // meal-admin controls: a caterer email digest, and the parent order cut-off.
 // Saved to the listing's mealConfig. (Caterer emailing is a backend cron —
 // Amir; cut-off is enforced at the meal-order checkout.)
-function SavedPlanCard({ listing, days, seasonName, current, onEdit }: { listing: Listing; days: number; seasonName?: string; current: boolean; onEdit: () => void }) {
+function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEdit }: { listing: Listing; days: number; seasonName?: string; current: boolean; defaultCutoff: { when: "off" | "same" | "prev" | "2days"; time: string }; onEdit: () => void }) {
   const [cfg, setCfg] = useState<MealConfig>(listing.mealConfig ?? {});
   const [ok, setOk] = useState(false);
+  const [open, setOpen] = useState(true);
   const save = (next: MealConfig) => {
     setCfg(next); setOk(false);
     api(`/api/listings/${encodeURIComponent(listing.id)}`, { method: "PUT", body: JSON.stringify({ mealConfig: next }) }).then(() => setOk(true)).catch(() => {});
   };
   const every = cfg.catererEvery ?? "off";
-  const when = cfg.cutoffWhen ?? "same";
+  const when = cfg.cutoffWhen ?? defaultCutoff.when;
   return (
     <div className="overflow-hidden rounded-2xl border-2 p-4" style={current ? { borderColor: "#2f6bd8", background: "#f4f8ff" } : { borderColor: "var(--line)", background: "#fff" }}>
       <div className="flex items-center gap-3">
@@ -450,9 +455,11 @@ function SavedPlanCard({ listing, days, seasonName, current, onEdit }: { listing
           <div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{listing.title || listing.name}</div>
           <div className="text-[11.5px] text-[var(--ink-3)]">{days} day{days === 1 ? "" : "s"} planned{seasonName ? ` · ${seasonName}` : ""}</div>
         </div>
-        <button type="button" onClick={onEdit} className="ml-auto flex-none rounded-lg border px-3 py-1.5 text-[12px] font-extrabold text-[#2f6bd8]" style={{ borderColor: "#bcd3f7", background: "#eef4fd" }}>Edit plan →</button>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="ml-auto flex-none rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{open ? "Options ▲" : "Options ▼"}</button>
+        <button type="button" onClick={onEdit} className="flex-none rounded-lg border px-3 py-1.5 text-[12px] font-extrabold text-[#2f6bd8]" style={{ borderColor: "#bcd3f7", background: "#eef4fd" }}>Edit plan →</button>
       </div>
 
+      {open && (<>
       {/* a) Caterer email digest */}
       <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
         <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">📧 Email the caterer the orders</div>
@@ -469,20 +476,22 @@ function SavedPlanCard({ listing, days, seasonName, current, onEdit }: { listing
         </div>
       </div>
 
-      {/* b) Order cut-off */}
+      {/* b) Order cut-off — pre-filled from the Settings default, editable here */}
       <div className="mt-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">⏰ Parents can order each meal until…</div>
+        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">⏰ Ordering closes {cfg.cutoffWhen === undefined && <span className="font-semibold text-[var(--ink-3)]">· using Settings default</span>}</div>
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
-          <Input type="time" value={cfg.cutoffTime ?? "08:00"} onChange={(e) => save({ ...cfg, cutoffTime: e.target.value })} className="!py-1.5 !text-[12px]" />
-          <span>on</span>
           <Select value={when} onChange={(e) => save({ ...cfg, cutoffWhen: e.target.value as MealConfig["cutoffWhen"] })} className="!py-1.5 !text-[12px]">
+            <option value="off">anytime — no cut-off</option>
             <option value="same">the same day</option>
             <option value="prev">the day before</option>
             <option value="2days">2 days before</option>
           </Select>
+          {when !== "off" && <><span>at</span><Input type="time" value={cfg.cutoffTime ?? defaultCutoff.time} onChange={(e) => save({ ...cfg, cutoffTime: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
         </div>
+        {when === "off" && <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">No cut-off set — parents can order right up to the day of the meal.</p>}
       </div>
-      {ok && <div className="mt-2 text-[11.5px] font-bold text-[#0e9a75]">✓ Saved</div>}
+      </>)}
+      {ok && open && <div className="mt-2 text-[11.5px] font-bold text-[#0e9a75]">✓ Saved</div>}
     </div>
   );
 }

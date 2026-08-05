@@ -530,6 +530,11 @@ export interface TenantSettings {
      *  day. Ordering itself is always open to booked families (menuShare only
      *  gates the informational display). */
     menuShare?: "booked" | "paid";
+    /** Central default for the per-meal order cut-off — each listing's meal plan
+     *  pre-fills from this (but can override). "same" day / "prev" day / "2days"
+     *  before the meal, at cutoffTime (HH:MM). */
+    cutoffWhen?: "off" | "same" | "prev" | "2days";  // "off" = no cut-off, order anytime
+    cutoffTime?: string;
   };
 
   /** Medication administration policy — edited in Setup → Medication, read by
@@ -952,7 +957,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
   learning: { trackTraining: true, observations: false, framework: "EYFS" },
-  meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", menuShare: "booked" },
+  meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },

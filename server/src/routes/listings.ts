@@ -121,7 +121,7 @@ const baseListingSchema = z
         catererEmail: z.string().trim().max(160).optional(),
         catererEvery: z.enum(["off", "day", "week"]).optional(),
         catererAt: z.string().max(5).optional(),
-        cutoffWhen: z.enum(["same", "prev", "2days"]).optional(),
+        cutoffWhen: z.enum(["off", "same", "prev", "2days"]).optional(),
         cutoffTime: z.string().max(5).optional(),
       })
       .optional(),
