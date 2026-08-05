@@ -662,6 +662,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // with one stage in front of it: whose booking this is. A parent already is
   // the parent, so they start at "who".
   const [ckStage, setCkStage] = useState<CkStage>(parentMode ? "who" : "parent");
+  const [openMealKid, setOpenMealKid] = useState<string | null>(null); // which child's meal picker is expanded
   // The provider's own child questions, for the every-booking ones this stage
   // both asks and enforces.
   const { questions: ckQuestions, settings: ckSettings } = useTenantSettings(tenantId);
@@ -799,6 +800,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   const mealTotal = mealSlots.reduce((sum, { kid, date }) => { const sel = b.mealFor(kid, date); const it = sel ? mealItemAt(date, sel) : undefined; return it ? sum + it.price : sum; }, 0);
   const mealKids = [...new Set(mealSlots.map((s) => s.kid))];
   const fmtMealDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  // Copy one child's picks to every sibling (same date → same dish, since a
+  // day's menu is the same for all children) — one tap for a big family.
+  const copyMealsToAll = (fromKid: string) => { for (const { kid, date } of mealSlots) { if (kid === fromKid) continue; const src = b.mealFor(fromKid, date); if (src && mealItemAt(date, src)) b.pickMeal(kid, date, src); } };
   const calculated = b.total + addonTotal + mealTotal;
   const grandTotal = b.totalOverride ?? calculated;
 
@@ -1308,38 +1312,57 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           is paid with the booking. Optional, one meal per child per day. */}
       {ckStage === "pay" && d.mealsEnabled && mealSlots.length > 0 && (
         <div className="mt-4 border-t pt-3" style={{ borderColor: tk.line }}>
-          <div className="mb-0.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals</div>
-          <p className="mb-2 text-[11px]" style={{ color: tk.muted }}>Optional — order a meal for each day. You pay for them with your booking.</p>
-          {mealKids.map((kid) => (
-            <div key={kid} className="mb-2">
-              {mealKids.length > 1 && <div className="mb-1 text-[11.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</div>}
-              <div className="flex flex-col gap-1.5">
-                {mealSlots.filter((s) => s.kid === kid).map(({ date }) => {
-                  const menu = menuForDate(date);
-                  if (!menu) return null;
-                  const sel = b.mealFor(kid, date);
-                  return (
-                    <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${tk.line}` }}>
-                      <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {menu.items.map((it) => {
-                          const on = sel === it.id;
+          <div className="mb-0.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals <span className="font-semibold" style={{ color: tk.muted }}>· optional</span></div>
+          <p className="mb-2 text-[11px]" style={{ color: tk.muted }}>Pick a meal for any day — you pay for them with your booking. Allergens shown with ⚠.</p>
+          <div className="flex flex-col gap-1.5">
+            {mealKids.map((kid) => {
+              const slots = mealSlots.filter((s) => s.kid === kid);
+              const chosen = slots.filter((s) => b.mealFor(kid, s.date)).length;
+              const single = mealKids.length === 1;
+              const open = single || (openMealKid === null ? kid === mealKids[0] : openMealKid === kid);
+              return (
+                <div key={kid} className="overflow-hidden rounded-xl" style={{ border: `1px solid ${tk.line}` }}>
+                  {!single && (
+                    <button type="button" onClick={() => setOpenMealKid(open ? "" : kid)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
+                      <span className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{kid}</span>
+                      <span className="rounded-full px-2 py-[1px] text-[10.5px] font-bold" style={{ background: chosen ? tk.accent : `${tk.line}`, color: chosen ? tk.accentInk : tk.muted }}>{chosen}/{slots.length} meals</span>
+                      <span className="ml-auto text-[12px]" style={{ color: tk.muted }}>{open ? "▲" : "▼"}</span>
+                    </button>
+                  )}
+                  {open && (
+                    <div className="px-3 pb-3" style={single ? { paddingTop: "4px" } : undefined}>
+                      {!single && chosen > 0 && <button type="button" onClick={() => copyMealsToAll(kid)} className="mb-2 rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ border: `1px solid ${tk.accent}`, color: tk.accent }}>⧉ Copy {kid}’s meals to all children</button>}
+                      <div className="grid gap-1.5 sm:grid-cols-2">
+                        {slots.map(({ date }) => {
+                          const menu = menuForDate(date);
+                          if (!menu) return null;
+                          const sel = b.mealFor(kid, date);
                           return (
-                            <button key={it.id} type="button" onClick={() => b.pickMeal(kid, date, on ? null : it.id)}
-                              className="rounded-full px-2.5 py-1 text-[12px] font-bold"
-                              style={on ? { background: tk.accent, color: tk.accentInk } : { border: `1px solid ${tk.line}`, color: tk.ink }}
-                              title={(it.allergens?.length ?? 0) > 0 ? `Contains ${it.allergens!.join(", ")}` : undefined}>
-                              {on ? "✓ " : ""}{it.name} · {money(it.price)}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
-                            </button>
+                            <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
+                              <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {menu.items.map((it) => {
+                                  const on = sel === it.id;
+                                  return (
+                                    <button key={it.id} type="button" onClick={() => b.pickMeal(kid, date, on ? null : it.id)}
+                                      className="rounded-full px-2 py-[3px] text-[11.5px] font-bold"
+                                      style={on ? { background: tk.accent, color: tk.accentInk } : { border: `1px solid ${tk.line}`, color: tk.ink }}
+                                      title={(it.allergens?.length ?? 0) > 0 ? `Contains ${it.allergens!.join(", ")}` : undefined}>
+                                      {on ? "✓ " : ""}{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
