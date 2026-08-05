@@ -297,7 +297,7 @@ my.get("/meal-days", async (req, res) => {
   const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean }>();
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
-    if (!l || !l.mealsEnabled || !l.mealPlan) continue;
+    if (!l || l.archived || !l.mealsEnabled || !l.mealPlan) continue; // active listings with a menu only
     const plan = l.mealPlan as Record<string, unknown>;
     const dayPlan = (dt: string) => { const p = mealDayPlan(plan[dt]); return p && menus.has(p.menuId) ? p : null; };
     const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => dayPlan(dt));
