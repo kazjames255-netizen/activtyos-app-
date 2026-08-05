@@ -815,6 +815,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       if (match) b.pickMeal(kid, date, match.id);
     }
   };
+  // Apply this dish (by name) to every one of the child's days that has it.
+  const applyAllDays = (kid: string, fromDate: string, itemId: string) => {
+    const name = mealItemAt(fromDate, itemId)?.name;
+    if (!name) return;
+    for (const { kid: k, date } of mealSlots) { if (k !== kid) continue; const match = menuForDate(date)?.items.find((i) => i.name === name); if (match) b.pickMeal(kid, date, match.id); }
+  };
   const calculated = b.total + addonTotal + mealTotal;
   const grandTotal = b.totalOverride ?? calculated;
 
@@ -1355,7 +1361,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           const sel = b.mealFor(kid, date);
                           const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
                           const wdLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
-                          const moreSameWd = slots.filter((s) => new Date(`${s.date}T00:00:00Z`).getUTCDay() === wd).length > 1;
+                          const sameWdCount = slots.filter((s) => new Date(`${s.date}T00:00:00Z`).getUTCDay() === wd).length;
                           return (
                             <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${sel ? tk.accent : tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
                               <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
@@ -1372,7 +1378,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                   );
                                 })}
                               </div>
-                              {sel && moreSameWd && <button type="button" onClick={() => applyEveryWeekday(kid, date, sel)} className="mt-1.5 text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same every {wdLabel}</button>}
+                              {sel && slots.length > 1 && (
+                                <div className="mt-1.5 flex flex-wrap gap-2">
+                                  {sameWdCount > 1 && <button type="button" onClick={() => applyEveryWeekday(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same every {wdLabel}</button>}
+                                  <button type="button" onClick={() => applyAllDays(kid, date, sel)} className="text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same all {kid.split(" ")[0]}’s days</button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
