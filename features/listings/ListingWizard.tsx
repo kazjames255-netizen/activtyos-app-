@@ -2813,22 +2813,23 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Week {w.n} <span className="font-semibold text-[#a6adba]">· from {fmtDate(w.mon)}</span></div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
-                const dOff = b.off(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
+                const dOff = b.off(iso); const dPast = b.past(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
                 // every cell turns the calendar into a spreadsheet.
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
-                const dot = dOff || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#3f78d8";
+                const left = b.leftOn(iso); const full = !dOff && !dPast && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
+                const dot = dOff || dPast || left === null ? null : full ? "#dc2626" : low ? "#f59e0b" : "#3f78d8";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;
-                return <button key={iso} type="button" disabled={dOff || (full && !queueable)}
+                return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                  title={dPast ? "This day has already passed" : full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
+                    : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
                     : dOff || full ? { borderColor: LINEp, color: "#c8ccd4", background: "#fafbfd" }
                     : on ? { borderColor: BLUE, color: "#fff", background: BLUE } : { borderColor: LINEp, color: INKp, background: "#fff" }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
-                  <span className="text-[14px] font-extrabold leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
+                  <span className="text-[14px] font-extrabold leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}
@@ -2999,20 +3000,21 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
-                const dOff = b.off(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
-                const left = b.leftOn(iso); const full = !dOff && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
-                const dot = dOff || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
+                const dOff = b.off(iso); const dPast = b.past(iso); const sel = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
+                const left = b.leftOn(iso); const full = !dOff && !dPast && left !== null && left < 1; const low = !full && left !== null && b.isLow(iso, left);
+                const dot = dOff || dPast || left === null ? null : full ? "#ff5470" : low ? "#ffb020" : "#3ddc84";
                 const waiting = b.waitSel.includes(iso);
                 const queueable = full && b.waitlistOn && !dOff;
-                return <button key={iso} type="button" disabled={dOff || (full && !queueable)}
+                return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                  title={dPast ? "This day has already passed" : full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
                   className="relative flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
+                    : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
                     : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
                     : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
-                  <span className="text-[14px] font-black leading-none" style={full ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
+                  <span className="text-[14px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}

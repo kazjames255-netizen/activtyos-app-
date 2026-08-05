@@ -123,15 +123,20 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const isSingle = need === 1;
   const unitPrice = pass && booking ? booking.priceFor(pass.id, periodId) : pass?.basePrice ?? 0;
   const off = (iso: string) => (d.datesOff ?? []).includes(iso);
+  // Days already gone: a parent can't book them (the server rejects them too).
+  // Operators may back-date to record past attendance, so past only bites for
+  // parents. Computed once so render stays pure.
+  const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
+  const past = (iso: string) => parentMode && iso < todayIso;
   function pickDay(iso: string, weekMon: string) {
-    if (!pass || off(iso)) return;
+    if (!pass || off(iso) || past(iso)) return;
     if (isSingle) { setSel((prev) => (prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso])); return; }
     if (rule === "blocks") {
       // A whole-run block (need spans more than a week) takes every day; a
       // within-a-week block takes that week's days.
       const avail = need > weekMax
-        ? weeks.flatMap((w) => w.days).filter((x) => !off(x)).slice(0, need)
-        : (weeks.find((w) => w.mon === weekMon)?.days ?? []).filter((x) => !off(x)).slice(0, need);
+        ? weeks.flatMap((w) => w.days).filter((x) => !off(x) && !past(x)).slice(0, need)
+        : (weeks.find((w) => w.mon === weekMon)?.days ?? []).filter((x) => !off(x) && !past(x)).slice(0, need);
       const same = avail.length === sel.length && avail.every((x) => sel.includes(x));
       setSel(same ? [] : avail);
       return;
@@ -405,7 +410,7 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
     setMealSel((all) => { const key = mealKey(child, date); const next = { ...all }; if (menuItemId) next[key] = menuItemId; else delete next[key]; return next; });
   const mealFor = (child: string, date: string) => mealSel[mealKey(child, date)] ?? "";
 
-  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
+  return { passes, periods, passId, setPassId, pickPass, passClosed, passFits, runTotal, periodId, setPeriodId, sel, basket, stage, setStage, child, setChild, attendees, parent, setParent, assign, assignTo, assignAll, addonSel, setAddonDays, addonDays, addonKey, addonAns, setAnswer, answers, mealSel, pickMeal, mealFor, priceOf, setItemPrice, priceEdit, totalOverride, setTotalOverride, pass, period, rule, need, isSingle, unitPrice, off, past, pickDay, canAdd, locked, countdown, opensLabel, soldOut, hasSpace, seatsLeft, fullDates, leftOn, hasCounts, isLow, editDates,
     roster, setRoster, childrenOn, toggleChild, clearRemovalsFor, headsOn, rosterNames,
     waitlistOn, waitSel, toggleWait, waitAll, fullCount, fullDays, isFull, waitDone, setWaitDone, subtotal, discountLines, saved, total, datesPretty, hint, nudge, addPreview, pendingGross, addNet, addToBasket, removeItem, reset };
 }
