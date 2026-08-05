@@ -117,6 +117,28 @@ function operatorScope(req: Request, res: Response): string | null {
   return auth.tenantId;
 }
 
+// GET /api/meal-orders/report — operator meal report. Meals are bought at
+// checkout and stored on bookings (booking.mealItems + child + listingId), so
+// this reads bookings, not the mealOrders collection. Returns a flat row per
+// meal purchased; the client aggregates by day / week / listing / total.
+mealOrders.get("/report", async (req, res) => {
+  const tenantId = operatorScope(req, res);
+  if (!tenantId) return;
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const listingIds = new Set<string>();
+  const rows: { listingId: string | null; date: string; child: string; dish: string; price: number }[] = [];
+  for (const d of snap.docs) {
+    const b = d.data() as { status?: string; child?: string; listingId?: string; mealItems?: { date: string; name: string; price: number }[] };
+    if (b.status === "Cancelled") continue;
+    for (const it of (b.mealItems ?? [])) rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price) });
+    if (b.listingId) listingIds.add(b.listingId);
+  }
+  const ids = [...listingIds];
+  const lsnaps = ids.length ? await db.getAll(...ids.map((id) => db.collection("listings").doc(id))) : [];
+  const lname = new Map(lsnaps.filter((s) => s.exists).map((s) => [s.id, (s.data()!.title as string) || (s.data()!.name as string) || "Listing"]));
+  res.json(rows.map((r) => ({ ...r, listingName: r.listingId ? (lname.get(r.listingId) ?? "Listing") : "—" })));
+});
+
 // GET /api/meal-orders — parent: own orders; operator: the tenant's (?date=).
 mealOrders.get("/", async (req, res) => {
   const auth = req.auth!;

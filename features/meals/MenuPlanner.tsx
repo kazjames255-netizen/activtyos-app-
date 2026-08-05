@@ -12,6 +12,7 @@ import { genDates, groupWeeks, fmtDate } from "@/features/listings/format";
 import { mealDayPlan, type MealDayPlan } from "./plan";
 import { SavedMenus, type SavedMenu } from "./SavedMenus";
 import { MenuSharing } from "./MenuSharing";
+import { MealReport } from "./MealReport";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Meals workspace — one blue title card with tabs on the right, each opening a
@@ -264,6 +265,8 @@ export function MenuPlanner() {
               </div>
             );
           })()}
+
+          <MealReport />
         </div>
       )}
 

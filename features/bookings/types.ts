@@ -146,6 +146,9 @@ export interface Booking {
   /** ISO dates a meal was bought for at checkout (meals ride the add-on lines;
    *  this is the clean structured signal the meals area reads). */
   mealDates?: string[];
+  /** Structured meal purchases — one per meal bought — for the operator report
+   *  (who chose what, totals per day). */
+  mealItems?: { date: string; name: string; price: number }[];
   answers: [string, string][];
   note: string;
   recon: boolean | null;

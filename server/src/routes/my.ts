@@ -1119,6 +1119,9 @@ my.post("/bookings", async (req, res) => {
             // signal for the customer "what's being served" gate + read-out,
             // separate from the human-readable add-on strings.
             ...(() => { const md = segAddons.filter((a) => a.meal).flatMap((a) => a.onDays); return md.length ? { mealDates: [...new Set(md)] } : {}; })(),
+            // Structured meal purchases (for the operator meal report): dish +
+            // date + price per meal bought on this segment.
+            ...(() => { const mi = segAddons.filter((a) => a.meal).map((a) => ({ date: a.onDays[0], name: a.name, price: a.price })); return mi.length ? { mealItems: mi } : {}; })(),
             sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
             status: placed ? placedStatus : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place
