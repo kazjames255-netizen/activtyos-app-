@@ -50,6 +50,7 @@ export function MenuPlanner() {
   const [focusDay, setFocusDay] = useState<number | null>(null); // weekday being edited on the menu card
   const [erase, setErase] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const loadLists = useCallback(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch((e) => setError(e instanceof Error ? e.message : "Failed to load listings")); }, []);
   const loadMenus = useCallback(() => { apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch(() => setMenus([])); }, []);
@@ -84,10 +85,16 @@ export function MenuPlanner() {
   // Meals are "offered" on a listing whenever it has at least one planned day —
   // no separate toggle. Persisted on every change.
   const commit = useCallback((nextPlan: Record<string, MealDayPlan>) => {
-    setPlan(nextPlan);
+    setPlan(nextPlan); setFlash(null);
     if (!listingId) return;
     api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(nextPlan).length > 0, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
   }, [listingId]);
+  const saveNow = () => {
+    if (!listingId) return;
+    api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(plan).length > 0, mealPlan: plan }) })
+      .then(() => setFlash("✓ Saved — find it under “Your saved meal plans”."))
+      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
+  };
 
   const daysOfWeekday = (n: number) => dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n);
   const pickMenu = (id: string) => {
@@ -235,6 +242,36 @@ export function MenuPlanner() {
               <span className="rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>{dates.length} run-days · {planned} planned</span>
             </div>
           )}
+
+          {/* Saved meal plans — view & edit any listing's plan */}
+          {(() => {
+            const saved = (listings ?? []).filter((l) => !l.archived && l.mealPlan && Object.keys(l.mealPlan).length > 0);
+            if (saved.length === 0) return null;
+            return (
+              <div className="mt-7 border-t border-[var(--line)] pt-4">
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your saved meal plans</div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {saved.map((l) => {
+                    const days = Object.values(l.mealPlan as Record<string, unknown>).filter((v) => mealDayPlan(v)).length;
+                    const sName = seasons.find((s) => s.id === l.seasonId)?.name;
+                    const current = l.id === listingId;
+                    return (
+                      <button key={l.id} type="button" onClick={() => { setSeason(l.seasonId ?? ""); setSeasonTouched(true); setListingId(l.id); setTab("days"); }}
+                        className="flex items-center gap-3 rounded-xl border p-3 text-left transition hover:-translate-y-0.5"
+                        style={current ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "#fff" }}>
+                        <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[15px] text-white" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🍽️</span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13px] font-extrabold text-[var(--ink)]">{l.title || l.name}</span>
+                          <span className="block text-[11.5px] text-[var(--ink-3)]">{days} day{days === 1 ? "" : "s"} planned{sName ? ` · ${sName}` : ""}</span>
+                        </span>
+                        <span className="ml-auto flex-none text-[11.5px] font-extrabold text-[#2f6bd8]">Edit →</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -380,6 +417,13 @@ export function MenuPlanner() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-4">
+              <button type="button" onClick={saveNow} className="rounded-lg px-5 py-2.5 text-[13px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ Save plan</button>
+              <button type="button" onClick={() => setTab("season")} className="rounded-lg border px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)]" style={{ borderColor: "var(--line)" }}>View all saved plans</button>
+              {flash ? <span className="text-[12.5px] font-bold text-[#0e9a75]">{flash}</span>
+                : <span className="text-[11.5px] text-[var(--ink-3)]">Changes save automatically as you go.</span>}
             </div>
           </div>
         )
