@@ -440,7 +440,7 @@ export function MenuPlanner() {
 function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEdit }: { listing: Listing; days: number; seasonName?: string; current: boolean; defaultCutoff: { when: "off" | "same" | "prev" | "2days"; time: string }; onEdit: () => void }) {
   const [cfg, setCfg] = useState<MealConfig>(listing.mealConfig ?? {});
   const [ok, setOk] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const save = (next: MealConfig) => {
     setCfg(next); setOk(false);
     api(`/api/listings/${encodeURIComponent(listing.id)}`, { method: "PUT", body: JSON.stringify({ mealConfig: next }) }).then(() => setOk(true)).catch(() => {});
