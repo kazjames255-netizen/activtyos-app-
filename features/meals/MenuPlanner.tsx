@@ -104,13 +104,20 @@ export function MenuPlanner() {
   const ready = !!listing && mealsOn && dates.length > 0;
   const brushReady = !!brushMenuId && brushItems.size > 0;
 
-  // Tab button on the blue header.
-  const tabBtn = ([key, label]: [Tab, string]) => {
+  // Tab button on the blue header. `green` gives the two tool tabs the Bookings
+  // tab's teal-green so they read as a separate group.
+  const tabBtn = ([key, label]: [Tab, string], green = false) => {
     const on = tab === key;
+    const active = green
+      ? { background: "linear-gradient(120deg,#0ea5a5,#3fd0c9)", color: "#fff", boxShadow: "0 4px 12px -2px rgba(14,165,165,.55)" }
+      : { background: "#fff", color: "#1d3a8f", boxShadow: "0 2px 8px -2px rgba(0,0,0,.25)" };
+    const idle = green
+      ? { background: "#14b8a6", color: "#fff" }
+      : { background: "rgba(255,255,255,.14)", color: "#fff", border: "1px solid rgba(255,255,255,.28)" };
     return (
       <button key={key} type="button" onClick={() => setTab(key)}
         className="rounded-full px-3 py-1.5 text-[12px] font-extrabold transition"
-        style={on ? { background: "#fff", color: "#1d3a8f", boxShadow: "0 2px 8px -2px rgba(0,0,0,.25)" } : { background: "rgba(255,255,255,.14)", color: "#fff", border: "1px solid rgba(255,255,255,.28)" }}>
+        style={on ? active : idle}>
         {label}
       </button>
     );
@@ -136,7 +143,7 @@ export function MenuPlanner() {
         <div className="flex flex-wrap items-center gap-1.5">
           {PLAN_TABS.map(tabBtn)}
           <span className="mx-1 h-5 w-px bg-white/25" />
-          {TOOL_TABS.map(tabBtn)}
+          {TOOL_TABS.map((t) => tabBtn(t, true))}
         </div>
       </div>
     }>
