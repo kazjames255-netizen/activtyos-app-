@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { groupWeeks, fmtDate } from "@/features/listings/format";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parent Meals — view-only. Meals are bought at checkout (they ride the
@@ -17,7 +18,9 @@ import { Card } from "@/components/ui";
 interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string }
 interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] }; served: boolean }
 
-const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
+// Week-header colours, matching the provider calendar's cycled palette.
+const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0c9"], ["#7a5af8", "#a88bff"], ["#e2559a", "#ff86c0"], ["#f5872b", "#ffb166"], ["#16a34a", "#4ade80"]];
 
 export function ParentMealsApp() {
   const [days, setDays] = useState<MealDay[] | null>(null);
@@ -29,7 +32,11 @@ export function ParentMealsApp() {
   useEffect(() => { load(); }, [load]);
   useRealtime(["listings", "bookings"], load);
 
-  const served = (days ?? []).filter((d) => d.served);
+  const served = useMemo(() => (days ?? []).filter((d) => d.served), [days]);
+  // Group the served days into a week-by-week calendar (a day can carry more
+  // than one listing's menu).
+  const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served]);
+  const weeks = useMemo(() => groupWeeks([...byDate.keys()]), [byDate]);
 
   return (
     <div className="text-[var(--ink)]">
@@ -46,25 +53,41 @@ export function ParentMealsApp() {
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for listings your provider offers meals on. You can add meals when you book.</Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {served.map((d) => (
-            <Card key={`${d.listingId}__${d.date}`} className="p-3.5">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <span className="text-[14px] font-extrabold">{fmtDay(d.date)}</span>
-                <span className="text-[12px] text-[var(--ink-3)]">{d.listingName} · {d.tenantName}</span>
-                <span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-[2px] text-[11px] font-bold text-[#1d3a8f]">{d.menu.name}</span>
+          {weeks.map((w, wi) => {
+            const [d1, d2] = WEEK_PAL[wi % WEEK_PAL.length];
+            return (
+              <div key={w.mon} className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
+                <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${d1}, ${d2})` }}>
+                  <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
+                  <span className="text-[14px] font-extrabold">Week {w.n}</span>
+                  <span className="text-[12px] font-semibold text-white/85">· from {fmtDate(w.mon)}</span>
+                </div>
+                <div className="grid gap-2.5 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {w.days.map((iso) => (
+                    <div key={iso} className="rounded-xl border border-[var(--line)] p-3" style={{ background: `${d1}0d` }}>
+                      <div className="text-[12.5px] font-extrabold" style={{ color: d1 }}>{fmtDay(iso)}</div>
+                      <div className="mt-1.5 flex flex-col gap-2.5">
+                        {(byDate.get(iso) ?? []).map((e) => (
+                          <div key={`${e.listingId}`}>
+                            <div className="text-[10.5px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">{e.listingName} · {e.menu.name}</div>
+                            <div className="mt-1 flex flex-col gap-1">
+                              {e.menu.items.map((it) => (
+                                <div key={it.id} className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
+                                  <span className="font-bold">{it.name}</span>
+                                  <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
+                                  {(it.allergens?.length ?? 0) > 0 && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-1.5 py-[1px] text-[10px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens!.join(", ")}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="mt-2 flex flex-col gap-1">
-                {d.menu.items.map((it) => (
-                  <div key={it.id} className="flex flex-wrap items-baseline gap-2 text-[12.5px]">
-                    <span className="font-bold">{it.name}</span>
-                    <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
-                    {(it.allergens?.length ?? 0) > 0 && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-1.5 py-[1px] text-[10px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens!.join(", ")}</span>}
-                    {it.description && <span className="text-[11px] text-[var(--ink-3)]">{it.description}</span>}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
