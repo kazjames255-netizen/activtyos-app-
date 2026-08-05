@@ -154,6 +154,30 @@ confirmed, declined, refund approved.
   `server/.env` (any SMTP provider — Resend, Mailgun, Gmail app password…)
   and restart the API.
 
+### Dev safety — mail does NOT go out by default
+
+Outside production, `sendMail` transmits **only** to addresses in
+`MAIL_ALLOWLIST` and logs-and-skips everything else. Two real hazards this
+removes:
+
+- The scheduler sweeps run against **real tenants**, so session reminders and
+  medication alerts would reach actual parents whenever anyone runs the server
+  locally.
+- `npm run e2e` sends dozens of messages per run to `@activityos-test.com`,
+  which doesn't exist. Every one is a hard bounce, and a domain bouncing at
+  that rate gets suspended by its email provider.
+
+```bash
+# server/.env — who really receives mail while developing
+MAIL_ALLOWLIST=you@example.com,someone@else.com
+```
+
+Production sets `MAIL_LIVE=1` (or `NODE_ENV=production`) instead, which sends
+to everyone. A suppressed send still **reports success**, exactly as the
+Ethereal dev inbox did, so `delivered` counts and e2e assertions stay
+meaningful about the code path. The API logs a `NOT LIVE — only … will
+actually receive mail` line at startup so this is never a mystery.
+
 ### Who mail comes from
 
 `MAIL_FROM` is the one authenticated identity every send leaves under — but

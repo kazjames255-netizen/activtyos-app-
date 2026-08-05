@@ -61,6 +61,34 @@ export const fromDomain = fromAddress.slice(fromAddress.lastIndexOf("@") + 1);
 /** The platform's own display name — used when no tenant identity applies. */
 export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace(/^"|"$/g, "") : "";
 
+// ── Don't mail the world from a laptop ────────────────────────────────────
+// Two ways a dev machine causes real damage, both observed on this project:
+//   • The scheduler sweeps run against REAL tenants, so session reminders and
+//     medication alerts go to actual parents whenever anyone runs the server.
+//   • `npm run e2e` sends ~30 messages per run to @activityos-test.com, a
+//     domain that doesn't exist. Every one is a hard bounce, and a sending
+//     domain that bounces at that rate gets suspended by its provider.
+//
+// So: unless this is production, transmit ONLY to allowlisted addresses and
+// log-and-skip everything else.
+//
+// A skipped send deliberately reports SUCCESS. Callers read the boolean as
+// "the transport accepted it", which is exactly what the Ethereal dev inbox
+// reported while never delivering anything either — so history counts, the
+// `delivered` column and the e2e assertions stay meaningful about the code
+// path, without a single message leaving the building.
+const MAIL_LIVE = process.env.MAIL_LIVE === "1" || process.env.NODE_ENV === "production";
+const MAIL_ALLOWLIST = new Set(
+  (process.env.MAIL_ALLOWLIST ?? "").split(/[,\s]+/).map((a) => a.trim().toLowerCase()).filter(Boolean),
+);
+if (!MAIL_LIVE) {
+  console.log(
+    `[mail] NOT LIVE — only ${MAIL_ALLOWLIST.size ? [...MAIL_ALLOWLIST].join(", ") : "nobody"} will actually receive mail.`
+    + " Set MAIL_LIVE=1 in production, or MAIL_ALLOWLIST to test real delivery.",
+  );
+}
+const maySend = (to: string): boolean => MAIL_LIVE || MAIL_ALLOWLIST.has(to.trim().toLowerCase());
+
 /** A file to attach — e.g. a child's EHCP plan on a booking notification.
  *  `content` is the raw bytes (Buffer) or a base64 string with `encoding`. */
 export interface MailAttachment {
@@ -81,6 +109,10 @@ export interface MailAttachment {
  *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
  *  adds files (or inline `cid:` images). */
 export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<boolean> {
+  if (!maySend(to)) {
+    console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
+    return true;
+  }
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
