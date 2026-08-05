@@ -113,6 +113,18 @@ const baseListingSchema = z
         ]),
       )
       .optional(),
+    // Per-listing meal admin: a caterer email digest schedule, and the parent
+    // order cut-off for each day. Caterer emailing is a backend cron (Amir);
+    // cut-off enforcement rides the meal-order checkout.
+    mealConfig: z
+      .object({
+        catererEmail: z.string().trim().max(160).optional(),
+        catererEvery: z.enum(["off", "day", "week"]).optional(),
+        catererAt: z.string().max(5).optional(),
+        cutoffWhen: z.enum(["same", "prev", "2days"]).optional(),
+        cutoffTime: z.string().max(5).optional(),
+      })
+      .optional(),
     // tickets
     blockId: z.string().max(60).nullable().optional(), // block bundle
     ticketOverrides: z
