@@ -72,7 +72,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
   );
 }
 
-export function SavedMenus() {
+export function SavedMenus({ bare = false }: { bare?: boolean }) {
   const [menus, setMenus] = useState<SavedMenu[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // menu id, or "new"
@@ -88,30 +88,22 @@ export function SavedMenus() {
   async function duplicate(m: SavedMenu) { try { await api("/api/meal-menus", { method: "POST", body: JSON.stringify({ name: `${m.name} (copy)`, items: m.items.map((i) => ({ ...i, id: uid() })) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function remove(m: SavedMenu) { if (!confirm(`Delete the “${m.name}” menu?`)) return; try { await api(`/api/meal-menus/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
-  return (
-    <MasterCard className="mb-4" header={
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> Saved menus</div>
-          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
-        </div>
-        {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ New menu</button>}
-      </div>
-    }>
+  const newBtnBare = editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white transition" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New menu</button>;
+
+  const body = (
+    <>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-
       {editing === "new" && <MenuEditor initial={{ id: "", name: "", items: [] }} onSave={create} onCancel={() => setEditing(null)} />}
-
       {!menus ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
-      : menus.length === 0 && editing !== "new" ? <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">No saved menus yet — create your first above.</Card>
+      : menus.length === 0 && editing !== "new" ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No saved menus yet — create your first above.</Card>
       : (
-        <div className="flex flex-col gap-1.5">
+        <div className="grid gap-2 sm:grid-cols-2">
           {menus.map((m) => editing === m.id ? (
-            <MenuEditor key={m.id} initial={m} onSave={(b) => update(m.id, b)} onCancel={() => setEditing(null)} />
+            <div key={m.id} className="sm:col-span-2"><MenuEditor initial={m} onSave={(b) => update(m.id, b)} onCancel={() => setEditing(null)} /></div>
           ) : (
-            <Card key={m.id} className="p-3">
+            <Card key={m.id} className="p-3.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13.5px] font-extrabold">{m.name}</span>
+                <span className="text-[14px] font-extrabold">{m.name}</span>
                 <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{m.items.length} meal{m.items.length === 1 ? "" : "s"}</Badge>
                 <div className="ml-auto flex gap-1.5">
                   <Button sm onClick={() => setEditing(m.id)}>Edit</Button>
@@ -119,9 +111,9 @@ export function SavedMenus() {
                   <Button sm variant="danger" onClick={() => remove(m)}>Delete</Button>
                 </div>
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {m.items.map((it) => (
-                  <span key={it.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[11.5px]">
+                  <span key={it.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[12px]">
                     <b>{it.name}</b>
                     <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
                     {it.allergens.length > 0 && <span className="capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens.join(", ")}</span>}
@@ -132,6 +124,33 @@ export function SavedMenus() {
           ))}
         </div>
       )}
+    </>
+  );
+
+  if (bare) return (
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">Saved menus</div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
+        </div>
+        {newBtnBare}
+      </div>
+      {body}
+    </div>
+  );
+
+  return (
+    <MasterCard className="mb-4" header={
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> Saved menus</div>
+          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your camps’ days.</div>
+        </div>
+        {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ New menu</button>}
+      </div>
+    }>
+      {body}
     </MasterCard>
   );
 }
