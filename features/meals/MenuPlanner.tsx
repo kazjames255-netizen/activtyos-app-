@@ -85,8 +85,10 @@ export function MenuPlanner() {
 
   const pickMenu = (id: string) => {
     setErase(false);
+    // Don't pre-tick anything — the operator picks one dish, or more if they
+    // want, rather than being forced to serve every dish on the menu.
     if (brushMenuId === id) { setBrushMenuId(null); setBrushItems(new Set()); return; }
-    setBrushMenuId(id); setBrushItems(new Set((menusById.get(id)?.items ?? []).map((it) => it.id)));
+    setBrushMenuId(id); setBrushItems(new Set());
   };
   const toggleBrushItem = (itemId: string) => setBrushItems((s) => { const n = new Set(s); if (n.has(itemId)) n.delete(itemId); else n.add(itemId); return n; });
 
@@ -206,7 +208,7 @@ export function MenuPlanner() {
         : (
           <div className="min-h-[300px]">
             <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose a menu</div>
-            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-2)]">Tap a menu, then tick the dish(es) to serve — parents pick from these at checkout (meat or veg are separate dishes).</p>
+            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-2)]">Tap a menu, then tick the dish(es) to serve — one is fine, or offer a few (e.g. meat &amp; veg) for parents to choose between at checkout.</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {menus.map((m, i) => {
                 const [dark, light, tint] = MENU_PAL[i % MENU_PAL.length];
