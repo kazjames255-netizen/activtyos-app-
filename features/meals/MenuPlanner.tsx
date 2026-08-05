@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -62,8 +62,14 @@ export function MenuPlanner() {
   const seasonListings = (listings ?? []).filter((l) => !l.archived && (!season || l.seasonId === season));
 
   // When the listing changes, load its saved plan.
+  // Only (re)load + reset when the chosen listing actually CHANGES. A realtime
+  // refetch after a save hands back a new listing object with the same id — we
+  // must NOT reset the picked menu/day then, or editing "jumps to the start".
+  const loadedId = useRef<string | null>(null);
   useEffect(() => {
-    if (!listing) { setPlan({}); return; }
+    if (!listing) { setPlan({}); loadedId.current = null; return; }
+    if (loadedId.current === listing.id) return;
+    loadedId.current = listing.id;
     const raw = (listing.mealPlan ?? {}) as Record<string, unknown>;
     const next: Record<string, MealDayPlan> = {};
     for (const [iso, v] of Object.entries(raw)) { const p = mealDayPlan(v); if (p) next[iso] = p; }
