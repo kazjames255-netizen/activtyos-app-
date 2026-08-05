@@ -106,6 +106,18 @@ export function MenuPlanner() {
     commit(next);
   };
   const clearAll = () => commit({});
+  // Assign / clear a whole weekday for a menu straight from the menu card —
+  // "runs on Mon, Wed". Uses the dishes ticked on that card.
+  const menuOnWeekday = (menuId: string, n: number) => dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n && plan[d]?.menuId === menuId);
+  const toggleMenuWeekday = (menuId: string, n: number) => {
+    const days = dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n);
+    if (days.length === 0) return;
+    const onAll = days.every((d) => plan[d]?.menuId === menuId);
+    const next = { ...plan };
+    if (onAll) { for (const d of days) delete next[d]; }
+    else { if (!brushItems.size) return; for (const d of days) next[d] = { menuId, itemIds: [...brushItems] }; }
+    commit(next);
+  };
   const dayDishes = (iso: string) => { const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined; if (!p || !menu) return null; const items = p.itemIds.length ? menu.items.filter((it) => p.itemIds.includes(it.id)) : menu.items; return { name: menu.name, items }; };
   // Toggle a single dish ON/OFF for one specific day — pick the meals right on
   // the day tile. Removing the last dish clears the day.
@@ -250,6 +262,22 @@ export function MenuPlanner() {
                                 </button>
                               );
                             })}
+                          </div>
+                          <div className="mt-3 border-t pt-2.5" style={{ borderColor: `${dark}22` }}>
+                            <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Runs on <span className="font-semibold opacity-70">· fine-tune on the Days slide</span></div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {weekdaysPresent.map((n) => {
+                                const onAll = menuOnWeekday(m.id, n).length > 0 && dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n).every((d) => plan[d]?.menuId === m.id);
+                                return (
+                                  <button key={n} type="button" disabled={!onAll && brushItems.size === 0} onClick={(e) => { e.stopPropagation(); toggleMenuWeekday(m.id, n); }}
+                                    className="rounded-full border px-2.5 py-1 text-[11.5px] font-extrabold transition disabled:opacity-40"
+                                    style={onAll ? { borderColor: "transparent", background: dark, color: "#fff" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
+                                    {onAll ? "✓ " : ""}{WEEKDAYS.find(([w]) => w === n)?.[1]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {brushItems.size === 0 && <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Tick a dish above first.</p>}
                           </div>
                         </>
                       ) : (
