@@ -1051,8 +1051,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             return (
               <button key={`${name}-${i}`} type="button" onClick={() => goStep(i)} disabled={i > stepNow}
                 title={done ? `Back to ${name.toLowerCase()}` : name}
-                className={`border-2 px-2.5 py-1 text-[11.5px] font-extrabold transition-colors ${tk.round}`}
-                style={now
+                className={`border-2 px-2.5 py-1 text-[11.5px] font-extrabold transition-colors ${tk.round} ${name === "Meals" ? "animate-pulse" : ""}`}
+                style={name === "Meals"
+                  ? { borderColor: "#38bdf8", background: now ? "#38bdf8" : "#38bdf826", color: now ? "#042a3d" : "#7dd3fc" }
+                  : now
                   ? { borderColor: tk.accent, background: tk.accent, color: tk.accentInk }
                   : done
                     ? { borderColor: `${tk.ink}59`, color: tk.ink, background: "transparent", cursor: "pointer" }
