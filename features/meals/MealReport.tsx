@@ -41,6 +41,7 @@ export function MealReport() {
 
   if (!rows) return null;
 
+  const chip = (text: string) => <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f]">{text}</span>;
   const DISH_PAL = ["#2f6bd8", "#0ea5a5", "#7a5af8", "#e2559a", "#f5872b", "#16a34a"];
   const dishCol = (n: string) => DISH_PAL[[...n].reduce((s, c) => s + c.charCodeAt(0), 0) % DISH_PAL.length];
   const showNames = !kid; // when a child's selected the names are redundant
