@@ -803,6 +803,18 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Copy one child's picks to every sibling (same date → same dish, since a
   // day's menu is the same for all children) — one tap for a big family.
   const copyMealsToAll = (fromKid: string) => { for (const { kid, date } of mealSlots) { if (kid === fromKid) continue; const src = b.mealFor(fromKid, date); if (src && mealItemAt(date, src)) b.pickMeal(kid, date, src); } };
+  // "Same every Monday": apply this dish (matched by name, since later weeks may
+  // use a different menu) to all this child's days of the same weekday.
+  const applyEveryWeekday = (kid: string, fromDate: string, itemId: string) => {
+    const wd = new Date(`${fromDate}T00:00:00Z`).getUTCDay();
+    const name = mealItemAt(fromDate, itemId)?.name;
+    if (!name) return;
+    for (const { kid: k, date } of mealSlots) {
+      if (k !== kid || new Date(`${date}T00:00:00Z`).getUTCDay() !== wd) continue;
+      const match = menuForDate(date)?.items.find((i) => i.name === name);
+      if (match) b.pickMeal(kid, date, match.id);
+    }
+  };
   const calculated = b.total + addonTotal + mealTotal;
   const grandTotal = b.totalOverride ?? calculated;
 
@@ -1341,6 +1353,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           const menu = menuForDate(date);
                           if (!menu) return null;
                           const sel = b.mealFor(kid, date);
+                          const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
+                          const wdLabel = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+                          const moreSameWd = slots.filter((s) => new Date(`${s.date}T00:00:00Z`).getUTCDay() === wd).length > 1;
                           return (
                             <div key={date} className="rounded-lg p-2" style={{ border: `1px solid ${sel ? tk.accent : tk.line}`, background: sel ? `${tk.accent}14` : "transparent" }}>
                               <div className="text-[11px] font-bold" style={{ color: tk.muted }}>{fmtMealDay(date)} · {menu.name}</div>
@@ -1357,6 +1372,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                   );
                                 })}
                               </div>
+                              {sel && moreSameWd && <button type="button" onClick={() => applyEveryWeekday(kid, date, sel)} className="mt-1.5 text-[10.5px] font-extrabold underline" style={{ color: tk.accent }}>↻ Same every {wdLabel}</button>}
                             </div>
                           );
                         })}
