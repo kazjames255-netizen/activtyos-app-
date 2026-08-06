@@ -132,12 +132,21 @@ export function MenuPlanner() {
 
   // Slide-3 fine-tuning: tap an empty day to add the active menu (all dishes),
   // then trim per day; erase deletes.
-  const applyTo = (iso: string) => {
+  const applyTo = (iso: string, menuId: string | null = brushMenuId) => {
     const next = { ...plan };
     if (erase) delete next[iso];
-    else if (brushMenuId) { const menu = menusById.get(brushMenuId); if (!menu) return; next[iso] = { menuId: brushMenuId, itemIds: menu.items.map((i) => i.id) }; }
+    else if (menuId) { const menu = menusById.get(menuId); if (!menu) return; next[iso] = { menuId, itemIds: menu.items.map((i) => i.id) }; }
     else return;
     commit(next);
+  };
+  // Tapping an empty day always adds something: the picked menu, else the first
+  // menu (which also becomes the brush), so it never silently does nothing.
+  const tapDay = (iso: string) => {
+    if (erase) { applyTo(iso); return; }
+    const mid = brushMenuId ?? ((menus ?? [])[0]?.id ?? null);
+    if (!mid) return;
+    if (!brushMenuId) setBrushMenuId(mid);
+    applyTo(iso, mid);
   };
   const clearAll = () => commit({});
   const dayDishes = (iso: string) => { const p = plan[iso]; const menu = p ? menusById.get(p.menuId) : undefined; if (!p || !menu) return null; const items = p.itemIds.length ? menu.items.filter((it) => p.itemIds.includes(it.id)) : menu.items; return { name: menu.name, items }; };
@@ -406,7 +415,7 @@ export function MenuPlanner() {
                         return (
                           <div key={iso}
                             onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
-                            onClick={() => { if (erase || !has) applyTo(iso); }}
+                            onClick={() => { if (erase || !has) tapDay(iso); }}
                             className={`flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${erase || !has ? "cursor-pointer hover:-translate-y-0.5" : ""}`}
                             style={has && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
                             <span className="text-[11.5px] font-extrabold" style={{ color: has && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
