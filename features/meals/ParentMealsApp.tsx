@@ -49,6 +49,7 @@ export function ParentMealsApp() {
   const [busy, setBusy] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [lastAdded, setLastAdded] = useState<string[]>([]); // line keys from the last add — for quick undo
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
@@ -125,6 +126,7 @@ export function ParentMealsApp() {
     const add = chosen.filter((k) => !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
     if (!add.length) return [];
     setBasket((prev) => [...prev, ...add.map((child) => ({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }))]);
+    setLastAdded(add.map((child) => `${e.date}|${e.listingId}|${it.id}|${child}`));
     setPayErr(null); setToast(`Added ${it.name} for ${add.join(", ")} to your basket.`);
     return add;
   };
@@ -163,10 +165,14 @@ export function ParentMealsApp() {
         lines.push({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: dish.id, name: dish.name, price: dish.price, child });
       }
     }
-    if (!lines.length) { setToast(`No new ${meta.short} meals to add — your booked days are already covered.`); return; }
+    if (!lines.length) { setLastAdded([]); setToast(`No new ${meta.short} meals to add — your booked days are already covered.`); return; }
     setBasket((prev) => [...prev, ...lines]); setPayErr(null);
+    setLastAdded(lines.map(lineKey));
     setToast(`Added ${lines.length} ${meta.short} meal${lines.length === 1 ? "" : "s"} across your booked days.`);
   };
+
+  // Quick undo — pull out exactly the lines added by the last add/quick-fill.
+  const undoLast = () => { const s = new Set(lastAdded); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); setLastAdded([]); setToast(null); };
 
   const payAll = useCallback(async () => {
     if (!basket.length) return;
@@ -183,7 +189,7 @@ export function ParentMealsApp() {
         await apiPost("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) });
       }
       const n = basket.length;
-      setBasket([]);
+      setBasket([]); setLastAdded([]);
       setToast(`✓ Booked ${n} meal${n === 1 ? "" : "s"} — payment taken with your account.`);
       load();
     } catch (err) { setPayErr(err instanceof Error ? err.message : "Couldn't complete the booking — try again."); }
@@ -200,9 +206,10 @@ export function ParentMealsApp() {
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {toast && (
-        <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#bde5cd] bg-[#effaf3] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#0e7a45]">
+        <div className="mb-3 flex items-center gap-2 rounded-xl border border-[#bde5cd] bg-[#effaf3] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#0e7a45]">
           <span className="flex-1">{toast}</span>
-          <button type="button" onClick={() => setToast(null)} className="text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
+          {lastAdded.length > 0 && <button type="button" onClick={undoLast} className="flex-none rounded-full bg-white px-2.5 py-[3px] text-[11.5px] font-extrabold text-[#0e7a45] shadow-sm transition hover:bg-[#0e7a45] hover:text-white">↩ Undo</button>}
+          <button type="button" onClick={() => { setToast(null); setLastAdded([]); }} className="flex-none text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
         </div>
       )}
 
@@ -442,7 +449,7 @@ export function ParentMealsApp() {
                       style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)", boxShadow: "0 8px 20px -6px rgba(14,154,90,.6)" }}>
                       {busy ? "Booking…" : <>💳 Pay {money(basketTotal)} &amp; book all</>}
                     </button>
-                    <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="mt-1.5 w-full text-center text-[11px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink-2)]">Clear basket</button>
+                    <button type="button" onClick={() => { setBasket([]); setPayErr(null); setLastAdded([]); }} className="mt-1.5 w-full text-center text-[11px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink-2)]">Clear basket</button>
                     <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Charged to your account like your booking · auto-confirmed while the window is open.</div>
                   </div>
                 </div>
