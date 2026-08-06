@@ -17,6 +17,7 @@ const itemSchema = z.object({
   price: z.number().nonnegative().max(1000),
   allergens: z.array(z.string().max(40)).max(20).default([]),
   description: z.string().trim().max(200).optional(),
+  diet: z.enum(["meat", "veg", "vegan"]).optional(), // dietary type, shown to parents
 });
 const menuSchema = z.object({
   name: z.string().trim().min(1).max(80),

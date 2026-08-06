@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { groupWeeks, fmtDate } from "@/features/listings/format";
+import { DIETS, dietMeta, type Diet } from "./diet";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parent Meals. "What's on" shows the menu on the family's booked days and —
@@ -15,11 +16,11 @@ import { groupWeeks, fmtDate } from "@/features/listings/format";
 // has a meal, showing only their meals (booked at checkout or ordered here).
 // ─────────────────────────────────────────────────────────────────────────
 
-interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string }
+interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string; diet?: Diet }
 interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] }; served: boolean; canOrder: boolean; cutoffLabel: string }
 interface Booking { child?: string; listingId?: string; kids?: { name?: string }[]; mealItems?: { date: string; name: string; price: number }[] }
 interface Order { id: string; listingId?: string; childName: string; date: string; status?: string; items?: { name: string; price: number; qty: number; menuItemId?: string; allergens?: string[] }[] }
-type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string };
+type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string; diet?: Diet };
 type BasketLine = { tenantId: string; listingId: string; listingName: string; date: string; dishId: string; name: string; price: number; child: string };
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
@@ -29,6 +30,7 @@ const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0
 const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
 // Softer allergen note — "contains …" in muted amber, not loud red.
 const Allergens = ({ list }: { list?: string[] }) => (list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">contains {list.join(", ")}</span> : null);
+const DietBadge = ({ diet }: { diet?: string }) => { const d = dietMeta(diet); return d ? <span className="rounded-full px-2 py-[1.5px] text-[10px] font-extrabold" style={{ background: d.bg, color: d.fg }}>{d.icon} {d.label}</span> : null; };
 const lineKey = (l: { date: string; listingId: string; dishId: string; child: string }) => `${l.date}|${l.listingId}|${l.dishId}|${l.child}`;
 
 export function ParentMealsApp() {
@@ -99,11 +101,11 @@ export function ParentMealsApp() {
     if (!tab) return m;
     for (const b of bookings) {
       if (!splitKids(b.child).includes(tab)) continue;
-      for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, qty: 1, allergens: info?.allergens, description: info?.description }); m.set(it.date, a); }
+      for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, qty: 1, allergens: info?.allergens, description: info?.description, diet: info?.diet }); m.set(it.date, a); }
     }
     for (const o of liveOrders) {
       if (o.childName !== tab) continue;
-      for (const it of (o.items ?? [])) { const info = dishInfo.get(`${o.date}|${it.name}`); const a = m.get(o.date) ?? []; a.push({ name: it.name, price: it.price, qty: it.qty ?? 1, allergens: it.allergens ?? info?.allergens, description: info?.description }); m.set(o.date, a); }
+      for (const it of (o.items ?? [])) { const info = dishInfo.get(`${o.date}|${it.name}`); const a = m.get(o.date) ?? []; a.push({ name: it.name, price: it.price, qty: it.qty ?? 1, allergens: it.allergens ?? info?.allergens, description: info?.description, diet: info?.diet }); m.set(o.date, a); }
     }
     return m;
   }, [tab, bookings, liveOrders, dishInfo]);
@@ -135,6 +137,31 @@ export function ParentMealsApp() {
   };
   const removeLine = (key: string) => setBasket((prev) => prev.filter((l) => lineKey(l) !== key));
   const basketTotal = basket.reduce((s, l) => s + l.price, 0);
+
+  // Diet types that appear on an orderable day — powers the quick-fill bar.
+  const dietsPresent = useMemo(() => DIETS.filter((d) => [...byDate.values()].some((es) => es.some((e) => e.canOrder && e.menu.items.some((it) => it.diet === d.key)))), [byDate]);
+
+  // Quick-fill: add that diet's dish for every child on every orderable booked
+  // day, skipping any already booked or in the basket.
+  const bulkAdd = (diet: Diet) => {
+    const meta = dietMeta(diet)!;
+    const seen = new Set(basketKeys);
+    const lines: BasketLine[] = [];
+    for (const entries of byDate.values()) for (const e of entries) {
+      if (!e.canOrder) continue;
+      const dish = e.menu.items.find((it) => it.diet === diet);
+      if (!dish) continue;
+      for (const child of kidsFor(e.listingId)) {
+        const k = `${e.date}|${e.listingId}|${dish.id}|${child}`;
+        if (seen.has(k) || orderedKey.has(`${e.date}|${child}|${dish.id}`)) continue;
+        seen.add(k);
+        lines.push({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: dish.id, name: dish.name, price: dish.price, child });
+      }
+    }
+    if (!lines.length) { setToast(`No new ${meta.short} meals to add — your booked days are already covered.`); return; }
+    setBasket((prev) => [...prev, ...lines]); setPayErr(null);
+    setToast(`Added ${lines.length} ${meta.short} meal${lines.length === 1 ? "" : "s"} across your booked days.`);
+  };
 
   const payAll = useCallback(async () => {
     if (!basket.length) return;
@@ -215,6 +242,7 @@ export function ParentMealsApp() {
                                 <div key={`${it.name}-${i}`} className="rounded-lg border border-[var(--line)] bg-white/70 px-2.5 py-1.5">
                                   <div className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
                                     <span className="text-[#0e9a5a]">✓</span><span className="font-bold">{it.name}</span>
+                                    <DietBadge diet={it.diet} />
                                     {it.qty > 1 && <span className="text-[var(--ink-3)]">× {it.qty}</span>}
                                     {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
                                     <Allergens list={it.allergens} />
@@ -235,7 +263,23 @@ export function ParentMealsApp() {
       ) : served.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for listings your provider offers meals on.</Card>
       ) : (
-        // ── "What's on": the full menu (left) + a running basket (right) ──
+        // ── Menu: quick-fill bar, then the full menu (left) + basket (right) ──
+        <>
+        {dietsPresent.length > 0 && (
+          <div className="mb-3 rounded-2xl border border-[var(--line)] bg-white p-3">
+            <div className="text-[12px] font-extrabold text-[#12306e]">🍽️ Quick-fill the basket</div>
+            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Add one meal for every child on every booked day. Skips days that are already booked or past the ordering cut-off.</div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {dietsPresent.map((d) => (
+                <button key={d.key} type="button" onClick={() => bulkAdd(d.key)}
+                  className="rounded-full px-3 py-1.5 text-[12px] font-extrabold transition active:scale-[.97]"
+                  style={{ background: d.bg, color: d.fg, border: `1px solid ${d.fg}40` }}>
+                  {d.icon} All {d.label.toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             {menuWeeks.map((w, wi) => {
@@ -278,6 +322,7 @@ export function ParentMealsApp() {
                                             {it.description && <div className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
                                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                               <span className="rounded-full bg-[#eef4fd] px-2 py-[1.5px] text-[11px] font-extrabold tabular-nums text-[#1d3a8f]">{money(it.price)}</span>
+                                              <DietBadge diet={it.diet} />
                                               <Allergens list={it.allergens} />
                                             </div>
                                           </div>
@@ -387,6 +432,7 @@ export function ParentMealsApp() {
             </div>
           </aside>
         </div>
+        </>
       )}
     </div>
   );

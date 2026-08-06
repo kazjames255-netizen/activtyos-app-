@@ -7,6 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { MasterCard } from "@/components/OperatorPage";
 import { UK_ALLERGENS } from "./allergens";
+import { DIETS, dietMeta, type Diet } from "./diet";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Saved-menu library (Phase 1 of the meal planner). A menu is a reusable,
@@ -14,7 +15,7 @@ import { UK_ALLERGENS } from "./allergens";
 // listing's days. Meat and veg are just separate items on the same menu.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface MenuItem { id: string; name: string; price: number; allergens: string[]; description?: string }
+export interface MenuItem { id: string; name: string; price: number; allergens: string[]; description?: string; diet?: Diet }
 export interface SavedMenu { id: string; name: string; items: MenuItem[] }
 
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e6)}`);
@@ -53,6 +54,19 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
               <button type="button" onClick={() => setItems((xs) => (xs.length > 1 ? xs.filter((x) => x.id !== it.id) : xs))} className="pb-1.5 text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Remove meal">×</button>
             </div>
             <div className="mt-2"><Input value={it.description ?? ""} onChange={(e) => upd(it.id, { description: e.target.value })} placeholder="Description (optional) — e.g. served with salad" className="w-full" /></div>
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Type</span>
+              {DIETS.map((d) => {
+                const on = it.diet === d.key;
+                return (
+                  <button key={d.key} type="button" onClick={() => upd(it.id, { diet: on ? undefined : d.key })}
+                    className="rounded-full border px-2 py-[1px] text-[10.5px] font-bold transition-colors"
+                    style={on ? { borderColor: "transparent", background: d.fg, color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                    {d.icon} {d.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="mt-2">
               <span className="mr-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Contains</span>
               {UK_ALLERGENS.map((a) => (
@@ -115,6 +129,7 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
                 {m.items.map((it) => (
                   <span key={it.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[12px]">
                     <b>{it.name}</b>
+                    {(() => { const dm = dietMeta(it.diet); return dm ? <span className="rounded-full px-1.5 py-[0.5px] text-[10px] font-bold" style={{ background: dm.bg, color: dm.fg }}>{dm.icon} {dm.label}</span> : null; })()}
                     <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
                     {it.allergens.length > 0 && <span className="capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens.join(", ")}</span>}
                   </span>
