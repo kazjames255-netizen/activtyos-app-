@@ -38,7 +38,8 @@ export function ParentMealsApp() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<string>(""); // "" = What's on; else a child's name
+  const [view, setView] = useState<"menu" | "kids">("menu"); // top-level section
+  const [kid, setKid] = useState<string>("");                // selected child within "kids"
 
   // Selection + basket state.
   const [picking, setPicking] = useState<string | null>(null); // `${date}|${listingId}|${itemId}`
@@ -95,20 +96,24 @@ export function ParentMealsApp() {
   const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { if (d.date < todayIso) continue; const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served, todayIso]);
   const menuWeeks = useMemo(() => groupWeeks([...byDate.keys()]), [byDate]);
 
+  // The child whose meals are shown in the "kids" view — the selection, or the
+  // first child if the selection is stale/empty.
+  const activeKid = kidsWithMeals.includes(kid) ? kid : (kidsWithMeals[0] ?? "");
+
   // ── Child tab data: only this child's meals (checkout + ordered here) ──
   const chosenByDate = useMemo(() => {
     const m = new Map<string, Chosen[]>();
-    if (!tab) return m;
+    if (!activeKid) return m;
     for (const b of bookings) {
-      if (!splitKids(b.child).includes(tab)) continue;
+      if (!splitKids(b.child).includes(activeKid)) continue;
       for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, qty: 1, allergens: info?.allergens, description: info?.description, diet: info?.diet }); m.set(it.date, a); }
     }
     for (const o of liveOrders) {
-      if (o.childName !== tab) continue;
+      if (o.childName !== activeKid) continue;
       for (const it of (o.items ?? [])) { const info = dishInfo.get(`${o.date}|${it.name}`); const a = m.get(o.date) ?? []; a.push({ name: it.name, price: it.price, qty: it.qty ?? 1, allergens: it.allergens ?? info?.allergens, description: info?.description, diet: info?.diet }); m.set(o.date, a); }
     }
     return m;
-  }, [tab, bookings, liveOrders, dishInfo]);
+  }, [activeKid, bookings, liveOrders, dishInfo]);
   const chosenWeeks = useMemo(() => groupWeeks([...chosenByDate.keys()]), [chosenByDate]);
   const chosenCount = [...chosenByDate.values()].reduce((s, a) => s + a.reduce((n, c) => n + c.qty, 0), 0);
 
@@ -201,15 +206,15 @@ export function ParentMealsApp() {
         </div>
       )}
 
-      {/* Tabs — What's on + a tab per child who has a meal */}
+      {/* Top tabs — the Menu, and one 'Children's meals' section (child sub-tabs inside) */}
       {kidsWithMeals.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {[["", "Menu"], ...kidsWithMeals.map((k) => [k, k] as [string, string])].map(([key, label]) => {
-            const on = tab === key;
+          {([["menu", "🍴 Menu"], ["kids", "🎒 Children’s meals"]] as [("menu" | "kids"), string][]).map(([key, label]) => {
+            const on = view === key;
             return (
-              <button key={key} type="button" onClick={() => { setTab(key); setToast(null); setPicking(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
+              <button key={key} type="button" onClick={() => { setView(key); setToast(null); setPicking(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
                 style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 4px 12px -3px rgba(47,107,216,.6)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                {key === "" ? "🍴 " : "🎒 "}{label}
+                {label}
               </button>
             );
           })}
@@ -217,13 +222,25 @@ export function ParentMealsApp() {
       )}
 
       {!days ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
-      : tab ? (
-        // ── A child's meals ──
-        chosenByDate.size === 0
-          ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{tab} hasn’t got any meals yet — book one from the Menu tab, or add meals when you book.</Card>
-          : (
+      : view === "kids" && kidsWithMeals.length > 0 ? (
+        // ── Children's meals — a sub-tab per child, then that child's meals ──
+        <>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {kidsWithMeals.map((k) => {
+              const on = activeKid === k;
+              return (
+                <button key={k} type="button" onClick={() => { setKid(k); setToast(null); }} className="rounded-full px-3 py-1.5 text-[12px] font-extrabold transition"
+                  style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 4px 12px -3px rgba(47,107,216,.6)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
+                  🎒 {k}
+                </button>
+              );
+            })}
+          </div>
+          {chosenByDate.size === 0
+            ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{activeKid} hasn’t got any meals yet — book one from the Menu tab, or add meals when you book.</Card>
+            : (
             <>
-              <div className="mb-2 text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{tab}</b> — {chosenCount} meal{chosenCount === 1 ? "" : "s"}</div>
+              <div className="mb-2 text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{activeKid}</b> — {chosenCount} meal{chosenCount === 1 ? "" : "s"}</div>
               <div className="flex flex-col gap-3">
                 {chosenWeeks.map((w, wi) => {
                   const [c1, c2] = WEEK_PAL[wi % WEEK_PAL.length];
@@ -259,7 +276,8 @@ export function ParentMealsApp() {
                 })}
               </div>
             </>
-          )
+          )}
+        </>
       ) : served.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for listings your provider offers meals on.</Card>
       ) : (
