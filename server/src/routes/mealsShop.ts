@@ -2,7 +2,8 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
-import { toMinutes, ukNow } from "../lib/scheduler";
+import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
+import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
 
 // Meal ordering (parent-facing meals shop). Operators publish a menu of
 // orderable meals (name + price); a parent who's booked with that provider
@@ -124,7 +125,10 @@ function operatorScope(req: Request, res: Response): string | null {
 mealOrders.get("/report", async (req, res) => {
   const tenantId = operatorScope(req, res);
   if (!tenantId) return;
-  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const [snap, orderSnap] = await Promise.all([
+    db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    ordersCol.where("tenantId", "==", tenantId).get(),
+  ]);
   const listingIds = new Set<string>();
   const rows: { listingId: string | null; date: string; child: string; dish: string; price: number }[] = [];
   for (const d of snap.docs) {
@@ -132,6 +136,14 @@ mealOrders.get("/report", async (req, res) => {
     if (b.status === "Cancelled") continue;
     for (const it of (b.mealItems ?? [])) rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price) });
     if (b.listingId) listingIds.add(b.listingId);
+  }
+  // Meals ordered later from the parent Meals area (the mealOrders collection)
+  // count towards the kitchen's numbers too — one row per unit, like above.
+  for (const d of orderSnap.docs) {
+    const o = d.data() as { status?: string; childName?: string; listingId?: string; date?: string; items?: { name: string; price: number; qty: number }[] };
+    if (o.status === "cancelled" || !o.date) continue;
+    for (const it of (o.items ?? [])) for (let q = 0; q < (it.qty ?? 1); q++) rows.push({ listingId: o.listingId ?? null, date: o.date, child: o.childName ?? "—", dish: it.name, price: round2(it.price) });
+    if (o.listingId) listingIds.add(o.listingId);
   }
   const ids = [...listingIds];
   const lsnaps = ids.length ? await db.getAll(...ids.map((id) => db.collection("listings").doc(id))) : [];
@@ -198,36 +210,11 @@ mealOrders.post("/", async (req, res) => {
     }
   }
 
-  // Settings → Meals: ordering can be switched off entirely, and the order
-  // cut-off (hours before the day's first session) is enforced here — the
-  // kitchen needs final numbers in time.
-  {
-    const lib = await db.collection("libraries").doc(input.tenantId).get();
-    const meals = ((lib.data()?.settings as { meals?: { ordering?: boolean; orderCutoffHours?: number } } | undefined)?.meals ?? {});
-    if (meals.ordering === false) { res.status(403).json({ error: "This provider isn't taking meal orders at the moment" }); return; }
-    const cutoffHours = Number(meals.orderCutoffHours ?? 18);
-    if (cutoffHours > 0 && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
-      // The day's earliest session start (09:00 when no block runs that day).
-      // Single-field query only — tenantId== plus an endDate range would need
-      // a composite index; a tenant's block list is small enough to filter here.
-      const blocks = await db.collection("blocks").where("tenantId", "==", input.tenantId).get();
-      let earliest: number | null = null;
-      for (const b of blocks.docs) {
-        for (const s of ((b.data() as { sessions?: { date: string; start: string }[] }).sessions ?? [])) {
-          if (s.date !== input.date) continue;
-          const m = toMinutes(s.start);
-          if (m !== null && (earliest === null || m < earliest)) earliest = m;
-        }
-      }
-      const { date: today, minutes: now } = ukNow();
-      const nowAbs = Date.parse(`${today}T00:00:00Z`) + now * 60_000;
-      const startAbs = Date.parse(`${input.date}T00:00:00Z`) + (earliest ?? 9 * 60) * 60_000;
-      if (nowAbs > startAbs - cutoffHours * 3_600_000) {
-        res.status(409).json({ error: `Meal ordering for that day has closed — orders need to be in ${cutoffHours} hours before the session` });
-        return;
-      }
-    }
-  }
+  // Settings → Meals: ordering can be switched off entirely, and a central
+  // cut-off default is set here.
+  const lib = await db.collection("libraries").doc(input.tenantId).get();
+  const mealsSettings = ((lib.data()?.settings as { meals?: { ordering?: boolean; cutoffWhen?: string; cutoffTime?: string } } | undefined)?.meals ?? {});
+  if (mealsSettings.ordering === false) { res.status(403).json({ error: "This provider isn't taking meal orders at the moment" }); return; }
 
   // Resolve every line from the server — the client never sends a price.
   type OrderLine = { name: string; price: number; qty: number; lineTotal: number; optionId?: string; menuItemId?: string; allergens?: string[] };
@@ -243,11 +230,20 @@ mealOrders.post("/", async (req, res) => {
     if (!listingSnap.exists || listing!.tenantId !== input.tenantId || !listing!.mealsEnabled) {
       res.status(400).json({ error: "That listing isn't offering meals" }); return;
     }
-    const menuId = (listing!.mealPlan as Record<string, string> | undefined)?.[input.date];
-    if (!menuId) { res.status(400).json({ error: "There's no menu set for that day" }); return; }
-    const menuSnap = await db.collection("mealMenus").doc(menuId).get();
+    // The ordering window: the listing's own cut-off, else the tenant default.
+    // The kitchen needs final numbers by then, so a closed day is refused.
+    const cut = resolveCutoff(listing!.mealConfig as { cutoffWhen?: unknown; cutoffTime?: unknown } | undefined, mealsSettings);
+    if (!canOrderMeal(cut.when, cut.time, input.date)) {
+      res.status(409).json({ error: `Meal ordering for that day has closed — ${cutoffLabel(cut.when, cut.time).toLowerCase()}.` });
+      return;
+    }
+    const plan = mealDayPlan((listing!.mealPlan as Record<string, unknown> | undefined)?.[input.date]);
+    if (!plan) { res.status(400).json({ error: "There's no menu set for that day" }); return; }
+    const menuSnap = await db.collection("mealMenus").doc(plan.menuId).get();
     if (!menuSnap.exists || menuSnap.data()!.tenantId !== input.tenantId) { res.status(400).json({ error: "That day's menu is unavailable — refresh" }); return; }
-    const byId = new Map(((menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]).map((it) => [it.id, it]));
+    // Only the dishes scheduled for that day are orderable (a menu subset).
+    const dayItems = dishesForDay(plan, (menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]) as { id: string; name: string; price: number; allergens?: string[] }[];
+    const byId = new Map(dayItems.map((it) => [it.id, it]));
     for (const i of input.items) {
       if (!("menuItemId" in i)) { res.status(400).json({ error: "Mixed order types aren't supported" }); return; }
       const it = byId.get(i.menuItemId);

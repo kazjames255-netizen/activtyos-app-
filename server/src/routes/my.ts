@@ -8,6 +8,7 @@ import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
+import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
 import { money } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -285,7 +286,7 @@ my.get("/meal-days", async (req, res) => {
   // Provider display names + the "what's being served" share rule, per tenant.
   const tenantIds = [...new Set([...listings.values()].map((l) => l.tenantId as string).filter(Boolean))];
   const libs = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("libraries").doc(id))) : [];
-  const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string } } } | undefined)?.settings ?? {}]));
+  const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string; cutoffWhen?: string; cutoffTime?: string } } } | undefined)?.settings ?? {}]));
   const nameByTenant = new Map([...settingsByTenant].map(([id, s]) => [id, (s.providerName ?? "").trim()]));
 
   // Days the family has bought a meal for (meals are added at checkout and ride
@@ -294,7 +295,7 @@ my.get("/meal-days", async (req, res) => {
   const paidKeys = new Set(bookings.flatMap((b) => (b.mealDates ?? []).map((dt) => `${b.listingId}__${dt}`)));
 
   // Merge siblings on the same (listing,date) into one entry.
-  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean }>();
+  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string }>();
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
     if (!l || l.archived || !l.mealsEnabled || !l.mealPlan) continue; // active listings with a menu only
@@ -302,7 +303,10 @@ my.get("/meal-days", async (req, res) => {
     const dayPlan = (dt: string) => { const p = mealDayPlan(plan[dt]); return p && menus.has(p.menuId) ? p : null; };
     const dates = (b.days && b.days.length ? b.days : Object.keys(plan)).filter((dt) => dayPlan(dt));
     const kids = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
-    const share = (settingsByTenant.get(l.tenantId as string)?.meals?.menuShare) === "paid" ? "paid" : "booked";
+    const tSettings = settingsByTenant.get(l.tenantId as string);
+    const share = (tSettings?.meals?.menuShare) === "paid" ? "paid" : "booked";
+    // Effective ordering window: the listing's own cut-off, else the tenant default.
+    const cut = resolveCutoff(l.mealConfig as { cutoffWhen?: unknown; cutoffTime?: unknown } | undefined, tSettings?.meals);
     for (const date of dates) {
       const key = `${b.listingId}__${date}`;
       let entry = byKey.get(key);
@@ -320,6 +324,8 @@ my.get("/meal-days", async (req, res) => {
           children: [],
           menu: { id: menu.id, name: menu.name, items },
           served: share === "booked" || paidKeys.has(key),
+          canOrder: canOrderMeal(cut.when, cut.time, date),
+          cutoffLabel: cutoffLabel(cut.when, cut.time),
         };
         byKey.set(key, entry);
       }
