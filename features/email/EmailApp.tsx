@@ -1719,13 +1719,10 @@ export function EmailApp() {
   useEffect(() => {
     if (!jumpMsg) return;
     const id = setTimeout(() => {
+      // scrollIntoView finds the real scroll container; the negative
+      // scroll-margin-top on the wrapper lands it ~5cm further into the box.
       const ed = msgRef.current?.querySelector('[contenteditable="true"]') as HTMLElement | null;
-      const target = ed ?? msgRef.current;
-      if (target) {
-        // Land ~5cm below the editor's top so the reply box sits well into view.
-        const y = target.getBoundingClientRect().top + window.scrollY + 180;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
+      msgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       ed?.focus({ preventScroll: true });
     }, 160);
     return () => clearTimeout(id);
@@ -2119,7 +2116,7 @@ export function EmailApp() {
         {!replyTo && <div className="-mx-4 my-3.5 flex items-center gap-2 border-y border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>2</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Your message</span></div>}
         {replyTo && <div className="mt-2" />}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
-        <div ref={msgRef} className="mt-2.5 scroll-mt-3">
+        <div ref={msgRef} className="mt-2.5 [scroll-margin-top:-150px]">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
