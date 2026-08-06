@@ -142,14 +142,17 @@ export function PlatformFeaturesApp() {
               const offCount = PAGES.filter(([v]) => !isOn(p.features, v)).length;
               return (
                 <div key={p.id} className="h-fit overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-                  <button type="button" onClick={() => toggleOpen(p.id)} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-white" style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
-                    <div className="min-w-0">
-                      <div className="truncate text-[14px] font-extrabold">{p.name}</div>
-                      <div className="text-[11px] capitalize text-white/80">{p.type}</div>
+                  <button type="button" onClick={() => toggleOpen(p.id)} className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left transition hover:bg-[var(--panel)]" style={open.has(p.id) ? { background: "var(--panel)" } : undefined}>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: p.type === "company" ? "#0ea5a5" : p.type === "franchise" ? "#7a5af8" : "#2f6bd8" }}>{(p.name.trim()[0] || "?").toUpperCase()}</span>
+                      <div className="min-w-0">
+                        <div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.name}</div>
+                        <div className="text-[11px] capitalize text-[var(--ink-3)]">{p.type}</div>
+                      </div>
                     </div>
-                    <span className="flex items-center gap-2">
-                      <span className="whitespace-nowrap rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold">{PAGES.length - offCount}/{PAGES.length} on</span>
-                      <span className={`text-[13px] transition-transform ${open.has(p.id) ? "rotate-180" : ""}`}>▾</span>
+                    <span className="flex flex-none items-center gap-2">
+                      <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={offCount === 0 ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "#fff3e0", color: "#96631a" }}>{PAGES.length - offCount}/{PAGES.length} on</span>
+                      <span className={`text-[12px] text-[var(--ink-3)] transition-transform ${open.has(p.id) ? "rotate-180" : ""}`}>▾</span>
                     </span>
                   </button>
                   {open.has(p.id) && (
