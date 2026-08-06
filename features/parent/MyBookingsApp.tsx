@@ -1234,7 +1234,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   }, [mealOrders, bookings]);
 
   useEffect(refresh, [refresh]);
-  useRealtime(["bookings"], refresh);
+  useRealtime(["bookings", "mealOrders"], refresh);
   // The family's children, coloured by gender for the per-child pill filter.
   useEffect(() => {
     apiGet<{ name: string; sex?: string }[]>("/api/my/children")

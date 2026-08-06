@@ -15,7 +15,7 @@ import { DIETS, dietMeta, type Diet } from "./diet";
 // listing's days. Meat and veg are just separate items on the same menu.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface MenuItem { id: string; name: string; price: number; allergens: string[]; description?: string; diet?: Diet }
+export interface MenuItem { id: string; name: string; price: number; allergens: string[]; description?: string; diet?: Diet; capacity?: number }
 export interface SavedMenu { id: string; name: string; items: MenuItem[] }
 
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e6)}`);
@@ -51,6 +51,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-[160px] flex-1"><FieldLabel>Meal</FieldLabel><Input value={it.name} onChange={(e) => upd(it.id, { name: e.target.value })} placeholder="Hot lunch — chicken" className="w-full" /></div>
               <div className="w-[92px]"><FieldLabel>Price (£)</FieldLabel><Input type="number" min="0" step="0.01" value={it.price} onChange={(e) => upd(it.id, { price: Number(e.target.value) })} className="w-full" /></div>
+              <div className="w-[92px]"><FieldLabel>Limit/day</FieldLabel><Input type="number" min="1" step="1" value={it.capacity ?? ""} placeholder="∞" onChange={(e) => upd(it.id, { capacity: e.target.value.trim() === "" ? undefined : Math.max(1, Math.round(Number(e.target.value))) })} className="w-full" /></div>
               <button type="button" onClick={() => setItems((xs) => (xs.length > 1 ? xs.filter((x) => x.id !== it.id) : xs))} className="pb-1.5 text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Remove meal">×</button>
             </div>
             <div className="mt-2"><Input value={it.description ?? ""} onChange={(e) => upd(it.id, { description: e.target.value })} placeholder="Description (optional) — e.g. served with salad" className="w-full" /></div>

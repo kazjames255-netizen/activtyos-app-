@@ -48,6 +48,14 @@ export function MenuSharing() {
           );
         })()}
       </div>
+
+      <div className="mt-6 border-t border-[var(--line)] pt-4">
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">Allergen disclaimer</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">A standard note shown to parents on the menu — e.g. cross-contamination. Per-dish allergens are set on each menu.</p>
+        <textarea value={settings.meals?.allergenNote ?? ""} onChange={(e) => save({ settings: { ...settings, meals: { ...settings.meals, allergenNote: e.target.value } } })}
+          rows={2} maxLength={300} placeholder="e.g. All meals are prepared in a kitchen that handles nuts, gluten and dairy — please speak to us about any allergy."
+          className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)]" />
+      </div>
     </div>
   );
 }

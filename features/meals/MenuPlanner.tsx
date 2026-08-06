@@ -383,6 +383,9 @@ export function MenuPlanner() {
                         const col = mi >= 0 ? MENU_PAL[mi % MENU_PAL.length] : null;
                         const has = !!(p && menu && col);
                         const served = p ? new Set(p.itemIds.length ? p.itemIds : (menu?.items.map((i) => i.id) ?? [])) : new Set<string>();
+                        // Nudge if a day's dishes are typed but none is veg/vegan.
+                        const servedItems = menu ? menu.items.filter((it) => served.has(it.id)) : [];
+                        const warnVeg = has && servedItems.some((it) => it.diet) && !servedItems.some((it) => it.diet === "veg" || it.diet === "vegan");
                         return (
                           <div key={iso}
                             onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
@@ -408,6 +411,7 @@ export function MenuPlanner() {
                                   </div>
                                 )
                             ) : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ tap to add</span>}
+                            {warnVeg && <span className="mt-1 text-[10px] font-bold text-[#c0392b]">⚠ no veg/vegan option</span>}
                           </div>
                         );
                       })}

@@ -14,17 +14,19 @@ import { fmtDate, mondayOf } from "@/features/listings/format";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface Row { listingId: string | null; listingName: string; date: string; child: string; dish: string; price: number }
+interface Missing { listingId: string; listingName: string; date: string; child: string }
 type View = "daily" | "weekly" | "total";
 
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function MealReport() {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [missing, setMissing] = useState<Missing[]>([]);
   const [listingId, setListingId] = useState("");
   const [kid, setKid] = useState("");
   const [view, setView] = useState<View>("daily");
 
-  const load = useCallback(() => { apiGet<Row[]>("/api/meal-orders/report").then(setRows).catch(() => setRows([])); }, []);
+  const load = useCallback(() => { apiGet<{ rows: Row[]; missing: Missing[] }>("/api/meal-orders/report").then((d) => { setRows(d.rows ?? []); setMissing(d.missing ?? []); }).catch(() => { setRows([]); setMissing([]); }); }, []);
   useEffect(() => { load(); }, [load]);
   useRealtime(["bookings"], load);
 
@@ -145,6 +147,28 @@ export function MealReport() {
       <div className="flex flex-col gap-2.5">
         {filtered.length === 0 ? emptyCard : view === "daily" ? daily() : view === "weekly" ? weekly() : total()}
       </div>
+      {(() => {
+        const miss = missing.filter((m) => (!listingId || m.listingId === listingId) && (!kid || m.child === kid));
+        if (miss.length === 0) return null;
+        const byDate = new Map<string, string[]>();
+        for (const m of miss) { const a = byDate.get(m.date) ?? []; a.push(m.child); byDate.set(m.date, a); }
+        return (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[#f2dcbb] bg-[#fffaf2]">
+            <div className="flex items-center gap-2 px-3.5 py-2 text-[13px] font-extrabold text-[#96631a]" style={{ background: "linear-gradient(120deg,#fff3e0,#fdecd2)" }}>
+              🕐 Not yet chosen <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{miss.length}</span>
+              <span className="ml-auto text-[10.5px] font-semibold text-[#96631a]/80">booked children with no meal on a meal day</span>
+            </div>
+            <div className="flex flex-col gap-1.5 p-3">
+              {[...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, kids]) => (
+                <div key={date} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[12px]">
+                  <span className="font-extrabold text-[#8a5300]">{fmtDay(date)}</span>
+                  <span className="text-[var(--ink-3)]">{[...kids].sort((a, b) => a.localeCompare(b)).join(", ")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
