@@ -46,6 +46,7 @@ export function ParentMealsApp() {
   const [busy, setBusy] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
     apiGet<MealDay[]>("/api/my/meal-days").then(setDays).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -87,7 +88,9 @@ export function ParentMealsApp() {
   }, [bookings, liveOrders]);
 
   // ── "What's on" data: the full menu, week by week ──
-  const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served]);
+  // Past days are dropped from the browse — the menu's only useful while you
+  // can still order (or at least the day hasn't gone).
+  const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { if (d.date < todayIso) continue; const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served, todayIso]);
   const menuWeeks = useMemo(() => groupWeeks([...byDate.keys()]), [byDate]);
 
   // ── Child tab data: only this child's meals (checkout + ordered here) ──
@@ -108,15 +111,27 @@ export function ParentMealsApp() {
   const chosenCount = [...chosenByDate.values()].reduce((s, a) => s + a.reduce((n, c) => n + c.qty, 0), 0);
 
   const pickId = (e: MealDay, it: MenuItem) => `${e.date}|${e.listingId}|${it.id}`;
-  const startPick = (e: MealDay, it: MenuItem) => { const id = pickId(e, it); setPickErr(null); if (picking === id) { setPicking(null); return; } setPicking(id); setPickKids([]); };
   const toggleKid = (k: string) => { setPickErr(null); setPickKids((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]); };
 
-  const addToBasket = (e: MealDay, it: MenuItem) => {
-    const add = pickKids.filter((k) => !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
-    if (!add.length) { setPickErr("Choose at least one child."); return; }
+  // Add a dish for a set of children (skipping any already booked/basketed).
+  const addMeal = (e: MealDay, it: MenuItem, chosen: string[]): string[] => {
+    const add = chosen.filter((k) => !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
+    if (!add.length) return [];
     setBasket((prev) => [...prev, ...add.map((child) => ({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }))]);
-    setPicking(null); setPickKids([]); setPayErr(null);
-    setToast(`Added ${it.name} for ${add.join(", ")} to your basket.`);
+    setPayErr(null); setToast(`Added ${it.name} for ${add.join(", ")} to your basket.`);
+    return add;
+  };
+
+  // "＋ Add": with one child, drop straight into the basket; with several,
+  // open the who-for picker.
+  const clickAdd = (e: MealDay, it: MenuItem, kids: string[]) => {
+    if (kids.length === 1) { addMeal(e, it, kids); return; }
+    const id = pickId(e, it); setPickErr(null); if (picking === id) { setPicking(null); return; } setPicking(id); setPickKids([]);
+  };
+  const addFromPicker = (e: MealDay, it: MenuItem) => {
+    if (!pickKids.length) { setPickErr("Choose at least one child."); return; }
+    if (!addMeal(e, it, pickKids).length) { setPickErr("Those children already have this meal."); return; }
+    setPicking(null); setPickKids([]);
   };
   const removeLine = (key: string) => setBasket((prev) => prev.filter((l) => lineKey(l) !== key));
   const basketTotal = basket.reduce((s, l) => s + l.price, 0);
@@ -249,7 +264,10 @@ export function ParentMealsApp() {
                                 </div>
                                 <div className="mt-1.5 flex flex-col gap-1.5">
                                   {e.menu.items.map((it) => {
-                                    const open = picking === pickId(e, it);
+                                    const solo = kids.length === 1 ? kids[0] : null;
+                                    const soloBooked = !!solo && orderedKey.has(`${e.date}|${solo}|${it.id}`);
+                                    const soloInBasket = !!solo && basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${solo}`);
+                                    const open = !solo && picking === pickId(e, it);
                                     return (
                                       <div key={it.id} className="overflow-hidden rounded-xl border bg-white transition"
                                         style={open ? { borderColor: "#a9caf7", boxShadow: "0 8px 22px -12px rgba(47,107,216,.5)" } : { borderColor: "var(--line)", boxShadow: "0 1px 2px rgba(16,42,110,.05)" }}>
@@ -263,13 +281,15 @@ export function ParentMealsApp() {
                                               <Allergens list={it.allergens} />
                                             </div>
                                           </div>
-                                          {canBook && (
-                                            <button type="button" onClick={() => startPick(e, it)}
+                                          {canBook && (soloBooked ? (
+                                            <span className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold" style={{ background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" }}>✓ Booked</span>
+                                          ) : (
+                                            <button type="button" onClick={() => soloInBasket ? removeLine(`${e.date}|${e.listingId}|${it.id}|${solo}`) : clickAdd(e, it, kids)}
                                               className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold transition active:scale-[.96]"
-                                              style={open ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
-                                              {open ? "✕ Close" : "＋ Add"}
+                                              style={(open || soloInBasket) ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
+                                              {soloInBasket ? "✓ Added" : open ? "✕ Close" : "＋ Add"}
                                             </button>
-                                          )}
+                                          ))}
                                         </div>
                                         {open && (
                                           <div className="border-t border-[#e6eefb] bg-gradient-to-b from-[#f4f8ff] to-white p-2.5">
@@ -289,7 +309,7 @@ export function ParentMealsApp() {
                                               })}
                                             </div>
                                             {pickErr && <div className="mt-1.5 text-[11px] font-semibold text-[var(--red,#e21d27)]">{pickErr}</div>}
-                                            <button type="button" disabled={!pickKids.length} onClick={() => addToBasket(e, it)}
+                                            <button type="button" disabled={!pickKids.length} onClick={() => addFromPicker(e, it)}
                                               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[12.5px] font-extrabold text-white transition active:scale-[.99] disabled:opacity-50"
                                               style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)", boxShadow: "0 6px 16px -5px rgba(14,154,90,.6)" }}>
                                               ＋ Add to basket{pickKids.length > 1 ? ` (${pickKids.length})` : ""}
