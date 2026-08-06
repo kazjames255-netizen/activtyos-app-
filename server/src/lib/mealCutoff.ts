@@ -50,6 +50,15 @@ export function canOrderMeal(when: CutoffWhen, time: string, date: string, now =
   return nowAbs < dl;
 }
 
+// True when the ordering deadline falls later today — drives an urgency nudge.
+export function closesToday(when: CutoffWhen, time: string, date: string, now = ukNow()): boolean {
+  const dl = deadlineMs(when, time, date);
+  if (dl === null) return false;
+  const dayStart = Date.parse(`${now.date}T00:00:00Z`);
+  const nowAbs = dayStart + now.minutes * 60_000;
+  return dl >= nowAbs && dl < dayStart + 24 * 60 * 60_000;
+}
+
 // A short human label for the ordering window, shown to parents.
 export function cutoffLabel(when: CutoffWhen, time: string): string {
   switch (when) {

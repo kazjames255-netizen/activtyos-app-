@@ -8,7 +8,7 @@ import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
-import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
+import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { money } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
@@ -295,7 +295,7 @@ my.get("/meal-days", async (req, res) => {
   const paidKeys = new Set(bookings.flatMap((b) => (b.mealDates ?? []).map((dt) => `${b.listingId}__${dt}`)));
 
   // Merge siblings on the same (listing,date) into one entry.
-  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string; allergenNote: string }>();
+  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string; closesToday: boolean; allergenNote: string }>();
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
     if (!l || l.archived || !l.mealsEnabled || !l.mealPlan) continue; // active listings with a menu only
@@ -326,6 +326,7 @@ my.get("/meal-days", async (req, res) => {
           served: share === "booked" || paidKeys.has(key),
           canOrder: canOrderMeal(cut.when, cut.time, date),
           cutoffLabel: cutoffLabel(cut.when, cut.time),
+          closesToday: closesToday(cut.when, cut.time, date),
           allergenNote: (tSettings?.meals?.allergenNote ?? "").trim(),
         };
         byKey.set(key, entry);
