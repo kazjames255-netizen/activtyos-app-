@@ -82,6 +82,15 @@ export function ParentMealsApp() {
   // Meals already booked (confirmed) here, per child, so a chip shows as done.
   const orderedKey = useMemo(() => new Set(liveOrders.flatMap((o) => (o.items ?? []).map((it) => `${o.date}|${o.childName}|${it.menuItemId ?? it.name}`))), [liveOrders]);
   const basketKeys = useMemo(() => new Set(basket.map(lineKey)), [basket]);
+  // A child gets ONE meal per day: this set marks (listing, date, child) that
+  // already has a meal — in the basket or booked — so a second dish is blocked.
+  const mealDayByChild = useMemo(() => {
+    const s = new Set<string>();
+    for (const l of basket) s.add(`${l.listingId}|${l.date}|${l.child}`);
+    for (const o of liveOrders) if (o.listingId) s.add(`${o.listingId}|${o.date}|${o.childName}`);
+    return s;
+  }, [basket, liveOrders]);
+  const hasMealThatDay = useCallback((listingId: string, date: string, child: string) => mealDayByChild.has(`${listingId}|${date}|${child}`), [mealDayByChild]);
 
   // A tab per child who has a meal (chosen at checkout OR ordered here).
   const kidsWithMeals = useMemo(() => {
@@ -123,7 +132,8 @@ export function ParentMealsApp() {
 
   // Add a dish for a set of children (skipping any already booked/basketed).
   const addMeal = (e: MealDay, it: MenuItem, chosen: string[]): string[] => {
-    const add = chosen.filter((k) => !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
+    // One meal per child per day — skip anyone who already has a meal that day.
+    const add = chosen.filter((k) => !hasMealThatDay(e.listingId, e.date, k) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
     if (!add.length) return [];
     setBasket((prev) => [...prev, ...add.map((child) => ({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }))]);
     setLastAdded(add.map((child) => `${e.date}|${e.listingId}|${it.id}|${child}`));
@@ -134,7 +144,7 @@ export function ParentMealsApp() {
   // "＋ Add": with one child, drop straight into the basket; with several,
   // open the who-for picker.
   const clickAdd = (e: MealDay, it: MenuItem, kids: string[]) => {
-    if (kids.length === 1) { addMeal(e, it, kids); return; }
+    if (kids.length === 1) { if (!addMeal(e, it, kids).length) setToast(`${kids[0]} already has a meal that day — remove it first to change.`); return; }
     const id = pickId(e, it); setPickErr(null); if (picking === id) { setPicking(null); return; } setPicking(id); setPickKids([]);
   };
   const addFromPicker = (e: MealDay, it: MenuItem) => {
@@ -152,16 +162,18 @@ export function ParentMealsApp() {
   // day, skipping any already booked or in the basket.
   const bulkAdd = (diet: Diet) => {
     const meta = dietMeta(diet)!;
-    const seen = new Set(basketKeys);
+    // Seed with days each child already has a meal (basket or booked) so quick-
+    // fill never gives anyone a second meal on a day.
+    const seenDay = new Set(mealDayByChild);
     const lines: BasketLine[] = [];
     for (const entries of byDate.values()) for (const e of entries) {
       if (!e.canOrder) continue;
       const dish = e.menu.items.find((it) => it.diet === diet);
       if (!dish) continue;
       for (const child of kidsFor(e.listingId)) {
-        const k = `${e.date}|${e.listingId}|${dish.id}|${child}`;
-        if (seen.has(k) || orderedKey.has(`${e.date}|${child}|${dish.id}`)) continue;
-        seen.add(k);
+        const dayKey = `${e.listingId}|${e.date}|${child}`;
+        if (seenDay.has(dayKey)) continue;
+        seenDay.add(dayKey);
         lines.push({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: dish.id, name: dish.name, price: dish.price, child });
       }
     }
@@ -334,14 +346,19 @@ export function ParentMealsApp() {
                                 <div className="mt-1.5 flex flex-col gap-1.5">
                                   {e.menu.items.map((it) => {
                                     const solo = kids.length === 1 ? kids[0] : null;
-                                    const soloBooked = !!solo && orderedKey.has(`${e.date}|${solo}|${it.id}`);
-                                    const soloInBasket = !!solo && basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${solo}`);
+                                    const bookedKids = kids.filter((k) => orderedKey.has(`${e.date}|${k}|${it.id}`));
+                                    const basketKids = kids.filter((k) => basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`));
+                                    const chosenN = bookedKids.length + basketKids.length;
+                                    const allChosen = kids.length > 0 && chosenN >= kids.length;
+                                    const soloBooked = !!solo && bookedKids.length > 0;
+                                    const soloInBasket = !!solo && basketKids.length > 0;
                                     const open = !solo && picking === pickId(e, it);
+                                    const grn = "linear-gradient(135deg,#22c07a,#0e9a5a)";
                                     return (
-                                      <div key={it.id} className="overflow-hidden rounded-xl border bg-white transition"
-                                        style={open ? { borderColor: "#a9caf7", boxShadow: "0 8px 22px -12px rgba(47,107,216,.5)" } : { borderColor: "var(--line)", boxShadow: "0 1px 2px rgba(16,42,110,.05)" }}>
-                                        <div className="flex items-start gap-2 p-2.5">
-                                          <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px]" style={{ background: `${d1}14` }}>🍴</span>
+                                      <div key={it.id} className="overflow-hidden rounded-xl border transition"
+                                        style={open ? { borderColor: "#a9caf7", background: "#fff", boxShadow: "0 8px 22px -12px rgba(47,107,216,.5)" } : allChosen ? { borderColor: "#b6e4cd", background: "#f3fbf6", boxShadow: "0 1px 2px rgba(16,42,110,.05)" } : { borderColor: "var(--line)", background: "#fff", boxShadow: "0 1px 2px rgba(16,42,110,.05)" }}>
+                                        <div className="flex items-start gap-2.5 p-2.5">
+                                          <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[15px]" style={allChosen ? { background: grn, color: "#fff" } : { background: `${d1}14` }}>{allChosen ? "✓" : "🍴"}</span>
                                           <div className="min-w-0 flex-1">
                                             <div className="text-[13px] font-extrabold leading-tight text-[var(--ink)]">{it.name}</div>
                                             {it.description && <div className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
@@ -352,21 +369,33 @@ export function ParentMealsApp() {
                                             </div>
                                           </div>
                                           {canBook && (soloBooked ? (
-                                            <span className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold" style={{ background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" }}>✓ Booked</span>
-                                          ) : (
+                                            <span className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold text-white" style={{ background: grn }}>✓ Booked</span>
+                                          ) : solo ? (
                                             <button type="button" onClick={() => soloInBasket ? removeLine(`${e.date}|${e.listingId}|${it.id}|${solo}`) : clickAdd(e, it, kids)}
+                                              className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold text-white transition active:scale-[.96]"
+                                              style={soloInBasket ? { background: grn } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
+                                              {soloInBasket ? "✓ Added" : "＋ Add"}
+                                            </button>
+                                          ) : (
+                                            <button type="button" onClick={() => clickAdd(e, it, kids)}
                                               className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold transition active:scale-[.96]"
-                                              style={(open || soloInBasket) ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
-                                              {soloInBasket ? "✓ Added" : open ? "✕ Close" : "＋ Add"}
+                                              style={open ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : allChosen ? { background: grn, color: "#fff" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
+                                              {open ? "✕ Close" : allChosen ? "✓ All set" : chosenN > 0 ? "＋ Add more" : "＋ Add"}
                                             </button>
                                           ))}
                                         </div>
+                                        {!solo && chosenN > 0 && (
+                                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t px-3 py-1.5 text-[11px] font-semibold" style={{ borderColor: allChosen ? "#cdeede" : "var(--line)", background: allChosen ? "#eafaf1" : "#f7fbf8" }}>
+                                            {basketKids.length > 0 && <span className="text-[#0e7a45]">🧺 In basket: {basketKids.join(", ")}</span>}
+                                            {bookedKids.length > 0 && <span className="text-[#12306e]">✓ Booked: {bookedKids.join(", ")}</span>}
+                                          </div>
+                                        )}
                                         {open && (
                                           <div className="border-t border-[#e6eefb] bg-gradient-to-b from-[#f4f8ff] to-white p-2.5">
                                             <div className="mb-1.5 text-[11px] font-bold text-[#12306e]">Who’s this meal for? <span className="font-semibold text-[var(--ink-3)]">Pick one or more.</span></div>
                                             <div className="flex flex-wrap gap-1.5">
                                               {(() => {
-                                                const selectable = kids.filter((k) => !orderedKey.has(`${e.date}|${k}|${it.id}`) && !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`));
+                                                const selectable = kids.filter((k) => !hasMealThatDay(e.listingId, e.date, k) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
                                                 if (selectable.length < 2) return null;
                                                 const allSel = selectable.every((k) => pickKids.includes(k));
                                                 return (
@@ -380,12 +409,13 @@ export function ParentMealsApp() {
                                               {kids.map((k) => {
                                                 const done = orderedKey.has(`${e.date}|${k}|${it.id}`);
                                                 const inBasket = basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`);
+                                                const otherMeal = !done && !inBasket && hasMealThatDay(e.listingId, e.date, k);
                                                 const sel = pickKids.includes(k);
                                                 return (
-                                                  <button key={k} type="button" disabled={done || inBasket} onClick={() => toggleKid(k)}
+                                                  <button key={k} type="button" disabled={done || inBasket || otherMeal} onClick={() => toggleKid(k)}
                                                     className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition disabled:cursor-not-allowed"
-                                                    style={done ? { background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" } : inBasket ? { background: "#fff6e9", color: "#96631a", border: "1px solid #f2dcbb" } : sel ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(47,107,216,.55)" } : { background: "#fff", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                                                    {done ? `✓ ${k} · booked` : inBasket ? `🧺 ${k} · in basket` : `${sel ? "✓" : "🎒"} ${k}`}
+                                                    style={done ? { background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" } : inBasket ? { background: "#fff6e9", color: "#96631a", border: "1px solid #f2dcbb" } : otherMeal ? { background: "var(--panel)", color: "var(--ink-3)", border: "1px solid var(--line)", opacity: 0.7 } : sel ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(47,107,216,.55)" } : { background: "#fff", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
+                                                    {done ? `✓ ${k} · booked` : inBasket ? `🧺 ${k} · in basket` : otherMeal ? `${k} · has a meal` : `${sel ? "✓" : "🎒"} ${k}`}
                                                   </button>
                                                 );
                                               })}
