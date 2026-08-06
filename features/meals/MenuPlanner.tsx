@@ -358,7 +358,24 @@ export function MenuPlanner() {
                 <button type="button" onClick={saveNow} className="rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ Save</button>
               </div>
             </div>
-            <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">You set the pattern on the Menu slide — here you can tweak a single day: tap its dish chips, tap an empty day to add {brushMenu ? <b>{brushMenu.name}</b> : <>the <button type="button" onClick={() => setTab("menu")} className="font-bold text-[#2f6bd8] underline">picked menu</button></>}, or erase.</p>
+            <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">Pick a menu below, then tap the days to add it (tap again on a day’s dish chips to fine-tune, or erase).</p>
+            {/* Pick which menu you're adding — the "brush" — right here. */}
+            <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Adding:</span>
+              {(menus ?? []).length === 0
+                ? <button type="button" onClick={() => setTab("saved")} className="text-[12px] font-bold text-[#2f6bd8] underline">Create a menu first</button>
+                : (menus ?? []).map((m, mi) => {
+                    const on = !erase && brushMenuId === m.id;
+                    const c = MENU_PAL[mi % MENU_PAL.length][0];
+                    return (
+                      <button key={m.id} type="button" onClick={() => { setErase(false); setBrushMenuId(brushMenuId === m.id ? null : m.id); }}
+                        className="rounded-full border px-3 py-1.5 text-[12px] font-extrabold transition" style={on ? { borderColor: "transparent", background: c, color: "#fff", boxShadow: `0 4px 12px -3px ${c}` } : { borderColor: "var(--line)", color: "var(--ink-2)", background: "#fff" }}>
+                        {on ? "✓ " : ""}{m.name}
+                      </button>
+                    );
+                  })}
+              {!brushMenuId && !erase && (menus ?? []).length > 0 && <span className="text-[11px] font-semibold text-[#c0392b]">← tap a menu, then tap the days</span>}
+            </div>
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
               <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? "✓ Erasing" : "Erase a day"}</button>
               <button type="button" onClick={clearAll} className="text-[12px] font-bold text-[var(--red,#e21d27)] underline">Clear all</button>
