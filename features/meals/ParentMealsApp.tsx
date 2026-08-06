@@ -29,6 +29,8 @@ const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0
 const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
 const lineKey = (l: { date: string; listingId: string; dishId: string; child: string }) => `${l.date}|${l.listingId}|${l.dishId}|${l.child}`;
 const GRN = "linear-gradient(135deg,#22c07a,#0e9a5a)";
+const AV_PAL = ["#2f6bd8", "#0ea5a5", "#7a5af8", "#e2559a", "#e8862a", "#16a34a", "#3f78d8", "#c0398b"];
+const avatarOf = (name: string) => { const s = [...name].reduce((a, c) => a + c.charCodeAt(0), 0); return { c: AV_PAL[s % AV_PAL.length], i: (name.trim()[0] || "?").toUpperCase() }; };
 
 const ALLERGEN_SYN: Record<string, string[]> = {
   milk: ["milk", "dairy", "lactose", "cheese"], gluten: ["gluten", "wheat", "bread", "coeliac", "celiac"], eggs: ["egg"], fish: ["fish"],
@@ -370,16 +372,16 @@ export function ParentMealsApp() {
             )}
             <div className="overflow-x-auto">
               <div style={{ minWidth: 140 + week.days.length * 160 }}>
-                {/* Header row */}
-                <div className="grid border-b border-[var(--line)] bg-[var(--panel)]" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))` }}>
-                  <div className="sticky left-0 z-10 bg-[var(--panel)] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Child</div>
+                {/* Header row — blue gradient */}
+                <div className="grid text-white" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
+                  <div className="sticky left-0 z-10 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white/90" style={{ background: weekPal[0] }}>Child</div>
                   {week.days.map((iso) => {
                     const anyClose = (byDate.get(iso) ?? []).some((e) => e.closesToday);
                     const anyOpen = (byDate.get(iso) ?? []).some((e) => e.canOrder);
                     return (
-                      <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2">
-                        <div className="text-[12px] font-extrabold" style={{ color: weekPal[0] }}>{fmtDay(iso)}</div>
-                        <div className="text-[9.5px] font-semibold" style={{ color: anyClose ? "#c0392b" : anyOpen ? "var(--ink-3)" : "var(--ink-3)" }}>{anyClose ? "closes today" : anyOpen ? "open" : "closed"}</div>
+                      <div key={iso} className="px-2.5 py-2.5" style={{ boxShadow: "inset 1px 0 0 rgba(255,255,255,.18)" }}>
+                        <div className="text-[12.5px] font-extrabold">{fmtDay(iso)}</div>
+                        <div className="text-[9.5px] font-bold uppercase tracking-[0.03em]" style={{ color: anyClose ? "#ffe0e0" : "rgba(255,255,255,.8)" }}>{anyClose ? "closes today" : anyOpen ? "open" : "closed"}</div>
                       </div>
                     );
                   })}
@@ -387,8 +389,9 @@ export function ParentMealsApp() {
                 {/* Child rows */}
                 {weekKids.map((child, ri) => (
                   <div key={child} className="grid border-b border-[var(--line)] last:border-0" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: ri % 2 ? "var(--surface)" : "#fff" }}>
-                    <div className="sticky left-0 z-10 flex items-center gap-1.5 px-3 py-2.5 text-[12.5px] font-extrabold text-[var(--ink)]" style={{ background: ri % 2 ? "var(--surface)" : "#fff" }}>
-                      🎒 <span className="truncate">{child}</span>
+                    <div className="sticky left-0 z-10 flex items-center gap-2 px-3 py-2.5 text-[12.5px] font-extrabold text-[var(--ink)]" style={{ background: ri % 2 ? "var(--surface)" : "#fff" }}>
+                      {(() => { const a = avatarOf(child); return <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] font-extrabold text-white" style={{ background: a.c }}>{a.i}</span>; })()}
+                      <span className="truncate">{child}</span>
                     </div>
                     {week.days.map((iso) => {
                       const e = entryFor(child, iso);
