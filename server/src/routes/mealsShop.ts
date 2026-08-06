@@ -129,13 +129,19 @@ mealOrders.get("/report", async (req, res) => {
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     ordersCol.where("tenantId", "==", tenantId).get(),
   ]);
-  const listingIds = new Set<string>();
+  const allListingIds = new Set<string>();
   const rows: { listingId: string | null; date: string; child: string; dish: string; price: number }[] = [];
+  const chosen = new Set<string>(); // `${listingId}|${date}|${childLc}` that has a meal
+  const bkInfo: { listingId: string; days: string[]; roster: string[] }[] = [];
   for (const d of snap.docs) {
-    const b = d.data() as { status?: string; child?: string; listingId?: string; mealItems?: { date: string; name: string; price: number }[] };
+    const b = d.data() as { status?: string; child?: string; listingId?: string; kids?: { name?: string }[]; days?: string[]; mealItems?: { date: string; name: string; price: number }[] };
     if (b.status === "Cancelled") continue;
-    for (const it of (b.mealItems ?? [])) rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price) });
-    if (b.listingId) listingIds.add(b.listingId);
+    const roster = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
+    if (b.listingId) { allListingIds.add(b.listingId); bkInfo.push({ listingId: b.listingId, days: b.days ?? [], roster }); }
+    for (const it of (b.mealItems ?? [])) {
+      rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price) });
+      for (const c of roster) chosen.add(`${b.listingId}|${it.date}|${c.toLowerCase()}`);
+    }
   }
   // Meals ordered later from the parent Meals area (the mealOrders collection)
   // count towards the kitchen's numbers too — one row per unit, like above.
@@ -143,12 +149,31 @@ mealOrders.get("/report", async (req, res) => {
     const o = d.data() as { status?: string; childName?: string; listingId?: string; date?: string; items?: { name: string; price: number; qty: number }[] };
     if (o.status === "cancelled" || !o.date) continue;
     for (const it of (o.items ?? [])) for (let q = 0; q < (it.qty ?? 1); q++) rows.push({ listingId: o.listingId ?? null, date: o.date, child: o.childName ?? "—", dish: it.name, price: round2(it.price) });
-    if (o.listingId) listingIds.add(o.listingId);
+    if (o.listingId) { allListingIds.add(o.listingId); chosen.add(`${o.listingId}|${o.date}|${(o.childName ?? "").toLowerCase()}`); }
   }
-  const ids = [...listingIds];
+  const ids = [...allListingIds];
   const lsnaps = ids.length ? await db.getAll(...ids.map((id) => db.collection("listings").doc(id))) : [];
-  const lname = new Map(lsnaps.filter((s) => s.exists).map((s) => [s.id, (s.data()!.title as string) || (s.data()!.name as string) || "Listing"]));
-  res.json(rows.map((r) => ({ ...r, listingName: r.listingId ? (lname.get(r.listingId) ?? "Listing") : "—" })));
+  const lmeta = new Map(lsnaps.filter((s) => s.exists).map((s) => { const x = s.data()!; return [s.id, { name: (x.title as string) || (x.name as string) || "Listing", mealsEnabled: !!x.mealsEnabled, archived: !!x.archived, plan: (x.mealPlan ?? null) as Record<string, unknown> | null }]; }));
+  const lname = (id: string) => lmeta.get(id)?.name ?? "Listing";
+
+  // Booked children with no meal on a day the listing offers one — the kitchen's
+  // "still to choose" list, for chasing families and final numbers.
+  const missing: { listingId: string; listingName: string; date: string; child: string }[] = [];
+  const seenMiss = new Set<string>();
+  for (const bk of bkInfo) {
+    const m = lmeta.get(bk.listingId);
+    if (!m || !m.mealsEnabled || m.archived || !m.plan) continue;
+    for (const date of bk.days) {
+      if (!mealDayPlan(m.plan[date])) continue; // no menu that day
+      for (const c of bk.roster) {
+        const key = `${bk.listingId}|${date}|${c.toLowerCase()}`;
+        if (chosen.has(key) || seenMiss.has(key)) continue;
+        seenMiss.add(key);
+        missing.push({ listingId: bk.listingId, listingName: lname(bk.listingId), date, child: c });
+      }
+    }
+  }
+  res.json({ rows: rows.map((r) => ({ ...r, listingName: r.listingId ? lname(r.listingId) : "—" })), missing });
 });
 
 // GET /api/meal-orders — parent: own orders; operator: the tenant's (?date=).
@@ -219,6 +244,7 @@ mealOrders.post("/", async (req, res) => {
   // Resolve every line from the server — the client never sends a price.
   type OrderLine = { name: string; price: number; qty: number; lineTotal: number; optionId?: string; menuItemId?: string; allergens?: string[] };
   const items: OrderLine[] = [];
+  const dishCap = new Map<string, number>(); // menuItemId → daily portion cap, if set
   const usesMenu = input.items.some((i) => "menuItemId" in i);
   if (usesMenu) {
     // Ordering from a listing's scheduled day-menu (the planner). The listing
@@ -242,13 +268,14 @@ mealOrders.post("/", async (req, res) => {
     const menuSnap = await db.collection("mealMenus").doc(plan.menuId).get();
     if (!menuSnap.exists || menuSnap.data()!.tenantId !== input.tenantId) { res.status(400).json({ error: "That day's menu is unavailable — refresh" }); return; }
     // Only the dishes scheduled for that day are orderable (a menu subset).
-    const dayItems = dishesForDay(plan, (menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[] }[]) as { id: string; name: string; price: number; allergens?: string[] }[];
+    const dayItems = dishesForDay(plan, (menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[]; capacity?: number }[]) as { id: string; name: string; price: number; allergens?: string[]; capacity?: number }[];
     const byId = new Map(dayItems.map((it) => [it.id, it]));
     for (const i of input.items) {
       if (!("menuItemId" in i)) { res.status(400).json({ error: "Mixed order types aren't supported" }); return; }
       const it = byId.get(i.menuItemId);
       if (!it) { res.status(400).json({ error: "One of the meals isn't on that day's menu any more — refresh" }); return; }
       const price = round2(it.price);
+      if (it.capacity) dishCap.set(i.menuItemId, it.capacity);
       items.push({ menuItemId: i.menuItemId, name: it.name, price, qty: i.qty, lineTotal: round2(price * i.qty), ...(it.allergens?.length ? { allergens: it.allergens } : {}) });
     }
   } else {
@@ -268,6 +295,56 @@ mealOrders.post("/", async (req, res) => {
   }
   const total = round2(items.reduce((s, x) => s + x.lineTotal, 0));
   if (total <= 0) { res.status(400).json({ error: "Nothing to order" }); return; }
+
+  // One meal per child per day. Count what this child already has for this
+  // (listing, date) — earlier meal orders + a meal bought at checkout — and
+  // refuse a second. (Only for listing-menu orders, which carry a date+listing.)
+  if (input.listingId && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+    const childLc = input.childName.trim().toLowerCase();
+    const [mineByDate, myBookings] = await Promise.all([
+      ordersCol.where("parentEmail", "==", email.toLowerCase()).where("date", "==", input.date).get(),
+      db.collection("bookings").where("tenantId", "==", input.tenantId).where("email", "==", email.toLowerCase()).get(),
+    ]);
+    let already = 0;
+    for (const d of mineByDate.docs) {
+      const o = d.data() as { status?: string; listingId?: string; childName?: string; items?: { qty?: number }[] };
+      if (o.status === "cancelled" || o.listingId !== input.listingId || (o.childName ?? "").trim().toLowerCase() !== childLc) continue;
+      already += (o.items ?? []).reduce((s, it) => s + (it.qty ?? 1), 0);
+    }
+    for (const d of myBookings.docs) {
+      const b = d.data() as { status?: string; listingId?: string; child?: string; kids?: { name?: string }[]; mealDates?: string[] };
+      if (b.status === "Cancelled" || b.listingId !== input.listingId || !(b.mealDates ?? []).includes(input.date)) continue;
+      const roster = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter(Boolean).map((n) => n!.trim().toLowerCase());
+      if (roster.includes(childLc)) already += 1;
+    }
+    const adding = items.reduce((s, x) => s + x.qty, 0);
+    if (already + adding > 1) { res.status(409).json({ error: `${input.childName} already has a meal booked for that day.` }); return; }
+  }
+
+  // Per-dish daily capacity (if the provider capped it): count everyone's
+  // orders + checkout meals for that dish on that day, refuse if it'd overflow.
+  if (dishCap.size && input.listingId && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+    const [ordersDay, allBookings] = await Promise.all([
+      ordersCol.where("tenantId", "==", input.tenantId).where("date", "==", input.date).get(),
+      db.collection("bookings").where("tenantId", "==", input.tenantId).get(),
+    ]);
+    for (const line of items) {
+      const cap = line.menuItemId ? dishCap.get(line.menuItemId) : undefined;
+      if (!cap) continue;
+      let taken = 0;
+      for (const d of ordersDay.docs) {
+        const o = d.data() as { status?: string; listingId?: string; items?: { menuItemId?: string; qty?: number }[] };
+        if (o.status === "cancelled" || o.listingId !== input.listingId) continue;
+        for (const it of (o.items ?? [])) if (it.menuItemId === line.menuItemId) taken += it.qty ?? 1;
+      }
+      for (const d of allBookings.docs) {
+        const b = d.data() as { status?: string; listingId?: string; mealItems?: { date: string; name: string }[] };
+        if (b.status === "Cancelled" || b.listingId !== input.listingId) continue;
+        for (const it of (b.mealItems ?? [])) if (it.date === input.date && it.name === line.name) taken += 1;
+      }
+      if (taken + line.qty > cap) { res.status(409).json({ error: `Sorry — “${line.name}” is fully booked for that day.` }); return; }
+    }
+  }
 
   const doc = {
     tenantId: input.tenantId,

@@ -286,7 +286,7 @@ my.get("/meal-days", async (req, res) => {
   // Provider display names + the "what's being served" share rule, per tenant.
   const tenantIds = [...new Set([...listings.values()].map((l) => l.tenantId as string).filter(Boolean))];
   const libs = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("libraries").doc(id))) : [];
-  const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string; cutoffWhen?: string; cutoffTime?: string } } } | undefined)?.settings ?? {}]));
+  const settingsByTenant = new Map(libs.map((l) => [l.id, (l.data() as { settings?: { providerName?: string; meals?: { menuShare?: string; cutoffWhen?: string; cutoffTime?: string; allergenNote?: string } } } | undefined)?.settings ?? {}]));
   const nameByTenant = new Map([...settingsByTenant].map(([id, s]) => [id, (s.providerName ?? "").trim()]));
 
   // Days the family has bought a meal for (meals are added at checkout and ride
@@ -295,7 +295,7 @@ my.get("/meal-days", async (req, res) => {
   const paidKeys = new Set(bookings.flatMap((b) => (b.mealDates ?? []).map((dt) => `${b.listingId}__${dt}`)));
 
   // Merge siblings on the same (listing,date) into one entry.
-  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string }>();
+  const byKey = new Map<string, { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: unknown[] }; served: boolean; canOrder: boolean; cutoffLabel: string; allergenNote: string }>();
   for (const b of bookings) {
     const l = listings.get(b.listingId!);
     if (!l || l.archived || !l.mealsEnabled || !l.mealPlan) continue; // active listings with a menu only
@@ -326,6 +326,7 @@ my.get("/meal-days", async (req, res) => {
           served: share === "booked" || paidKeys.has(key),
           canOrder: canOrderMeal(cut.when, cut.time, date),
           cutoffLabel: cutoffLabel(cut.when, cut.time),
+          allergenNote: (tSettings?.meals?.allergenNote ?? "").trim(),
         };
         byKey.set(key, entry);
       }
@@ -333,6 +334,34 @@ my.get("/meal-days", async (req, res) => {
     }
   }
   const out = [...byKey.values()].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  // Remaining portions for capped dishes (a provider set a daily limit). Only
+  // runs when a capped dish is actually on the family's menu — uncommon — so
+  // the extra reads don't hit every meal-days call.
+  const cappedTenants = new Set<string>();
+  for (const e of out) for (const it of e.menu.items as { capacity?: number }[]) if (it.capacity) cappedTenants.add(e.tenantId);
+  if (cappedTenants.size) {
+    const ts = [...cappedTenants];
+    const [ordersSnaps, bookingSnaps] = await Promise.all([
+      Promise.all(ts.map((t) => db.collection("mealOrders").where("tenantId", "==", t).get())),
+      Promise.all(ts.map((t) => bookingsCol.where("tenantId", "==", t).get())),
+    ]);
+    const taken = new Map<string, number>();
+    const bump = (k: string, n: number) => taken.set(k, (taken.get(k) ?? 0) + n);
+    for (const s of ordersSnaps) for (const d of s.docs) {
+      const o = d.data() as { status?: string; listingId?: string; date?: string; items?: { name?: string; qty?: number }[] };
+      if (o.status === "cancelled" || !o.listingId || !o.date) continue;
+      for (const it of (o.items ?? [])) if (it.name) bump(`${o.listingId}|${o.date}|${it.name}`, it.qty ?? 1);
+    }
+    for (const s of bookingSnaps) for (const d of s.docs) {
+      const b = d.data() as { status?: string; listingId?: string; mealItems?: { date: string; name: string }[] };
+      if (b.status === "Cancelled" || !b.listingId) continue;
+      for (const it of (b.mealItems ?? [])) bump(`${b.listingId}|${it.date}|${it.name}`, 1);
+    }
+    for (const e of out) for (const it of e.menu.items as { name?: string; capacity?: number; left?: number }[]) {
+      if (it.capacity) it.left = Math.max(0, it.capacity - (taken.get(`${e.listingId}|${e.date}|${it.name}`) ?? 0));
+    }
+  }
   res.json(out);
 });
 

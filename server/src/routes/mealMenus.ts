@@ -18,6 +18,7 @@ const itemSchema = z.object({
   allergens: z.array(z.string().max(40)).max(20).default([]),
   description: z.string().trim().max(200).optional(),
   diet: z.enum(["meat", "veg", "vegan"]).optional(), // dietary type, shown to parents
+  capacity: z.number().int().positive().max(9999).optional(), // max portions/day, if the kitchen caps it
 });
 const menuSchema = z.object({
   name: z.string().trim().min(1).max(80),
