@@ -1205,7 +1205,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
   const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<BookingFilter>("all");
-  const [waitOpen, setWaitOpen] = useState(true);
+  const [waitOpen, setWaitOpen] = useState(false); // waiting list starts collapsed — tap the header to open
   const [childF, setChildF] = useState("");
   const [listingF, setListingF] = useState("");
   const [fromF, setFromF] = useState("");
