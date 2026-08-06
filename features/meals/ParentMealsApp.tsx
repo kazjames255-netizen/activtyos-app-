@@ -9,10 +9,11 @@ import { groupWeeks, fmtDate } from "@/features/listings/format";
 import { DIETS, dietMeta, type Diet } from "./diet";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Parent Meals. Menu tab: the menu on the family's booked days, book a meal
-// for one or more children (one meal per child per day), pay the basket in
-// one go. Children's meals tab: a sub-tab per child with their meals + gaps.
-// Allergens/diet are cross-checked against each child's profile.
+// Parent Meals. Menu tab: a weekly timetable — children down the left, days
+// across — where each cell is a dropdown of that day's meals. Choosing one
+// drops it straight into the basket; "— none" removes it. One meal per child
+// per day. Allergens/diet are checked against each child's profile.
+// Children's meals tab: a sub-tab per child with their meals + gaps.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string; diet?: Diet; capacity?: number; left?: number }
@@ -29,8 +30,6 @@ const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).fi
 const lineKey = (l: { date: string; listingId: string; dishId: string; child: string }) => `${l.date}|${l.listingId}|${l.dishId}|${l.child}`;
 const GRN = "linear-gradient(135deg,#22c07a,#0e9a5a)";
 
-// Best-effort match of a child's free-text allergies to a dish's declared
-// allergens — always paired with a "check the label" caveat, never a promise.
 const ALLERGEN_SYN: Record<string, string[]> = {
   milk: ["milk", "dairy", "lactose", "cheese"], gluten: ["gluten", "wheat", "bread", "coeliac", "celiac"], eggs: ["egg"], fish: ["fish"],
   crustaceans: ["crustacean", "shellfish", "prawn", "shrimp", "crab", "lobster"], molluscs: ["mollusc", "shellfish", "squid", "mussel", "oyster"],
@@ -63,15 +62,13 @@ export function ParentMealsApp() {
   const [view, setView] = useState<"menu" | "kids">("menu");
   const [kid, setKid] = useState<string>("");
 
-  const [picking, setPicking] = useState<string | null>(null);
-  const [pickKids, setPickKids] = useState<string[]>([]);
-  const [pickErr, setPickErr] = useState<string | null>(null);
+  const [weekIdx, setWeekIdx] = useState(0);
+  const [dietFilter, setDietFilter] = useState<Diet | "">("");
+  const [basketOpen, setBasketOpen] = useState(false);
   const [basket, setBasket] = useState<BasketLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [lastAdded, setLastAdded] = useState<string[]>([]);
-  const [openMore, setOpenMore] = useState<Set<string>>(new Set()); // day-entries with "show more" expanded
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
@@ -101,18 +98,15 @@ export function ParentMealsApp() {
   }, [bookings]);
   const kidsFor = useCallback((listingId: string) => [...(kidsByListing.get(listingId) ?? [])].sort((a, b) => a.localeCompare(b)), [kidsByListing]);
 
-  const orderedKey = useMemo(() => new Set(liveOrders.flatMap((o) => (o.items ?? []).map((it) => `${o.date}|${o.childName}|${it.menuItemId ?? it.name}`))), [liveOrders]);
   const basketKeys = useMemo(() => new Set(basket.map(lineKey)), [basket]);
-  // One meal per child per day — every (listing, date, child) that already has
-  // a meal: basket + post-booking orders + meals bought at checkout.
-  const mealDayByChild = useMemo(() => {
-    const s = new Set<string>();
-    for (const l of basket) s.add(`${l.listingId}|${l.date}|${l.child}`);
-    for (const o of liveOrders) if (o.listingId) s.add(`${o.listingId}|${o.date}|${o.childName}`);
-    for (const b of bookings) { if (!b.listingId) continue; const roster = [...splitKids(b.child), ...((b.kids ?? []).map((k) => k.name).filter(Boolean) as string[])]; for (const it of (b.mealItems ?? [])) for (const c of roster) s.add(`${b.listingId}|${it.date}|${c}`); }
-    return s;
-  }, [basket, liveOrders, bookings]);
-  const hasMealThatDay = useCallback((listingId: string, date: string, child: string) => mealDayByChild.has(`${listingId}|${date}|${child}`), [mealDayByChild]);
+  // Every (listing, date, child) that already has a meal — orders + checkout —
+  // so a confirmed meal shows in its cell and blocks a duplicate.
+  const bookedByCell = useMemo(() => {
+    const m = new Map<string, { name: string; orderId?: string; canCancel?: boolean }>();
+    for (const o of liveOrders) if (o.listingId && o.items?.length) m.set(`${o.listingId}|${o.date}|${o.childName}`, { name: o.items.map((i) => i.name).join(", "), orderId: o.id, canCancel: o.pay !== "Paid" });
+    for (const b of bookings) { if (!b.listingId) continue; const roster = [...splitKids(b.child), ...((b.kids ?? []).map((k) => k.name).filter(Boolean) as string[])]; for (const it of (b.mealItems ?? [])) for (const c of roster) { const k = `${b.listingId}|${it.date}|${c}`; if (!m.has(k)) m.set(k, { name: it.name }); } }
+    return m;
+  }, [liveOrders, bookings]);
 
   const kidsWithMeals = useMemo(() => {
     const s = new Set<string>();
@@ -123,17 +117,19 @@ export function ParentMealsApp() {
 
   const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { if (d.date < todayIso) continue; const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served, todayIso]);
   const menuWeeks = useMemo(() => groupWeeks([...byDate.keys()]), [byDate]);
+  const dietsPresent = useMemo(() => DIETS.filter((d) => [...byDate.values()].some((es) => es.some((e) => e.menu.items.some((it) => it.diet === d.key)))), [byDate]);
 
-  // Per-child coverage across upcoming meal days (booked days that offer a menu).
+  // Per-child coverage across upcoming meal days.
   const coverage = useMemo(() => {
     const m = new Map<string, { done: number; total: number; gaps: string[] }>();
     for (const entries of byDate.values()) for (const e of entries) for (const c of kidsFor(e.listingId)) {
       const g = m.get(c) ?? { done: 0, total: 0, gaps: [] }; g.total++;
-      if (hasMealThatDay(e.listingId, e.date, c)) g.done++; else g.gaps.push(e.date);
+      const has = basket.some((l) => l.child === c && l.listingId === e.listingId && l.date === e.date) || bookedByCell.has(`${e.listingId}|${e.date}|${c}`);
+      if (has) g.done++; else g.gaps.push(e.date);
       m.set(c, g);
     }
     return m;
-  }, [byDate, kidsFor, hasMealThatDay]);
+  }, [byDate, kidsFor, basket, basketKeys, bookedByCell]);
 
   const activeKid = kidsWithMeals.includes(kid) ? kid : (kidsWithMeals[0] ?? "");
   const chosenByDate = useMemo(() => {
@@ -152,35 +148,6 @@ export function ParentMealsApp() {
   const chosenWeeks = useMemo(() => groupWeeks([...chosenByDate.keys()]), [chosenByDate]);
   const chosenCount = [...chosenByDate.values()].reduce((s, a) => s + a.reduce((n, c) => n + c.qty, 0), 0);
 
-  const pickId = (e: MealDay, it: MenuItem) => `${e.date}|${e.listingId}|${it.id}`;
-  const toggleKid = (k: string) => { setPickErr(null); setPickKids((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]); };
-  const dishLeft = (e: MealDay, it: MenuItem) => it.left === undefined ? undefined : Math.max(0, it.left - kidsFor(e.listingId).filter((k) => basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`)).length);
-
-  const addMeal = (e: MealDay, it: MenuItem, chosen: string[]): string[] => {
-    let add = chosen.filter((k) => !hasMealThatDay(e.listingId, e.date, k) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
-    // Capacity cap.
-    const left = dishLeft(e, it);
-    if (left !== undefined && add.length > left) add = add.slice(0, left);
-    if (!add.length) return [];
-    // Allergen / dietary safety — confirm before adding a risky meal.
-    const risky = add.map((k) => { const c = childInfo.get(k); const al = allergenClash(it.allergens, c?.allergies); const dc = dietClash(it, c?.dietary); return al.length || dc ? `${k}: ${[al.length ? `contains ${al.join(", ")}` : "", dc || ""].filter(Boolean).join("; ")}` : null; }).filter(Boolean) as string[];
-    if (risky.length && typeof window !== "undefined" && !window.confirm(`Please check — this meal may not suit:\n\n${risky.join("\n")}\n\nAllergen info is a guide; confirm with your provider. Add anyway?`)) return [];
-    setBasket((prev) => [...prev, ...add.map((child) => ({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }))]);
-    setLastAdded(add.map((child) => `${e.date}|${e.listingId}|${it.id}|${child}`));
-    setPayErr(null); setToast(`Added ${it.name} for ${add.join(", ")}.`);
-    return add;
-  };
-  const clickAdd = (e: MealDay, it: MenuItem, kids: string[]) => {
-    if (kids.length === 1) { if (!addMeal(e, it, kids).length) setToast(`${kids[0]} already has a meal that day — remove it first to change.`); return; }
-    const id = pickId(e, it); setPickErr(null); if (picking === id) { setPicking(null); return; } setPicking(id); setPickKids([]);
-  };
-  const addFromPicker = (e: MealDay, it: MenuItem) => {
-    if (!pickKids.length) { setPickErr("Choose at least one child."); return; }
-    if (!addMeal(e, it, pickKids).length) { setPickErr("Those children already have a meal that day."); return; }
-    setPicking(null); setPickKids([]);
-  };
-  const removeLine = (key: string) => setBasket((prev) => prev.filter((l) => lineKey(l) !== key));
-  const undoLast = () => { const s = new Set(lastAdded); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); setLastAdded([]); setToast(null); };
   const basketTotal = basket.reduce((s, l) => s + l.price, 0);
   const basketByChild = useMemo(() => {
     const m = new Map<string, BasketLine[]>();
@@ -188,36 +155,29 @@ export function ParentMealsApp() {
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [basket]);
 
-  const dietsPresent = useMemo(() => DIETS.filter((d) => [...byDate.values()].some((es) => es.some((e) => e.canOrder && e.menu.items.some((it) => it.diet === d.key)))), [byDate]);
+  const removeLine = (key: string) => setBasket((prev) => prev.filter((l) => lineKey(l) !== key));
+  const dishLeft = (e: MealDay, it: MenuItem) => it.left === undefined ? undefined : Math.max(0, it.left - kidsFor(e.listingId).filter((k) => basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`)).length);
 
-  // Quick-fill: add a diet's dish for every child (or one child) on every
-  // orderable booked day, skipping days already covered and honouring capacity.
-  const bulkAdd = (diet: Diet, onlyKid?: string) => {
-    const meta = dietMeta(diet)!;
-    const seenDay = new Set(mealDayByChild);
-    const capLeft = new Map<string, number>(); // `${listing}|${date}|${dishId}` remaining this run
-    const lines: BasketLine[] = [];
-    let skippedRisk = 0;
-    for (const entries of byDate.values()) for (const e of entries) {
-      if (!e.canOrder) continue;
-      const dish = e.menu.items.find((it) => it.diet === diet);
-      if (!dish) continue;
-      const ck = `${e.listingId}|${e.date}|${dish.id}`;
-      if (!capLeft.has(ck)) capLeft.set(ck, dish.left ?? Infinity);
-      for (const child of (onlyKid ? [onlyKid] : kidsFor(e.listingId))) {
-        if (onlyKid && !kidsFor(e.listingId).includes(child)) continue;
-        const dayKey = `${e.listingId}|${e.date}|${child}`;
-        if (seenDay.has(dayKey)) continue;
-        if ((capLeft.get(ck) ?? 0) <= 0) continue;
+  // The timetable cell setter: choose a dish for (child, day) → straight into
+  // the basket, swapping any current choice; "" removes it.
+  const setCell = (e: MealDay, child: string, dishId: string) => {
+    setPayErr(null);
+    if (dishId) {
+      const it = e.menu.items.find((x) => x.id === dishId);
+      if (!it) return;
+      const already = basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${child}`);
+      if (!already) {
+        const left = dishLeft(e, it);
+        if (left !== undefined && left <= 0) { setToast(`Sorry — ${it.name} is fully booked that day.`); return; }
         const c = childInfo.get(child);
-        if (allergenClash(dish.allergens, c?.allergies).length || dietClash(dish, c?.dietary)) { skippedRisk++; continue; }
-        seenDay.add(dayKey); capLeft.set(ck, (capLeft.get(ck) ?? 0) - 1);
-        lines.push({ tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: dish.id, name: dish.name, price: dish.price, child });
+        if ((allergenClash(it.allergens, c?.allergies).length || dietClash(it, c?.dietary)) && typeof window !== "undefined" && !window.confirm(`Please check — ${it.name} may not suit ${child}:\n\n${[allergenClash(it.allergens, c?.allergies).length ? `contains ${allergenClash(it.allergens, c?.allergies).join(", ")}` : "", dietClash(it, c?.dietary) || ""].filter(Boolean).join("; ")}\n\nAllergen info is a guide; confirm with your provider. Choose anyway?`)) return;
       }
+      setBasket((prev) => [...prev.filter((l) => !(l.child === child && l.listingId === e.listingId && l.date === e.date)), { tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }]);
+      setToast(`${it.name} added for ${child} · ${fmtDay(e.date)}`);
+    } else {
+      setBasket((prev) => prev.filter((l) => !(l.child === child && l.listingId === e.listingId && l.date === e.date)));
+      setToast(null);
     }
-    if (!lines.length) { setLastAdded([]); setToast(`No new ${meta.short} meals to add${skippedRisk ? " — some skipped for allergy/diet" : " — days already covered"}.`); return; }
-    setBasket((prev) => [...prev, ...lines]); setPayErr(null); setLastAdded(lines.map(lineKey));
-    setToast(`Added ${lines.length} ${meta.short} meal${lines.length === 1 ? "" : "s"}${skippedRisk ? ` (skipped ${skippedRisk} for allergy/diet)` : ""}.`);
   };
 
   const payAll = useCallback(async () => {
@@ -231,15 +191,12 @@ export function ParentMealsApp() {
     }
     const doneKeys: string[] = []; let failMsg: string | null = null;
     for (const g of groups.values()) {
-      try {
-        await apiPost("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) });
-        doneKeys.push(...g.keys);
-      } catch (err) { failMsg = err instanceof Error ? err.message : "Some meals couldn't be booked."; break; }
+      try { await apiPost("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); }
+      catch (err) { failMsg = err instanceof Error ? err.message : "Some meals couldn't be booked."; break; }
     }
-    // Drop everything that succeeded so a retry never double-books.
-    if (doneKeys.length) { const s = new Set(doneKeys); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); setLastAdded([]); }
+    if (doneKeys.length) { const s = new Set(doneKeys); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); }
     if (failMsg) setPayErr(`${failMsg} ${doneKeys.length ? "The rest are still in your basket." : ""}`.trim());
-    else setToast(`✓ Booked ${doneKeys.length} meal${doneKeys.length === 1 ? "" : "s"} — held for you now.`);
+    else { setToast(`✓ Booked ${doneKeys.length} meal${doneKeys.length === 1 ? "" : "s"} — held for you now.`); setBasketOpen(false); }
     load(); setBusy(false);
   }, [basket, load]);
 
@@ -249,21 +206,25 @@ export function ParentMealsApp() {
     catch (err) { setToast(err instanceof Error ? err.message : "Couldn't remove that meal."); }
   }, [load]);
 
+  const week = menuWeeks.length ? menuWeeks[Math.min(weekIdx, menuWeeks.length - 1)] : null;
+  const weekPal = WEEK_PAL[(week?.n ?? 1) - 1 >= 0 ? ((week?.n ?? 1) - 1) % WEEK_PAL.length : 0];
+  const weekKids = week ? [...new Set(week.days.flatMap((iso) => (byDate.get(iso) ?? []).flatMap((e) => kidsFor(e.listingId))))].sort((a, b) => a.localeCompare(b)) : [];
+  const entryFor = (child: string, iso: string) => (byDate.get(iso) ?? []).find((e) => kidsFor(e.listingId).includes(child)) ?? null;
+
   return (
     <div className="text-[var(--ink)]">
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🍽️</span>Meals
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Book a meal for each child on your booked days — one meal per day. We flag anything that clashes with a child’s allergies or diet.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Pick a meal for each child on the weekly planner — it drops straight into your basket. One meal per day; we flag anything that clashes with allergies or diet.</p>
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ordersWarn && <div className="mb-3 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[12px] font-semibold text-[#96631a]">Couldn’t load your existing meal orders — refresh to make sure you don’t double-book.</div>}
       {toast && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-[#bde5cd] bg-[#effaf3] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#0e7a45]">
           <span className="flex-1">{toast}</span>
-          {lastAdded.length > 0 && <button type="button" onClick={undoLast} className="flex-none rounded-full bg-white px-2.5 py-[3px] text-[11.5px] font-extrabold text-[#0e7a45] shadow-sm transition hover:bg-[#0e7a45] hover:text-white">↩ Undo</button>}
-          <button type="button" aria-label="Dismiss" onClick={() => { setToast(null); setLastAdded([]); }} className="flex-none text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
+          <button type="button" aria-label="Dismiss" onClick={() => setToast(null)} className="flex-none text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
         </div>
       )}
 
@@ -272,7 +233,7 @@ export function ParentMealsApp() {
           {([["menu", "🍴 Menu"], ["kids", "🎒 Children’s meals"]] as [("menu" | "kids"), string][]).map(([key, label]) => {
             const on = view === key;
             return (
-              <button key={key} type="button" onClick={() => { setView(key); setToast(null); setPicking(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
+              <button key={key} type="button" onClick={() => { setView(key); setToast(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
                 style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 4px 12px -3px rgba(47,107,216,.6)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
                 {label}
               </button>
@@ -296,10 +257,10 @@ export function ParentMealsApp() {
             })}
           </div>
           {(() => { const cov = coverage.get(activeKid); return cov && cov.gaps.length > 0 && (
-            <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-1.5 text-[11.5px] font-semibold text-[#96631a]">No meal yet on {cov.gaps.slice(0, 6).map(fmtDay).join(", ")}{cov.gaps.length > 6 ? "…" : ""} — add from the Menu tab.</div>
+            <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-1.5 text-[11.5px] font-semibold text-[#96631a]">No meal yet on {cov.gaps.slice(0, 6).map(fmtDay).join(", ")}{cov.gaps.length > 6 ? "…" : ""} — add on the Menu planner.</div>
           ); })()}
           {chosenByDate.size === 0
-            ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{activeKid} hasn’t got any meals yet — book one from the Menu tab, or add meals when you book.</Card>
+            ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{activeKid} hasn’t got any meals yet — add them on the Menu planner.</Card>
             : (
             <>
               <div className="mb-2 text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{activeKid}</b> — {chosenCount} meal{chosenCount === 1 ? "" : "s"}</div>
@@ -322,12 +283,10 @@ export function ParentMealsApp() {
                                   <div className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
                                     <span className="text-[#0e9a5a]">✓</span><span className="font-bold">{it.name}</span>
                                     <DietBadge diet={it.diet} />
-                                    {it.qty > 1 && <span className="text-[var(--ink-3)]">× {it.qty}</span>}
                                     {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
                                     <Allergens list={it.allergens} />
                                     {it.canCancel && it.orderId && <button type="button" onClick={() => cancelMeal(it.orderId!)} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">Remove</button>}
                                   </div>
-                                  {it.description && <div className="mt-0.5 pl-4 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
                                 </div>
                               ))}
                             </div>
@@ -338,222 +297,142 @@ export function ParentMealsApp() {
                   );
                 })}
               </div>
-              <div className="mt-2 text-[11px] text-[var(--ink-3)]">To change a booked meal, remove it (if still open) and pick another, or ask your provider.</div>
             </>
           )}
         </>
-      ) : served.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the day’s menu appears here for listings your provider offers meals on.</Card>
+      ) : !week ? (
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the planner appears here for listings your provider offers meals on.</Card>
       ) : (
         <>
-        {dietsPresent.length > 0 && (
-          <div className="mb-3 rounded-2xl border border-[var(--line)] bg-white p-3">
-            <div className="text-[12px] font-extrabold text-[#12306e]">🍽️ Quick-fill the basket</div>
-            <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">Add one meal for every child on every booked day. Skips days already booked, past the cut-off, or that clash with a child’s allergies/diet.</div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {dietsPresent.map((d) => (
-                <button key={d.key} type="button" onClick={() => bulkAdd(d.key)} className="rounded-full px-3 py-1.5 text-[12px] font-extrabold transition active:scale-[.97]" style={{ background: d.bg, color: d.fg, border: `1px solid ${d.fg}40` }}>
-                  {d.icon} {d.label} for everyone, every day
-                </button>
-              ))}
+          {/* Basket, above the planner */}
+          <div id="meal-basket" className="mb-3 overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white shadow-[0_8px_24px_-16px_rgba(29,58,143,.5)]">
+            <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
+              <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[14px]">🧺</span>
+              <span className="text-[14px] font-extrabold">Meal basket</span>
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11.5px] font-extrabold">{basket.length} meal{basket.length === 1 ? "" : "s"} · {money(basketTotal)}</span>
+              {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="text-[11.5px] font-bold text-white/85 underline">{basketOpen ? "Hide" : "View"}</button>}
+              <div className="ml-auto flex items-center gap-2">
+                {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">Clear</button>}
+                <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? "Booking…" : `Book all · ${money(basketTotal)}`}</button>
+              </div>
             </div>
-          </div>
-        )}
-        {allergenNote && <div className="mb-3 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[11.5px] text-[#96631a]">⚠ {allergenNote}</div>}
-        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[var(--ink-3)]">
-          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: GRN }} />chosen</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[#f5b642]" />in your basket</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[#5b9bff]" />available to add</span>
-        </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            {menuWeeks.map((w, wi) => {
-              const [d1, d2] = WEEK_PAL[wi % WEEK_PAL.length];
-              return (
-                <div key={w.mon} className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
-                  <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${d1}, ${d2})` }}>
-                    <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
-                    <span className="text-[14px] font-extrabold">Week {w.n}</span><span className="text-[12px] font-semibold text-white/85">· from {fmtDate(w.mon)}</span>
-                  </div>
-                  <div className="grid gap-2.5 p-3 sm:grid-cols-2">
-                    {w.days.map((iso) => (
-                      <div key={iso} className="rounded-xl border border-[var(--line)] p-3" style={{ background: `${d1}0d` }}>
-                        <div className="text-[12.5px] font-extrabold" style={{ color: d1 }}>{fmtDay(iso)}</div>
-                        <div className="mt-1.5 flex flex-col gap-2.5">
-                          {(byDate.get(iso) ?? []).map((e) => {
-                            const kids = kidsFor(e.listingId);
-                            const canBook = e.canOrder && kids.length > 0;
-                            const moreKey = `${e.date}|${e.listingId}`;
-                            // Chosen-for-someone dishes first; collapse the long tail.
-                            const dishes = [...e.menu.items].sort((a, b) => {
-                              const ca = kids.some((k) => orderedKey.has(`${e.date}|${k}|${a.id}`) || basketKeys.has(`${e.date}|${e.listingId}|${a.id}|${k}`)) ? 0 : 1;
-                              const cb = kids.some((k) => orderedKey.has(`${e.date}|${k}|${b.id}`) || basketKeys.has(`${e.date}|${e.listingId}|${b.id}|${k}`)) ? 0 : 1;
-                              return ca - cb;
-                            });
-                            const collapsed = dishes.length > 4 && !openMore.has(moreKey);
-                            const shown = collapsed ? dishes.slice(0, 4) : dishes;
-                            return (
-                              <div key={e.listingId}>
-                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                  <span className="text-[10.5px] font-bold uppercase tracking-[0.03em] text-[var(--ink-3)]">{e.listingName} · {e.menu.name}</span>
-                                  {e.canOrder
-                                    ? <span className="text-[10px] font-semibold" style={{ color: e.closesToday ? "#c0392b" : "#2f6bd8" }}>🕒 {e.closesToday ? "Ordering closes today" : e.cutoffLabel}</span>
-                                    : <span className="text-[10px] font-semibold text-[var(--ink-3)]">Ordering closed for this day</span>}
-                                </div>
-                                <div className="mt-1.5 flex flex-col gap-1.5">
-                                  {shown.map((it) => {
-                                    const solo = kids.length === 1 ? kids[0] : null;
-                                    const bookedKids = kids.filter((k) => orderedKey.has(`${e.date}|${k}|${it.id}`));
-                                    const basketKids = kids.filter((k) => basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`));
-                                    const chosenN = bookedKids.length + basketKids.length;
-                                    const allChosen = kids.length > 0 && chosenN >= kids.length;
-                                    const soloBooked = !!solo && bookedKids.length > 0;
-                                    const soloInBasket = !!solo && basketKids.length > 0;
-                                    const open = !solo && picking === pickId(e, it);
-                                    const left = dishLeft(e, it);
-                                    const soldOut = left === 0 && !allChosen;
-                                    return (
-                                      <div key={it.id} className="overflow-hidden rounded-xl border transition"
-                                        style={open ? { borderColor: "#a9caf7", background: "#fff", boxShadow: "0 8px 22px -12px rgba(47,107,216,.5)" } : allChosen ? { borderColor: "#b6e4cd", background: "#f3fbf6" } : { borderColor: "var(--line)", background: "#fff", boxShadow: "0 1px 2px rgba(16,42,110,.05)" }}>
-                                        <div className="flex items-start gap-2.5 p-2.5">
-                                          <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[15px]" style={allChosen ? { background: GRN, color: "#fff" } : { background: `${d1}14` }}>{allChosen ? "✓" : "🍴"}</span>
-                                          <div className="min-w-0 flex-1">
-                                            <div className="text-[13px] font-extrabold leading-tight text-[var(--ink)]">{it.name}</div>
-                                            {it.description && <div className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
-                                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                                              <span className="rounded-full bg-[#eef4fd] px-2 py-[1.5px] text-[11px] font-extrabold tabular-nums text-[#1d3a8f]">{money(it.price)}</span>
-                                              <DietBadge diet={it.diet} />
-                                              <Allergens list={it.allergens} />
-                                              {left !== undefined && left <= 5 && <span className="rounded-full px-1.5 py-[1px] text-[10px] font-bold" style={soldOut ? { background: "#fdebec", color: "#c0392b" } : { background: "#fff3e0", color: "#96631a" }}>{soldOut ? "Sold out" : `${left} left`}</span>}
-                                            </div>
-                                          </div>
-                                          {canBook && (soloBooked ? (
-                                            <span className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold text-white" style={{ background: GRN }}>✓ Booked</span>
-                                          ) : solo ? (
-                                            <button type="button" disabled={busy || (soldOut && !soloInBasket)} aria-label={soloInBasket ? `Remove ${it.name} for ${solo}` : `Add ${it.name} for ${solo}`} onClick={() => soloInBasket ? removeLine(`${e.date}|${e.listingId}|${it.id}|${solo}`) : clickAdd(e, it, kids)}
-                                              className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold text-white transition active:scale-[.96] disabled:opacity-40"
-                                              style={soloInBasket ? { background: GRN } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
-                                              {soloInBasket ? "✓ Added" : "＋ Add"}
-                                            </button>
-                                          ) : (
-                                            <button type="button" disabled={busy || (soldOut && chosenN === 0)} aria-label={`Choose children for ${it.name}`} onClick={() => clickAdd(e, it, kids)}
-                                              className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold transition active:scale-[.96] disabled:opacity-40"
-                                              style={open ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : allChosen ? { background: GRN, color: "#fff" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
-                                              {open ? "✕ Close" : allChosen ? "✓ All set" : chosenN > 0 ? "＋ Add more" : soldOut ? "Sold out" : "＋ Add"}
-                                            </button>
-                                          ))}
-                                        </div>
-                                        {!solo && chosenN > 0 && (
-                                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t px-3 py-1.5 text-[11px] font-semibold" style={{ borderColor: allChosen ? "#cdeede" : "var(--line)", background: allChosen ? "#eafaf1" : "#f7fbf8" }}>
-                                            {basketKids.length > 0 && <span className="text-[#0e7a45]">🧺 In basket: {basketKids.join(", ")}</span>}
-                                            {bookedKids.length > 0 && <span className="text-[#12306e]">✓ Booked: {bookedKids.join(", ")}</span>}
-                                          </div>
-                                        )}
-                                        {open && (
-                                          <div className="border-t border-[#e6eefb] bg-gradient-to-b from-[#f4f8ff] to-white p-2.5">
-                                            <div className="mb-1.5 text-[11px] font-bold text-[#12306e]">Who’s this meal for? <span className="font-semibold text-[var(--ink-3)]">Pick one or more.</span></div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                              {(() => {
-                                                const selectable = kids.filter((k) => !hasMealThatDay(e.listingId, e.date, k) && !orderedKey.has(`${e.date}|${k}|${it.id}`));
-                                                if (selectable.length < 2) return null;
-                                                const allSel = selectable.every((k) => pickKids.includes(k));
-                                                return (
-                                                  <button type="button" onClick={() => { setPickErr(null); setPickKids(allSel ? [] : selectable); }} className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition"
-                                                    style={allSel ? { background: GRN, color: "#fff", boxShadow: "0 3px 9px -3px rgba(14,154,90,.55)" } : { background: "#eefaf3", color: "#0e7a45", border: "1px solid #bde5cd" }}>
-                                                    {allSel ? "✓ All kids" : "👪 All kids"}
-                                                  </button>
-                                                );
-                                              })()}
-                                              {kids.map((k) => {
-                                                const done = orderedKey.has(`${e.date}|${k}|${it.id}`);
-                                                const inBasket = basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`);
-                                                const otherMeal = !done && !inBasket && hasMealThatDay(e.listingId, e.date, k);
-                                                const c = childInfo.get(k);
-                                                const warn = !done && !inBasket && !otherMeal && (allergenClash(it.allergens, c?.allergies).length > 0 || !!dietClash(it, c?.dietary));
-                                                const sel = pickKids.includes(k);
-                                                return (
-                                                  <button key={k} type="button" disabled={done || inBasket || otherMeal} onClick={() => toggleKid(k)}
-                                                    className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition disabled:cursor-not-allowed"
-                                                    style={done ? { background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" } : inBasket ? { background: "#fff6e9", color: "#96631a", border: "1px solid #f2dcbb" } : otherMeal ? { background: "var(--panel)", color: "var(--ink-3)", border: "1px solid var(--line)", opacity: 0.7 } : sel ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(47,107,216,.55)" } : { background: "#fff", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                                                    {done ? `✓ ${k} · booked` : inBasket ? `🧺 ${k} · in basket` : otherMeal ? `${k} · has a meal` : `${sel ? "✓" : warn ? "⚠" : "🎒"} ${k}`}
-                                                  </button>
-                                                );
-                                              })}
-                                            </div>
-                                            {pickErr && <div className="mt-1.5 text-[11px] font-semibold text-[var(--red,#e21d27)]">{pickErr}</div>}
-                                            <button type="button" disabled={!pickKids.length || busy} onClick={() => addFromPicker(e, it)}
-                                              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[12.5px] font-extrabold text-white transition active:scale-[.99] disabled:opacity-50" style={{ background: GRN, boxShadow: "0 6px 16px -5px rgba(14,154,90,.6)" }}>
-                                              ＋ Add to basket{pickKids.length > 1 ? ` (${pickKids.length})` : ""}
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                  {collapsed && <button type="button" onClick={() => setOpenMore((s) => new Set(s).add(moreKey))} className="self-start text-[11px] font-bold text-[#2f6bd8] underline">＋{dishes.length - 4} more option{dishes.length - 4 === 1 ? "" : "s"}</button>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+            {payErr && <div className="border-b border-[var(--line)] bg-[var(--red-soft,#fdebec)] px-3.5 py-2 text-[11.5px] font-semibold text-[var(--red,#e21d27)]">{payErr}</div>}
+            {basketOpen && basket.length > 0 && (
+              <div className="grid gap-x-4 gap-y-1 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                {basketByChild.map(([child, lines]) => (
+                  <div key={child} className="rounded-lg border border-[var(--line)] p-2">
+                    <div className="mb-0.5 flex items-baseline justify-between text-[11.5px] font-extrabold text-[#12306e]"><span>🎒 {child}</span><span className="tabular-nums">{money(lines.reduce((s, l) => s + l.price, 0))}</span></div>
+                    {lines.map((l) => (
+                      <div key={lineKey(l)} className="flex items-baseline gap-1.5 text-[11.5px]">
+                        <span className="flex-1 truncate">{fmtDay(l.date)} · {l.name}</span>
+                        <span className="tabular-nums text-[var(--ink-3)]">{money(l.price)}</span>
+                        <button type="button" aria-label={`Remove ${l.name}`} onClick={() => removeLine(lineKey(l))} className="text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
                       </div>
                     ))}
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
 
-          <aside id="meal-basket" className="lg:sticky lg:top-4 lg:w-[300px] lg:flex-none">
-            <div className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white shadow-[0_12px_34px_-18px_rgba(29,58,143,.5)]">
-              <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
-                <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[14px]">🧺</span>
-                <span className="text-[14px] font-extrabold">Meal basket</span>
-                {basket.length > 0 && <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[11.5px] font-extrabold">{basket.length}</span>}
-              </div>
-              {basket.length === 0 ? (
-                <div className="px-4 py-6 text-center text-[12px] text-[var(--ink-3)]">Your basket is empty.<br />Tap <b className="text-[var(--ink-2)]">＋ Add</b> on a meal to start.</div>
-              ) : (
-                <div className="flex flex-col">
-                  <div className="flex max-h-[340px] flex-col overflow-y-auto">
-                    {basketByChild.map(([child, lines]) => (
-                      <div key={child} className="border-b border-[var(--line)] last:border-0">
-                        <div className="flex items-center justify-between bg-[#f7faff] px-3 py-1.5 text-[11px] font-extrabold text-[#12306e]"><span>🎒 {child}</span><span className="tabular-nums">{money(lines.reduce((s, l) => s + l.price, 0))}</span></div>
-                        {lines.map((l) => (
-                          <div key={lineKey(l)} className="flex items-start gap-2 px-3 py-2">
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-[12px] font-bold text-[var(--ink)]">{l.name}</div>
-                              <div className="text-[10.5px] text-[var(--ink-3)]">{fmtDay(l.date)}</div>
-                            </div>
-                            <span className="tabular-nums text-[11.5px] font-bold text-[var(--ink-2)]">{money(l.price)}</span>
-                            <button type="button" aria-label={`Remove ${l.name} for ${l.child}`} onClick={() => removeLine(lineKey(l))} className="text-[var(--ink-3)] transition hover:text-[var(--red,#e21d27)]">✕</button>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-[var(--line)] px-3.5 py-2.5">
-                    <span className="text-[12px] font-bold text-[var(--ink-2)]">Total</span>
-                    <span className="text-[15px] font-extrabold tabular-nums text-[#0e9a5a]">{money(basketTotal)}</span>
-                  </div>
-                  {payErr && <div className="mx-3 mb-1 rounded-lg bg-[var(--red-soft,#fdebec)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--red,#e21d27)]">{payErr}</div>}
-                  <div className="px-3 pb-3">
-                    <button type="button" disabled={busy} onClick={payAll} className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-extrabold text-white transition active:scale-[.99] disabled:opacity-50" style={{ background: GRN, boxShadow: "0 8px 20px -6px rgba(14,154,90,.6)" }}>
-                      {busy ? "Booking…" : <>🧺 Book all · {money(basketTotal)}</>}
-                    </button>
-                    <button type="button" onClick={() => { setBasket([]); setPayErr(null); setLastAdded([]); }} className="mt-1.5 w-full text-center text-[11px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink-2)]">Clear basket</button>
-                    <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Held for you now · your provider charges these to your account.</div>
-                  </div>
-                </div>
-              )}
+          {/* Diet filter */}
+          {dietsPresent.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-[var(--ink-3)]">Show:</span>
+              {([["", "All meals"], ...dietsPresent.map((d) => [d.key, `${d.icon} ${d.label} only`] as [Diet, string])] as [Diet | "", string][]).map(([k, label]) => {
+                const on = dietFilter === k;
+                return <button key={k || "all"} type="button" onClick={() => setDietFilter(k)} className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition" style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>{label}</button>;
+              })}
             </div>
-          </aside>
-        </div>
-        {basket.length > 0 && (
-          <a href="#meal-basket" className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-center gap-2 rounded-full py-3 text-[13px] font-extrabold text-white shadow-[0_10px_24px_-6px_rgba(14,154,90,.6)] lg:hidden" style={{ background: GRN }}>
-            🧺 Basket · {money(basketTotal)} ({basket.length})
-          </a>
-        )}
+          )}
+          {allergenNote && <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[11.5px] text-[#96631a]">⚠ {allergenNote}</div>}
+
+          {/* Weekly planner (slide show) */}
+          <div className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
+            <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
+              <button type="button" aria-label="Previous week" disabled={weekIdx === 0} onClick={() => setWeekIdx((i) => Math.max(0, i - 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">◀</button>
+              <div className="flex-1 text-center"><span className="text-[14px] font-extrabold">Week {week.n}</span><span className="ml-1.5 text-[12px] font-semibold text-white/85">from {fmtDate(week.mon)}</span></div>
+              <button type="button" aria-label="Next week" disabled={weekIdx >= menuWeeks.length - 1} onClick={() => setWeekIdx((i) => Math.min(menuWeeks.length - 1, i + 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">▶</button>
+            </div>
+            {menuWeeks.length > 1 && (
+              <div className="flex justify-center gap-1 border-b border-[var(--line)] py-1.5">
+                {menuWeeks.map((w, i) => <button key={w.mon} type="button" aria-label={`Week ${w.n}`} onClick={() => setWeekIdx(i)} className="h-1.5 rounded-full transition" style={{ width: i === weekIdx ? 18 : 6, background: i === weekIdx ? weekPal[0] : "var(--line)" }} />)}
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: 140 + week.days.length * 160 }}>
+                {/* Header row */}
+                <div className="grid border-b border-[var(--line)] bg-[var(--panel)]" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))` }}>
+                  <div className="sticky left-0 z-10 bg-[var(--panel)] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Child</div>
+                  {week.days.map((iso) => {
+                    const anyClose = (byDate.get(iso) ?? []).some((e) => e.closesToday);
+                    const anyOpen = (byDate.get(iso) ?? []).some((e) => e.canOrder);
+                    return (
+                      <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2">
+                        <div className="text-[12px] font-extrabold" style={{ color: weekPal[0] }}>{fmtDay(iso)}</div>
+                        <div className="text-[9.5px] font-semibold" style={{ color: anyClose ? "#c0392b" : anyOpen ? "var(--ink-3)" : "var(--ink-3)" }}>{anyClose ? "closes today" : anyOpen ? "open" : "closed"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Child rows */}
+                {weekKids.map((child, ri) => (
+                  <div key={child} className="grid border-b border-[var(--line)] last:border-0" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: ri % 2 ? "var(--surface)" : "#fff" }}>
+                    <div className="sticky left-0 z-10 flex items-center gap-1.5 px-3 py-2.5 text-[12.5px] font-extrabold text-[var(--ink)]" style={{ background: ri % 2 ? "var(--surface)" : "#fff" }}>
+                      🎒 <span className="truncate">{child}</span>
+                    </div>
+                    {week.days.map((iso) => {
+                      const e = entryFor(child, iso);
+                      if (!e) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[11px] text-[var(--ink-3)]">·</div>;
+                      const booked = bookedByCell.get(`${e.listingId}|${e.date}|${child}`);
+                      const line = basket.find((l) => l.child === child && l.listingId === e.listingId && l.date === e.date);
+                      const c = childInfo.get(child);
+                      // A confirmed meal (paid or a checkout meal) — locked, shown filled.
+                      if (booked && !line) {
+                        return (
+                          <div key={iso} className="border-l border-[var(--line)] p-2">
+                            <div className="rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}>✓ {booked.name}</div>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--ink-3)]"><span>booked</span>{booked.canCancel && booked.orderId && <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="font-bold hover:text-[var(--red,#e21d27)]">· remove</button>}</div>
+                          </div>
+                        );
+                      }
+                      const options = e.menu.items.filter((it) => !dietFilter || it.diet === dietFilter || line?.dishId === it.id);
+                      const sel = line ? e.menu.items.find((it) => it.id === line.dishId) : undefined;
+                      const clash = sel ? (allergenClash(sel.allergens, c?.allergies).length > 0 || !!dietClash(sel, c?.dietary)) : false;
+                      if (!e.canOrder) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">Closed</div>;
+                      return (
+                        <div key={iso} className="border-l border-[var(--line)] p-2">
+                          <select aria-label={`Meal for ${child} on ${fmtDay(iso)}`} value={line?.dishId ?? ""} onChange={(ev) => setCell(e, child, ev.target.value)}
+                            className="w-full rounded-lg border px-2 py-1.5 text-[11.5px] font-bold transition"
+                            style={line ? { borderColor: "#f2dcbb", background: "#fff6e9", color: "#96631a" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
+                            <option value="">— choose —</option>
+                            {options.map((it) => {
+                              const soldOut = it.left !== undefined && it.left <= 0 && line?.dishId !== it.id;
+                              const risk = allergenClash(it.allergens, c?.allergies).length > 0 || dietClash(it, c?.dietary);
+                              return <option key={it.id} value={it.id} disabled={soldOut}>{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}{it.diet ? ` · ${dietMeta(it.diet)?.label}` : ""}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
+                            })}
+                          </select>
+                          {sel && (
+                            <div className="mt-1 flex flex-wrap items-center gap-1">
+                              {clash && <span className="rounded bg-[#fdebec] px-1 py-[0.5px] text-[9.5px] font-bold text-[#c0392b]">⚠ check suitability</span>}
+                              <Allergens list={sel.allergens} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+                {weekKids.length === 0 && <div className="px-3 py-6 text-center text-[12px] text-[var(--ink-3)]">No booked children this week.</div>}
+              </div>
+            </div>
+          </div>
+
+          {basket.length > 0 && (
+            <a href="#meal-basket" className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-center gap-2 rounded-full py-3 text-[13px] font-extrabold text-white shadow-[0_10px_24px_-6px_rgba(14,154,90,.6)] lg:hidden" style={{ background: GRN }}>
+              🧺 Basket · {money(basketTotal)} ({basket.length}) — tap to book
+            </a>
+          )}
         </>
       )}
     </div>
