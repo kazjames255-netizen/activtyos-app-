@@ -212,6 +212,42 @@ payments.post("/checkout", async (req, res) => {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
+  // Meal-order checkout — meals ordered from the parent Meals planner live in
+  // their own collection but pay through the SAME direct-charge flow. All the
+  // orders must be one provider (one connected account) and belong to the
+  // paying family.
+  if (Array.isArray((req.body as { mealOrderIds?: unknown }).mealOrderIds)) {
+    const ids = ((req.body as { mealOrderIds: unknown[] }).mealOrderIds).filter((x): x is string => typeof x === "string").slice(0, 40);
+    if (!ids.length) { res.status(400).json({ error: "No meals to pay for" }); return; }
+    const emailLc = email.toLowerCase();
+    const snaps = await db.getAll(...ids.map((id) => db.collection("mealOrders").doc(id)));
+    const orders = snaps.filter((x) => x.exists).map((x) => ({ id: x.id, ...(x.data() as { tenantId: string; parentEmail: string; status?: string; pay?: string; total?: number }) }));
+    if (orders.length !== ids.length || orders.some((o) => o.parentEmail !== emailLc)) { res.status(404).json({ error: "Meal order not found" }); return; }
+    const tenantId = orders[0].tenantId;
+    if (orders.some((o) => o.tenantId !== tenantId)) { res.status(400).json({ error: "These meals belong to different providers — pay them separately" }); return; }
+    const bad = orders.find((o) => o.status === "cancelled" || o.pay === "Paid");
+    if (bad) { res.status(409).json({ error: bad.pay === "Paid" ? "One of these meals is already paid" : "One of these meals was cancelled" }); return; }
+    const amount = Math.round(orders.reduce((sum, o) => sum + (o.total ?? 0), 0) * 100) / 100;
+    if (amount <= 0) { res.status(409).json({ error: "Nothing to pay" }); return; }
+    const tenant = await tenantsCol.doc(tenantId).get();
+    const accountId: string | undefined = tenant.data()?.stripeAccountId;
+    let stripeAccount: string | null = null;
+    if (accountId) { const account = await s.accounts.retrieve(accountId); if (account.charges_enabled && account.capabilities?.card_payments === "active") stripeAccount = accountId; }
+    if (!stripeAccount && !platformFallback) { res.status(409).json({ error: "This provider can't take card payments yet — they haven't finished Stripe onboarding" }); return; }
+    let intent;
+    try {
+      intent = await s.paymentIntents.create({
+        amount: toPence(amount), currency: "gbp", automatic_payment_methods: { enabled: true },
+        description: `${tenant.data()?.name ?? "ActivityOS"} — meal${orders.length > 1 ? "s" : ""}`,
+        metadata: { tenantId, mealOrders: orders.map((o) => o.id).join(","), email },
+        ...((await autoEmailOn(tenantId, "payments")) ? { receipt_email: email } : {}),
+      }, stripeAccount ? { stripeAccount } : undefined);
+    } catch (e) { stripeFail(res, e); return; }
+    const rref = await paymentsCol.add({ tenantId, mealOrderIds: orders.map((o) => o.id), email, amount, currency: "gbp", paymentIntentId: intent.id, stripeAccount, platformFallback: !stripeAccount, status: "created", createdAt: new Date().toISOString() });
+    res.status(201).json({ paymentId: rref.id, clientSecret: intent.client_secret, stripeAccount, amount });
+    return;
+  }
+
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
@@ -318,7 +354,8 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
   }
   const rec = snap.data() as {
     tenantId: string;
-    refs: string[];
+    refs?: string[];
+    mealOrderIds?: string[];
     paymentIntentId: string;
     stripeAccount: string | null;
     status: string;
@@ -332,9 +369,24 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
     res.json({ status: intent.status, paid: false });
     return;
   }
+  // Meal-order payment — flip those orders to Paid.
+  if (rec.mealOrderIds?.length) {
+    if (rec.status !== "succeeded") {
+      const batch = db.batch();
+      for (const id of rec.mealOrderIds) {
+        const oSnap = await db.collection("mealOrders").doc(id).get();
+        if (!oSnap.exists) continue;
+        batch.set(oSnap.ref, { pay: "Paid", amountPaid: oSnap.data()!.total ?? 0, paidAt: new Date().toISOString(), paymentIntentId: rec.paymentIntentId }, { merge: true });
+      }
+      batch.update(snap.ref, { status: "succeeded", paidAt: new Date().toISOString() });
+      await batch.commit();
+    }
+    res.json({ status: "succeeded", paid: true });
+    return;
+  }
   if (rec.status !== "succeeded") {
     const batch = db.batch();
-    for (const bookingRef of rec.refs) {
+    for (const bookingRef of rec.refs ?? []) {
       const bSnap = await db.collection("bookings").doc(bookingDocId(rec.tenantId, bookingRef)).get();
       if (!bSnap.exists) continue;
       const b = fromDoc(bSnap.data() as BookingDoc);
@@ -346,5 +398,5 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
     batch.update(snap.ref, { status: "succeeded", paidAt: new Date().toISOString() });
     await batch.commit();
   }
-  res.json({ status: "succeeded", paid: true, refs: rec.refs });
+  res.json({ status: "succeeded", paid: true, refs: rec.refs ?? [] });
 });

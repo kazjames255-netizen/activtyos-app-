@@ -7,6 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { groupWeeks, fmtDate } from "@/features/listings/format";
 import { DIETS, dietMeta, type Diet } from "./diet";
+import { PayModal } from "@/features/payments/PayModal";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parent Meals. Menu tab: a weekly timetable — children down the left, days
@@ -76,6 +77,7 @@ export function ParentMealsApp() {
   const [busy, setBusy] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [payIds, setPayIds] = useState<string[] | null>(null); // created meal-order ids awaiting card payment
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
@@ -196,16 +198,18 @@ export function ParentMealsApp() {
       const g = groups.get(key) ?? { tenantId: l.tenantId, listingId: l.listingId, date: l.date, child: l.child, items: new Map<string, number>(), keys: [] };
       g.items.set(l.dishId, (g.items.get(l.dishId) ?? 0) + 1); g.keys.push(lineKey(l)); groups.set(key, g);
     }
-    const doneKeys: string[] = []; let failMsg: string | null = null;
+    const doneKeys: string[] = []; const createdIds: string[] = []; let failMsg: string | null = null;
     for (const g of groups.values()) {
-      try { await apiPost("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); }
+      try { const o = await apiPost<{ id: string }>("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); if (o?.id) createdIds.push(o.id); }
       catch (err) { failMsg = err instanceof Error ? err.message : "Some meals couldn't be booked."; break; }
     }
     if (doneKeys.length) { const s = new Set(doneKeys); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); }
     if (failMsg) setPayErr(`${failMsg} ${doneKeys.length ? "The rest are still in your basket." : ""}`.trim());
-    else { setToast(`✓ Booked ${doneKeys.length} meal${doneKeys.length === 1 ? "" : "s"} — held for you now.`); setBasketOpen(false); }
-    load(); setBusy(false);
-  }, [basket, load]);
+    setBusy(false);
+    // Take card payment for the meals just created (real Stripe, same flow as
+    // a booking). If they close without paying, the orders stay unpaid.
+    if (createdIds.length) { setBasketOpen(false); setPayIds(createdIds); }
+  }, [basket]);
 
   const cancelMeal = useCallback(async (orderId: string) => {
     if (typeof window !== "undefined" && !window.confirm("Remove this meal?")) return;
@@ -329,7 +333,7 @@ export function ParentMealsApp() {
               {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="text-[11.5px] font-bold text-white/85 underline">{basketOpen ? "Hide" : "View"}</button>}
               <div className="ml-auto flex items-center gap-2">
                 {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">Clear</button>}
-                <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? "Booking…" : `Book all · ${money(basketTotal)}`}</button>
+                <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? "Booking…" : `💳 Pay ${money(basketTotal)}`}</button>
               </div>
             </div>
             {payErr && <div className="border-b border-[var(--line)] bg-[var(--red-soft,#fdebec)] px-3.5 py-2 text-[11.5px] font-semibold text-[var(--red,#e21d27)]">{payErr}</div>}
@@ -481,10 +485,18 @@ export function ParentMealsApp() {
 
           {basket.length > 0 && (
             <a href="#meal-basket" className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-center gap-2 rounded-full py-3 text-[13px] font-extrabold text-white shadow-[0_10px_24px_-6px_rgba(14,154,90,.6)] lg:hidden" style={{ background: GRN }}>
-              🧺 Basket · {money(basketTotal)} ({basket.length}) — tap to book
+              💳 Pay {money(basketTotal)} · {basket.length} meal{basket.length === 1 ? "" : "s"}
             </a>
           )}
         </>
+      )}
+
+      {payIds && (
+        <PayModal
+          mealOrderIds={payIds}
+          onClose={() => { setPayIds(null); load(); setToast("Meals booked — payment not completed. You can pay your provider, or try again."); }}
+          onPaid={() => { setPayIds(null); load(); setToast("✓ Paid — your meals are booked."); }}
+        />
       )}
     </div>
   );

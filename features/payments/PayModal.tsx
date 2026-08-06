@@ -61,15 +61,17 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
   );
 }
 
-export function PayModal({ refs, onClose, onPaid }: { refs: string[]; onClose: () => void; onPaid: () => void }) {
+export function PayModal({ refs = [], mealOrderIds, onClose, onPaid }: { refs?: string[]; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
+  const meals = !!mealOrderIds?.length;
+  const noun = meals ? "meal" : "booking";
 
   useEffect(() => {
     let alive = true;
-    apiPost<CheckoutInfo>("/api/payments/checkout", { refs })
+    apiPost<CheckoutInfo>("/api/payments/checkout", meals ? { mealOrderIds } : { refs })
       .then((i) => {
         if (!alive) return;
         setInfo(i);
@@ -82,7 +84,7 @@ export function PayModal({ refs, onClose, onPaid }: { refs: string[]; onClose: (
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refs.join(",")]);
+  }, [refs.join(","), (mealOrderIds ?? []).join(",")]);
 
   return (
     <div
@@ -92,7 +94,7 @@ export function PayModal({ refs, onClose, onPaid }: { refs: string[]; onClose: (
       <div className="w-full max-w-[440px] rounded-2xl bg-white p-5 text-[#171534] shadow-2xl">
         <div className="mb-2 flex items-center justify-between">
           <div className="text-[16px] font-extrabold">
-            {paid ? "Payment complete" : `Pay for booking${refs.length > 1 ? "s" : ""} ${refs.join(", ")}`}
+            {paid ? "Payment complete" : meals ? `Pay for your meal${(mealOrderIds?.length ?? 0) > 1 ? "s" : ""}` : `Pay for booking${refs.length > 1 ? "s" : ""} ${refs.join(", ")}`}
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="text-[20px] leading-none text-[#8a86a3]">
             ×
@@ -101,7 +103,7 @@ export function PayModal({ refs, onClose, onPaid }: { refs: string[]; onClose: (
         {paid ? (
           <div className="py-4 text-center">
             <div className="text-[22px]">✅</div>
-            <p className="mt-1 text-[13.5px]">Thanks — your booking{refs.length > 1 ? "s are" : " is"} paid.</p>
+            <p className="mt-1 text-[13.5px]">Thanks — your {noun}{meals ? ((mealOrderIds?.length ?? 0) > 1 ? "s are" : " is") : (refs.length > 1 ? "s are" : " is")} paid.</p>
             <Button variant="primary" onClick={onClose} className="mt-3">
               Done
             </Button>
