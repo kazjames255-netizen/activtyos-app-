@@ -31,6 +31,9 @@ const lineKey = (l: { date: string; listingId: string; dishId: string; child: st
 const GRN = "linear-gradient(135deg,#22c07a,#0e9a5a)";
 const AV_PAL = ["#2f6bd8", "#0ea5a5", "#7a5af8", "#e2559a", "#e8862a", "#16a34a", "#3f78d8", "#c0398b"];
 const avatarOf = (name: string) => { const s = [...name].reduce((a, c) => a + c.charCodeAt(0), 0); return { c: AV_PAL[s % AV_PAL.length], i: (name.trim()[0] || "?").toUpperCase() }; };
+// One dropdown-option label carrying every detail a dish has — price, diet,
+// the optional description, and its allergens.
+const dishOptText = (it: MenuItem) => `${it.name}${it.price > 0 ? ` · ${money(it.price)}` : ""}${it.diet ? ` · ${dietMeta(it.diet)?.label}` : ""}${it.description ? ` · ${it.description}` : ""}${it.allergens?.length ? ` · contains ${it.allergens.join(", ")}` : ""}`;
 
 const ALLERGEN_SYN: Record<string, string[]> = {
   milk: ["milk", "dairy", "lactose", "cheese"], gluten: ["gluten", "wheat", "bread", "coeliac", "celiac"], eggs: ["egg"], fish: ["fish"],
@@ -414,7 +417,7 @@ export function ParentMealsApp() {
                               <div className="mt-1 flex items-center gap-1">
                                 <select aria-label={`Change ${child}'s meal`} value="" onChange={(ev) => { if (ev.target.value) changeMeal(booked.orderId!, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
                                   <option value="">Change…</option>
-                                  {e.menu.items.filter((it) => it.name !== booked.name).map((it) => <option key={it.id} value={it.id}>{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}</option>)}
+                                  {e.menu.items.filter((it) => it.name !== booked.name).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
                                 </select>
                                 <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
                               </div>
@@ -435,7 +438,7 @@ export function ParentMealsApp() {
                             {options.map((it) => {
                               const soldOut = it.left !== undefined && it.left <= 0 && line?.dishId !== it.id;
                               const risk = allergenClash(it.allergens, c?.allergies).length > 0 || dietClash(it, c?.dietary);
-                              return <option key={it.id} value={it.id} disabled={soldOut}>{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}{it.diet ? ` · ${dietMeta(it.diet)?.label}` : ""}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
+                              return <option key={it.id} value={it.id} disabled={soldOut}>{dishOptText(it)}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
                             })}
                           </select>
                           {sel && (
