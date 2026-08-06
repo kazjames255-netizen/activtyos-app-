@@ -359,7 +359,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "registers", legacyView: "freelancer-registers", label: "Register", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
         { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
