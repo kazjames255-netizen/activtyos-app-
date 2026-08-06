@@ -24,12 +24,12 @@ export function BookingsHubApp() {
 
   const meta: Record<Tab, { label: string; lede: string }> = {
     bookings: { label: "My bookings", lede: "Your family’s places, days and details — status updates as the provider confirms." },
-    timetable: { label: "My timetable", lede: "Your child’s sessions day by day — what, when, where and who." },
+    timetable: { label: "My schedule", lede: "Your child’s sessions day by day — what, when, where and who." },
     payments: { label: "My payments", lede: "Everything your family owes and has paid — download receipts as proof of purchase." },
   };
   const tabs: [Tab, string][] = [
     ["bookings", "My bookings"],
-    ["timetable", "My timetable"],
+    ["timetable", "My schedule"],
     ["payments", "My payments"],
   ];
 
