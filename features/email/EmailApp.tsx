@@ -1718,7 +1718,11 @@ export function EmailApp() {
   const [jumpMsg, setJumpMsg] = useState(0);                // bump to scroll+focus the editor (reply/forward)
   useEffect(() => {
     if (!jumpMsg) return;
-    const id = setTimeout(() => { msgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); (msgRef.current?.querySelector('[contenteditable="true"]') as HTMLElement | null)?.focus(); }, 90);
+    const id = setTimeout(() => {
+      const ed = msgRef.current?.querySelector('[contenteditable="true"]') as HTMLElement | null;
+      (ed ?? msgRef.current)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      ed?.focus();
+    }, 160);
     return () => clearTimeout(id);
   }, [jumpMsg]);
   const [sender, setSender] = useState<SenderIdentity | null>(null); // who this tenant's mail goes out as
