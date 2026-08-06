@@ -330,7 +330,7 @@ export function ParentMealsApp() {
               <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[14px]">🧺</span>
               <span className="text-[14px] font-extrabold">Meal basket</span>
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11.5px] font-extrabold">{basket.length} meal{basket.length === 1 ? "" : "s"} · {money(basketTotal)}</span>
-              {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="text-[11.5px] font-bold text-white/85 underline">{basketOpen ? "Hide" : "View"}</button>}
+              {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="flex items-center gap-1 rounded-full border border-white/40 bg-white/15 px-2.5 py-1 text-[11.5px] font-extrabold text-white transition hover:bg-white/25">{basketOpen ? "Hide meals ▴" : "See my meals ▾"}</button>}
               <div className="ml-auto flex items-center gap-2">
                 {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">Clear</button>}
                 <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? "Booking…" : `💳 Pay ${money(basketTotal)}`}</button>
