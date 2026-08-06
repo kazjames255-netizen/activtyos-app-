@@ -143,7 +143,9 @@ export function MenuPlanner() {
   // menu (which also becomes the brush), so it never silently does nothing.
   const tapDay = (iso: string) => {
     if (erase) { applyTo(iso); return; }
-    const mid = brushMenuId ?? ((menus ?? [])[0]?.id ?? null);
+    // Default to the FULLEST menu (most dishes) so a tap gives parents real
+    // choice, not whichever menu happens to be first.
+    const mid = brushMenuId ?? ([...(menus ?? [])].sort((a, b) => (b.items?.length ?? 0) - (a.items?.length ?? 0))[0]?.id ?? null);
     if (!mid) return;
     if (!brushMenuId) setBrushMenuId(mid);
     applyTo(iso, mid);
@@ -415,7 +417,7 @@ export function MenuPlanner() {
                         return (
                           <div key={iso}
                             onDragOver={(e) => { if (brushMenuId) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); applyTo(iso); }}
-                            onClick={() => { if (erase || !has) tapDay(iso); }}
+                            onClick={() => { if (erase || !has || brushMenuId) tapDay(iso); }}
                             className={`flex min-h-[76px] flex-col items-start overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${erase || !has ? "cursor-pointer hover:-translate-y-0.5" : ""}`}
                             style={has && col ? { borderColor: col[0], background: col[2], boxShadow: `0 10px 22px -16px ${col[0]}` } : { borderColor: "var(--line)", background: "#fff", borderStyle: "dashed" }}>
                             <span className="text-[11.5px] font-extrabold" style={{ color: has && col ? col[0] : "var(--ink-2)" }}>{fmtDate(iso)}</span>
