@@ -1720,8 +1720,13 @@ export function EmailApp() {
     if (!jumpMsg) return;
     const id = setTimeout(() => {
       const ed = msgRef.current?.querySelector('[contenteditable="true"]') as HTMLElement | null;
-      (ed ?? msgRef.current)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      ed?.focus();
+      const target = ed ?? msgRef.current;
+      if (target) {
+        // Land ~5cm below the editor's top so the reply box sits well into view.
+        const y = target.getBoundingClientRect().top + window.scrollY + 180;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+      ed?.focus({ preventScroll: true });
     }, 160);
     return () => clearTimeout(id);
   }, [jumpMsg]);
