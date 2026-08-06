@@ -2038,8 +2038,7 @@ export function EmailApp() {
               {([
                 ["all", "👨‍👩‍👧", "All families", families.length ? included.length : reach ?? 0],
                 ["listing", "🎟", "A listing", null],
-                ["one", "✉️", "One address", null],
-                ["none", "✍️", "Add my own", null],
+                ["one", "✉️", "Specific people", null],
               ] as [("all" | "listing" | "one" | "none"), string, string, number | null][]).map(([k, icon, label, count]) => {
                 const on = audience === k;
                 return (
