@@ -1067,6 +1067,25 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {s}
             </div>
           ))}
+          {/* Extras — the true add-ons (meal lines are pulled out into their
+              own section below so they don't double up). */}
+          {(() => { const extras = (b.addons ?? []).filter((a) => !a.startsWith("🍽")); return extras.length > 0 && (
+            <>
+              <SectionHead>Add-ons</SectionHead>
+              {extras.map((a, i) => <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">{a}</div>)}
+            </>
+          ); })()}
+          {(b.mealItems?.length ?? 0) > 0 && (
+            <>
+              <SectionHead>Meals</SectionHead>
+              {b.mealItems!.map((m, i) => (
+                <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
+                  <span><span className="mr-1">🍽</span><b>{m.name}</b> <span className="text-[var(--ink-3)]">· {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span></span>
+                  {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}
+                </div>
+              ))}
+            </>
+          )}
           <SectionHead>Payment</SectionHead>
           <DefRow label="Method" value={b.method} />
           <DefRow label="Total" value={money(b.amount)} />
