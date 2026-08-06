@@ -120,17 +120,21 @@ new fakes the moment they're spotted.
 
 ## Blocking for prod
 
-- [ ] **Mail leaves from a personal Gmail account.** `server/.env` points
-  `SMTP_*`/`MAIL_FROM` at `amirmoumen@gmail.com` (app password), so every
-  provider's mail — transactional, campaigns, e2e blasts — goes out as that
-  address, and its bounces land in that inbox. Also caps at ~500 recipients/day
-  against a `MAX_RECIPIENTS` of 2000 per send, so one large blast can exceed
-  quota mid-send (`delivered` then lands under `recipientCount` with nothing
-  surfacing the shortfall). Move to a transactional provider on an ActivityOS
-  domain with SPF/DKIM before real customer volume. (`server/src/lib/mailer.ts`)
-  - Partly mitigated: the From **display name** and **Reply-To** are already
-    per-provider (`server/src/lib/sender.ts`), so families see the provider's
-    name and replies reach them. Only the envelope address is shared.
+- [x] ~~Mail leaves from a personal Gmail account~~ — **fixed 6 Aug 2026.**
+  Sending moved to **Resend** on `activityos.uk` (DKIM + SPF verified,
+  eu-west-1). `MAIL_FROM` is now `no-reply@activityos.uk`; the personal Gmail
+  app password can be revoked. Verified with a real send: `delivered: 1`.
+  - The ~500/day Gmail cap is gone, but **check Resend's plan limits** before
+    the first large campaign — the free tier has a daily cap of its own that
+    is lower than you'd expect, against a `MAX_RECIPIENTS` of 2000 per send.
+  - Per-provider name and Reply-To carry over unchanged (`lib/sender.ts`).
+    `MAIL_PER_TENANT_FROM=1` now becomes possible — it was only ever blocked
+    by Gmail rewriting the From address.
+  - **Dev no longer emails real people**: outside production `sendMail` only
+    transmits to `MAIL_ALLOWLIST` (`lib/mailer.ts`). This matters more than it
+    sounds — the scheduler sweeps run against real tenants, and one e2e run
+    fires ~30 messages at the non-existent `@activityos-test.com`, which on a
+    real ESP is a bounce rate that gets a domain suspended.
 - [x] ~~Staff portal landing page is the legacy iframe~~ — real
   StaffDashApp now (today's sessions, open tasks, day-plan link).
 - [ ] **Inbound email has no provider connected** — the Email Inbox backend
