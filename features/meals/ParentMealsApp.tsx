@@ -295,6 +295,18 @@ export function ParentMealsApp() {
                                           <div className="border-t border-[#e6eefb] bg-gradient-to-b from-[#f4f8ff] to-white p-2.5">
                                             <div className="mb-1.5 text-[11px] font-bold text-[#12306e]">Who’s this meal for? <span className="font-semibold text-[var(--ink-3)]">Pick one or more.</span></div>
                                             <div className="flex flex-wrap gap-1.5">
+                                              {(() => {
+                                                const selectable = kids.filter((k) => !orderedKey.has(`${e.date}|${k}|${it.id}`) && !basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`));
+                                                if (selectable.length < 2) return null;
+                                                const allSel = selectable.every((k) => pickKids.includes(k));
+                                                return (
+                                                  <button type="button" onClick={() => { setPickErr(null); setPickKids(allSel ? [] : selectable); }}
+                                                    className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition"
+                                                    style={allSel ? { background: "linear-gradient(180deg,#22c07a,#0e9a5a)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(14,154,90,.55)" } : { background: "#eefaf3", color: "#0e7a45", border: "1px solid #bde5cd" }}>
+                                                    {allSel ? "✓ All kids" : "👪 All kids"}
+                                                  </button>
+                                                );
+                                              })()}
                                               {kids.map((k) => {
                                                 const done = orderedKey.has(`${e.date}|${k}|${it.id}`);
                                                 const inBasket = basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${k}`);
