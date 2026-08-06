@@ -19,6 +19,11 @@ interface Booking { child?: string; listingId?: string; mealItems?: { date: stri
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0c9"], ["#7a5af8", "#a88bff"], ["#e2559a", "#ff86c0"], ["#f5872b", "#ffb166"], ["#16a34a", "#4ade80"]];
+// A booking may hold several kids on one line ("Ava, Ben & Cara") — split so
+// each gets their own tab.
+const splitKids = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
+// Softer allergen note — "contains …" in muted amber, not loud red.
+const Allergens = ({ list }: { list?: string[] }) => (list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">contains {list.join(", ")}</span> : null);
 
 export function ParentMealsApp() {
   const [days, setDays] = useState<MealDay[] | null>(null);
@@ -38,7 +43,7 @@ export function ParentMealsApp() {
   const dishInfo = useMemo(() => { const m = new Map<string, MenuItem>(); for (const d of served) for (const it of d.menu.items) m.set(`${d.date}|${it.name}`, it); return m; }, [served]);
 
   // A tab per child who has actually CHOSEN a meal (not every booked name).
-  const kidsWithMeals = useMemo(() => [...new Set(bookings.filter((b) => (b.mealItems?.length ?? 0) > 0).map((b) => b.child).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [bookings]);
+  const kidsWithMeals = useMemo(() => [...new Set(bookings.filter((b) => (b.mealItems?.length ?? 0) > 0).flatMap((b) => splitKids(b.child)))].sort((a, b) => a.localeCompare(b)), [bookings]);
 
   // ── "What's on" data: the full menu, week by week ──
   const byDate = useMemo(() => { const m = new Map<string, MealDay[]>(); for (const d of served) { const a = m.get(d.date) ?? []; a.push(d); m.set(d.date, a); } return m; }, [served]);
@@ -48,7 +53,7 @@ export function ParentMealsApp() {
   const chosenByDate = useMemo(() => {
     const m = new Map<string, { name: string; price: number; allergens?: string[] }[]>();
     if (!tab) return m;
-    for (const b of bookings) { if (b.child !== tab) continue; for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, allergens: info?.allergens }); m.set(it.date, a); } }
+    for (const b of bookings) { if (!splitKids(b.child).includes(tab)) continue; for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, allergens: info?.allergens }); m.set(it.date, a); } }
     return m;
   }, [tab, bookings, dishInfo]);
   const chosenWeeks = useMemo(() => groupWeeks([...chosenByDate.keys()]), [chosenByDate]);
@@ -106,7 +111,7 @@ export function ParentMealsApp() {
                                 <div key={`${it.name}-${i}`} className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
                                   <span className="text-[#0e9a5a]">✓</span><span className="font-bold">{it.name}</span>
                                   {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
-                                  {(it.allergens?.length ?? 0) > 0 && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-1.5 py-[1px] text-[10px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens!.join(", ")}</span>}
+                                  <Allergens list={it.allergens} />
                                 </div>
                               ))}
                             </div>
@@ -145,7 +150,7 @@ export function ParentMealsApp() {
                                 <div key={it.id} className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
                                   <span className="font-bold">{it.name}</span>
                                   <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
-                                  {(it.allergens?.length ?? 0) > 0 && <span className="rounded-full bg-[var(--red-soft,#fdebec)] px-1.5 py-[1px] text-[10px] font-bold capitalize text-[var(--red,#e21d27)]">⚠ {it.allergens!.join(", ")}</span>}
+                                  <Allergens list={it.allergens} />
                                 </div>
                               ))}
                             </div>
