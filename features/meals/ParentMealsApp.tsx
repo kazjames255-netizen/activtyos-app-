@@ -56,6 +56,8 @@ const dietClash = (it: MenuItem, dietary: string | undefined): string | null => 
 
 const Allergens = ({ list }: { list?: string[] }) => (list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">contains {list.join(", ")}</span> : null);
 const DietBadge = ({ diet }: { diet?: string }) => { const d = dietMeta(diet); return d ? <span className="rounded-full px-2 py-[1.5px] text-[10px] font-extrabold" style={{ background: d.bg, color: d.fg }}>{d.icon} {d.label}</span> : null; };
+// A clear coloured letter (V / M / VG) — explained by the key at the top.
+const DietLetter = ({ diet, on }: { diet?: string; on?: boolean }) => { const d = dietMeta(diet); return d ? <span className="grid h-[15px] min-w-[15px] flex-none place-items-center rounded px-[3px] text-[9px] font-extrabold" title={d.label} style={{ background: on ? "rgba(255,255,255,.9)" : d.fg, color: on ? d.fg : "#fff" }}>{d.letter}</span> : null; };
 
 export function ParentMealsApp() {
   const [days, setDays] = useState<MealDay[] | null>(null);
@@ -360,6 +362,13 @@ export function ParentMealsApp() {
             </div>
           )}
           {allergenNote && <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[11.5px] text-[#96631a]">⚠ {allergenNote}</div>}
+          {/* Diet key — explains the coloured letters on the meal chips */}
+          {dietsPresent.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[var(--ink-3)]">
+              <span className="uppercase tracking-[0.04em]">Key</span>
+              {dietsPresent.map((d) => <span key={d.key} className="flex items-center gap-1"><DietLetter diet={d.key} /> {d.label}</span>)}
+            </div>
+          )}
 
           {/* Weekly planner (slide show) */}
           <div className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
@@ -406,9 +415,10 @@ export function ParentMealsApp() {
                       if (booked && !line) {
                         const ord = booked.orderId ? orders.find((o) => o.id === booked.orderId) : undefined;
                         const pendChange = ord?.changeRequest; const pendCancel = ord?.cancelRequest;
+                        const bookedDiet = e.menu.items.find((it) => it.name === booked.name)?.diet;
                         return (
                           <div key={iso} className="border-l border-[var(--line)] p-2">
-                            <div className="rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}>✓ {booked.name}</div>
+                            <div className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}><span className="truncate">✓ {booked.name}</span><DietLetter diet={bookedDiet} on /></div>
                             {pendChange ? (
                               <div className="mt-1 text-[10px] font-semibold text-[#8a5300]">↺ change to {pendChange.name} — awaiting approval <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">undo</button></div>
                             ) : pendCancel ? (
@@ -428,24 +438,36 @@ export function ParentMealsApp() {
                       const options = e.menu.items.filter((it) => !dietFilter || it.diet === dietFilter || line?.dishId === it.id);
                       const sel = line ? e.menu.items.find((it) => it.id === line.dishId) : undefined;
                       const clash = sel ? (allergenClash(sel.allergens, c?.allergies).length > 0 || !!dietClash(sel, c?.dietary)) : false;
-                      if (!e.canOrder) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">Closed</div>;
+                      if (!e.canOrder && !line) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">Closed</div>;
                       return (
                         <div key={iso} className="border-l border-[var(--line)] p-2">
-                          <select aria-label={`Meal for ${child} on ${fmtDay(iso)}`} value={line?.dishId ?? ""} onChange={(ev) => setCell(e, child, ev.target.value)}
-                            className="w-full rounded-lg border px-2 py-1.5 text-[11.5px] font-bold transition"
-                            style={line ? { borderColor: "#f2dcbb", background: "#fff6e9", color: "#96631a" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
-                            <option value="">— choose —</option>
-                            {options.map((it) => {
-                              const soldOut = it.left !== undefined && it.left <= 0 && line?.dishId !== it.id;
-                              const risk = allergenClash(it.allergens, c?.allergies).length > 0 || dietClash(it, c?.dietary);
-                              return <option key={it.id} value={it.id} disabled={soldOut}>{dishOptText(it)}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
-                            })}
-                          </select>
-                          {sel && (
-                            <div className="mt-1 flex flex-wrap items-center gap-1">
-                              {clash && <span className="rounded bg-[#fdebec] px-1 py-[0.5px] text-[9.5px] font-bold text-[#c0392b]">⚠ check suitability</span>}
-                              <Allergens list={sel.allergens} />
-                            </div>
+                          {line && sel ? (
+                            // In your basket — clean chip + a Change dropdown + remove.
+                            <>
+                              <div className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11.5px] font-extrabold" style={{ background: "#fff6e9", color: "#96631a", border: "1px solid #f2dcbb" }}>
+                                <span>🧺</span><span className="truncate">{sel.name}</span><DietLetter diet={sel.diet} />
+                                {sel.price > 0 && <span className="ml-auto tabular-nums text-[10.5px]">{money(sel.price)}</span>}
+                              </div>
+                              {clash && <div className="mt-1 text-[9.5px] font-bold text-[#c0392b]">⚠ check suitability</div>}
+                              {sel.allergens?.length ? <div className="mt-0.5"><Allergens list={sel.allergens} /></div> : null}
+                              <div className="mt-1 flex items-center gap-1">
+                                <select aria-label={`Change ${child}'s meal on ${fmtDay(iso)}`} value="" onChange={(ev) => { if (ev.target.value) setCell(e, child, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
+                                  <option value="">Change…</option>
+                                  {options.filter((it) => it.id !== line.dishId).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
+                                </select>
+                                <button type="button" onClick={() => setCell(e, child, "")} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
+                              </div>
+                            </>
+                          ) : (
+                            <select aria-label={`Meal for ${child} on ${fmtDay(iso)}`} value="" onChange={(ev) => setCell(e, child, ev.target.value)}
+                              className="w-full rounded-lg border px-2 py-1.5 text-[11.5px] font-bold transition" style={{ borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
+                              <option value="">— choose —</option>
+                              {options.map((it) => {
+                                const soldOut = it.left !== undefined && it.left <= 0;
+                                const risk = allergenClash(it.allergens, c?.allergies).length > 0 || dietClash(it, c?.dietary);
+                                return <option key={it.id} value={it.id} disabled={soldOut}>{dishOptText(it)}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
+                              })}
+                            </select>
                           )}
                         </div>
                       );

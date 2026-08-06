@@ -94,7 +94,7 @@ export function MenuPlanner() {
   const saveNow = () => {
     if (!listingId) return;
     api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(plan).length > 0, mealPlan: plan }) })
-      .then(() => setFlash("✓ Saved — find it under “Your saved meal plans”."))
+      .then(() => { setFlash("✓ Saved — showing your saved meal plans."); setTab("saved"); })
       .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
   };
 
