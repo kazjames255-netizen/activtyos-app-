@@ -19,7 +19,7 @@ interface MenuItem { id: string; name: string; price: number; allergens?: string
 interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] }; served: boolean; canOrder: boolean; cutoffLabel: string }
 interface Booking { child?: string; listingId?: string; kids?: { name?: string }[]; mealItems?: { date: string; name: string; price: number }[] }
 interface Order { id: string; listingId?: string; childName: string; date: string; status?: string; items?: { name: string; price: number; qty: number; menuItemId?: string; allergens?: string[] }[] }
-type Chosen = { name: string; price: number; qty: number; allergens?: string[] };
+type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string };
 
 const fmtDay = (iso: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
 const WEEK_PAL: [string, string][] = [["#2f6bd8", "#5b9bff"], ["#0ea5a5", "#3fd0c9"], ["#7a5af8", "#a88bff"], ["#e2559a", "#ff86c0"], ["#f5872b", "#ffb166"], ["#16a34a", "#4ade80"]];
@@ -91,11 +91,11 @@ export function ParentMealsApp() {
     if (!tab) return m;
     for (const b of bookings) {
       if (!splitKids(b.child).includes(tab)) continue;
-      for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, qty: 1, allergens: info?.allergens }); m.set(it.date, a); }
+      for (const it of (b.mealItems ?? [])) { const info = dishInfo.get(`${it.date}|${it.name}`); const a = m.get(it.date) ?? []; a.push({ name: it.name, price: it.price, qty: 1, allergens: info?.allergens, description: info?.description }); m.set(it.date, a); }
     }
     for (const o of liveOrders) {
       if (o.childName !== tab) continue;
-      for (const it of (o.items ?? [])) { const a = m.get(o.date) ?? []; a.push({ name: it.name, price: it.price, qty: it.qty ?? 1, allergens: it.allergens }); m.set(o.date, a); }
+      for (const it of (o.items ?? [])) { const info = dishInfo.get(`${o.date}|${it.name}`); const a = m.get(o.date) ?? []; a.push({ name: it.name, price: it.price, qty: it.qty ?? 1, allergens: it.allergens ?? info?.allergens, description: info?.description }); m.set(o.date, a); }
     }
     return m;
   }, [tab, bookings, liveOrders, dishInfo]);
@@ -140,7 +140,7 @@ export function ParentMealsApp() {
             return (
               <button key={key} type="button" onClick={() => { setTab(key); setToast(null); setPicking(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
                 style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 4px 12px -3px rgba(47,107,216,.6)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                {key === "" ? "📅 " : "🧒 "}{label}
+                {key === "" ? "📅 " : "🎒 "}{label}
               </button>
             );
           })}
@@ -170,11 +170,14 @@ export function ParentMealsApp() {
                             <div className="text-[12.5px] font-extrabold" style={{ color: c1 }}>{fmtDay(iso)}</div>
                             <div className="mt-1.5 flex flex-col gap-1">
                               {(chosenByDate.get(iso) ?? []).map((it, i) => (
-                                <div key={`${it.name}-${i}`} className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
-                                  <span className="text-[#0e9a5a]">✓</span><span className="font-bold">{it.name}</span>
-                                  {it.qty > 1 && <span className="text-[var(--ink-3)]">× {it.qty}</span>}
-                                  {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
-                                  <Allergens list={it.allergens} />
+                                <div key={`${it.name}-${i}`} className="rounded-lg border border-[var(--line)] bg-white/70 px-2.5 py-1.5">
+                                  <div className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
+                                    <span className="text-[#0e9a5a]">✓</span><span className="font-bold">{it.name}</span>
+                                    {it.qty > 1 && <span className="text-[var(--ink-3)]">× {it.qty}</span>}
+                                    {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
+                                    <Allergens list={it.allergens} />
+                                  </div>
+                                  {it.description && <div className="mt-0.5 pl-4 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
                                 </div>
                               ))}
                             </div>
@@ -216,25 +219,33 @@ export function ParentMealsApp() {
                                   ? <span className="text-[10px] font-semibold text-[#2f6bd8]">🕒 {e.cutoffLabel}</span>
                                   : <span className="text-[10px] font-semibold text-[var(--ink-3)]">Ordering closed for this day</span>}
                               </div>
-                              <div className="mt-1 flex flex-col gap-1">
+                              <div className="mt-1.5 flex flex-col gap-1.5">
                                 {e.menu.items.map((it) => {
                                   const open = picking === pickId(e, it);
                                   return (
-                                    <div key={it.id}>
-                                      <div className="flex flex-wrap items-baseline gap-1.5 text-[12px]">
-                                        <span className="font-bold">{it.name}</span>
-                                        <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>
-                                        <Allergens list={it.allergens} />
+                                    <div key={it.id} className="overflow-hidden rounded-xl border bg-white transition"
+                                      style={open ? { borderColor: "#a9caf7", boxShadow: "0 8px 22px -12px rgba(47,107,216,.5)" } : { borderColor: "var(--line)", boxShadow: "0 1px 2px rgba(16,42,110,.05)" }}>
+                                      <div className="flex items-start gap-2 p-2.5">
+                                        <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px]" style={{ background: `${d1}14` }}>🍴</span>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="text-[13px] font-extrabold leading-tight text-[var(--ink)]">{it.name}</div>
+                                          {it.description && <div className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{it.description}</div>}
+                                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                            <span className="rounded-full bg-[#eef4fd] px-2 py-[1.5px] text-[11px] font-extrabold tabular-nums text-[#1d3a8f]">{money(it.price)}</span>
+                                            <Allergens list={it.allergens} />
+                                          </div>
+                                        </div>
                                         {canBook && (
-                                          <button type="button" onClick={() => startPick(e, it)} className="ml-auto rounded-full px-2.5 py-[3px] text-[11px] font-extrabold transition"
-                                            style={open ? { background: "#e8eefb", color: "#2f6bd8" } : { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(47,107,216,.6)" }}>
-                                            {open ? "Close" : "＋ Book"}
+                                          <button type="button" onClick={() => startPick(e, it)}
+                                            className="flex flex-none items-center gap-1 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold transition active:scale-[.96]"
+                                            style={open ? { background: "#eef2fb", color: "#2f6bd8", border: "1px solid #cfe0fb" } : { background: "linear-gradient(135deg,#5b9bff,#2f6bd8)", color: "#fff", boxShadow: "0 5px 14px -4px rgba(47,107,216,.6)" }}>
+                                            {open ? "✕ Close" : "🍽️ Book"}
                                           </button>
                                         )}
                                       </div>
                                       {open && (
-                                        <div className="mt-1.5 rounded-xl border border-[#cfe0fb] bg-[#f4f8ff] p-2.5">
-                                          <div className="mb-1.5 text-[11px] font-bold text-[#12306e]">Book {it.name} for:</div>
+                                        <div className="border-t border-[#e6eefb] bg-gradient-to-b from-[#f4f8ff] to-white p-2.5">
+                                          <div className="mb-1.5 text-[11px] font-bold text-[#12306e]">Who’s this meal for?</div>
                                           <div className="flex flex-wrap gap-1.5">
                                             {kids.map((k) => {
                                               const already = orderedKey.has(`${e.date}|${k}|${it.id}`);
@@ -242,19 +253,19 @@ export function ParentMealsApp() {
                                               return (
                                                 <button key={k} type="button" disabled={already || busy} onClick={() => { setPickKid(k); setPickErr(null); }}
                                                   className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition disabled:cursor-not-allowed"
-                                                  style={already ? { background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" } : sel ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { background: "#fff", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                                                  {already ? `✓ ${k}` : `🧒 ${k}`}
+                                                  style={already ? { background: "#effaf3", color: "#0e7a45", border: "1px solid #bde5cd" } : sel ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 9px -3px rgba(47,107,216,.55)" } : { background: "#fff", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
+                                                  {already ? `✓ ${k} · booked` : `🎒 ${k}`}
                                                 </button>
                                               );
                                             })}
                                           </div>
                                           {pickErr && <div className="mt-1.5 text-[11px] font-semibold text-[var(--red,#e21d27)]">{pickErr}</div>}
                                           <button type="button" disabled={busy || !pickKid} onClick={() => book(e, it)}
-                                            className="mt-2 w-full rounded-lg py-1.5 text-[12px] font-extrabold text-white transition disabled:opacity-50"
-                                            style={{ background: "linear-gradient(180deg,#22c07a,#0e9a5a)", boxShadow: "0 4px 12px -4px rgba(14,154,90,.55)" }}>
-                                            {busy ? "Booking…" : `Pay ${money(it.price)} & book`}
+                                            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[12.5px] font-extrabold text-white transition active:scale-[.99] disabled:opacity-50"
+                                            style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)", boxShadow: "0 6px 16px -5px rgba(14,154,90,.6)" }}>
+                                            {busy ? "Booking…" : <>💳 Pay {money(it.price)} &amp; book</>}
                                           </button>
-                                          <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Charged to your account like your booking. Auto-confirmed while the window is open.</div>
+                                          <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Charged to your account like your booking · auto-confirmed while the window is open.</div>
                                         </div>
                                       )}
                                     </div>
