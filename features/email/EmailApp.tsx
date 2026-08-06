@@ -2020,6 +2020,7 @@ export function EmailApp() {
           <div><div className="text-[14.5px] font-extrabold">Compose your email</div><div className="text-[11.5px] text-white/80">Choose who gets it, write your message, then send or schedule.</div></div>
         </div>
         <div className="p-4">
+        <div className="-mx-4 -mt-4 mb-3.5 flex items-center gap-2 border-b border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>1</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Who gets it</span></div>
         {replyTo ? (
           <div className="rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -2033,7 +2034,7 @@ export function EmailApp() {
         ) : (
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div>
-              <FieldLabel>Audience</FieldLabel>
+              <FieldLabel>👥 Audience</FieldLabel>
               <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing" | "none")} className="w-full">
                 <option value="all">All families ({families.length ? included.length : reach ?? 0})</option>
                 <option value="listing">Families on a listing</option>
@@ -2041,7 +2042,7 @@ export function EmailApp() {
                 <option value="none">None — I&apos;ll add recipients myself</option>
               </Select>
             </div>
-            {audience === "one" && <div><FieldLabel>Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
+            {audience === "one" && <div><FieldLabel>✉️ Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
           </div>
         )}
         {sender && (
@@ -2099,7 +2100,7 @@ export function EmailApp() {
             ); })()}
           </div>
         )}
-        <div className="-mx-4 my-3.5 flex items-center gap-2 border-t border-[var(--line)] bg-[#f7f9fc] px-4 py-2"><span className="text-[13px]">✏️</span><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Your message</span></div>
+        <div className="-mx-4 my-3.5 flex items-center gap-2 border-y border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>2</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Your message</span></div>
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
         <div className="mt-2.5">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
