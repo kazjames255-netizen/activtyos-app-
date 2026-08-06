@@ -177,12 +177,12 @@ export function ParentMealsApp() {
       {/* Tabs — What's on + a tab per child who has a meal */}
       {kidsWithMeals.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {[["", "What’s on"], ...kidsWithMeals.map((k) => [k, k] as [string, string])].map(([key, label]) => {
+          {[["", "Menu"], ...kidsWithMeals.map((k) => [k, k] as [string, string])].map(([key, label]) => {
             const on = tab === key;
             return (
               <button key={key} type="button" onClick={() => { setTab(key); setToast(null); setPicking(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
                 style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 4px 12px -3px rgba(47,107,216,.6)" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>
-                {key === "" ? "📅 " : "🎒 "}{label}
+                {key === "" ? "🍴 " : "🎒 "}{label}
               </button>
             );
           })}
@@ -193,7 +193,7 @@ export function ParentMealsApp() {
       : tab ? (
         // ── A child's meals ──
         chosenByDate.size === 0
-          ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{tab} hasn’t got any meals yet — book one from What’s on, or add meals when you book.</Card>
+          ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{tab} hasn’t got any meals yet — book one from the Menu tab, or add meals when you book.</Card>
           : (
             <>
               <div className="mb-2 text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{tab}</b> — {chosenCount} meal{chosenCount === 1 ? "" : "s"}</div>
