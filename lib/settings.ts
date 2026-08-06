@@ -526,6 +526,7 @@ export interface TenantSettings {
     orderCutoffHours?: number;    // hours before a session that ordering closes
     menuNote?: string;            // a note shown on the meals page
     allergenNote?: string;        // standard allergen disclaimer shown to parents
+    changeApproval?: "review" | "auto"; // do parent meal changes/cancels need approval
     /** Who sees the read-only "what's being served" menu display in the customer
      *  area: every booked family, or only families who've paid for a meal that
      *  day. Ordering itself is always open to booked families (menuShare only
@@ -958,7 +959,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
   learning: { trackTraining: true, observations: false, framework: "EYFS" },
-  meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", allergenNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00" },
+  meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", allergenNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00", changeApproval: "auto" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },

@@ -56,6 +56,28 @@ export function MenuSharing() {
           rows={2} maxLength={300} placeholder="e.g. All meals are prepared in a kitchen that handles nuts, gluten and dairy — please speak to us about any allergy."
           className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)]" />
       </div>
+
+      <div className="mt-6 border-t border-[var(--line)] pt-4">
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">Meal changes &amp; cancellations</div>
+        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">When a family swaps or removes a meal they’ve already booked (before the cut-off).</p>
+        {(() => {
+          const mode = settings.meals?.changeApproval ?? "auto";
+          const setMode = (v: "review" | "auto") => save({ settings: { ...settings, meals: { ...settings.meals, changeApproval: v } } });
+          const card = (v: "review" | "auto", label: string, sub: string) => (
+            <button type="button" onClick={() => setMode(v)} className="flex-1 rounded-xl border p-4 text-left transition"
+              style={mode === v ? { borderColor: "#2f6bd8", background: "#eef4fd" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+              <div className="text-[14px] font-extrabold" style={{ color: mode === v ? "#1d3a8f" : "var(--ink)" }}>{mode === v ? "✓ " : ""}{label}</div>
+              <div className="mt-1 text-[12px] text-[var(--ink-3)]">{sub}</div>
+            </button>
+          );
+          return (
+            <div className="flex flex-col gap-2.5 sm:flex-row">
+              {card("auto", "Apply straight away", "Families can change or cancel a meal themselves up to the cut-off.")}
+              {card("review", "Need my approval", "Changes and cancellations come to you as a request to approve or decline first.")}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }

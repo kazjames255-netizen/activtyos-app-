@@ -19,7 +19,7 @@ import { DIETS, dietMeta, type Diet } from "./diet";
 interface MenuItem { id: string; name: string; price: number; allergens?: string[]; description?: string; diet?: Diet; capacity?: number; left?: number }
 interface MealDay { tenantId: string; tenantName: string; listingId: string; listingName: string; date: string; children: string[]; menu: { id: string; name: string; items: MenuItem[] }; served: boolean; canOrder: boolean; cutoffLabel: string; closesToday: boolean; allergenNote?: string }
 interface Booking { child?: string; listingId?: string; kids?: { name?: string }[]; mealItems?: { date: string; name: string; price: number }[] }
-interface Order { id: string; listingId?: string; childName: string; date: string; status?: string; pay?: string; items?: { name: string; price: number; qty: number; menuItemId?: string; allergens?: string[] }[] }
+interface Order { id: string; listingId?: string; childName: string; date: string; status?: string; pay?: string; items?: { name: string; price: number; qty: number; menuItemId?: string; allergens?: string[] }[]; changeRequest?: { menuItemId: string; name: string; price: number }; cancelRequest?: { at: string } }
 interface Child { name: string; allergies?: string; dietary?: string }
 type Chosen = { name: string; price: number; qty: number; allergens?: string[]; description?: string; diet?: Diet; orderId?: string; canCancel?: boolean };
 type BasketLine = { tenantId: string; listingId: string; listingName: string; date: string; dishId: string; name: string; price: number; child: string };
@@ -202,8 +202,17 @@ export function ParentMealsApp() {
 
   const cancelMeal = useCallback(async (orderId: string) => {
     if (typeof window !== "undefined" && !window.confirm("Remove this meal?")) return;
-    try { await apiPost(`/api/meal-orders/${encodeURIComponent(orderId)}/cancel`, {}); setToast("Meal removed."); load(); }
+    try { const r = await apiPost<{ requested?: boolean }>(`/api/meal-orders/${encodeURIComponent(orderId)}/cancel`, {}); setToast(r?.requested ? "Removal requested — awaiting your provider’s approval." : "Meal removed."); load(); }
     catch (err) { setToast(err instanceof Error ? err.message : "Couldn't remove that meal."); }
+  }, [load]);
+  const changeMeal = useCallback(async (orderId: string, menuItemId: string) => {
+    if (!menuItemId) return;
+    try { const r = await apiPost<{ changeRequest?: unknown }>(`/api/meal-orders/${encodeURIComponent(orderId)}/change`, { menuItemId }); setToast(r?.changeRequest ? "Change requested — awaiting your provider’s approval." : "Meal changed."); load(); }
+    catch (err) { setToast(err instanceof Error ? err.message : "Couldn't change that meal."); }
+  }, [load]);
+  const withdrawReq = useCallback(async (orderId: string) => {
+    try { await apiPost(`/api/meal-orders/${encodeURIComponent(orderId)}/request`, { action: "withdraw" }); setToast("Request withdrawn."); load(); }
+    catch (err) { setToast(err instanceof Error ? err.message : "Couldn't withdraw."); }
   }, [load]);
 
   const week = menuWeeks.length ? menuWeeks[Math.min(weekIdx, menuWeeks.length - 1)] : null;
@@ -389,10 +398,24 @@ export function ParentMealsApp() {
                       const c = childInfo.get(child);
                       // A confirmed meal (paid or a checkout meal) — locked, shown filled.
                       if (booked && !line) {
+                        const ord = booked.orderId ? orders.find((o) => o.id === booked.orderId) : undefined;
+                        const pendChange = ord?.changeRequest; const pendCancel = ord?.cancelRequest;
                         return (
                           <div key={iso} className="border-l border-[var(--line)] p-2">
                             <div className="rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}>✓ {booked.name}</div>
-                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--ink-3)]"><span>booked</span>{booked.canCancel && booked.orderId && <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="font-bold hover:text-[var(--red,#e21d27)]">· remove</button>}</div>
+                            {pendChange ? (
+                              <div className="mt-1 text-[10px] font-semibold text-[#8a5300]">↺ change to {pendChange.name} — awaiting approval <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">undo</button></div>
+                            ) : pendCancel ? (
+                              <div className="mt-1 text-[10px] font-semibold text-[#c0392b]">removal requested — awaiting approval <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">undo</button></div>
+                            ) : booked.canCancel && booked.orderId && e.canOrder ? (
+                              <div className="mt-1 flex items-center gap-1">
+                                <select aria-label={`Change ${child}'s meal`} value="" onChange={(ev) => { if (ev.target.value) changeMeal(booked.orderId!, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
+                                  <option value="">Change…</option>
+                                  {e.menu.items.filter((it) => it.name !== booked.name).map((it) => <option key={it.id} value={it.id}>{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}</option>)}
+                                </select>
+                                <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
+                              </div>
+                            ) : <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">booked</div>}
                           </div>
                         );
                       }

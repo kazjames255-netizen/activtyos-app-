@@ -23,6 +23,45 @@ async function hasBooking(tenantId: string, email: string) {
   return !snap.empty;
 }
 
+// Do parent meal changes / cancellations need the provider's approval first?
+async function mealApproval(tenantId: string): Promise<"review" | "auto"> {
+  const lib = await db.collection("libraries").doc(tenantId).get();
+  return ((lib.data()?.settings as { meals?: { changeApproval?: string } } | undefined)?.meals?.changeApproval) === "review" ? "review" : "auto";
+}
+
+type ResolvedLine = { menuItemId: string; name: string; price: number; qty: number; lineTotal: number; allergens?: string[] };
+// Price + validate a single dish on a listing's day-menu (cut-off + capacity),
+// as used when a family changes a booked meal. excludeOrderId lets the order
+// being changed free up its own portion in the capacity count.
+async function resolveDishForDay(tenantId: string, listingId: string, date: string, menuItemId: string, excludeOrderId?: string): Promise<{ line: ResolvedLine } | { error: string; code: number }> {
+  const listingSnap = await db.collection("listings").doc(listingId).get();
+  const listing = listingSnap.data();
+  if (!listingSnap.exists || listing!.tenantId !== tenantId || !listing!.mealsEnabled) return { error: "That listing isn't offering meals", code: 400 };
+  const libSnap = await db.collection("libraries").doc(tenantId).get();
+  const meals = ((libSnap.data()?.settings as { meals?: { cutoffWhen?: string; cutoffTime?: string } } | undefined)?.meals ?? {});
+  const cut = resolveCutoff(listing!.mealConfig as { cutoffWhen?: unknown; cutoffTime?: unknown } | undefined, meals);
+  if (!canOrderMeal(cut.when, cut.time, date)) return { error: `Ordering for that day has closed — ${cutoffLabel(cut.when, cut.time).toLowerCase()}.`, code: 409 };
+  const plan = mealDayPlan((listing!.mealPlan as Record<string, unknown> | undefined)?.[date]);
+  if (!plan) return { error: "There's no menu set for that day", code: 400 };
+  const menuSnap = await db.collection("mealMenus").doc(plan.menuId).get();
+  if (!menuSnap.exists || menuSnap.data()!.tenantId !== tenantId) return { error: "That day's menu is unavailable — refresh", code: 400 };
+  const dayItems = dishesForDay(plan, (menuSnap.data()!.items ?? []) as { id: string; name: string; price: number; allergens?: string[]; capacity?: number }[]) as { id: string; name: string; price: number; allergens?: string[]; capacity?: number }[];
+  const it = dayItems.find((x) => x.id === menuItemId);
+  if (!it) return { error: "That meal isn't on that day's menu any more — refresh", code: 400 };
+  if (it.capacity) {
+    const [ordersDay, allBookings] = await Promise.all([
+      ordersCol.where("tenantId", "==", tenantId).where("date", "==", date).get(),
+      db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    ]);
+    let taken = 0;
+    for (const d of ordersDay.docs) { if (d.id === excludeOrderId) continue; const o = d.data() as { status?: string; listingId?: string; items?: { menuItemId?: string; qty?: number }[] }; if (o.status === "cancelled" || o.listingId !== listingId) continue; for (const li of (o.items ?? [])) if (li.menuItemId === menuItemId) taken += li.qty ?? 1; }
+    for (const d of allBookings.docs) { const b = d.data() as { status?: string; listingId?: string; mealItems?: { date: string; name: string }[] }; if (b.status === "Cancelled" || b.listingId !== listingId) continue; for (const li of (b.mealItems ?? [])) if (li.date === date && li.name === it.name) taken += 1; }
+    if (taken + 1 > it.capacity) return { error: `Sorry — “${it.name}” is fully booked for that day.`, code: 409 };
+  }
+  const price = round2(it.price);
+  return { line: { menuItemId, name: it.name, price, qty: 1, lineTotal: price, ...(it.allergens?.length ? { allergens: it.allergens } : {}) } };
+}
+
 // ── Meal options (the orderable menu) ─────────────────────────────────────
 const optionSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -378,6 +417,8 @@ mealOrders.post("/:id/pay", async (req, res) => {
 });
 
 // POST /api/meal-orders/:id/cancel — the parent (own, unpaid) or the provider.
+// When the provider requires approval, a parent cancel is recorded as a pending
+// request instead of cancelling outright (mirrors booking date-changes).
 mealOrders.post("/:id/cancel", async (req, res) => {
   const auth = req.auth!;
   const snap = await ordersCol.doc(req.params.id).get();
@@ -387,7 +428,77 @@ mealOrders.post("/:id/cancel", async (req, res) => {
   const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId;
   const isOwner = auth.role === "parent" && o.parentEmail === email;
   if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
-  if (isOwner && o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to cancel it" }); return; }
-  await snap.ref.set({ status: "cancelled" }, { merge: true });
+  if (isOwner) {
+    if (o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to cancel it" }); return; }
+    if ((await mealApproval(o.tenantId)) === "review") {
+      await snap.ref.set({ cancelRequest: { at: new Date().toISOString() }, changeRequest: null }, { merge: true });
+      res.json({ ok: true, requested: true });
+      return;
+    }
+  }
+  await snap.ref.set({ status: "cancelled", changeRequest: null, cancelRequest: null }, { merge: true });
   res.json({ ok: true });
+});
+
+// POST /api/meal-orders/:id/change { menuItemId } — a family swaps a booked
+// meal for another dish that day. Auto-applied, or recorded as a pending
+// changeRequest when the provider requires approval.
+mealOrders.post("/:id/change", async (req, res) => {
+  const auth = req.auth!;
+  if (auth.role !== "parent") { res.status(403).json({ error: "Only families change their meals" }); return; }
+  const email = req.user?.email?.toLowerCase();
+  const parsed = z.object({ menuItemId: z.string().min(1).max(60) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Pick a meal" }); return; }
+  const snap = await ordersCol.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
+  const o = snap.data() as { tenantId: string; parentEmail: string; listingId?: string; date: string; pay: string; status?: string };
+  if (o.parentEmail !== email) { res.status(404).json({ error: "Order not found" }); return; }
+  if (o.status === "cancelled") { res.status(409).json({ error: "This order was cancelled" }); return; }
+  if (o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to change it" }); return; }
+  if (!o.listingId) { res.status(400).json({ error: "This order can't be changed here" }); return; }
+  const r = await resolveDishForDay(o.tenantId, o.listingId, o.date, parsed.data.menuItemId, snap.id);
+  if ("error" in r) { res.status(r.code).json({ error: r.error }); return; }
+  if ((await mealApproval(o.tenantId)) === "review") {
+    await snap.ref.set({ changeRequest: { menuItemId: r.line.menuItemId, name: r.line.name, price: r.line.price, at: new Date().toISOString() }, cancelRequest: null }, { merge: true });
+  } else {
+    await snap.ref.set({ items: [r.line], total: r.line.price, changeRequest: null }, { merge: true });
+  }
+  const after = await snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+// POST /api/meal-orders/:id/request { action } — approve/decline (provider) or
+// withdraw (family) a pending change/cancel request.
+mealOrders.post("/:id/request", async (req, res) => {
+  const auth = req.auth!;
+  const action = (req.body as { action?: string })?.action;
+  const snap = await ordersCol.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
+  const o = snap.data() as { tenantId: string; parentEmail: string; listingId?: string; date: string; changeRequest?: { menuItemId: string }; cancelRequest?: unknown };
+  const email = req.user?.email?.toLowerCase();
+  const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId;
+  const isOwner = auth.role === "parent" && o.parentEmail === email;
+  if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
+  if (action === "withdraw" || action === "decline") {
+    if (action === "withdraw" && !isOwner) { res.status(403).json({ error: "Not allowed" }); return; }
+    if (action === "decline" && !isOperator) { res.status(403).json({ error: "Not allowed" }); return; }
+    await snap.ref.set({ changeRequest: null, cancelRequest: null }, { merge: true });
+    res.json({ ok: true });
+    return;
+  }
+  if (action === "approve") {
+    if (!isOperator) { res.status(403).json({ error: "Requires an operator account" }); return; }
+    if (o.cancelRequest) { await snap.ref.set({ status: "cancelled", changeRequest: null, cancelRequest: null }, { merge: true }); res.json({ ok: true }); return; }
+    if (o.changeRequest && o.listingId) {
+      const r = await resolveDishForDay(o.tenantId, o.listingId, o.date, o.changeRequest.menuItemId, snap.id);
+      if ("error" in r) { res.status(r.code).json({ error: r.error }); return; }
+      await snap.ref.set({ items: [r.line], total: r.line.price, changeRequest: null, cancelRequest: null }, { merge: true });
+      const after = await snap.ref.get();
+      res.json({ id: after.id, ...after.data() });
+      return;
+    }
+    res.status(400).json({ error: "Nothing to approve" });
+    return;
+  }
+  res.status(400).json({ error: "Unknown action" });
 });

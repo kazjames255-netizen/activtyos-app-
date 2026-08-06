@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Select } from "@/components/ui";
@@ -15,6 +15,7 @@ import { fmtDate, mondayOf } from "@/features/listings/format";
 
 interface Row { listingId: string | null; listingName: string; date: string; child: string; dish: string; price: number }
 interface Missing { listingId: string; listingName: string; date: string; child: string }
+interface MealReq { id: string; childName: string; date: string; listingId?: string; items?: { name: string }[]; changeRequest?: { name: string }; cancelRequest?: { at: string } }
 type View = "daily" | "weekly" | "total";
 
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -22,13 +23,18 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 export function MealReport() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [missing, setMissing] = useState<Missing[]>([]);
+  const [reqs, setReqs] = useState<MealReq[]>([]);
   const [listingId, setListingId] = useState("");
   const [kid, setKid] = useState("");
   const [view, setView] = useState<View>("daily");
 
-  const load = useCallback(() => { apiGet<{ rows: Row[]; missing: Missing[] }>("/api/meal-orders/report").then((d) => { setRows(d.rows ?? []); setMissing(d.missing ?? []); }).catch(() => { setRows([]); setMissing([]); }); }, []);
+  const load = useCallback(() => {
+    apiGet<{ rows: Row[]; missing: Missing[] }>("/api/meal-orders/report").then((d) => { setRows(d.rows ?? []); setMissing(d.missing ?? []); }).catch(() => { setRows([]); setMissing([]); });
+    apiGet<MealReq[]>("/api/meal-orders").then((list) => setReqs((list ?? []).filter((o) => o.changeRequest || o.cancelRequest))).catch(() => setReqs([]));
+  }, []);
   useEffect(() => { load(); }, [load]);
-  useRealtime(["bookings"], load);
+  useRealtime(["bookings", "mealOrders"], load);
+  const act = useCallback((id: string, action: "approve" | "decline") => { apiPost(`/api/meal-orders/${encodeURIComponent(id)}/request`, { action }).then(() => load()).catch(() => {}); }, [load]);
 
   const listings = useMemo(() => {
     const m = new Map<string, string>();
@@ -144,6 +150,32 @@ export function MealReport() {
           ))}
         </div>
       </div>
+      {(() => {
+        const rq = reqs.filter((r) => (!listingId || r.listingId === listingId) && (!kid || r.childName === kid));
+        if (rq.length === 0) return null;
+        return (
+          <div className="mb-3 overflow-hidden rounded-2xl border border-[#cdddf7] bg-[#f7faff]">
+            <div className="flex items-center gap-2 px-3.5 py-2 text-[13px] font-extrabold text-[#1d3a8f]" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}>
+              🔔 Meal change requests <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{rq.length}</span>
+            </div>
+            <div className="flex flex-col divide-y divide-[var(--line)]">
+              {rq.map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center gap-2 px-3.5 py-2 text-[12px]">
+                  <span className="font-extrabold text-[#12306e]">{r.childName}</span>
+                  <span className="text-[var(--ink-3)]">{fmtDay(r.date)}</span>
+                  {r.cancelRequest
+                    ? <span className="font-semibold text-[#c0392b]">wants to cancel {r.items?.map((i) => i.name).join(", ")}</span>
+                    : <span className="font-semibold text-[#8a5300]">change {r.items?.map((i) => i.name).join(", ")} → <b>{r.changeRequest?.name}</b></span>}
+                  <div className="ml-auto flex gap-1.5">
+                    <button type="button" onClick={() => act(r.id, "approve")} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)" }}>Approve</button>
+                    <button type="button" onClick={() => act(r.id, "decline")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-extrabold text-[var(--ink-2)]">Decline</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       <div className="flex flex-col gap-2.5">
         {filtered.length === 0 ? emptyCard : view === "daily" ? daily() : view === "weekly" ? weekly() : total()}
       </div>
