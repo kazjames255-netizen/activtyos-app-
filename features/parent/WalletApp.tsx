@@ -131,32 +131,35 @@ export function WalletApp() {
                     <div className="text-[10.5px] text-[var(--ink-3)]">to spend</div>
                   </div>
                 </div>
-                {/* The membership plan that tops this wallet up, if any. */}
+                {/* The membership plan that tops this wallet up, if any — its
+                    own clearly-labelled block, not part of the history. */}
                 {mem?.current && (
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-[var(--line)] bg-[#fff8e6] px-4 py-2.5">
-                    <div className="text-[12.5px]">
-                      <span className="font-extrabold text-[#8a5b00]">⭐ {tierName(mem)} membership</span>
-                      <span className="text-[var(--ink-3)]"> · {money(mem.current.priceMonthly)}/mo</span>
-                    </div>
-                    <div className="text-[11.5px] text-[var(--ink-2)]">
-                      {mem.current.benefitType === "credit"
-                        ? `+${money(mem.current.benefitValue)} credit each month`
-                        : `${mem.current.benefitValue}% off every booking`}
-                      {mem.current.renewsAt ? ` · renews ${fmtWhen(mem.current.renewsAt)}` : ""}
+                  <div className="border-b border-[var(--line)] bg-[#fff8e6] px-4 py-2.5">
+                    <div className="text-[9.5px] font-bold uppercase tracking-[0.07em] text-[#b08600]">Your plan</div>
+                    <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+                      <span className="text-[12.5px] font-extrabold text-[#8a5b00]">⭐ {tierName(mem)} membership <span className="font-semibold text-[var(--ink-3)]">· {money(mem.current.priceMonthly)}/mo</span></span>
+                      <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">
+                        {mem.current.benefitType === "credit" ? `+${money(mem.current.benefitValue)} credit each month` : `${mem.current.benefitValue}% off every booking`}
+                        {mem.current.renewsAt ? ` · renews ${fmtWhen(mem.current.renewsAt)}` : ""}
+                      </span>
                     </div>
                   </div>
                 )}
-                <div className="px-4 py-1.5">
+                <div className="px-4 pb-2 pt-2.5">
+                  <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">Activity</div>
                   {b.transactions.length === 0 ? (
                     <div className="py-2 text-[12px] text-[var(--ink-3)]">No activity yet.</div>
                   ) : (
                     b.transactions.map((t) => (
                       <div key={t.id} className="flex items-center justify-between gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold">{t.reason}</div>
-                          <div className="text-[11px] text-[var(--ink-3)]">{fmtWhen(t.at)}{t.ref ? ` · Ref ${t.ref}` : ""}</div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[11px]" style={t.delta >= 0 ? { background: "#e8f7ee", color: "#0e7a45" } : { background: "#eef2f9", color: "#5b6b86" }}>{t.delta >= 0 ? "＋" : "−"}</span>
+                          <div className="min-w-0">
+                            <div className="truncate font-semibold">{t.reason}</div>
+                            <div className="text-[11px] text-[var(--ink-3)]">{fmtWhen(t.at)}{t.ref ? ` · Ref ${t.ref}` : ""}</div>
+                          </div>
                         </div>
-                        <div className={`flex-none font-extrabold tabular-nums ${t.delta >= 0 ? "text-[#1d3a8f]" : "text-[var(--ink-2)]"}`}>
+                        <div className={`flex-none font-extrabold tabular-nums ${t.delta >= 0 ? "text-[#0e7a45]" : "text-[var(--ink-2)]"}`}>
                           {t.delta >= 0 ? "+" : "−"}{money(Math.abs(t.delta))}
                         </div>
                       </div>
