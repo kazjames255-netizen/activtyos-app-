@@ -793,8 +793,17 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
   );
 }
 
-function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null } }) {
+function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null }; mealOrders?: MealOrder[] }) {
   const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay || autoOpen));
+  // Meals on this booking: those bought at checkout (b.mealItems) + any ordered
+  // later from the Meals area (matched orders). "later" ones are tagged.
+  const mealRows = useMemo(() => {
+    const rows: { name: string; date: string; price: number; child?: string; later?: boolean }[] = [];
+    for (const m of (b.mealItems ?? [])) rows.push({ name: m.name, date: m.date, price: m.price });
+    for (const o of mealOrders) for (const it of (o.items ?? [])) for (let q = 0; q < (it.qty ?? 1); q++) rows.push({ name: it.name, date: o.date, price: it.price, child: o.childName, later: true });
+    return rows.sort((a, c) => a.date.localeCompare(c.date));
+  }, [b.mealItems, mealOrders]);
+  const mealTotal = mealRows.reduce((s, m) => s + m.price, 0);
   const [cancelling, setCancelling] = useState(!!autoCancel);
   const [withdrawing, setWithdrawing] = useState(false);
   const [amending, setAmending] = useState(!!autoAmend);
@@ -916,6 +925,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <div className="ml-auto flex-none text-right">
             <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
+            {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {mealRows.length} meal{mealRows.length === 1 ? "" : "s"} · {money(mealTotal)}</div>}
           </div>
           <span className={`flex-none text-[13px] text-[var(--ink-3)] transition-transform ${expanded ? "rotate-180" : ""}`} title={expanded ? "Close" : "Open"}>▾</span>
         </div>
@@ -1075,12 +1085,16 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               {extras.map((a, i) => <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">{a}</div>)}
             </>
           ); })()}
-          {(b.mealItems?.length ?? 0) > 0 && (
+          {mealRows.length > 0 && (
             <>
               <SectionHead>Meals</SectionHead>
-              {b.mealItems!.map((m, i) => (
+              {mealRows.map((m, i) => (
                 <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
-                  <span><span className="mr-1">🍽</span><b>{m.name}</b> <span className="text-[var(--ink-3)]">· {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span></span>
+                  <span>
+                    <span className="mr-1">🍽</span><b>{m.name}</b>
+                    <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
+                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[#2f6bd8]">added later</span>}
+                  </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}
                 </div>
               ))}
@@ -1181,8 +1195,14 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
 
 type BookingFilter = "all" | "upcoming" | "past" | "cancelled";
 
+// Meals ordered from the Meals area after booking — folded back onto the
+// booking they belong to (same listing, a booked day, one of its children).
+interface MealOrder { id: string; listingId?: string; childName: string; date: string; status?: string; items?: { name: string; price: number; qty: number }[] }
+const splitKidNames = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
+
 export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<BookingFilter>("all");
   const [waitOpen, setWaitOpen] = useState(true);
@@ -1196,7 +1216,22 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
     apiGet<Booking[]>("/api/my/bookings")
       .then(setBookings)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load bookings"));
+    apiGet<MealOrder[]>("/api/meal-orders").then(setMealOrders).catch(() => {});
   }, []);
+
+  // Attach each live meal order to the one booking it belongs to (same listing,
+  // a day that booking covers, one of its children). An order lands on a single
+  // booking — first match wins.
+  const ordersByRef = useMemo(() => {
+    const live = mealOrders.filter((o) => o.status !== "cancelled");
+    const map = new Map<string, MealOrder[]>();
+    for (const o of live) {
+      const b = (bookings ?? []).find((bk) => bk.listingId && bk.listingId === o.listingId && (bk.days ?? []).includes(o.date) && new Set([...splitKidNames(bk.child), ...((bk.kids ?? []).map((k) => k.name))]).has(o.childName));
+      if (!b) continue;
+      const a = map.get(b.ref) ?? []; a.push(o); map.set(b.ref, a);
+    }
+    return map;
+  }, [mealOrders, bookings]);
 
   useEffect(refresh, [refresh]);
   useRealtime(["bookings"], refresh);
@@ -1419,7 +1454,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (
-                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} autoOpen={b.ref === openRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={venueOf(b)} />
+                      <BookingCard key={`${b.tenantId}-${b.ref}`} b={b} refresh={refresh} autoPay={b.ref === payRef} autoAmend={b.ref === amendRef} autoCancel={b.ref === cancelRef} autoOpen={b.ref === openRef} clash={clashRefs.has(b.ref)} listingInfo={listingOf(b)} venue={venueOf(b)} mealOrders={ordersByRef.get(b.ref) ?? []} />
                     ))}
                   </div>
                 )}
