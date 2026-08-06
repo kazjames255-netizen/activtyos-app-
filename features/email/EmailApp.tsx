@@ -1714,6 +1714,13 @@ export function EmailApp() {
   const [sigChoice, setSigChoice] = useState<string | null>(null); // null = follow default
   const [sigMgr, setSigMgr] = useState(false);
   const [replyTo, setReplyTo] = useState<{ name: string; email: string } | null>(null); // focused 1:1 reply mode
+  const msgRef = useRef<HTMLDivElement | null>(null);       // the message editor — jumped to on reply/forward
+  const [jumpMsg, setJumpMsg] = useState(0);                // bump to scroll+focus the editor (reply/forward)
+  useEffect(() => {
+    if (!jumpMsg) return;
+    const id = setTimeout(() => { msgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); (msgRef.current?.querySelector('[contenteditable="true"]') as HTMLElement | null)?.focus(); }, 90);
+    return () => clearTimeout(id);
+  }, [jumpMsg]);
   const [sender, setSender] = useState<SenderIdentity | null>(null); // who this tenant's mail goes out as
   const [schedOpen, setSchedOpen] = useState(false);
   const [schedAt, setSchedAt] = useState("");
@@ -1986,7 +1993,7 @@ export function EmailApp() {
         </div>
       )}
 
-      {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); }} />}
+      {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} seasons={settings.seasons ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
@@ -2103,7 +2110,7 @@ export function EmailApp() {
         {!replyTo && <div className="-mx-4 my-3.5 flex items-center gap-2 border-y border-[var(--line)] px-4 py-2.5" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}><span className="grid h-6 w-6 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>2</span><span className="text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[#12306e]">Your message</span></div>}
         {replyTo && <div className="mt-2" />}
         <div className="mt-2.5"><FieldLabel>Subject</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full" /></div>
-        <div className="mt-2.5">
+        <div ref={msgRef} className="mt-2.5 scroll-mt-3">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><FieldLabel>Message</FieldLabel>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[12px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
