@@ -427,7 +427,7 @@ export function ParentMealsApp() {
                               <div className="mt-1 flex items-center gap-1">
                                 <select aria-label={`Change ${child}'s meal`} value="" onChange={(ev) => { if (ev.target.value) changeMeal(booked.orderId!, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
                                   <option value="">Change…</option>
-                                  {e.menu.items.filter((it) => it.name !== booked.name).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
+                                  {e.menu.items.filter((it) => it.name !== booked.name && (!dietFilter || it.diet === dietFilter)).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
                                 </select>
                                 <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
                               </div>
