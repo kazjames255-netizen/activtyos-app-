@@ -2032,17 +2032,26 @@ export function EmailApp() {
             <div className="mt-2"><FieldLabel>To</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>
           </div>
         ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <div>
-              <FieldLabel>👥 Audience</FieldLabel>
-              <Select value={audience} onChange={(e) => setAudience(e.target.value as "all" | "one" | "listing" | "none")} className="w-full">
-                <option value="all">All families ({families.length ? included.length : reach ?? 0})</option>
-                <option value="listing">Families on a listing</option>
-                <option value="one">A single address</option>
-                <option value="none">None — I&apos;ll add recipients myself</option>
-              </Select>
+          <div>
+            <FieldLabel>👥 Send to</FieldLabel>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {([
+                ["all", "👨‍👩‍👧", "All families", families.length ? included.length : reach ?? 0],
+                ["listing", "🎟", "A listing", null],
+                ["one", "✉️", "One address", null],
+                ["none", "✍️", "Add my own", null],
+              ] as [("all" | "listing" | "one" | "none"), string, string, number | null][]).map(([k, icon, label, count]) => {
+                const on = audience === k;
+                return (
+                  <button key={k} type="button" onClick={() => setAudience(k)}
+                    className="rounded-xl border px-3.5 py-2.5 text-[12.5px] font-extrabold transition active:scale-[.98]"
+                    style={on ? { borderColor: "transparent", background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 6px 14px -6px rgba(47,107,216,.6)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                    {icon} {label}{count != null ? <span className={on ? "text-white/80" : "text-[var(--ink-3)]"}> {count}</span> : null}
+                  </button>
+                );
+              })}
             </div>
-            {audience === "one" && <div><FieldLabel>✉️ Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
+            {audience === "one" && <div className="mt-2.5 sm:max-w-[380px]"><FieldLabel>✉️ Recipient</FieldLabel><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" className="w-full" /></div>}
           </div>
         )}
         {sender && (
