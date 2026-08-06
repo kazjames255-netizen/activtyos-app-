@@ -1902,6 +1902,10 @@ export function EmailApp() {
       : audienceIncluded.map((f) => f.email.toLowerCase());
     return [...new Set([...base, ...extraTo, ...cc, ...bcc])].filter(Boolean);
   })();
+  // A single-address or manual "also send to" email is transactional — it must
+  // send to exactly the addresses typed, never get consent-filtered as a family
+  // broadcast (which strips non-family addresses and can leave zero recipients).
+  const manualSend = audience === "one" || audience === "none";
 
   // Fire the actual API send with a snapshotted payload, then clear the composer.
   const dispatchSend = useCallback(async (payload: Record<string, unknown>, hadAttachments: boolean) => {
@@ -1938,10 +1942,9 @@ export function EmailApp() {
     const payload: Record<string, unknown> = {
       subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
       html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
-      // "one" is recorded as such in the history ("Sent to 1 address");
-      // everything else sends the explicit recipient list.
-      audience: audience === "one" && finalRecipients.length === 1 ? "one" : "all",
-      ...(audience === "one" && finalRecipients.length === 1 ? { to: finalRecipients[0] } : {}),
+      // Manual/single sends are transactional ("one"); family broadcasts are "all".
+      audience: manualSend ? "one" : "all",
+      ...(manualSend && finalRecipients[0] ? { to: finalRecipients[0] } : {}),
       recipients: finalRecipients, cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
     };
     const secs = settings.emailPrefs?.undoSeconds ?? 0;   // instant send by default; opt into a grace period in Settings
@@ -1963,7 +1966,8 @@ export function EmailApp() {
       await apiPost("/api/emails/schedule", {
         subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
         html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
-        audience: "all", recipients: finalRecipients,
+        audience: manualSend ? "one" : "all", ...(manualSend && finalRecipients[0] ? { to: finalRecipients[0] } : {}),
+        recipients: finalRecipients,
         cc: cc.length ? cc.join(",") : undefined, bcc: bcc.length ? bcc.join(",") : undefined,
         sendAt: schedAt,
       });

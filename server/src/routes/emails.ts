@@ -100,7 +100,7 @@ const familyEmails = async (tenantId: string) => (await familyRecipients(tenantI
  *  base audience plus any Cc/Bcc addresses, deduped and lowercased. */
 async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSchema>): Promise<string[]> {
   const base = input.audience === "one"
-    ? [input.to!.toLowerCase()]
+    ? [input.to!.toLowerCase(), ...(input.recipients?.map((e) => e.toLowerCase()) ?? [])]
     : input.recipients?.length
       ? [...new Set(input.recipients.map((e) => e.toLowerCase()))]
       : await familyEmails(tenantId);
@@ -281,7 +281,7 @@ emails.post("/send", async (req, res) => {
   const input = parsed.data;
 
   const recipients = await resolveRecipients(auth.tenantId, input);
-  if (recipients.length === 0) { res.status(400).json({ error: "No families to email yet" }); return; }
+  if (recipients.length === 0) { res.status(400).json({ error: input.audience === "one" ? "Add at least one recipient address." : "No families to email yet — nobody matches this audience." }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `Too many recipients (${recipients.length}) — max ${MAX_RECIPIENTS}` }); return; }
 
   if (input.dryRun) { res.json({ dryRun: true, recipientCount: recipients.length, sample: recipients.slice(0, 20) }); return; }
@@ -323,7 +323,7 @@ emails.post("/schedule", async (req, res) => {
   if (sendAt <= nowStamp()) { res.status(400).json({ error: "Pick a time in the future — or just press Send" }); return; }
 
   const recipients = await resolveRecipients(auth.tenantId, input);
-  if (recipients.length === 0) { res.status(400).json({ error: "No families to email yet" }); return; }
+  if (recipients.length === 0) { res.status(400).json({ error: input.audience === "one" ? "Add at least one recipient address." : "No families to email yet — nobody matches this audience." }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `Too many recipients (${recipients.length}) — max ${MAX_RECIPIENTS}` }); return; }
 
   const doc = {
