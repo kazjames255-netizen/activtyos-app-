@@ -3,18 +3,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────
-// A self-driving "watch me build it" demo for the Sessions & blocks page. A
-// fake cursor moves to each field, types the values in, and clicks the
-// buttons — make a period, make a pass, tap "+ Add to block" on each, name
-// the block, then "Move to Block Library". Mirrors the real screens exactly.
-// Pure presentation (no real data touched).
+// A self-driving, narrated "watch me build it" demo for Sessions & blocks. A
+// fake cursor types values in and clicks — make periods, make passes, tap
+// "+ Add to block" on each, name the block, "Move to Block Library" — landing
+// on a Block Library card that mirrors the real one. Optional voice narration
+// uses the browser's most natural available voice (no external service).
 // ─────────────────────────────────────────────────────────────────────────
 
-const PERIOD = { key: "p1", nm: "8am-3pm", mt: "8:00 AM – 3:00 PM" };
-const PASS = { key: "x1", nm: "5 day pass", mt: "5 days" };
+const PERIODS = [
+  { key: "p1", nm: "8am-3pm", mt: "8:00 AM – 3:00 PM", start: "08:00", finish: "15:00" },
+  { key: "p2", nm: "9am-3.30pm", mt: "9:00 AM – 3:30 PM", start: "09:00", finish: "15:30" },
+];
+const PASSES = [
+  { key: "x1", nm: "5 day pass", mt: "5 days", days: "5" },
+  { key: "x2", nm: "1 day pay", mt: "1 day", days: "1" },
+];
+
+// Rank the device's installed voices, most natural first. Chrome's "Google"
+// voices and Apple's premium/enhanced voices sound closest to a real person.
+function pickVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+  const vs = window.speechSynthesis.getVoices();
+  if (!vs.length) return null;
+  const pref = ["Google UK English Female", "Google UK English Male", "Google US English", "Microsoft Sonia", "Microsoft Libby", "Samantha", "Serena", "Kate", "Fiona", "Daniel", "Moira"];
+  for (const name of pref) { const v = vs.find((x) => x.name === name) || vs.find((x) => x.name.includes(name)); if (v) return v; }
+  return vs.find((v) => /en-GB/i.test(v.lang) && !v.localService) || vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
+}
 
 const CSS = `
-.bt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
+.bt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--red:#e21d27;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
 .bt-root .bt-rail{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
 .bt-root .rstep{flex:1;min-width:140px;display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:12px;background:var(--surface);border:1px solid var(--line);transition:.35s}
 .bt-root .rstep .n{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--panel);color:var(--faint);border:1px solid var(--line);flex:none;transition:.35s}
@@ -25,7 +42,7 @@ const CSS = `
 .bt-root .rstep.on .t{color:var(--navy)}
 .bt-root .rstep.done .n{background:var(--green);color:#fff;border-color:transparent}
 .bt-root .rstep.done .t{color:var(--ink2)}
-.bt-root .bt-stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 24px 50px -36px rgba(20,48,110,.5);min-height:300px;overflow:hidden}
+.bt-root .bt-stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 24px 50px -36px rgba(20,48,110,.5);min-height:320px;overflow:hidden}
 .bt-root .appear{animation:btrise .45s ease both}
 @keyframes btrise{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .bt-root .card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:14px}
@@ -53,14 +70,28 @@ const CSS = `
 .bt-root .bchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:800}
 .bt-root .bchip .mt{color:var(--faint);font-weight:600}
 .bt-root .bchip .x{color:var(--faint);font-weight:800;font-size:13px}
-.bt-root .drop{border:2px dashed var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.bt-root .drop{border:2px dashed var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:560px){.bt-root .drop{grid-template-columns:1fr 1fr}}
 .bt-root .stacklist{display:flex;flex-direction:column;gap:8px}
-.bt-root .calc{border:1px solid #d7e6ff;background:linear-gradient(180deg,#f7faff,#eef4ff);border-radius:14px;padding:13px;margin-top:12px}
-.bt-root .calc .h{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:9px}
-.bt-root .prow{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--line);margin-bottom:6px;font-size:12.5px}
-.bt-root .prow .p{font-weight:800}
-.bt-root .tagm{font-size:9.5px;font-weight:800;color:#127a3e;background:#d8f3e1;border-radius:999px;padding:1px 7px;margin-left:6px}
-.bt-root .tagc{font-size:9.5px;font-weight:800;color:var(--brandink);background:#e7eefc;border-radius:999px;padding:1px 7px;margin-left:6px}
+/* Block Library card — mirrors the real one */
+.bt-root .lib{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 40px -30px rgba(20,48,110,.5)}
+.bt-root .lib .hd{background:linear-gradient(100deg,#16306e,#2f6bd8 90%);color:#fff;padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+.bt-root .lib .drag{color:rgba(255,255,255,.55);font-size:12px;line-height:1;letter-spacing:1px;margin-top:2px}
+.bt-root .lib .sw{width:16px;height:16px;border-radius:5px;background:#3b82f6;box-shadow:0 0 0 2px rgba(255,255,255,.4);margin-top:2px;flex:none}
+.bt-root .lib .nm{font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+.bt-root .lib .sub{font-size:11.5px;color:rgba(255,255,255,.82);margin-top:2px}
+.bt-root .lib .r{margin-left:auto;display:flex;align-items:center;gap:9px}
+.bt-root .lib .unpriced{background:rgba(255,255,255,.92);color:#1d3a8f;border-radius:999px;padding:3px 11px;font-size:11px;font-weight:800}
+.bt-root .lib .chev{color:rgba(255,255,255,.85);font-size:11px}
+.bt-root .lib .bd{padding:14px;background:#fff}
+.bt-root .lib .grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:520px){.bt-root .lib .grid2{grid-template-columns:1fr 1fr}}
+.bt-root .lib .seclab{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin-bottom:4px}
+.bt-root .lib .line{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.bt-root .lib .line .g{color:var(--faint);font-weight:600}
+.bt-root .lib .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.bt-root .lib .abtn{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800;color:var(--ink2)}
+.bt-root .lib .abtn.del{color:var(--red);border-color:#f6c9cc}
 .bt-root .bt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .55s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.35))}
 .bt-root .bt-cursor.down{transition:transform .1s}
 .bt-root .bt-cursor .ring{position:absolute;left:-9px;top:-9px;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);opacity:0}
@@ -71,6 +102,7 @@ const CSS = `
 .bt-root .bt-controls{margin-top:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .bt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}
 .bt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}
+.bt-root .cbtn.on{background:#eef4ff;border-color:#bcd0f5;color:var(--brandink)}
 .bt-root .count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
 `;
 
@@ -81,19 +113,45 @@ export function BlocksTour() {
   const [pTitle, setPTitle] = useState("");
   const [passName, setPassName] = useState("");
   const [blockName, setBlockName] = useState("");
-  const [madePeriod, setMadePeriod] = useState(false);
-  const [madePass, setMadePass] = useState(false);
+  const [fStart, setFStart] = useState("08:00");
+  const [fFinish, setFFinish] = useState("15:00");
+  const [fDays, setFDays] = useState("5");
+  const [periodsMade, setPeriodsMade] = useState<string[]>([]);
+  const [passesMade, setPassesMade] = useState<string[]>([]);
   const [focus, setFocus] = useState<string | null>(null);
   const [added, setAdded] = useState<Record<string, boolean>>({});
+  const [soundOn, setSoundOn] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number; down: boolean; click: boolean }>({ x: 24, y: 20, down: false, click: false });
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const reg = (k: string) => (el: HTMLElement | null) => { refs.current[k] = el; };
+  const soundOnRef = useRef(false);
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const capRef = useRef("");
+
+  // load the best available voice
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const load = () => { voiceRef.current = pickVoice(); };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { window.speechSynthesis.onvoiceschanged = null; window.speechSynthesis.cancel(); };
+  }, []);
 
   const run = useCallback(async (alive: () => boolean) => {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const set = <T,>(fn: (v: T) => void, v: T) => { if (alive()) fn(v); };
+    const strip = (h: string) => h.replace(/<[^>]+>/g, "");
+    const speak = (text: string) => {
+      if (!soundOnRef.current || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      const s = window.speechSynthesis; s.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = voiceRef.current; if (v) { u.voice = v; u.lang = v.lang; }
+      u.rate = 0.98; u.pitch = 1;
+      s.speak(u);
+    };
+    const narrate = (html: string) => { capRef.current = html; set(setCap, html); speak(strip(html)); };
     const moveTo = async (key: string, ox = 0.5, oy = 0.6) => {
       const el = refs.current[key], st = stageRef.current;
       if (el && st) {
@@ -103,63 +161,79 @@ export function BlocksTour() {
       await sleep(650);
     };
     const click = async () => {
-      setCursor((c) => ({ ...c, down: true, click: true }));
-      await sleep(150);
-      setCursor((c) => ({ ...c, down: false }));
-      await sleep(120);
+      setCursor((c) => ({ ...c, down: true, click: true })); await sleep(150);
+      setCursor((c) => ({ ...c, down: false })); await sleep(120);
       setCursor((c) => ({ ...c, click: false }));
     };
     const typeInto = async (fn: (v: string) => void, text: string) => {
-      for (let i = 1; i <= text.length; i++) { if (!alive()) return; fn(text.slice(0, i)); await sleep(42); }
+      for (let i = 1; i <= text.length; i++) { if (!alive()) return; fn(text.slice(0, i)); await sleep(40); }
     };
 
     // reset
-    set(setMadePeriod, false); set(setMadePass, false); set(setAdded, {});
+    set(setPeriodsMade, []); set(setPassesMade, []); set(setAdded, {});
     set(setPTitle, ""); set(setPassName, ""); set(setBlockName, ""); set(setFocus, null);
 
-    // ── Phase 1: make a period, then + Add to block
-    set(setPhase, 1); set(setCap, "First, make a <b>period</b> — a session time window."); await sleep(700);
-    set(setFocus, "pTitle"); await moveTo("pTitle", 0.15);
-    await typeInto(setPTitle, PERIOD.nm); await sleep(250);
-    set(setFocus, null); await moveTo("pAdd");
-    await click(); set(setMadePeriod, true); set(setPTitle, "");
-    set(setCap, "Set the times and press <b>Add period</b> — it appears in your list."); await sleep(700);
-    await moveTo("add-" + PERIOD.key);
-    await click(); set(setAdded, { [PERIOD.key]: true });
-    set(setCap, "Then tap <b>+ Add to block</b> — the card turns <b>green</b> to show it's in."); await sleep(800);
+    // ── Phase 1: periods
+    set(setPhase, 1); narrate("First, make your <b>periods</b> — the daily time windows."); await sleep(1000);
+    for (let i = 0; i < PERIODS.length; i++) {
+      set(setFStart, PERIODS[i].start); set(setFFinish, PERIODS[i].finish);
+      set(setFocus, "pTitle"); await moveTo("pTitle", 0.15);
+      await typeInto(setPTitle, PERIODS[i].nm); await sleep(200);
+      set(setFocus, null); await moveTo("pAdd");
+      await click(); set(setPeriodsMade, PERIODS.slice(0, i + 1).map((p) => p.key)); set(setPTitle, "");
+      if (i === 0) narrate("Give it a title, set the start and finish, and press <b>Add period</b>.");
+      await sleep(500);
+      await moveTo("add-" + PERIODS[i].key);
+      await click(); set(setAdded, (() => { const c = { ...addedRef.current, [PERIODS[i].key]: true }; addedRef.current = c; return c; })());
+      if (i === 0) narrate("Then tap <b>+ Add to block</b> — the card turns <b>green</b> to show it's in. Add any others the same way.");
+      await sleep(i === 0 ? 900 : 600);
+    }
 
-    // ── Phase 2: make a pass, then + Add to block
-    set(setPhase, 2); set(setCap, "Next, make a <b>pass</b> — how long a parent books."); await sleep(800);
-    set(setFocus, "passName"); await moveTo("passName", 0.15);
-    await typeInto(setPassName, PASS.nm); await sleep(250);
-    set(setFocus, null); await moveTo("passAdd");
-    await click(); set(setMadePass, true); set(setPassName, "");
-    set(setCap, "Press <b>Add pass</b>, then <b>+ Add to block</b> — prices come from the calculator, not by hand."); await sleep(700);
-    await moveTo("add-" + PASS.key);
-    await click(); set(setAdded, { [PERIOD.key]: true, [PASS.key]: true }); await sleep(800);
+    // ── Phase 2: passes
+    set(setPhase, 2); narrate("Next, make your <b>passes</b> — how long a parent books."); await sleep(1000);
+    for (let i = 0; i < PASSES.length; i++) {
+      set(setFDays, PASSES[i].days);
+      set(setFocus, "passName"); await moveTo("passName", 0.15);
+      await typeInto(setPassName, PASSES[i].nm); await sleep(200);
+      set(setFocus, null); await moveTo("passAdd");
+      await click(); set(setPassesMade, PASSES.slice(0, i + 1).map((p) => p.key)); set(setPassName, "");
+      await sleep(450);
+      await moveTo("add-" + PASSES[i].key);
+      await click(); set(setAdded, (() => { const c = { ...addedRef.current, [PASSES[i].key]: true }; addedRef.current = c; return c; })());
+      if (i === 0) narrate("A full-week pass, and a single day. Prices come from the calculator, not by hand.");
+      await sleep(i === 0 ? 900 : 600);
+    }
 
-    // ── Phase 3: name the block and move to library
-    set(setPhase, 3); set(setCap, "Your period and pass are now in the block. Give it a <b>name</b>…"); await sleep(800);
-    set(setFocus, "bName"); await moveTo("bName", 0.12);
-    await typeInto(setBlockName, "Summer Multi Activity Camp — Loughton"); await sleep(250);
-    set(setFocus, null);
-    set(setCap, "…then press <b>Move to Block Library</b>."); await sleep(250);
-    await moveTo("save"); await click(); await sleep(500);
+    // ── Phase 3: name + move to library
+    set(setPhase, 3); narrate("Now <b>name your block</b>, then move it to your Block Library."); await sleep(900);
+    set(setFocus, "bName"); await moveTo("bName", 0.1);
+    await typeInto(setBlockName, "Summer Camp"); await sleep(200);
+    set(setFocus, null); await moveTo("save");
+    await click(); await sleep(500);
 
-    // ── Phase 4: saved to library + pricing
+    // ── Phase 4: library card
     set(setPhase, 4);
-    set(setCap, "Saved to your <b>Block Library</b> — reuse or duplicate it across every listing. Set the longest pass's price and the calculator fills in the rest.");
+    narrate("Done. Your block is in the <b>Block Library</b> — reuse or duplicate it on any listing. Set the price and the calculator does the rest.");
     await sleep(400);
   }, []);
 
+  const addedRef = useRef<Record<string, boolean>>({});
   useEffect(() => {
     let cancelled = false;
+    addedRef.current = {};
     run(() => !cancelled);
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel(); };
   }, [run, runId]);
 
-  const railOn = Math.min(phase, 3);
+  const toggleSound = () => {
+    const on = !soundOn; setSoundOn(on); soundOnRef.current = on;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (on) { const u = new SpeechSynthesisUtterance(capRef.current.replace(/<[^>]+>/g, "")); const v = voiceRef.current; if (v) { u.voice = v; u.lang = v.lang; } u.rate = 0.98; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }
+    else window.speechSynthesis.cancel();
+  };
 
+  const railOn = Math.min(phase, 3);
+  const byKey = (k: string) => [...PERIODS, ...PASSES].find((x) => x.key === k)!;
   const paletteChip = (it: { key: string; nm: string; mt: string }) => (
     <div className={`chip ${added[it.key] ? "in" : ""}`}>
       <div><div className="nm">{it.nm}</div><div className="mt">{it.mt}</div></div>
@@ -195,8 +269,8 @@ export function BlocksTour() {
                 <>
                   <div ref={reg("pTitle")} className={`field ${focus === "pTitle" ? "focus" : ""} ${pTitle ? "" : "ph"}`}>{pTitle || "Period title"}{focus === "pTitle" && <span className="caret" />}</div>
                   <div className="row2">
-                    <div><div className="flab" style={{ marginBottom: 4 }}>Start</div><div className="field">08:00</div></div>
-                    <div><div className="flab" style={{ marginBottom: 4 }}>Finish</div><div className="field">15:00</div></div>
+                    <div><div className="flab" style={{ marginBottom: 4 }}>Start</div><div className="field">{fStart}</div></div>
+                    <div><div className="flab" style={{ marginBottom: 4 }}>Finish</div><div className="field">{fFinish}</div></div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}><span ref={reg("pAdd")} className="btn amber">Add period</span><span className="btn">Cancel</span></div>
                 </>
@@ -204,7 +278,7 @@ export function BlocksTour() {
                 <>
                   <div ref={reg("passName")} className={`field ${focus === "passName" ? "focus" : ""} ${passName ? "" : "ph"}`}>{passName || "Pass name (e.g. 5-day week pass)"}{focus === "passName" && <span className="caret" />}</div>
                   <div className="row2">
-                    <div><div className="flab" style={{ marginBottom: 4 }}>Days</div><div className="field">5</div></div>
+                    <div><div className="flab" style={{ marginBottom: 4 }}>Days</div><div className="field">{fDays}</div></div>
                     <div><div className="flab" style={{ marginBottom: 4 }}>Details (optional)</div><div className="field ph">Anything parents should know…</div></div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}><span ref={reg("passAdd")} className="btn amber">Add pass</span><span className="btn">Cancel</span></div>
@@ -212,8 +286,8 @@ export function BlocksTour() {
               )}
             </div>
             <div className="stacklist">
-              {phase === 1 && madePeriod && <div className="appear">{paletteChip(PERIOD)}</div>}
-              {phase === 2 && madePass && <div className="appear">{paletteChip(PASS)}</div>}
+              {phase === 1 && periodsMade.map((k) => <div key={k} className="appear">{paletteChip(byKey(k))}</div>)}
+              {phase === 2 && passesMade.map((k) => <div key={k} className="appear">{paletteChip(byKey(k))}</div>)}
             </div>
           </div>
         )}
@@ -223,8 +297,8 @@ export function BlocksTour() {
             <div className="stephead"><span className="c">3</span><h3>Build your blocks</h3></div>
             <p className="lede">Tap &ldquo;+ Add to block&rdquo; on the periods &amp; passes you want, name it, then reuse or duplicate it across every listing.</p>
             <div className="drop">
-              <div><div className="flab" style={{ marginBottom: 6 }}>Periods</div><span className="bchip">{PERIOD.nm} <span className="mt">{PERIOD.mt}</span> <span className="x">×</span></span></div>
-              <div><div className="flab" style={{ marginBottom: 6 }}>Passes</div><span className="bchip">{PASS.nm} <span className="x">×</span></span></div>
+              <div><div className="flab" style={{ marginBottom: 6 }}>Periods</div><div className="stacklist">{PERIODS.map((p) => <span key={p.key} className="bchip">{p.nm} <span className="mt">{p.mt}</span> <span className="x">×</span></span>)}</div></div>
+              <div><div className="flab" style={{ marginBottom: 6 }}>Passes</div><div className="stacklist">{PASSES.map((p) => <span key={p.key} className="bchip">{p.nm} <span className="x">×</span></span>)}</div></div>
             </div>
             <div className="flab" style={{ marginBottom: 6 }}>Name your block</div>
             <div ref={reg("bName")} className={`field ${focus === "bName" ? "focus" : ""} ${blockName ? "" : "ph"}`} style={{ marginBottom: 12 }}>{blockName || "e.g. Summer Multi Activity Camp — Loughton"}{focus === "bName" && <span className="caret" />}</div>
@@ -234,15 +308,24 @@ export function BlocksTour() {
 
         {phase === 4 && (
           <div className="appear">
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div className="flab" style={{ marginBottom: 8 }}>Block Library</div>
-              <div className="chip in"><div><div className="nm">🧩 Summer Multi Activity Camp — Loughton</div><div className="mt">1 period · 1 pass · reuse or duplicate across listings</div></div><span className="pill ok">Saved ✓</span></div>
-            </div>
-            <div className="calc">
-              <div className="h">💷 Pricing calculator</div>
-              <div className="prow"><span>5 day pass <span className="tagm">master price</span></span><span className="p">£150.00</span></div>
-              <div className="prow"><span>Single day <span className="tagc">auto-filled</span></span><span className="p">£33.00</span></div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.5 }}>Set the longest pass; the calculator prices the shorter ones — edit any if you want.</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 3 }}>Block Library</div>
+            <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 12 }}>Your finished blocks — reorder, sort pricing, and send them to your listings.</div>
+            <div className="lib">
+              <div className="hd">
+                <span className="drag">⠿</span><span className="sw" />
+                <div><div className="nm">Summer Camp <span style={{ fontSize: 12, opacity: 0.8 }}>✎</span></div><div className="sub">2 periods · 2 passes</div></div>
+                <div className="r"><span className="unpriced">Unpriced</span><span className="chev">▲</span></div>
+              </div>
+              <div className="bd">
+                <div className="grid2">
+                  <div><div className="seclab">Periods</div>{PERIODS.map((p) => <div key={p.key} className="line">{p.nm} <span className="g">{p.mt}</span></div>)}</div>
+                  <div><div className="seclab">Passes</div><div className="line">5 day pass <span className="g">· 1 day pay</span></div></div>
+                </div>
+                <div style={{ marginTop: 12 }}><div className="seclab">Sent to listings</div><div style={{ fontSize: 12.5, color: "var(--muted)" }}>Not sent to any listing yet.</div></div>
+                <div className="acts">
+                  <span className="abtn">Sort pricing</span><span className="abtn">Edit</span><span className="abtn">Duplicate</span><span className="abtn">Archive</span><span className="abtn del">Delete</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -251,6 +334,7 @@ export function BlocksTour() {
       <div className="bt-cap" dangerouslySetInnerHTML={{ __html: cap }} />
       <div className="bt-controls">
         <button type="button" className="cbtn" onClick={() => setRunId((n) => n + 1)}>↻ Replay</button>
+        <button type="button" className={`cbtn ${soundOn ? "on" : ""}`} onClick={toggleSound}>{soundOn ? "🔊 Sound on" : "🔈 Narrate"}</button>
         <span className="count">Step {railOn} of 3{phase === 4 ? " · done" : ""}</span>
       </div>
     </div>
