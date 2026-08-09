@@ -5,6 +5,7 @@ import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
+import { BlocksTour } from "./BlocksTour";
 import { PageHero } from "@/components/OperatorPage";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
@@ -268,21 +269,7 @@ export function BlocksApp() {
         </div>
       )}
 
-      <HowItWorks
-        video="Periods, passes, building a block, and how the pricing calculator fills in the shorter passes."
-        minutes="2 min"
-      >
-        <p className="mb-2">
-          Build a scheduling pattern once and reuse it on every listing:{" "}
-          <b className="text-[var(--ink-2)]">periods</b> are the time windows (early drop-off,
-          standard day), <b className="text-[var(--ink-2)]">passes</b> are how long a parent books
-          (one day, a full week).
-        </p>
-        <p>
-          Add the ones you want to a block, name it, then set the price of the longest pass — every
-          shorter pass and timing is worked out for you, and you can override any of them.
-        </p>
-      </HowItWorks>
+      <HowItWorks tour={<BlocksTour />} />
 
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>

@@ -19,12 +19,15 @@ export function HowItWorks({
   children,
   video,
   minutes,
+  tour,
 }: {
   /** Two short paragraphs at most. If it needs more, it needs the video. */
-  children: ReactNode;
+  children?: ReactNode;
   /** What the walkthrough covers, so whoever records it knows the brief. */
-  video: string;
+  video?: string;
   minutes?: string;
+  /** An interactive walkthrough that replaces the text + video placeholder. */
+  tour?: ReactNode;
 }) {
   return (
     <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
@@ -32,10 +35,13 @@ export function HowItWorks({
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
         <span>ℹ️ How it works</span>
         <span className="ml-1 rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[1px] text-[10px] font-extrabold">
-          ▶ video
+          {tour ? "▶ walkthrough" : "▶ video"}
         </span>
       </summary>
 
+      {tour ? (
+        <div className="px-3.5 pb-3.5 pt-1">{tour}</div>
+      ) : (
       <div className="grid gap-4 px-3.5 pb-3.5 pl-8 md:grid-cols-[1fr_300px]">
         <div className="max-w-[560px] text-[12.5px] leading-[1.6] text-[var(--ink-3)]">{children}</div>
 
@@ -58,6 +64,7 @@ export function HowItWorks({
           </div>
         </div>
       </div>
+      )}
     </details>
   );
 }
