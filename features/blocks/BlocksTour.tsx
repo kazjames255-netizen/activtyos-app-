@@ -78,6 +78,7 @@ export function BlocksTour() {
     const rail = [...root.querySelectorAll(".rstep")] as HTMLElement[];
     const replayBtn = root.querySelector(".bt-replay") as HTMLElement;
     const soundBtn = root.querySelector(".bt-sound") as HTMLElement;
+    const voiceSel = root.querySelector(".bt-voice") as HTMLSelectElement | null;
     const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
 
     const PERIODS = [
@@ -101,16 +102,23 @@ export function BlocksTour() {
       if (!hasSpeech) return null;
       const vs = window.speechSynthesis.getVoices();
       if (!vs.length) return null;
-      const pref = ["Google UK English Female", "Microsoft Sonia", "Serena (Premium)", "Serena", "Kate", "Google UK English Male", "Microsoft Ryan", "Daniel (Enhanced)", "Daniel", "Fiona", "Samantha"];
+      const pref = ["Google UK English Male", "Daniel (Enhanced)", "Arthur", "Oliver", "Reed", "Daniel", "Microsoft Ryan", "Microsoft George", "Alex", "Google UK English"];
       for (const n of pref) { const v = vs.find((x) => x.name === n) || vs.find((x) => x.name.includes(n)); if (v) return v; }
-      return vs.find((v) => /en-GB/i.test(v.lang) && !v.localService) || vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
+      return vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
+    }
+    function fillVoices() {
+      if (!voiceSel || !hasSpeech) return;
+      const vs = window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
+      if (!vs.length) return;
+      voiceSel.innerHTML = vs.map((v) => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
+      if (voice) voiceSel.value = voice.name;
     }
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
       const s = window.speechSynthesis; s.cancel();
       const u = new SpeechSynthesisUtterance(t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
-      u.rate = 1.05; u.pitch = 1.12;
+      u.rate = 1.02; u.pitch = 0.98;
       speaking = Promise.race([new Promise((res) => { u.onend = res; u.onerror = res; }), sleep(20000)]);
       s.speak(u);
     }
@@ -227,7 +235,8 @@ export function BlocksTour() {
       await line("Pop in the full price for your longest pass — say, a hundred and fifty pounds for the five-day. The shorter passes fill themselves in, worked out pro-rata, so a single day lands at thirty. And if you'd like, open a pass to fine-tune each timing — maybe a touch more for the longer day. Then hit Save pricing, and that's you, all done!"); await act5;
     }
 
-    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
+    if (hasSpeech) { voice = pickVoice(); fillVoices(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
+    if (voiceSel) voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) { soundOn = true; soundBtn.classList.add("on"); soundBtn.textContent = "🔊 Sound on"; } if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
     replayBtn.onclick = () => { run(); };
     soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
     run();
@@ -252,6 +261,7 @@ export function BlocksTour() {
       <div className="bt-controls">
         <button type="button" className="cbtn bt-replay">↻ Replay</button>
         <button type="button" className="cbtn bt-sound">🔈 Narrate</button>
+        <select className="cbtn bt-voice" title="Pick a voice" style={{ maxWidth: 230 }} />
         <span className="bt-count" />
       </div>
     </div>
