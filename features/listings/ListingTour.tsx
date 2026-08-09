@@ -11,10 +11,10 @@ import { useEffect, useRef } from "react";
 
 const F = '<span class="caret"></span>';
 type TypeField = { id: string; text: string };
-type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string; tabHtml?: string };
+type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string; tabHtml?: string; scroll?: boolean };
 const STEPS: Step[] = [
   { stage: "About", label: "Basics", line: "Start with the basics — a clear name, and a big, bright photo. Pick a layout to see how it looks, then add your main image. You can pop extra photos in the gallery too.", type: { id: "F", text: "Summer Multi-Activity Camp" },
-    body: `<div class="frm"><div><div class="fl">Listing title · up to 70 characters</div><div class="field ph focus" id="F">e.g. Summer Multi-Activity Camp${F}</div></div><div><div class="fl">Main image — layout + hero photo</div><div class="lay"><span class="layopt on">🖼️ One big image</span><span class="layopt">Wide banner</span><span class="layopt">Collage</span><span class="layopt">Big + thumbnails</span></div><div style="margin-top:7px"><span class="btn">＋ Add main photo</span></div></div></div>` },
+    body: `<div class="frm"><div><div class="fl">Listing title · up to 70 characters</div><div class="field ph focus" id="F">e.g. Summer Multi-Activity Camp${F}</div></div><div><div class="fl">Main image — layout + hero photo</div><div class="hero"><span class="heroem">⚽🤸🎨🏕️</span><span class="herocap">Summer Multi-Activity Camp</span></div><div class="lay" style="margin-top:7px"><span class="layopt on">🖼️ One big image</span><span class="layopt">Wide banner</span><span class="layopt">Collage</span><span class="layopt">Big + thumbnails</span></div></div></div>` },
   { stage: "About", label: "Details", line: "Add the details — the age range it's for, from and to, and choose your venue.", type: [{ id: "F", text: "5" }, { id: "F2", text: "12" }],
     body: `<div class="frm"><div class="row2"><div><div class="fl">Age from</div><div class="field ph focus" id="F">e.g. 5${F}</div></div><div><div class="fl">Age to</div><div class="field ph" id="F2">e.g. 12</div></div></div><div><div class="fl">Venue</div><div class="field">📍 Riverside Sports Hall</div></div></div>` },
   { stage: "About", label: "Capacity", line: "Set your capacity — the most children per session; once it's full, bookings stop by themselves. If you run age groups you can cap each one per day too — but leave those blank if you just have one overall number. Blank means no limit, and zero means closed.", type: { id: "F", text: "24" },
@@ -47,14 +47,30 @@ const STEPS: Step[] = [
       <div class="fl" style="margin-top:2px">How parents can book each pass<span style="text-transform:none;letter-spacing:0;color:var(--ink2)"> · 5 day pass</span></div>
       <div class="chips"><span class="rchip on" data-note="Parents pick any 5 days within a single week.">Any 5 days in one week</span><span class="rchip" data-note="Parents pick any 5 days across all the weeks it runs.">Any 5 days across the listing</span><span class="rchip" id="C" data-note="Parents book one fixed Monday–Friday block.">Fixed 5-day block</span></div>
       <div class="hint" id="rnote">Parents pick any 5 days within a single week.</div></div>` },
-  { stage: "Tickets & pricing", label: "Discounts", line: "Add discounts if you'd like — an early-bird, or a sibling offer. They come off automatically at checkout, so there's nothing for you to remember.", click: "C",
-    body: `<div class="frm"><div class="fl">Discounts</div><div><span class="chip2">🐤 Early bird · 10%</span><span class="chip2">👨‍👩‍👧 Sibling · £10</span></div><div style="margin-top:6px"><span class="btn" id="C">＋ Add a discount</span></div></div>` },
+  { stage: "Tickets & pricing", label: "Discounts", line: "Discounts are optional, but lovely. There are three kinds: multi-person, for siblings or a friend booking together; multi-session, a percentage off when they book several; and early bird, money off if they book before a date. Pick a type, name it, set the amount — and parents see it right there on the booking page. They come off automatically, so there's nothing for you to do.", click: "C",
+    body: `<div class="frm"><div class="fl">Select a discount type</div>
+      <div class="dtypes"><div class="dtype"><b>👥 Multi-person</b><div class="ds">Siblings or a friend booking together pay less.</div></div>
+        <div class="dtype"><b>📅 Multi-session</b><div class="ds">Book more than 3 sessions to get 10% off.</div></div>
+        <div class="dtype on" id="C"><b>🐤 Early bird</b><div class="ds">£10 off when they book before 1 June.</div></div></div>
+      <div><div class="fl">Name your discount — parents see this</div><div class="field">Early bird — £10 off before 1 June</div></div>
+      <div class="row2"><div><div class="fl">Discount method</div><div class="field">Subtract an amount</div></div><div><div class="fl">Amount</div><div class="field">£10</div></div></div>
+      <div class="hint" style="border-left:3px solid var(--blue);padding-left:9px"><b>Parents will see:</b> Early bird — £10 off before 1 June</div></div>` },
   { stage: "Extras & team", label: "Add-ons", line: "Offer optional add-ons — a hot lunch, or late pick-up — that parents can tick on at checkout.", click: "C",
     body: `<div class="frm"><div class="fl">Optional add-ons</div><div class="chk"><span class="chkbx">✓</span>🍽️ Hot lunch · £4</div><div style="margin-top:2px"><span class="btn" id="C">＋ Add an add-on</span></div></div>` },
   { stage: "Extras & team", label: "Staff", line: "Add the staff who'll be running the sessions.", click: "C",
     body: `<div class="frm"><div class="fl">Staff on this listing</div><div class="chk"><span class="chkbx">✓</span>👤 Alex Turner · Lead</div><div style="margin-top:2px"><span class="btn" id="C">＋ Assign staff</span></div></div>` },
-  { stage: "Publish", label: "Preview", line: "The preview shows your listing exactly as parents will see it — give it a quick once-over.",
-    body: `<div class="frm"><div class="fl">Preview — what parents see</div><div class="prevcard"><div class="ph">🤸</div><div class="pb"><div class="pt">Summer Multi-Activity Camp</div><div class="pm">📍 Riverside Sports Hall · Ages 5–12</div><div class="pp">From £150 / week</div></div></div></div>` },
+  { stage: "Publish", label: "Preview", line: "Here's the best bit — the preview shows your listing exactly as parents will see it. Let's scroll through: your big photo up top, the venue, dates and ages, how many spaces, your passes and prices, the early-bird discount, and the booking panel where they pick their dates and pass. If it looks good here, it'll look good to them.", scroll: true,
+    body: `<div class="fl">Preview — the parent booking page</div><div class="ppwrap"><div class="ppscroll" id="pvscroll"><div id="pvinner">
+      <div class="pphero">⚽🤸🎨<div class="ppht">Summer Multi-Activity Camp</div></div>
+      <div class="pprow"><span>📍 Riverside Sports Hall</span><span>📅 28 Jul – 8 Aug</span><span>👧 Ages 5–12</span></div>
+      <div class="ppcols"><div><div class="ppl">Spaces</div><div class="ppbig">Up to 60</div></div>
+        <div><div class="ppl">Passes</div><div class="pppass">5 day pass <b>£500</b></div><div class="pppass">1 day pass <b>£100</b></div></div>
+        <div><div class="ppl">Discounts</div><div class="ppdisc">🐤 Early bird · £10 off</div></div></div>
+      <div class="ppcta"><div>CHOOSE DATES &amp; TIMES <span>from £500</span></div><div class="ppcta2">👉 Tap a week to take the fixed 5-day block</div></div>
+      <div class="ppl" style="padding:0 14px">Choose your pass</div><div class="ppbox">5 day pass · £500</div><div class="ppbox">1 day pass · £100</div>
+      <div class="ppl" style="padding:12px 14px 0">About this camp</div><div class="pptxt">A fun-packed week of sports, games and crafts — something for everyone. Ages 5 to 12.</div>
+      <div class="ppl" style="padding:0 14px">What's provided</div><div class="pptxt">🍽️ Hot lunch · 🎒 all equipment · 🍎 snacks &amp; drinks</div>
+      <div class="ppl" style="padding:0 14px">Safety &amp; SEND</div><div class="pptxt">🛡️ DBS-checked staff · 🚑 first aid on site · 🤫 quiet space · 🎓 SEND-trained staff</div></div></div></div>` },
   { stage: "Publish", label: "Policy & publish", line: "Last of all, set your booking policy, and hit Publish. That's it — your listing's live and ready for bookings!",
     body: `<div class="frm"><div><div class="fl">Booking policy</div><div class="field">Full refund up to 7 days before</div></div><div class="hint">All set — press Publish to go live.</div></div>` },
 ];
@@ -106,6 +122,20 @@ const CSS = `
 .lt-root .tkrow{display:flex;gap:8px;margin-top:6px}.lt-root .mini2{font-size:10.5px;font-weight:700;color:var(--faint);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
 .lt-root .rchip{font-size:11.5px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 10px;color:var(--ink2)}.lt-root .rchip.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
 .lt-root .g{color:var(--faint);font-weight:600}
+.lt-root .hero{position:relative;height:74px;border-radius:10px;background:linear-gradient(120deg,#1b3f8f,#2f6bd8 55%,#0ea5a5);display:flex;align-items:center;justify-content:center;overflow:hidden}.lt-root .heroem{font-size:30px;letter-spacing:4px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}.lt-root .herocap{position:absolute;left:10px;bottom:7px;color:#fff;font-size:12px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.lt-root .dtypes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}@media(max-width:560px){.lt-root .dtypes{grid-template-columns:1fr}}
+.lt-root .dtype{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:12.5px}.lt-root .dtype.on{border-color:#2f6bd8;background:#eef4ff;box-shadow:0 0 0 2px rgba(47,107,216,.15)}.lt-root .dtype .ds{font-size:10.5px;color:var(--faint);font-weight:600;margin-top:3px;line-height:1.4}
+.lt-root .ppwrap{border:1px solid #1a2340;border-radius:12px;overflow:hidden}.lt-root .ppscroll{height:250px;overflow:hidden;background:#0b1020}.lt-root #pvinner{will-change:transform;transition:transform .1s linear}
+.lt-root .pphero{background:linear-gradient(120deg,#1b3f8f,#2f6bd8 60%,#0ea5a5);color:#fff;font-size:26px;letter-spacing:3px;padding:22px 14px 26px}.lt-root .ppht{font-size:16px;font-weight:800;letter-spacing:0;margin-top:6px}
+.lt-root .pprow{display:flex;gap:14px;flex-wrap:wrap;background:#0f1630;color:#cdd6f0;font-size:11px;font-weight:800;padding:9px 14px;border-bottom:2px solid #b6ff3a}
+.lt-root .ppcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px 14px}
+.lt-root .ppl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#7f8bb5;margin-bottom:5px}
+.lt-root .ppbig{font-size:17px;font-weight:800;font-style:italic;color:#fff}
+.lt-root .pppass{font-size:12px;color:#dfe6ff;border-left:2px solid #b6ff3a;padding-left:8px;margin-bottom:5px}.lt-root .pppass b{color:#b6ff3a}
+.lt-root .ppdisc{font-size:12px;color:#dfe6ff}
+.lt-root .ppcta{margin:8px 14px;background:linear-gradient(120deg,#2f6bd8,#1b3f8f);border-radius:12px;padding:12px;color:#fff;font-size:14px;font-weight:800;font-style:italic}.lt-root .ppcta span{font-size:11px;opacity:.85}.lt-root .ppcta2{margin-top:8px;background:rgba(255,255,255,.12);border-radius:8px;padding:8px;font-size:12px;font-style:normal;font-weight:700}
+.lt-root .ppbox{margin:6px 14px;background:#0f1630;border:1px solid #1a2340;border-radius:10px;padding:10px 12px;color:#dfe6ff;font-size:12.5px;font-weight:700}
+.lt-root .pptxt{padding:2px 14px 10px;color:#aeb8dc;font-size:12px;line-height:1.5}
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
@@ -206,7 +236,8 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         const s = STEPS[i]; content.innerHTML = frame(i);
         const act = (async () => {
           if (s.type) { const arr = Array.isArray(s.type) ? s.type : [s.type]; for (const t of arr) { await move(t.id, 0.2); await type(t.id, t.text, tk); await sleep(150); } }
-          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("dchip")) c.classList.add("off"); else if (c.classList.contains("rchip")) { c.parentElement?.querySelectorAll(".rchip").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const rn = pick("rnote"); const nt = (c as HTMLElement).dataset.note; if (rn && nt) rn.textContent = nt; } else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
+          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("dchip")) c.classList.add("off"); else if (c.classList.contains("dtype")) { c.parentElement?.querySelectorAll(".dtype").forEach((x) => x.classList.remove("on")); c.classList.add("on"); } else if (c.classList.contains("rchip")) { c.parentElement?.querySelectorAll(".rchip").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const rn = pick("rnote"); const nt = (c as HTMLElement).dataset.note; if (rn && nt) rn.textContent = nt; } else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
+          else if (s.scroll) { const sc = pick("pvinner"), box = pick("pvscroll"); if (sc && box) { const max = Math.max(0, sc.offsetHeight - box.clientHeight); const steps = 46; for (let k = 1; k <= steps; k++) { await sleep(120); sc.style.transform = "translateY(" + (-Math.round(max * (k / steps))) + "px)"; } } }
           else await sleep(600);
           await move("next"); await click();
         })();
