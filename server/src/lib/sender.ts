@@ -57,6 +57,11 @@ export const slugify = (name: string): string =>
  *  inbound address (`<slug>@<INBOUND_EMAIL_DOMAIN>`) depends on it too — a
  *  provider's forwarding rule points at that address forever, so it must not
  *  appear or change with an outbound feature flag. */
+/** The generic fallback, with or without its collision suffix. A slug shaped
+ *  like this was never derived from a real name — the tenant had none to hand
+ *  at the time — so it's the one value worth reconsidering. */
+const GENERIC_SLUG = /^provider(-[a-z0-9]{1,6})?$/;
+
 export async function tenantSlug(
   tenantId: string,
   tenant?: FirebaseFirestore.DocumentSnapshot,
@@ -64,9 +69,23 @@ export async function tenantSlug(
 ): Promise<string> {
   const snap = tenant ?? (await db.collection("tenants").doc(tenantId).get());
   const existing = (snap.get("sendingSlug") as string | undefined)?.trim();
-  if (existing) return existing;
+  if (existing && !GENERIC_SLUG.test(existing)) return existing;
 
-  const base = slugify(name ?? (snap.get("name") as string | undefined) ?? "") || "provider";
+  // `||` not `??`: an EMPTY providerName (a Setup field saved blank) must fall
+  // through to the tenant name. With `??` it didn't, slugify("") returned "",
+  // and every such tenant was handed the anonymous "provider" address — then
+  // kept it forever, because the slug is write-once.
+  const base = slugify(name?.trim() || (snap.get("name") as string | undefined) || "") || "provider";
+
+  if (existing) {
+    // Only ever trade a generic slug for a real one, and only while the address
+    // has never received anything. Once a provider has pointed a forwarding
+    // rule at it, the address is theirs for good — moving it would silently
+    // black-hole their mail, which is far worse than an ugly slug.
+    if (GENERIC_SLUG.test(base)) return existing;
+    const summary = await db.collection("mailboxSummary").doc(tenantId).get();
+    if (((summary.get("received") as number | undefined) ?? 0) > 0) return existing;
+  }
   // A reserved word, or a slug another tenant already owns, gets a short
   // tenant-derived suffix rather than silently colliding.
   const taken = RESERVED.has(base)

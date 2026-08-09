@@ -18,11 +18,14 @@ export class ApiError extends Error {
 const TIMEOUT_MS = 15_000;
 
 function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
+  // `label` names an internal step ("Getting your sign-in token"), so it stays
+  // out of the production message for the same reason as the fetch errors below.
+  const message = process.env.NODE_ENV === "production"
+    ? "That took longer than expected. Please refresh and try again."
+    : `${label} timed out after ${TIMEOUT_MS / 1000}s`;
   return Promise.race([
     p,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new ApiError(408, `${label} timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS),
-    ),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new ApiError(408, message)), TIMEOUT_MS)),
   ]);
 }
 
@@ -63,7 +66,18 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
     },
   })
     .catch((e) => {
-      throw e?.name === "AbortError"
+      // Views render err.message verbatim, so these reach real users. In
+      // production that must read as "try again", not as a debugging hint —
+      // the API's URL is nothing a parent can act on. The diagnostic version
+      // stays in development, where "is the API running?" is the answer 9
+      // times out of 10.
+      const timedOut = e?.name === "AbortError";
+      if (process.env.NODE_ENV === "production") {
+        throw timedOut
+          ? new ApiError(408, "That took longer than expected. Please try again.")
+          : new ApiError(0, "We can’t reach ActivityOS right now. Check your connection and try again in a moment.");
+      }
+      throw timedOut
         ? new ApiError(408, `The server didn't respond within ${TIMEOUT_MS / 1000}s (${BASE}). Is the API running?`)
         : new ApiError(0, `Couldn't reach the server at ${BASE}. Is the API running?`);
     })

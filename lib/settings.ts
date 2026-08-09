@@ -641,6 +641,10 @@ export interface TenantSettings {
     undoSeconds?: number;              // send-cancellation window: 0 (off) | 5 | 10 | 20 | 30
     defaultReply?: "reply" | "replyAll"; // which reply action leads in the inbox
     replySignatureId?: string;         // signature to use on replies/forwards ("" = none)
+    /** "Connect your mailbox" dismissed from the Inbox. Not everyone wants to
+     *  forward their mail, and the panel shouldn't nag forever — Email →
+     *  Settings still shows it, so the choice is reversible. */
+    mailboxSetupDismissed?: boolean;
   };
   /** Social profile links — entered once, auto-filled into campaign social rows. */
   social?: { facebook?: string; instagram?: string; twitter?: string; tiktok?: string; youtube?: string; website?: string };

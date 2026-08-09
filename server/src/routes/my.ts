@@ -1146,6 +1146,12 @@ my.post("/bookings", async (req, res) => {
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
             tenantId: listing.tenantId,
+            // Stamped here because the whole app assumes it is: the operator
+            // Bookings list drops any booking without one as soon as a season
+            // filter is on, and the Email composer's listing audience matches
+            // on it. Storing only `listing` (the NAME) left parent bookings
+            // invisible to both.
+            listingId: input.listingId,
             blockId: seg.blockId,
             seats: 1,
             days: seg.days,

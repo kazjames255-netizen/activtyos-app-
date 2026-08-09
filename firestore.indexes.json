@@ -1,0 +1,21 @@
+{
+  "comment": [
+    "Composite indexes Firestore can't infer. Deploy with:",
+    "  firebase deploy --only firestore:indexes",
+    "Everything else in this codebase sorts in memory precisely to avoid needing",
+    "indexes; the entries here exist where reading a whole collection would cost",
+    "a document read per stored row on every page load."
+  ],
+  "indexes": [
+    {
+      "comment": "Inbox: newest-N received mail. Without this, GET /api/emails/messages reads EVERY message a provider has ever received, on every load and every live refresh.",
+      "collectionGroup": "emailMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

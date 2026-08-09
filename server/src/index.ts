@@ -36,7 +36,7 @@ import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
-import { emails, emailsInbound, emailsOpen, emailsUnsub } from "./routes/emails";
+import { emails, emailsInbound, emailsOpen, emailsResendInbound, emailsUnsub } from "./routes/emails";
 import { mealOptions, mealOrders } from "./routes/mealsShop";
 import { mealMenus } from "./routes/mealMenus";
 import { documents } from "./routes/documents";
@@ -82,6 +82,8 @@ app.use(
 // Stripe Billing webhook — must see the RAW body for signature verification,
 // so it mounts before the JSON parser (its router does its own raw parsing).
 app.use("/api/stripe/webhook", stripeWebhook);
+// Resend inbound webhook — Svix-signed, so it needs the raw body too.
+app.use("/api/emails/inbound/resend", emailsResendInbound);
 
 // Listings now store the operator's whole draft, so the 100kb default was
 // nowhere near enough — a listing with any real content 500'd on save.

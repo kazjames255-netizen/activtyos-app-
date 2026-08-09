@@ -1,4 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
+
+// The inbound-email specs post to the API's webhook, which authenticates with
+// INBOUND_EMAIL_SECRET. That value lives in server/.env (the API reads it via
+// dotenv), and this process doesn't load it — so the suite would send the old
+// dev fallback and get a 401 the moment a real secret is configured. Lift just
+// that key across, without overriding anything already in the environment.
+const serverEnv = path.join(import.meta.dirname, "server", ".env");
+if (fs.existsSync(serverEnv)) {
+  const lines = fs.readFileSync(serverEnv, "utf8").split("\n");
+  for (const key of ["INBOUND_EMAIL_SECRET"]) {
+    if (process.env[key]) continue;
+    const line = lines.find((l) => l.startsWith(`${key}=`));
+    if (line) process.env[key] = line.slice(key.length + 1).trim().replace(/^["']|["']$/g, "");
+  }
+}
 
 // UI end-to-end suite. Runs against the real dev stack (web :3000, API :4000,
 // live Firebase project) with throwaway @activityos-test.com accounts created

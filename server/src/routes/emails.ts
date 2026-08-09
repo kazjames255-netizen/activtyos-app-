@@ -1,4 +1,5 @@
-import { Router, type Request, type Response } from "express";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { Router, raw, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
@@ -246,20 +247,8 @@ emails.get("/mailbox", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const address = await inboundAddress(tenantId);
-  const snap = await msgCol.where("tenantId", "==", tenantId).get();
-  let received = 0;
-  let lastAt: string | null = null;
-  let pending: { code?: string; link?: string; at?: string } | null = null;
-  for (const d of snap.docs) {
-    const m = d.data() as { at?: string; verificationCode?: string; verificationLink?: string };
-    received++;
-    if (m.at && (!lastAt || m.at > lastAt)) lastAt = m.at;
-    // Surface the newest Gmail confirmation still waiting to be entered.
-    if ((m.verificationCode || m.verificationLink) && (!pending?.at || (m.at ?? "") > pending.at)) {
-      pending = { code: m.verificationCode, link: m.verificationLink, at: m.at };
-    }
-  }
-  res.json({ configured: inboundConfigured, address, received, lastAt, pendingVerification: pending });
+  const s = await readSummary(tenantId);
+  res.json({ configured: inboundConfigured, address, received: s.received, lastAt: s.lastAt, pendingVerification: s.pending });
 });
 
 // GET /api/emails — the send history (operators).
@@ -385,11 +374,36 @@ const msgPatchSchema = z.object({
   snoozedUntil: z.string().max(40).nullable().optional(),
 });
 
-// GET /api/emails/messages — every received message (client filters folders).
+// How many messages the Inbox loads. The client filters folders in memory, so
+// this is the whole working set — generous enough that nobody notices, small
+// enough that the cost of opening the Inbox stops growing with mail history.
+const MESSAGE_PAGE = 300;
+
+/** Newest-first, capped. Wants a composite index (tenantId ASC, at DESC) —
+ *  see firestore.indexes.json. Until that exists Firestore rejects the query,
+ *  so fall back to the old full scan rather than break the Inbox; the warning
+ *  says what to create and why it's worth it. */
+let indexedFetchWorks = true;
+async function recentMessages(tenantId: string): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  if (indexedFetchWorks) {
+    try {
+      return (await msgCol.where("tenantId", "==", tenantId).orderBy("at", "desc").limit(MESSAGE_PAGE).get()).docs;
+    } catch (e) {
+      indexedFetchWorks = false;
+      console.warn(
+        "[emails] no (tenantId, at desc) index on emailMessages — falling back to reading EVERY stored message per Inbox load."
+        + ` Create the index to cap it at ${MESSAGE_PAGE}: ${(e as Error).message}`,
+      );
+    }
+  }
+  return (await msgCol.where("tenantId", "==", tenantId).get()).docs;
+}
+
+// GET /api/emails/messages — the recent window (client filters folders).
 emails.get("/messages", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
-  const snap = await msgCol.where("tenantId", "==", tenantId).get();
+  const snap = { docs: await recentMessages(tenantId) };
   const now = new Date().toISOString();
   const list = [] as (Record<string, unknown> & { id: string; at?: string })[];
   for (const d of snap.docs) {
@@ -472,13 +486,11 @@ function gmailConfirmation(fromEmail?: string, subject?: string, text?: string):
   };
 }
 
-export const emailsInbound = Router();
-emailsInbound.post("/", async (req, res) => {
-  if (req.headers["x-inbound-secret"] !== INBOUND_SECRET) { res.status(401).json({ error: "Bad inbound secret" }); return; }
-  const parsed = inboundSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const input = parsed.data;
+type InboundInput = z.infer<typeof inboundSchema>;
 
+/** Which provider does this message belong to? Null when nothing matches —
+ *  shared by every inbound source, so they can't drift apart on the rules. */
+async function resolveInboundTenant(input: InboundInput): Promise<string | null> {
   let tenantId = input.tenantId ?? null;
   if (!tenantId && input.to) {
     const addr = input.to.toLowerCase();
@@ -496,11 +508,76 @@ emailsInbound.post("/", async (req, res) => {
       if (!hit.empty) tenantId = hit.docs[0].id;
     }
   }
-  if (!tenantId || !(await db.collection("tenants").doc(tenantId).get()).exists) {
-    res.status(404).json({ error: "No provider matches that address" });
-    return;
-  }
+  if (!tenantId || !(await db.collection("tenants").doc(tenantId).get()).exists) return null;
+  return tenantId;
+}
 
+// ── Mailbox summary ───────────────────────────────────────────────────────
+// GET /api/emails/mailbox used to read EVERY stored message just to answer
+// "how many, when was the last, is a setup code outstanding?" — and the Inbox
+// re-asks on every realtime tick. That's a Firestore read per stored email per
+// refresh, so the bill grew with a tenant's mail history rather than with
+// their activity. One summary doc per tenant, maintained on write, makes it a
+// single read forever.
+const summaryCol = db.collection("mailboxSummary");
+
+interface MailboxSummary {
+  /** Total ever received. Never decremented — deleting a message doesn't mean
+   *  mail never arrived, and the UI only asks "has anything come through?". */
+  received: number;
+  lastAt: string | null;
+  /** Newest Gmail confirmation still outstanding, cleared once real mail
+   *  arrives after it (proof that forwarding works). */
+  pending: { code?: string; link?: string; at?: string } | null;
+}
+
+/** Fold one newly-received message into the tenant's summary. */
+async function bumpSummary(tenantId: string, at: string, setup: { code?: string; link?: string } | null): Promise<void> {
+  const ref = summaryCol.doc(tenantId);
+  await db.runTransaction(async (tx) => {
+    const cur = (await tx.get(ref)).data() as MailboxSummary | undefined;
+    const next: MailboxSummary = {
+      received: (cur?.received ?? 0) + 1,
+      lastAt: !cur?.lastAt || at > cur.lastAt ? at : cur.lastAt,
+      // A setup code becomes the outstanding one; ordinary mail clears it.
+      pending: setup ? { ...setup, at } : null,
+    };
+    tx.set(ref, next, { merge: true });
+  });
+}
+
+/** The tenant's summary, computed from scratch the first time (tenants that
+ *  received mail before this existed have no doc yet) and cached from then on.
+ *  That one-off scan is the ONLY time the collection is read in full. */
+async function readSummary(tenantId: string): Promise<MailboxSummary> {
+  const ref = summaryCol.doc(tenantId);
+  const existing = (await ref.get()).data() as MailboxSummary | undefined;
+  if (existing) return existing;
+
+  const snap = await msgCol.where("tenantId", "==", tenantId).get();
+  let lastAt: string | null = null;
+  let pending: MailboxSummary["pending"] = null;
+  let lastRealAt = "";
+  for (const d of snap.docs) {
+    const m = d.data() as { at?: string; verificationCode?: string; verificationLink?: string };
+    if (m.at && (!lastAt || m.at > lastAt)) lastAt = m.at;
+    if (m.verificationCode || m.verificationLink) {
+      if (!pending?.at || (m.at ?? "") > pending.at) pending = { code: m.verificationCode, link: m.verificationLink, at: m.at };
+    } else if ((m.at ?? "") > lastRealAt) {
+      lastRealAt = m.at ?? "";
+    }
+  }
+  // Same rule the write path applies: a code stops being outstanding once
+  // ordinary mail arrives after it.
+  if (pending && lastRealAt && (pending.at ?? "") <= lastRealAt) pending = null;
+
+  const summary: MailboxSummary = { received: snap.size, lastAt, pending };
+  await ref.set(summary, { merge: true }).catch(() => {});
+  return summary;
+}
+
+/** File a received message against a provider. Returns the new message id. */
+async function storeInbound(tenantId: string, input: InboundInput): Promise<{ id: string; setup: boolean }> {
   // Gmail won't start forwarding until someone confirms a code it emails to
   // the DESTINATION — which is us, a mailbox the provider can't open. Without
   // surfacing it, every Gmail provider dead-ends here. Flag the message and
@@ -526,7 +603,144 @@ emailsInbound.post("/", async (req, res) => {
     at: new Date().toISOString(),
   };
   const ref = await msgCol.add(doc);
-  res.status(201).json({ id: ref.id, ok: true, ...(setup ? { setup: true } : {}) });
+  // Keep the summary in step. Never let it fail the delivery — a wrong count
+  // is cosmetic, a dropped email isn't.
+  await bumpSummary(tenantId, doc.at, setup ? { code: setup.code, link: setup.link } : null)
+    .catch((e) => console.error(`[inbound] summary update failed for ${tenantId}:`, (e as Error).message));
+  return { id: ref.id, setup: !!setup };
+}
+
+export const emailsInbound = Router();
+emailsInbound.post("/", async (req, res) => {
+  if (req.headers["x-inbound-secret"] !== INBOUND_SECRET) { res.status(401).json({ error: "Bad inbound secret" }); return; }
+  const parsed = inboundSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+
+  const tenantId = await resolveInboundTenant(parsed.data);
+  if (!tenantId) { res.status(404).json({ error: "No provider matches that address" }); return; }
+
+  const { id, setup } = await storeInbound(tenantId, parsed.data);
+  res.status(201).json({ id, ok: true, ...(setup ? { setup: true } : {}) });
+});
+
+// ── Resend inbound webhook (public) ───────────────────────────────────────
+// Resend receives mail for our inbound domain (a *.resend.app catch-all, or a
+// custom domain once one is pointed at them) and calls this on `email.received`.
+//
+// Two things make it more than a field rename over the generic endpoint above:
+//   • The webhook carries METADATA ONLY — no body. The message itself has to be
+//     fetched back from Resend's API with the id it gives us.
+//   • It's signed (Svix), not shared-secret. Verification needs the RAW body,
+//     so this mounts BEFORE express.json — same as the Stripe webhook.
+//
+// Local setup: cloudflared tunnel --url http://localhost:4000, point a Resend
+// webhook at <public-url>/api/emails/inbound/resend for the `email.received`
+// event, then put its signing secret in RESEND_WEBHOOK_SECRET and an API key
+// in RESEND_API_KEY.
+export const emailsResendInbound = Router();
+
+/** Svix signature check — the scheme Resend's webhooks use.
+ *  Signs "<id>.<timestamp>.<body>" with the base64 secret after its whsec_
+ *  prefix; the header holds space-separated "v1,<sig>" candidates. */
+function svixVerified(rawBody: Buffer, headers: Request["headers"], secret: string): boolean {
+  const id = headers["svix-id"];
+  const timestamp = headers["svix-timestamp"];
+  const signature = headers["svix-signature"];
+  if (typeof id !== "string" || typeof timestamp !== "string" || typeof signature !== "string") return false;
+
+  // Reject stale deliveries — a captured request must not be replayable.
+  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(age) || age > 300) return false;
+
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+  const expected = createHmac("sha256", key).update(`${id}.${timestamp}.${rawBody.toString("utf8")}`).digest();
+  // Any candidate matching is a pass — Svix sends several during key rotation.
+  return signature.split(" ").some((part) => {
+    const sig = part.startsWith("v1,") ? part.slice(3) : null;
+    if (!sig) return false;
+    const given = Buffer.from(sig, "base64");
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  });
+}
+
+/** "Jane Patel <jane@example.com>" → both halves; a bare address works too. */
+function parseAddress(value: string): { name: string; email?: string } {
+  const angled = value.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  if (angled) {
+    const name = angled[1].replace(/^"|"$/g, "").trim();
+    const email = angled[2].trim().toLowerCase();
+    return { name: name || email, email };
+  }
+  const bare = value.trim();
+  return bare.includes("@") ? { name: bare, email: bare.toLowerCase() } : { name: bare || "Unknown sender" };
+}
+
+interface ResendReceived {
+  to?: string[];
+  received_for?: string[];
+  from?: string;
+  subject?: string;
+  text?: string | null;
+  html?: string;
+  attachments?: { filename?: string; size?: number }[];
+}
+
+emailsResendInbound.post("/", raw({ type: "application/json", limit: "5mb" }), async (req, res) => {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!secret || !apiKey) { res.status(503).json({ error: "Resend inbound not configured" }); return; }
+  if (!Buffer.isBuffer(req.body) || !svixVerified(req.body, req.headers, secret)) {
+    res.status(400).json({ error: "Bad signature" });
+    return;
+  }
+
+  let event: { type?: string; data?: { email_id?: string } };
+  try { event = JSON.parse(req.body.toString("utf8")); }
+  catch { res.status(400).json({ error: "Bad payload" }); return; }
+  // Anything that isn't a received email is acknowledged and ignored, so
+  // Resend doesn't retry it forever.
+  if (event.type !== "email.received" || !event.data?.email_id) { res.json({ ok: true, ignored: true }); return; }
+
+  const fetched = await fetch(`https://api.resend.com/emails/receiving/${event.data.email_id}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  }).catch(() => null);
+  if (!fetched?.ok) {
+    // A failed fetch IS worth retrying — 500 asks Resend to redeliver.
+    console.error(`[inbound] couldn't fetch ${event.data.email_id} from Resend: ${fetched?.status ?? "network error"}`);
+    res.status(500).json({ error: "Couldn't fetch the message" });
+    return;
+  }
+  const mail = (await fetched.json()) as ResendReceived;
+
+  // `received_for` is the envelope recipient — the address mail was actually
+  // delivered to. `to` is the header, which on a FORWARDED message still names
+  // the provider's own mailbox, not us. Envelope first or forwarding breaks.
+  const deliveredTo = mail.received_for?.[0] ?? mail.to?.[0];
+  const sender = parseAddress(mail.from ?? "");
+
+  const input: InboundInput = {
+    to: deliveredTo,
+    from: sender.name,
+    fromEmail: sender.email,
+    subject: mail.subject?.trim() || "(no subject)",
+    text: mail.text ?? "",
+    ...(mail.html ? { html: mail.html } : {}),
+    ...(mail.attachments?.length
+      ? { attachments: mail.attachments.map((a) => ({ name: a.filename ?? "attachment", size: a.size ? String(a.size) : undefined })) }
+      : {}),
+  };
+
+  const tenantId = await resolveInboundTenant(input);
+  if (!tenantId) {
+    // Mail for an address no provider owns is a dead letter, not a failure —
+    // 200 so Resend stops retrying, logged so it's diagnosable.
+    console.warn(`[inbound] no provider matches ${deliveredTo ?? "(no recipient)"} — dropped`);
+    res.json({ ok: true, ignored: true });
+    return;
+  }
+  const { id, setup } = await storeInbound(tenantId, input);
+  console.log(`[inbound] ${sender.email ?? sender.name} → ${deliveredTo} filed for ${tenantId}${setup ? " (mailbox setup code)" : ""}`);
+  res.status(201).json({ id, ok: true });
 });
 
 // ── Open tracking (public) ────────────────────────────────────────────────

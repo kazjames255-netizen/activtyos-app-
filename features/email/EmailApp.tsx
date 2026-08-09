@@ -363,9 +363,17 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
   const [host, setHost] = useState<string | null>(null);
+  const { settings, save } = useSettings();
   const load = useCallback(() => { apiGet<Mailbox>("/api/emails/mailbox").then(setMb).catch(() => {}); }, []);
   useEffect(load, [load]);
   useRealtime(["emailMessages"], load);
+
+  // Dismissed from the Inbox, but never from Settings — that's where someone
+  // goes to look for it again, so hiding it there would strand them.
+  const dismissed = !!settings.emailPrefs?.mailboxSetupDismissed;
+  const setDismissed = (v: boolean) =>
+    save({ settings: { ...settings, emailPrefs: { ...(settings.emailPrefs ?? {}), mailboxSetupDismissed: v } } });
+  if (context === "inbox" && dismissed) return null;
 
   // Not switched on for this platform yet. The Inbox stays silent — it isn't
   // something a provider can act on. Settings is where someone goes to ASK,
@@ -406,7 +414,13 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   return (
     <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#dbe6fb] bg-white">
       <div className="border-b border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3">
-        <div className="text-[15px] font-extrabold text-[#16306e]">📥 See the emails parents send you, here</div>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 text-[15px] font-extrabold text-[#16306e]">📥 See the emails parents send you, here</div>
+          {context === "inbox" && (
+            <button type="button" onClick={() => setDismissed(true)} title="Hide this — you can bring it back from Email → Settings"
+              className="-mr-1 -mt-0.5 flex-none rounded-lg px-2 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-white hover:text-[var(--ink)]">×</button>
+          )}
+        </div>
         <div className="mt-0.5 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
           Right now this Inbox only shows email sent <b>from</b> ActivityOS. Add one setting in your own email
           — it takes about two minutes, once — and everything parents send you shows up here too.
@@ -476,11 +490,44 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
           <b>Good to know:</b> only email you <b>receive</b>{" "}appears here — messages you send from your
           own inbox won&rsquo;t. Replies you send from ActivityOS are saved here automatically.
         </div>
+
+        {/* Settings is the panel's permanent home, so it owns the on/off switch
+            for showing it in the Inbox. */}
+        {context === "settings" && (
+          <div className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">
+            {dismissed ? (
+              <>Hidden from your Inbox. <button type="button" onClick={() => setDismissed(false)} className="font-bold text-[#1d3a8f] underline">Show it there again</button></>
+            ) : (
+              <button type="button" onClick={() => setDismissed(true)} className="font-bold text-[#1d3a8f] underline">Hide this from my Inbox</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+
+// Received mail is stored as PLAIN TEXT, and was being dropped into a <p> —
+// which collapses every newline and leaves URLs as dead text you have to copy
+// out by hand. Render it with the line breaks intact and the links live.
+//
+// Deliberately NOT dangerouslySetInnerHTML over the sender's own HTML: inbound
+// mail is attacker-controlled, so that would be an XSS hole. Building React
+// nodes from matched text can't inject markup.
+const LINKIFY_RE = /((?:https?:\/\/|www\.)[^\s<>"']+[^\s<>"'.,;:!?)]|[\w.+-]+@[\w-]+\.[\w.-]*[\w])/g;
+
+function linkify(text: string) {
+  return text.split(LINKIFY_RE).map((part, i) => {
+    if (i % 2 === 0 || !part) return part;                    // odd indices are the matches
+    const isEmail = part.includes("@") && !part.includes("//");
+    const href = isEmail ? `mailto:${part}` : part.startsWith("http") ? part : `https://${part}`;
+    return (
+      <a key={`${i}-${part}`} href={href} target={isEmail ? undefined : "_blank"} rel="noreferrer noopener"
+        className="font-semibold text-[#1d3a8f] underline underline-offset-2 hover:text-[#16306e]">{part}</a>
+    );
+  });
+}
 
 function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
@@ -543,8 +590,11 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         </div>
         {([["cozy", "Cozy"], ["compact", "Compact"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
       </div>
+      {/* min-w-0 on BOTH columns: a grid track defaults to a min-content
+          floor, so one wide descendant (a long address, a nowrap row) pushes
+          the whole grid past the viewport and the Inbox scrolls sideways. */}
       <div className="grid gap-3 md:grid-cols-[210px_1fr]">
-        <div>
+        <div className="min-w-0">
           <button type="button" onClick={onCompose} className="mb-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white shadow" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>✎ Compose</button>
           <div className="flex flex-col">
             {FOLDERS.map(([k, label]) => { const n = count(k); return (
@@ -554,7 +604,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             ); })}
           </div>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
         <MailboxSetup />
         <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
@@ -624,7 +674,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                 <span className="flex-none text-[12.5px] font-semibold text-[var(--ink-3)]">{o.time}</span>
               </div>
               {showContact && <div className="mt-3 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] p-3 text-[12.5px]"><div className="font-extrabold text-[#1d3a8f]">{o.from}</div><div className="text-[var(--ink-3)]">{o.fromEmail}</div>{o.tag && <div className="mt-1 text-[var(--ink-2)]">List: <b>{o.tag}</b></div>}<div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Full contact history opens in the CRM once linked (backend).</div></div>}
-              <p className="mt-4 text-[14px] leading-relaxed text-[var(--ink-2)]">{o.body ?? o.preview}</p>
+              <p className="mt-4 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[var(--ink-2)]">{linkify(o.body ?? o.preview)}</p>
               {o.attachment && <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
             {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#fbfdff] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#dbe6fb] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2a3a63] transition-colors hover:border-[#2f6bd8] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">{qr}</button>)}</div></div> : null}
@@ -672,7 +722,17 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
 // location, age group, dates); campaigns pick an audience + a saved Template and
 // Send now / Schedule / Save draft. Campaigns + custom audiences persist locally
 // (the true send/track/schedule engine is the backend — see the handoff doc).
-interface Booking { id?: string; email?: string; name?: string; child?: string; age?: number; listingId?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string; method?: string }
+/** The listing a booking is for, whichever field name it arrived under. */
+const bookingListing = (b: { listing?: string; title?: string; listingTitle?: string }) =>
+  (b.listing || b.title || b.listingTitle || "").trim() || undefined;
+/** Who made the booking — `booker` is the real field; `name` is a legacy alias. */
+const bookerName = (b: { booker?: string; name?: string }) => (b.booker || b.name || "").trim() || undefined;
+
+// Mirrors the slice of features/bookings/types.ts the composer needs. `listing`
+// (the name) and `booker` are what the API actually sends — `title`/
+// `listingTitle`/`name` are kept only because older rows and other callers use
+// them; matching that relied on those alone silently found nothing.
+interface Booking { id?: string; email?: string; booker?: string; name?: string; child?: string; age?: number; listingId?: string; listing?: string; title?: string; listingTitle?: string; locationName?: string; date?: string; dates?: string; createdAt?: string; method?: string }
 interface AudFilter { location?: string; listingIds?: string[]; listingTitles?: string[]; from?: string; to?: string; dateType?: "booked" | "session" | "either"; ageMin?: number; ageMax?: number; when?: "any" | "upcoming" | "past"; repeatOnly?: boolean; paymentMethod?: string }
 interface Audience { id: string; name: string; count: number; emails: string[]; desc: string; filter?: AudFilter; people?: { email: string; name?: string }[]; folder?: string }
 type CampStatus = "sent" | "sending" | "scheduled" | "draft";
@@ -1823,10 +1883,31 @@ export function EmailApp() {
   const listingOpts = (() => {
     const opts: { key: string; title: string; live: boolean }[] = composeListings.map((l) => ({ key: l.id, title: l.title, live: true }));
     const liveIds = new Set(composeListings.map((l) => l.id)); const liveTitles = new Set(composeListings.map((l) => l.title)); const seen = new Set<string>();
-    for (const b of composeBookings) { const key = b.listingId || b.title || b.listingTitle; const title = b.title || b.listingTitle || key; if (!key || !title || liveIds.has(key) || liveTitles.has(title) || seen.has(key)) continue; seen.add(key); opts.push({ key, title, live: false }); }
+    for (const b of composeBookings) { const key = b.listingId || bookingListing(b); const title = bookingListing(b) || key; if (!key || !title || liveIds.has(key) || liveTitles.has(title) || seen.has(key)) continue; seen.add(key); opts.push({ key, title, live: false }); }
     return opts;
   })();
-  const bookingMatchesSel = (b: Booking) => listingIds.includes(b.listingId || "\0") || listingIds.includes(b.title || "\0") || listingIds.includes(b.listingTitle || "\0");
+  // A picked LIVE listing is keyed by its id, but a booking only carries
+  // `listingId` when the server stamped one — manual and older bookings just
+  // name the listing. So match on the picked options' TITLES as well, or those
+  // bookings can never be selected and the count sits at 0 however many exist.
+  const selectedTitles = new Set(listingOpts.filter((o) => listingIds.includes(o.key)).map((o) => o.title));
+  // Distinct families per listing, so a chip can say what picking it would
+  // actually reach. Without it the only way to discover an empty listing is to
+  // tick it and watch the total not move.
+  const listingCounts = (() => {
+    const byId = new Map(listingOpts.map((o) => [o.key, o.key] as const));
+    const byTitle = new Map(listingOpts.map((o) => [o.title, o.key] as const));
+    const counts = new Map(listingOpts.map((o) => [o.key, new Set<string>()] as const));
+    for (const b of composeBookings) {
+      if (!b.email) continue;
+      const title = bookingListing(b);
+      const key = (b.listingId && byId.get(b.listingId)) || (title ? byTitle.get(title) : undefined);
+      if (key) counts.get(key)?.add(b.email.toLowerCase());
+    }
+    return new Map([...counts].map(([k, set]) => [k, set.size] as const));
+  })();
+  const bookingMatchesSel = (b: Booking) =>
+    listingIds.includes(b.listingId || "\0") || selectedTitles.has(bookingListing(b) || "\0");
   // Recipients when targeting by listing: distinct emails booked on any selected
   // listing (a repeat parent across duplicated listings only appears once).
   const composeLocations = [...new Set(composeListings.map((l) => (l.venueId ? venueName[l.venueId] : undefined)).filter((x): x is string => !!x))].sort();
@@ -1844,7 +1925,7 @@ export function EmailApp() {
     setError(null); setOk(null);
     setUndoEnq({ name: m.from, location: locations.join(", ") || undefined, prev }); setUndoEnqLeft(5);
   };
-  const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, b.name || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
+  const listingFamilies = (() => { const m = new Map<string, string>(); for (const b of composeBookings) { if (!b.email || !bookingMatchesSel(b)) continue; const e = b.email.toLowerCase(); if (!m.has(e)) m.set(e, bookerName(b) || b.email); } return [...m].map(([email, name]) => ({ email, name })); })();
   const listingEmails = listingFamilies.map((f) => f.email);
   const audienceFamilies = audience === "listing" ? listingFamilies : audience === "all" ? families : [];
   const audienceIncluded = audienceFamilies.filter((f) => !excluded.has(f.email));
@@ -2071,7 +2152,7 @@ export function EmailApp() {
             <FieldLabel>Listings — everyone booked on the ones you pick ({listingEmails.length})</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {listingOpts.length === 0 ? <span className="text-[11.5px] text-[var(--ink-3)]">No listings yet.</span>
-                : listingOpts.map((l) => { const on = listingIds.includes(l.key); return <button key={l.key} type="button" onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{on ? "✓ " : ""}{l.title}{!l.live && <span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
+                : listingOpts.map((l) => { const on = listingIds.includes(l.key); const n = listingCounts.get(l.key) ?? 0; return <button key={l.key} type="button" title={n ? `${n} famil${n === 1 ? "y" : "ies"} booked` : "Nobody has booked this one yet"} onClick={() => setListingIds((xs) => on ? xs.filter((x) => x !== l.key) : [...xs, l.key])} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={on ? { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)", opacity: n ? 1 : 0.45 }}>{on ? "✓ " : ""}{l.title}<span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· {n}</span>{!l.live && <span className="ml-1 text-[10px] font-semibold text-[var(--ink-3)]">· past</span>}</button>; })}
             </div>
             <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">Includes past listings still linked to bookings — so parents from a listing you’ve since duplicated aren’t missed. Repeat parents are only emailed once.</p>
           </div>
