@@ -319,12 +319,14 @@ function PeriodsColumn({
   const [start, setStart] = useState("09:00");
   const [finish, setFinish] = useState("15:30");
   const [busy, setBusy] = useState(false);
+  const [triedSave, setTriedSave] = useState(false); // show validation only after a save attempt
 
   function reset() {
     setTitle("");
     setStart("09:00");
     setFinish("15:30");
     setEditingId(null);
+    setTriedSave(false);
   }
   function openEdit(p: Period) {
     setTitle(p.title);
@@ -334,6 +336,7 @@ function PeriodsColumn({
     setOpen(true);
   }
   async function saveForm() {
+    setTriedSave(true);
     if (title.trim().length < 2 || start >= finish) return;
     const body = { title: title.trim(), start, finish };
     setBusy(true);
@@ -377,6 +380,9 @@ function PeriodsColumn({
             {editingId ? "Edit period" : "New period"}
           </div>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Period title" className="w-full" />
+          {triedSave && title.trim().length < 2 && (
+            <div className="text-[11px] text-[var(--red)]">Give the period a title before saving.</div>
+          )}
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <FieldLabel>Start</FieldLabel>
