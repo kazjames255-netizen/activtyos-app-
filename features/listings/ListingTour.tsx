@@ -10,16 +10,17 @@ import { useEffect, useRef } from "react";
 // ─────────────────────────────────────────────────────────────────────────
 
 const F = '<span class="caret"></span>';
-type Step = { stage: string; label: string; line: string; body: string; type?: { id: string; text: string }; click?: string };
+type TypeField = { id: string; text: string };
+type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string };
 const STEPS: Step[] = [
-  { stage: "About", label: "Basics", line: "Start with the basics — give your listing a name, choose a category, and pick the venue.", type: { id: "F", text: "Summer Multi-Activity Camp" },
-    body: `<div class="frm"><div><div class="fl">Listing name</div><div class="field ph focus" id="F">Give it a name…${F}</div></div><div class="row2"><div><div class="fl">Category</div><div class="field">🏕️ Holiday Camp</div></div><div><div class="fl">Venue</div><div class="field">📍 Riverside Sports Hall</div></div></div></div>` },
-  { stage: "About", label: "Details", line: "Add a few details, like the age range it's for.", type: { id: "F", text: "5 to 12 years" },
-    body: `<div class="frm"><div class="row2"><div><div class="fl">Ages</div><div class="field ph focus" id="F">e.g. 5–12${F}</div></div><div><div class="fl">Tagline</div><div class="field ph">Short and punchy…</div></div></div></div>` },
+  { stage: "About", label: "Basics", line: "Start with the basics — a clear name, and a big, bright photo. Pick a layout to see how it looks, then add your main image. You can pop extra photos in the gallery too.", type: { id: "F", text: "Summer Multi-Activity Camp" },
+    body: `<div class="frm"><div><div class="fl">Listing title · up to 70 characters</div><div class="field ph focus" id="F">e.g. Summer Multi-Activity Camp${F}</div></div><div><div class="fl">Main image — layout + hero photo</div><div class="lay"><span class="layopt on">🖼️ One big image</span><span class="layopt">Wide banner</span><span class="layopt">Collage</span><span class="layopt">Big + thumbnails</span></div><div style="margin-top:7px"><span class="btn">＋ Add main photo</span></div></div></div>` },
+  { stage: "About", label: "Details", line: "Add the details — the age range it's for, from and to, and choose your venue.", type: [{ id: "F", text: "5" }, { id: "F2", text: "12" }],
+    body: `<div class="frm"><div class="row2"><div><div class="fl">Age from</div><div class="field ph focus" id="F">e.g. 5${F}</div></div><div><div class="fl">Age to</div><div class="field ph" id="F2">e.g. 12</div></div></div><div><div class="fl">Venue</div><div class="field">📍 Riverside Sports Hall</div></div></div>` },
   { stage: "About", label: "Capacity", line: "Set your capacity — the most children you can take per session. Once it's full, bookings stop by themselves, so you'll never oversell a place.", type: { id: "F", text: "24" },
     body: `<div class="frm"><div style="max-width:200px"><div class="fl">Max children per session</div><div class="field ph focus" id="F">0${F}</div></div><div class="hint">Bookings close automatically when you reach this number.</div></div>` },
-  { stage: "About", label: "Content", line: "Add your photos and a friendly description — this is the first thing parents see, so make it shine.", type: { id: "F", text: "A fun-packed week of sports, games and crafts." },
-    body: `<div class="frm"><div><div class="fl">Photos</div><div class="imgrow"><div class="imgph">🖼️</div><div class="imgph">🖼️</div><div class="imgph">＋</div></div></div><div><div class="fl">Description</div><div class="field ph focus" id="F" style="min-height:50px">Tell parents what to expect…${F}</div></div></div>` },
+  { stage: "About", label: "Content", line: "Now the description — tell parents what to expect. A friendly, clear write-up is what sells your listing.", type: { id: "F", text: "A fun-packed week of sports, games and crafts — something for everyone." },
+    body: `<div class="frm"><div><div class="fl">Description</div><div class="field ph focus" id="F" style="min-height:64px">Tell parents what to expect…${F}</div></div></div>` },
   { stage: "About", label: "Provided", line: "Tick what's included — a hot lunch, equipment, snacks, whatever you provide.", click: "C",
     body: `<div class="frm"><div class="fl">What's provided</div><div class="chk" id="C"><span class="chkbx"></span>🍽️ Hot lunch</div><div class="chk"><span class="chkbx"></span>🎒 All equipment</div><div class="chk"><span class="chkbx"></span>🍎 Snacks &amp; drinks</div></div>` },
   { stage: "About", label: "Safety & SEND", line: "Add your safety notes and ratios, and how you support SEND — that's special educational needs. It reassures parents, and tells your team exactly what a child needs.", type: { id: "F", text: "1:8 ratios · first-aid trained · quiet space for SEND" },
@@ -75,6 +76,7 @@ const CSS = `
 .lt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}.lt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.lt-root .cbtn.on{background:#eef4ff;border-color:#bcd0f5;color:var(--brandink)}
 .lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
 .lt-root .lnk{font-size:11.5px;font-weight:800;color:var(--brandink);background:#eef4fd;border:1px solid #cfe0fb;border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-block}.lt-root .lnk:hover{background:#e2ecfc}
+.lt-root .lay{display:flex;gap:6px;flex-wrap:wrap}.lt-root .layopt{font-size:11px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 9px;color:var(--ink2)}.lt-root .layopt.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
@@ -174,7 +176,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       for (let i = 0; i < STEPS.length; i++) {
         const s = STEPS[i]; content.innerHTML = frame(i);
         const act = (async () => {
-          if (s.type) { await move(s.type.id, 0.2); await type(s.type.id, s.type.text, tk); await sleep(200); }
+          if (s.type) { const arr = Array.isArray(s.type) ? s.type : [s.type]; for (const t of arr) { await move(t.id, 0.2); await type(t.id, t.text, tk); await sleep(150); } }
           else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); } await sleep(200); }
           else await sleep(600);
           await move("next"); await click();
