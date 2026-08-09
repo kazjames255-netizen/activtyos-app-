@@ -12,7 +12,8 @@
     "test:isolation": "tsx src/isolationTest.mts",
     "e2e-cleanup": "tsx src/e2eCleanup.ts",
     "e2e-unwall": "tsx src/e2eUnwall.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "fake-inbound": "tsx src/fakeInbound.ts"
   },
   "dependencies": {
     "@types/proj4": "^2.5.6",
