@@ -84,7 +84,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     let speaking: Promise<unknown> = Promise.resolve();
     const gate = () => (paused ? new Promise<void>((r) => waiters.push(r)) : Promise.resolve());
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)).then(gate);
-    const strip = (h: string) => h.replace(/<[^>]+>/g, "").replace(/[—–]/g, ", ").replace(/\s+/g, " ").trim();
+    const strip = (h: string) => h.replace(/<[^>]+>/g, "").replace(/&amp;/g, " and ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;|&rsquo;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/[—–]/g, ", ").replace(/\s+/g, " ").trim();
     const readMs = (t: string) => Math.max(2400, t.split(/\s+/).length * 330);
 
     function pickVoice(): SpeechSynthesisVoice | null {
@@ -139,7 +139,9 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       cursor.style.transform = "translate(24px,20px) scale(1)";
       if (startIdx <= 0) {
         if (splash) { splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth; await sleep(2200); if (!alive()) return; splash.classList.add("hide"); await sleep(500); splash.style.display = "none"; }
-        currentIdx = -1; content.innerHTML = `<div class="appear" style="padding:24px 6px;font-size:13px;color:var(--ink2);line-height:1.6">${cfg.introHtml ?? ""}</div>`;
+        currentIdx = -1; content.innerHTML = cfg.introHtml
+          ? `<div class="appear" style="padding:24px 6px;font-size:13px;color:var(--ink2);line-height:1.6">${cfg.introHtml}</div>`
+          : `<div class="appear" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:200px;gap:8px"><div style="font-size:30px">👋</div><div style="font-size:16px;font-weight:800;color:var(--ink)">${cfg.title}</div><div style="font-size:12px;color:var(--ink3)">Here's a quick walkthrough.</div></div>`;
         await line(cfg.introLine); if (!alive()) return;
       } else if (splash) { splash.style.display = "none"; }
       for (let i = Math.max(0, startIdx); i < cfg.steps.length; i++) {

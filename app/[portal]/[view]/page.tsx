@@ -2,6 +2,12 @@ import { createElement } from "react";
 import { notFound } from "next/navigation";
 import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { getRegisteredView } from "@/lib/view-registry";
+import { PageTour } from "@/features/common/PageTour";
+
+// Portals whose pages are the operator/provider workspace — the only ones that
+// get the "How it works" guided walkthroughs. Parent (custdash) and staff share
+// some view slugs but render different components, so they're deliberately out.
+const PROVIDER_PORTALS = new Set<PortalKey>(["company", "franchise", "freelancer"]);
 
 export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   const { portal, view } = await props.params;
@@ -18,5 +24,10 @@ export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   // registered component 404s.
   const registeredView = getRegisteredView(portalKey, view);
   if (!registeredView) notFound();
-  return <div className="p-3 sm:p-5">{createElement(registeredView)}</div>;
+  return (
+    <div className="p-3 sm:p-5">
+      {PROVIDER_PORTALS.has(portalKey) && <PageTour view={view} />}
+      {createElement(registeredView)}
+    </div>
+  );
 }
