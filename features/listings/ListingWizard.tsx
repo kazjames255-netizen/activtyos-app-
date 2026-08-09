@@ -1786,7 +1786,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
               {weeks.map((w, i) => {
                 const col = WEEK_PAL[i % WEEK_PAL.length];
                 return (
-                  <div key={w.mon} className="overflow-hidden rounded-xl border border-[var(--line)]">
+                  <div key={w.mon} className="shrink-0 overflow-hidden rounded-xl border border-[var(--line)]">
                     <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-extrabold text-white" style={{ background: col }}>
                       Week {w.n} <span className="font-semibold opacity-80">· from {fmtDate(w.mon)}</span>
                     </div>
