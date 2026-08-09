@@ -1,166 +1,180 @@
 import type { TourConfig } from "./GuidedTour";
 
 // Provider-page walkthroughs. Drafted by a planner+builder agent pass that read
-// each real page component, then reviewed. Keyed by route view-id (see
-// lib/view-registry.tsx). Only surfaced on provider portals via PageTour.
+// each real page component, then QA'd by a review+amend pass against a 20-point
+// rubric (functional truth vs the code, populated mock frames, TTS-clean
+// narration). Keyed by route view-id (see lib/view-registry.tsx). Surfaced on
+// provider portals via PageTour (and in-panel on the four self-hosting pages).
 export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "dash": {
     "title": "Your Dashboard",
-    "introLine": "This is your morning command-centre — one glance tells you how the whole business is doing today, and every number here jumps you straight to where the work is.",
-    "doneLine": "And that's the lot — start here each morning and you'll never miss a booking, a full session, or a cert about to lapse.",
+    "introLine": "This is your morning command-centre — one glance tells you how the whole business is doing today: who's on site, which sessions are filling, what money's in, and how bookings are trending. Your tasks-due list links straight into the Task manager.",
+    "doneLine": "And that's the lot — check in here each morning and you'll see at a glance who's on site, what's filling up, what's owed, and how the business is trending.",
     "steps": [
       {
-        "label": "Greeting, period toggle & KPI cards",
+        "label": "Your business at a glance",
         "stage": "Overview",
-        "line": "Up top you get a friendly good-morning and a Today / This week / This month toggle that re-scopes every number on the page, with five headline cards giving you the health of the business at a glance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">GOOD MORNING</div><div class=\"field\">Good morning, Jordan — here's your sessions today</div><div class=\"chips\"><span class=\"ochip\">Today</span><span class=\"ochip\">This week</span><span class=\"ochip\">This month</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bookings · today</b> <span class=\"g\">↑ +8% vs last wk</span><span class=\"tkp\">14</span></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Revenue</b> <span class=\"g\">↑ today</span><span class=\"tkp\">£610</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Attendance</b> <span class=\"g\">↑ present</span><span class=\"tkp\">95%</span></div></div></div><div class=\"hint\">Total children 42 · Staff 1 (just you) · Families 39 · 5 live listings</div></div>"
+        "line": "The hero banner shows how many children are on site today and how many sessions are running. Below it, four live cards: new bookings over the last five weeks, spaces left on your open runs, money taken this week, and anything still outstanding.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ON SITE TODAY</div><div class=\"field\">24 children · 3 sessions running</div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>New bookings</b> <span class=\"g\">last 5 weeks</span><span class=\"tkp\">31</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Spaces left</b> <span class=\"g\">68% filled</span><span class=\"tkp\">46</span></div></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Taken this week</b> <span class=\"g\">9 new bookings</span><span class=\"tkp\">£1,240</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Outstanding</b> <span class=\"g\">2 awaiting voucher</span><span class=\"tkp\">£320</span></div></div></div></div>"
       },
       {
-        "label": "Attendance donut & trend",
-        "stage": "Attendance",
-        "line": "Your attendance ring shows today's present-rate at a glance, and the twelve-month chart beside it reveals the seasonal pattern — those big summer-camp peaks you plan your staffing around.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ATTENDANCE · THIS WEEK</div><div class=\"field\">95% present</div><div class=\"chips\"><span class=\"ochip\">🟢 Present 38</span><span class=\"ochip\">🟠 Late 3</span><span class=\"ochip\">🔴 Absent 1</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Attendance &amp; bookings</b> <span class=\"g\">Jan–Dec · 91–96% present</span></div></div><div class=\"hint\">Bookings peak Jul–Aug (~40) for summer camps, dipping to ~8 in winter.</div></div>"
+        "label": "Today, live listings and tasks",
+        "stage": "Today",
+        "line": "The Today panel lists every club and camp running now with its start-to-finish time and a fill bar for places booked against capacity. Beside it, open listings show places left with a green, amber or red pill as they fill, and the Tasks today card lists anything due today and links into your Task manager.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TODAY</div><div class=\"tkt\"><div class=\"tkhd\"><b>After-school Football Club</b> <span class=\"g\">15:30 to 16:30 · 75% full</span><span class=\"tkp\">12/16</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Holiday Camp · morning</b> <span class=\"g\">09:00 to 12:00 · 38% full</span><span class=\"tkp\">9/24</span></div></div><div class=\"fl\">LIVE LISTINGS · PLACES LEFT</div><div class=\"tkt\"><div class=\"tkhd\"><b>Saturday Multi-Sports</b> <span class=\"g\">from Sat 14 Jun</span><span class=\"chip2\">2 left</span><span class=\"tkp\">18/20</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Easter Holiday Camp</b> <span class=\"g\">from Tue 7 Apr</span><span class=\"chip2\">full</span><span class=\"tkp\">24/24</span></div></div><div class=\"fl\">TASKS TODAY</div><div class=\"tkt\"><div class=\"tkhd\"><b>Chase unpaid invoice — Obi family</b> <span class=\"g\">Today 14:00</span></div></div></div>"
       },
       {
-        "label": "Today's sessions — capacity fill",
-        "stage": "Sessions",
-        "line": "Every one of today's clubs and camps, with a booked-out-of-capacity bar that turns amber as it fills and red when it's over — so you can see instantly what's full and what's got room to upsell.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TODAY'S SESSIONS · CAPACITY FILL</div><div class=\"tkt\"><div class=\"tkhd\"><b>After-school Football Club</b> <span class=\"g\">space left</span><span class=\"tkp\">12/16</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Saturday Multi-Sports</b> <span class=\"g\">near full · Waitlist 2</span><span class=\"tkp\">18/20</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Holiday Camp · Tue AM</b> <span class=\"g\">space left</span><span class=\"tkp\">9/24</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Gymnastics Tots</b> <span class=\"g\">Starts 15:30</span><span class=\"tkp\">8/10</span></div></div></div>"
+        "label": "Business analytics — pick your window",
+        "stage": "Analytics",
+        "line": "Scroll on and the Business analytics section recalculates from your own bookings. The three-month, six-month and twelve-month toggle re-scopes everything below it — income collected net of refunds, total bookings, unique families, and your average booking value.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">BUSINESS ANALYTICS</div><div class=\"chips\"><span class=\"ochip\">3m</span><span class=\"ochip\">6m</span><span class=\"ochip\">12m</span></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Income collected</b> <span class=\"g\">net of refunds</span><span class=\"tkp\">£8,450</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bookings</b> <span class=\"g\">excl. cancelled</span><span class=\"tkp\">132</span></div></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Families</b> <span class=\"g\">unique</span><span class=\"tkp\">74</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Avg booking</b> <span class=\"g\">per paid</span><span class=\"tkp\">£64</span></div></div></div></div>"
       },
       {
-        "label": "Popular activities & events calendar",
-        "stage": "Planning",
-        "line": "Your best-selling activities ranked by places booked tell you what to schedule more of, while the events calendar keeps the fixed diary dates — camp openings, payout runs — right in front of you.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">POPULAR ACTIVITIES · PLACES BOOKED</div><div class=\"tkt\"><div class=\"tkhd\"><b>Multi-Sports</b> <span class=\"g\">Football 72 · Holiday Club 40</span><span class=\"tkp\">96</span></div></div><div class=\"fl\">UPCOMING</div><div class=\"chips\"><span class=\"ochip\">25 Jun · Summer Camp wk 1 opens</span><span class=\"ochip\">28 Jun · Staff briefing 9:00am</span><span class=\"ochip\">02 Jul · Payments run</span></div><div class=\"hint\">Tap Listings → to schedule more of what's selling.</div></div>"
+        "label": "Revenue splits, funnel and repeat customers",
+        "stage": "Trends",
+        "line": "The charts show income month by month and booked against collected, plus where your revenue comes from — by season and by activity, ranked in pounds. The booking funnel tracks bookings through to confirmed and paid, and the repeat-customers ring shows how many families come back.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REVENUE BY ACTIVITY</div><div class=\"tkt\"><div class=\"tkhd\"><b>Multi-Sports Camp</b> <span class=\"g\">top earner</span><span class=\"tkp\">£3,200</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>After-school Football</b> <span class=\"g\">2nd</span><span class=\"tkp\">£2,150</span></div></div><div class=\"fl\">BOOKING FUNNEL</div><div class=\"chips\"><span class=\"ochip\">Bookings 132</span><span class=\"ochip\">Confirmed 118</span><span class=\"ochip\">Paid 96</span></div><div class=\"hint\">72% of bookings are paid · 89% confirmed · 41% of families are repeat.</div></div>"
       },
       {
-        "label": "Upcoming bookings",
-        "stage": "Arrivals",
-        "line": "Your arrivals list for the sessions ahead — who's coming, whose booking still needs a confirm, and who's sitting on the waitlist — the queue you work through before each session.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">NEXT ARRIVALS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Sophie Khan</b> <span class=\"g\">Sarah Khan · Football · Today 15:30</span><span class=\"chip2\">Confirmed</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Ella Obi</b> <span class=\"g\">Dani Obi · Multi-Sports · Today 16:00</span><span class=\"chip2\">Pending</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Aarav Patel</b> <span class=\"g\">M. Patel · Holiday Camp · Tomorrow</span><span class=\"chip2\">Confirmed</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sofia Bianchi</b> <span class=\"g\">L. Bianchi · Gymnastics Tots · Sat</span><span class=\"chip2\">Waitlisted</span></div></div></div>"
-      },
-      {
-        "label": "Camp updates & needs attention",
-        "stage": "Action",
-        "line": "A live feed of everything happening across your camps, and below it a needs-attention queue where each row is a button that jumps you straight to wherever you sort it out.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CAMP UPDATES</div><div class=\"chk\"><span class=\"chkbx\">📖</span>New booking — Sophie Khan · Football <span class=\"g\">2m ago</span></div><div class=\"chk\"><span class=\"chkbx\">💷</span>Payment received — £48 from Dani Obi <span class=\"g\">18m ago</span></div><div class=\"fl\">NEEDS ATTENTION</div><div class=\"tkt\"><div class=\"tkhd\"><b>🟠 3 bookings awaiting approval</b> <span class=\"btn amber\">Review</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔴 1 refund request</b> <span class=\"btn\">Review</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔵 First-aid certificate expires soon</b> <span class=\"btn\">View</span></div></div></div>"
+        "label": "Bookings, payments and newest arrivals",
+        "stage": "Detail",
+        "line": "Finally, two doughnuts break your bookings down by status and by payment mix, a newest-bookings list shows who just signed up and for how much, and the footer line sums your listings, active runs and live bookings.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">BY STATUS</div><div class=\"chips\"><span class=\"ochip\">Confirmed 118</span><span class=\"ochip\">Approval needed 6</span><span class=\"ochip\">Waitlisted 4</span><span class=\"ochip\">Cancelled 4</span></div><div class=\"fl\">PAYMENT MIX</div><div class=\"chips\"><span class=\"ochip\">Paid 96</span><span class=\"ochip\">Unpaid 22</span><span class=\"ochip\">Invoice sent 10</span></div><div class=\"fl\">NEWEST BOOKINGS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Sophie Khan</b> <span class=\"g\">Multi-Sports Camp</span><span class=\"tkp\">£96</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Aarav Patel</b> <span class=\"g\">After-school Football</span><span class=\"tkp\">£48</span></div></div><div class=\"hint\">12 listings · 5 active runs · 47 live bookings</div></div>"
       }
     ]
   },
   "meals": {
     "title": "Meals",
-    "introLine": "This is where you plan each camp's menus, keep every child's allergy and dietary need to hand, tally up exactly what to order the caterer, and keep an eye on whether the meals are actually paying their way.",
-    "doneLine": "And that's Meals sorted — plan it once, and the allergies, caterer order and costs all look after themselves.",
+    "introLine": "This is where you build reusable menus, plan their dishes onto each listing's run-days, and set who sees what — families then add and pay for meals right in the booking basket, and every order and change lands back here.",
+    "doneLine": "And that's Meals — build a menu once, drop it onto the days, and every order, swap and 'not yet chosen' nudge lands right back here for you.",
     "steps": [
       {
-        "label": "Menu planner",
+        "label": "Season & listing",
+        "stage": "Start",
+        "line": "Start on the first tab: choose a season, then the listing that slides out beside it. The planner runs left to right across three tabs, and every listing that already has a meal plan is listed below to jump back into.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">1 · Season &amp; listing</span><span class=\"ochip\">2 · Menu</span><span class=\"ochip\">3 · Days</span><span class=\"ochip\">Saved menus</span><span class=\"ochip\">Sharing</span></div><div class=\"row2\"><div><div class=\"fl\">SEASON</div><div class=\"field\">Summer 2026</div></div><div><div class=\"fl\">LISTING</div><div class=\"field\">Summer Multi-Activity Camp — Milton Keynes</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Activity Camp</b> <span class=\"g\">10 days planned · Summer 2026</span><span class=\"tkp\">Edit plan →</span></div></div><div class=\"hint\">Every listing with a saved meal plan is listed here to jump back into.</div></div>"
+      },
+      {
+        "label": "Saved menus",
+        "stage": "Build",
+        "line": "Menus have their own tab and get reused across listings. Build one once — name it, then add each meal with a price, a diet type, and any of the fourteen UK allergens — and duplicate or edit it whenever you like.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MENU NAME</div><div class=\"field\">Summer hot lunches</div><div class=\"tkt\"><div class=\"tkhd\"><b>Chicken and sweetcorn pasta</b> <span class=\"g\">🍖 Meat · Limit 20/day</span><span class=\"tkp\">£4.50</span></div><span class=\"chip2\">Gluten</span> <span class=\"chip2\">Milk</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Tomato and basil pasta</b> <span class=\"g\">🥕 Vegetarian</span><span class=\"tkp\">£4.50</span></div><span class=\"chip2\">Gluten</span></div><div class=\"chips\"><span class=\"btn amber\">Save menu</span><span class=\"btn\">Duplicate</span></div></div>"
+      },
+      {
+        "label": "Menu onto the days",
         "stage": "Plan",
-        "line": "Build a menu against a listing and give each day two options — a Hot/Meat and usually a Cold/Veg — tagging allergens as you go, and the dates and choices flow straight through to the child's chooser and the caterer.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MENU NAME</div><div class=\"field\">Summer hot menu</div><div class=\"fl\">LISTING</div><div class=\"field\">Summer Multi-Activity · Milton Keynes · Wk1 (28 Jul–01 Aug)</div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon · Chicken &amp; sweetcorn pasta</b> <span class=\"g\">Hot · Meat</span></div><span class=\"chip2\">Gluten</span> <span class=\"chip2\">Milk</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon · Tomato &amp; basil pasta</b> <span class=\"g\">Hot · Veg</span></div><span class=\"chip2\">Gluten</span></div><span class=\"btn amber\">Save menu</span></div>"
+        "line": "The Menu and Days tabs are where you plan. Tap a menu, choose which dish or two each weekday serves — offer both a meat and a veg and families pick at checkout — then paint it onto the run-days. It saves as you go.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>🍽️ Summer hot lunches</b> <span class=\"g\">2 dishes</span><span class=\"tkp\">✓ picked</span></div><span class=\"chip2\">✓ Chicken pasta · £4.50</span> <span class=\"chip2\">✓ Tomato pasta · £4.50</span></div><div class=\"fl\">WEEK 1 · DROP IT ONTO THE DAYS</div><div class=\"chips\"><span class=\"ochip\">Mon · 2</span><span class=\"ochip\">Tue · 2</span><span class=\"ochip\">Wed · 2</span><span class=\"ochip\">Thu ＋ tap</span><span class=\"ochip\">Fri ＋ tap</span></div><div class=\"hint\">Changes save automatically. Any day with no veg option is flagged.</div></div>"
       },
       {
-        "label": "Dietary & allergy register",
-        "stage": "Safety",
-        "line": "Every allergy and dietary need here is pulled automatically from your bookings and the register — you don't re-type a thing — giving the kitchen and your staff one exportable source of truth.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"field\">Summer Multi-Activity · Wk1 — 8 booked · 3 with needs</div><div class=\"hint\">Pulled from bookings &amp; the register — 3 have an allergy, 2 a dietary need.</div><div class=\"tkt\"><div class=\"tkhd\"><b>Oliver Reed</b> <span class=\"g\">Peanuts, Tree nuts</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Amara Singh</b> <span class=\"g\">Milk · Halal</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sofia Costa</b> <span class=\"g\">Gluten · Coeliac</span></div></div><span class=\"btn\">↓ Export</span></div>"
+        "label": "Sharing & ordering rules",
+        "stage": "Rules",
+        "line": "The Sharing tab sets the rules: who sees each day's menu, how late families can order, a standard allergen note, and whether meal swaps need your say-so. Each saved plan can also email its caterer the orders on a schedule.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHO SEES THE MENU</div><div class=\"field\">✓ All booked families</div><div class=\"row2\"><div><div class=\"fl\">ORDERING CLOSES</div><div class=\"field\">The day before · 08:00</div></div><div><div class=\"fl\">MEAL CHANGES</div><div class=\"field\">Need my approval</div></div></div><div class=\"fl\">EMAIL THE CATERER THE ORDERS</div><div class=\"field\">orders@freshstartcatering.co.uk · every day at 07:00</div><div class=\"hint\">The cut-off pre-fills from your default — each listing can override it.</div></div>"
       },
       {
-        "label": "Catering counts & order",
-        "stage": "Order",
-        "line": "Flip between by day, week or listing and the choices roll up into exact numbers — the 'to order' figure quietly leaves out the bring-your-owns — then you fire it off to the venue's caterer with a cut-off.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">By day</span> <span class=\"ochip\">By week</span> <span class=\"ochip\">By listing</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon</b> <span class=\"g\">Hot 5 · Packed 2 · Own 1</span><span class=\"tkp\">7 to order</span></div></div><div class=\"fl\">ORDER TO CATERER</div><div class=\"field\">Fresh Start Catering · orders@freshstartcatering.co.uk · cut-off 48h before</div><span class=\"btn amber\">Send order</span></div>"
-      },
-      {
-        "label": "Caterers",
-        "stage": "Setup",
-        "line": "Set each caterer up once — their order email, a cut-off, and the venues they cover — so when the counts come through they route to whoever's actually feeding that location.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CATERER NAME</div><div class=\"field\">Fresh Start Catering</div><div class=\"fl\">ORDER EMAIL</div><div class=\"field\">orders@freshstartcatering.co.uk</div><div class=\"row2\"><div><div class=\"fl\">ORDERING CUT-OFF</div><div class=\"field\">48h before</div></div><div><div class=\"fl\">LOCATIONS</div><div class=\"field\">All venues</div></div></div><span class=\"btn amber\">Add caterer</span></div>"
-      },
-      {
-        "label": "Costs",
-        "stage": "Money",
-        "line": "See meals as a proper margin line — revenue against catering cost — and rest easy that anything you enter here writes into Expenses under 'Catering' and feeds Finance, so you're never double-keying.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">MEAL REVENUE</div><div class=\"field\">£186.50</div></div><div><div class=\"fl\">CATERING COST</div><div class=\"field\">£120.00</div></div></div><div class=\"row2\"><div><div class=\"fl\">MARGIN</div><div class=\"field\">36%</div></div><div><div class=\"fl\">MEALS/WEEK</div><div class=\"field\">38</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Activity</b> <span class=\"g\">Milton Keynes · 22 meals/wk · Suggested £42.90</span><span class=\"tkp\">£75.00</span></div></div><div class=\"hint\">Catering costs sync straight into Expenses under \"Catering\" and feed Finance — both ways.</div></div>"
+        "label": "Meal orders",
+        "stage": "Track",
+        "line": "Back on the first tab, the Meal orders panel totals who chose what — by day, by week or across the whole run — flags any booked child who hasn't chosen yet, and drops meal-change requests here for you to approve or decline.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Daily</span><span class=\"ochip\">Weekly</span><span class=\"ochip\">Total</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon 3 Aug</b> <span class=\"g\">Chicken pasta ×5 · Tomato pasta ×2</span><span class=\"tkp\">7 meals</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔔 Meal change request</b> <span class=\"g\">Amara Singh · swap to Tomato pasta</span></div><div class=\"chips\"><span class=\"btn amber\">Approve</span><span class=\"btn\">Decline</span></div></div><div class=\"hint\">🕐 Not yet chosen: 2 booked children have no meal on Tue.</div></div>"
       }
     ]
   },
   "customers": {
     "title": "Families",
-    "introLine": "This is your self-filling little black book — every booking quietly pops the family in here, so you only ever type when someone rings up or you spot a correction, and you can see exactly where each family sits from first enquiry to happy regular.",
+    "introLine": "This is your self-filling little black book (the page calls it Leads and customers) — every booking quietly pops the family in here, so you only ever type when someone rings up or you spot a correction, and you can see exactly where each family sits from first enquiry to happy regular.",
     "doneLine": "And that's Families — a CRM that mostly fills itself in, so you can spend your time chasing bookings rather than typing them up.",
     "steps": [
       {
         "label": "The pipeline tiles",
         "stage": "Pipeline",
         "line": "The tiles across the top are your funnel and your filter in one — each count tells you where families have got to, and a tap on any tile filters the list down to just that stage.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>All families</b> <span class=\"g\">everyone in one place</span><span class=\"tkp\">48</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lead</b> <span class=\"g\">Enquired, never booked, not invited yet</span><span class=\"tkp\">12</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Invited</b> <span class=\"g\">Sent a sign-up link, not signed in yet</span><span class=\"tkp\">7</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Customer</b> <span class=\"g\">Signed up or booked with you</span><span class=\"tkp\">21</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Repeat</b> <span class=\"g\">Booked more than once — they came back</span><span class=\"tkp\">8</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>All families</b> <span class=\"g\">Everyone on your list</span><span class=\"tkp\">48</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lead</b> <span class=\"g\">Enquired, never booked, not invited yet</span><span class=\"tkp\">12</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Invited</b> <span class=\"g\">Sent a sign-up link, not signed in yet</span><span class=\"tkp\">7</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Customer</b> <span class=\"g\">Signed up or booked with you</span><span class=\"tkp\">21</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Repeat</b> <span class=\"g\">Booked more than once — they came back</span><span class=\"tkp\">8</span></div></div></div>"
+      },
+      {
+        "label": "Import & export",
+        "stage": "Bringing people in",
+        "line": "Two shortcuts sit up top: Import bulk-adds families from a spreadsheet and can invite them in one go, and Export pulls any slice of your list — pick the families, columns and format you want.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">⬇ Export</span><span class=\"ochip\">📥 Import</span><span class=\"ochip\">＋ Add family</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Import families</b> <span class=\"g\">from a spreadsheet · optional invite</span></div></div><div class=\"hint\">Export lets you choose families, columns and a format (CSV or print).</div><div class=\"hint\">Import, Export and Add family show only for company, freelancer or franchise roles — staff see the page read-only.</div></div>"
       },
       {
         "label": "Toggle, filters & search",
         "stage": "Finding people",
         "line": "Flip between Families and Children depending on whether you're chasing money or running a day, then narrow by venue, booking date or a quick search — handy for pulling everyone interested in Bedford for a campaign.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Families (48)</span><span class=\"ochip\">Children (73)</span></div><div class=\"chips\"><span class=\"ochip\">📍 Bedford Sports Hall</span><span class=\"ochip\">📅 Booked on 04/08/2026</span><span class=\"ochip\">Show everyone</span></div><div class=\"field\">🔍 Freya</div><div class=\"hint\">Showing 3 of 48 · ⬇ Export · 📥 Import · ＋ Add family</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Families (48)</span><span class=\"ochip\">Children (73)</span></div><div class=\"field ph\">🔍 Search by name, child, email, phone or location…</div><div class=\"chips\"><span class=\"ochip\">📍 Bedford Sports Hall</span><span class=\"ochip\">📅 Booked on 04/08/2026</span><span class=\"ochip\">Show everyone</span></div><div class=\"hint\">Showing 3 of 48 · filter active</div></div>"
       },
       {
         "label": "Family card",
         "stage": "Finding people",
-        "line": "Each family gets a card in its stage colour so a long list stays scannable — you can see where they sit, tap Contact to reach them any way you like, or re-send their sign-up link in one go.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Whitfield</b> <span class=\"g\">REPEAT · 3 bookings</span></div></div><div class=\"hint\">sarah.whitfield@gmail.com · 07700 900412</div><div class=\"chips\"><span class=\"chip2\">📍 Bedford Sports Hall</span><span class=\"chip2\">✉ Marketing</span><span class=\"chip2\">✓ Signed up</span><span class=\"chip2\">Freya · 8</span><span class=\"chip2\">Oliver · 6</span></div><div class=\"chips\"><span class=\"btn amber\">Contact →</span><span class=\"btn\">Re-send sign-up link</span><span class=\"btn\">View / edit</span></div></div>"
+        "line": "Each family gets a card headed with its stage and booking count, so a long list stays scannable — see where they've got to, tap Contact to reach them any way you like, or re-send their sign-up link in one go.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Whitfield</b> <span class=\"g\">REPEAT · 3 bookings</span></div></div><div class=\"hint\">sarah.whitfield@gmail.com · 07700 900412</div><div class=\"chips\"><span class=\"chip2\">📍 Bedford Sports Hall</span><span class=\"chip2\">✉ Marketing</span><span class=\"chip2\">✓ Signed up</span><span class=\"chip2\">Freya · 8</span><span class=\"chip2\">Oliver · 6</span></div><div class=\"chips\"><span class=\"btn amber\">Contact →</span><span class=\"btn\">Re-send sign-up link</span><span class=\"btn\">View / edit</span><span class=\"btn ghost\">Has bookings</span></div><div class=\"hint\">Tap a child chip to jump straight to their profile.</div></div>"
       },
       {
         "label": "Add / edit a family",
         "stage": "Manual entry",
-        "line": "For the manual cases — a phone enquiry or a tweak — you pop the details in here; age works itself out from the date of birth, and care notes write once to the family's shared record so there's never a thin duplicate.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">FIRST NAME</div><div class=\"field\">Freya</div></div><div><div class=\"fl\">DATE OF BIRTH</div><div class=\"field\">2018-03-14</div></div></div><div class=\"row2\"><div><div class=\"fl\">AGE (FROM DOB)</div><div class=\"field ph\">8</div></div><div><div class=\"fl\">ALLERGIES</div><div class=\"field\">Peanuts, kiwi</div></div></div><div class=\"row2\"><div><div class=\"fl\">COLLECTION PASSWORD</div><div class=\"field\">Bluebell</div></div><div><div class=\"fl\">PHOTO CONSENT</div><div class=\"field\">Yes</div></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Happy to receive marketing (PECR)</div><div class=\"chips\"><span class=\"btn amber\">✉ Save &amp; send sign-up link</span><span class=\"btn\">Save</span></div></div>"
+        "line": "For the manual cases — a phone enquiry, or a tweak to someone already on the list — pop the parent's details in here. Open a family to add each child: their age works itself out from the date of birth, and care notes save once to the family's shared record, so there's never a thin duplicate.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">FIRST NAME</div><div class=\"field\">Sarah</div></div><div><div class=\"fl\">SURNAME</div><div class=\"field\">Whitfield</div></div></div><div class=\"row2\"><div><div class=\"fl\">EMAIL</div><div class=\"field\">sarah.whitfield@gmail.com</div></div><div><div class=\"fl\">PHONE (OPTIONAL)</div><div class=\"field\">07700 900412</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>👪 The family&rsquo;s own record — Freya</b></div><div class=\"row2\"><div><div class=\"fl\">DATE OF BIRTH</div><div class=\"field\">2018-03-14</div></div><div><div class=\"fl\">AGE (FROM DOB)</div><div class=\"field ph\">8</div></div></div><div class=\"row2\"><div><div class=\"fl\">ALLERGIES</div><div class=\"field\">Peanuts, kiwi</div></div><div><div class=\"fl\">COLLECTION PASSWORD</div><div class=\"field\">Bluebell</div></div></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>They said yes to hearing about upcoming activities</div><div class=\"chips\"><span class=\"btn\">Save</span><span class=\"btn amber\">✉ Save &amp; send sign-up link</span></div></div>"
       },
       {
         "label": "Children view",
         "stage": "On the day",
         "line": "This is what your team reads while running a session — allergies, SEND and the collection password at a glance — and a blank child clearly says 'Not filled in yet' so nobody ever mistakes an empty line for 'no needs'.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>👪 Whitfield</b> <span class=\"g\">2 children · Bedford Sports Hall</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Freya</b> <span class=\"g\">age 8</span><span class=\"tkp\">Open</span></div></div><div class=\"chips\"><span class=\"chip2\">Allergies · Peanuts, kiwi</span><span class=\"chip2\">Collection · Bluebell</span><span class=\"chip2\">Photo · Allowed</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Oliver</b> <span class=\"g\">age 6</span><span class=\"tkp\">Open</span></div></div><div class=\"hint\">Not filled in yet — a blank line does NOT mean a child has none.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>👪 Whitfield</b> <span class=\"g\">2 children · Bedford Sports Hall</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Freya</b> <span class=\"g\">age 8</span><span class=\"tkp\">Open</span></div></div><div class=\"chips\"><span class=\"chip2\">Allergies · Peanuts, kiwi</span><span class=\"chip2\">Collection · Bluebell</span><span class=\"chip2\">SEND · plan on file</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Oliver</b> <span class=\"g\">age 6</span><span class=\"tkp\">Open</span></div></div><div class=\"hint\">Not filled in yet — a blank line does NOT mean a child has none.</div></div>"
       }
     ]
   },
   "email": {
     "title": "Email",
-    "introLine": "This is your comms hub — a proper Gmail-style inbox for chatting one-to-one with parents, plus a full marketing pipeline for firing branded campaigns out to your live CRM audiences.",
-    "doneLine": "That's the lot — reply to parents on the left, run your marketing on the right, and let the numbers tell you what's landing.",
+    "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails ActivityOS sends for you.",
+    "doneLine": "That's the lot — write to parents in the Inbox and Compose, fire branded campaigns at your live audiences, let ActivityOS send the routine emails for you, and read the numbers to see what's landing.",
     "steps": [
       {
         "label": "Sub-tabs",
         "stage": "Getting around",
-        "line": "Everything on this page splits across five little pills up top — one side is your 1:1 mailbox, the other is bulk marketing, so it's worth a quick sweep across them.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">EMAIL SECTIONS</div><div class=\"chips\"><span class=\"ochip\">📥 Inbox</span><span class=\"ochip\">📣 Campaigns</span><span class=\"ochip\">👥 Audiences</span><span class=\"ochip\">📄 Templates</span><span class=\"ochip\">📊 Analytics</span></div><div class=\"hint\">Inbox opens by default — the active pill sits highlighted so you always know where you are.</div></div>"
+        "line": "Everything on this page lives under a row of eight tabs — the first two are your one-to-one mailbox and writing desk, the middle three run your bulk marketing, and the last three are the emails ActivityOS sends automatically plus your settings.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">EMAIL SECTIONS</div><div class=\"chips\"><span class=\"ochip\">Inbox</span><span class=\"ochip\">Compose</span><span class=\"ochip\">Campaigns</span><span class=\"ochip\">Audiences</span><span class=\"ochip\">Templates</span><span class=\"ochip\">Automatic emails</span><span class=\"ochip\">Analytics</span><span class=\"ochip\">Settings</span></div><div class=\"hint\">Inbox opens by default — the active tab sits highlighted so you always know where you are.</div></div>"
       },
       {
         "label": "Inbox",
-        "stage": "1:1 mail",
-        "line": "Your everyday mailbox, but with a clever twist — open any message and one click reveals a Contact card showing that parent's child, booking and balance right beside the email.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"field ph\">🔍 Search mail · try from: subject: label: is:unread has:attachment</div><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Khan · Allergy update for Jack before Summer Camp</b> <span class=\"g\">09:18</span></div></div><div class=\"hint\">\"…confirming Jack's asthma inhaler will stay with the lead coach…\"</div><div class=\"chips\"><span class=\"ochip\">👤 Parent · Jack Khan (8)</span><span class=\"ochip\">🎟️ Summer Multi-Activity Camp · 28 Jul</span><span class=\"ochip\">💷 Paid · £225</span></div></div>"
+        "stage": "One-to-one mail",
+        "line": "Your everyday mailbox — folders, stars, snooze and a powerful search all work like Gmail, and one click on any parent's email marks it as an enquiry, dropping them straight onto your Audiences boards for follow-up.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"field ph\">🔍 Search mail · try from: subject: label: is:unread has:attachment</div><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Thompson · Summer camp availability?</b> <span class=\"g\">09:18</span></div><div class=\"g\">\"…any spaces left on your August multi-activity camp? My daughter is 8…\"</div></div><div class=\"chips\"><span class=\"ochip\">↩ Reply</span><span class=\"ochip\">↪ Forward</span><span class=\"ochip\">➕ Mark as enquiry</span></div><div class=\"hint\">Star, snooze, archive and folders all save to your account.</div></div>"
+      },
+      {
+        "label": "Compose",
+        "stage": "Writing to parents",
+        "line": "The Compose tab is your writing desk — choose who gets it, all families, everyone on one listing, or a single address, draft it in the formatting editor with photos, attachments and a saved signature, then send or schedule; there's even a Help-me-write button and an undo-send window if you have second thoughts.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHO GETS IT</div><div class=\"chips\"><span class=\"ochip\">👨‍👩‍👧 All families · 312</span><span class=\"ochip\">🎟 A listing</span><span class=\"ochip\">✉️ Specific people</span></div><div><div class=\"fl\">SUBJECT</div><div class=\"field\">Only a few places left for October half-term</div></div><div><div class=\"fl\">MESSAGE</div><div class=\"field ph\">Hi {ChildName}'s family — we've just opened…</div></div><div class=\"chips\"><span class=\"ochip\">✨ Help me write</span><span class=\"ochip\">🖼 Photo</span><span class=\"ochip\">📎 Attach</span><span class=\"ochip\">✒ Signature</span></div><span class=\"btn amber\">Send to 312 recipients ▲</span></div>"
       },
       {
         "label": "Campaigns",
         "stage": "Marketing",
-        "line": "This is where the real marketing happens — pick an audience and a template, name it, then send or schedule and watch the opens and clicks roll in against each one.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CAMPAIGNS SENT</div><div class=\"field\">2 · 65% avg open</div></div><div><div class=\"fl\">PEOPLE REACHED</div><div class=\"field\">474 · 25% avg click</div></div></div><span class=\"btn amber\">＋ New campaign</span><div class=\"tkt\"><div class=\"tkhd\"><b>Summer early-bird</b> <span class=\"g\">Sent 2 Jun · 65% open</span><span class=\"tkp\">Sent</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Win-back — spring lapsed</b> <span class=\"g\">Sending…</span><span class=\"tkp\">⏳</span></div></div></div>"
+        "line": "This is where the real marketing happens — pick a live audience and a template or design, name it, then send now or schedule; each campaign reports back how many opened, tracked by a pixel, and click tracking is still to come.",
+        "bodyHtml": "<div class=\"frm\"><span class=\"btn amber\">＋ New campaign</span><div class=\"tkt\"><div class=\"tkhd\"><b>Summer early-bird</b> <span class=\"g\">All active families · 312</span><span class=\"tkp\">65% open</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Win-back — spring lapsed</b> <span class=\"g\">Lapsed families · 88</span><span class=\"tkp\">Sending…</span></div></div><div class=\"hint\">Send now or schedule; opens tracked via a pixel. Click tracking is still to come.</div></div>"
       },
       {
         "label": "Audiences",
         "stage": "Marketing",
-        "line": "These aren't fixed mailing lists — each audience is a live rule that recounts itself from your booking data every send, with opt-outs always quietly left out.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">Recomputed from booking & enrolment data each send — opt-outs always excluded.</div><div class=\"tkt\"><div class=\"tkhd\"><b>All active families</b> <span class=\"g\">Has an active or upcoming booking</span><span class=\"tkp\">312</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Camp 2026</b> <span class=\"g\">Booked any Summer Multi-Activity week</span><span class=\"tkp\">168</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>HAF / funded</b> <span class=\"g\">Eligible for or using HAF funding</span><span class=\"tkp\">96</span></div></div><span class=\"btn\">Use in campaign</span></div>"
+        "line": "These aren't fixed lists — each is a live rule that recounts from your bookings every send, opt-outs always left out. They split into booked-parent groups and enquiries — interested people who haven't booked, who by law you can only market to once they've opted in.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">📩 Enquiries</span><span class=\"ochip\">👪 Booked parents</span></div><div class=\"hint\">Recomputed from booking and enrolment data each send — opt-outs always excluded.</div><div class=\"tkt\"><div class=\"tkhd\"><b>All active families</b> <span class=\"g\">Has an active or upcoming booking</span><span class=\"tkp\">312</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Repeat families</b> <span class=\"g\">Booked with you 2+ times</span><span class=\"tkp\">88</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lapsed families</b> <span class=\"g\">Not attended in 6+ months</span><span class=\"tkp\">54</span></div></div><span class=\"btn\">Use in campaign</span></div>"
       },
       {
         "label": "Templates",
         "stage": "Marketing",
-        "line": "One shared library of ready-made emails feeding both your campaigns and the inbox composer, with {Merge fields} that auto-fill each child, booking and venue for you.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">One canonical library — shared across campaigns, the inbox composer & Workflows.</div><div class=\"tkt\"><div class=\"tkhd\"><b>Early-bird launch</b> <span class=\"chip2\">Promotion</span></div><div class=\"g\">Subject: Early-bird places now open — save 15%</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Last-chance places</b> <span class=\"chip2\">Promotion</span></div><div class=\"g\">Subject: Almost full — last places for {ListingName}</div></div><span class=\"btn amber\">＋ New template</span></div>"
+        "line": "One library in two flavours — plain worded templates, shared with your Messages and the composer, with merge fields like ChildName and VenueName that fill themselves in, plus fully designed branded emails you build in the visual editor and send from Campaigns.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">✍️ Worded templates</span><span class=\"ochip\">🎨 Builder templates</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Early-bird launch</b></div><div class=\"g\">Subject: Early-bird places now open — save 15%</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Last-chance places</b></div><div class=\"g\">Subject: Almost full — last places for {ListingName}</div></div><div class=\"hint\">Shared with Messages and the composer. Merge fields fill in each child, booking and venue.</div><span class=\"btn amber\">＋ New template</span></div>"
+      },
+      {
+        "label": "Automatic emails",
+        "stage": "Set and forget",
+        "line": "Beyond what you write, ActivityOS quietly sends a batch on your behalf — booking confirmations, receipts, session reminders, late-collection alerts and review requests — and this tab is where you switch any of them off or change when the reminders go out.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">The emails ActivityOS sends for you automatically — flip any off, or change when reminders go out.</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Bookings and approvals <span class=\"chip2\">Core</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Payments and receipts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Session reminders <span class=\"g\">· 48 hours before</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Late-collection alerts</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Review requests</div></div>"
       },
       {
         "label": "Analytics",
         "stage": "Results",
-        "line": "The payoff for all that marketing — see what's delivered, opened and clicked at a glance, with bounces and unsubscribes flagged so you know if anything's going astray.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DELIVERED</div><div class=\"field\">624 · ~58% open</div></div><div><div class=\"fl\">CLICK RATE</div><div class=\"field\">~27%</div></div></div><div class=\"chips\"><span class=\"ochip\">⚠️ Bounces 9</span><span class=\"ochip\">⚠️ Unsubscribes 6</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>August football camp</b> <span class=\"g\">▇▇▇▇▇▇▇▁▁</span><span class=\"tkp\">72%</span></div></div></div>"
+        "line": "The payoff — for a single send or across the lot, see how many were delivered and your open rate, with bounces flagged as not delivered; click tracking and unsubscribe counts are still on the way.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DELIVERED</div><div class=\"field\">624 · 58% open</div></div><div><div class=\"fl\">CLICK RATE</div><div class=\"field ph\">— link tracking to come</div></div></div><div class=\"chips\"><span class=\"ochip\">Sent 640</span><span class=\"ochip\">Not delivered 16</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>August football camp</b> <span class=\"g\">▇▇▇▇▇▇▇▁▁</span><span class=\"tkp\">72%</span></div></div></div>"
       }
     ]
   },
@@ -172,26 +186,26 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Month, Week or Day",
         "stage": "Getting around",
-        "line": "Flip between the three views up top — Month for the overview, Week to see booked numbers per day, and Day for the full hour-by-hour run-sheet.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Month</span> <span class=\"ochip\">Week</span> <span class=\"ochip\">Day</span></div><div class=\"row2\"><div><div class=\"fl\">PERIOD</div><div class=\"field\">August 2026</div></div><div><div class=\"fl\">JUMP TO</div><div class=\"field\">‹  Today  ›</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon 3 Aug</b> <span class=\"g\">Summer Multi-Sports Camp</span></div></div></div>"
+        "line": "Flip between the three views up top — Month for the overview, Week to see booked numbers per day, and Day for the full hour-by-hour run-sheet — and step through dates with the arrows, Today, or the date picker.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Month</span> <span class=\"ochip\">Week</span> <span class=\"ochip\">Day</span></div><div class=\"row2\"><div><div class=\"fl\">PERIOD</div><div class=\"field\">August 2026</div></div><div><div class=\"fl\">JUMP TO</div><div class=\"field\">‹  Today  ›</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mon 3 Aug</b> <span class=\"g\">Summer Multi-Sports Camp · 18/24</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Wed 5 Aug</b> <span class=\"g\">📌 Staff INSET day</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Fri 7 Aug</b> <span class=\"g\">Little Kickers Football Club · 12/16</span></div></div></div>"
       },
       {
         "label": "Sessions vs your events",
         "stage": "Reading it",
-        "line": "Solid colour-filled chips are bookable sessions pulled from your listings, while your own dashed 📌 events sit right alongside them.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Sports Camp</b> <span class=\"g\">18 / 24 booked · 75%</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📌 Staff INSET day</b> <span class=\"g\">your event</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📌 August Bank Holiday</b> <span class=\"g\">closed</span></div></div><div class=\"hint\">Solid = session (edit in Listings). Dashed 📌 = event you added here.</div></div>"
+        "line": "Solid colour-filled chips are bookable sessions pulled from your listings, while your own dashed pinned events sit right alongside them — tap a day number to drop into its run-sheet.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Sports Camp</b> <span class=\"g\">18 / 24 booked · 75%</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📌 Staff INSET day</b> <span class=\"g\">your event</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📌 August Bank Holiday</b> <span class=\"g\">Closure</span></div></div><div class=\"hint\">Solid = session (edit in Listings). Dashed 📌 = event you added here.</div></div>"
       },
       {
         "label": "Add or edit an event",
         "stage": "Adding events",
-        "line": "The only thing you write on this page — pop in a title, date and time, pick a colour-coded category, and set a reminder if you'd like a nudge beforehand.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TITLE</div><div class=\"field\">Parent info evening</div><div class=\"row2\"><div><div class=\"fl\">DATE</div><div class=\"field\">2026-09-10</div></div><div><div class=\"fl\">TIME</div><div class=\"field\">18:30 – 19:30</div></div></div><div class=\"chips\"><span class=\"ochip\">Open day</span> <span class=\"chip2\">＋ New category</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Reminder on · 60 min before</div></div>"
+        "line": "The only thing you write on this page — pop in a title, date and time, pick a colour-coded category and set a reminder if you'd like a nudge; the same box edits or deletes it later.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TITLE</div><div class=\"field\">Parent info evening</div><div class=\"row2\"><div><div class=\"fl\">DATE</div><div class=\"field\">Thu 10 Sep 2026</div></div><div><div class=\"fl\">TIME</div><div class=\"field\">18:30 – 19:30</div></div></div><div class=\"chips\"><span class=\"ochip\">🟣 Open day</span> <span class=\"chip2\">＋ New category</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Reminder on · 60 min before</div><div class=\"hint\">Tick All-day, or add an optional End date for a multi-day event · Delete removes it.</div></div>"
       },
       {
         "label": "Legend & filters",
         "stage": "Tidying the view",
-        "line": "When several clubs are running at once, tap the toggles or dim a listing in the legend to isolate one club or hide the booking counts.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Booking info</span> <span class=\"ochip\">My events</span> <span class=\"chip2\">All listings</span></div><div class=\"hint\">Legend — tap a listing to hide its sessions</div><div class=\"chips\"><span class=\"ochip\">Summer Multi-Sports Camp</span> <span class=\"ochip\">Little Kickers Football Club</span> <span class=\"chip2\">Holiday Art &amp; Craft Camp (hidden)</span></div></div>"
+        "line": "When several clubs are running at once, tap the toggles or dim a listing in the legend to isolate one club or hide the booking counts — and Full month opens every day cell right out on a busy Month grid.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Booking info</span> <span class=\"ochip\">My events</span> <span class=\"ochip\">Full month</span> <span class=\"chip2\">All listings</span></div><div class=\"hint\">Legend — tap a listing to hide its sessions</div><div class=\"chips\"><span class=\"ochip\">Summer Multi-Sports Camp</span> <span class=\"ochip\">Little Kickers Football Club</span> <span class=\"chip2\">Holiday Art &amp; Craft Camp (hidden)</span></div></div>"
       },
       {
         "label": "Reminders & empty periods",
@@ -204,86 +218,92 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "timetable": {
     "title": "Activity timetable",
     "introLine": "This is where you turn your activity bank into a proper day-by-day camp timetable — set the days up, let it auto-fill or build it by hand, then share the finished thing with staff and parents.",
-    "doneLine": "And that's your camp sorted — a full timetable built, refined and shared, all from the one page.",
+    "doneLine": "And that's your camp sorted — a full timetable built, refined, shared and saved, all from the one page.",
     "steps": [
       {
         "label": "Dates",
         "stage": "Setup",
         "line": "Kick things off by pulling in your listing and ticking which dates the camp actually runs — everything downstream is built from what you choose here.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LISTING</div><div class=\"field\">Loughton Multi-Activity Camp</div><div class=\"row2\"><div><div class=\"fl\">FROM</div><div class=\"field\">28 Jul</div></div><div><div class=\"fl\">TO</div><div class=\"field\">22 Aug</div></div></div><div class=\"hint\">28 Jul – 22 Aug · 09:00–15:30 · Loughton Manor First School · 20 days</div><div class=\"chips\"><span class=\"ochip\">✕ Mon 25 Aug excluded</span><span class=\"chip2\">19 of 20 days included</span></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LISTING</div><div class=\"field\">Loughton Multi-Activity Camp</div><div class=\"row2\"><div><div class=\"fl\">FROM</div><div class=\"field\">28 Jul</div></div><div><div class=\"fl\">TO</div><div class=\"field\">22 Aug</div></div></div><div class=\"hint\">28 Jul – 22 Aug · 09:00–15:30 · Loughton Manor First School · 20 days</div><div class=\"chips\"><span class=\"ochip\">✕ Fri 21 Aug excluded</span><span class=\"chip2\">19 of 20 days included</span></div></div>"
       },
       {
         "label": "The day & arrivals",
         "stage": "Setup",
         "line": "Set the shape of the day just once — start and end times, breaks, lunch and your sign-in slots — and they become the fixed banner rows on every grid.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DAY START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">DAY END</div><div class=\"field\">15:30</div></div></div><div class=\"row2\"><div><div class=\"fl\">LUNCH</div><div class=\"field\">12:00</div></div><div><div class=\"fl\">ACTIVITIES / DAY</div><div class=\"field\">6</div></div></div><div class=\"fl\">WHOLE-CAMP · SIGN-IN · SIGN-OUT</div><div class=\"chips\"><span class=\"ochip\">🎪 14:30</span><span class=\"ochip\">➡️ 08:00</span><span class=\"ochip\">➡️ 09:00</span><span class=\"ochip\">⬅️ 15:30</span><span class=\"ochip\">⬅️ 17:30</span></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DAY START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">DAY END</div><div class=\"field\">15:30</div></div></div><div class=\"row2\"><div><div class=\"fl\">LUNCH</div><div class=\"field\">12:00</div></div><div><div class=\"fl\">BREAKS / DAY</div><div class=\"field\">2</div></div></div><div class=\"fl\">WHOLE-CAMP · SIGN-IN · SIGN-OUT</div><div class=\"chips\"><span class=\"ochip\">🎪 14:30</span><span class=\"ochip\">➡️ 08:00</span><span class=\"ochip\">➡️ 09:00</span><span class=\"ochip\">⬅️ 15:30</span><span class=\"ochip\">⬅️ 17:30</span></div></div>"
       },
       {
         "label": "Groups & spaces",
         "stage": "Setup",
         "line": "Add your groups, switch on the spaces you've actually got this week and pick which activity categories go into the rotation.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FACILITIES</div><div class=\"chips\"><span class=\"ochip\">🏟️ Sports Hall</span><span class=\"ochip\">🌳 Field</span><span class=\"ochip\">🛝 Playground</span><span class=\"ochip\">📚 Classroom</span><span class=\"ochip\">🎾 Tennis court</span></div><div class=\"fl\">GROUPS</div><div class=\"chips\"><span class=\"ochip\">🔴 Reds (5–7)</span><span class=\"ochip\">🔵 Blues (8–10)</span><span class=\"ochip\">🟢 Greens (11–13)</span></div><div class=\"chips\"><span class=\"ochip\">⚽ Sports</span><span class=\"ochip\">🎨 Arts</span><span class=\"ochip\">🧗 Extreme</span></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FACILITIES</div><div class=\"chips\"><span class=\"ochip\">🏟️ Sports Hall</span><span class=\"ochip\">🌳 Field</span><span class=\"ochip\">🛝 Playground</span><span class=\"ochip\">📚 Classroom</span><span class=\"ochip\">🎭 Studio</span><span class=\"ochip\">🏊 Pool</span></div><div class=\"fl\">GROUPS</div><div class=\"chips\"><span class=\"ochip\">🔴 Reds (5–7)</span><span class=\"ochip\">🔵 Blues (8–10)</span><span class=\"ochip\">🟢 Greens (11–13)</span></div><div class=\"chips\"><span class=\"ochip\">⚽ Sports</span><span class=\"ochip\">🎨 Arts</span><span class=\"ochip\">🧗 Extreme</span><span class=\"ochip\">🧩 Others</span></div></div>"
       },
       {
         "label": "Activity bank",
         "stage": "Activities",
         "line": "Toggle activities on or off, say where each one runs and hide any that aren't right for a group — only the 'On' ones get rotated into the grid.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SPORTS · 2/2 ON</div><div class=\"tkt\"><div class=\"tkhd\"><b>Football</b> <span class=\"g\">@ Field · all groups</span><span class=\"tkp\">On</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Multi-Sports</b> <span class=\"g\">@ Sports Hall · all groups</span><span class=\"tkp\">On</span></div></div><div class=\"fl\">EXTREME</div><div class=\"tkt\"><div class=\"tkhd\"><b>Archery</b> <span class=\"g\">@ Field · excl. Reds</span><span class=\"tkp\">On</span></div></div><div class=\"chips\"><span class=\"ochip\">＋ Bubble Football</span></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SPORTS · 13/13 ON</div><div class=\"tkt\"><div class=\"tkhd\"><b>Football</b> <span class=\"g\">@ Field · all groups</span><span class=\"tkp\">On</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Multi-Sports</b> <span class=\"g\">@ Sports Hall · all groups</span><span class=\"tkp\">On</span></div></div><div class=\"fl\">EXTREME · 11/11 ON</div><div class=\"tkt\"><div class=\"tkhd\"><b>Archery</b> <span class=\"g\">@ Field · excl. Reds</span><span class=\"tkp\">On</span></div></div><div class=\"chips\"><span class=\"ochip\">＋ Bubble Football</span></div></div>"
       },
       {
         "label": "Build the grid",
         "stage": "Build",
         "line": "Let it auto-fill for variety or start from a blank template, then just drag blocks to swap them and click any cell to tweak it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">⚙️ Automatic</span><span class=\"ochip\">✏️ Manual</span></div><div class=\"fl\">MON 28 JUL · DAY VIEW</div><div class=\"tkt\"><div class=\"tkhd\"><b>09:00</b> <span class=\"g\">Sign-in · whole-camp banner</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>10:00</b> <span class=\"g\">Reds Football · Blues Basketball · Greens Archery</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>14:30</b> <span class=\"g\">Water Day · all groups</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">⚙️ Automatic</span><span class=\"ochip\">✏️ Manual</span></div><div class=\"fl\">MON 28 JUL · DAY VIEW</div><div class=\"tkt\"><div class=\"tkhd\"><b>09:00</b> <span class=\"g\">Sign-in banner</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>10:00</b> <span class=\"g\">Reds Football · Blues Basketball · Greens Archery</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>14:30</b> <span class=\"g\">Water Day · all groups</span></div></div></div>"
       },
       {
         "label": "Publish",
         "stage": "Publish",
-        "line": "Nothing goes live until you publish — flick it out to staff and parents, and choose whether everyone or just booked families gets to see it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Publish to the Staff portal</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Share with Parents</div><div class=\"fl\">PARENT AUDIENCE</div><div class=\"chips\"><span class=\"ochip\">✓ Booked families only</span><span class=\"ochip\">Everyone viewing the listing</span></div><span class=\"btn amber\">Publish timetable</span><div class=\"hint\">Published to staff + parents · 19 days</div></div>"
+        "line": "Nothing goes live until you publish — flick it out to staff and parents, choose whether everyone or just booked families gets to see it, and tick whether to email them or ping their in-app bell that the week's ready.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Publish to the Staff portal</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Share with Parents</div><div class=\"fl\">PARENT AUDIENCE</div><div class=\"chips\"><span class=\"ochip\">✓ Booked families only</span><span class=\"ochip\">Everyone viewing the listing</span></div><div class=\"fl\">NOTIFY FAMILIES</div><div class=\"chips\"><span class=\"ochip\">✉️ Email</span><span class=\"ochip\">🔔 In-app notification</span></div><span class=\"btn amber\">Publish timetable</span><div class=\"hint\">Published to staff + parents · 19 days</div></div>"
+      },
+      {
+        "label": "My timetables",
+        "stage": "Saved",
+        "line": "Every week you build auto-saves under My timetables at the top, tagged draft or published — reopen a past week to duplicate and re-publish it, download it, or clear it out, so next season you're never starting from a blank page.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MY TIMETABLES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Loughton Multi-Activity Camp</b> <span class=\"g\">28 Jul to 22 Aug · 19 days</span><span class=\"tkp\">Shared with parents</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>February Half-Term Camp</b> <span class=\"g\">16 to 20 Feb · 5 days</span><span class=\"tkp\">Draft</span></div></div><div class=\"chips\"><span class=\"ochip\">Open</span><span class=\"ochip\">↓ Download</span><span class=\"ochip\">Delete</span></div></div>"
       }
     ]
   },
   "registers": {
     "title": "Registers",
-    "introLine": "This is your daily register — where you sign the children in and out, keep an eye on every allergy and medical flag, and take a quick head count, all for one camp on one day.",
-    "doneLine": "And that's the register sorted — everyone signed in, counted, and their parents just a tap away.",
+    "introLine": "This is your daily register — where you sign the children in and out, keep an eye on every allergy and medical flag, count heads for safety, and reach any parent in a tap, all for one camp on one day.",
+    "doneLine": "And that's the register sorted — everyone signed in, counted, safeguarded, and their parents just a tap away.",
     "steps": [
       {
         "label": "Pick listing & day",
         "stage": "Get set up",
-        "line": "Start by choosing which camp you're running and which day, so the whole register is pointed at the right group before you mark a soul present.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LISTING</div><div class=\"field\">MULTI-ACTIVITY CAMP</div><div class=\"hint\">📍 Loughton Manor · Today · Tue 9 Jun</div><div class=\"tkt\"><div class=\"tkhd\"><b>Today · Tue 9 Jun</b> <span class=\"tkp\">10 booked · 7 in</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Tomorrow · Wed 10 Jun</b> <span class=\"g\">10 booked</span></div></div><span class=\"btn\">⚑ Log incident</span></div>"
+        "line": "Start by choosing the season, the camp and the day, so the whole register is pointed at the right group before you mark a soul present — and if a collection PIN is switched on, you'll see the reminder to check it at pick-up.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">📅 Summer Holidays 2026</span><span class=\"ochip\">🎟 Multi-Activity Camp</span><span class=\"ochip\">‹ Today · Tue 9 Jun ›</span></div><div class=\"hint\">📍 Loughton Manor</div><div class=\"chips\"><span class=\"chip2\">EXPECTED 10</span><span class=\"chip2\">PRESENT 70% signed in</span><span class=\"chip2\">NOT ARRIVED 1</span><span class=\"chip2\">ABSENT / ILL 1</span></div><div class=\"hint\">🔒 Collection PIN required — check the family's 4-digit PIN before releasing a child.</div></div>"
       },
       {
         "label": "Take the register",
         "stage": "Attendance",
-        "line": "This is the heart of it — one tap to sign a child in, one to log them collected, with allergy and medical flags right there on every row so nothing gets missed at drop-off or pick-up.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Expected 10</span><span class=\"ochip\">Present 7</span><span class=\"ochip\">Not arrived 1</span><span class=\"ochip\">Absent/ill 1</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Jack Jones</b> <span class=\"g\">Age 8 · 8am–5pm · PIN 4821</span></div><span class=\"chip2\">🥜 Peanuts</span> <span class=\"chip2\">💊 Asthma</span> <span class=\"btn amber\">Sign in</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sofia Reyes</b> <span class=\"g\">Age 7 · 9am–3pm · PIN 8812</span></div><span class=\"chip2\">💊 Diabetes</span> <span class=\"btn\">✓ In · 08:47</span></div></div>"
+        "line": "This is the heart of it — three toggles on every row for In, Collect or Absent, with allergy and medical flags right there so nothing gets missed. Tick several at once to mark them together or Sign all in with one tap, and every row has one-tap links to log first aid, an incident, medication or a moment for that child, or contact their parent.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Sort · youngest first</span><span class=\"ochip\">Earliest start</span><span class=\"ochip\">🔎 Search</span></div><div class=\"chips\"><span class=\"chip2\">Allergy 2</span><span class=\"chip2\">Medical 3</span><span class=\"chip2\">Dietary 1</span><span class=\"chip2\">SEND 1</span></div><div class=\"chips\"><span class=\"ochip\">☑ Select all</span><span class=\"btn amber\">✓ Sign all in (3)</span><span class=\"ochip\">Mark: In · Collect · Absent</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Jack Jones · view ›</b> <span class=\"g\">Age 8 · 8am–5pm · 🔑 Bluebird</span></div><span class=\"chip2\">ALLERGY · Peanuts</span> <span class=\"chip2\">MEDICAL · Asthma</span> <span class=\"btn amber\">In</span> <span class=\"btn\">Collect</span> <span class=\"btn\">Absent</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sofia Reyes · view ›</b> <span class=\"g\">Age 7 · 9am–3pm · 🔑 Sparrow</span></div><span class=\"chip2\">MEDICAL · Diabetes</span> <span class=\"btn\">✓ In · 08:47</span> <span class=\"btn\">Collect</span></div><div class=\"chips\"><span class=\"ochip\">First aid</span><span class=\"ochip\">Incident</span><span class=\"ochip\">Medication</span><span class=\"ochip\">Add moment</span><span class=\"ochip\">Email parent</span></div></div>"
       },
       {
         "label": "Head count",
         "stage": "Safety check",
-        "line": "On trips and free-play you'll physically count heads on top of the register — pop the number in and the running tally flags if you're short, with a note of who counted and when.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">HEADS COUNTED</div><div class=\"field\">7</div><div class=\"hint\">expected 10 · 2 head counts logged today</div><div class=\"tkt\"><div class=\"tkhd\"><b>7/10 ⚠ 3 short</b> <span class=\"g\">by Priya Shah at 10:30</span></div></div><span class=\"btn amber\">Log head count</span></div>"
+        "line": "On trips and free-play you'll physically count heads on top of the register — pop the number in and the running tally flags if you're short, with a note of who counted and when. And one tap opens Roll call: everyone signed in right now, to count heads against in a fire drill.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">HEADS COUNTED</div><div class=\"field\">7</div><div class=\"hint\">expected 10 · 2 head counts logged today · Register taken by Priya Shah</div><div class=\"tkt\"><div class=\"tkhd\"><b>7/10 ⚠ 3 short</b> <span class=\"g\">by Priya Shah at 10:30</span></div></div><span class=\"btn amber\">Log head count</span><div class=\"tkt\"><div class=\"tkhd\"><b>🚨 Roll call</b> <span class=\"g\">7 on site now — count heads against this list</span></div></div></div>"
       },
       {
         "label": "Child profile",
         "stage": "Attendance",
         "line": "Tap any child to open their full profile — medical and learning needs, collection password and emergency contact all in one place, without ever leaving the register.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">NOAH SMITH · AGE 10 (03/07/2015)</div><div class=\"hint\">8am–5pm · PIN 6093</div><div class=\"fl\">LEARNING NEEDS</div><div class=\"field\">ADHD — benefits from structure</div><div class=\"row2\"><div><div class=\"fl\">EMERGENCY CONTACT</div><div class=\"field\">Beth Smith · +44 7700 900633</div></div><div><div class=\"fl\">PASSWORD</div><div class=\"field\">Falcon</div></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">NOAH SMITH · AGE 10 (03/07/2015)</div><div class=\"hint\">8am–5pm</div><div class=\"fl\">SEND / NEEDS</div><div class=\"field\">ADHD — benefits from structure</div><div class=\"row2\"><div><div class=\"fl\">EMERGENCY CONTACT</div><div class=\"field\">Beth Smith · +44 7700 900633</div></div><div><div class=\"fl\">PASSWORD</div><div class=\"field\">🔑 Falcon</div></div></div></div>"
       },
       {
         "label": "Download register",
         "stage": "Records",
-        "line": "Need a printed sheet for a trip or a spreadsheet for your records? Tick exactly which columns to include — handy for leaving out the sensitive bits — and grab it as a PDF or CSV.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">DOWNLOAD REGISTER — TODAY</div><div class=\"hint\">The child's name is always included.</div><div class=\"chips\"><span class=\"ochip\">Age</span><span class=\"ochip\">Timing</span><span class=\"ochip\">Allergies</span><span class=\"ochip\">Medical</span><span class=\"ochip\">Emergency contact</span></div><span class=\"btn amber\">PDF (printable)</span> <span class=\"btn\">CSV (spreadsheet)</span></div>"
+        "line": "Need a printed sheet for a trip or a spreadsheet for your records? Tick exactly which columns to include — grouped so you can leave out the sensitive bits — and grab it as a PDF or CSV.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">DOWNLOAD REGISTER — TODAY</div><div class=\"hint\">The child's name is always included.</div><div class=\"chips\"><span class=\"ochip\">Age</span><span class=\"ochip\">Timing</span><span class=\"ochip\">Allergies</span><span class=\"ochip\">Medical</span><span class=\"ochip\">Emergency contact</span><span class=\"ochip\">Collection password ⚠</span></div><span class=\"btn amber\">🖨 PDF (printable)</span> <span class=\"btn\">⭳ CSV (spreadsheet)</span></div>"
       },
       {
         "label": "Message parents",
         "stage": "Communicate",
-        "line": "Spotted something day-of — late pick-up or a change of plan? Message one parent or the whole day's group in a flash, in-app or by email, without switching areas.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TO</div><div class=\"field\">All parents attending Today — Multi-Activity Camp (10 families)</div><div class=\"fl\">SUBJECT</div><div class=\"field\">Pick-up moved to 5:15 today</div><span class=\"btn amber\">Send in-app</span> <span class=\"btn\">Send as email</span></div>"
+        "line": "Message the whole day's group or a single parent — it opens the Messages composer with everyone already filled in, a parent's messaged just once even with two children, and each row can email or WhatsApp that family too.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TO</div><div class=\"field\">All attending Today · Multi-Activity Camp — 12 children (10 families)</div><span class=\"btn amber\">✉️ Message all attending (12)</span> <span class=\"btn\">Email parent</span> <span class=\"btn\">WhatsApp</span><div class=\"hint\">Opens the Messages composer with parents already filled in — a parent's messaged once even with two children.</div></div>"
       }
     ]
   },
@@ -295,26 +315,26 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Day, listing & the three hero tiles",
         "stage": "Scope & read",
-        "line": "Start by picking the season, the camp and the day — then the three hero tiles give you the headline: how many children are in, whether they're covered, and how many groups are running.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">SEASON</div><div class=\"field\">📅 Summer Holidays 2026</div></div><div><div class=\"fl\">LISTING</div><div class=\"field\">🎟 Summer Multi-Sports Camp · 34 kids</div></div></div><div class=\"chips\"><span class=\"ochip\">Whole day 34</span><span class=\"ochip\">9am–3pm 26</span><span class=\"ochip\">8am–5:30pm 8</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Children on site</b> <span class=\"g\">across 2 groups · 3 SEND</span><span class=\"tkp\">34</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Staff on duty</b> <span class=\"g\">5 needed · 1 short</span><span class=\"tkp\">4</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Groups today</b> <span class=\"g\">every child placed by age</span><span class=\"tkp\">2</span></div></div></div>"
+        "line": "Start by picking the season, the camp and the day with the arrows or date picker — then the three hero tiles give you the headline: how many children are in, whether they're covered, and how many groups are running.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">SEASON</div><div class=\"field\">📅 Summer Holidays 2026</div></div><div><div class=\"fl\">LISTING</div><div class=\"field\">🎟 Summer Multi-Sports Camp · 34 kids</div></div></div><div><div class=\"fl\">DAY</div><div class=\"field\">‹ 📅 Today · Wed 5 Aug ›</div></div><div class=\"chips\"><span class=\"ochip\">Whole day 34</span><span class=\"ochip\">9am–3pm 26</span><span class=\"ochip\">8am–5:30pm 8</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Children on site</b> <span class=\"g\">across 2 groups · 3 SEND</span><span class=\"tkp\">34</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Staff on duty</b> <span class=\"g\">5 needed · 1 short</span><span class=\"tkp\">4</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Groups today</b> <span class=\"g\">every child placed by age</span><span class=\"tkp\">2</span></div></div></div>"
       },
       {
         "label": "Your ratio policy",
         "stage": "Policy",
         "line": "Here for reference only — these colours, age bands and targets are your own policy (activity camps aren't bound by statutory ratios), and they can only be edited over in Setup, where every board reads from the one master record.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">Your ratio policy — set in Setup → Age groups & rooms; shown here for reference.</div><div class=\"tkt\"><div class=\"tkhd\"><b>🔵 Cubs</b> <span class=\"g\">5–7 yrs · room size 24</span><span class=\"tkp\">1:8</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🟢 Explorers</b> <span class=\"g\">8–11 yrs · no cap</span><span class=\"tkp\">1:12</span></div></div><div class=\"hint\">Change them in Setup and every board and listing updates at once.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">Your ratio policy — set in Setup → Age groups & rooms; shown here for reference.</div><div class=\"tkt\"><div class=\"tkhd\"><b>🔴 Cubs</b> <span class=\"g\">5–7 yrs · room size 24</span><span class=\"tkp\">1:8</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔵 Explorers</b> <span class=\"g\">8–11 yrs · no cap</span><span class=\"tkp\">1:12</span></div></div><div class=\"hint\">Change them in Setup and every board and listing updates at once.</div></div>"
       },
       {
         "label": "Your team & the Cover board",
         "stage": "Live board",
-        "line": "This is the daily workspace — build your team, then drag real staff onto the coloured group cards and watch, card by card, whether each age band is in ratio, with red banners flagging any group that's short.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Ellie Hartman · Camp Lead · you</span><span class=\"ochip\">Marcus Bright · Coach</span><span class=\"ochip\">Priya Shah · Coach</span><span class=\"ochip\">Tom Reyes · Assistant</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔵 Cubs · Target 1:8</b> <span class=\"g\">12 children · 2 of 2 needed</span><span class=\"tkp\">🙂 In ratio</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🟢 Explorers · Target 1:12</b> <span class=\"g\">22 children · 2 of 3 needed</span><span class=\"tkp\">😟 1 short</span></div></div><div class=\"hint\">NEEDS 1 MORE STAFF ON THIS DAY — drag a child between cards to regroup.</div></div>"
+        "line": "This is the daily workspace — build your team up top, then assign each person to a group from the Assign to group dropdown in the roster down the side. Drag a child between the coloured cards to regroup them for the day, and each card shows whether that age band is in ratio, with a red banner flagging any group that's short — and flip to By time to re-check cover for each arrival and pickup window instead of by age.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">By age group</span><span class=\"ochip\">By time</span></div><div class=\"chips\"><span class=\"ochip\">Ellie Hartman · Camp Lead · you</span><span class=\"ochip\">Marcus Bright · Coach</span><span class=\"ochip\">Priya Shah · Coach</span><span class=\"ochip\">Tom Reyes · Assistant</span></div><div><div class=\"fl\">MARCUS BRIGHT · COACH</div><div class=\"field ph\">＋ Assign to group…</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔴 Cubs · Target 1:8</b> <span class=\"g\">12 children · 2 of 2 needed</span><span class=\"tkp\">🙂 In ratio</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🔵 Explorers · Target 1:12</b> <span class=\"g\">22 children · 2 of 3 needed</span><span class=\"tkp\">😟 1 staff short</span></div></div><div class=\"hint\">NEEDS 1 MORE STAFF ON THIS DAY — drag a child between cards to regroup.</div></div>"
       },
       {
         "label": "Staffing ratio calculator",
         "stage": "Planning",
         "line": "A handy planning aid off to one side — drop in today's numbers (or a hypothetical mix) and it totals the staff you'd need, blending statutory EYFS bands for the little ones with your own school-age targets.",
-        "bodyHtml": "<div class=\"frm\"><span class=\"btn amber\">🧮 Drop in today (34)</span><div class=\"row2\"><div><div class=\"fl\">CUBS (5–7 YRS)</div><div class=\"field\">12</div></div><div><div class=\"fl\">EXPLORERS (8–11 YRS)</div><div class=\"field\">22</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Total children</b> <span class=\"g\">Cubs 12÷8=2 · Explorers 22÷12=2</span><span class=\"tkp\">34</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Total staff needed</b> <span class=\"g\">EYFS statutory · school-age your policy</span><span class=\"tkp\">4</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><span class=\"btn\">🧮 Drop in today (34)</span><div class=\"fl\">EARLY YEARS — STATUTORY EYFS</div><div class=\"row2\"><div><div class=\"fl\">UNDER 2s · 1:3</div><div class=\"field\">0</div></div><div><div class=\"fl\">3 TO 5 YRS · 1:8</div><div class=\"field\">0</div></div></div><div class=\"fl\">SCHOOL AGE — YOUR TARGETS</div><div class=\"row2\"><div><div class=\"fl\">CUBS (5–7 YRS)</div><div class=\"field\">12</div></div><div><div class=\"fl\">EXPLORERS (8–11 YRS)</div><div class=\"field\">22</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Total children</b> <span class=\"g\">Cubs 12÷8=2 · Explorers 22÷12=2</span><span class=\"tkp\">34</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Total staff needed</b> <span class=\"g\">EYFS statutory · school-age your policy</span><span class=\"tkp\">4</span></div></div></div>"
       }
     ]
   },
@@ -327,111 +347,111 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Two tabs, one title bar",
         "stage": "Overview",
         "line": "Your first choice is simply which kind of concern this is — a routine behaviour note the parent can see, or a confidential safeguarding matter that's routed to your DSL.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">⚑ LOG A CONCERN</div><div class=\"chips\"><span class=\"ochip\">🧩 Behaviour</span><span class=\"ochip\">🛡️ Safeguarding</span></div><div class=\"hint\">Behaviour &amp; near-misses — share with the parent when you choose. Accidents &amp; first aid live in Health &amp; safety.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">⚑ LOG A CONCERN</div><div class=\"chips\"><span class=\"ochip\">🧩 Behaviour</span><span class=\"ochip\">🛡️ Safeguarding</span></div><div class=\"hint\">Behaviour &amp; near-misses — share with the parent when you choose. Accidents and first aid live in the separate First aid area.</div></div>"
       },
       {
         "label": "Behaviour tiles & Log button",
         "stage": "Behaviour",
         "line": "The stat tiles give you an at-a-glance feel for how many concerns are on the go and whether parents have been told, before you open a fresh record.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">This month 3</span><span class=\"chip2\">Serious 1</span><span class=\"chip2\">Parent informed 4</span><span class=\"chip2\">Total 9</span></div><span class=\"btn amber\">＋ Log a behaviour concern</span></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">THIS MONTH</div><div class=\"field\">3</div></div><div><div class=\"fl\">SERIOUS</div><div class=\"field\">1</div></div></div><div class=\"row2\"><div><div class=\"fl\">PARENT INFORMED</div><div class=\"field\">4</div></div><div><div class=\"fl\">TOTAL</div><div class=\"field\">9</div></div></div><span class=\"btn amber\">＋ Log a behaviour concern</span></div>"
       },
       {
         "label": "Log a behaviour concern",
         "stage": "Behaviour",
-        "line": "This is the heart of the page — a three-step wizard that walks you through who and when, what actually happened, then how serious it is and who gets to see it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CHILD</div><div class=\"field\">Freya Whitmore</div></div><div><div class=\"fl\">WHEN</div><div class=\"field\">Tue 5 Aug · 14:20</div></div></div><div class=\"fl\">WHAT HAPPENED (FACTS)</div><div class=\"field\">Pushed another child off the bench during free play; calmed down after a chat.</div><div class=\"chips\"><span class=\"ochip\">Minor</span><span class=\"ochip\">Moderate</span><span class=\"ochip\">Serious</span></div><div class=\"chips\"><span class=\"ochip\">📤 Share with parent</span><span class=\"ochip\">🔒 Keep internal</span></div></div>"
+        "line": "This is the heart of the page — a three-step wizard: who and when, what happened, then how serious it is and who gets to see it. You can only log against a child who has a booking, so the record links to their account.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CHILD (BOOKED)</div><div class=\"field\">Freya Whitmore</div></div><div><div class=\"fl\">WHEN</div><div class=\"field\">Tue 5 Aug · 14:20</div></div></div><div class=\"fl\">WHAT HAPPENED</div><div class=\"field\">Pushed another child off the bench during free play; calmed down after a chat.</div><div class=\"hint\">⚠️ You can only log against a child who has a booking — that's how it links to their account.</div><div class=\"chips\"><span class=\"ochip\">Minor</span><span class=\"ochip\">Moderate</span><span class=\"ochip\">Serious</span></div><div class=\"chips\"><span class=\"ochip\">📤 Share with parent</span><span class=\"ochip\">🔒 Keep internal</span></div></div>"
       },
       {
         "label": "Per-child records & messages",
         "stage": "Behaviour",
-        "line": "Records gather neatly under each child, with colour-coded badges at a glance and a two-way thread so you can read the parent's reply and pick up the conversation.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">👤 FREYA WHITMORE · 2 RECORDS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Pushed another child off the bench</b> <span class=\"g\">5 Aug</span></div></div><div class=\"chips\"><span class=\"chip2\">Moderate</span><span class=\"chip2\">📤 Shared</span><span class=\"chip2\">💬 Parent replied</span></div><div class=\"hint\">Parent: “Thanks for letting me know — we've talked to her at home.”</div><span class=\"btn\">💬 Details &amp; messages (1)</span></div>"
+        "line": "Records gather under each child, with filters and search up top and colour-coded badges at a glance. Open the two-way thread to read the parent's reply — and when you edit, you choose whether to alert the parent or just update their profile quietly, always leaving an Updated stamp.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Minor</span><span class=\"ochip\">Moderate</span><span class=\"ochip\">Serious</span><span class=\"ochip\">✓ Acknowledged</span></div><div class=\"fl\">👤 FREYA WHITMORE · 2 RECORDS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Pushed another child off the bench</b> <span class=\"g\">5 Aug</span></div></div><div class=\"chips\"><span class=\"chip2\">Moderate</span><span class=\"chip2\">📤 Shared</span><span class=\"chip2\">💬 Parent replied</span><span class=\"chip2\">✏️ Updated</span></div><div class=\"hint\">Parent: \"Thanks for letting me know — we've talked to her at home.\"</div><div class=\"chips\"><span class=\"ochip\">🔔 Alert the parent</span><span class=\"ochip\">🙈 Just update their profile</span></div><span class=\"btn\">💬 Details &amp; messages (1)</span></div>"
       },
       {
         "label": "Safeguarding concern form",
         "stage": "Safeguarding",
-        "line": "Safeguarding is a different, facts-only shape — you pick the category and the risk level and 'what to do now' protocol set themselves, and you can even pin an injury on the body map.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">🛡️ You are the safeguarding lead — confidential, facts only.</div><div class=\"chips\"><span class=\"ochip\">🧒 A child</span><span class=\"ochip\">🧑‍🏫 A member of staff</span></div><div class=\"fl\">CATEGORY (KCSIE)</div><div class=\"field\">Child-on-child abuse (bullying, harassment)</div><div class=\"chips\"><span class=\"chip2\">Risk: Medium</span><span class=\"chip2\">Oliver Branson</span><span class=\"chip2\">📍 Body map: 1 pin</span></div></div>"
+        "line": "Safeguarding is a different, facts-only shape — pick a category and both the risk level and a what-to-do-now protocol fill in for you, and you can even pin an injury on the body map.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">🛡️ You are the safeguarding lead — confidential, facts only. Set your LADO, social-care contacts and categories in Setup → Safeguarding.</div><div class=\"chips\"><span class=\"ochip\">🧒 A child</span><span class=\"ochip\">🧑‍🏫 A member of staff</span></div><div class=\"fl\">CATEGORY (KCSIE)</div><div class=\"field\">Child-on-child abuse (bullying, harassment)</div><div class=\"tkt\"><div class=\"tkhd\"><b>What to do now</b> <span class=\"g\">Same day · tell your DSL · KCSIE</span></div><div class=\"g\">Log the facts, inform your DSL, and consider a referral to children's social care.</div></div><div class=\"chips\"><span class=\"chip2\">Risk: Medium</span><span class=\"chip2\">Oliver Branson</span><span class=\"chip2\">📍 Body map: 1 pin</span></div></div>"
       },
       {
         "label": "DSL action log & PDF",
         "stage": "Safeguarding",
-        "line": "For safeguarding the record is only half the job — behind 'Review &amp; action' the DSL logs what they did with timestamps and review dates, then exports the full child dossier as a confidential PDF.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Medium risk</span><span class=\"chip2\">⏳ Awaiting DSL</span><span class=\"chip2\">🗓 2 actions by 8 Aug</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Spoke to the child — 5 Aug 15:10</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Referred to children's social care — review by 8 Aug</div><span class=\"btn amber\">🛡️ Review &amp; action (DSL)</span><span class=\"btn\">⬇ Download PDF…</span></div>"
-      }
-    ]
-  },
-  "medication": {
-    "title": "Medication",
-    "introLine": "This is where you keep children's medicine safe and above board — consent, stock, every dose given, and the return home, all joined up around the child.",
-    "doneLine": "And that's the full chain — from a parent's signature right through to the medicine going safely back home.",
-    "steps": [
-      {
-        "label": "Overview & tabs",
-        "stage": "Orientation",
-        "line": "Four little tiles give you the day's safety picture at a glance, and five tabs walk you through the four linked records.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Doses today</b> <span class=\"g\">given so far</span><span class=\"tkp\">1</span></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Active auths</b><span class=\"tkp\">2</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Meds in stock</b><span class=\"tkp\">2</span></div></div></div><div class=\"chips\"><span class=\"ochip\">💊 Give a dose</span><span class=\"ochip\">✍️ Authorisations</span><span class=\"ochip\">📦 Stock</span><span class=\"ochip\">📋 MAR log</span><span class=\"ochip\">🏠 Returns</span></div><div class=\"hint\">Children covered: 2 · records stay visible for safeguarding even when logging is off.</div></div>"
-      },
-      {
-        "label": "Give a dose",
-        "stage": "Point of care",
-        "line": "Pick a child with consent, the blue summary tells you exactly what's allowed, then you record the dose with a second staff signature right there.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Ava (7)</span><span class=\"ochip\">Mia (9)</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Salbutamol inhaler (Ventolin)</b> <span class=\"g\">Inhaler 100mcg/puff · 2 puffs Inhaled</span></div><div class=\"g\">PRN: Wheeze, or before sport · Max/24h 8 · Min interval 240 min</div></div><div class=\"chips\"><span class=\"ochip\">given</span><span class=\"ochip\">refused</span><span class=\"ochip\">missed</span></div><div class=\"row2\"><div><div class=\"fl\">DOSE</div><div class=\"field\">2 puffs</div></div><div><div class=\"fl\">WITNESSED BY</div><div class=\"field\">Tom Reade ✍️</div></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Parent informed today · In stock: 1</div><span class=\"btn amber\">Record &amp; sign</span></div>"
-      },
-      {
-        "label": "Authorisations",
-        "stage": "Consent",
-        "line": "This is the parent's signed permission that unlocks dose-giving — you mostly read it and add operational notes rather than changing the medical instruction.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Ava — Salbutamol (Ventolin)</b> <span class=\"chip2\">Prescribed</span></div><div class=\"g\">Consent: Sarah Okafor, signed 12 Jun 2026 · valid 12 Jun → 12 Dec 2026</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mia — Cetirizine antihistamine</b> <span class=\"chip2\">Over-the-counter</span></div><div class=\"g\">Liquid 5mg/5ml · 5ml Oral · fixed 09:00 · “Give with breakfast”</div><div class=\"g\">Consent: James Patel · valid 1 Jun → 31 Aug 2026</div></div><div class=\"fl\">STAFF NOTES (OPERATIONAL — DOES NOT CHANGE PARENT CONSENT)</div><div class=\"field ph\">Add an operational note…</div></div>"
-      },
-      {
-        "label": "Stock & MAR log",
-        "stage": "Records",
-        "line": "Stock proves what medicine you physically hold and what's expiring, and the MAR is the tamper-evident audit trail inspectors love — corrections are struck through, never erased.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">STOCK HELD</div><div class=\"tkt\"><div class=\"tkhd\"><b>Ava — Salbutamol</b> <span class=\"g\">in stock 1 · exp 03/2027</span><span class=\"chip2\">active</span></div><div class=\"g\">Received 12 Jun 2026 by Liberty Young · Locked cabinet · Room temp</div></div><div class=\"fl\">ADMINISTRATION RECORD (APPEND-ONLY)</div><div class=\"tkt\"><div class=\"tkhd\"><b>09:05am — Mia — Cetirizine</b> <span class=\"g\">5ml · Oral</span><span class=\"chip2\">given</span></div><div class=\"g\">By Liberty Young · witness Tom Reade · qty after 1 · parent told ✓ · “No issues”</div></div><div class=\"hint\">Made a mistake? “Correct” strikes the row through rather than deleting it.</div></div>"
-      },
-      {
-        "label": "Returns",
-        "stage": "Hand-back",
-        "line": "Medicine that came in must be signed back out to the parent, closing the loop with a clean chain of custody from consent to hand-back.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">RETURNS TO PARENT</div><div class=\"tkt\"><div class=\"tkhd\"><b>Ava — Salbutamol inhaler</b> <span class=\"g\">qty 1 · 15 Aug 2026</span></div><div class=\"g\">Returned to Sarah Okafor · handled by Liberty Young</div><div class=\"g\">⏳ Awaiting parent signature</div></div><div class=\"row2\"><div><div class=\"fl\">MEDICATION</div><div class=\"field\">Ava — Salbutamol</div></div><div><div class=\"fl\">QTY RETURNED</div><div class=\"field\">1</div></div></div><div class=\"hint\">The parent signs to confirm receipt in their own app — record 4 of the four linked records.</div></div>"
+        "line": "For safeguarding the record is only half the job — behind Review and action the DSL logs what they did with timestamps and review dates, with your LADO and referral contacts to hand, then exports the full child dossier as a confidential PDF.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Medium risk</span><span class=\"chip2\">⏳ Awaiting DSL</span><span class=\"chip2\">🗓 2 actions by 8 Aug</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Spoke to the child — 5 Aug 15:10</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Referred to children's social care — review by 8 Aug</div><div class=\"hint\">📞 LADO, children's social care and MASH contacts sit here with the KCSIE 2026 link.</div><span class=\"btn amber\">🛡️ Review &amp; action (DSL)</span><span class=\"btn\">⬇ Download PDF…</span></div>"
       }
     ]
   },
   "accidents": {
     "title": "First aid",
-    "introLine": "This is your digital accident book — log a bump, record the first aid you gave, auto-flag anything RIDDOR-reportable, and share it with the parent, all in one place.",
-    "doneLine": "And that's the whole loop — logged, flagged, shared and signed off, with a tidy audit trail behind every record.",
+    "introLine": "This is your first aid log — record every bump and graze on the day, note the first aid you gave, and the parent is told automatically with a timestamp.",
+    "doneLine": "And that's the whole loop — logged on the day, the parent told and able to acknowledge, with a tidy record kept behind every one.",
     "steps": [
       {
         "label": "KPI stat row",
         "stage": "Overview",
-        "line": "Your safety pulse at a glance — the counts up top, plus a nudge whenever an accident needs a RIDDOR review with its legal filing clock ticking.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>🔔 Accident logged — knock to head (Freya M.)</b> <span class=\"g\">needs RIDDOR review · 9:12am</span></div></div><div class=\"row2\"><div><div class=\"fl\">TODAY</div><div class=\"field\">1</div></div><div><div class=\"fl\">THIS WEEK</div><div class=\"field\">4</div></div></div><div class=\"row2\"><div><div class=\"fl\">RIDDOR OPEN</div><div class=\"field\">1</div></div><div><div class=\"fl\">MOST COMMON</div><div class=\"field\">Cut / graze</div></div></div></div>"
+        "line": "Your safety pulse at a glance — how many first aid records this month, how many were serious, how many parents you've told, and the running total.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"field\"><b>⛑️ First aid</b> — every bump and graze, logged on the day and sent to the parent</div><div class=\"row2\"><div><div class=\"fl\">THIS MONTH</div><div class=\"field\">3</div></div><div><div class=\"fl\">SERIOUS</div><div class=\"field\">1</div></div></div><div class=\"row2\"><div><div class=\"fl\">PARENT INFORMED</div><div class=\"field\">3</div></div><div><div class=\"fl\">TOTAL</div><div class=\"field\">12</div></div></div></div>"
       },
       {
-        "label": "Log an accident",
+        "label": "Log a first aid record",
         "stage": "Log",
-        "line": "The heart of the page — jot down who, what and the first aid you gave; the severity chip is the clever bit, as it's what quietly decides whether this gets escalated to RIDDOR.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CHILD</div><div class=\"field\">Freya Middleton</div></div><div><div class=\"fl\">ACTIVITY</div><div class=\"field\">Climbing wall</div></div></div><div class=\"fl\">INJURY TYPE</div><div class=\"chips\"><span class=\"ochip\">Bump/bruise</span><span class=\"ochip\">Knock to head</span><span class=\"ochip\">Cut/graze</span></div><div class=\"fl\">SEVERITY — DRIVES RIDDOR</div><div class=\"chips\"><span class=\"ochip\">Minor (first aid)</span><span class=\"ochip\">Over-7-day</span><span class=\"ochip\">Specified</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Parent informed at collection</div><span class=\"btn amber\">Save accident</span></div>"
+        "line": "The heart of the page — a quick three-step form: who and when, what happened plus the first aid you gave, then how serious it was and whether you've told the parent. You can only log against a child who's booked.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CHILD (BOOKED)</div><div class=\"field\">Freya Middleton</div></div><div><div class=\"fl\">WHERE DID IT HAPPEN?</div><div class=\"field\">The main hall</div></div></div><div class=\"hint\">You can only log against a child who's booked — that's how it reaches the parent.</div><div class=\"fl\">INJURY / BODY PART</div><div class=\"field\">Grazed knee</div><div class=\"fl\">FIRST AID GIVEN — TICK ALL THAT APPLY</div><div class=\"chips\"><span class=\"ochip\">Cleaned with water</span><span class=\"ochip\">Plaster applied</span><span class=\"ochip\">Cold compress</span></div><div class=\"fl\">HOW SERIOUS?</div><div class=\"chips\"><span class=\"ochip\">Minor</span><span class=\"ochip\">Moderate</span><span class=\"ochip\">Serious</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>I've also told the parent in person / by phone</div><span class=\"btn amber\">Save record</span></div>"
       },
       {
-        "label": "Accident insights",
-        "stage": "Insights",
-        "line": "Turns the raw log into prevention smarts — the bars show you where accidents cluster, so if most grazes keep happening on the football pitch, you'll spot it and can act.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">BY INJURY TYPE</div><div class=\"tkt\"><div class=\"tkhd\"><b>Cut / graze</b> <span class=\"g\">▓▓▓▓▓</span><span class=\"tkp\">5</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bump / bruise</b> <span class=\"g\">▓▓▓</span><span class=\"tkp\">3</span></div></div><div class=\"fl\">BY ACTIVITY / LOCATION</div><div class=\"tkt\"><div class=\"tkhd\"><b>Football pitch</b> <span class=\"g\">▓▓▓▓</span><span class=\"tkp\">4</span></div></div></div>"
+        "label": "Find a record",
+        "stage": "Filter",
+        "line": "Above the list sits a filter bar — jump to just the serious ones, search by child or detail, narrow by injury or date, or show only the ones a parent hasn't acknowledged yet.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Minor</span><span class=\"ochip\">Moderate</span><span class=\"ochip\">Serious</span></div><div class=\"field ph\">Search child or details…</div><div class=\"row2\"><div><div class=\"fl\">INJURY</div><div class=\"field\">Grazed knee</div></div><div><div class=\"fl\">DATE</div><div class=\"field\">9 Aug 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">Any</span><span class=\"ochip\">✓ Acknowledged</span><span class=\"ochip\">Awaiting</span></div></div>"
       },
       {
-        "label": "Accident book",
-        "stage": "Register",
-        "line": "Your legally-required register, newest first — scan the RIDDOR column for its file-by deadline and the parent-told/shared status to see what's still outstanding.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ACCIDENT BOOK</div><div class=\"tkt\"><div class=\"tkhd\"><b>Freya Middleton · Knock to head</b> <span class=\"g\">9 Aug · 14:35 · Head · told ✓</span><span class=\"tkp\"><span class=\"chip2\">Minor</span></span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Oscar Bennett · Suspected fracture</b> <span class=\"g\">8 Aug · 11:05 · Arm · Acknowledged</span><span class=\"tkp\"><span class=\"chip2\">RIDDOR · by 15 Aug</span></span></div></div></div>"
+        "label": "First aid records",
+        "stage": "The list",
+        "line": "Every record sits under the child it's about, newest first, with a colour for how serious it was and badges telling you at a glance who's been told, who's acknowledged and what's been edited.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">👤 FREYA MIDDLETON · 2 RECORDS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Grazed knee</b> <span class=\"g\">9 Aug · 14:35 · told ✓</span><span class=\"tkp\"><span class=\"chip2\">Minor</span></span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bump to the head</b> <span class=\"g\">2 Aug · 11:05 · Acknowledged ✓</span><span class=\"tkp\"><span class=\"chip2\">Moderate</span></span></div></div></div>"
       },
       {
         "label": "Expanded record",
-        "stage": "Close-out",
-        "line": "Tap any row to close it out end-to-end — share it for the parent to acknowledge, add an admin note, download the report for your insurer, and keep the immutable chronology that makes it all defensible.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"field\">Suspected fracture → Arm · specified · Football · Astro pitch · Sling applied, ambulance called · Liberty Young</div><div class=\"hint\">⚠️ The provider reports this to HSE — ActivityOS records it only · file by 15 Aug.</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Parent acknowledged · 8 Aug 6:40pm</div><div class=\"row2\"><div><span class=\"btn amber\">📤 Share with parent</span></div><div><span class=\"btn\">⬇ Download report</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Chronology</b> <span class=\"g\">logged 11:05 → shared 11:20 → acknowledged 6:40pm</span></div></div></div>"
+        "stage": "Details",
+        "line": "Tap any record to open it out — the full details, whether the parent's seen and acknowledged it, and a two-way message thread so you and the parent can talk it through right there. When you edit a record you choose whether to alert the parent again or just quietly update their profile — either way it's stamped Updated.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">WHERE</div><div class=\"field\">The main hall</div></div><div><div class=\"fl\">FIRST AID BY</div><div class=\"field\">Liberty Young</div></div></div><div class=\"fl\">FIRST AID GIVEN</div><div class=\"field\">Cleaned with water and covered with a plaster</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Parent acknowledged · 9 Aug 6:40pm</div><div class=\"tkt\"><div class=\"tkhd\"><b>💬 Messages</b> <span class=\"g\">You: 'All fine by home time' → Parent: 'Thank you!'</span></div></div><div class=\"row2\"><div><span class=\"btn\">💬 Details &amp; messages</span></div><div><span class=\"btn amber\">Edit</span></div></div></div>"
+      }
+    ]
+  },
+  "medication": {
+    "title": "Medication",
+    "introLine": "This is where you keep children's medicine safe and above board — a card for each child's medicine, the parent's written consent, and every dose given, all in one place.",
+    "doneLine": "That's the full loop — consent captured, every dose logged with who gave it, and the parent kept in the picture, all kept safe for safeguarding.",
+    "steps": [
+      {
+        "label": "Overview",
+        "stage": "Orientation",
+        "line": "Four tiles give the day's safety picture — how many medicines are on file, how many have consent, how many still need it, and doses given today. Below that you filter Active or Archived and search by child or medicine.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>On file</b><span class=\"tkp\">6</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>With consent</b><span class=\"tkp\">5</span></div></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Needs consent</b><span class=\"tkp\">1</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Doses today</b><span class=\"tkp\">3</span></div></div></div><div class=\"chips\"><span class=\"ochip\">Active 6</span><span class=\"ochip\">Archived 2</span><span class=\"field ph\">Search child or medicine…</span></div><div class=\"hint\">One card per child's medicine. Records stay visible for safeguarding even when notifications are off.</div></div>"
+      },
+      {
+        "label": "Give a dose",
+        "stage": "Point of care",
+        "line": "On any medicine with consent, tap Yes or No to log a dose against today and now — the parent is told automatically. Need to back-date or add a note? Open 'with time and notes' for the full form.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Ava Okafor</b> <span class=\"g\">Ventolin · one puff</span><span class=\"chip2\">consent on file</span></div><div class=\"g\">🔁 On every booked day · at 12:30</div><div class=\"g\">📋 How to give: shake well; one puff, use spacer if needed</div></div><div class=\"chips\"><span class=\"g\">Given?</span><span class=\"ochip\">✓ Yes</span><span class=\"ochip\">✕ No</span><span class=\"btn ghost\">＋ with time / notes</span></div><div class=\"row2\"><div><div class=\"fl\">DOSE</div><div class=\"field\">one puff</div></div><div><div class=\"fl\">WITNESSED BY</div><div class=\"field ph\">optional</div></div></div><div class=\"hint\">Tapping Yes logs it against today and now, and informs the parent. No consent means no dose can be recorded.</div></div>"
+      },
+      {
+        "label": "Add a medication",
+        "stage": "New record",
+        "line": "New medicine? The '＋ Administer a medication' button opens a three-step form — the medicine and dose, when staff should give it, then ticking that the parent has given written consent. The child must already have a booking so it links to their account.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">1 Medicine</span><span class=\"ochip\">2 When &amp; how</span><span class=\"ochip\">3 Consent</span></div><div class=\"row2\"><div><div class=\"fl\">CHILD (BOOKED)</div><div class=\"field\">Ava Okafor</div></div><div><div class=\"fl\">MEDICINE</div><div class=\"field\">Ventolin</div></div></div><div class=\"row2\"><div><div class=\"fl\">DOSE</div><div class=\"field\">one puff</div></div><div><div class=\"fl\">FOR (CONDITION)</div><div class=\"field\">asthma</div></div></div><div class=\"chips\"><span class=\"ochip\">📋 On every booked day</span><span class=\"ochip\">📅 Only on the days I pick</span><span class=\"ochip\">🩹 Only when needed</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>The parent / carer has given written consent to administer this</div></div>"
+      },
+      {
+        "label": "Dose history",
+        "stage": "Records",
+        "line": "Every card keeps its own dose history — tap 'History' to see each dose with who gave it, when, any witness and notes, plus who gave consent and where the medicine is stored.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">HISTORY (2)</div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">✓ Given</span><b>15 Aug 2026 · 12:32</b> <span class=\"g\">one puff</span></div><div class=\"g\">by Liberty Young · witnessed Tom Reade · no reaction</div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">✕ Not given</span><b>14 Aug 2026 · 12:30</b> <span class=\"g\">Not given</span></div><div class=\"g\">by Liberty Young</div></div><div class=\"hint\">Consent by Sarah Okafor. Stored: locked office cabinet. Expires 03/2027.</div></div>"
+      },
+      {
+        "label": "Safety & archive",
+        "stage": "Guardrails",
+        "line": "A few guardrails keep it safe — no consent, or a parent who has withdrawn it, blocks dosing; expired medicines are flagged; and in Setup you can require a witness on every dose or limit recording to leads. Managers can archive a finished medicine — the record is kept, never deleted.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Noah Bennett</b> <span class=\"g\">Piriton · 5ml</span><span class=\"chip2\">no consent</span></div><div class=\"g\">Consent needed before a dose can be recorded</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mia Patel</b> <span class=\"g\">Calpol · 5ml</span><span class=\"chip2\">⚠️ Expired</span></div><div class=\"g\">📝 Parent note: only if temperature is over 38</div></div><div class=\"chips\"><span class=\"ochip\">History (4)</span><span class=\"btn\">Archive</span></div><div class=\"hint\">Turn on 'require a witness' or 'leads only' in Setup. Archived medicines can be restored — nothing is ever erased.</div></div>"
       }
     ]
   },
@@ -443,8 +463,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Share a moment",
         "stage": "Composer",
-        "line": "Pick a listing and the children come through automatically from its bookings, then tag an activity and jot down what happened — that's a post.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LISTING (TODAY)</div><div class=\"field\">Multi-Activity Camp — Mon 9 Aug</div><div class=\"hint\">Children are pulled from the bookings on this listing — same register as the Registers area.</div><div class=\"fl\">WHICH CHILDREN?</div><div class=\"chips\"><span class=\"ochip\">🧒 Ava · Photos: Yes</span><span class=\"ochip\">🧒 Noah · Photos: No</span><span class=\"ochip\">🧒 Mia · Photos: Yes</span></div><div class=\"fl\">ACTIVITY</div><div class=\"chips\"><span class=\"ochip\">🎨 Arts & crafts</span><span class=\"ochip\">⚽ Sports</span><span class=\"ochip\">🍎 Lunch & snack</span></div><div class=\"field\">Ava and Mia built a junk-model rocket and counted down the launch together.</div><span class=\"btn amber\">Post update 🚀</span></div>"
+        "line": "Pick a listing and its children come through automatically, choose whether it's a child photo or their work, tag an activity and jot down what happened — or tap Write for me to draft the caption for you.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LISTING (TODAY)</div><div class=\"field\">Multi-Activity Camp — Mon 9 Aug</div><div class=\"hint\">Children are pulled from the bookings on this listing — same register as the Registers area.</div><div class=\"fl\">WHICH CHILDREN?</div><div class=\"chips\"><span class=\"ochip\">Ava · consent ✓</span><span class=\"ochip\">Noah · no photos</span><span class=\"ochip\">Mia · consent ✓</span></div><div class=\"fl\">PHOTO</div><div class=\"chips\"><span class=\"ochip\">📷 Child photo</span><span class=\"ochip\">🎨 Their work</span></div><div class=\"fl\">ACTIVITY</div><div class=\"chips\"><span class=\"ochip\">🎨 Arts &amp; crafts</span><span class=\"ochip\">⚽ Sports</span><span class=\"ochip\">🍎 Lunch &amp; snack</span></div><div class=\"field\">Ava and Mia built a junk-model rocket and counted down the launch together.</div><div class=\"chips\"><span class=\"ochip\">✨ Write for me</span></div><span class=\"btn amber\">Post moment 🚀</span></div>"
       },
       {
         "label": "Photo consent gate",
@@ -453,64 +473,64 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">PHOTO</div><div class=\"tkt\"><div class=\"tkhd\"><b>⚠ Noah doesn't have photo consent</b> <span class=\"g\">remove Noah or post without a photo</span></div></div><div class=\"hint\">Text-only updates for Noah still post fine.</div><div class=\"fl\">WITH AVA &amp; MIA SELECTED</div><div class=\"tkt\"><div class=\"tkhd\"><b>🌈 Painted rainbow</b> <span class=\"g\">tagged</span><span class=\"tkp\">Child's work</span></div></div></div>"
       },
       {
-        "label": "Photo approval",
-        "stage": "Governance",
-        "line": "If the owner's turned on approval, any moment with a photo waits amber-flagged until a manager approves it — text-only posts sail straight through to parents.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>🏊 Noah swam a whole width on his own!</b> <span class=\"g\">Tom Reade · Swimming</span></div></div><div class=\"hint\">⚠ Awaiting approval — not sent to parents yet.</div><span class=\"btn amber\">✔ Approve &amp; send</span><span class=\"btn\">Reject</span></div>"
+        "label": "Share & download",
+        "stage": "Share the photo",
+        "line": "Every photo has a download button — pick a shape, drop the caption or a starred parent quote into a neat banner underneath, then download it or save it into your Email marketing area for a campaign.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FORMAT</div><div class=\"chips\"><span class=\"ochip\">Square 1:1</span><span class=\"ochip\">Portrait 4:5</span><span class=\"ochip\">Story 9:16</span></div><div class=\"fl\">ADD A BANNER WITH…</div><div class=\"chips\"><span class=\"ochip\">✓ Caption</span><span class=\"ochip\">★ Starred quote</span><span class=\"ochip\">All comments</span></div><div class=\"chips\"><span class=\"btn\">Photo only</span><span class=\"btn amber\">⬇ Download with banner</span></div><div class=\"hint\">Or save it straight into the Email marketing area to reuse in a campaign.</div></div>"
       },
       {
         "label": "Photo gallery",
         "stage": "Media library",
-        "line": "Every photo and piece of work you post files itself in here automatically, ready to filter by child or date whenever you need it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📷 PHOTO GALLERY — 2 OF 3 STORED</div><div class=\"hint\">Every photo &amp; piece of work lands here automatically.</div><div class=\"chips\"><span class=\"ochip\">All children</span><span class=\"ochip\">Mia</span></div><div class=\"chips\"><span class=\"ochip\">All dates</span><span class=\"ochip\">Today</span><span class=\"ochip\">This week</span></div></div>"
+        "line": "Every photo and piece of work files itself in here automatically, ready to filter by child, by listing or by date whenever you need it — and from here managers can push photos into the Email marketing area, automatically if they like.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">🖼️ PHOTO GALLERY</div><div class=\"hint\">Every photo &amp; piece of work lands here automatically.</div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">By child</span><span class=\"ochip\">By listing</span></div><div class=\"chips\"><span class=\"ochip\">All dates</span><span class=\"ochip\">Today</span><span class=\"ochip\">This week</span></div><div class=\"fl\">EMAIL MARKETING AREA</div><div class=\"chips\"><span class=\"btn amber\">✉ Move all photos (3)</span><span class=\"ochip\">✓ Auto-add new photos</span></div></div>"
       },
       {
         "label": "The live feed",
         "stage": "The record",
-        "line": "This is the running story of the day — exactly what parents see mirrored back — with the children, activity, time and a little heart for the likes.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"prevcard\"><div class=\"ph\">🎨</div><div class=\"pb\"><div class=\"pt\">Ava &amp; Mia · Arts &amp; crafts · Their work</div><div class=\"pm\">Made superhero masks and wore them all afternoon!</div><div class=\"pp\">1:24pm · ♥ 2 · Liberty Young</div></div></div><div class=\"prevcard\"><div class=\"ph\">🏊</div><div class=\"pb\"><div class=\"pt\">Noah · Swimming</div><div class=\"pm\">Swam a whole width on his own for the first time!</div><div class=\"pp\">11:50am · ♥ 1 · Tom Reade</div></div></div></div>"
+        "line": "This is the running story of the day, mirrored to the parents whose child is in each moment — the children, activity, time, and any comments a parent leaves back.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"prevcard\"><div class=\"ph\">🎨</div><div class=\"pb\"><div class=\"pt\">Ava &amp; Mia · Arts &amp; crafts · Their work</div><div class=\"pm\">Made superhero masks and wore them all afternoon!</div><div class=\"pp\">1:24pm · Liberty Young</div></div></div><div class=\"prevcard\"><div class=\"ph\">🏊</div><div class=\"pb\"><div class=\"pt\">Noah · Swimming</div><div class=\"pm\">Swam a whole width on his own for the first time!</div><div class=\"pp\">11:50am · Tom Reade</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya (parent):</b> <span class=\"g\">He came home so proud — thank you!</span></div></div><span class=\"btn\">☆ Use as a marketing quote</span></div>"
       }
     ]
   },
   "documents": {
     "title": "Documents",
-    "introLine": "This is your Head Office library — one tidy home for every policy, agreement, template and brand asset, with control over exactly who down the network can see each file.",
-    "doneLine": "And that's the library — upload once, set the sharing scope, and the right files flow neatly down to your franchises and staff.",
+    "introLine": "This is your document store — one tidy place for the policies, risk assessments, insurance and certificates your setting needs, so the right paperwork is always a click away.",
+    "doneLine": "And that's Documents — add a file or a link, tag it with a category, and it's saved to the shared list for your team to open any time.",
     "steps": [
       {
-        "label": "Library summary",
+        "label": "The page",
         "stage": "Overview",
-        "line": "Four little tiles up top give you an instant read of the library size — and, crucially, how many files are overdue a review before you go digging.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>43</b> <span class=\"g\">Documents in library</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>31</b> <span class=\"g\">Shared with franchises</span></div></div></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>3</b> <span class=\"g\">Need review / renewal</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>1.2 GB</b> <span class=\"g\">Storage used</span></div></div></div></div>"
+        "line": "Everything lives on one simple page — a running list of your paperwork, with an Add a document button top-right for anyone who can manage the setting.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div class=\"fl\">DOCUMENTS</div><span class=\"btn amber\">＋ Add a document</span></div><div class=\"hint\">Policies, risk assessments and certificates — the paperwork in one place.</div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Safeguarding Policy</b> <span class=\"g\">Policies · 2 Jun 2026</span><span class=\"tkp\">Open</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Public Liability Insurance</b> <span class=\"g\">Insurance · 14 Jan 2026</span><span class=\"tkp\">Open</span></div></div></div>"
       },
       {
-        "label": "Search & upload",
+        "label": "Add a document",
         "stage": "Add files",
-        "line": "This is how a document enters the library — Upload records the file and its sharing scope, while Search and folders are on the way but not live just yet.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEARCH DOCUMENTS</div><div class=\"field ph\">🔍 Search documents…</div><div class=\"chips\"><span class=\"btn\">+ New folder</span><span class=\"btn amber\">↓ Upload</span></div><div class=\"hint\">Uploading 'Autumn Half-Term Camp — Risk Assessment.docx'. Search and folders are coming in a later phase.</div></div>"
+        "line": "Managers add a document by filling four quick fields — give it a title, pick a category, then either choose a file to upload or just paste a link, with an optional note. Only company, freelancer or franchise accounts can add or delete; everyone else just reads and opens.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">TITLE</div><div class=\"field\">Autumn Half-Term Camp - Risk Assessment</div></div><div><div class=\"fl\">CATEGORY</div><div class=\"field\">Risk assessments</div></div></div><div><div class=\"fl\">FILE OR LINK</div><div class=\"chips\"><span class=\"btn\">Choose file</span><span class=\"g\">or paste a link:</span></div><div class=\"field ph\">https://…</div></div><div><div class=\"fl\">NOTES</div><div class=\"field\">Reviewed for the Oct half-term dates.</div></div><div class=\"chips\"><span class=\"btn amber\">Save</span><span class=\"btn ghost\">Cancel</span></div></div>"
       },
       {
-        "label": "Category filters",
-        "stage": "Filter",
-        "line": "Tap a category pill to jump straight to one class of document — say all your Compliance evidence for an inspection — instead of scanning the whole list.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FILTER BY CATEGORY</div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Policies</span><span class=\"ochip\">Agreements</span><span class=\"ochip\">Brand & marketing</span><span class=\"ochip\">Compliance</span><span class=\"ochip\">HR</span><span class=\"ochip\">Templates</span></div><div class=\"hint\">'Compliance' selected — narrows to the Safeguarding Policy and Public Liability certificate.</div></div>"
+        "label": "Categories",
+        "stage": "Organise",
+        "line": "When you add a file you tag it with one category, and that category shows as a badge on its row — so an inspector's request for your insurance is easy to spot at a glance.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CATEGORY</div><div class=\"field\">Policies</div><div class=\"chips\"><span class=\"ochip\">Policies</span><span class=\"ochip\">Risk assessments</span><span class=\"ochip\">Insurance</span><span class=\"ochip\">Certificates</span><span class=\"ochip\">Procedures</span><span class=\"ochip\">Other</span></div><div class=\"hint\">These six are the only categories — pick one per document.</div></div>"
       },
       {
-        "label": "Documents & sharing scope",
+        "label": "The document list",
         "stage": "The library",
-        "line": "The heart of the page — every file with its category and, most importantly, its 'Shared with' scope that decides exactly who down the network can open it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Safeguarding Policy 2026</b> <span class=\"g\">Compliance · Updated 02 Jun 2026</span><span class=\"tkp\">1.3 MB</span></div><div class=\"chips\"><span class=\"chip2\">Franchises + staff</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Public Liability Insurance</b> <span class=\"g\">Renews 31 Dec 2026</span><span class=\"tkp\">820 KB</span></div><div class=\"chips\"><span class=\"chip2\">All franchises</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📝 Franchise Agreement — template</b> <span class=\"g\">Agreements · Legal</span><span class=\"tkp\">240 KB</span></div><div class=\"chips\"><span class=\"chip2\">Head Office only</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>🗜️ Marketing toolkit (summer)</b> <span class=\"g\">Brand & marketing</span><span class=\"tkp\">64 MB</span></div><div class=\"chips\"><span class=\"chip2\">All franchises</span></div></div></div>"
+        "line": "The list itself — each row shows the file's category, its title as a link, the date it was added, an Open link, and a delete cross for managers.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Policies</span><b>Safeguarding Policy</b> <span class=\"g\">2 Jun 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Insurance</span><b>Public Liability Certificate</b> <span class=\"g\">14 Jan 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Risk assessments</span><b>Summer Camp Risk Assessment</b> <span class=\"g\">28 May 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Certificates</span><b>Paediatric First Aid Certificate</b> <span class=\"g\">3 Mar 2026</span><span class=\"tkp\">Open ✕</span></div></div></div>"
       },
       {
-        "label": "In-app reader",
-        "stage": "Read inline",
-        "line": "A document isn't just a download — open the accordion and read a policy in full, right here, like this GDPR one that spells out the platform-wide safeguarding rule.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">GDPR & DATA PROTECTION POLICY 2026</div><div class=\"field\">Owner: Head Office (Data Protection Lead) · Applies to: every provider, site, franchise & staff · Review: at least annually</div><div class=\"chk\"><span class=\"chkbx\">✓</span>§4 Children's data — turning a field off stops NEW collection but never hides or deletes existing medical/SEND/allergy info.</div></div>"
+        "label": "Open & manage",
+        "stage": "Everyday use",
+        "line": "Click a title or its Open link and the file opens in a new tab. Managers also get a delete cross, which asks you to confirm before the document is removed.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Procedures</span><b>Fire Evacuation Procedure</b> <span class=\"g\">Opens in a new tab ↗</span><span class=\"tkp\">Open</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Only company, freelancer and franchise roles see Add a document and the delete cross.</div><div class=\"hint\">Deleting asks 'Delete this document?' before it's removed.</div></div>"
       }
     ]
   },
   "finance": {
-    "title": "Finances",
+    "title": "Finance &amp; analytics",
     "introLine": "This is your money-and-analytics hub — one place to see what you've earned, what's still owed, when it lands in the bank, and who's actually booking.",
     "doneLine": "That's the whole money picture in one page — revenue, payouts, debts and demand, all moving together with your chosen window.",
     "steps": [
@@ -524,13 +544,19 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Overview",
         "stage": "At a glance",
         "line": "The headline tiles show collected versus booked, what's still owed and what actually reaches your bank after fees — the quick health-check most operators open this page for.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">REVENUE COLLECTED</div><div class=\"field\">£18,420 <span class=\"g\">88% of £21,050 booked</span></div></div><div><div class=\"fl\">OWED TO YOU</div><div class=\"field\">£2,630 <span class=\"g\">unpaid / invoiced</span></div></div></div><div class=\"row2\"><div><div class=\"fl\">REFUNDS</div><div class=\"field\">£310 <span class=\"g\">last 6 months</span></div></div><div><div class=\"fl\">EST. NET TO BANK</div><div class=\"field\">£18,155 <span class=\"g\">after ~£265 fees</span></div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Sports Camp</b> <span class=\"g\">top listing</span><span class=\"tkp\">£6,240</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">💰 REVENUE COLLECTED</div><div class=\"field\">£18,420 <span class=\"g\">88% of £21,050 booked</span></div></div><div><div class=\"fl\">⏳ OWED TO YOU</div><div class=\"field\">£2,630 <span class=\"g\">unpaid / invoiced</span></div></div></div><div class=\"row2\"><div><div class=\"fl\">↩️ REFUNDS</div><div class=\"field\">£310 <span class=\"g\">last 6 months</span></div></div><div><div class=\"fl\">🏦 EST. NET TO BANK</div><div class=\"field\">£18,155 <span class=\"g\">after ~£265 fees</span></div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Multi-Sports Camp</b> <span class=\"g\">top listing</span><span class=\"tkp\">£6,240</span></div></div><div class=\"hint\">Below: a booked-vs-collected trend line and a donut of where the money comes from.</div></div>"
+      },
+      {
+        "label": "Revenue",
+        "stage": "The takings",
+        "line": "Revenue breaks your takings down by where the money actually comes from — card payments versus funded and voucher places — and by which programmes earn the most.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Overview</span><span class=\"chip2\">Revenue</span><span class=\"chip2\">Payouts</span></div><div class=\"row2\"><div><div class=\"fl\">TOTAL BOOKED</div><div class=\"field\">£21,050 <span class=\"g\">6-month value</span></div></div><div><div class=\"fl\">COLLECTED</div><div class=\"field\">£18,420 <span class=\"g\">paid & funded</span></div></div></div><div class=\"fl\">WHERE MONEY COMES FROM</div><div class=\"tkt\"><div class=\"tkhd\"><b>Card</b> <span class=\"g\">63%</span><span class=\"tkp\">£11,600</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Childcare / voucher</b> <span class=\"g\">funded places · 37%</span><span class=\"tkp\">£6,820</span></div></div><div class=\"hint\">Also broken down by listing — Summer Multi-Sports Camp leads at £6,240.</div></div>"
       },
       {
         "label": "Payouts",
         "stage": "Getting paid",
-        "line": "This is your Stripe on-ramp and your in-transit versus settled split — just remember the amounts are ActivityOS estimates until Stripe is fully connected.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Payout account connected &nbsp;<span class=\"btn\">Manage payouts →</span></div><div class=\"row2\"><div><div class=\"fl\">ON THE WAY (EST.)</div><div class=\"field\">£1,240</div></div><div><div class=\"fl\">IN YOUR BANK (EST.)</div><div class=\"field\">£16,915</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>5 Aug 2026</b> <span class=\"g\">BK-10432, BK-10433 · succeeded</span><span class=\"tkp\">£96.00</span></div></div><div class=\"hint\">Est. fees £265 · Est. net (period) £18,155 — estimates only.</div></div>"
+        "line": "This is where you connect or manage your Stripe payout account, with your on-the-way versus in-the-bank split — just remember the amounts are ActivityOS estimates until Stripe is fully connected.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Payout account connected &nbsp;<span class=\"btn\">Manage payouts →</span></div><div class=\"row2\"><div><div class=\"fl\">🚚 ON THE WAY (EST.)</div><div class=\"field\">£1,240</div></div><div><div class=\"fl\">🏦 IN YOUR BANK (EST.)</div><div class=\"field\">£16,915</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>5 Aug 2026</b> <span class=\"g\">BK-10432, BK-10433 · succeeded</span><span class=\"tkp\">£96.00</span></div></div><div class=\"hint\">Est. fees £265 · Est. net (period) £18,155 — estimates only.</div></div>"
       },
       {
         "label": "Debts",
@@ -547,33 +573,33 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
     ]
   },
   "expenses": {
-    "title": "Money out",
+    "title": "Money out — corrected guided tour (expenses)",
     "introLine": "This is your spending hub — pop in everything the business pays out, mark each one as owed or gone, and watch it all roll up into tidy monthly and yearly totals.",
     "doneLine": "That's the lot — keep your spends logged and your receipts attached, and come tax time everything's sitting neat and ready for the accountant.",
     "steps": [
       {
         "label": "The headline + Cash/Accrual toggle",
         "stage": "Overview",
-        "line": "Everything you spend rolls up into three big numbers up top, and the Cash-or-Accrual toggle quietly decides whether money you still owe is counted yet.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>💸 Money out</b> <span class=\"g\">This month: £1,247.50 paid + £222.00 pending</span></div></div><div class=\"row2\"><div><div class=\"fl\">OUT THIS MONTH</div><div class=\"field\">£1,247.50</div></div><div><div class=\"fl\">OUT IN 2026</div><div class=\"field\">£8,930.00</div></div></div><div class=\"fl\">PENDING TO PAY</div><div class=\"field\">£222.00</div><div class=\"chips\"><span class=\"ochip\">✓ Cash · counts when paid</span><span class=\"ochip\">Accrual · counts when logged</span></div><div class=\"hint\">Pending isn't counted in the totals above until it's marked paid.</div></div>"
+        "line": "Everything you spend rolls up into three big numbers up top, and the Cash-or-Accrual toggle quietly decides whether money you still owe is counted yet. Switch on Purchase Orders in Setup and a Purchase orders tab joins the page too.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>💸 Money out</b> <span class=\"g\">This month: £1,247.50 paid + £222.00 pending</span></div></div><div class=\"row2\"><div><div class=\"fl\">OUT THIS MONTH</div><div class=\"field\">£1,247.50</div></div><div><div class=\"fl\">OUT IN 2026</div><div class=\"field\">£8,930.00</div></div></div><div class=\"fl\">PENDING TO PAY</div><div class=\"field\">£222.00</div><div class=\"chips\"><span class=\"ochip\">✓ Cash · counts when paid</span><span class=\"ochip\">Accrual · counts when logged</span></div><div class=\"hint\">On Cash basis, pending spends aren't counted in the totals above until they're marked paid.</div></div>"
       },
       {
         "label": "Log an expense",
         "stage": "Logging",
-        "line": "This is the heart of the page — pop in a spend, mark it Paid or Pending, and if it's a regular bill set it to repeat so a whole run of entries appears for you.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DATE</div><div class=\"field\">2026-08-05</div></div><div><div class=\"fl\">CATEGORY</div><div class=\"field\">Venue hire</div></div></div><div class=\"row2\"><div><div class=\"fl\">AMOUNT (£)</div><div class=\"field\">180.00</div></div><div><div class=\"fl\">SUPPLIER</div><div class=\"field\">Riverside Sports Hall</div></div></div><div class=\"fl\">NOTES</div><div class=\"field\">Summer Multi-Sports Camp — week 3 hire</div><div class=\"chips\"><span class=\"ochip\">✓ Paid</span><span class=\"ochip\">Pending</span><span class=\"ochip\">⬆ Upload receipt</span></div><span class=\"btn amber\">Log expense</span></div>"
+        "line": "This is the heart of the page — pop in a spend, pick a category or add a fresh one with the New button right in the form, then mark it Paid or Pending. Set a regular bill to repeat and the button flips to Create series, spinning up the whole run of entries for you.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">DATE</div><div class=\"field\">5 Aug 2026</div></div><div><div class=\"fl\">CATEGORY</div><div class=\"field\">Venue hire</div></div></div><div class=\"chips\"><span class=\"g\">Not listed?</span><span class=\"ochip\">＋ New</span></div><div class=\"row2\"><div><div class=\"fl\">AMOUNT (£)</div><div class=\"field\">180.00</div></div><div><div class=\"fl\">SUPPLIER</div><div class=\"field\">Riverside Sports Hall</div></div></div><div class=\"fl\">NOTES</div><div class=\"field\">Summer Multi-Sports Camp — week 3 hire</div><div class=\"row2\"><div><div class=\"fl\">REPEAT</div><div class=\"field\">Every month</div></div><div><div class=\"fl\">REPEAT UNTIL</div><div class=\"field\">31 Dec 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">✓ Paid</span><span class=\"ochip\">Pending</span><span class=\"ochip\">⬆ Upload photo</span><span class=\"ochip\">or paste a link</span></div><span class=\"btn amber\">Create series</span></div>"
       },
       {
         "label": "All expenses ledger",
         "stage": "Ledger",
-        "line": "Where you'll actually graft day-to-day — search a spend, chase what's owed, tap Mark paid to flip a bill Paid on the spot, and pull a CSV for your accountant.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"field ph\">🔍 Search supplier or note…</div><div class=\"chips\"><span class=\"ochip\">All categories</span><span class=\"ochip\">This month</span><span class=\"ochip\">Newest</span><span class=\"ochip\">⬇ Export CSV</span></div><div class=\"hint\">12 of 34 expenses · showing £1,247.50</div><div class=\"tkt\"><div class=\"tkhd\"><b>RS · Riverside Sports Hall</b> <span class=\"g\">Venue hire · 5 Aug 2026 · Paid</span><span class=\"tkp\">£180.00</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>MM · Morton Michel</b> <span class=\"g\">Insurance · Repeats · Pending · due 20 Aug</span><span class=\"tkp\">£42.00</span></div></div><span class=\"btn\">Mark paid</span></div>"
+        "line": "Where you'll actually graft day-to-day — this is the All tab, your full expenses ledger. Search a spend, chase what's owed, tap Mark paid to flip a bill Paid on the spot, and pull a CSV for your accountant.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Overview</span><span class=\"ochip\">✓ All</span><span class=\"ochip\">Pending</span><span class=\"ochip\">Paid</span></div><div class=\"field ph\">🔍 Search supplier or note…</div><div class=\"chips\"><span class=\"ochip\">All categories</span><span class=\"ochip\">This month</span><span class=\"ochip\">Newest</span><span class=\"ochip\">⬇ Export CSV</span></div><div class=\"hint\">12 of 34 expenses · showing £1,247.50</div><div class=\"tkt\"><div class=\"tkhd\"><b>RS · Riverside Sports Hall</b> <span class=\"g\">Venue hire · 5 Aug 2026 · Paid</span><span class=\"tkp\">£180.00</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>MM · Morton Michel</b> <span class=\"g\">Insurance · Repeats · Pending · due 20 Aug</span><span class=\"tkp\">£42.00</span></div></div><span class=\"btn\">Mark paid</span></div>"
       },
       {
         "label": "Overview dashboard",
         "stage": "Overview",
-        "line": "A quick health-check of the business — where the money's leaking, which suppliers cost you most, and whether this month's up or down on the last, all without wading through the ledger.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">THIS MONTH</div><div class=\"field\">£1,247.50</div></div><div><div class=\"fl\">BIGGEST</div><div class=\"field\">£245.50 · Equipment</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Where it goes</b></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43%</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Equipment</b> <span class=\"g\">20%</span><span class=\"tkp\">£245.50</span></div></div><div class=\"hint\">Top suppliers: 1. Riverside Sports Hall £540 (3×) · 2. Sports Direct £245.50 (1×)</div></div>"
+        "line": "A quick health-check of the business — the last six months at a glance, where the money's leaking, which suppliers cost you most, and whether this month's up or down on the last, all without wading through the ledger.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">THIS MONTH</div><div class=\"field\">£1,247.50</div></div><div><div class=\"fl\">BIGGEST</div><div class=\"field\">£245.50 · Equipment</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Last 6 months</b> <span class=\"g\">Mar £980 · Apr £1,120 · May £890 · Jun £1,310 · Jul £1,180 · Aug £1,247</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Where it goes</b></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43%</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Equipment</b> <span class=\"g\">20%</span><span class=\"tkp\">£245.50</span></div></div><div class=\"hint\">Top suppliers: 1. Riverside Sports Hall £540 (3×) · 2. Sports Direct £245.50 (1×)</div></div>"
       },
       {
         "label": "Receipts",
@@ -584,8 +610,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Categories & Suppliers",
         "stage": "Setup",
-        "line": "Keep the ledger tidy with reusable categories and a saved supplier address book — and flip the toggle so your own ActivityOS plan fee gets counted as a monthly cost too.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43% · 3 expenses · avg £180</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Riverside Sports Hall</b> <span class=\"g\">bookings@riversidesports.co.uk · 07700 900123</span></div></div><span class=\"btn\">＋ Add supplier</span><div class=\"chk\"><span class=\"chkbx\">✓</span>Include my ActivityOS subscription in expenses</div><div class=\"hint\">ActivityOS Pro plan · £29/month since 12 Jan 2026 — counted below.</div></div>"
+        "line": "Keep the ledger tidy with reusable categories and a saved supplier address book — and, from the card above the tabs, flip the toggle so your own ActivityOS plan fee gets counted as a monthly cost too.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Venue hire</b> <span class=\"g\">43% · 3 expenses · avg £180</span><span class=\"tkp\">£540</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Riverside Sports Hall</b> <span class=\"g\">bookings@riversidesports.co.uk · 07700 900123</span></div></div><span class=\"btn\">＋ Add supplier</span><div class=\"chk\"><span class=\"chkbx\">✓</span>Include my ActivityOS subscription in expenses</div><div class=\"hint\">ActivityOS Pro plan · £29/month since 12 Jan 2026 — counted as a monthly cost.</div></div>"
       }
     ]
   },
@@ -596,15 +622,15 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
     "steps": [
       {
         "label": "The hub & switch",
-        "stage": "Overview",
+        "stage": "Money in",
         "line": "Up top you get your whole takings at a glance, with a little pill to flip between the Income workspace and the Invoices workspace.",
         "bodyHtml": "<div class=\"frm\"><div class=\"tkhd\"><b>💰 Money in</b> <span class=\"g\">this month</span><span class=\"tkp\">£4,820</span></div><div class=\"chips\"><span class=\"ochip\">💰 Income</span><span class=\"ochip\">📄 Invoices</span></div><div class=\"row2\"><div><div class=\"fl\">IN 2026</div><div class=\"field\">£38,450</div></div><div><div class=\"fl\">AWAITING PAYMENT</div><div class=\"field\">£1,290</div></div></div><div class=\"hint\">This month: £3,150 bookings + £980 invoices + £690 other income · awaiting payment isn't counted until it's paid.</div></div>"
       },
       {
         "label": "Income · Overview",
         "stage": "Income",
-        "line": "The Overview shows not just your total but the shape of it — which programmes and which payment types bring the money in, scoped to any season or date range you fancy.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Overview</span><span class=\"ochip\">All income</span><span class=\"ochip\">Categories</span></div><div class=\"tkhd\"><b>This month</b> <span class=\"g\">▲12% vs last month £4,300</span><span class=\"tkp\">£4,820</span></div><div class=\"fl\">WHERE IT COMES FROM</div><div class=\"tkt\"><div class=\"tkhd\"><b>Camps</b> <span class=\"g\">44%</span><span class=\"tkp\">£2,100</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sessions</b> <span class=\"g\">Memberships £680 · Grants £700</span><span class=\"tkp\">£1,340</span></div></div><div class=\"hint\">Bookings by payment type: Card £1,980 (63%) · Tax-Free Childcare £620 · Vouchers £340 · Cash £210.</div></div>"
+        "line": "The Overview shows not just your total but the shape of it — a trend chart you can swing from seven days right out to a full year, then which programmes and payment types bring the money in, scoped to any season or date range you fancy. The Categories tab then totals each stream by share, count and average.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Overview</span><span class=\"ochip\">All income</span><span class=\"ochip\">Categories</span></div><div class=\"tkhd\"><b>This month</b> <span class=\"g\">▲12% vs last month £4,300</span><span class=\"tkp\">£4,820</span></div><div class=\"chips\"><span class=\"ochip\">7 days</span><span class=\"ochip\">Month</span><span class=\"ochip\">6 months</span><span class=\"ochip\">9 months</span><span class=\"ochip\">Year</span></div><div class=\"fl\">WHERE IT COMES FROM</div><div class=\"tkt\"><div class=\"tkhd\"><b>Camps</b> <span class=\"g\">44%</span><span class=\"tkp\">£2,100</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sessions</b> <span class=\"g\">28%</span><span class=\"tkp\">£1,340</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Grants</b> <span class=\"g\">15%</span><span class=\"tkp\">£700</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Memberships</b> <span class=\"g\">14%</span><span class=\"tkp\">£680</span></div></div><div class=\"hint\">Bookings by payment type: Card £1,980 (63%) · Tax-Free Childcare £620 · Childcare vouchers £340 · Cash £210.</div></div>"
       },
       {
         "label": "Log income",
@@ -616,19 +642,19 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "All income",
         "stage": "Income",
         "line": "This is your single reconciled ledger — every pound in, with auto-folded bookings and invoices sat read-only next to the bits you've logged, all filterable and ready to export for the accountant.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"field ph\">🔎 Search income…</div></div><div><div class=\"field\">This month</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bookings</b> <span class=\"g\">🎟️ Card · Locke family · Football Camp · BKG-2291 <span class=\"chip2\">auto</span></span><span class=\"tkp\">+£135</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Invoices</b> <span class=\"g\">📄 invoice · Priya Shah <span class=\"chip2\">auto</span></span><span class=\"tkp\">+£240</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Grants</b> <span class=\"g\">Awards for All · ✎ ×</span><span class=\"tkp\">+£700</span></div></div><div class=\"hint\">Sort Newest / Oldest / Largest / Smallest · ⬇ Export CSV.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"field ph\">🔎 Search source or note…</div></div><div><div class=\"field\">This month</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Bookings</b> <span class=\"g\">🎟️ Card · Locke family · Football Camp · BKG-2291 <span class=\"chip2\">auto</span></span><span class=\"tkp\">+£135</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Invoices</b> <span class=\"g\">📄 invoice · Priya Shah <span class=\"chip2\">auto</span></span><span class=\"tkp\">+£240</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Grants</b> <span class=\"g\">Awards for All · ✎ ×</span><span class=\"tkp\">+£700</span></div></div><div class=\"hint\">Sort Newest / Oldest / Largest / Smallest · ⬇ Export CSV.</div></div>"
       },
       {
         "label": "New invoice",
         "stage": "Invoices",
-        "line": "On the active side you raise a proper invoice for a deposit or balance and it spits out a shareable pay-link, tied straight back to a real parent record on the system.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CUSTOMER</div><div class=\"field\">Priya Shah</div></div><div><div class=\"fl\">INVOICE NO.</div><div class=\"field\">INV-1042</div></div></div><div class=\"row2\"><div><div class=\"fl\">INVOICE DATE</div><div class=\"field\">9 Aug 2026</div></div><div><div class=\"fl\">DUE DATE</div><div class=\"field\">16 Aug 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">+3d</span><span class=\"ochip\">+5d</span><span class=\"ochip\">+7d ⭐</span><span class=\"ochip\">+10d</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer camp balance</b> <span class=\"g\">🔎 Find a parent · child Aanya</span><span class=\"tkp\">£240</span></div></div></div>"
+        "line": "On this side you raise a proper invoice for a deposit or balance and out pops a shareable pay-link. The number auto-increments, the due-date presets save you the sums, and extra fields like a PO number, account reference or VAT rate only show when your billing settings switch them on — and you can look the parent up straight from your existing customer records with Find a parent.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CUSTOMER</div><div class=\"field\">Priya Shah</div></div><div><div class=\"fl\">INVOICE NO.</div><div class=\"field\">INV-1042</div></div></div><div class=\"row2\"><div><div class=\"fl\">INVOICE DATE</div><div class=\"field\">9 Aug 2026</div></div><div><div class=\"fl\">DUE DATE</div><div class=\"field\">16 Aug 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">+3d</span><span class=\"ochip\">+5d</span><span class=\"ochip\">+7d ⭐</span><span class=\"ochip\">+10d</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Summer camp balance</b> <span class=\"g\">🔎 Find a parent · child Aanya</span><span class=\"tkp\">£240</span></div></div><div class=\"hint\">PO number, Account ref and VAT % appear only when your billing settings switch them on.</div></div>"
       },
       {
         "label": "Track & chase",
         "stage": "Invoices",
         "line": "And here you close the loop — see who still owes, chase them by email, WhatsApp or pay-link, then mark it paid so that amount folds straight back into your takings up top.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Draft £0</span><span class=\"ochip\">Sent £1,290 (5)</span><span class=\"ochip\">Paid £12,640 (19)</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">Summer camp balance · due 16 Aug</span><span class=\"tkp\">£240</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Tom Beckett</b> <span class=\"g\">🚩 overdue · due 2 Aug</span><span class=\"tkp\">£310</span></div></div><div class=\"chips\"><span class=\"ochip\">✉️ Email + pay-link</span><span class=\"ochip\">💬 WhatsApp</span><span class=\"ochip\">🔗 Copy link</span></div><span class=\"btn amber\">Mark paid</span><div class=\"hint\">Card payments are still being connected, so mark paid by hand when the money lands.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Overview</span><span class=\"ochip\">All invoices</span><span class=\"ochip\">Sent · 27</span><span class=\"ochip\">Customers</span></div><div class=\"chips\"><span class=\"ochip\">Draft £0</span><span class=\"ochip\">Sent £1,290 (5)</span><span class=\"ochip\">Paid £12,640 (19)</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">Summer camp balance · due 16 Aug</span><span class=\"tkp\">£240</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Tom Beckett</b> <span class=\"g\">🚩 overdue · due 2 Aug</span><span class=\"tkp\">£310</span></div></div><div class=\"chips\"><span class=\"ochip\">✉️ Email + pay-link</span><span class=\"ochip\">💬 WhatsApp</span><span class=\"ochip\">🔗 Copy pay-link</span></div><span class=\"btn amber\">Mark paid</span><div class=\"hint\">Card payments are still being connected, so mark paid by hand when the money lands — and the Sent tab logs every email while Customers totals up each payer.</div></div>"
       }
     ]
   },
@@ -640,81 +666,69 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Pick a post type",
         "stage": "Start",
-        "line": "Everything starts by tapping a template — the type you choose sets the card's colour, its fields and its defaults, so Urgent auto-pins and asks for an acknowledgement while a Booking nudge adds a 'Book now' button.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Newsfeed</b> <span class=\"g\">Published 24 · Pinned 3 · Scheduled 2</span></div></div><div class=\"fl\">NEW POST — PICK A TYPE</div><div class=\"chips\"><span class=\"ochip\">📣 Announcement</span><span class=\"ochip\">📅 Event</span><span class=\"ochip\">⏰ Reminder</span><span class=\"ochip\">🚨 Urgent / closure</span><span class=\"ochip\">🎉 Celebration</span><span class=\"ochip\">🎟️ Booking nudge</span></div><div class=\"hint\">Or hit ✨ Design a newsletter, top-right, for the richer multi-section builder.</div></div>"
+        "line": "Everything starts by tapping a template — the type you choose sets the card's colour, its fields and its defaults, so Urgent auto-pins and asks for an acknowledgement while a Booking nudge adds a Book now button.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Newsfeed</b> <span class=\"g\">Published 24 · Pinned 3 · Scheduled 2</span></div></div><div class=\"fl\">NEW POST — PICK A TYPE</div><div class=\"chips\"><span class=\"ochip\">Announcement</span><span class=\"ochip\">Event</span><span class=\"ochip\">Reminder</span><span class=\"ochip\">Urgent / closure</span><span class=\"ochip\">Celebration</span><span class=\"ochip\">Booking nudge</span></div><div class=\"hint\">Each type carries its own hint — Announcement is general news, Event adds a date and RSVP, Booking nudge promotes a listing.</div></div>"
       },
       {
         "label": "Write the post",
         "stage": "Compose",
-        "line": "The composer is where the message is built — jot a rough note into '✨ Help me write' and let the AI draft it, then fine-tune the title, message, image and any event details, watching the live family preview update as you go.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>New · Event</b> <span class=\"g\">✨ Help me write · medium</span></div></div><div class=\"fl\">TITLE</div><div class=\"field\">Summer Sports Day 🏅</div><div class=\"fl\">MESSAGE</div><div class=\"field\">Join us on the meadow for races, medals and a picnic — all welcome!</div><div class=\"row2\"><div><div class=\"fl\">DATE / TIME</div><div class=\"field\">18 Jul 2026 · 09:30</div></div><div><div class=\"fl\">COST</div><div class=\"field\">£4</div></div></div></div>"
+        "line": "The composer builds the message. Drop a rough note into Help me write and the AI drafts your title and message; then pick a colour, add a photo and choose its shape, tune the event details, and watch the live family preview update as you go.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>New · Event</b> <span class=\"g\">Composer</span></div></div><div class=\"fl\">✨ HELP ME WRITE</div><div class=\"field ph\">Races, medals and a picnic on the meadow — all welcome…</div><div class=\"row2\"><div><div class=\"fl\">COST (FEEDS THE AI)</div><div class=\"field\">£4</div></div><div><div class=\"fl\">LENGTH</div><div class=\"chips\"><span class=\"ochip\">Short</span><span class=\"ochip\">Medium ✓</span><span class=\"ochip\">Long</span></div></div></div><div class=\"fl\">COLOUR</div><div class=\"chips\"><span class=\"ochip\">Auto ✓</span><span class=\"ochip\">🟣</span><span class=\"ochip\">🟢</span><span class=\"ochip\">🩷</span></div><div class=\"fl\">TITLE</div><div class=\"field\">Summer Sports Day 🏅</div><div class=\"fl\">MESSAGE</div><div class=\"field\">Join us on the meadow for races, medals and a picnic — all welcome!</div><div class=\"row2\"><div><div class=\"fl\">DATE / TIME</div><div class=\"field\">18 Jul 2026 · 09:30</div></div><div><div class=\"fl\">IMAGE SHAPE</div><div class=\"chips\"><span class=\"ochip\">Full ✓</span><span class=\"ochip\">Wide</span><span class=\"ochip\">Portrait</span><span class=\"ochip\">Square</span></div></div></div><div class=\"fl\">PREVIEW — WHAT FAMILIES SEE</div><div class=\"prevcard\"><div class=\"ph\">🏅</div><div class=\"pb\"><div class=\"pt\">Summer Sports Day 🏅</div><div class=\"pm\">Join us on the meadow for races, medals and a picnic — all welcome!</div></div></div></div>"
+      },
+      {
+        "label": "Design a newsletter",
+        "stage": "Newsletter",
+        "line": "For a richer, branded update, tap Design a newsletter — drag in sections like a welcome, dates for the diary or a booking offer, pick a colour theme, and your provider name, logo and contact details fill the banner and footer for you.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>✨ Newsletter builder</b> <span class=\"g\">Autumn Term Update</span></div></div><div class=\"fl\">SECTIONS</div><div class=\"chips\"><span class=\"ochip\">👋 Welcome</span><span class=\"ochip\">📅 Dates for the diary</span><span class=\"ochip\">🎟️ Booking offer</span><span class=\"ochip\">📸 Photo gallery</span></div><div class=\"fl\">THEME</div><div class=\"chips\"><span class=\"ochip\">Navy</span><span class=\"ochip\">Teal ✓</span><span class=\"ochip\">Berry</span></div><div class=\"hint\">Your provider name, logo and contact details auto-fill the banner and footer — every field stays editable, then save to the page, email, or both.</div></div>"
       },
       {
         "label": "Who sees it",
         "stage": "Audience",
         "line": "Next you decide who's actually notified — all families or just chosen listings' parents — then name it for your own search, pop it in a folder and flip the toggles that control how prominent it is.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHO SEES IT — CHOSEN LISTINGS' FAMILIES</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Woodpeckers Holiday Camp</div><div class=\"chk\"><span class=\"chkbx\">✓</span>After-School Football Club</div><div class=\"row2\"><div><div class=\"fl\">SAVE AS</div><div class=\"field\">Sports Day 2026</div></div><div><div class=\"fl\">FOLDER</div><div class=\"field\">Summer 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">📌 Pin to top ✓</span><span class=\"ochip\">♥ Allow reactions ✓</span></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHO SEES IT — CHOSEN LISTINGS' FAMILIES</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Woodpeckers Holiday Camp</div><div class=\"chk\"><span class=\"chkbx\">✓</span>After-School Football Club</div><div class=\"row2\"><div><div class=\"fl\">SAVE AS</div><div class=\"field\">Sports Day 2026</div></div><div><div class=\"fl\">FOLDER</div><div class=\"field\">Summer 2026</div></div></div><div class=\"chips\"><span class=\"ochip\">Pin to top ✓</span><span class=\"ochip\">Allow reactions ✓</span></div></div>"
       },
       {
         "label": "When & where to send",
         "stage": "Publish",
-        "line": "Finally, choose the timing — publish now, schedule, or save a draft — and the destination, since the same post can also leave as an image, a printable PDF or an email, with a five-second cancellable countdown before anything live reaches families.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHEN (FOR THE NEWSFEED)</div><div class=\"chips\"><span class=\"ochip\">Publish now</span><span class=\"ochip\">Schedule ✓</span><span class=\"ochip\">Save as draft</span></div><div class=\"field\">Fri 17 Jul 2026 · 08:00</div><div class=\"chips\"><span class=\"ochip\">⬇ Image</span><span class=\"ochip\">⬇ PDF</span><span class=\"ochip\">✉ Email</span></div><div class=\"row2\"><div><span class=\"btn amber\">Schedule</span></div><div><span class=\"btn\">Post now → 5s ✋ Cancel</span></div></div></div>"
+        "line": "Finally, choose the timing — publish now, schedule, or save a draft. Publishing now to the page gives you a five-second cancellable countdown before it reaches families. The same post can also go out as an image, a printable PDF, or an email, and Email files a draft then hands it to the Email composer ready to send.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHEN (FOR THE NEWSFEED)</div><div class=\"chips\"><span class=\"ochip\">Publish now ✓</span><span class=\"ochip\">Schedule</span><span class=\"ochip\">Save as draft</span></div><div class=\"fl\">OR SEND IT ANOTHER WAY</div><div class=\"chips\"><span class=\"ochip\">⬇ Image</span><span class=\"ochip\">⬇ PDF</span><span class=\"ochip\">✉ Email</span></div><div class=\"hint\">✉ Email files a draft and opens the Email composer with the subject and the designed message ready to send.</div><div class=\"row2\"><div></div><div><span class=\"btn amber\">Post to Newsfeed → 5s ✋ Cancel</span></div></div></div>"
       },
       {
         "label": "Read the feed",
         "stage": "Track",
-        "line": "Every post lands in the feed as a card showing where it went and when, plus the engagement that tells you it landed — seen counts, reactions and, for events, the Going / Maybe / No RSVP tally.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Sports Day 🏅</b> <span class=\"chip2\">📅 Event</span><span class=\"chip2\">📌 Pinned</span></div></div><div class=\"hint\">✅ Shared to Woodpeckers Holiday Camp · 14 Jul, 08:12 · posted by Priya Sharma</div><div class=\"chips\"><span class=\"ochip\">📅 18 Jul · 09:30 · Meadow Park</span><span class=\"ochip\">🎟️ Reserve a spot</span></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"g\">Seen 42 · ♥ 11</span> <span class=\"tkp\">Going 18 · Maybe 5 · No 2</span></div></div></div>"
+        "line": "Every post lands in the feed as a card showing where it went and when, plus the engagement that tells you it landed — seen counts, reactions and, for events, the Going, Maybe, No RSVP tally.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Sports Day 🏅</b> <span class=\"chip2\">Event</span><span class=\"chip2\">Pinned</span></div></div><div class=\"hint\">✅ Shared to Woodpeckers Holiday Camp · 14 Jul, 08:12 · posted by Priya Sharma</div><div class=\"chips\"><span class=\"ochip\">📅 18 Jul · 09:30 · Meadow Park</span></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"g\">Seen 42 · ♥ 11</span> <span class=\"tkp\">Going 18 · Maybe 5 · No 2</span></div></div></div>"
       },
       {
         "label": "Find, file & manage",
         "stage": "Organise",
-        "line": "As the board fills up over the seasons, the filter pills, search, folders and each card's pin / edit / duplicate / archive controls keep it tidy — and Duplicate lets you reuse last year's post rather than rewriting it.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Drafts</span><span class=\"ochip\">Scheduled ✓</span><span class=\"ochip\">Archived</span><span class=\"ochip\">🔍 Search</span></div><div class=\"fl\">FOLDER — SUMMER 2026</div><div class=\"chips\"><span class=\"ochip\">Posts</span><span class=\"ochip\">Newsletters ✓</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sports Day (last year)</b> <span class=\"g\">📁 · Pin · Edit</span><span class=\"tkp\">⧉ Duplicate</span></div></div><div class=\"hint\">Duplicate makes a fresh draft copy; deleting a folder just moves its posts to Unfiled.</div></div>"
+        "line": "As the board fills up over the seasons, the filter pills, search, folders and each card's pin, edit, duplicate and archive controls keep it tidy — and Duplicate lets you reuse last year's post rather than rewriting it.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Newsletter</span><span class=\"ochip\">Drafts</span><span class=\"ochip\">Scheduled ✓</span><span class=\"ochip\">Archived</span><span class=\"ochip\">🔍 Search</span></div><div class=\"fl\">FOLDER — SUMMER 2026</div><div class=\"chips\"><span class=\"ochip\">Posts</span><span class=\"ochip\">Newsletters ✓</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sports Day (last year)</b> <span class=\"g\">📁 · Pin · Edit</span><span class=\"tkp\">Duplicate</span></div></div><div class=\"hint\">Duplicate makes a fresh draft copy; deleting a folder just moves its posts to Unfiled.</div></div>"
       }
     ]
   },
   "staff": {
     "title": "Staff",
-    "introLine": "This is your team HQ.",
-    "doneLine": "All sorted.",
+    "introLine": "This is where you bring people onto your team — by invite.",
+    "doneLine": "And that's the whole page — invite someone, share the link, done.",
     "steps": [
       {
-        "label": "Tabs & Invite staff",
+        "label": "Invite someone",
         "stage": "Getting started",
-        "line": "Everything lives under five tabs, and the big amber button pings a new coach an invite that quietly attaches all the certificates and onboarding their role needs.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👥 Team</span><span class=\"ochip\">📣 Recruitment</span><span class=\"ochip\">✅ Compliance</span><span class=\"ochip\">🎓 Roles</span><span class=\"ochip\">⚙️ Settings</span></div><div class=\"row2\"><div><div class=\"fl\">FULL NAME</div><div class=\"field\">Jordan Lee</div></div><div><div class=\"fl\">ROLE</div><div class=\"field\">Activity Leader</div></div></div><div class=\"fl\">ATTACHED ON INVITE</div><div class=\"chips\"><span class=\"chip2\">DBS required</span><span class=\"chip2\">Safeguarding</span><span class=\"chip2\">Onboarding checklist</span></div><span class=\"btn amber\">+ Invite staff</span><div class=\"hint\">Invite sent to Jordan Lee — shows as Pending until they log in and self-complete onboarding.</div></div>"
+        "line": "Type someone's email and ActivityOS sends them an invite straight away; leave it blank and it just makes a link you can copy and share yourself. Company accounts can also invite a whole franchise, and that button stays hidden for everyone else.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEND AN INVITE</div><div class=\"field ph\">their@email.com (optional)</div><div class=\"chips\"><span class=\"btn amber\">+ Invite a franchise</span><span class=\"btn\">+ Invite staff</span></div><div class=\"hint\">Add an email and the invite is emailed to them; leave it blank to just create a link to share by hand. The 'Invite a franchise' button only appears on company accounts.</div></div>"
       },
       {
-        "label": "Team tab",
-        "stage": "Your team",
-        "line": "The default landing view answers who's on your team, what they cost and who needs a nudge — a KPI strip up top and a weekly rota that feeds straight into Timesheets & Payroll.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">5 Team · 2 venues</span><span class=\"chip2\">4 Active</span><span class=\"chip2\">1 Onboarding</span><span class=\"chip2\">1 Compliance action</span><span class=\"chip2\">148 h Scheduled</span><span class=\"chip2\">£2,140 Est. wage</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Hiba Rahman</b> <span class=\"g\">Lead Coach · Mon–Fri 9–5 · 40h</span><span class=\"tkp\">£16/hr</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lacie Bennett</b> <span class=\"g\">Activity Leader · Mon/Tue/Thu/Fri 9–3:30</span><span class=\"tkp\">£13/hr</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Tom Reeves</b> <span class=\"g\">Assistant · Invited</span><span class=\"tkp\">£11/hr</span></div></div><div class=\"hint\">The recurring roster feeds Timesheets & Payroll automatically.</div></div>"
+        "label": "Your invite links",
+        "stage": "Invites",
+        "line": "Every invite you've made is listed here with its role, a short reference code and the date. A pending one keeps a Copy link button so you can share it by hand; the moment someone signs up with it, it flips to Used.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">INVITE LINKS</div><div class=\"tkt\"><div class=\"tkhd\"><b>staff</b> <span class=\"g\">…a3f9c2b1 · 2026-08-05 · to jordan@apfcamps.co.uk</span><span class=\"tkp\">Pending</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>staff</b> <span class=\"g\">…7d2e5b90 · 2026-07-22</span><span class=\"tkp\">Used</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>franchise</b> <span class=\"g\">…9b04f1a8 · 2026-07-18</span><span class=\"tkp\">Pending</span></div></div><div class=\"chips\"><span class=\"btn\">Copy link</span></div><div class=\"hint\">Pending invites show Copy link; used invites just show 'Used'.</div></div>"
       },
       {
-        "label": "Compliance tab",
-        "stage": "Compliance",
-        "line": "The one surface where every certificate is read, chased and approved — a status badge per cert, an expiry date that warns you in good time, and a pending-approvals queue that gates whether staff can go Active.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">HIBA RAHMAN</div><div class=\"chips\"><span class=\"chip2\">DBS ✓ Approved</span><span class=\"chip2\">Safeguarding ✓ Valid</span><span class=\"chip2\">Paediatric First Aid ⚠ Exp 30d</span></div><div class=\"fl\">EXPIRY</div><div class=\"field\">02 Sep 2026</div><div class=\"tkt\"><div class=\"tkhd\"><b>Tom Reeves</b> <span class=\"g\">Assistant · DBS awaiting upload</span></div></div><div class=\"chips\"><span class=\"btn amber\">Approve certificates</span><span class=\"btn\">Send reminder</span></div></div>"
-      },
-      {
-        "label": "Roles tab",
-        "stage": "Rules",
-        "line": "This is the rules engine behind the whole page — each role maps to the certificates and onboarding it demands, and nobody reaches Active until both are ticked off.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Manager / Lead Coach</b> <span class=\"g\">DBS + Safeguarding + Paediatric First Aid + full onboarding</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Coach / Activity Leader</b> <span class=\"g\">DBS + Safeguarding</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Assistant</b> <span class=\"g\">DBS</span></div></div><div class=\"fl\">ONBOARDING — 1 OUTSTANDING</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Tom Reeves · Assistant · 1/3 approved</div><span class=\"btn amber\">Approve all</span></div>"
-      },
-      {
-        "label": "Assignments",
-        "stage": "Scheduling",
-        "line": "This is how coaches actually land on specific camps and clubs — each assignment ties a listing, venue and dates together and drops you into a schedule to add or swap staff onto its days.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Summer Holiday Camp</b> <span class=\"g\">28 Jul–8 Aug · All venues</span></div></div><div class=\"chips\"><span class=\"chip2\">Hiba Rahman</span><span class=\"chip2\">Lacie Bennett</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Football Intensive</b> <span class=\"g\">11 Aug–15 Aug · Milton Keynes</span></div></div><div class=\"chips\"><span class=\"chip2\">Zaph Okafor</span></div><div class=\"chips\"><span class=\"btn amber\">+ New assignment</span><span class=\"btn\">Open schedule →</span></div></div>"
-      },
-      {
-        "label": "Settings tab",
-        "stage": "Configuration",
-        "line": "The quiet config home you set once — how many days before expiry everyone gets alerted, and each certificate type's renewal cadence that drives all the chasing across the page.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">EXPIRY ALERT LEAD TIME</div><div class=\"field\">30 days</div><div class=\"fl\">CERTIFICATE TYPES</div><div class=\"chips\"><span class=\"chip2\">DBS · renew 36 mo</span><span class=\"chip2\">Safeguarding · renew 24 mo</span><span class=\"chip2\">Paediatric First Aid · renew 36 mo</span></div><div class=\"hint\">Role requirements shown read-only below, mirroring the Roles mapping.</div></div>"
+        "label": "Where the rules live",
+        "stage": "Setup",
+        "line": "The checks behind the scenes aren't set here. Whether a valid DBS and in-date certificates are required, plus the friendly note added to every invite email, all live in Setup under Staff and workforce, and are enforced for you in the background.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETUP · STAFF AND WORKFORCE</div><div class=\"row2\"><div><div class=\"fl\">REQUIRE A VALID DBS</div><div class=\"field\">Yes</div></div><div><div class=\"fl\">KEY CERTIFICATES IN DATE</div><div class=\"field\">Yes</div></div></div><div class=\"fl\">NOTE ADDED TO INVITE EMAILS</div><div class=\"field\">Looking forward to having you on the team!</div><div class=\"hint\">Set these once in Setup — the checks are enforced by the backend and the note is added to every staff invite.</div></div>"
       }
     ]
   },
@@ -726,32 +740,38 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Workload cards",
         "stage": "Overview",
-        "line": "A quick row of cards up top so you can see your whole workload — and anything that's slipped — at a single glance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR WORKLOAD</div><div class=\"chips\"><span class=\"ochip\">🔵 Open · 4</span><span class=\"ochip\">🔴 Overdue · 1</span><span class=\"ochip\">🟠 Due this week · 3</span></div><div class=\"hint\">The 'Unassigned' card is manager-only — as a freelancer you get just these three.</div></div>"
+        "line": "A quick row of cards up top so you can see your whole workload — and anything that's slipped — at a single glance, and tap any card to filter the list down to just those tasks.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR WORKLOAD</div><div class=\"chips\"><span class=\"ochip\">Open · 4</span><span class=\"ochip\">Overdue · 1</span><span class=\"ochip\">Due this week · 3</span></div><div class=\"hint\">The 'Unassigned' card is manager-only — as a freelancer you get just these three.</div></div>"
       },
       {
-        "label": "One inbox · Acting for",
+        "label": "One inbox",
         "stage": "One inbox",
-        "line": "The clever bit for solo coaches — every company's tasks land together, each badged with its provider, and whatever you add gets filed to whoever you're currently acting for.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ONE INBOX</div><div class=\"field\">One inbox across every company you work for</div><div class=\"fl\">ACTING FOR</div><div class=\"field\">APF Camps ▾</div><div class=\"chips\"><span class=\"chip2\">APF Camps</span><span class=\"chip2\">Riverside Sports</span><span class=\"chip2\">Bright Stars</span></div><div class=\"hint\">New tasks you add are filed to this company.</div></div>"
+        "line": "The clever bit for solo coaches — tasks from every company you coach for land in one inbox, each row badged with the provider it belongs to, so nothing gets lost between gigs.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ONE INBOX</div><div class=\"field\">One inbox across every company you work for</div><div class=\"tkt\"><div class=\"tkhd\"><b>Chase parent consent form</b> <span class=\"tkp\">APF Camps</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Set up Week 3 registers</b> <span class=\"tkp\">Riverside Sports</span></div></div></div>"
       },
       {
         "label": "Quick-add bar",
         "stage": "Capture",
-        "line": "Just type it in plain English — @ picks the assignee, ! sets priority, # links a camp or booking, and words like 'tomorrow' set the due date automatically.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ADD A TASK</div><div class=\"field ph\">Add a task…  try: Brief coaches tomorrow @Jess !high #Riverside</div><div class=\"field\">Chase parent consent form tomorrow @You !high #Easter</div><div class=\"chips\"><span class=\"chip2\">@You</span><span class=\"chip2\">!High</span><span class=\"chip2\">#Easter</span><span class=\"chip2\">Tomorrow</span></div><div class=\"hint\">@ assignee · ! priority · # link a camp/booking · today / tomorrow / Mon set the due date</div></div>"
+        "line": "Just type it in plain English — an exclamation mark sets priority, a hash links a camp or booking, and words like tomorrow set the due date automatically.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ADD A TASK</div><div class=\"field ph\">Add a task…  try: Chase consent form tomorrow !high #Easter</div><div class=\"field\">Chase parent consent form tomorrow !high #Easter</div><div class=\"chips\"><span class=\"chip2\">!High</span><span class=\"chip2\">#Easter</span><span class=\"chip2\">Tomorrow</span><span class=\"btn\">+ New task</span></div><div class=\"hint\">! priority · # link a camp/booking · today / tomorrow / Mon set the due date. '+ New task' opens the full form.</div></div>"
       },
       {
         "label": "My Tasks list",
         "stage": "My tasks",
         "line": "The heart of the page — your tasks grouped into Overdue, Today and Upcoming, each row showing its priority, linked camp or booking, and when it's due.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">OVERDUE · 1</div><div class=\"tkt\"><div class=\"tkhd\"><b>Upload renewed DBS certificate</b> <span class=\"g\">🛡️ Compliance · ⚡auto · Riverside Sports</span><span class=\"tkp\">2d ago</span></div></div><div class=\"fl\">TODAY · 1</div><div class=\"tkt\"><div class=\"tkhd\"><b>Confirm session plan — football week</b> <span class=\"g\">🏕️ Easter · Wk1 · APF Camps</span><span class=\"tkp\">Today</span></div></div><div class=\"fl\">UPCOMING · 2</div><div class=\"tkt\"><div class=\"tkhd\"><b>Send invoice for last week</b> <span class=\"g\">🧾 Wk ending 7 Jun · Bright Stars</span><span class=\"tkp\">Tomorrow</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">OVERDUE · 1</div><div class=\"tkt\"><div class=\"tkhd\"><b>Upload renewed DBS certificate</b> <span class=\"g\">🛡️ Compliance · auto · Riverside Sports</span><span class=\"tkp\">2d ago</span></div></div><div class=\"fl\">TODAY · 1</div><div class=\"tkt\"><div class=\"tkhd\"><b>Confirm session plan — football week</b> <span class=\"g\">⛺ Easter · Wk1 · APF Camps</span><span class=\"tkp\">Today</span></div></div><div class=\"fl\">UPCOMING · 2</div><div class=\"tkt\"><div class=\"tkhd\"><b>Send invoice for last week</b> <span class=\"g\">🎫 Booking · Wk ending 7 Jun · Bright Stars</span><span class=\"tkp\">Tomorrow</span></div></div></div>"
       },
       {
         "label": "Board & detail drawer",
         "stage": "Board",
-        "line": "Flip to the Board to drag tasks between columns, or click any row to open the drawer and tweak the detail — assignee, due date, priority, linked record and all.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">BOARD</div><div class=\"chips\"><span class=\"ochip\">Backlog · 1</span><span class=\"ochip\">To do · 2</span><span class=\"ochip\">In progress · 0</span><span class=\"ochip\">Done · 0</span></div><div class=\"fl\">SEND INVOICE FOR LAST WEEK</div><div class=\"row2\"><div><div class=\"fl\">ASSIGNEE</div><div class=\"field\">You</div></div><div><div class=\"fl\">DUE</div><div class=\"field\">Tomorrow</div></div></div><div class=\"row2\"><div><div class=\"fl\">PRIORITY</div><div class=\"field\">Medium</div></div><div><div class=\"fl\">LINKED TO</div><div class=\"field\">Booking · Wk ending 7 Jun</div></div></div></div>"
+        "line": "Flip to the Board to drag tasks between columns, or click any row to open the drawer and tweak the detail — due date, priority, status and the linked record, plus checkable subtasks and comments.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">BOARD</div><div class=\"chips\"><span class=\"ochip\">Backlog · 1</span><span class=\"ochip\">To do · 2</span><span class=\"ochip\">In progress · 0</span><span class=\"ochip\">Done · 0</span></div><div class=\"fl\">SEND INVOICE FOR LAST WEEK</div><div class=\"row2\"><div><div class=\"fl\">DUE</div><div class=\"field\">Tomorrow</div></div><div><div class=\"fl\">PRIORITY</div><div class=\"field\">Medium</div></div></div><div class=\"row2\"><div><div class=\"fl\">STATUS</div><div class=\"field\">To do</div></div><div><div class=\"fl\">LINKED TO</div><div class=\"field\">🎫 Booking · Wk ending 7 Jun</div></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Pull hours from the register</div><div class=\"chips\"><span class=\"chip2\">Finance</span><span class=\"chip2\">2 comments</span></div></div>"
+      },
+      {
+        "label": "Calendar & mirror",
+        "stage": "Calendar",
+        "line": "See everything by date in the Calendar tab, and optionally mirror any task onto your Events calendar — its labels, subtasks and comments travel across so the whole team sees it there too.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CALENDAR · AUGUST</div><div class=\"chips\"><span class=\"ochip\">Day</span><span class=\"ochip\">Week</span><span class=\"ochip\">Month</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Confirm session plan</b> <span class=\"g\">Wed 12 · football week</span><span class=\"tkp\">🎫</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>On the Events calendar — labels, subtasks and comments carried across</div></div>"
       }
     ]
   },
@@ -764,13 +784,13 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Trips dashboard",
         "stage": "Overview",
         "line": "Your home base for every visit — each trip is a readiness card so you can see at a glance which ones are safe to run and which are still blocked.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Upcoming 3</span><span class=\"chip2\">This month 2</span><span class=\"chip2\">Need action 1</span><span class=\"chip2\">Total 7</span></div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Planned</span><span class=\"ochip\">Completed</span><span class=\"ochip\">Cancelled</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>🚌 Woodland Wonders, Epping Forest</b> <span class=\"g\">Approved — ready to go</span><span class=\"tkp\">86%</span></div></div><div class=\"chips\"><span class=\"chip2\">18 children</span><span class=\"chip2\">3 staff · 1:6</span><span class=\"chip2\">✓ RA signed</span><span class=\"chip2\">✍️ Consent 18/18</span><span class=\"chip2\">💳 Paid 16/18</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>🐠 Sea Life Centre, Brighton</b> <span class=\"g\">In planning</span><span class=\"tkp\">57%</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Upcoming 3</span><span class=\"chip2\">This month 2</span><span class=\"chip2\">Need action 1</span><span class=\"chip2\">Total 7</span></div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Planned</span><span class=\"ochip\">Completed</span><span class=\"ochip\">Cancelled</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Woodland Wonders, Epping Forest</b> <span class=\"g\">Approved — ready to go</span><span class=\"tkp\">86%</span></div></div><div class=\"chips\"><span class=\"chip2\">18 children</span><span class=\"chip2\">3 staff · 1:6</span><span class=\"chip2\">✓ RA signed</span><span class=\"chip2\">✍️ Consent 18/18</span><span class=\"chip2\">💳 Paid 16/18</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sea Life Centre, Brighton</b> <span class=\"g\">In planning</span><span class=\"tkp\">57%</span></div></div><div class=\"chips\"><span class=\"chip2\">12 children</span><span class=\"chip2\">2 staff · 1:8</span><span class=\"chip2\">RA draft</span><span class=\"chip2\">✍️ Consent 7/12</span><span class=\"chip2\">sign-off pending</span></div></div>"
       },
       {
         "label": "The 7-step planner",
         "stage": "Planner",
         "line": "Opening a trip swaps in the planner — a big readiness ring, six live chips and a rail of seven numbered steps that turn green as you complete them.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEA LIFE CENTRE, BRIGHTON · READINESS 57%</div><div class=\"chips\"><span class=\"chip2\">Children 12</span><span class=\"chip2\">Staff 2</span><span class=\"chip2\">Ratio 1:8</span><span class=\"chip2\">Consents 7/12</span><span class=\"chip2\">RA Draft</span><span class=\"chip2\">Sign-off Pending</span></div><div class=\"chips\"><span class=\"ochip\">1 ✓ Trip details</span><span class=\"ochip\">2 Risk assessment</span><span class=\"ochip\">3 Staffing & ratio</span><span class=\"ochip\">4 Consent & payment</span><span class=\"ochip\">5 Sign-off</span><span class=\"ochip\">6 Head counts</span><span class=\"ochip\">7 Debrief</span></div><div class=\"hint\">Ready to submit · Track changes ON · one step shows at a time with a Previous / Next pager.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEA LIFE CENTRE, BRIGHTON · READINESS 57%</div><div class=\"chips\"><span class=\"chip2\">Children 12</span><span class=\"chip2\">Staff 2</span><span class=\"chip2\">Ratio 1:8</span><span class=\"chip2\">Consents 7/12</span><span class=\"chip2\">RA Draft</span><span class=\"chip2\">Sign-off Pending</span></div><div class=\"chips\"><span class=\"ochip\">1 ✓ Trip details</span><span class=\"ochip\">2 Risk assessment</span><span class=\"ochip\">3 Staffing & ratio</span><span class=\"ochip\">4 Children, consent & payment</span><span class=\"ochip\">5 Sign-off</span><span class=\"ochip\">6 Head counts</span><span class=\"ochip\">7 Debrief</span></div><div class=\"hint\">In planning · Track changes ON · one step shows at a time with a Previous / Next pager.</div></div>"
       },
       {
         "label": "Risk assessment",
@@ -782,10 +802,10 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Staffing & off-site ratio",
         "stage": "Safety",
         "line": "Set your off-site policy and we work out how many staff you need — the banner only turns green once the ratio's met with a named lead and a first aider.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">18 children</span><span class=\"chip2\">3 staff</span><span class=\"chip2\">actual 1:6</span><span class=\"chip2\">policy 1:6 · need 3</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Lead · First aider</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Grace Bennett</b> <span class=\"g\">Activity leader · First aider</span></div></div><div class=\"chips\"><span class=\"ochip\">＋ Daniel Reid</span><span class=\"ochip\">＋ Chloe Turner</span></div><div class=\"hint\">✓ Off-site ratio met (1:6), with a named lead and a first aider.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">18 children</span><span class=\"chip2\">3 staff</span><span class=\"chip2\">actual 1:6</span><span class=\"chip2\">policy 1:6 · need 3</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Lead · First aider</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Grace Bennett</b> <span class=\"g\">Activity leader · First aider</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Daniel Reid</b> <span class=\"g\">Activity leader</span></div></div><div class=\"chips\"><span class=\"ochip\">＋ Chloe Turner</span></div><div class=\"hint\">✓ Off-site ratio met (1:6), with a named lead and a first aider.</div></div>"
       },
       {
-        "label": "Consent & payment",
+        "label": "Children, consent & payment",
         "stage": "Parents",
         "line": "Booked children flow straight in, so you can see who's consented, who still owes and who's not coming — then fire off a parent letter with a tap-to-pay button.",
         "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">FROM WHICH CAMP</div><div class=\"field\">Summer Multi-Sports Camp</div></div><div><div class=\"fl\">WHICH PASS</div><div class=\"field\">Full week + trips</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Olivia Hughes</b> <span class=\"g\">age 8 · Consented</span><span class=\"tkp\">Paid £14</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Jacob Ali</b> <span class=\"g\">age 7 · ⚠ EpiPen · Pending</span><span class=\"tkp\">Unpaid</span></div></div><div class=\"hint\">7 consented · 5 pending · 6/12 paid · letter 7/12 sent.</div><span class=\"btn amber\">💳 Pay £14.00 · by 20 Aug 2026</span></div>"
@@ -794,38 +814,50 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Sign-off & head counts",
         "stage": "On the day",
         "line": "The manager's approval is your go/no-go gate — and once it's green, the live head-count checkpoints let you confirm everyone's present at every stage.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Prepared by Priya Sharma</span><span class=\"chip2\">Checks: All clear</span></div><div class=\"hint\">Approved by Priya Sharma (Manager) · 09 Aug 2026, 14:32.</div><div class=\"tkt\"><div class=\"tkhd\"><b>Depart base</b> <span class=\"g\">✓ all 18 · 08:55</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Arrive venue</b> <span class=\"g\">✓ all 18 · 10:10</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lunch / midpoint</b> <span class=\"g\">expecting 18</span></div></div><span class=\"btn amber\">Confirm count</span></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">Prepared by Priya Sharma</span><span class=\"chip2\">Checks: All clear</span></div><div class=\"hint\">Approved by Priya Sharma (Manager) · 09 Aug 2026, 14:32.</div><div class=\"tkt\"><div class=\"tkhd\"><b>Depart base</b> <span class=\"g\">✓ all 18 · 08:55</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Arrive venue</b> <span class=\"g\">✓ all 18 · 10:10</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Lunch / midpoint</b> <span class=\"g\">18 on trip</span></div></div><span class=\"btn amber\">Confirm count</span></div>"
+      },
+      {
+        "label": "Return & debrief",
+        "stage": "Wrap up",
+        "line": "Back at base you log a debrief and close the trip — once every head count is done, one tap marks it returned and complete.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">DEBRIEF NOTES</div><div class=\"field\">Great day — all children engaged. One grazed knee, first aid given, parent told at pickup. Book the earlier coach next time.</div><span class=\"btn amber\">Mark trip returned & complete</span><div class=\"hint\">✓ Trip returned and closed — all children accounted for and handed back.</div></div>"
       }
     ]
   },
   "referrals": {
-    "title": "Refer a friend",
-    "introLine": "This is the little \"give credit, get credit\" page where families share their own link and earn store credit whenever a friend books for the first time.",
-    "doneLine": "And that's the lot — a friendly way for happy families to bring their friends along and pick up a bit of credit for the trouble.",
+    "title": "Referrals",
+    "introLine": "This is your referrals scoreboard — a running read-out of the families bringing you new bookings, what those bookings are worth, and what the rewards are costing you. It is a report, not a settings page.",
+    "doneLine": "And that is Referrals — see who is bringing you new families, what it is earning, and what the rewards cost. Change the offer itself over in Setup.",
     "steps": [
       {
-        "label": "Reward headline",
-        "stage": "The hook",
-        "line": "Right at the top we spell out the offer, and the reward amount is copy you've set per provider, so it isn't something families can change here.",
-        "bodyHtml": "<div class=\"frm\"><span class=\"chip2\">Refer a friend</span><div class=\"fl\">HEADING</div><div class=\"field\">Share &amp; earn</div><div class=\"hint\">Earn £5 credit when a friend books their first Summer Holiday Camp.</div></div>"
+        "label": "Hero and headline stats",
+        "stage": "Overview",
+        "line": "Right at the top a banner sums up your live offer — how much the friend saves and how much the referrer earns back — with three headline figures: friends booked, the revenue those bookings brought in, and how many families are referring. The reward amounts themselves are set over in Setup — tap Change settings to adjust them.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>🏆 Referrals</b> <span class=\"g\">£5 off for the friend, £5 back for the referrer</span><span class=\"btn\">⚙️ Change settings</span></div></div><div class=\"chips\"><span class=\"ochip\">Friends booked · 8</span><span class=\"ochip\">Brought in · £1,240</span><span class=\"ochip\">Referrers · 5</span></div></div>"
       },
       {
-        "label": "Referral link",
-        "stage": "The link",
-        "line": "Each family gets their own unique link, and a tap of Copy pops it on the clipboard with a cheery \"Referral link copied\" toast — this link is how a booking gets credited back to them.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR REFERRAL LINK</div><div class=\"field\">apf.camps/r/priya-9F3K</div><span class=\"btn amber\">Copy link</span><div class=\"hint\">Anyone who books through this link is matched to Priya's account.</div></div>"
+        "label": "Top 5 referrers",
+        "stage": "Who is referring",
+        "line": "This leaderboard ranks your five busiest referrers by the number of friends they have brought in, with the reward each has earned alongside. If your offer is a percentage, this shows the count of codes used instead of a pound figure.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">🏆 TOP 5 REFERRERS</div><div class=\"tkt\"><div class=\"tkhd\"><b>1 · Priya Sharma</b><span class=\"tkp\">3 · £15</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>2 · Amara Okafor</b><span class=\"tkp\">2 · £10</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>3 · Leah Bennett</b><span class=\"tkp\">1 · £5</span></div></div></div>"
       },
       {
-        "label": "Share channels",
-        "stage": "The link",
-        "line": "Just under the link sit two quick share buttons — Email and WhatsApp — so families can fire it off in a tap (that's the lot for now, no Facebook yet).",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SHARE VIA</div><div><span class=\"btn\">Email</span> <span class=\"btn\">WhatsApp</span></div><div class=\"hint\">Opening WhatsApp… drops the link straight into a message.</div></div>"
-      },
-      {
-        "label": "Reward tracker",
+        "label": "Impact and cost",
         "stage": "The payoff",
-        "line": "These three tiles let a family see how they're getting on — friends joined, credit banked, and anything still pending until that friend's first booking is actually paid.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Friends joined</b> <span class=\"g\">so far</span><span class=\"tkp\">2</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Credit earned</b> <span class=\"g\">in your wallet</span><span class=\"tkp\">£10</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Pending</b> <span class=\"g\">awaiting first booking</span><span class=\"tkp\">1</span></div></div></div>"
+        "line": "This strip weighs the win against the cost: the revenue from referred bookings, the discounts you handed out shown as a share of that revenue, and how many rewards have been redeemed versus how many are still owed. Here that is three of five rewards redeemed, with two still out and ten pounds owed.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">IMPACT</div><div class=\"row2\"><div class=\"tkt\"><b>£1,240</b><div class=\"hint\">bookings from referrals</div></div><div class=\"tkt\"><b>−£120</b><div class=\"hint\">discounts given · 10% of revenue</div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Rewards redeemed</b><span class=\"tkp\">3 / 5</span></div><div class=\"hint\">2 still out · £10 owed</div></div></div>"
+      },
+      {
+        "label": "Recent referrals",
+        "stage": "The detail",
+        "line": "Every referral is listed here — who referred whom, the date, what the friend spent and saved, a link through to their booking, and whether the referrer reward has been used yet. Search by name or booking, and sort by newest, top reward or top spend.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkhd\"><b>Recent referrals</b><span class=\"btn ghost\">🔍 Search name or booking…</span></div><div class=\"chips\"><span class=\"ochip\">Newest</span><span class=\"ochip\">Top reward</span><span class=\"ochip\">Top spend</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">referred</span> <b>Aisha Khan</b><span class=\"tkp\">£5</span></div><div class=\"hint\">12 Jul 2026 · friend spent £95 (saved £5)</div><span class=\"chip2\">View booking BK-1043 ›</span><span class=\"chip2\">✓ Reward redeemed</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Amara Okafor</b> <span class=\"g\">referred</span> <b>Tom Reilly</b><span class=\"tkp\">£5</span></div><div class=\"hint\">8 Jul 2026 · friend spent £60</div><span class=\"chip2\">no booking linked</span><span class=\"chip2\">Reward not yet used</span></div></div>"
+      },
+      {
+        "label": "Last 3 months",
+        "stage": "The trend",
+        "line": "A quick three-month bar chart shows friends booked each month with the revenue beneath, so you can see whether referrals are picking up.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LAST 3 MONTHS · friends booked</div><div class=\"chips\"><span class=\"ochip\">May · 1 · £60</span><span class=\"ochip\">Jun · 3 · £320</span><span class=\"ochip\">Jul · 4 · £860</span></div></div>"
       }
     ]
   },
@@ -843,20 +875,20 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "The code form",
         "stage": "Create",
-        "line": "This is the heart of it — name the code, pick one of three discount types, then optionally add a minimum spend, an expiry, a usage cap and which listings it applies to.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CODE</div><div class=\"field\">SUMMER25</div></div><div><div class=\"fl\">DISCOUNT TYPE</div><div class=\"field\">By a percentage</div></div></div><div class=\"row2\"><div><div class=\"fl\">PERCENT OFF</div><div class=\"field\">15%</div></div><div><div class=\"fl\">MIN SPEND (£)</div><div class=\"field\">60</div></div></div><div class=\"row2\"><div><div class=\"fl\">EXPIRY DATE</div><div class=\"field\">31 Aug 2026</div></div><div><div class=\"fl\">USAGE LIMIT</div><div class=\"field\">100</div></div></div><div class=\"fl\">APPLIES TO</div><div class=\"field\">Summer Multi-Sports Camp — Guildford</div></div>"
+        "line": "This is the heart of it — name the code or tap Generate to mint a fresh one, then pick how the money comes off: a percentage, a fixed amount off the booking, or an amount off for each child. Then optionally add a minimum spend, an expiry, a usage cap and which listings it applies to.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">CODE</div><div class=\"field\">SUMMER25</div></div><div><div class=\"fl\">DISCOUNT TYPE</div><div class=\"field\">By a percentage</div></div></div><div class=\"row2\"><div><div class=\"fl\">PERCENT OFF</div><div class=\"field\">15%</div></div><div><div class=\"fl\">MIN SPEND (£)</div><div class=\"field\">60</div></div></div><div class=\"row2\"><div><div class=\"fl\">EXPIRY</div><div class=\"field\">31 Aug 2026</div></div><div><div class=\"fl\">USAGE LIMIT</div><div class=\"field\">100</div></div></div><div class=\"fl\">APPLIES TO</div><div class=\"field\">Summer Multi-Sports Camp — Guildford</div></div>"
       },
       {
         "label": "Rule toggles",
         "stage": "Create",
         "line": "Two handy switches: cap a code to one use per family so a welcome offer stays a one-off, and stop a code stacking with any other at checkout.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>WELCOME10</b> <span class=\"g\">£10 off first booking</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Limit to one use per customer</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Can't be used with any other code</div><div class=\"hint\">Ticking these keeps a code single-use per family and stops it combining with sibling discounts.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>WELCOME10</b> <span class=\"g\">£10 off per booking</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Limit to one use per customer</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Can't be used with any other code</div><div class=\"hint\">Ticking these keeps a code single-use per family and stops it combining with sibling discounts.</div></div>"
       },
       {
         "label": "Reserve for a family or group",
         "stage": "Targeting",
         "line": "Keep a code public for anyone, or reserve it for one family or a saved group — reserving it messages and emails them and drops it straight into their Coupons area.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">RESERVE FOR ONE FAMILY</div><div class=\"field\">The Okafor family</div><div class=\"fl\">…OR A GROUP</div><div class=\"field ph\">No group</div><div class=\"hint\">Reserving auto-suggests OKAFOR2026, saves it, and emails them; left public it isn't emailed but shows in every family's Coupons banner.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">RESERVE FOR ONE FAMILY</div><div class=\"field\">Amara Okafor</div><div class=\"fl\">…OR A GROUP</div><div class=\"field ph\">No group</div><div class=\"hint\">Reserving auto-suggests OKAFOR2026, saves it, and emails them; left public it isn't emailed but shows in every family's Coupons banner.</div></div>"
       },
       {
         "label": "Parent groups",
@@ -868,7 +900,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "The code list",
         "stage": "Manage",
         "line": "Every code sits here as a card showing its value, status and redemption progress, so you can read how it's doing and pause, edit or delete it on the spot.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>SUMMER25</b> <span class=\"chip2\">15% off</span> <span class=\"g\">active · min £60 · 42/100 used · expires 31 Aug 2026</span><span class=\"btn\">Pause</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>OKAFOR2026</b> <span class=\"chip2\">£10 off</span> <span class=\"g\">🔒 The Okafor family only · 1 per customer · 0/1 used</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>EASTER20</b> <span class=\"chip2\">20% off</span> <span class=\"g\">expired · 18/50 used</span></div></div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>SUMMER25</b> <span class=\"chip2\">15% off</span> <span class=\"g\">active · min £60 · 42/100 used · expires 31 Aug 2026</span><span class=\"btn\">Pause</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>OKAFOR2026</b> <span class=\"chip2\">£10 off</span> <span class=\"g\">🔒 Amara Okafor only · 1 per customer · 0/1 used</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>EASTER20</b> <span class=\"chip2\">20% off</span> <span class=\"g\">expired · 18/50 used</span></div></div></div>"
       }
     ]
   }
