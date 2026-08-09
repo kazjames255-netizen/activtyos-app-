@@ -106,12 +106,14 @@ export function BlocksTour() {
       for (const n of pref) { const v = vs.find((x) => x.name === n) || vs.find((x) => x.name.includes(n)); if (v) return v; }
       return vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
     }
-    function fillVoices() {
-      if (!voiceSel || !hasSpeech) return;
+    function fillVoices(): boolean {
+      if (!voiceSel || !hasSpeech) return false;
       const vs = window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
-      if (!vs.length) return;
+      if (!vs.length) return false;
+      const cur = voiceSel.value;
       voiceSel.innerHTML = vs.map((v) => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
-      if (voice) voiceSel.value = voice.name;
+      voiceSel.value = cur || (voice ? voice.name : "");
+      return true;
     }
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
@@ -235,13 +237,18 @@ export function BlocksTour() {
       await line("Pop in the full price for your longest pass — say, a hundred and fifty pounds for the five-day. The shorter passes fill themselves in, worked out pro-rata, so a single day lands at thirty. And if you'd like, open a pass to fine-tune each timing — maybe a touch more for the longer day. Then hit Save pricing, and that's you, all done!"); await act5;
     }
 
-    if (hasSpeech) { voice = pickVoice(); fillVoices(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
-    if (voiceSel) voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) { soundOn = true; soundBtn.classList.add("on"); soundBtn.textContent = "🔊 Sound on"; } if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
+    let voicePoll = 0;
+    const pollIv = hasSpeech ? window.setInterval(() => { if (fillVoices() || ++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
+    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
+    if (voiceSel) {
+      voiceSel.onmousedown = () => { fillVoices(); };
+      voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) { soundOn = true; soundBtn.classList.add("on"); soundBtn.textContent = "🔊 Sound on"; } if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
+    }
     replayBtn.onclick = () => { run(); };
-    soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    soundBtn.onclick = () => { fillVoices(); soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
     run();
 
-    return () => { dead = true; token++; if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
+    return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
   }, []);
 
   return (
