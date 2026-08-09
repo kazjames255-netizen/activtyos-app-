@@ -77,14 +77,23 @@ export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace
 // reported while never delivering anything either — so history counts, the
 // `delivered` column and the e2e assertions stay meaningful about the code
 // path, without a single message leaving the building.
-const MAIL_LIVE = process.env.MAIL_LIVE === "1" || process.env.NODE_ENV === "production";
+// Opt-in ONLY — deliberately not implied by NODE_ENV. Every host sets
+// NODE_ENV=production, so the old rule meant the first staging deploy would
+// start mailing real parents from the scheduler sweeps and hard-bouncing the
+// e2e accounts (@activityos-test.com doesn't resolve). Sending has to be a
+// decision someone makes, not a side effect of deploying. The startup log
+// below states which mode is active, so "why did no mail arrive?" is one
+// glance away.
+const MAIL_LIVE = process.env.MAIL_LIVE === "1";
 const MAIL_ALLOWLIST = new Set(
   (process.env.MAIL_ALLOWLIST ?? "").split(/[,\s]+/).map((a) => a.trim().toLowerCase()).filter(Boolean),
 );
-if (!MAIL_LIVE) {
+if (MAIL_LIVE) {
+  console.log("[mail] LIVE — mail goes to real recipients. Scheduler sweeps will email actual parents.");
+} else {
   console.log(
     `[mail] NOT LIVE — only ${MAIL_ALLOWLIST.size ? [...MAIL_ALLOWLIST].join(", ") : "nobody"} will actually receive mail.`
-    + " Set MAIL_LIVE=1 in production, or MAIL_ALLOWLIST to test real delivery.",
+    + " Set MAIL_LIVE=1 to send for real, or MAIL_ALLOWLIST to receive at specific addresses.",
   );
 }
 const maySend = (to: string): boolean => MAIL_LIVE || MAIL_ALLOWLIST.has(to.trim().toLowerCase());
