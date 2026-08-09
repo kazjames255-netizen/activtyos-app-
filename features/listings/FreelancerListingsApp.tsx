@@ -1067,6 +1067,7 @@ function LocationsTab({
   const [adding, setAdding] = useState(false);
   const [nm, setNm] = useState("");
   const [addr, setAddr] = useState("");
+  const [pin, setPin2] = useState<{ lat: number; lng: number } | null>(null); // pending map pin from the finder
 
   const sel = local.venues.find((v) => v.id === selId) ?? local.venues[0] ?? null;
   const wh = whereHeading(local);
@@ -1074,9 +1075,10 @@ function LocationsTab({
   const addVenue = () => {
     if (nm.trim().length < 2) return;
     const id = uid();
-    patch((s) => ({ ...s, venues: [...s.venues, { id, name: nm.trim(), address: addr.trim() }] }));
+    patch((s) => ({ ...s, venues: [...s.venues, { id, name: nm.trim(), address: addr.trim(), ...(pin ? { lat: pin.lat, lng: pin.lng, zoom: 16 } : {}) }] }));
     setNm("");
     setAddr("");
+    setPin2(null);
     setAdding(false);
     setSelId(id);
   };
@@ -1162,19 +1164,23 @@ function LocationsTab({
           )}
 
           {adding ? (
-            <div className="mt-1 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5 sm:flex-row sm:items-end">
-              <div className="flex-1">
-                <FieldLabel>Venue name</FieldLabel>
-                <Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="e.g. Riverside Sports Hall" className="w-full" />
+            <div className="mt-1 flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
+              <AddressFinder onPick={(h) => { setAddr(tidyAddress(h.label)); setPin2({ lat: h.lat, lng: h.lng }); }} />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <FieldLabel>Venue name</FieldLabel>
+                  <Input value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="e.g. Riverside Sports Hall" className="w-full" />
+                </div>
+                <div className="flex-1">
+                  <FieldLabel>Address <span className="font-normal text-[var(--ink-3)]">— found or typed</span></FieldLabel>
+                  <Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Street, town, postcode" className="w-full" />
+                </div>
+                <div className="flex gap-1.5">
+                  <Button variant="primary" onClick={addVenue}>Add</Button>
+                  <Button onClick={() => { setAdding(false); setPin2(null); }}>Cancel</Button>
+                </div>
               </div>
-              <div className="flex-1">
-                <FieldLabel>Address</FieldLabel>
-                <Input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addVenue()} placeholder="Street, town, postcode" className="w-full" />
-              </div>
-              <div className="flex gap-1.5">
-                <Button variant="primary" onClick={addVenue}>Add</Button>
-                <Button onClick={() => setAdding(false)}>Cancel</Button>
-              </div>
+              {pin && <div className="text-[11px] font-semibold text-[#127a3e]">📍 Pin found — it&rsquo;ll show on the map once added.</div>}
             </div>
           ) : (
             <div className="mt-1 flex flex-wrap gap-1.5">
