@@ -1282,10 +1282,13 @@ function PricingCalculator({
   }
 
   // Display price for a pass row: master + flat overrides are what the operator
-  // typed (local); auto rows show the server-resolved price.
+  // typed (local). Auto rows compute LIVE from the typed master — same pro-rata
+  // formula as the server (perDay = master / longest-pass days) — so shorter
+  // passes update as you type, not only after Save.
   const passDisplayPrice = (passId: string, idx: number, resolvedPrice: number): number => {
     if (idx === 0) return num(masterPrice);
     if (passMode[passId] === "flat") return num(passFlat[passId] ?? "0");
+    if (calcOn) { const md = passes[0]?.days || 1; return Math.round((passes[idx]?.days ?? 0) * (num(masterPrice) / md) * 100) / 100; }
     return resolvedPrice;
   };
 
