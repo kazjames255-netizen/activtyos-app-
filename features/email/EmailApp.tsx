@@ -363,10 +363,14 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
   const [host, setHost] = useState<string | null>(null);
+  const [open, setOpen] = useState(false); // the "Setting up your email" dropdown — collapsed by default
   const { settings, save } = useSettings();
   const load = useCallback(() => { apiGet<Mailbox>("/api/emails/mailbox").then(setMb).catch(() => {}); }, []);
   useEffect(load, [load]);
   useRealtime(["emailMessages"], load);
+  // Auto-open when Gmail's confirmation code lands, or when the provider is
+  // mid-setup for a host — those are the moments the steps must be on screen.
+  useEffect(() => { if (mb?.pendingVerification || host) setOpen(true); }, [mb?.pendingVerification, host]);
 
   // Dismissed from the Inbox, but never from Settings — that's where someone
   // goes to look for it again, so hiding it there would strand them.
@@ -401,11 +405,14 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   // A pending Gmail code always wins: it's time-sensitive, it only exists
   // here, and someone connecting a SECOND mailbox already has mail arriving.
   if (live && !host && !mb.pendingVerification) {
+    // Set up — the dropdown has done its job. It vanishes from the Inbox
+    // entirely; Settings keeps a compact confirmation + a way back in.
+    if (context === "inbox") return null;
     return (
       <div data-ui="mailbox-setup" className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#cdeacd] bg-[#f3fbf3] px-4 py-2.5">
-        <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your emails are coming through</span>
+        <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your email is connected</span>
         <code data-ui="inbound-address" className="rounded-md bg-white px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
-        <span className="text-[11.5px] text-[var(--ink-3)]">Last one {when(mb.lastAt ?? undefined)}</span>
+        <span className="text-[11.5px] text-[var(--ink-3)]">Last message {when(mb.lastAt ?? undefined)}</span>
         <button type="button" onClick={() => setHost("outlook")} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
       </div>
     );
@@ -413,22 +420,28 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
 
   return (
     <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#dbe6fb] bg-white">
-      <div className="border-b border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1 text-[15px] font-extrabold text-[#16306e]">📥 See the emails parents send you, here</div>
-          {context === "inbox" && (
-            <button type="button" onClick={() => setDismissed(true)} title="Hide this — you can bring it back from Email → Settings"
-              className="-mr-1 -mt-0.5 flex-none rounded-lg px-2 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-white hover:text-[var(--ink)]">×</button>
-          )}
-        </div>
-        <div className="mt-0.5 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
+      {/* The dropdown header — always visible; a click reveals the steps. */}
+      <div className="flex items-center gap-2 bg-[#f4f8ff] px-4 py-3">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          <span className="text-[16px]">📧</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-extrabold text-[#16306e]">Setting up your email</span>
+            <span className="block text-[11.5px] leading-snug text-[var(--ink-3)]">See parents&rsquo; replies in this Inbox — about two minutes, once. {live ? <b className="text-[#127a3e]">✓ almost there</b> : "Tap to see how."}</span>
+          </span>
+          <span className="flex-none text-[12px] font-bold text-[var(--ink-3)]">{open ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {context === "inbox" && (
+          <button type="button" onClick={() => setDismissed(true)} title="Hide this — you can bring it back from Email → Settings"
+            className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-white hover:text-[var(--ink)]">×</button>
+        )}
+      </div>
+
+      {!open ? null : <div className="border-t border-[#dbe6fb] px-4 py-3">
+        <div className="mb-3 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
           Right now this Inbox only shows email sent <b>from</b> ActivityOS. Add one setting in your own email
           — it takes about two minutes, once — and everything parents send you shows up here too.
           Your email keeps working exactly as it does now, and you keep your own copy of everything.
         </div>
-      </div>
-
-      <div className="px-4 py-3">
         {/* Step 1 — the address. Always visible: it's what every route needs. */}
         <div className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 1 — copy your ActivityOS address</div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -502,7 +515,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
