@@ -8,6 +8,7 @@ import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks as HowItWorksPanel } from "@/components/HowItWorks";
+import { ListingTour } from "./ListingTour";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
@@ -216,26 +217,8 @@ async function putLibrary(s: LocalState): Promise<void> {
   await api("/api/library", { method: "PUT", body: JSON.stringify({ ...s, addons }) });
 }
 
-function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
-  const jump = "font-bold text-[var(--brand-ink,#1d3a8f)] underline underline-offset-2";
-  return (
-    <HowItWorksPanel
-      video="Building a listing end to end: categories and locations first, then the ten steps, preview, publish."
-      minutes="3 min"
-    >
-      <p className="mb-2">
-        A listing is one thing you sell — a holiday camp, a weekly club, a one-off session. The
-        builder walks you through it and saves as you go; nothing is live until you publish.
-      </p>
-      <p className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
-        <b>Set up your </b>
-        <button type="button" onClick={() => onTab("categories")} className={jump}>categories</button>
-        <b> and </b>
-        <button type="button" onClick={() => onTab("locations")} className={jump}>locations</button>
-        <b> first</b> — you pick from those lists inside the builder.
-      </p>
-    </HowItWorksPanel>
-  );
+function HowItWorks(_props: { onTab: (t: Tab) => void }) {
+  return <HowItWorksPanel tour={<ListingTour />} />;
 }
 
 /** Freelancer Listings — manual layout, Phase A. */
