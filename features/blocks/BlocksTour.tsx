@@ -5,18 +5,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving "watch me build it" demo for the Sessions & blocks page. A
 // fake cursor moves to each field, types the values in, and clicks the
-// buttons — periods → passes → block → pricing — so a new operator sees
-// exactly how it's done. Pure presentation (no real data touched).
+// buttons — make a period, make a pass, tap "+ Add to block" on each, name
+// the block, then "Move to Block Library". Mirrors the real screens exactly.
+// Pure presentation (no real data touched).
 // ─────────────────────────────────────────────────────────────────────────
 
-const PERIODS = [
-  { key: "p1", nm: "Main day · 8am–3pm", mt: "8:00 AM – 3:00 PM" },
-  { key: "p2", nm: "Early drop-off", mt: "7:30 AM – 9:00 AM" },
-];
-const PASSES = [
-  { key: "x1", nm: "5-day week pass", mt: "5 days" },
-  { key: "x2", nm: "Single day", mt: "1 day" },
-];
+const PERIOD = { key: "p1", nm: "8am-3pm", mt: "8:00 AM – 3:00 PM" };
+const PASS = { key: "x1", nm: "5 day pass", mt: "5 days" };
 
 const CSS = `
 .bt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
@@ -35,9 +30,10 @@ const CSS = `
 @keyframes btrise{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .bt-root .card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:14px}
 .bt-root .card.rail-l{border-left:4px solid var(--blue)}
-.bt-root .stephead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bt-root .stephead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .bt-root .stephead .c{width:29px;height:29px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;flex:none}
 .bt-root .stephead h3{margin:0;font-size:15px;font-weight:800}
+.bt-root .lede{font-size:11.5px;color:var(--muted);line-height:1.5;margin:2px 0 12px}
 .bt-root .formbox{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:8px}
 .bt-root .flab{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
 .bt-root .field{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--ink);font-weight:600;min-height:34px}
@@ -54,16 +50,17 @@ const CSS = `
 .bt-root .chip.in{background:#eefaf1;border-color:#bfe6cd}
 .bt-root .pill{border-radius:999px;padding:2px 9px;font-size:10px;font-weight:800;border:1px solid var(--line);color:var(--brandink);white-space:nowrap}
 .bt-root .pill.ok{background:#d8f3e1;color:#127a3e;border-color:transparent}
-.bt-root .cols{display:grid;grid-template-columns:1fr;gap:12px}
-@media(min-width:640px){.bt-root .cols.two{grid-template-columns:1fr 1fr}}
+.bt-root .bchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:800}
+.bt-root .bchip .mt{color:var(--faint);font-weight:600}
+.bt-root .bchip .x{color:var(--faint);font-weight:800;font-size:13px}
+.bt-root .drop{border:2px dashed var(--line);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
 .bt-root .stacklist{display:flex;flex-direction:column;gap:8px}
-.bt-root .calc{border:1px solid #d7e6ff;background:linear-gradient(180deg,#f7faff,#eef4ff);border-radius:14px;padding:13px}
+.bt-root .calc{border:1px solid #d7e6ff;background:linear-gradient(180deg,#f7faff,#eef4ff);border-radius:14px;padding:13px;margin-top:12px}
 .bt-root .calc .h{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:9px}
 .bt-root .prow{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--line);margin-bottom:6px;font-size:12.5px}
 .bt-root .prow .p{font-weight:800}
 .bt-root .tagm{font-size:9.5px;font-weight:800;color:#127a3e;background:#d8f3e1;border-radius:999px;padding:1px 7px;margin-left:6px}
 .bt-root .tagc{font-size:9.5px;font-weight:800;color:var(--brandink);background:#e7eefc;border-radius:999px;padding:1px 7px;margin-left:6px}
-/* the fake cursor */
 .bt-root .bt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .55s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.35))}
 .bt-root .bt-cursor.down{transition:transform .1s}
 .bt-root .bt-cursor .ring{position:absolute;left:-9px;top:-9px;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);opacity:0}
@@ -84,11 +81,10 @@ export function BlocksTour() {
   const [pTitle, setPTitle] = useState("");
   const [passName, setPassName] = useState("");
   const [blockName, setBlockName] = useState("");
-  const [periods, setPeriods] = useState<typeof PERIODS>([]);
-  const [passes, setPasses] = useState<typeof PASSES>([]);
+  const [madePeriod, setMadePeriod] = useState(false);
+  const [madePass, setMadePass] = useState(false);
   const [focus, setFocus] = useState<string | null>(null);
   const [added, setAdded] = useState<Record<string, boolean>>({});
-  const [saved, setSaved] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number; down: boolean; click: boolean }>({ x: 24, y: 20, down: false, click: false });
 
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -118,66 +114,56 @@ export function BlocksTour() {
     };
 
     // reset
-    set(setPeriods, []); set(setPasses, []); set(setAdded, {}); set(setSaved, false);
+    set(setMadePeriod, false); set(setMadePass, false); set(setAdded, {});
     set(setPTitle, ""); set(setPassName, ""); set(setBlockName, ""); set(setFocus, null);
 
-    // ── Phase 1: periods
-    set(setPhase, 1); set(setCap, "First, make your <b>periods</b> — the session time windows.");
-    await sleep(700);
-    for (let i = 0; i < PERIODS.length; i++) {
-      set(setFocus, "pTitle"); await moveTo("pTitle");
-      await typeInto(setPTitle, PERIODS[i].nm); await sleep(250);
-      set(setFocus, null); await moveTo("pAdd");
-      await click(); set(setPeriods, PERIODS.slice(0, i + 1)); set(setPTitle, "");
-      set(setCap, i === 0 ? "Type a title, set the times, and press <b>Add period</b>." : "Add any extras the same way — like an <b>early drop-off</b>.");
-      await sleep(700);
-    }
+    // ── Phase 1: make a period, then + Add to block
+    set(setPhase, 1); set(setCap, "First, make a <b>period</b> — a session time window."); await sleep(700);
+    set(setFocus, "pTitle"); await moveTo("pTitle", 0.15);
+    await typeInto(setPTitle, PERIOD.nm); await sleep(250);
+    set(setFocus, null); await moveTo("pAdd");
+    await click(); set(setMadePeriod, true); set(setPTitle, "");
+    set(setCap, "Set the times and press <b>Add period</b> — it appears in your list."); await sleep(700);
+    await moveTo("add-" + PERIOD.key);
+    await click(); set(setAdded, { [PERIOD.key]: true });
+    set(setCap, "Then tap <b>+ Add to block</b> — the card turns <b>green</b> to show it's in."); await sleep(800);
 
-    // ── Phase 2: passes
-    set(setPhase, 2); set(setCap, "Next, make your <b>passes</b> — how long a parent books."); await sleep(800);
-    for (let i = 0; i < PASSES.length; i++) {
-      set(setFocus, "passName"); await moveTo("passName");
-      await typeInto(setPassName, PASSES[i].nm); await sleep(250);
-      set(setFocus, null); await moveTo("passAdd");
-      await click(); set(setPasses, PASSES.slice(0, i + 1)); set(setPassName, "");
-      set(setCap, i === 0 ? "A full <b>5-day week</b> pass…" : "…and a <b>single day</b>. Prices come from the calculator, not by hand.");
-      await sleep(700);
-    }
+    // ── Phase 2: make a pass, then + Add to block
+    set(setPhase, 2); set(setCap, "Next, make a <b>pass</b> — how long a parent books."); await sleep(800);
+    set(setFocus, "passName"); await moveTo("passName", 0.15);
+    await typeInto(setPassName, PASS.nm); await sleep(250);
+    set(setFocus, null); await moveTo("passAdd");
+    await click(); set(setMadePass, true); set(setPassName, "");
+    set(setCap, "Press <b>Add pass</b>, then <b>+ Add to block</b> — prices come from the calculator, not by hand."); await sleep(700);
+    await moveTo("add-" + PASS.key);
+    await click(); set(setAdded, { [PERIOD.key]: true, [PASS.key]: true }); await sleep(800);
 
-    // ── Phase 3: build the block
-    set(setPhase, 3); set(setCap, "Now build the <b>block</b>: name it, then add the periods and passes."); await sleep(800);
-    set(setFocus, "bName"); await moveTo("bName");
-    await typeInto(setBlockName, "Summer Holiday Club"); await sleep(250);
+    // ── Phase 3: name the block and move to library
+    set(setPhase, 3); set(setCap, "Your period and pass are now in the block. Give it a <b>name</b>…"); await sleep(800);
+    set(setFocus, "bName"); await moveTo("bName", 0.12);
+    await typeInto(setBlockName, "Summer Multi Activity Camp — Loughton"); await sleep(250);
     set(setFocus, null);
-    for (const it of [...PERIODS, ...PASSES]) {
-      await moveTo("add-" + it.key);
-      await click(); set(setAdded, (() => { const cur = { ...refsAdded.current }; cur[it.key] = true; refsAdded.current = cur; return cur; })());
-      await sleep(320);
-    }
-    set(setCap, "Each one turns <b>green</b> with an Undo. Then press <b>Save block</b>."); await sleep(300);
-    await moveTo("save"); await click(); set(setSaved, true); await sleep(500);
+    set(setCap, "…then press <b>Move to Block Library</b>."); await sleep(250);
+    await moveTo("save"); await click(); await sleep(500);
 
-    // ── Phase 4: done + pricing
+    // ── Phase 4: saved to library + pricing
     set(setPhase, 4);
-    set(setCap, "Saved. Set the price of the longest pass and the <b>pricing calculator</b> fills in the rest — then send the block to any listing.");
+    set(setCap, "Saved to your <b>Block Library</b> — reuse or duplicate it across every listing. Set the longest pass's price and the calculator fills in the rest.");
     await sleep(400);
   }, []);
 
-  // small mutable mirror of `added` so the async loop can accumulate safely
-  const refsAdded = useRef<Record<string, boolean>>({});
-
   useEffect(() => {
     let cancelled = false;
-    refsAdded.current = {};
     run(() => !cancelled);
     return () => { cancelled = true; };
   }, [run, runId]);
 
   const railOn = Math.min(phase, 3);
-  const chip = (it: { key: string; nm: string; mt: string }, inBlock: boolean) => (
-    <div key={it.key} className={`chip ${inBlock ? "in" : ""}`}>
+
+  const paletteChip = (it: { key: string; nm: string; mt: string }) => (
+    <div className={`chip ${added[it.key] ? "in" : ""}`}>
       <div><div className="nm">{it.nm}</div><div className="mt">{it.mt}</div></div>
-      {inBlock
+      {added[it.key]
         ? <div style={{ display: "flex", gap: 6, alignItems: "center" }}><span className="pill ok">✓ In block</span><span style={{ fontSize: "10.5px", fontWeight: 800, color: "var(--faint)", textDecoration: "underline" }}>Undo</span></div>
         : <span ref={reg("add-" + it.key)} className="pill">+ Add to block</span>}
     </div>
@@ -218,7 +204,7 @@ export function BlocksTour() {
                 <>
                   <div ref={reg("passName")} className={`field ${focus === "passName" ? "focus" : ""} ${passName ? "" : "ph"}`}>{passName || "Pass name (e.g. 5-day week pass)"}{focus === "passName" && <span className="caret" />}</div>
                   <div className="row2">
-                    <div><div className="flab" style={{ marginBottom: 4 }}>Days</div><div className="field">{passes.length === 1 ? 1 : 5}</div></div>
+                    <div><div className="flab" style={{ marginBottom: 4 }}>Days</div><div className="field">5</div></div>
                     <div><div className="flab" style={{ marginBottom: 4 }}>Details (optional)</div><div className="field ph">Anything parents should know…</div></div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}><span ref={reg("passAdd")} className="btn amber">Add pass</span><span className="btn">Cancel</span></div>
@@ -226,7 +212,8 @@ export function BlocksTour() {
               )}
             </div>
             <div className="stacklist">
-              {(phase === 1 ? periods : passes).map((it) => <div key={it.key} className="appear">{chip(it, false)}</div>)}
+              {phase === 1 && madePeriod && <div className="appear">{paletteChip(PERIOD)}</div>}
+              {phase === 2 && madePass && <div className="appear">{paletteChip(PASS)}</div>}
             </div>
           </div>
         )}
@@ -234,27 +221,26 @@ export function BlocksTour() {
         {phase === 3 && (
           <div className="card rail-l">
             <div className="stephead"><span className="c">3</span><h3>Build your blocks</h3></div>
-            <div className="formbox" style={{ marginBottom: 12 }}>
-              <div className="flab">Block name</div>
-              <div ref={reg("bName")} className={`field ${focus === "bName" ? "focus" : ""} ${blockName ? "" : "ph"}`}>{blockName || "Name this block"}{focus === "bName" && <span className="caret" />}</div>
+            <p className="lede">Tap &ldquo;+ Add to block&rdquo; on the periods &amp; passes you want, name it, then reuse or duplicate it across every listing.</p>
+            <div className="drop">
+              <div><div className="flab" style={{ marginBottom: 6 }}>Periods</div><span className="bchip">{PERIOD.nm} <span className="mt">{PERIOD.mt}</span> <span className="x">×</span></span></div>
+              <div><div className="flab" style={{ marginBottom: 6 }}>Passes</div><span className="bchip">{PASS.nm} <span className="x">×</span></span></div>
             </div>
-            <div className="cols two">
-              <div><div className="flab" style={{ marginBottom: 6 }}>Periods</div><div className="stacklist">{PERIODS.map((it) => chip(it, !!added[it.key]))}</div></div>
-              <div><div className="flab" style={{ marginBottom: 6 }}>Passes</div><div className="stacklist">{PASSES.map((it) => chip(it, !!added[it.key]))}</div></div>
-            </div>
-            <div style={{ marginTop: 13 }}><span ref={reg("save")} className="btn amber">Save block</span></div>
+            <div className="flab" style={{ marginBottom: 6 }}>Name your block</div>
+            <div ref={reg("bName")} className={`field ${focus === "bName" ? "focus" : ""} ${blockName ? "" : "ph"}`} style={{ marginBottom: 12 }}>{blockName || "e.g. Summer Multi Activity Camp — Loughton"}{focus === "bName" && <span className="caret" />}</div>
+            <span ref={reg("save")} className="btn amber">Move to Block Library →</span>
           </div>
         )}
 
         {phase === 4 && (
           <div className="appear">
             <div className="card" style={{ marginBottom: 12 }}>
-              <div className="flab" style={{ marginBottom: 8 }}>Your blocks</div>
-              <div className="chip in"><div><div className="nm">🧩 Summer Holiday Club</div><div className="mt">2 periods · 2 passes · ready to send to listings</div></div><span className="pill ok">Saved ✓</span></div>
+              <div className="flab" style={{ marginBottom: 8 }}>Block Library</div>
+              <div className="chip in"><div><div className="nm">🧩 Summer Multi Activity Camp — Loughton</div><div className="mt">1 period · 1 pass · reuse or duplicate across listings</div></div><span className="pill ok">Saved ✓</span></div>
             </div>
             <div className="calc">
               <div className="h">💷 Pricing calculator</div>
-              <div className="prow"><span>5-day week pass <span className="tagm">master price</span></span><span className="p">£150.00</span></div>
+              <div className="prow"><span>5 day pass <span className="tagm">master price</span></span><span className="p">£150.00</span></div>
               <div className="prow"><span>Single day <span className="tagc">auto-filled</span></span><span className="p">£33.00</span></div>
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.5 }}>Set the longest pass; the calculator prices the shorter ones — edit any if you want.</div>
             </div>
