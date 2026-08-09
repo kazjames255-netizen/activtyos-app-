@@ -7,6 +7,8 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
 import { HowItWorks } from "@/components/HowItWorks";
+import { GuidedTour } from "@/features/common/GuidedTour";
+import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
 import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -321,7 +323,7 @@ export function NewsfeedApp() {
         </div>
       </div>
 
-      <HowItWorks video="Picking a post template, adding an event with RSVPs or a booking nudge, scoping who sees it, pinning and scheduling." minutes="2 min">
+      <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.newsfeed} />} video="Picking a post template, adding an event with RSVPs or a booking nudge, scoping who sees it, pinning and scheduling." minutes="2 min">
         <p className="mb-2"><b className="text-[var(--ink-2)]">Start from a template.</b> An <b>Event</b> carries a date, time and RSVP; a <b>Booking nudge</b> adds a button to a listing; an <b>Urgent notice</b> is pinned and asks families to acknowledge it.</p>
         <p><b className="text-[var(--ink-2)]">Choose who sees it and when.</b> Send to all families or just one listing’s families, pin it to the top, and publish now or schedule it for later.</p>
       </HowItWorks>
