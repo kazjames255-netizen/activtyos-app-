@@ -136,6 +136,16 @@ const CSS = `
 .lt-root .ppcta{margin:8px 14px;background:linear-gradient(120deg,#2f6bd8,#1b3f8f);border-radius:12px;padding:12px;color:#fff;font-size:14px;font-weight:800;font-style:italic}.lt-root .ppcta span{font-size:11px;opacity:.85}.lt-root .ppcta2{margin-top:8px;background:rgba(255,255,255,.12);border-radius:8px;padding:8px;font-size:12px;font-style:normal;font-weight:700}
 .lt-root .ppbox{margin:6px 14px;background:#0f1630;border:1px solid #1a2340;border-radius:10px;padding:10px 12px;color:#dfe6ff;font-size:12.5px;font-weight:700}
 .lt-root .pptxt{padding:2px 14px 10px;color:#aeb8dc;font-size:12px;line-height:1.5}
+.lt-root .lt-splash{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(130% 120% at 50% 0%,#1b3f8f,#0b1020 75%);transition:opacity .5s ease;overflow:hidden}
+.lt-root .lt-splash.hide{opacity:0;pointer-events:none}
+.lt-root .lt-splash::before{content:"";position:absolute;top:0;left:-70%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:ltshine 2s ease-in-out .2s}
+@keyframes ltshine{0%{left:-70%}100%{left:130%}}
+.lt-root .splmark{font-size:28px;color:#7fd0ff;animation:ltspin 3s linear infinite;text-shadow:0 0 18px rgba(80,170,255,.7)}
+@keyframes ltspin{to{transform:rotate(360deg)}}
+.lt-root .splogo{font-size:38px;font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,#7fd0ff,#ffffff 45%,#7fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent;animation:ltsppop .6s ease both;filter:drop-shadow(0 2px 10px rgba(80,170,255,.4))}
+.lt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff;animation:ltsppop .6s ease .1s both}
+.lt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd;animation:ltsppop .6s ease .2s both}
+@keyframes ltsppop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
@@ -154,10 +164,13 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     const soundBtn = root.querySelector(".lt-sound") as HTMLElement;
     const voiceSel = root.querySelector(".lt-voice") as HTMLSelectElement | null;
     const pauseBtn = root.querySelector(".lt-pause") as HTMLElement;
+    const backBtn = root.querySelector(".lt-back") as HTMLElement;
+    const fwdBtn = root.querySelector(".lt-fwd") as HTMLElement;
+    const splash = root.querySelector(".lt-splash") as HTMLElement | null;
     const setupHref = typeof window !== "undefined" ? window.location.pathname.replace(/\/[^/]*$/, "/setup") : "/freelancer/setup";
     const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
 
-    let token = 0, dead = false, soundOn = false, paused = false;
+    let token = 0, dead = false, soundOn = false, paused = false, currentIdx = -1;
     const waiters: (() => void)[] = [];
     let voice: SpeechSynthesisVoice | null = null;
     let speaking: Promise<unknown> = Promise.resolve();
@@ -222,18 +235,22 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       <div style="font-size:12px;color:var(--muted);margin-top:3px">Summer Multi-Activity Camp · ready to take bookings</div>
       <div class="prevcard" style="margin:14px auto 0;text-align:left"><div class="ph">🤸</div><div class="pb"><div class="pt">Summer Multi-Activity Camp</div><div class="pm">📍 Riverside Sports Hall · Ages 5–12</div><div class="pp">From £150 / week</div></div></div></div>`;
 
-    async function run() {
+    async function run(startIdx = 0) {
       const tk = ++token; const alive = () => tk === token && !dead;
+      if (hasSpeech) window.speechSynthesis.cancel();
       paused = false; waiters.splice(0).forEach((f) => f()); if (pauseBtn) pauseBtn.textContent = "⏸ Pause";
       cursor.style.transform = "translate(24px,20px) scale(1)";
-      content.innerHTML = introView;
-      const lc = pick("lnkCat"); if (lc) lc.onclick = () => onTabRef.current?.("categories");
-      const ll = pick("lnkLoc"); if (ll) ll.onclick = () => onTabRef.current?.("locations");
-      const lse = pick("lnkSea"); if (lse) lse.onclick = () => { window.location.href = setupHref; };
-      await line("Let's create a listing — that's a camp, class or club parents can book. First though, three quick set-ups live in their own tabs: your <b>Categories</b>, your <b>Locations</b> — that's your venues — and your <b>Seasons</b>, your holiday and term dates. There are links right here to jump straight to each. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
-      await move("newListing"); await click(); if (!alive()) return;
-      for (let i = 0; i < STEPS.length; i++) {
-        const s = STEPS[i]; content.innerHTML = frame(i);
+      if (startIdx <= 0) {
+        if (splash) { splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth; await sleep(2300); if (!alive()) return; splash.classList.add("hide"); await sleep(500); splash.style.display = "none"; }
+        currentIdx = -1; content.innerHTML = introView;
+        const lc = pick("lnkCat"); if (lc) lc.onclick = () => onTabRef.current?.("categories");
+        const ll = pick("lnkLoc"); if (ll) ll.onclick = () => onTabRef.current?.("locations");
+        const lse = pick("lnkSea"); if (lse) lse.onclick = () => { window.location.href = setupHref; };
+        await line("Let's create a listing — that's a camp, class or club parents can book. First though, three quick set-ups live in their own tabs: your <b>Categories</b>, your <b>Locations</b> — that's your venues — and your <b>Seasons</b>, your holiday and term dates. There are links right here to jump straight to each. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
+        await move("newListing"); await click(); if (!alive()) return;
+      } else if (splash) { splash.style.display = "none"; }
+      for (let i = Math.max(0, startIdx); i < STEPS.length; i++) {
+        currentIdx = i; const s = STEPS[i]; content.innerHTML = frame(i);
         const act = (async () => {
           if (s.type) { const arr = Array.isArray(s.type) ? s.type : [s.type]; for (const t of arr) { await move(t.id, 0.2); await type(t.id, t.text, tk); await sleep(150); } }
           else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("dchip")) c.classList.add("off"); else if (c.classList.contains("dtype")) { c.parentElement?.querySelectorAll(".dtype").forEach((x) => x.classList.remove("on")); c.classList.add("on"); } else if (c.classList.contains("rchip")) { c.parentElement?.querySelectorAll(".rchip").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const rn = pick("rnote"); const nt = (c as HTMLElement).dataset.note; if (rn && nt) rn.textContent = nt; } else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
@@ -243,8 +260,8 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         })();
         await line(s.line); await act; if (!alive()) return;
       }
-      content.innerHTML = doneView;
-      await line("And that's it — your listing's live and ready to take bookings. You can edit or duplicate it any time. Nice work!");
+      currentIdx = STEPS.length; content.innerHTML = doneView;
+      if (!alive()) return; await line("That's it — your listing is ready!");
     }
 
     let voicePoll = 0;
@@ -256,8 +273,10 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     }
     // Turning sound on hides the on-screen caption (the voice replaces it).
     const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
-    replayBtn.onclick = () => { run(); };
-    soundBtn.onclick = () => { fillVoices(); setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    replayBtn.onclick = () => { run(0); };
+    if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
+    if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
+    soundBtn.onclick = () => { fillVoices(); setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
     if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
@@ -269,14 +288,17 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       <style>{CSS}</style>
       <div className="lt-controls">
         <span className="lt-count" />
+        <button type="button" className="cbtn lt-back" title="Back a step">⏮</button>
         <button type="button" className="cbtn lt-replay">▶ Play</button>
         <button type="button" className="cbtn lt-pause">⏸ Pause</button>
+        <button type="button" className="cbtn lt-fwd" title="Skip forward">⏭</button>
         <button type="button" className="cbtn lt-sound">🔊 Sound</button>
         <select className="cbtn lt-voice" title="Pick a voice" style={{ maxWidth: 200 }} />
       </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-content" />
+        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">ActivityOS</div><div className="sptitle">Create a listing</div><div className="spsub">a quick guided walkthrough</div></div>
       </div>
       <div className="lt-cap" />
     </div>
