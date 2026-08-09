@@ -106,9 +106,9 @@ const CSS = `
 .lt-root .lt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .55s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.35))}.lt-root .lt-cursor.down{transition:transform .1s}
 .lt-root .lt-cursor .ring{position:absolute;left:-9px;top:-9px;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);opacity:0}.lt-root .lt-cursor.click .ring{animation:ltclk .4s ease-out}@keyframes ltclk{0%{opacity:.7;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
 .lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
-.lt-root .lt-controls{margin-top:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.lt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}.lt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.lt-root .cbtn.on{background:#eef4ff;border-color:#bcd0f5;color:var(--brandink)}
-.lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
+.lt-root .lt-controls{margin:0 0 12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.lt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:11px 20px;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer}.lt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.lt-root .cbtn.on{background:linear-gradient(180deg,#4f8bf5,#2f6bd8);border-color:transparent;color:#fff}
+.lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-right:auto}
 .lt-root .lnk{font-size:11.5px;font-weight:800;color:var(--brandink);background:#eef4fd;border:1px solid #cfe0fb;border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-block}.lt-root .lnk:hover{background:#e2ecfc}
 .lt-root .lay{display:flex;gap:6px;flex-wrap:wrap}.lt-root .layopt{font-size:11px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 9px;color:var(--ink2)}.lt-root .layopt.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
 .lt-root .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.lt-root .ochip{font-size:11.5px;font-weight:800;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
@@ -252,10 +252,12 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
     if (voiceSel) {
       voiceSel.onmousedown = () => { fillVoices(); };
-      voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) { soundOn = true; soundBtn.classList.add("on"); soundBtn.textContent = "🔊 Sound on"; } if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
+      voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) setSound(true); if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
     }
+    // Turning sound on hides the on-screen caption (the voice replaces it).
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
     replayBtn.onclick = () => { run(); };
-    soundBtn.onclick = () => { fillVoices(); soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    soundBtn.onclick = () => { fillVoices(); setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
     if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
@@ -265,18 +267,18 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
   return (
     <div className="lt-root" ref={rootRef}>
       <style>{CSS}</style>
+      <div className="lt-controls">
+        <span className="lt-count" />
+        <button type="button" className="cbtn lt-replay">▶ Play</button>
+        <button type="button" className="cbtn lt-pause">⏸ Pause</button>
+        <button type="button" className="cbtn lt-sound">🔊 Sound</button>
+        <select className="cbtn lt-voice" title="Pick a voice" style={{ maxWidth: 200 }} />
+      </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-content" />
       </div>
       <div className="lt-cap" />
-      <div className="lt-controls">
-        <button type="button" className="cbtn lt-replay">↻ Replay</button>
-        <button type="button" className="cbtn lt-pause">⏸ Pause</button>
-        <button type="button" className="cbtn lt-sound">🔈 Narrate</button>
-        <select className="cbtn lt-voice" title="Pick a voice" style={{ maxWidth: 230 }} />
-        <span className="lt-count" />
-      </div>
     </div>
   );
 }
