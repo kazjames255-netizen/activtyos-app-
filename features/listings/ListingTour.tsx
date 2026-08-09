@@ -74,10 +74,13 @@ const CSS = `
 .lt-root .lt-controls{margin-top:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .lt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}.lt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.lt-root .cbtn.on{background:#eef4ff;border-color:#bcd0f5;color:var(--brandink)}
 .lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
+.lt-root .lnk{font-size:11.5px;font-weight:800;color:var(--brandink);background:#eef4fd;border:1px solid #cfe0fb;border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-block}.lt-root .lnk:hover{background:#e2ecfc}
 `;
 
-export function ListingTour() {
+export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const onTabRef = useRef(onTab);
+  onTabRef.current = onTab;
 
   useEffect(() => {
     const root = rootRef.current;
@@ -89,12 +92,16 @@ export function ListingTour() {
     const replayBtn = root.querySelector(".lt-replay") as HTMLElement;
     const soundBtn = root.querySelector(".lt-sound") as HTMLElement;
     const voiceSel = root.querySelector(".lt-voice") as HTMLSelectElement | null;
+    const pauseBtn = root.querySelector(".lt-pause") as HTMLElement;
+    const setupHref = typeof window !== "undefined" ? window.location.pathname.replace(/\/[^/]*$/, "/setup") : "/freelancer/setup";
     const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
 
-    let token = 0, dead = false, soundOn = false;
+    let token = 0, dead = false, soundOn = false, paused = false;
+    const waiters: (() => void)[] = [];
     let voice: SpeechSynthesisVoice | null = null;
     let speaking: Promise<unknown> = Promise.resolve();
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const gate = () => (paused ? new Promise<void>((r) => waiters.push(r)) : Promise.resolve());
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)).then(gate);
     const strip = (h: string) => h.replace(/<[^>]+>/g, "").replace(/[—–]/g, ", ").replace(/\s+/g, " ").trim();
     const readMs = (t: string) => Math.max(2400, t.split(/\s+/).length * 330);
     const pick = (id: string) => content.querySelector("#" + id) as HTMLElement | null;
@@ -146,7 +153,8 @@ export function ListingTour() {
         <div class="wfoot"><span class="btn ghost">← Back</span><span class="btn amber" id="next">${i === STEPS.length - 1 ? "Publish ✓" : "Next →"}</span></div></div>`;
     };
     const introView = `<div class="appear"><div class="tabs"><span class="tab">Listings</span><span class="tab on">Categories</span><span class="tab">Locations</span></div>
-      <div class="hint" style="margin-top:12px;font-size:12px">Two quick set-ups live in their own tabs — your <b>Categories</b> (like “Holiday Camp”) and your <b>Locations</b> (your venues and addresses). Set them once, and reuse them on every listing.</div>
+      <div class="hint" style="margin-top:12px;font-size:12px">Three quick set-ups live in their own tabs: your <b>Categories</b> (like “Holiday Camp”), your <b>Locations</b> (your venues), and your <b>Seasons</b> (your holiday and term date ranges). Set them once, and reuse them on every listing.</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="lnk" id="lnkCat">🏷️ Set up categories →</span><span class="lnk" id="lnkLoc">📍 Set up locations →</span><span class="lnk" id="lnkSea">🗓️ Add a season →</span></div>
       <div style="margin-top:14px"><span class="btn amber" id="newListing">＋ New listing</span></div></div>`;
     const doneView = `<div class="appear" style="text-align:center;padding:8px 0"><div style="font-size:34px">🎉</div>
       <div style="font-size:16px;font-weight:800;margin-top:6px">Your listing is live!</div>
@@ -155,9 +163,13 @@ export function ListingTour() {
 
     async function run() {
       const tk = ++token; const alive = () => tk === token && !dead;
+      paused = false; waiters.splice(0).forEach((f) => f()); if (pauseBtn) pauseBtn.textContent = "⏸ Pause";
       cursor.style.transform = "translate(24px,20px) scale(1)";
       content.innerHTML = introView;
-      await line("Let's create a listing — that's a camp, class or club parents can book. First though, two quick things live in their own tabs: your <b>Categories</b>, and your <b>Locations</b>, your venues. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
+      const lc = pick("lnkCat"); if (lc) lc.onclick = () => onTabRef.current?.("categories");
+      const ll = pick("lnkLoc"); if (ll) ll.onclick = () => onTabRef.current?.("locations");
+      const lse = pick("lnkSea"); if (lse) lse.onclick = () => { window.location.href = setupHref; };
+      await line("Let's create a listing — that's a camp, class or club parents can book. First though, three quick set-ups live in their own tabs: your <b>Categories</b>, your <b>Locations</b> — that's your venues — and your <b>Seasons</b>, your holiday and term dates. There are links right here to jump straight to each. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
       await move("newListing"); await click(); if (!alive()) return;
       for (let i = 0; i < STEPS.length; i++) {
         const s = STEPS[i]; content.innerHTML = frame(i);
@@ -182,6 +194,7 @@ export function ListingTour() {
     }
     replayBtn.onclick = () => { run(); };
     soundBtn.onclick = () => { fillVoices(); soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
@@ -197,6 +210,7 @@ export function ListingTour() {
       <div className="lt-cap" />
       <div className="lt-controls">
         <button type="button" className="cbtn lt-replay">↻ Replay</button>
+        <button type="button" className="cbtn lt-pause">⏸ Pause</button>
         <button type="button" className="cbtn lt-sound">🔈 Narrate</button>
         <select className="cbtn lt-voice" title="Pick a voice" style={{ maxWidth: 230 }} />
         <span className="lt-count" />

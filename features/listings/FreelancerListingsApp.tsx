@@ -217,8 +217,8 @@ async function putLibrary(s: LocalState): Promise<void> {
   await api("/api/library", { method: "PUT", body: JSON.stringify({ ...s, addons }) });
 }
 
-function HowItWorks(_props: { onTab: (t: Tab) => void }) {
-  return <HowItWorksPanel tour={<ListingTour />} />;
+function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
+  return <HowItWorksPanel tour={<ListingTour onTab={(t) => onTab(t as Tab)} />} />;
 }
 
 /** Freelancer Listings — manual layout, Phase A. */
