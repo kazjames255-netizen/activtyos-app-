@@ -11,20 +11,28 @@ import { useEffect, useRef } from "react";
 
 const F = '<span class="caret"></span>';
 type TypeField = { id: string; text: string };
-type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string };
+type Step = { stage: string; label: string; line: string; body: string; type?: TypeField | TypeField[]; click?: string; tabHtml?: string };
 const STEPS: Step[] = [
   { stage: "About", label: "Basics", line: "Start with the basics — a clear name, and a big, bright photo. Pick a layout to see how it looks, then add your main image. You can pop extra photos in the gallery too.", type: { id: "F", text: "Summer Multi-Activity Camp" },
     body: `<div class="frm"><div><div class="fl">Listing title · up to 70 characters</div><div class="field ph focus" id="F">e.g. Summer Multi-Activity Camp${F}</div></div><div><div class="fl">Main image — layout + hero photo</div><div class="lay"><span class="layopt on">🖼️ One big image</span><span class="layopt">Wide banner</span><span class="layopt">Collage</span><span class="layopt">Big + thumbnails</span></div><div style="margin-top:7px"><span class="btn">＋ Add main photo</span></div></div></div>` },
   { stage: "About", label: "Details", line: "Add the details — the age range it's for, from and to, and choose your venue.", type: [{ id: "F", text: "5" }, { id: "F2", text: "12" }],
     body: `<div class="frm"><div class="row2"><div><div class="fl">Age from</div><div class="field ph focus" id="F">e.g. 5${F}</div></div><div><div class="fl">Age to</div><div class="field ph" id="F2">e.g. 12</div></div></div><div><div class="fl">Venue</div><div class="field">📍 Riverside Sports Hall</div></div></div>` },
-  { stage: "About", label: "Capacity", line: "Set your capacity — the most children you can take per session. Once it's full, bookings stop by themselves, so you'll never oversell a place.", type: { id: "F", text: "24" },
-    body: `<div class="frm"><div style="max-width:200px"><div class="fl">Max children per session</div><div class="field ph focus" id="F">0${F}</div></div><div class="hint">Bookings close automatically when you reach this number.</div></div>` },
+  { stage: "About", label: "Capacity", line: "Set your capacity — the most children per session; once it's full, bookings stop by themselves. If you run age groups you can cap each one per day too — but leave those blank if you just have one overall number. Blank means no limit, and zero means closed.", type: { id: "F", text: "24" },
+    body: `<div class="frm"><div style="max-width:210px"><div class="fl">Max children per session</div><div class="field ph focus" id="F">0${F}</div></div>
+      <div class="fl" style="margin-top:2px">Per-age caps<span style="font-weight:600;color:var(--faint);text-transform:none;letter-spacing:0"> — optional, per day</span></div>
+      <div class="capgrp"><span class="dot" style="background:#e2559a"></span><b>Cubs</b> <span class="g">5–7 · room 32</span><span class="field2">no limit</span></div>
+      <div class="capgrp"><span class="dot" style="background:#2f6bd8"></span><b>Explorers</b> <span class="g">8–10 · room 32</span><span class="field2">no limit</span></div>
+      <div class="capgrp"><span class="dot" style="background:#16306e"></span><b>Adventurers</b> <span class="g">11–14 · room 30</span><span class="field2">no limit</span></div>
+      <div class="hint">Leave these blank if you just have an overall capacity. Blank = no limit · 0 = closed.</div></div>` },
   { stage: "About", label: "Content", line: "Now the description — tell parents what to expect. A friendly, clear write-up is what sells your listing.", type: { id: "F", text: "A fun-packed week of sports, games and crafts — something for everyone." },
     body: `<div class="frm"><div><div class="fl">Description</div><div class="field ph focus" id="F" style="min-height:64px">Tell parents what to expect…${F}</div></div></div>` },
-  { stage: "About", label: "Provided", line: "Tick what's included — a hot lunch, equipment, snacks, whatever you provide.", click: "C",
-    body: `<div class="frm"><div class="fl">What's provided</div><div class="chk" id="C"><span class="chkbx"></span>🍽️ Hot lunch</div><div class="chk"><span class="chkbx"></span>🎒 All equipment</div><div class="chk"><span class="chkbx"></span>🍎 Snacks &amp; drinks</div></div>` },
-  { stage: "About", label: "Safety & SEND", line: "Add your safety notes and ratios, and how you support SEND — that's special educational needs. It reassures parents, and tells your team exactly what a child needs.", type: { id: "F", text: "1:8 ratios · first-aid trained · quiet space for SEND" },
-    body: `<div class="frm"><div><div class="fl">Safety, ratios &amp; SEND</div><div class="field ph focus" id="F" style="min-height:48px">e.g. 1:8 ratios, first-aid trained…${F}</div></div><div class="hint">Shows on the listing, and flags to your staff.</div></div>` },
+  { stage: "About", label: "Provided", line: "Now the extras — three quick tabs here: what's provided, what to bring, and the outcomes children get. Tick what's included, then flick to What to bring and add things like a packed lunch or sun cream.", click: "C",
+    tabHtml: `<div class="chips"><span class="ochip">🥪 Packed lunch</span><span class="ochip">🧴 Sun cream</span><span class="ochip">👟 Trainers</span><span class="ochip">💧 Water bottle</span><span class="btn">＋ Add option</span></div>`,
+    body: `<div class="frm"><div class="tabs2"><span class="tab2 on">What's provided</span><span class="tab2" id="C">What to bring</span><span class="tab2">Outcomes</span></div>
+      <div id="tabc"><div class="chips"><span class="ochip">🍽️ Hot lunch</span><span class="ochip">🎒 All equipment</span><span class="ochip">🍎 Snacks &amp; drinks</span><span class="btn">＋ Add option</span></div></div></div>` },
+  { stage: "About", label: "Safety & SEND", line: "Safety and inclusion isn't free text — you pick from ready-made chips. Show your safety features, like DBS-checked staff and first aid, and the SEND support you offer, like a quiet space or one-to-one help. Anything you add here is saved for every listing.", click: "C",
+    body: `<div class="frm"><div class="fl">Safety features</div><div class="chips"><span class="ochip">🛡️ DBS-checked staff</span><span class="ochip">🚑 First aid on site</span><span class="ochip">🧑‍⚖️ Safeguarding lead</span><span class="ochip">👥 Low ratios</span><span class="btn" id="C">＋ Add option</span></div>
+      <div class="fl" style="margin-top:6px">SEND &amp; accessibility</div><div class="chips"><span class="ochip">♿ Wheelchair accessible</span><span class="ochip">🤝 1:1 support</span><span class="ochip">🤫 Quiet space</span><span class="ochip">🎓 SEND-trained staff</span></div></div>` },
   { stage: "When it runs", label: "When it runs", line: "Choose when it runs — the dates, the days of the week, and your session times.", click: "C",
     body: `<div class="frm"><div class="row2"><div><div class="fl">From</div><div class="field">Mon 28 Jul</div></div><div><div class="fl">To</div><div class="field">Fri 1 Aug</div></div></div><div><div class="fl">Days</div><div><span class="daychip on">Mon</span><span class="daychip on">Tue</span><span class="daychip on">Wed</span><span class="daychip" id="C">Thu</span><span class="daychip on">Fri</span></div></div></div>` },
   { stage: "Tickets & pricing", label: "Tickets & pricing", line: "Set your ticket prices — a full week, or a single day.", type: { id: "F", text: "150.00" },
@@ -77,6 +85,10 @@ const CSS = `
 .lt-root .lt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
 .lt-root .lnk{font-size:11.5px;font-weight:800;color:var(--brandink);background:#eef4fd;border:1px solid #cfe0fb;border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-block}.lt-root .lnk:hover{background:#e2ecfc}
 .lt-root .lay{display:flex;gap:6px;flex-wrap:wrap}.lt-root .layopt{font-size:11px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 9px;color:var(--ink2)}.lt-root .layopt.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
+.lt-root .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.lt-root .ochip{font-size:11.5px;font-weight:800;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+.lt-root .capgrp{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-top:1px dashed var(--line)}.lt-root .capgrp .g{color:var(--faint);font-weight:600}.lt-root .capgrp .field2{margin-left:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--faint);background:var(--surface)}
+.lt-root .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.lt-root .tabs2{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px}.lt-root .tab2{font-size:12px;font-weight:800;color:var(--faint);padding:5px 9px;cursor:pointer}.lt-root .tab2.on{color:var(--navy);border-bottom:2px solid var(--navy)}
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
@@ -177,7 +189,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         const s = STEPS[i]; content.innerHTML = frame(i);
         const act = (async () => {
           if (s.type) { const arr = Array.isArray(s.type) ? s.type : [s.type]; for (const t of arr) { await move(t.id, 0.2); await type(t.id, t.text, tk); await sleep(150); } }
-          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); } await sleep(200); }
+          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
           else await sleep(600);
           await move("next"); await click();
         })();
