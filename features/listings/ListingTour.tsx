@@ -143,6 +143,7 @@ const CSS = `
 .lt-root .splmark{font-size:28px;color:#7fd0ff;animation:ltspin 3s linear infinite;text-shadow:0 0 18px rgba(80,170,255,.7)}
 @keyframes ltspin{to{transform:rotate(360deg)}}
 .lt-root .splogo{font-size:38px;font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,#7fd0ff,#ffffff 45%,#7fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent;animation:ltsppop .6s ease both;filter:drop-shadow(0 2px 10px rgba(80,170,255,.4))}
+.lt-root .splos{-webkit-text-fill-color:#ff5aa8;color:#ff5aa8;background:none;filter:drop-shadow(0 2px 10px rgba(255,90,168,.5))}
 .lt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff;animation:ltsppop .6s ease .1s both}
 .lt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd;animation:ltsppop .6s ease .2s both}
 @keyframes ltsppop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
@@ -298,7 +299,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-content" />
-        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">ActivityOS</div><div className="sptitle">Create a listing</div><div className="spsub">a quick guided walkthrough</div></div>
+        <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">Create a listing</div><div className="spsub">a quick guided walkthrough</div></div>
       </div>
       <div className="lt-cap" />
     </div>
