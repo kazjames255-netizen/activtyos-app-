@@ -124,6 +124,8 @@ function PaletteCard({
   onEdit,
   onRemove,
   onDragStart,
+  added = false,
+  onUndo,
 }: {
   title: string;
   meta: string;
@@ -131,25 +133,40 @@ function PaletteCard({
   onEdit: () => void;
   onRemove: () => void;
   onDragStart: (e: React.DragEvent) => void;
+  added?: boolean;
+  onUndo?: () => void;
 }) {
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className="flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${added ? "border-[#bfe6cd] bg-[#eefaf1]" : "border-[var(--line)] bg-[var(--panel)]"}`}
     >
       <div className="min-w-0">
         <div className="truncate text-[12.5px] font-bold text-[var(--ink)]">{title}</div>
         <div className="truncate text-[11px] text-[var(--ink-3)]">{meta}</div>
       </div>
       <div className="flex flex-none items-center gap-1">
-        <button
-          type="button"
-          onClick={onAdd}
-          className="rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--brand-ink,#1d3a8f)] hover:border-[var(--brand)]"
-        >
-          + Add to block
-        </button>
+        {added ? (
+          <>
+            <span className="rounded-full bg-[#d8f3e1] px-2 py-[2px] text-[10.5px] font-extrabold text-[#127a3e]">✓ In block</span>
+            <button
+              type="button"
+              onClick={onUndo}
+              className="px-1 text-[10.5px] font-bold text-[var(--ink-3)] underline hover:text-[var(--red)]"
+            >
+              Undo
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="rounded-full border border-[var(--line)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--brand-ink,#1d3a8f)] hover:border-[var(--brand)]"
+          >
+            + Add to block
+          </button>
+        )}
         <button
           type="button"
           onClick={onEdit}
@@ -359,6 +376,8 @@ function PeriodsColumn({
     setDraft((d) =>
       d.periodIds.includes(id) ? d : { ...d, periodIds: [...d.periodIds, id] },
     );
+  const removeFromDraft = (id: string) =>
+    setDraft((d) => ({ ...d, periodIds: d.periodIds.filter((x) => x !== id) }));
   const removePeriod = (id: string) => {
     if (!confirm("Delete this period? It’s removed from any blocks using it. This can’t be undone."))
       return;
@@ -430,7 +449,9 @@ function PeriodsColumn({
             key={p.id}
             title={p.title}
             meta={periodRange(p)}
+            added={draft.periodIds.includes(p.id)}
             onAdd={() => addToDraft(p.id)}
+            onUndo={() => removeFromDraft(p.id)}
             onEdit={() => openEdit(p)}
             onRemove={() => removePeriod(p.id)}
             onDragStart={(e) => e.dataTransfer.setData("text/plain", `period:${p.id}`)}
@@ -494,6 +515,8 @@ function PassesColumn({
 
   const addToDraft = (id: string) =>
     setDraft((d) => (d.passIds.includes(id) ? d : { ...d, passIds: [...d.passIds, id] }));
+  const removeFromDraft = (id: string) =>
+    setDraft((d) => ({ ...d, passIds: d.passIds.filter((x) => x !== id) }));
   const removePass = (id: string) => {
     if (!confirm("Delete this pass? It’s removed from any blocks using it. This can’t be undone."))
       return;
@@ -569,7 +592,9 @@ function PassesColumn({
             key={p.id}
             title={p.name}
             meta={`${p.days} day${p.days === 1 ? "" : "s"}${p.details ? " · has details" : ""}`}
+            added={draft.passIds.includes(p.id)}
             onAdd={() => addToDraft(p.id)}
+            onUndo={() => removeFromDraft(p.id)}
             onEdit={() => openEdit(p)}
             onRemove={() => removePass(p.id)}
             onDragStart={(e) => e.dataTransfer.setData("text/plain", `pass:${p.id}`)}
