@@ -38,8 +38,15 @@ const STEPS: Step[] = [
       <div class="fl">Calendar · 2 weeks — tap a day to switch it off</div>
       <div class="wkcard"><div class="wkhd" style="background:#16306e">Week 1 · from Mon 28 Jul</div><div class="wkdays"><span class="dchip">Mon 28</span><span class="dchip">Tue 29</span><span class="dchip">Wed 30</span><span class="dchip" id="C">Thu 31</span><span class="dchip">Fri 1</span></div></div>
       <div class="wkcard"><div class="wkhd" style="background:#2f6bd8">Week 2 · from Mon 4 Aug</div><div class="wkdays"><span class="dchip">Mon 4</span><span class="dchip">Tue 5</span><span class="dchip">Wed 6</span><span class="dchip">Thu 7</span><span class="dchip">Fri 8</span></div></div></div>` },
-  { stage: "Tickets & pricing", label: "Tickets & pricing", line: "Set your ticket prices — a full week, or a single day.", type: { id: "F", text: "150.00" },
-    body: `<div class="frm"><div class="row2"><div><div class="fl">Full week (£)</div><div class="field ph focus" id="F">0.00${F}</div></div><div><div class="fl">Single day (£)</div><div class="field ph">worked out for you</div></div></div></div>` },
+  { stage: "Tickets & pricing", label: "Tickets & pricing", line: "Your tickets come straight from the block you built — its passes and their prices. Each one can tweak its own age range and its capacity per day; that's how you'd cap a one-to-one place to the staff you have. Close a ticket and parents still see it marked closed; Hide it and it's gone. And here you choose how parents book each pass — any five days in one week, any five across the whole listing, or a fixed block.", click: "C",
+    body: `<div class="frm"><div class="selrow">🧩 Summer Camp · 1 period · 2 passes<span class="pill2">✓ Selected</span></div>
+      <div class="fl">Tickets on this listing — each can amend its own age &amp; capacity</div>
+      <div class="tkt"><div class="tkhd"><b>5 day pass</b> <span class="g">5 days</span><span class="tkp">£500.00</span><span class="mini">Close</span><span class="mini">Hide</span></div>
+        <div class="tkrow"><span class="mini2">Age from —</span><span class="mini2">Age to —</span><span class="mini2">Capacity/day 60</span></div></div>
+      <div class="tkt"><div class="tkhd"><b>1 day pass</b> <span class="g">1 day</span><span class="tkp">£100.00</span><span class="mini">Close</span><span class="mini">Hide</span></div></div>
+      <div class="fl" style="margin-top:2px">How parents can book each pass<span style="text-transform:none;letter-spacing:0;color:var(--ink2)"> · 5 day pass</span></div>
+      <div class="chips"><span class="rchip on" data-note="Parents pick any 5 days within a single week.">Any 5 days in one week</span><span class="rchip" data-note="Parents pick any 5 days across all the weeks it runs.">Any 5 days across the listing</span><span class="rchip" id="C" data-note="Parents book one fixed Monday–Friday block.">Fixed 5-day block</span></div>
+      <div class="hint" id="rnote">Parents pick any 5 days within a single week.</div></div>` },
   { stage: "Tickets & pricing", label: "Discounts", line: "Add discounts if you'd like — an early-bird, or a sibling offer. They come off automatically at checkout, so there's nothing for you to remember.", click: "C",
     body: `<div class="frm"><div class="fl">Discounts</div><div><span class="chip2">🐤 Early bird · 10%</span><span class="chip2">👨‍👩‍👧 Sibling · £10</span></div><div style="margin-top:6px"><span class="btn" id="C">＋ Add a discount</span></div></div>` },
   { stage: "Extras & team", label: "Add-ons", line: "Offer optional add-ons — a hot lunch, or late pick-up — that parents can tick on at checkout.", click: "C",
@@ -94,6 +101,11 @@ const CSS = `
 .lt-root .tabs2{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:10px}.lt-root .tab2{font-size:12px;font-weight:800;color:var(--faint);padding:5px 9px;cursor:pointer}.lt-root .tab2.on{color:var(--navy);border-bottom:2px solid var(--navy)}
 .lt-root .wkcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:7px}.lt-root .wkhd{font-size:11.5px;font-weight:800;color:#fff;padding:5px 10px}.lt-root .wkdays{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
 .lt-root .dchip{border:1px solid #2f6bd8;color:#2f6bd8;background:#fff;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800}.lt-root .dchip.off{border-color:var(--line);color:var(--faint);text-decoration:line-through}
+.lt-root .selrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;background:#eef4fd;border:1px solid #cfe0fb;border-radius:10px;padding:8px 11px}.lt-root .pill2{margin-left:auto;font-size:10.5px;font-weight:800;color:#127a3e;background:#d8f3e1;border-radius:999px;padding:2px 9px}
+.lt-root .tkt{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:9px 11px;margin-bottom:7px}.lt-root .tkhd{display:flex;align-items:center;gap:8px;font-size:13px}.lt-root .tkp{margin-left:auto;font-weight:800}.lt-root .mini{font-size:10.5px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--ink2)}
+.lt-root .tkrow{display:flex;gap:8px;margin-top:6px}.lt-root .mini2{font-size:10.5px;font-weight:700;color:var(--faint);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.lt-root .rchip{font-size:11.5px;font-weight:800;border:1px solid var(--line);border-radius:9px;padding:6px 10px;color:var(--ink2)}.lt-root .rchip.on{border-color:#bcd0f5;background:#eef4ff;color:var(--brandink)}
+.lt-root .g{color:var(--faint);font-weight:600}
 `;
 
 export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
@@ -194,7 +206,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         const s = STEPS[i]; content.innerHTML = frame(i);
         const act = (async () => {
           if (s.type) { const arr = Array.isArray(s.type) ? s.type : [s.type]; for (const t of arr) { await move(t.id, 0.2); await type(t.id, t.text, tk); await sleep(150); } }
-          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("dchip")) c.classList.add("off"); else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
+          else if (s.click) { await move(s.click); await click(); const c = pick(s.click); if (c) { if (c.classList.contains("chk")) { c.classList.add("on"); const b = c.querySelector(".chkbx"); if (b) b.textContent = "✓"; } else if (c.classList.contains("daychip")) c.classList.add("on"); else if (c.classList.contains("dchip")) c.classList.add("off"); else if (c.classList.contains("rchip")) { c.parentElement?.querySelectorAll(".rchip").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const rn = pick("rnote"); const nt = (c as HTMLElement).dataset.note; if (rn && nt) rn.textContent = nt; } else if (c.classList.contains("tab2")) { c.parentElement?.querySelectorAll(".tab2").forEach((x) => x.classList.remove("on")); c.classList.add("on"); const tc = pick("tabc"); if (tc && s.tabHtml) tc.innerHTML = s.tabHtml; } } await sleep(300); }
           else await sleep(600);
           await move("next"); await click();
         })();
