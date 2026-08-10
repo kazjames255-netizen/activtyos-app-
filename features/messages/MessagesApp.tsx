@@ -203,6 +203,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // localStorage so there's no SSR mismatch.
   const [themeId, setThemeId] = useState("classic");
   const [themeOpen, setThemeOpen] = useState(false);
+  const themeBtnRef = useRef<HTMLButtonElement>(null);
+  // Popover is positioned fixed (from the button's rect) so it escapes the
+  // hero's overflow-hidden clip instead of being cut off below the band.
+  const [themePos, setThemePos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const theme = MESSAGE_THEMES.find((t) => t.id === themeId) ?? MESSAGE_THEMES[0];
   const loadTemplates = () => apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch(() => {});
   const endRef = useRef<HTMLDivElement>(null);
@@ -234,6 +238,25 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     setThemeId(id); setThemeOpen(false);
     try { localStorage.setItem(THEME_STORAGE_KEY, id); } catch { /* private mode */ }
   };
+  const toggleThemeMenu = () => {
+    setThemeOpen((o) => {
+      const next = !o;
+      if (next && themeBtnRef.current) {
+        const r = themeBtnRef.current.getBoundingClientRect();
+        setThemePos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+      }
+      return next;
+    });
+  };
+  // A fixed popover doesn't follow the page — close it if the user scrolls or
+  // resizes so it can't hang detached from its button.
+  useEffect(() => {
+    if (!themeOpen) return;
+    const close = () => setThemeOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => { window.removeEventListener("scroll", close, true); window.removeEventListener("resize", close); };
+  }, [themeOpen]);
   useEffect(() => { loadThreads(); }, [loadThreads]);
   useEffect(() => { loadFolders(); }, [loadFolders]);
   useEffect(() => { loadBroadcasts(); }, [loadBroadcasts]);
@@ -505,12 +528,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <div className="relative">
-              <button type="button" onClick={() => setThemeOpen((o) => !o)} aria-haspopup="true" aria-expanded={themeOpen} title="Change the background theme" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">🎨 Theme</button>
+              <button ref={themeBtnRef} type="button" onClick={toggleThemeMenu} aria-haspopup="true" aria-expanded={themeOpen} title="Change the background theme" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">🎨 Theme</button>
               {themeOpen && (
                 <>
                   {/* click-away backdrop */}
                   <button type="button" aria-label="Close theme picker" onClick={() => setThemeOpen(false)} className="fixed inset-0 z-40 cursor-default" />
-                  <div className="absolute right-0 z-50 mt-2 w-[280px] rounded-2xl border border-[var(--line)] bg-white p-3 text-left shadow-[0_18px_40px_-12px_rgba(20,20,60,.4)]">
+                  <div style={{ position: "fixed", top: themePos.top, right: themePos.right }} className="z-50 w-[280px] rounded-2xl border border-[var(--line)] bg-white p-3 text-left shadow-[0_18px_40px_-12px_rgba(20,20,60,.4)]">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-[12px] font-extrabold text-[var(--ink)]">Pick a theme</span>
                       <span className="text-[10.5px] text-[var(--ink-3)]">Saved on this device</span>
