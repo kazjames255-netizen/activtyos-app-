@@ -62,7 +62,7 @@ const CSS = `
 .bt-root .bt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.bt-root .bt-cap b{color:var(--ink)}
 .bt-root .bt-controls{margin-top:12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .bt-root .cbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:800;color:var(--ink);cursor:pointer}.bt-root .cbtn:hover{border-color:#bcd0f5;background:#f4f8ff}.bt-root .cbtn.on{background:#eef4ff;border-color:#bcd0f5;color:var(--brandink)}
-.bt-root .bt-count{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
+.bt-root .bt-count{font-size:11.5px;color:var(--faint);font-weight:700}
 `;
 
 export function BlocksTour() {
@@ -116,7 +116,10 @@ export function BlocksTour() {
       const u = new SpeechSynthesisUtterance(t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
       u.rate = 1.0; u.pitch = 1.05;
-      speaking = Promise.race([new Promise((res) => { u.onend = res; u.onerror = res; }), sleep(20000)]);
+      // Move the robot's mouth only while it's genuinely speaking.
+      const mouth = (on: boolean) => rootRef.current?.querySelector(".tnr-bot")?.classList.toggle("speaking", on);
+      u.onstart = () => mouth(true);
+      speaking = Promise.race([new Promise((res) => { u.onend = () => { mouth(false); res(undefined); }; u.onerror = () => { mouth(false); res(undefined); }; }), sleep(20000).then(() => mouth(false))]);
       s.speak(u);
     }
     async function line(h: string) { await speaking; capEl.innerHTML = h; const t = strip(h); speak(t); await Promise.all([speaking, sleep(readMs(t))]); }
@@ -261,10 +264,10 @@ export function BlocksTour() {
         <div className="bt-content" />
       </div>
       <div className="bt-cap" />
-      <div className="bt-controls">
-        <button type="button" className="cbtn bt-replay">▶ Play</button>
-        <button type="button" className="cbtn bt-sound">🔊 Sound</button>
-        <span className="bt-count" />
+      <div className="tctl bt-controls">
+        <span className="tctl-count bt-count" />
+        <button type="button" className="tctl-btn bt-replay" title="Start again">↺ Replay</button>
+        <button type="button" className="tctl-btn bt-sound">🔊 Sound</button>
       </div>
     </div>
   );

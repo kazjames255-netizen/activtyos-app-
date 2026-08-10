@@ -197,7 +197,10 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       const u = new SpeechSynthesisUtterance(t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
       u.rate = 1.0; u.pitch = 1.05;
-      speaking = Promise.race([new Promise((res) => { u.onend = res; u.onerror = res; }), sleep(22000)]);
+      // Move the robot's mouth only while it's genuinely speaking.
+      const mouth = (on: boolean) => rootRef.current?.querySelector(".tnr-bot")?.classList.toggle("speaking", on);
+      u.onstart = () => mouth(true);
+      speaking = Promise.race([new Promise((res) => { u.onend = () => { mouth(false); res(undefined); }; u.onerror = () => { mouth(false); res(undefined); }; }), sleep(22000).then(() => mouth(false))]);
       s.speak(u);
     }
     async function line(h: string) { await speaking; capEl.innerHTML = h; const t = strip(h); speak(t); await Promise.all([speaking, sleep(readMs(t))]); }
@@ -240,7 +243,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     async function run(startIdx = 0) {
       const tk = ++token; const alive = () => tk === token && !dead;
       if (hasSpeech) window.speechSynthesis.cancel();
-      paused = false; waiters.splice(0).forEach((f) => f()); if (pauseBtn) pauseBtn.textContent = "⏸ Pause";
+      paused = false; waiters.splice(0).forEach((f) => f()); if (pauseBtn) pauseBtn.textContent = "⏸";
       cursor.style.transform = "translate(24px,20px) scale(1)";
       if (startIdx <= 0) {
         if (splash) { splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth; await sleep(2300); if (!alive()) return; splash.classList.add("hide"); await sleep(500); splash.style.display = "none"; }
@@ -282,7 +285,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
     soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
-    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
+    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? "Resume" : "Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
@@ -291,13 +294,15 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
   return (
     <div className="lt-root" ref={rootRef}>
       <style>{CSS + NARRATOR_CSS}</style>
-      <div className="lt-controls">
-        <span className="lt-count" />
-        <button type="button" className="cbtn lt-back" title="Back a step">⏮</button>
-        <button type="button" className="cbtn lt-replay">▶ Play</button>
-        <button type="button" className="cbtn lt-pause">⏸ Pause</button>
-        <button type="button" className="cbtn lt-fwd" title="Skip forward">⏭</button>
-        <button type="button" className="cbtn lt-sound">🔊 Sound</button>
+      <div className="tctl lt-controls">
+        <span className="tctl-count lt-count" />
+        <div className="tctl-grp">
+          <button type="button" className="tctl-btn ico lt-back" title="Back a step" aria-label="Back a step">⏮</button>
+          <button type="button" className="tctl-btn primary lt-pause" title="Pause or resume" aria-label="Pause or resume">⏸</button>
+          <button type="button" className="tctl-btn ico lt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
+        </div>
+        <button type="button" className="tctl-btn lt-replay" title="Start again">↺ Replay</button>
+        <button type="button" className="tctl-btn lt-sound">🔊 Sound</button>
       </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>

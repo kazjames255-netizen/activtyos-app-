@@ -22,9 +22,16 @@ export const NARRATOR_CSS = `
 @keyframes tnrbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .tnr-bot .eye{transform-box:fill-box;transform-origin:center;animation:tnrblink 5.2s infinite}
 @keyframes tnrblink{0%,93%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.12)}}
-.tnr-bot .mbar{transform-box:fill-box;transform-origin:center;animation:tnrtalk .82s ease-in-out infinite}
-.tnr-bot .mbar.b2{animation-duration:.6s;animation-delay:.09s}.tnr-bot .mbar.b3{animation-duration:.72s;animation-delay:.18s}
-@keyframes tnrtalk{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+/* Mouth: a gentle idle by default, and a lively staggered "talk" only while the
+   voice is actually speaking (the host tour toggles .speaking on the bot from
+   the utterance's onstart/onend — so the mouth moves in time with the words). */
+.tnr-bot .mbar{transform-box:fill-box;transform-origin:center;animation:tnridle 2.6s ease-in-out infinite}
+.tnr-bot .mbar.b2{animation-delay:.3s}.tnr-bot .mbar.b3{animation-delay:.6s}
+@keyframes tnridle{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(.7)}}
+.tnr-bot.speaking .mbar{animation:tnrtalk .5s ease-in-out infinite}
+.tnr-bot.speaking .mbar.b2{animation-duration:.38s;animation-delay:.06s}
+.tnr-bot.speaking .mbar.b3{animation-duration:.46s;animation-delay:.12s}
+@keyframes tnrtalk{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}
 .tnr-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7fd0ff;background:rgba(80,170,255,.12);border:1px solid rgba(127,208,255,.28);border-radius:999px;padding:4px 12px}
 .tnr-title{font-size:20px;font-weight:800;color:#eaf2ff;letter-spacing:-.2px;animation:tnrpop .5s ease both}
 .tnr-sub{font-size:12.5px;font-weight:600;color:#9fb4dd;max-width:350px;line-height:1.55;animation:tnrpop .5s ease .1s both}
@@ -50,6 +57,18 @@ export const NARRATOR_CSS = `
 .tnr-link:hover .arw{transform:translateX(2px)}
 .tnr-cta{margin-top:11px;border:none;border-radius:999px;padding:9px 22px;font-size:13px;font-weight:800;color:#04223f;cursor:pointer;background:linear-gradient(180deg,#8fe0ff,#3aa0ea);box-shadow:0 7px 18px -6px rgba(58,160,234,.7);animation:tnrpop .5s ease .18s both}
 .tnr-cta:hover{filter:brightness(1.06)}
+/* Unified tour control bar — a compact transport group (prev · play/pause ·
+   next) with Replay and Sound as tidy buttons. Shared by all three tours. */
+.tctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tctl-count{font-size:11.5px;color:#9aa6bd;font-weight:700;margin-right:auto}
+.tctl-grp{display:inline-flex;align-items:center;gap:3px;background:#eef3fb;border:1px solid #e2e8f4;border-radius:999px;padding:4px}
+.tctl-btn{border:1px solid #e6ebf5;background:#fff;border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:800;color:#3a4a68;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,filter .15s;display:inline-flex;align-items:center;gap:7px;line-height:1}
+.tctl-btn:hover{border-color:#bcd0f5;background:#f4f8ff;color:#12203c}
+.tctl-btn.ico{border:none;background:transparent;width:33px;height:33px;padding:0;justify-content:center;font-size:12.5px;color:#5b6b86}
+.tctl-btn.ico:hover{background:#e0eafc;color:#16306e}
+.tctl-btn.primary{border:none;width:40px;height:40px;padding:0;justify-content:center;font-size:14px;color:#fff;background:linear-gradient(180deg,#4f8bf5,#2f6bd8);box-shadow:0 5px 13px -4px rgba(47,107,216,.6)}
+.tctl-btn.primary:hover{filter:brightness(1.07);color:#fff}
+.tctl-btn.on{border-color:transparent;color:#fff;background:linear-gradient(180deg,#4f8bf5,#2f6bd8)}
 `;
 
 export interface SettingsLink { icon: string; label: string; tab: string; note?: string }
