@@ -903,5 +903,370 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>SUMMER25</b> <span class=\"chip2\">15% off</span> <span class=\"g\">active · min £60 · 42/100 used · expires 31 Aug 2026</span><span class=\"btn\">Pause</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>OKAFOR2026</b> <span class=\"chip2\">£10 off</span> <span class=\"g\">🔒 Amara Okafor only · 1 per customer · 0/1 used</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>EASTER20</b> <span class=\"chip2\">20% off</span> <span class=\"g\">expired · 18/50 used</span></div></div></div>"
       }
     ]
+  },
+  "bookings": {
+    "title": "Bookings",
+    "introLine": "Bookings is the one place to handle every request that comes in, from approvals and the waitlist through to payments, refunds and bookings you take yourself over the phone.",
+    "doneLine": "That is your whole booking pipeline in a single view, so nothing slips between a request arriving and the money landing.",
+    "steps": [
+      {
+        "label": "Find any booking",
+        "stage": "List",
+        "line": "Seven tabs sort your bookings by state: All, Approval needed, Confirmed, Waitlisted, Unpaid or invoiced, Cancelled and Refunds, each with a live count. The search box beneath finds a booking by parent, child, reference, booking ID, email or listing.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FILTER</div><div class=\"chips\"><span class=\"ochip\">All 42</span><span class=\"ochip\">Approval needed 3</span><span class=\"ochip\">Confirmed 28</span><span class=\"ochip\">Waitlisted 4</span><span class=\"ochip\">Unpaid / invoiced 5</span><span class=\"ochip\">Refunds 2</span></div><div class=\"fl\">SEARCH</div><div class=\"field ph\">Search booker, child, ref, email, listing…</div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Summer Holiday Camp · Confirmed</span><span class=\"tkp\">£240</span></div></div></div>"
+      },
+      {
+        "label": "Act on many at once",
+        "stage": "Bulk",
+        "line": "Tick the box on any rows and a bulk bar appears. From there you can approve, email, waitlist, cancel or export the whole selection in a single action, then clear it.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">3 SELECTED</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Priya Sharma · Ref BK-1042</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Tom Ellis · Ref BK-1043</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Aisha Khan · Ref BK-1044</div><div class=\"row2\"><div class=\"btn amber\">Approve</div><div class=\"btn ghost\">Email</div></div><div class=\"chips\"><span class=\"chip2\">Waitlist</span><span class=\"chip2\">Cancel</span><span class=\"chip2\">Export</span></div></div>"
+      },
+      {
+        "label": "Take a booking yourself",
+        "stage": "Manual",
+        "line": "Take a booking lets you book on a customer's behalf, for example a phone booking. It emails the parent a secure payment link and sits as Invoice sent until they pay, and your capacity and double-booking guards still apply.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">BOOKER NAME</div><div class=\"field\">James Whitfield</div></div><div><div class=\"fl\">BOOKER EMAIL</div><div class=\"field\">james.w@gmail.com</div></div></div><div class=\"row2\"><div><div class=\"fl\">CHILD</div><div class=\"field\">Olivia Whitfield</div></div><div><div class=\"fl\">AGE</div><div class=\"field\">7</div></div></div><div class=\"fl\">LISTING</div><div class=\"field\">Summer Holiday Camp 2027</div><div class=\"row2\"><div><div class=\"fl\">PASS</div><div class=\"field\">5-day week pass</div></div><div><div class=\"fl\">AMOUNT</div><div class=\"field\">£120</div></div></div><div class=\"fl\">BLOCK / DATES</div><div class=\"field\">Week 2 · 4 – 8 Aug 2027</div><div class=\"hint\">We email the parent a secure payment link — it stays Invoice sent until paid.</div><div class=\"btn amber\">Send payment link &amp; create</div></div>"
+      },
+      {
+        "label": "Open the full record",
+        "stage": "Detail",
+        "line": "Opening a booking gives you three headline tiles for attendees, sessions and total. Below them each child is listed, and you can change or cancel individual days for any child without touching the rest of the booking.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>Attendees</b> <span class=\"g\">on booking</span><span class=\"tkp\">2</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sessions</b> <span class=\"g\">booked</span><span class=\"tkp\">10</span></div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Total</b> <span class=\"g\">paid</span><span class=\"tkp\">£240</span></div></div><div class=\"fl\">ATTENDEES</div><div class=\"field\">Olivia Whitfield · 7 yrs · 5 of 5 days</div><div class=\"chips\"><span class=\"chip2\">Change day</span><span class=\"chip2\">Cancel day</span></div><div class=\"field\">Max Whitfield · 9 yrs · 4 of 5 days</div></div>"
+      },
+      {
+        "label": "Payments and funding",
+        "stage": "Payment",
+        "line": "The payment section shows the method and total. For a Tax-Free Childcare booking you can toggle whether it has been reconciled, and for a funded HAF place you can track whether the evidence has been received.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">METHOD</div><div class=\"field\">Tax-Free Childcare</div><div class=\"fl\">TOTAL</div><div class=\"field\">£240.00</div><div class=\"fl\">TFC RECONCILED</div><div class=\"field\">Yes <span class=\"chip2\">toggle</span></div><div class=\"fl\">HAF EVIDENCE</div><div class=\"field\">Received</div></div>"
+      },
+      {
+        "label": "Cancel and refund",
+        "stage": "Refunds",
+        "line": "When you cancel or refund, you choose full, partial or no refund. ActivityOS never moves money, so you action the refund in your own payment provider, and the same panel is where you approve, decline, promote from the waitlist or mark a booking paid.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REFUND THE PARENT?</div><div class=\"chips\"><span class=\"ochip\">Yes — full (£240.00)</span><span class=\"ochip\">Partial</span><span class=\"ochip\">No refund</span></div><div class=\"fl\">REFUND AMOUNT (£)</div><div class=\"field ph\">120.00</div><div class=\"hint\">ActivityOS never moves money — action any refund in your own payment provider.</div><div class=\"row2\"><div class=\"btn amber\">Confirm cancellation</div><div class=\"btn ghost\">Keep booking</div></div></div>"
+      }
+    ]
+  },
+  "messages": {
+    "title": "Messages",
+    "introLine": "This is your Messages inbox. From here you can message one family or a whole listing at once, keep every reply as a normal one to one conversation, and use templates and merge fields to write faster.",
+    "doneLine": "That is Messages end to end, from a single family right through to a whole listing broadcast with templates and merge fields.",
+    "steps": [
+      {
+        "label": "The hero and your actions",
+        "stage": "Overview",
+        "line": "The banner at the top explains the idea: message one family or a whole listing at once, and any replies come back as normal one to one conversations. On the right sit your actions. Message customers starts a new send, Templates manages your saved messages, and Message ActivityOS is there for support.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MESSAGES</div><div class=\"field\">Message one family or a whole listing — replies come back as 1:1 chats</div><div class=\"chips\"><span class=\"ochip\">＋ Message customers</span><span class=\"ochip\">📝 Templates</span><span class=\"ochip\">✦ Message ActivityOS</span></div></div>"
+      },
+      {
+        "label": "Your conversation list",
+        "stage": "Inbox",
+        "line": "Down the left is every conversation. Search families or the message text at the top, then narrow the list with the tabs: All, Needs reply, and New, each carrying a live count. You can also file conversations into your own folders such as Resolved to keep the inbox tidy.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"field ph\">Search families or messages…</div><div class=\"chips\"><span class=\"ochip\">All 42</span><span class=\"ochip\">Needs reply 6</span><span class=\"ochip\">New 3</span></div><div class=\"chips\"><span class=\"ochip\">📁 Resolved 18</span><span class=\"ochip\">＋ Folder</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Whitmore</b> <span class=\"g\">parent of Ava</span><span class=\"tkp\">7 Aug</span></div></div></div>"
+      },
+      {
+        "label": "Message families or a listing",
+        "stage": "Compose",
+        "line": "Hit Message customers and the composer opens. Choose Families to tick one or many families from a searchable list, or Listings to reach a whole run. Pick a single family and it opens as a normal conversation, while picking several sends the same message to each of them.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">👤 Families</span><span class=\"ochip\">📋 Listings</span></div><div class=\"field ph\">Search families by name, place or email…</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Sarah Whitmore · parent of Ava · Leeds</div><div class=\"chk\"><span class=\"chkbx\">✓</span> James Okafor · parent of Leo · Leeds</div><div class=\"hint\">2 selected</div></div>"
+      },
+      {
+        "label": "Whole listing, reviewed",
+        "stage": "Broadcast",
+        "line": "In Listings mode you pick one or more listings and ActivityOS pulls in everyone booked onto them. Before you send, a review panel lists every family so you can un-tick anyone you want to leave out. The whole send then shows in your inbox as a single Sent to families row.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">GOING TO 23 OF 25 FAMILIES</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Sarah Whitmore · Ava · sarah.w@gmail.com</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Priya Sharma · Dev · priya.s@gmail.com</div><div class=\"hint\">Click any family to un-tick and leave them out of this send.</div></div>"
+      },
+      {
+        "label": "Simple or Pro composer",
+        "stage": "Templates",
+        "line": "Above the message box you can switch from Simple to Pro. Pro lets you drop in saved templates and merge fields like Parent name and Child name, which fill in for each recipient automatically. A live preview shows exactly how the message will read, and you can save any message as a new template.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Simple</span><span class=\"chip2\">Pro ✦</span></div><div class=\"field ph\">Insert template…</div><div class=\"chips\"><span class=\"ochip\">{ParentName}</span><span class=\"ochip\">{ChildName}</span><span class=\"ochip\">{ProviderName}</span><span class=\"ochip\">＋ Save as template</span></div><div class=\"fl\">👀 PREVIEW — HOW SARAH WILL SEE IT</div><div class=\"field\">Hi Sarah, just a reminder that Ava's session runs Saturday. See you there!</div></div>"
+      },
+      {
+        "label": "Read and reply",
+        "stage": "Reply",
+        "line": "Open any conversation to read the whole thread. Your messages show in blue and the family's in pink. When you reply, merge fields fill from that family, and once you are finished you can move the conversation into a folder to clear it from your inbox.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Whitmore</b> <span class=\"g\">parent of Ava</span><span class=\"tkp\">Move to 📁</span></div></div><div class=\"chips\"><span class=\"ochip\">🔵 You</span><span class=\"ochip\">🔴 Customer</span></div><div class=\"field ph\">Write a message…  (Enter to send · Shift+Enter for a new line)</div><div class=\"btn amber\">Send</div></div>"
+      }
+    ]
+  },
+  "schedule": {
+    "title": "Schedule and rota",
+    "introLine": "This is your schedule and rota, where you see who is working when across the week and build the team's shifts.",
+    "doneLine": "That is the rota. Step through the weeks, add shifts for your staff, and everyone stays in sync automatically.",
+    "steps": [
+      {
+        "label": "Pick your week",
+        "stage": "Week",
+        "line": "Use the arrows to move a week back or forward, and This week jumps you straight back to today. The heading shows the Monday to Sunday range you are currently looking at.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WEEK SHOWING</div><div class=\"field\">Mon 11 Aug – Sun 17 Aug</div><div class=\"chips\"><span class=\"btn ghost\">‹ Prev</span><span class=\"btn ghost\">Next ›</span><span class=\"btn amber\">This week</span></div></div>"
+      },
+      {
+        "label": "Add a shift",
+        "stage": "Build",
+        "line": "If your role lets you manage the team, you get an Add a shift button. Tap it to open the form and start building out the week's rota.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"btn amber\">＋ Add a shift</span></div><div class=\"hint\">Only company, franchise and freelancer accounts can add or remove shifts.</div></div>"
+      },
+      {
+        "label": "Fill in the details",
+        "stage": "Details",
+        "line": "Each shift needs a staff member and a date, then you set a start and end time. You can also give it a role, like lead coach, and tie it to one of your programmes.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">STAFF MEMBER</div><div class=\"field\">Priya Sharma</div><div class=\"row2\"><div><div class=\"fl\">START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">END</div><div class=\"field\">17:00</div></div></div><div class=\"fl\">ROLE</div><div class=\"field\">lead coach</div><div class=\"fl\">PROGRAMME</div><div class=\"field\">Summer Multi-Sports Camp</div></div>"
+      },
+      {
+        "label": "The week at a glance",
+        "stage": "Rota",
+        "line": "Below the form sits a card for every day, Monday through Sunday. Each day lists its shifts in order of start time, so you can read the whole week at once.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>MON 11</b> <span class=\"g\">Aisha Khan 09:00–15:00 · assistant</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>TUE 12</b> <span class=\"g\">Tom Ellis 08:30–16:30 · first aider</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>WED 13</b> <span class=\"g\">— no shifts</span></div></div>"
+      },
+      {
+        "label": "Each shift card",
+        "stage": "Shifts",
+        "line": "A shift card shows the staff member's name, their hours, the role and the programme they are on. If you manage the team, the little cross removes that shift.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">09:00–17:00 · lead coach</span><span class=\"tkp\">×</span></div></div><div class=\"chips\"><span class=\"ochip\">Summer Multi-Sports Camp</span></div>"
+      },
+      {
+        "label": "Always up to date",
+        "stage": "Live",
+        "line": "The rota updates on its own whenever anyone on the team adds or removes a shift, so the week you see is always the latest version.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span> Live sync across your team</div><div class=\"hint\">Jordan Reeves just added a shift for Sat 16 Aug — it appears here instantly.</div></div>"
+      }
+    ]
+  },
+  "reconciliation": {
+    "title": "Reconciliation",
+    "introLine": "This is where you match money that lands off the platform — childcare vouchers, cash, bank transfers and funded places. Card payments already settle online, so they arrive here done.",
+    "doneLine": "That is reconciliation — match each payment, chase what is still owed, and every family gets told the moment their booking is settled.",
+    "steps": [
+      {
+        "label": "Money at a glance",
+        "stage": "Overview",
+        "line": "The four tiles across the top give you the shape of what is outstanding. You can see how many payments are still awaiting a match, the total money still to come in, how many are fully reconciled, and how many vouchers are now past their due date.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">AWAITING</div><div class=\"field\">12 payments to match</div></div><div><div class=\"fl\">OUTSTANDING</div><div class=\"field\">£1,840 still to come in</div></div></div><div class=\"row2\"><div><div class=\"fl\">RECONCILED</div><div class=\"field\">47 fully matched</div></div><div><div class=\"fl\">OVERDUE</div><div class=\"field\">3 vouchers past due</div></div></div></div>"
+      },
+      {
+        "label": "Payment method tabs",
+        "stage": "Tabs",
+        "line": "Each tab is a payment route. Switch between childcare vouchers, cash, bank transfer and funded places to work one method at a time. The number on each tab tells you how many bookings sit behind it.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">METHOD</div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Childcare vouchers 8</span><span class=\"ochip\">Cash 3</span><span class=\"ochip\">Bank transfer 5</span><span class=\"ochip\">HAF / funded 2</span></div></div>"
+      },
+      {
+        "label": "Voucher provider filter",
+        "stage": "Vouchers",
+        "line": "Open the childcare vouchers tab and a second row of chips appears for the provider. Narrow down to just Edenred or just Computershare so you can reconcile one scheme's batch in one go.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">PROVIDER</div><div class=\"chips\"><span class=\"ochip\">All providers</span><span class=\"ochip\">Edenred 4</span><span class=\"ochip\">Computershare 3</span><span class=\"ochip\">Care-4 1</span></div></div>"
+      },
+      {
+        "label": "Status and filters",
+        "stage": "Filters",
+        "line": "Below the tabs you can filter by status — awaiting, reconciled, or all — and narrow further by listing, season and date range. The line on the right shows how many bookings are shown and how much of that is still outstanding.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">STATUS</div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"chip2\">Awaiting</span><span class=\"ochip\">Reconciled</span></div><div class=\"row2\"><div><div class=\"fl\">LISTING</div><div class=\"field\">Summer Holiday Club</div></div><div><div class=\"fl\">SEASON</div><div class=\"field\">Summer 2026</div></div></div><div class=\"hint\">9 shown · £1,340 outstanding</div></div>"
+      },
+      {
+        "label": "Reconcile or nudge a booking",
+        "stage": "Match",
+        "line": "Each row is one booking, colour-tagged by its payment route and showing what is still due. Hit reconcile to settle it in one click, or ring the bell to nudge the family for the balance. You can also log a partial amount when only some of the money has landed.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>#BK-4021 · Sarah Whitfield · Amelia</b> <span class=\"g\">Voucher · Edenred · overdue since 24 Jul</span><span class=\"tkp\">£90 due</span></div></div><div class=\"chips\"><span class=\"btn ghost\">🔔 Nudge</span><span class=\"btn ghost\">Log amount received</span><span class=\"btn amber\">✓ Reconcile</span></div>"
+      },
+      {
+        "label": "Reference and notes",
+        "stage": "Detail",
+        "line": "Open a row for the full picture — the payment breakdown, the parent's reference which you can edit if the bank shows it differently, and internal notes only you ever see. A booking for two children may pay as two references, and each can land separately.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">PAYMENT REFERENCE</div><div class=\"field\"><b>Amelia</b> · Edenred — EDN-88214 · £50</div><div class=\"field\">Jacob · Edenred — EDN-88215 · £40</div><div class=\"fl\">INTERNAL NOTES</div><div class=\"field ph\">Chased Edenred; parent says sent, waiting on the bank</div><div class=\"hint\">Only you see these, never the parent</div></div>"
+      }
+    ]
+  },
+  "inventory": {
+    "title": "Inventory",
+    "introLine": "This is Inventory, your kit and stock check in one place. It shows what you hold, where it is stored, how many you have, and when each item was last counted.",
+    "doneLine": "That is Inventory end to end, from adding your kit and counting stock to reordering and carrying a season over to the next.",
+    "steps": [
+      {
+        "label": "Your stock at a glance",
+        "stage": "Overview",
+        "line": "The banner tallies your whole season. You can see how many items you hold, how many categories they fall into, how many are running low, and how many are due a count.",
+        "bodyHtml": "<div class=\"row2\"><div><div class=\"fl\">ITEMS</div><div class=\"field\">86</div></div><div><div class=\"fl\">CATEGORIES</div><div class=\"field\">7</div></div></div><div class=\"row2\"><div><div class=\"fl\">LOW STOCK</div><div class=\"field\">4</div></div><div><div class=\"fl\">TO CHECK</div><div class=\"field\">11</div></div></div>"
+      },
+      {
+        "label": "Kit grouped by category",
+        "stage": "Items",
+        "line": "Every item is grouped under its category, each one colour coded. A card shows the name, where it is stored, the current count, and when it was last counted. Add an item with a category, a location, a quantity, an optional reorder level and a season.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Footballs (size 4)</b> <span class=\"g\">Sports Hall · ✓ 4 Aug · min 10</span><span class=\"tkp\">24</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>First-aid kits</b> <span class=\"g\">Store Cupboard · ⚠ Low</span><span class=\"tkp\">3</span></div></div>"
+      },
+      {
+        "label": "Run a stock check",
+        "stage": "Check",
+        "line": "Start stock check turns every count into an input. Type the real figure you have on the shelf and press Count. It saves the new number and auto stamps the time and who did it. Tap any count to see the last five.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Bibs (bundles)</b> <span class=\"g\">Kit Bag</span><span class=\"tkp\">12</span></div></div><div class=\"frm\"><div class=\"fl\">NEW COUNT</div><div class=\"field\">9</div></div><div class=\"btn amber\">✓ Count</div><div class=\"hint\">Last 5: 9 · 10 Aug · Sam · latest, then 12, 12, 14</div>"
+      },
+      {
+        "label": "Running low and due a check",
+        "stage": "Filters",
+        "line": "Set a reorder level and an item flags as low when it drops to it. Anything not counted within your window is flagged due a check. Filter by category, location, low stock or needs a check, or just search.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"chip2\">All categories</span><span class=\"chip2\">All locations</span><span class=\"ochip\">Low stock</span><span class=\"ochip\">Needs a check</span></div><div class=\"frm\"><div class=\"fl\">SEARCH</div><div class=\"field ph\">Search items…</div></div>"
+      },
+      {
+        "label": "Order more into Expenses",
+        "stage": "Ordering",
+        "line": "Order records how many you want, the total cost and the supplier, then logs a matching expense under the category you pick, as paid or owed. The item shows on order until you press Received, which adds them into stock.",
+        "bodyHtml": "<div class=\"tkhd\"><b>Order more — Footballs</b> <span class=\"g\">→ Expenses</span></div><div class=\"row2\"><div><div class=\"fl\">HOW MANY</div><div class=\"field\">16</div></div><div><div class=\"fl\">TOTAL COST</div><div class=\"field\">£120.00</div></div></div><div class=\"frm\"><div class=\"fl\">SUPPLIER</div><div class=\"field\">Decathlon</div></div><div class=\"chips\"><span class=\"ochip\">Owed (unpaid)</span><span class=\"chip2\">Already paid</span></div><div class=\"btn amber\">Place order → Expenses</div>"
+      },
+      {
+        "label": "Carry a season over",
+        "stage": "Seasons",
+        "line": "Pick a season up top to view just its stock. Carry over to next season copies every item, kit and current counts, into a brand new season, so you do not have to re enter everything. The new season starts unchecked.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEASON</div><div class=\"field\">Summer 2026</div></div><div class=\"row2\"><div><div class=\"fl\">COPY FROM</div><div class=\"field\">Summer 2026</div></div><div><div class=\"fl\">INTO SEASON</div><div class=\"field ph\">e.g. Autumn 2026</div></div></div><div class=\"btn ghost\">↪ Carry over</div><div class=\"hint\">✓ Carried over 86 items into Autumn 2026</div>"
+      }
+    ]
+  },
+  "locations": {
+    "title": "Locations",
+    "introLine": "This is your Locations page. It gives you every venue you run at a glance, with the address, how to get there and a map, all in one place so you can run the day without opening a listing.",
+    "doneLine": "That is Locations. It is a read only view, so to add a venue or change its details you edit it under Listings and then Locations.",
+    "steps": [
+      {
+        "label": "Every venue at a glance",
+        "stage": "Overview",
+        "line": "This page pulls in all of your saved venues from the listing library. It updates on its own as venues change, and each one shows as a card so you can scan your whole estate quickly.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR VENUES</div><div class=\"tkt\"><div class=\"tkhd\"><b>St Mary's Primary Hall</b> <span class=\"g\">Bristol</span><span class=\"tkp\">Cap 60</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Redland Community Centre</b> <span class=\"g\">Bristol</span><span class=\"tkp\">Cap 40</span></div></div></div>"
+      },
+      {
+        "label": "Map for each venue",
+        "stage": "Map",
+        "line": "For any physical venue that has a pinned location, a small map sits at the top of its card. That gives you and your team a quick sense of exactly where you are heading before the session.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LOCATION MAP</div><div class=\"tkt\"><div class=\"tkhd\"><b>St Mary's Primary Hall</b> <span class=\"g\">51.4621, -2.6031</span></div></div><div class=\"hint\">Pinned map shown for physical venues</div></div>"
+      },
+      {
+        "label": "Name and address",
+        "stage": "Details",
+        "line": "Each card leads with the venue name and its full address. Venues that run online instead of in person are flagged with an online tag rather than a map, so you can tell the two apart at a glance.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">VENUE</div><div class=\"field\">St Mary's Primary Hall</div><div class=\"fl\">ADDRESS</div><div class=\"field\">Elm Grove, Redland, Bristol, BS6 6TR</div><div class=\"chips\"><span class=\"ochip\">online</span></div></div>"
+      },
+      {
+        "label": "How to get there",
+        "stage": "Directions",
+        "line": "Under the address you get the practical arrival notes. There is a transport line for parking and public transport, a free text directions note, and a what3words reference for pinpointing the exact entrance.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TRANSPORT</div><div class=\"field\">Car park on Elm Grove, 5 min from Redland station</div><div class=\"fl\">DIRECTIONS</div><div class=\"field\">Side gate on Cranbrook Road, hall is at the rear</div><div class=\"fl\">WHAT3WORDS</div><div class=\"field\">///spoon.local.chair</div></div>"
+      },
+      {
+        "label": "Facilities",
+        "stage": "Facilities",
+        "line": "Finally each venue lists its facilities as tags, so you know what is on site before you arrive. Things like accessible access, a kitchen or an outdoor space show here at a glance.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FACILITIES</div><div class=\"chips\"><span class=\"ochip\">Wheelchair access</span><span class=\"ochip\">Kitchen</span><span class=\"ochip\">Outdoor space</span><span class=\"ochip\">Parking</span></div></div>"
+      }
+    ]
+  },
+  "templates": {
+    "title": "Message templates",
+    "introLine": "This is the Message templates page. It holds reusable messages, the preset ones from head office plus your own, so you never rewrite the same email twice.",
+    "doneLine": "That is templates in a nutshell. Build a library that sounds like you, and every send starts from a ready draft.",
+    "steps": [
+      {
+        "label": "What this page is",
+        "stage": "Overview",
+        "line": "Every template you and head office have saved lives here in one list. The presets come ready made, and you can add as many of your own as you like using the New template button.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR TEMPLATES</div><div class=\"field\">3 presets and 4 of your own</div><div class=\"hint\">Merge fields fill per recipient on send. Edit these to match your voice.</div><div class=\"btn amber\">＋ New template</div></div>"
+      },
+      {
+        "label": "A saved template",
+        "stage": "Cards",
+        "line": "Each template shows its name, an optional subject line, and the message body. Any merge field is picked out as a highlighted chip so you can see at a glance what will fill in per recipient.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Booking confirmation</b> <span class=\"g\">Subject: You're booked in for {ListingName}</span></div><div>Hi {ParentName}, {ChildName} is all booked for {ListingName} on {SessionDate} at {VenueName}. Your reference is {BookingRef}. See you there.</div></div>"
+      },
+      {
+        "label": "Presets versus your own",
+        "stage": "Presets",
+        "line": "Templates from head office carry a Preset tag and are read only, so you cannot edit or delete them. Your own templates can be edited or removed at any time, and every card can be duplicated as a starting point.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Welcome</b> <span class=\"g\">Preset</span><span class=\"tkp\">head office</span></div></div><div class=\"chips\"><span class=\"ochip\">Duplicate</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Payment reminder</b> <span class=\"g\">yours</span></div></div><div class=\"chips\"><span class=\"ochip\">Edit</span><span class=\"ochip\">Duplicate</span><span class=\"chip2\">Delete</span></div>"
+      },
+      {
+        "label": "Writing a template",
+        "stage": "Editor",
+        "line": "New template opens a simple editor. Give it a name, an optional subject, and the message itself. A name and a message are the only things required before you can save.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">TEMPLATE NAME</div><div class=\"field\">Payment reminder</div></div><div><div class=\"fl\">SUBJECT</div><div class=\"field ph\">Subject line (optional)</div></div></div><div class=\"fl\">MESSAGE</div><div class=\"field\">Hi {ParentName}, a quick reminder that payment for {ListingName} is now due. Thank you.</div></div>"
+      },
+      {
+        "label": "Adding merge fields",
+        "stage": "Merge fields",
+        "line": "Below the message is the list of merge fields. Click one to drop it into whichever box you last touched, the subject or the body. Each fills in per recipient when the message goes out, and the booking ones need a booking to resolve.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">INSERT A MERGE FIELD</div><div class=\"chips\"><span class=\"ochip\">{ParentName}</span><span class=\"ochip\">{ChildName}</span><span class=\"ochip\">{ProviderName}</span><span class=\"chip2\">{ListingName} · needs a booking</span><span class=\"chip2\">{SessionDate} · needs a booking</span><span class=\"chip2\">{BookingRef} · needs a booking</span></div><div class=\"hint\">Click to add; each fills per recipient on send.</div></div>"
+      }
+    ]
+  },
+  "compliance": {
+    "title": "Compliance",
+    "introLine": "This page keeps track of your staff certifications and when each one runs out, things like DBS checks, first aid, safeguarding and insurance.",
+    "doneLine": "That is compliance covered, so you can see at a glance who is up to date and who needs renewing.",
+    "steps": [
+      {
+        "label": "What this tracks",
+        "stage": "Overview",
+        "line": "At the top you get a plain summary of what this page is for. It holds every staff certification alongside its expiry date, so nothing quietly lapses without you noticing.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TRACKING</div><div class=\"field\">Staff certifications and when they expire</div><div class=\"hint\">DBS, first aid, safeguarding and insurance</div></div>"
+      },
+      {
+        "label": "Add a certificate",
+        "stage": "Add",
+        "line": "Managers can add a new certificate from here. You pick the staff member and the type, add an optional reference and issued date, then set the expiry, which is required along with the name.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">STAFF MEMBER</div><div class=\"field\">Sarah Whitfield</div></div><div><div class=\"fl\">TYPE</div><div class=\"field\">DBS check</div></div></div><div class=\"row2\"><div><div class=\"fl\">REFERENCE</div><div class=\"field\">001234567890</div></div><div><div class=\"fl\">ISSUED</div><div class=\"field\">14 Feb 2024</div></div></div><div class=\"fl\">EXPIRES</div><div class=\"field\">14 Feb 2027</div><div class=\"btn amber\">Save</div></div>"
+      },
+      {
+        "label": "Status at a glance",
+        "stage": "Summary",
+        "line": "Three counters break your certificates down by state. You can see how many have expired, how many are expiring soon and how many are still valid, so you know where to focus first.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">Expired 1</span><span class=\"ochip\">Expiring soon 2</span><span class=\"ochip\">Valid 9</span></div>"
+      },
+      {
+        "label": "The certificate list",
+        "stage": "Records",
+        "line": "Below the counters every certificate is listed as its own row. Each one shows a status badge, the staff member, the type and reference, and the date it expires.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Sarah Whitfield</b> <span class=\"g\">DBS check · 001234567890</span><span class=\"tkp\">valid</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>James Okafor</b> <span class=\"g\">Paediatric first aid</span><span class=\"tkp\">expiring soon</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Safeguarding</span><span class=\"tkp\">expired</span></div></div>"
+      },
+      {
+        "label": "Keeping records current",
+        "stage": "Manage",
+        "line": "Each row carries its expiry date and, for managers, a delete control to remove a record. Use these to keep the list matching what you actually hold on file.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Safeguarding · expires 3 Aug 2026</span><span class=\"tkp\">expired</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span> Renewed record replaces the old one</div><div class=\"hint\">Delete removes a certificate you no longer need to track</div></div>"
+      }
+    ]
+  },
+  "ai": {
+    "title": "AI assistant",
+    "introLine": "This is your AI assistant. It reads the same live data as your screens and answers questions about your day in plain English. It is read only, so it can look things up but it cannot book, cancel or refund anything.",
+    "doneLine": "That is the assistant in a nutshell. Ask it anything about your bookings, spaces, who is in or what is owed, and it will point you to the right screen when you need to take action.",
+    "steps": [
+      {
+        "label": "What it does",
+        "stage": "Overview",
+        "line": "The assistant answers from your live data, scoped only to your own account. It is read only by design, so it will tell you what is happening but it cannot make changes for you.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">AI ASSISTANT</div><div class=\"field\">Answers from your live data</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Reads only your account's data</div><div class=\"chk\"><span class=\"chkbx\">✓</span> Cannot book, cancel or refund</div></div>"
+      },
+      {
+        "label": "Ask in plain English",
+        "stage": "Intro",
+        "line": "When you open it fresh, the assistant invites you to ask about your day in plain English. It reads the same live figures as your screens and never sees anyone else's.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>✦ Ask about your day</b> <span class=\"g\">live data</span></div></div><div class=\"hint\">The assistant reads the same live data as your screens — it never sees anyone else's, and it can't book, cancel or refund anything.</div></div>"
+      },
+      {
+        "label": "Suggested questions",
+        "stage": "Starters",
+        "line": "To get you going there are a few tap to ask starters. For an operator these cover who is booked in today, how full your upcoming sessions are, which families still owe money, and how bookings went this week.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TRY ONE OF THESE</div><div class=\"chips\"><span class=\"ochip\">Who's booked in today?</span><span class=\"ochip\">How full are my upcoming sessions?</span><span class=\"ochip\">Which families still owe money?</span><span class=\"ochip\">How were bookings this week?</span></div></div>"
+      },
+      {
+        "label": "The answer",
+        "stage": "Reply",
+        "line": "You ask a question and the assistant reads your live data and replies in the chat. While it is working it shows a reading your live data message, then comes back with the figures.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>You</b> <span class=\"g\">question</span></div>Who's booked in today?</div><div class=\"tkt\"><div class=\"tkhd\"><b>Assistant</b> <span class=\"g\">from live data</span><span class=\"tkp\">24 in</span></div>24 children are booked across 3 sessions today. Forest School is full at 12, Football has 8 of 16, and Art Club has 4 of 10.</div></div>"
+      },
+      {
+        "label": "Ask your own",
+        "stage": "Ask box",
+        "line": "At the bottom is a box where you can type any question of your own about bookings, spaces, who is in or what is owed. Press send and it answers from your live data.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">ASK ANYTHING</div><div class=\"field ph\">Ask anything — bookings, spaces, who's in, what's owed…</div><div class=\"row2\"><div><span class=\"btn ghost\">Clear</span></div><div><span class=\"btn amber\">Send</span></div></div></div>"
+      }
+    ]
   }
+
 };
+TOUR_CONFIGS.invoices = TOUR_CONFIGS.purchasing;

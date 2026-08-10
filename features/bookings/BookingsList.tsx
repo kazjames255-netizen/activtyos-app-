@@ -27,6 +27,8 @@ import { useSettings } from "@/lib/settings";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
+import { GuidedTour } from "@/features/common/GuidedTour";
+import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
 
 // Status → identity-panel gradient. Same hue family as the status pill, but a
 // brighter, friendlier version (with a text shadow so white stays legible).
@@ -177,23 +179,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       />
       )}
 
-      {!compact && (
-        <HowItWorks
-          video="Approving, chasing an unpaid booking, taking one over the phone, cancelling and refunding."
-          minutes="3 min"
-        >
-          <p className="mb-2">
-            Every booking you&rsquo;ve taken, however it came in. The tabs are the jobs:{" "}
-            <b className="text-[var(--ink-2)]">Approval needed</b> waits on you,{" "}
-            <b className="text-[var(--ink-2)]">Unpaid / invoiced</b> is money owed, and{" "}
-            <b className="text-[var(--ink-2)]">Waitlisted</b> is who&rsquo;s queuing for a place.
-          </p>
-          <p>
-            Open one to approve, mark it paid, move a day, cancel or refund. <b>Take a booking</b>{" "}
-            does the same as a parent&rsquo;s checkout, for a phone booking.
-          </p>
-        </HowItWorks>
-      )}
+      {!compact && <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.bookings} />} />}
 
       {/* Filter chips */}
       <div className="mb-2.5 flex flex-wrap gap-[7px]">

@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
 import { HowItWorks } from "@/components/HowItWorks";
+import { GuidedTour } from "@/features/common/GuidedTour";
+import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
@@ -437,27 +439,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         </div>
       </div>
 
-      {mode === "operator" && (
-        <HowItWorks
-          video="Messaging a family, a whole listing (with the recipient review), the Simple/Pro composer with templates + merge fields, and sending a booking-specific message from a booking."
-          minutes="2 min"
-        >
-          <p className="mb-2">
-            Message <b>one family</b>, or <b>many at once</b> — pick families, or a <b>whole listing</b> and review who&rsquo;s
-            included before sending. A bulk send shows as a single <b>📣 Sent to N families</b> row; any <b>replies come back
-            as normal 1:1 conversations</b>.
-          </p>
-          <p className="mb-2">
-            Switch on <b>Pro</b> for saved <b>templates</b> and <b>merge fields</b> — <code>{"{ParentName}"}</code>,
-            <code>{" {ChildName}"}</code> and your name fill for each recipient automatically.
-          </p>
-          <p>
-            For a message about a <b>specific booking</b> (its dates &amp; venue), open the booking and hit{" "}
-            <b>✉️ Message family</b> — every field fills from that booking, with a live preview before you send.
-            Use <b>folders</b> to file conversations, and <b>Message ActivityOS</b> for support.
-          </p>
-        </HowItWorks>
-      )}
+      {mode === "operator" && <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.messages} />} />}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {notice && <div className="mb-3 rounded-lg border border-[#cdddf7] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">✓ {notice}</div>}
 

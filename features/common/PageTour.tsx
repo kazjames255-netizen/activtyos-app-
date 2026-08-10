@@ -8,7 +8,7 @@ import { TOUR_CONFIGS } from "./tourConfigs";
 // Pages that render their own "How it works" panel and host the walkthrough
 // there (in-context, under their banner) — skip the central injection for them
 // so it isn't shown twice.
-const SELF_HOSTED = new Set(["customers", "ratios", "newsfeed", "tasks"]);
+const SELF_HOSTED = new Set(["customers", "ratios", "newsfeed", "tasks", "bookings", "messages"]);
 
 // Drops the "How it works ▸ walkthrough" panel at the top of a provider page
 // when a guided tour exists for that view. Injected centrally by the portal
