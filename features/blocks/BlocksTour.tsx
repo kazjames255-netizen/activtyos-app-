@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { NARRATOR_CSS, narratorScene } from "@/features/common/tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving, narrated "watch me build it" demo for Sessions & blocks.
@@ -181,9 +182,11 @@ export function BlocksTour() {
       const tk = ++token; const alive = () => tk === token && !dead;
       cursor.style.transform = "translate(24px,20px) scale(1)";
       const added: Record<string, boolean> = {};
-      // Phase 1 — periods
-      setRail(1); content.innerHTML = makeForm("p", [], added, PERIODS[0]);
+      // Intro bookend
+      setRail(1); content.innerHTML = narratorScene("Guided walkthrough", "Sessions &amp; blocks", "Sit back — I'll build one with you.");
       await line("Right — let's build a block together. First up, <b>periods</b>. A period is just a chunk of the day, like your main session from morning till home time."); if (!alive()) return;
+      // Phase 1 — periods
+      content.innerHTML = makeForm("p", [], added, PERIODS[0]);
       const madeP: typeof PERIODS = [];
       const lineP = ["So, give it a name, pop in the start and finish times, and hit <b>Add period</b>. Then tap <b>+ Add to block</b> — see it turn <b>green</b>? That means it's in.",
         "And you can add <b>as many periods as you like</b> — an early drop-off, a late pick-up, whatever you run. Let's pop in another one now."];
@@ -228,7 +231,10 @@ export function BlocksTour() {
         await move("passChev"); await click(); const bd = pick("passBd"), ch = pick("passChev"); if (bd) bd.style.display = ""; if (ch) ch.textContent = "▲"; await sleep(800);
         await move("savePrice"); await click();
       })();
-      await line("Pop in the full price for your longest pass — say, a hundred and fifty pounds for the five-day. The shorter passes fill themselves in, worked out pro-rata, so a single day lands at thirty. And if you'd like, open a pass to fine-tune each timing — maybe a touch more for the longer day. Then hit Save pricing, and that's you, all done!"); await act5;
+      await line("Pop in the full price for your longest pass — say, a hundred and fifty pounds for the five-day. The shorter passes fill themselves in, worked out pro-rata, so a single day lands at thirty. And if you'd like, open a pass to fine-tune each timing — maybe a touch more for the longer day. Then hit Save pricing."); await act5; if (!alive()) return;
+      // Done bookend
+      setRail(5); content.innerHTML = narratorScene("✓ Complete", "All done", "You've built and priced a block — reuse it on any listing.");
+      await line("And that's a block built and priced. Reuse it, duplicate it, or drop it onto any listing whenever you need it.");
     }
 
     let voicePoll = 0;
@@ -243,7 +249,7 @@ export function BlocksTour() {
 
   return (
     <div className="bt-root" ref={rootRef}>
-      <style>{CSS}</style>
+      <style>{CSS + NARRATOR_CSS}</style>
       <div className="rail">
         <div className="rstep" data-s="1"><span className="n">1</span><span><span className="t">Periods</span><div className="s">Session time windows</div></span></div>
         <div className="rstep" data-s="2"><span className="n">2</span><span><span className="t">Passes</span><div className="s">How long they book</div></span></div>

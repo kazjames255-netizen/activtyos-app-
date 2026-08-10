@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { NARRATOR_CSS, narratorScene } from "@/features/common/tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving, narrated "watch me build it" demo for creating a listing.
@@ -225,10 +226,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
       <div class="hint" style="margin-top:12px;font-size:12px">Three quick set-ups live in their own tabs: your <b>Categories</b> (like “Holiday Camp”), your <b>Locations</b> (your venues), and your <b>Seasons</b> (your holiday and term date ranges). Set them once, and reuse them on every listing.</div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="lnk" id="lnkCat">🏷️ Set up categories →</span><span class="lnk" id="lnkLoc">📍 Set up locations →</span><span class="lnk" id="lnkSea">🗓️ Add a season →</span></div>
       <div style="margin-top:14px"><span class="btn amber" id="newListing">＋ New listing</span></div></div>`;
-    const doneView = `<div class="appear" style="text-align:center;padding:8px 0"><div style="font-size:34px">🎉</div>
-      <div style="font-size:16px;font-weight:800;margin-top:6px">Your listing is live!</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">Summer Multi-Activity Camp · ready to take bookings</div>
-      <div class="prevcard" style="margin:14px auto 0;text-align:left"><div class="ph">🤸</div><div class="pb"><div class="pt">Summer Multi-Activity Camp</div><div class="pm">📍 Riverside Sports Hall · Ages 5–12</div><div class="pp">From £150 / week</div></div></div></div>`;
+    const doneView = narratorScene("✓ Complete", "All done", "Your listing is live and ready to take bookings.");
 
     async function run(startIdx = 0) {
       const tk = ++token; const alive = () => tk === token && !dead;
@@ -276,7 +274,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
 
   return (
     <div className="lt-root" ref={rootRef}>
-      <style>{CSS}</style>
+      <style>{CSS + NARRATOR_CSS}</style>
       <div className="lt-controls">
         <span className="lt-count" />
         <button type="button" className="cbtn lt-back" title="Back a step">⏮</button>

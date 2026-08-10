@@ -9,7 +9,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "dash": {
     "title": "Your Dashboard",
     "introLine": "This is your morning command-centre — one glance tells you how the whole business is doing today: who's on site, which sessions are filling, what money's in, and how bookings are trending. Your tasks-due list links straight into the Task manager.",
-    "doneLine": "And that's the lot — check in here each morning and you'll see at a glance who's on site, what's filling up, what's owed, and how the business is trending.",
+    "doneLine": "Check in here each morning and, at a glance, you'll see who's on site, what's filling up, what's owed, and how the business is trending.",
     "steps": [
       {
         "label": "Your business at a glance",
@@ -126,7 +126,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "email": {
     "title": "Email",
     "introLine": "This is your whole comms hub — a Gmail-style inbox and composer for writing to parents one-to-one, a marketing pipeline for branded campaigns to your live audiences, and the automatic emails ActivityOS sends for you.",
-    "doneLine": "That's the lot — write to parents in the Inbox and Compose, fire branded campaigns at your live audiences, let ActivityOS send the routine emails for you, and read the numbers to see what's landing.",
+    "doneLine": "Write to parents from the Inbox, fire branded campaigns at your live audiences, let ActivityOS send the routine emails for you, and read the numbers to see what's landing.",
     "steps": [
       {
         "label": "Sub-tabs",
@@ -181,7 +181,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "calendar": {
     "title": "Events calendar",
     "introLine": "This is your one big calendar — every booked session across all your listings, laid over the meetings, INSET days and closures you add yourself.",
-    "doneLine": "That's the lot — one tidy calendar for every session and every event you run, however busy your week gets.",
+    "doneLine": "One tidy calendar for every session and every event you run, however busy your week gets.",
     "steps": [
       {
         "label": "Month, Week or Day",
@@ -310,7 +310,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "ratios": {
     "title": "Ratios & groups",
     "introLine": "This is your live cover board — it sorts the day's booked children into age groups from your registers and checks each one against your own ratio targets, so you can tell at a glance whether every group's properly staffed.",
-    "doneLine": "And that's the lot — scope the board, obey your policy, work the cards, and you'll spot a short group long before the session ever runs.",
+    "doneLine": "Scope the board, follow your policy and work the cards, and you'll spot a short group long before the session ever runs.",
     "steps": [
       {
         "label": "Day, listing & the three hero tiles",
@@ -341,7 +341,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "incidents": {
     "title": "Log concern",
     "introLine": "This is your one place for recording concerns about a child — everyday behaviour notes you can share with the parent, and confidential safeguarding matters that go straight to your DSL.",
-    "doneLine": "And that's the lot — behaviour on one side, safeguarding on the other, every concern kept safely on the child's record.",
+    "doneLine": "Behaviour on one side, safeguarding on the other, and every concern kept safely on the child's record.",
     "steps": [
       {
         "label": "Two tabs, one title bar",
@@ -575,7 +575,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "expenses": {
     "title": "Money out — corrected guided tour (expenses)",
     "introLine": "This is your spending hub — pop in everything the business pays out, mark each one as owed or gone, and watch it all roll up into tidy monthly and yearly totals.",
-    "doneLine": "That's the lot — keep your spends logged and your receipts attached, and come tax time everything's sitting neat and ready for the accountant.",
+    "doneLine": "Keep your spending logged and your receipts attached, and come tax time everything is sitting neat and ready for the accountant.",
     "steps": [
       {
         "label": "The headline + Cash/Accrual toggle",
@@ -618,7 +618,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "purchasing": {
     "title": "Money in",
     "introLine": "This is your one takings hub, love — every paid booking, paid invoice and bit of cash you log all roll up into a single \"money in\" figure, then split neatly into an Income side and an Invoices side.",
-    "doneLine": "And that's the lot — bookings and invoices land on their own, you pop the rest in by hand, and it all tallies up at the top so you always know exactly what's come in.",
+    "doneLine": "Bookings and invoices land on their own, you pop the rest in by hand, and it all tallies up at the top so you always know exactly what's come in.",
     "steps": [
       {
         "label": "The hub & switch",
@@ -735,7 +735,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "tasks": {
     "title": "Task manager",
     "introLine": "This is your operational to-do list — proper tasks tied to real camps, bookings and compliance, all pulled into one tidy inbox no matter how many companies you coach for.",
-    "doneLine": "And that's the lot — capture it, tick it off, and never lose track of what's due across all your gigs.",
+    "doneLine": "Capture it, tick it off, and never lose track of what's due across all your gigs.",
     "steps": [
       {
         "label": "Workload cards",
@@ -864,7 +864,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "marketing": {
     "title": "Discount codes",
     "introLine": "This is where all your promo codes live — the little codes families type at checkout for money off, whether that's a public sale, a private thank-you, or an offer for a whole group.",
-    "doneLine": "And that's the lot — you've now got everything you need to spin up a code, target it, and keep an eye on how it's doing.",
+    "doneLine": "You've now got everything you need to spin up a code, target who sees it, and keep an eye on how it's doing.",
     "steps": [
       {
         "label": "Hero & live stats",
@@ -1159,7 +1159,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "templates": {
     "title": "Message templates",
     "introLine": "This is the Message templates page. It holds reusable messages, the preset ones from head office plus your own, so you never rewrite the same email twice.",
-    "doneLine": "That is templates in a nutshell. Build a library that sounds like you, and every send starts from a ready draft.",
+    "doneLine": "Build a library that sounds like you, and every send starts from a ready draft.",
     "steps": [
       {
         "label": "What this page is",
@@ -1233,7 +1233,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "ai": {
     "title": "AI assistant",
     "introLine": "This is your AI assistant. It reads the same live data as your screens and answers questions about your day in plain English. It is read only, so it can look things up but it cannot book, cancel or refund anything.",
-    "doneLine": "That is the assistant in a nutshell. Ask it anything about your bookings, spaces, who is in or what is owed, and it will point you to the right screen when you need to take action.",
+    "doneLine": "Ask the assistant anything about your bookings, spaces, who is in or what is owed, and it will point you to the right screen when you need to take action.",
     "steps": [
       {
         "label": "What it does",
