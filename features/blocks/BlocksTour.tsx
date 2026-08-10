@@ -78,7 +78,6 @@ export function BlocksTour() {
     const rail = [...root.querySelectorAll(".rstep")] as HTMLElement[];
     const replayBtn = root.querySelector(".bt-replay") as HTMLElement;
     const soundBtn = root.querySelector(".bt-sound") as HTMLElement;
-    const voiceSel = root.querySelector(".bt-voice") as HTMLSelectElement | null;
     const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
 
     const PERIODS = [
@@ -98,29 +97,24 @@ export function BlocksTour() {
     const readMs = (t: string) => Math.max(2600, t.split(/\s+/).length * 340);
     const pick = (id: string) => content.querySelector("#" + id) as HTMLElement | null;
 
+    // One fixed narrator, matching the shared GuidedTour: "Google UK English
+    // Female" when available, else the closest British female / en-GB voice.
+    // No picker.
     function pickVoice(): SpeechSynthesisVoice | null {
       if (!hasSpeech) return null;
       const vs = window.speechSynthesis.getVoices();
       if (!vs.length) return null;
-      const pref = ["Google UK English Male", "Daniel (Enhanced)", "Arthur", "Oliver", "Reed", "Daniel", "Microsoft Ryan", "Microsoft George", "Alex", "Google UK English"];
-      for (const n of pref) { const v = vs.find((x) => x.name === n) || vs.find((x) => x.name.includes(n)); if (v) return v; }
-      return vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
-    }
-    function fillVoices(): boolean {
-      if (!voiceSel || !hasSpeech) return false;
-      const vs = window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
-      if (!vs.length) return false;
-      const cur = voiceSel.value;
-      voiceSel.innerHTML = vs.map((v) => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
-      voiceSel.value = cur || (voice ? voice.name : "");
-      return true;
+      return vs.find((v) => v.name === "Google UK English Female")
+        || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
+        || vs.find((v) => /en-GB/i.test(v.lang))
+        || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
     }
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
       const s = window.speechSynthesis; s.cancel();
       const u = new SpeechSynthesisUtterance(t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
-      u.rate = 1.02; u.pitch = 0.98;
+      u.rate = 1.0; u.pitch = 1.05;
       speaking = Promise.race([new Promise((res) => { u.onend = res; u.onerror = res; }), sleep(20000)]);
       s.speak(u);
     }
@@ -238,14 +232,10 @@ export function BlocksTour() {
     }
 
     let voicePoll = 0;
-    const pollIv = hasSpeech ? window.setInterval(() => { if (fillVoices() || ++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
-    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
-    if (voiceSel) {
-      voiceSel.onmousedown = () => { fillVoices(); };
-      voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) { soundOn = true; soundBtn.classList.add("on"); soundBtn.textContent = "🔊 Sound on"; } if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
-    }
+    const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
+    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     replayBtn.onclick = () => { run(); };
-    soundBtn.onclick = () => { fillVoices(); soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔈 Narrate"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔊 Sound"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
@@ -266,9 +256,8 @@ export function BlocksTour() {
       </div>
       <div className="bt-cap" />
       <div className="bt-controls">
-        <button type="button" className="cbtn bt-replay">↻ Replay</button>
-        <button type="button" className="cbtn bt-sound">🔈 Narrate</button>
-        <select className="cbtn bt-voice" title="Pick a voice" style={{ maxWidth: 230 }} />
+        <button type="button" className="cbtn bt-replay">▶ Play</button>
+        <button type="button" className="cbtn bt-sound">🔊 Sound</button>
         <span className="bt-count" />
       </div>
     </div>

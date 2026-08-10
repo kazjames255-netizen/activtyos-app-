@@ -163,7 +163,6 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     const capEl = root.querySelector(".lt-cap") as HTMLElement;
     const replayBtn = root.querySelector(".lt-replay") as HTMLElement;
     const soundBtn = root.querySelector(".lt-sound") as HTMLElement;
-    const voiceSel = root.querySelector(".lt-voice") as HTMLSelectElement | null;
     const pauseBtn = root.querySelector(".lt-pause") as HTMLElement;
     const backBtn = root.querySelector(".lt-back") as HTMLElement;
     const fwdBtn = root.querySelector(".lt-fwd") as HTMLElement;
@@ -181,20 +180,15 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     const readMs = (t: string) => Math.max(2400, t.split(/\s+/).length * 330);
     const pick = (id: string) => content.querySelector("#" + id) as HTMLElement | null;
 
+    // One fixed narrator, matching the shared GuidedTour: "Google UK English
+    // Female" when available, else the closest British female / en-GB voice.
     function pickVoice(): SpeechSynthesisVoice | null {
       if (!hasSpeech) return null;
       const vs = window.speechSynthesis.getVoices(); if (!vs.length) return null;
-      const pref = ["Google UK English Female", "Microsoft Sonia", "Serena", "Kate", "Fiona", "Samantha"];
-      for (const n of pref) { const v = vs.find((x) => x.name === n) || vs.find((x) => x.name.includes(n)); if (v) return v; }
-      return vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
-    }
-    function fillVoices(): boolean {
-      if (!voiceSel || !hasSpeech) return false;
-      const vs = window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); if (!vs.length) return false;
-      const cur = voiceSel.value;
-      voiceSel.innerHTML = vs.map((v) => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
-      voiceSel.value = cur || (voice ? voice.name : "");
-      return true;
+      return vs.find((v) => v.name === "Google UK English Female")
+        || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
+        || vs.find((v) => /en-GB/i.test(v.lang))
+        || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
     }
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
@@ -266,18 +260,14 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     }
 
     let voicePoll = 0;
-    const pollIv = hasSpeech ? window.setInterval(() => { if (fillVoices() || ++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
-    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
-    if (voiceSel) {
-      voiceSel.onmousedown = () => { fillVoices(); };
-      voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) setSound(true); if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); };
-    }
+    const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
+    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     // Turning sound on hides the on-screen caption (the voice replaces it).
     const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
     replayBtn.onclick = () => { run(0); };
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
-    soundBtn.onclick = () => { fillVoices(); setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
+    soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
     if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
@@ -294,7 +284,6 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         <button type="button" className="cbtn lt-pause">⏸ Pause</button>
         <button type="button" className="cbtn lt-fwd" title="Skip forward">⏭</button>
         <button type="button" className="cbtn lt-sound">🔊 Sound</button>
-        <select className="cbtn lt-voice" title="Pick a voice" style={{ maxWidth: 200 }} />
       </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
